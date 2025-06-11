@@ -40,7 +40,7 @@ public class UsersService {
 
             userRepository.save(users);
             Users userData = userRepository.findUserByEmailId(createAccount.mailId());
-
+            //inserting otp table
             UserOtp otp = new UserOtp();
             otp.setUserId(userData.getUserId());
             otp.setOtp(Utils.generateOtp());
