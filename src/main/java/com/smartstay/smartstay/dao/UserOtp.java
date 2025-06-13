@@ -12,7 +12,5 @@ public class UserOtp {
     private int id;
     private int otp;
 
-    @ManyToOne
-    @JoinColumn(name = "users_userId")
-    private Users users;
+
 }
