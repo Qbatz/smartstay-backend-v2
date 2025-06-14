@@ -23,8 +23,7 @@ public class UsersService {
     UserRepository userRepository;
 
     @Autowired
-    UserOtpRepository otpRepository;
-
+    OTPService otpService;
     private BCryptPasswordEncoder encoder=new BCryptPasswordEncoder(10);
 
     public ResponseEntity<com.smartstay.smartstay.responses.CreateAccount> createAccount(CreateAccount createAccount) {
@@ -40,14 +39,9 @@ public class UsersService {
 
             userRepository.save(users);
             Users userData = userRepository.findUserByEmailId(createAccount.mailId());
-            //inserting otp table
-            UserOtp otp = new UserOtp();
-            otp.setUserId(userData.getUserId());
-            otp.setOtp(Utils.generateOtp());
-            otp.setCreatedAt(LocalDateTime.now());
-            otp.setRegistered(false);
 
-            otpRepository.save(otp);
+            otpService.insertOTP(userData.getUserId());
+
             com.smartstay.smartstay.responses.CreateAccount response = new com.smartstay.smartstay.responses.CreateAccount("Created Successfully");
 
             return new ResponseEntity<>(response, HttpStatus.OK);

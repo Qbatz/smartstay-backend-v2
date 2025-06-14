@@ -1,12 +1,10 @@
 package com.smartstay.smartstay.dao;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 
 
 @Entity
@@ -18,6 +16,6 @@ public class UserOtp {
     private int id;
     private Integer otp;
     private String userId;
-    private LocalDateTime createdAt;
-    private boolean isRegistered;
+    private Date createdAt;
+    private boolean isVerified;
 }
