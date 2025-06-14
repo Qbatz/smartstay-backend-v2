@@ -1,11 +1,14 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.dao.RolesV1;
+import com.smartstay.smartstay.dao.UserOtp;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.payloads.CreateAccount;
 import com.smartstay.smartstay.payloads.Login;
 import com.smartstay.smartstay.repositories.RolesRepository;
+import com.smartstay.smartstay.repositories.UserOtpRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +17,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import java.util.HashMap;
 import java.util.Objects;
@@ -24,6 +31,8 @@ public class UsersService {
     @Autowired
     UserRepository userRepository;
 
+    @Autowired
+    OTPService otpService;
     @Autowired
     AuthenticationManager authManager;
 
@@ -47,6 +56,9 @@ public class UsersService {
             users.setRoleId(1);
 
             userRepository.save(users);
+            Users userData = userRepository.findUserByEmailId(createAccount.mailId());
+
+            otpService.insertOTP(userData.getUserId());
 
             Users userFOrOtp = userRepository.findByEmailId(createAccount.mailId());
 
