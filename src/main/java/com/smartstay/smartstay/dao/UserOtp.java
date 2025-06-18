@@ -15,7 +15,11 @@ public class UserOtp {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     private Integer otp;
-    private String userId;
     private Date createdAt;
+    private Date otpValidity;
     private boolean isVerified;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private Users users;
 }

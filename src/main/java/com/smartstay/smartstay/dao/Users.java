@@ -25,6 +25,9 @@ public class Users {
     private String emailId;
     private String password;
     private int roleId;
+    private boolean twoStepVerificationStatus;
+    private boolean emailAuthenticationStatus;
+    private boolean smsAuthenticationStatus;
 
 
 }
