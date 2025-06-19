@@ -30,4 +30,8 @@ public class UserPrinciple implements UserDetails {
     public String getUsername() {
         return users.getUserId();
     }
+
+    public Users getUser() {
+        return users;
+    }
 }
