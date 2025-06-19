@@ -7,21 +7,23 @@ import com.smartstay.smartstay.payloads.CreateAccount;
 import com.smartstay.smartstay.payloads.Login;
 import com.smartstay.smartstay.payloads.VerifyOtpPayloads;
 import com.smartstay.smartstay.repositories.RolesRepository;
-import com.smartstay.smartstay.repositories.UserOtpRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
+import com.smartstay.smartstay.responses.LoginUsersDetails;
 import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.parameters.P;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
+import java.util.Date;
 import java.util.HashMap;
 
 @Service
@@ -41,6 +43,10 @@ public class UsersService {
     @Autowired
     JWTService jwtService;
 
+    @Value("ENVIRONMENT")
+    private String environment;
+
+
     private BCryptPasswordEncoder encoder=new BCryptPasswordEncoder(10);
 
     public ResponseEntity<com.smartstay.smartstay.responses.CreateAccount> createAccount(CreateAccount createAccount) {
@@ -55,14 +61,15 @@ public class UsersService {
                 users.setPassword(encoder.encode(createAccount.password()));
                 users.setEmailId(createAccount.mailId());
                 users.setRoleId(1);
+                users.setCountry(1L);
                 users.setEmailAuthenticationStatus(false);
                 users.setSmsAuthenticationStatus(false);
                 users.setEmailAuthenticationStatus(false);
 
                 userRepository.save(users);
-                Users userData = userRepository.findUserByEmailId(createAccount.mailId());
-
-                otpService.insertOTP(userData);
+//                Users userData = userRepository.findUserByEmailId(createAccount.mailId());
+//
+//                otpService.insertOTP(userData);
 
                 com.smartstay.smartstay.responses.CreateAccount response = new com.smartstay.smartstay.responses.CreateAccount("Created Successfully");
 
@@ -81,16 +88,21 @@ public class UsersService {
     }
 
     public ResponseEntity<Object> login(Login login) {
-        Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(login.emailId(), login.password()));
+        Users users = userRepository.findUserByEmailId(login.emailId());
+
+        Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
 
         if (authentication.isAuthenticated()) {
-            Users users = userRepository.findByEmailId(login.emailId());
-
             if (users.isTwoStepVerificationStatus()) {
                 int otp = Utils.generateOtp();
                 String otpMessage = "Dear user, your SmartStay Login OTP is " + otp + ". Use this OTP to verify your login. Do not share it with anyone. - SmartStay";
                 otpService.insertOTP(users, otp);
-                otpService.sendOtp(users.getMobileNo(), otpMessage);
+                if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+                    otpService.sendOtp(users.getMobileNo(), otpMessage);
+                }
+                else {
+                    System.out.println("ignoring....");
+                }
 
                 OtpRequired otpRequired = new OtpRequired(true, users.getUserId());
                 return new ResponseEntity<>(otpRequired, HttpStatus.OK);
@@ -108,12 +120,27 @@ public class UsersService {
 
     public ResponseEntity<Object> verifyOtp(VerifyOtpPayloads verifyOtp) {
         UserOtp users = otpService.verifyOtp(verifyOtp);
-        if (users != null) {
+        if (users != null && users.getOtpValidity().after(new Date())) {
             HashMap<String, Object> claims = new HashMap<>();
             claims.put("userId", users.getUsers().getUserId());
             claims.put("role", rolesRepository.findById(users.getUsers().getRoleId()).orElse(new RolesV1()).getRoleName());
             return new ResponseEntity<>(jwtService.generateToken(users.getUsers().getEmailId(), claims), HttpStatus.OK);
         }
+        else if (users != null && users.getOtpValidity().before(new Date())) {
+            return new ResponseEntity<>("Otp expired.", HttpStatus.BAD_REQUEST);
+        }
         return new ResponseEntity<>("Invalid Otp", HttpStatus.BAD_REQUEST);
+    }
+
+
+    public ResponseEntity<Object> getProfileInformation() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication.isAuthenticated()) {
+            LoginUsersDetails usersDetails = userRepository.getLoginUserDetails(authentication.getName());
+            return new ResponseEntity<>(usersDetails, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>("Invalid user.", HttpStatus.BAD_REQUEST);
     }
 }

@@ -35,7 +35,6 @@ public class JWTService {
         try {
             KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
             SecretKey secretKey = keyGen.generateKey();
-            System.out.println("Secret Key : " + secretKey.toString());
             return Base64.getEncoder().encodeToString(secretKey.getEncoded());
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Error generating secret key", e);
@@ -43,7 +42,6 @@ public class JWTService {
     }
 
     public String generateToken(String username, Map<String, Object> claims) {
-
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(username)

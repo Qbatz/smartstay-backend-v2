@@ -1,6 +1,8 @@
 package com.smartstay.smartstay;
 
+import com.smartstay.smartstay.dao.Countries;
 import com.smartstay.smartstay.dao.RolesV1;
+import com.smartstay.smartstay.repositories.CountriesRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -28,6 +30,21 @@ public class SmartstayApplication {
 //			RolesV1 v3 = new RolesV1();
 //			v3.setRoleName("User");
 //			rolesRepository.save(v3);
+
+
+
+		};
+	}
+
+	@Bean
+	CommandLineRunner loadCountryData(CountriesRepository countriesRepository) {
+		return args -> {
+//			Countries countries = new Countries();
+//			countries.setCountryCode("91");
+//			countries.setCountryName("India");
+//			countries.setCurrency("INR");
+//
+//			countriesRepository.save(countries);
 		};
 	}
 

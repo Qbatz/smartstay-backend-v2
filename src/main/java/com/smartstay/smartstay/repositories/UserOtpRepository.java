@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface UserOtpRepository extends JpaRepository<UserOtp, String> {
 
-    Optional<UserOtp> findByUsers_UserIdAndOtp(String userId, Integer otp);
+    Optional<UserOtp> findByUsers_UserIdAndOtpAndIsVerifiedFalse(String userId, Integer otp);
 
 
 }

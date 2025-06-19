@@ -89,8 +89,8 @@ public class OTPService {
     }
 
     public UserOtp verifyOtp(VerifyOtpPayloads verifyOtp) {
-        UserOtp userOtp = userOtpRepository.findByUsers_UserIdAndOtp(verifyOtp.userId(), verifyOtp.otp()).orElse(null);
-        if (userOtp != null && !userOtp.isVerified()) {
+        UserOtp userOtp = userOtpRepository.findByUsers_UserIdAndOtpAndIsVerifiedFalse(verifyOtp.userId(), verifyOtp.otp()).orElse(null);
+        if (userOtp != null && userOtp.getOtpValidity().after(new Date())) {
             userOtp.setVerified(true);
             userOtpRepository.save(userOtp);
         }
