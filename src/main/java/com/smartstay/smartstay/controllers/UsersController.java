@@ -2,6 +2,7 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.CreateAccount;
 import com.smartstay.smartstay.payloads.Login;
+import com.smartstay.smartstay.payloads.Password;
 import com.smartstay.smartstay.payloads.VerifyOtpPayloads;
 import com.smartstay.smartstay.services.UsersService;
 import jakarta.validation.Valid;
@@ -32,5 +33,16 @@ public class UsersController {
     public ResponseEntity<Object> verifyOtp(@RequestBody VerifyOtpPayloads verifyOtp) {
         return userService.verifyOtp(verifyOtp);
     }
+
+    @PostMapping("/verify-password")
+    public ResponseEntity<Object> verifyPassword(@RequestBody Password password) {
+        return userService.verifyPassword(password);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Object> changePassword(@RequestBody Password password) {
+        return userService.changePassword(password);
+    }
+
 
 }

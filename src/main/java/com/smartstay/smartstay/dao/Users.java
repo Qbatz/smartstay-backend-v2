@@ -29,6 +29,10 @@ public class Users {
     private boolean twoStepVerificationStatus;
     private boolean emailAuthenticationStatus;
     private boolean smsAuthenticationStatus;
+    private boolean isActive = true;
+    private boolean isDeleted = false;
+
+
 
 
 }
