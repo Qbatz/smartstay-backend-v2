@@ -5,6 +5,7 @@ import com.smartstay.smartstay.dao.UserOtp;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.payloads.CreateAccount;
 import com.smartstay.smartstay.payloads.Login;
+import com.smartstay.smartstay.payloads.Password;
 import com.smartstay.smartstay.payloads.VerifyOtpPayloads;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
@@ -19,6 +20,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -47,7 +49,7 @@ public class UsersService {
     private String environment;
 
 
-    private BCryptPasswordEncoder encoder=new BCryptPasswordEncoder(10);
+    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
     public ResponseEntity<com.smartstay.smartstay.responses.CreateAccount> createAccount(CreateAccount createAccount) {
 
@@ -74,13 +76,11 @@ public class UsersService {
                 com.smartstay.smartstay.responses.CreateAccount response = new com.smartstay.smartstay.responses.CreateAccount("Created Successfully");
 
                 return new ResponseEntity<>(response, HttpStatus.OK);
-            }
-            else {
+            } else {
                 com.smartstay.smartstay.responses.CreateAccount response = new com.smartstay.smartstay.responses.CreateAccount("Password and confirm password is not matching");
                 return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
             }
-        }
-        else {
+        } else {
             com.smartstay.smartstay.responses.CreateAccount response = new com.smartstay.smartstay.responses.CreateAccount("Email Id already registered");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
@@ -99,8 +99,7 @@ public class UsersService {
                 otpService.insertOTP(users, otp);
                 if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
                     otpService.sendOtp(users.getMobileNo(), otpMessage);
-                }
-                else {
+                } else {
                     System.out.println("ignoring....");
                 }
 
@@ -112,8 +111,7 @@ public class UsersService {
             claims.put("userId", users.getUserId());
             claims.put("role", rolesRepository.findById(users.getRoleId()).orElse(new RolesV1()).getRoleName());
             return new ResponseEntity<>(jwtService.generateToken(authentication.getName(), claims), HttpStatus.OK);
-        }
-        else {
+        } else {
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
     }
@@ -125,13 +123,11 @@ public class UsersService {
             claims.put("userId", users.getUsers().getUserId());
             claims.put("role", rolesRepository.findById(users.getUsers().getRoleId()).orElse(new RolesV1()).getRoleName());
             return new ResponseEntity<>(jwtService.generateToken(users.getUsers().getEmailId(), claims), HttpStatus.OK);
-        }
-        else if (users != null && users.getOtpValidity().before(new Date())) {
+        } else if (users != null && users.getOtpValidity().before(new Date())) {
             return new ResponseEntity<>("Otp expired.", HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>("Invalid Otp", HttpStatus.BAD_REQUEST);
     }
-
 
     public ResponseEntity<Object> getProfileInformation() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -143,4 +139,61 @@ public class UsersService {
 
         return new ResponseEntity<>("Invalid user.", HttpStatus.BAD_REQUEST);
     }
+
+    public ResponseEntity<Object> changePassword(Password password) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication.isAuthenticated()) {
+
+            Users user = userRepository.findUserByUserId(authentication.getName());
+            if (user == null) {
+                return new ResponseEntity<>("User not found", HttpStatus.BAD_REQUEST);
+            }
+
+            String encodedPassword = encoder.encode(password.password());
+            user.setPassword(encodedPassword);
+            userRepository.save(user);
+            return new ResponseEntity<>("Password changed successfully", HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>("Invalid user.", HttpStatus.BAD_REQUEST);
+    }
+
+
+    public ResponseEntity<Object> deleteUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication.isAuthenticated()) {
+
+            Users user = userRepository.findUserByUserId(authentication.getName());
+            if (user == null) {
+                return new ResponseEntity<>("User not found", HttpStatus.BAD_REQUEST);
+            }
+
+            user.setDeleted(true);
+            userRepository.save(user);
+            return new ResponseEntity<>("Deleted successfully", HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>("Invalid user.", HttpStatus.BAD_REQUEST);
+    }
+
+    public ResponseEntity<Object> verifyPassword(Password currentPassword) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userRepository.findUserByUserId(userId);
+        if (user == null) {
+            return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+        }
+
+        boolean matches = encoder.matches(currentPassword.password(), user.getPassword());
+
+        if (matches) {
+            return new ResponseEntity<>("Password Matched!", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("Incorrect password", HttpStatus.BAD_REQUEST);
+        }
+    }
+
 }
