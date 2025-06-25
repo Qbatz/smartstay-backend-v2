@@ -7,6 +7,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Service
 public class UploadFileToS3 {
@@ -23,15 +27,17 @@ public class UploadFileToS3 {
     public String uploadFileToS3(File file) {
 
         AmazonS3 s3 = AWSConfig.setupS3Client(accessKey, secretKey);
-//
+
         PutObjectRequest request = new PutObjectRequest(bucketName, "general_user_profile/" + file.getName(), file);
         PutObjectResult result = s3.putObject(request);
 
 
         String fileName = s3.getUrl(bucketName, "general_user_profile/" + file.getName()).toString();
 //
-        if (file.exists()) {
-            file.deleteOnExit();
+        try {
+            Files.delete(Paths.get(file.toURI()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
         return fileName;

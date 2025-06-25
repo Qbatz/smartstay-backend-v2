@@ -2,9 +2,11 @@ package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.AddressTypes;
 import com.smartstay.smartstay.dao.Countries;
+import com.smartstay.smartstay.dao.HotelType;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.repositories.AddressTypeRepository;
 import com.smartstay.smartstay.repositories.CountriesRepository;
+import com.smartstay.smartstay.repositories.HotelTypeRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -60,6 +62,23 @@ public class SmartstayApplication {
 //			addressTypes2.setType("Permanent");
 //
 //			addressTypeRepository.save(addressTypes2);
+		};
+	}
+
+	@Bean
+	CommandLineRunner addHotelType(HotelTypeRepository hotelTypeRepository) {
+		return args -> {
+//			HotelType type1 = new HotelType();
+//			type1.setActive(true);
+//			type1.setType("PG");
+//
+//			hotelTypeRepository.save(type1);
+//
+//			HotelType type2 = new HotelType();
+//			type2.setActive(true);
+//			type2.setType("Hotel");
+//
+//			hotelTypeRepository.save(type2);
 		};
 	}
 
