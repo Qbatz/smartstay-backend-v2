@@ -1,12 +1,11 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.ProfileUplodWrapper;
+import com.smartstay.smartstay.dao.Address;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.UserOtp;
 import com.smartstay.smartstay.dao.Users;
-import com.smartstay.smartstay.payloads.CreateAccount;
-import com.smartstay.smartstay.payloads.Login;
-import com.smartstay.smartstay.payloads.Password;
-import com.smartstay.smartstay.payloads.VerifyOtpPayloads;
+import com.smartstay.smartstay.payloads.*;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
@@ -25,6 +24,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -67,6 +67,14 @@ public class UsersService {
                 users.setEmailAuthenticationStatus(false);
                 users.setSmsAuthenticationStatus(false);
                 users.setEmailAuthenticationStatus(false);
+                users.setActive(true);
+                users.setDeleted(false);
+                users.setCreatedAt(Calendar.getInstance().getTime());
+                users.setLastUpdate(Calendar.getInstance().getTime());
+
+                Address address = new Address();
+                address.setUser(users);
+                users.setAddress(address);
 
                 userRepository.save(users);
 //                Users userData = userRepository.findUserByEmailId(createAccount.mailId());
@@ -196,4 +204,21 @@ public class UsersService {
         }
     }
 
+    public ResponseEntity<Object> updateProfileInformations(UpdateUserProfilePayloads updateProfile) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userRepository.findUserByUserId(userId);
+        if (user == null) {
+            return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+        }
+
+        Users usersForUpdate = new ProfileUplodWrapper(user).apply(updateProfile);
+
+        userRepository.save(usersForUpdate);
+        return new ResponseEntity<>("Updated Successfully", HttpStatus.OK);
+    }
 }

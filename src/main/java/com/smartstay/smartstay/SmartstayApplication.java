@@ -1,7 +1,9 @@
 package com.smartstay.smartstay;
 
+import com.smartstay.smartstay.dao.AddressTypes;
 import com.smartstay.smartstay.dao.Countries;
 import com.smartstay.smartstay.dao.RolesV1;
+import com.smartstay.smartstay.repositories.AddressTypeRepository;
 import com.smartstay.smartstay.repositories.CountriesRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import org.springframework.boot.CommandLineRunner;
@@ -31,8 +33,6 @@ public class SmartstayApplication {
 //			v3.setRoleName("User");
 //			rolesRepository.save(v3);
 
-
-
 		};
 	}
 
@@ -45,6 +45,21 @@ public class SmartstayApplication {
 //			countries.setCurrency("INR");
 //
 //			countriesRepository.save(countries);
+		};
+	}
+
+	@Bean
+	CommandLineRunner addAddressType(AddressTypeRepository addressTypeRepository) {
+		return args -> {
+//			AddressTypes addressTypes = new AddressTypes();
+//			addressTypes.setType("Present");
+//
+//			addressTypeRepository.save(addressTypes);
+//
+//			AddressTypes addressTypes2 = new AddressTypes();
+//			addressTypes2.setType("Permanent");
+//
+//			addressTypeRepository.save(addressTypes2);
 		};
 	}
 

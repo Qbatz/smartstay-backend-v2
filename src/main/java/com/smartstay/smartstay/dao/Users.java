@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,15 +25,18 @@ public class Users {
     private String mobileNo;
     private String emailId;
     private String password;
+    private String profileUrl;
     private int roleId;
     private Long country;
     private boolean twoStepVerificationStatus;
     private boolean emailAuthenticationStatus;
     private boolean smsAuthenticationStatus;
-    private boolean isActive = true;
-    private boolean isDeleted = false;
+    private boolean isActive;
+    private boolean isDeleted;
+    private Date createdAt;
+    private Date lastUpdate;
 
 
-
-
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Address address;
 }
