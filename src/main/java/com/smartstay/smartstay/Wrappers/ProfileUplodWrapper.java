@@ -40,6 +40,7 @@ public class ProfileUplodWrapper implements Function<UpdateUserProfilePayloads, 
         if (updateUserProfilePayloads.mobile() != null && !updateUserProfilePayloads.mobile().equalsIgnoreCase("")) {
             users.setMobileNo(updateUserProfilePayloads.mobile());
         }
+
         users.setLastUpdate(Calendar.getInstance().getTime());
 
         return users;

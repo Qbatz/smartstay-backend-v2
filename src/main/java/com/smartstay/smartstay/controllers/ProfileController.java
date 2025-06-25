@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/profile")
@@ -29,7 +30,7 @@ public class ProfileController {
     }
 
     @PutMapping("/")
-    public ResponseEntity<Object> updateProfileInformation(@RequestBody UpdateUserProfilePayloads updateProfile) {
-        return usersService.updateProfileInformations(updateProfile);
+    public ResponseEntity<Object> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart("profilePic") MultipartFile profilePic) {
+        return usersService.updateProfileInformations(updateProfile, profilePic);
     }
 }

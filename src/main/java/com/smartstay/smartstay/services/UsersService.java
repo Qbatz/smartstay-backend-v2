@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.ProfileUplodWrapper;
+import com.smartstay.smartstay.config.FilesConfig;
+import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.Address;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.UserOtp;
@@ -22,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 
 import java.util.Calendar;
@@ -44,6 +47,9 @@ public class UsersService {
 
     @Autowired
     JWTService jwtService;
+
+    @Autowired
+    UploadFileToS3 uploadToS3;
 
     @Value("ENVIRONMENT")
     private String environment;
@@ -204,7 +210,7 @@ public class UsersService {
         }
     }
 
-    public ResponseEntity<Object> updateProfileInformations(UpdateUserProfilePayloads updateProfile) {
+    public ResponseEntity<Object> updateProfileInformations(UpdateUserProfilePayloads updateProfile, MultipartFile file) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!authentication.isAuthenticated()) {
@@ -214,6 +220,15 @@ public class UsersService {
         Users user = userRepository.findUserByUserId(userId);
         if (user == null) {
             return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+        }
+
+        String profilePic = null;
+        if (file != null && !file.isEmpty()) {
+            profilePic = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file));
+        }
+
+        if (profilePic != null && !profilePic.equalsIgnoreCase("")) {
+            user.setProfileUrl(profilePic);
         }
 
         Users usersForUpdate = new ProfileUplodWrapper(user).apply(updateProfile);
