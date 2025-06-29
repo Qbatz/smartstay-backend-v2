@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.ProfileUplodWrapper;
 import com.smartstay.smartstay.config.FilesConfig;
+import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.Address;
 import com.smartstay.smartstay.dao.RolesV1;
@@ -15,19 +16,21 @@ import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -56,6 +59,13 @@ public class UsersService {
 
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
+
+    private final RestTemplate restTemplate;
+
+    public UsersService() {
+        this.restTemplate = new RestTemplate();
+        restTemplate.setInterceptors(Collections.singletonList(new RestTemplateLoggingInterceptor()));
+    }
 
     public ResponseEntity<com.smartstay.smartstay.responses.CreateAccount> createAccount(CreateAccount createAccount) {
 
@@ -104,30 +114,36 @@ public class UsersService {
     public ResponseEntity<Object> login(Login login) {
         Users users = userRepository.findUserByEmailId(login.emailId());
 
-        Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
+        if (users != null) {
+            Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
 
-        if (authentication.isAuthenticated()) {
-            if (users.isTwoStepVerificationStatus()) {
-                int otp = Utils.generateOtp();
-                String otpMessage = "Dear user, your SmartStay Login OTP is " + otp + ". Use this OTP to verify your login. Do not share it with anyone. - SmartStay";
-                otpService.insertOTP(users, otp);
-                if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
-                    otpService.sendOtp(users.getMobileNo(), otpMessage);
-                } else {
-                    System.out.println("ignoring....");
+            if (authentication.isAuthenticated()) {
+                if (users.isTwoStepVerificationStatus()) {
+                    int otp = Utils.generateOtp();
+                    String otpMessage = "Dear user, your SmartStay Login OTP is " + otp + ". Use this OTP to verify your login. Do not share it with anyone. - SmartStay";
+                    otpService.insertOTP(users, otp);
+                    if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+                        otpService.sendOtp(users.getMobileNo(), otpMessage);
+                    } else {
+                        System.out.println("ignoring....");
+                    }
+
+                    OtpRequired otpRequired = new OtpRequired(true, users.getUserId());
+                    return new ResponseEntity<>(otpRequired, HttpStatus.OK);
                 }
 
-                OtpRequired otpRequired = new OtpRequired(true, users.getUserId());
-                return new ResponseEntity<>(otpRequired, HttpStatus.OK);
+                HashMap<String, Object> claims = new HashMap<>();
+                claims.put("userId", users.getUserId());
+                claims.put("role", rolesRepository.findById(users.getRoleId()).orElse(new RolesV1()).getRoleName());
+                return new ResponseEntity<>(jwtService.generateToken(authentication.getName(), claims), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
             }
-
-            HashMap<String, Object> claims = new HashMap<>();
-            claims.put("userId", users.getUserId());
-            claims.put("role", rolesRepository.findById(users.getRoleId()).orElse(new RolesV1()).getRoleName());
-            return new ResponseEntity<>(jwtService.generateToken(authentication.getName(), claims), HttpStatus.OK);
-        } else {
+        }
+        else {
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
+
     }
 
     public ResponseEntity<Object> verifyOtp(VerifyOtpPayloads verifyOtp) {

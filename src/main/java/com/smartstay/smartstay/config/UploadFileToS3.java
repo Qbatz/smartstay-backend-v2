@@ -41,4 +41,22 @@ public class UploadFileToS3 {
 
         return fileName;
     }
+
+    public String uploadFileToS3(File file, String folderName) {
+
+        AmazonS3 s3 = AWSConfig.setupS3Client(accessKey, secretKey);
+
+        PutObjectRequest request = new PutObjectRequest(bucketName, folderName + "/" + file.getName(), file);
+        PutObjectResult result = s3.putObject(request);
+
+        String fileName = s3.getUrl(bucketName, folderName + "/" + file.getName()).toString();
+//
+        try {
+            Files.delete(Paths.get(file.toURI()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return fileName;
+    }
 }
