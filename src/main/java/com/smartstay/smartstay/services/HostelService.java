@@ -3,12 +3,11 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.HostelsMapper;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.HostelImages;
-import com.smartstay.smartstay.dao.HostelV1;
-import com.smartstay.smartstay.dao.Subscription;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
+import com.smartstay.smartstay.repositories.UserHostelRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.Hostels;
 import com.smartstay.smartstay.responses.ZohoSubscription;
@@ -44,6 +43,9 @@ public class HostelService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private UserHostelRepository userHostelRepo;
+
     public ResponseEntity<?> addHostel(MultipartFile mainImage, List<MultipartFile> additionalImages, AddHostelPayloads payloads) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -52,16 +54,16 @@ public class HostelService {
         }
         String userId = authentication.getName();
         String emailId = payloads.emailId();
+        Users users = userRepository.findUserByUserId(userId);
 
         if (payloads.emailId() == null || payloads.emailId().equalsIgnoreCase("")) {
-            emailId = userRepository.findUserByUserId(userId).getEmailId();
+            emailId = users.getEmailId();
         }
         else if (!Utils.verifyEmail(payloads.emailId())) {
             emailId = userRepository.findUserByUserId(userId).getEmailId();
         }
 
         ZohoSubscriptionRequest request = formSubscription(payloads, emailId);
-
 
         HostelV1 hostelV1 = new HostelV1();
         hostelV1.setHostelId(hostelIdGenerator());
@@ -109,6 +111,8 @@ public class HostelService {
             subscription.setHostel(hostelV1);
             hostelV1.setSubscription(subscription);
             hostelV1Repository.save(hostelV1);
+            mapUserHostel(userId, hostelV1.getHostelId());
+
             return new ResponseEntity<>("Created successfully", HttpStatus.CREATED);
         }
         else {
@@ -157,6 +161,19 @@ public class HostelService {
         List<Hostels> list = listHotels.stream().map(hostelV1 -> new HostelsMapper().apply(hostelV1)).toList();
 
         return new ResponseEntity<>(list, HttpStatus.OK);
+    }
+
+
+    public List<UserHostel> fetchAllHostels(String userId) {
+        return userHostelRepo.findByUserId(userId);
+    }
+
+    public void mapUserHostel(String userId, String hostelId) {
+        UserHostel userHostel = new UserHostel();
+        userHostel.setHostleId(hostelId);
+        userHostel.setUserId(userId);
+
+        userHostelRepo.save(userHostel);
     }
 }
 

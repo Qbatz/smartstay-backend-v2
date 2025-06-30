@@ -39,4 +39,6 @@ public class HostelV1 {
 
     @OneToMany(mappedBy = "hostel", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HostelImages> additionalImages;
+
+
 }
