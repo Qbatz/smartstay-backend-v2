@@ -14,5 +14,5 @@ public class UserHostel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     private String userId;
-    private String hostleId;
+    private String hostelId;
 }

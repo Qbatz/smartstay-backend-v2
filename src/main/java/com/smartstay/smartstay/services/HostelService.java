@@ -1,31 +1,26 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.HostelsMapper;
+import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
+import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.repositories.UserHostelRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.Hostels;
-import com.smartstay.smartstay.responses.ZohoSubscription;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,9 +41,12 @@ public class HostelService {
     @Autowired
     private UserHostelRepository userHostelRepo;
 
+    @Autowired
+    private Authentication authentication;
+
     public ResponseEntity<?> addHostel(MultipartFile mainImage, List<MultipartFile> additionalImages, AddHostelPayloads payloads) {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -164,16 +162,45 @@ public class HostelService {
     }
 
 
-    public List<UserHostel> fetchAllHostels(String userId) {
-        return userHostelRepo.findByUserId(userId);
+    public ResponseEntity<?> fetchAllHostels() {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user", HttpStatus.OK);
+        }
+        String userId = authentication.getName();
+
+        List<Hostels> listOfHostels = userHostelRepo.findByUserId(userId).stream().map(item -> new HostelsMapper().apply(Objects.requireNonNull(hostelV1Repository.findById(item.getHostelId()).orElse(null)))).toList();
+
+        return new ResponseEntity<>(listOfHostels, HttpStatus.OK);
     }
 
     public void mapUserHostel(String userId, String hostelId) {
         UserHostel userHostel = new UserHostel();
-        userHostel.setHostleId(hostelId);
+        userHostel.setHostelId(hostelId);
         userHostel.setUserId(userId);
-
         userHostelRepo.save(userHostel);
+    }
+
+    public ResponseEntity<?> deleteHostelFromUser(RemoveUserFromHostel removeUserPayload) {
+        UserHostel userHostel = userHostelRepo.findByUserIdAndHostelId(removeUserPayload.userId(), removeUserPayload.hostelId());
+
+        userHostelRepo.delete(userHostel);
+        return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
+    }
+
+    public ResponseEntity<?> deleteHostel(String hostelId) {
+        HostelV1 hostelV1 = hostelV1Repository.findById(hostelId).orElse(null);
+        assert hostelV1 != null;
+        hostelV1Repository.delete(hostelV1);
+
+        List<UserHostel> listUserHostel = userHostelRepo.findAllByHostelId(hostelId);
+        if (listUserHostel != null) {
+            userHostelRepo.deleteAll(listUserHostel);
+        }
+
+        if (hostelV1 != null) {
+            return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
+        }
+        return new ResponseEntity<>("No hostels found", HttpStatus.BAD_REQUEST);
     }
 }
 

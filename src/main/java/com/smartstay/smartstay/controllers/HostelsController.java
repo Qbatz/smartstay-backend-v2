@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
+import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
 import com.smartstay.smartstay.services.HostelService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -13,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("hostels/v2")
+@RequestMapping("v2/hostel")
 @SecurityScheme(
         name = "Authorization",
         type = SecuritySchemeType.HTTP,
@@ -26,13 +27,25 @@ public class HostelsController {
     @Autowired
     HostelService hostelService;
 
-    @PostMapping("/")
+    @PostMapping("")
     public ResponseEntity<?> addHostel(@RequestPart MultipartFile mainImage, @RequestPart List<MultipartFile> additionalImages, @RequestPart AddHostelPayloads payloads) {
         return hostelService.addHostel(mainImage, additionalImages, payloads);
     }
 
-    @GetMapping("/")
+    @GetMapping("")
     public ResponseEntity<?> getAllHostels() {
-        return hostelService.getAllHostels();
+        return hostelService.fetchAllHostels();
     }
+
+    @DeleteMapping("remove-user")
+    public ResponseEntity<?> deletedHostelFromUser(@RequestBody RemoveUserFromHostel removeUserPayload) {
+        return hostelService.deleteHostelFromUser(removeUserPayload);
+    }
+
+    @DeleteMapping("/{hostelId}")
+    public ResponseEntity<?> deleteHostel(@PathVariable("hostelId") String hostelId) {
+        return hostelService.deleteHostel(hostelId);
+    }
+
+
 }
