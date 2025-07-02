@@ -1,13 +1,13 @@
 package com.smartstay.smartstay.dao;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.Date;
+import java.util.List;
 
 @Entity
 @Setter
@@ -17,8 +17,8 @@ import lombok.Setter;
 public class HostelV1 {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String hostelId;
+    private int hostelType;
     private String hostelName;
     private String mobile;
     private String emailId;
@@ -26,8 +26,18 @@ public class HostelV1 {
     private String houseNo;
     private String street;
     private String landmark;
-    private String pincode;
+    private int pincode;
     private String city;
     private String state;
-    private String country;
+    private int country;
+    private String createdBy;
+    private Date createdAt;
+    private Date updatedAt;
+
+    @OneToOne(mappedBy = "hostel", cascade = CascadeType.ALL)
+    private Subscription subscription;
+
+    @OneToMany(mappedBy = "hostel", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<HostelImages> additionalImages;
+
 }

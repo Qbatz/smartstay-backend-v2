@@ -67,6 +67,7 @@ public class JWTService {
     }
 
     private Claims extractAllClaims(String token) {
+        System.out.println(token);
         return Jwts.parserBuilder()
                 .setSigningKey(getKey())
                 .build().parseClaimsJws(token).getBody();

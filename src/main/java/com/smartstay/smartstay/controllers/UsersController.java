@@ -11,14 +11,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("api/v2/users")
 @CrossOrigin("*")
 public class UsersController {
 
     @Autowired
     UsersService userService;
 
-    @PostMapping("/")
+    @PostMapping("")
     public ResponseEntity<com.smartstay.smartstay.responses.CreateAccount> createAccount(@Valid @RequestBody CreateAccount createAccount) {
         return userService.createAccount(createAccount);
     }

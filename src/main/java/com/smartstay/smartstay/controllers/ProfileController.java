@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/profile")
+@RequestMapping("api/v2/profile")
 @SecurityScheme(
         name = "Authorization",
         type = SecuritySchemeType.HTTP,
@@ -24,12 +24,12 @@ public class ProfileController {
     @Autowired
     UsersService usersService;
 
-    @GetMapping("/")
+    @GetMapping("")
     public ResponseEntity<Object> getProfileInformation() {
         return usersService.getProfileInformation();
     }
 
-    @PutMapping("/")
+    @PutMapping("")
     public ResponseEntity<Object> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart("profilePic") MultipartFile profilePic) {
         return usersService.updateProfileInformations(updateProfile, profilePic);
     }
