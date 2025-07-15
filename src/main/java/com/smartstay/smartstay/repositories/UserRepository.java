@@ -6,12 +6,19 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+import java.util.Optional;
+
 public interface UserRepository extends JpaRepository<Users, String> {
 
 
     Users findUserByEmailId(String emailId);
 
     Users findUserByUserId(String userId);
+
+    Users findUserByParentId(String parentId);
+
+    List<Users> findAllByParentId(String parentId);
 
     @Query(value = """
                 SELECT 
@@ -35,6 +42,10 @@ public interface UserRepository extends JpaRepository<Users, String> {
                 WHERE usr.user_id = :userId
             """, nativeQuery = true)
     LoginUsersDetails getLoginUserDetails(@Param("userId") String userId);
+
+    Optional<Users> findByEmailIdOrMobileNo(String emailId, String mobileNo);
+    boolean existsByEmailId(String emailId);
+    boolean existsByMobileNo(String mobileNo);
 
 
 }

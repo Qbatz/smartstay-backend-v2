@@ -16,4 +16,9 @@ public interface UserHostelRepository extends JpaRepository<UserHostel, Integer>
 
     List<UserHostel> findAllByHostelId(String hostelId);
 
+    List<UserHostel> findAllByParentId(String parentId);
+
+    @Query(value = "select * from user_hostel where parent_id=:parentId group by user_id", nativeQuery = true)
+    List<UserHostel> findAllUserFromParentId(String parentId);
+
 }

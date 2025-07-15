@@ -40,13 +40,13 @@ public class JWTFilter extends OncePerRequestFilter {
         }
 
         if (userName != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            System.out.println(userName);
             UserDetails details = context.getBean(MyUserDetailService.class).loadUserByUsername(userName);
 
             if (jwtService.validateToken(token, details)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
 
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+//                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                authToken.setDetails(jwtService.extractAllClaims(token));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }

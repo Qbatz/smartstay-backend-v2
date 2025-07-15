@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("api/v2/users")
+@RequestMapping("v2/users")
 @CrossOrigin("*")
 public class UsersController {
 
