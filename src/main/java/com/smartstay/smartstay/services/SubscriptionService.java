@@ -86,11 +86,7 @@ public class SubscriptionService {
             ResponseEntity<AuthTokenResponse> response = restTemplate.exchange(
                     url, HttpMethod.POST, entity, AuthTokenResponse.class);
 
-            System.out.println("Raw response: " + response.getBody());
-
-
             if (response.getStatusCode() == HttpStatus.OK) {
-                System.out.println("Access Token: " + response.getBody().getAccessToken());
                 credentials.setAuthToken(response.getBody().getAccessToken());
 //
                 credentialsRepo.save(credentials);

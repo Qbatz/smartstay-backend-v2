@@ -30,6 +30,7 @@ public class HostelV1 {
     private String city;
     private String state;
     private int country;
+    private String parentId;
     private String createdBy;
     private Date createdAt;
     private Date updatedAt;

@@ -1,14 +1,13 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.AddAdminUsersMapper;
 import com.smartstay.smartstay.Wrappers.ProfileUplodWrapper;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.Address;
-import com.smartstay.smartstay.dao.RolesV1;
-import com.smartstay.smartstay.dao.UserOtp;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.*;
+import com.smartstay.smartstay.repositories.RolesPermissionRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
@@ -29,10 +28,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
 
 @Service
 public class UsersService {
@@ -49,6 +45,9 @@ public class UsersService {
     RolesRepository rolesRepository;
 
     @Autowired
+    RolesPermissionServie rolesPermissionService;
+
+    @Autowired
     JWTService jwtService;
 
     @Autowired
@@ -56,6 +55,12 @@ public class UsersService {
 
     @Value("ENVIRONMENT")
     private String environment;
+
+    @Autowired
+    private com.smartstay.smartstay.config.Authentication authentication;
+
+    @Autowired
+    private UserHostelService userHostelService;
 
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
@@ -80,6 +85,7 @@ public class UsersService {
                 users.setEmailId(createAccount.mailId());
                 users.setRoleId(1);
                 users.setCountry(1L);
+                users.setParentId(configUUID());
                 users.setEmailAuthenticationStatus(false);
                 users.setSmsAuthenticationStatus(false);
                 users.setEmailAuthenticationStatus(false);
@@ -113,7 +119,7 @@ public class UsersService {
 
     public ResponseEntity<Object> login(Login login) {
         Users users = userRepository.findUserByEmailId(login.emailId());
-
+        System.out.println(users);
         if (users != null) {
             Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
 
@@ -124,8 +130,6 @@ public class UsersService {
                     otpService.insertOTP(users, otp);
                     if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
                         otpService.sendOtp(users.getMobileNo(), otpMessage);
-                    } else {
-                        System.out.println("ignoring....");
                     }
 
                     OtpRequired otpRequired = new OtpRequired(true, users.getUserId());
@@ -251,5 +255,82 @@ public class UsersService {
 
         userRepository.save(usersForUpdate);
         return new ResponseEntity<>("Updated Successfully", HttpStatus.OK);
+    }
+
+    public boolean checkUUID(String uuid) {
+        if (userRepository.findUserByParentId(uuid) == null) {
+            return false;
+        }
+        return true;
+    }
+
+    public String configUUID() {
+        String uuid = Utils.generateRandomUUID();
+        if (!checkUUID(uuid)) {
+            return uuid;
+        }
+        return configUUID();
+    }
+
+    public ResponseEntity<?> createAdmin(AddAdminPayload createAccount, MultipartFile file) {
+        if (authentication.isAuthenticated()) {
+            Users users = userRepository.findUserByUserId(authentication.getName());
+
+            if (users != null) {
+                RolesPermission rolesPermission = rolesPermissionService.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PROFILE).orElse(null);
+
+                if (rolesPermission == null || !rolesPermission.isCanWrite()) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
+                if (userRepository.existsByEmailId(createAccount.mailId())) {
+                    return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);
+                }
+                if (userRepository.existsByMobileNo(createAccount.mobile())) {
+                    return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                }
+                else {
+
+                    Users adminUser  = new Users();
+                    adminUser.setCreatedBy(users.getUserId());
+                    adminUser.setParentId(users.getParentId());
+                    adminUser.setPassword(encoder.encode(createAccount.password()));
+
+                    String profilePic = null;
+                    if (file != null && !file.isEmpty()) {
+                        profilePic = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file));
+                    }
+
+                    if (profilePic != null && !profilePic.equalsIgnoreCase("")) {
+                        adminUser.setProfileUrl(profilePic);
+                    }
+
+                    adminUser = new AddAdminUsersMapper(adminUser).apply(createAccount);
+                    userRepository.save(adminUser);
+
+                    Users user = userRepository.findUserByEmailId(createAccount.mailId());
+                    if (user != null) {
+                        userHostelService.addUserToExistingHostel(users.getParentId(), user.getUserId());
+                    }
+
+
+                    return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+                }
+            }
+            else {
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+
+        }
+        else {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    public Users findUserByUserId(String userId) {
+        return userRepository.findUserByUserId(userId);
+    }
+
+    public List<Users> findAllByParentId(String parentId) {
+        return userRepository.findAllByParentId(parentId);
     }
 }

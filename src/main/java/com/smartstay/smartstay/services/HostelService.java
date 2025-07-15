@@ -36,13 +36,17 @@ public class HostelService {
     private SubscriptionService subscriptionService;
 
     @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private UserHostelRepository userHostelRepo;
-
-    @Autowired
     private Authentication authentication;
+
+    @Autowired
+    private RolesPermissionServie rolesPermission;
+
+    @Autowired
+    private UserHostelService userHostelService;
+
+    @Autowired
+    private UsersService usersService;
+
 
     public ResponseEntity<?> addHostel(MultipartFile mainImage, List<MultipartFile> additionalImages, AddHostelPayloads payloads) {
 
@@ -51,14 +55,21 @@ public class HostelService {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
+
         String emailId = payloads.emailId();
-        Users users = userRepository.findUserByUserId(userId);
+        Users users = usersService.findUserByUserId(userId);
+
+        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
+
+        if (roles == null || !roles.isCanWrite()) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
 
         if (payloads.emailId() == null || payloads.emailId().equalsIgnoreCase("")) {
             emailId = users.getEmailId();
         }
         else if (!Utils.verifyEmail(payloads.emailId())) {
-            emailId = userRepository.findUserByUserId(userId).getEmailId();
+            emailId = usersService.findUserByUserId(userId).getEmailId();
         }
 
         ZohoSubscriptionRequest request = formSubscription(payloads, emailId);
@@ -66,6 +77,7 @@ public class HostelService {
         HostelV1 hostelV1 = new HostelV1();
         hostelV1.setHostelId(hostelIdGenerator());
         hostelV1.setCreatedBy(userId);
+        hostelV1.setParentId(users.getParentId());
         hostelV1.setHostelType(1);
         hostelV1.setHostelName(payloads.hostelName());
         hostelV1.setCity(payloads.city());
@@ -109,7 +121,16 @@ public class HostelService {
             subscription.setHostel(hostelV1);
             hostelV1.setSubscription(subscription);
             hostelV1Repository.save(hostelV1);
-            mapUserHostel(userId, hostelV1.getHostelId());
+//            mapUserHostel(userId, hostelV1.getHostelId(), users.getParentId());
+
+            int result = userHostelService.addHostelToExistingUsers(users.getParentId(), hostelV1.getHostelId());
+
+            if (result == 100) {
+                List<Users> listUsers = usersService.findAllByParentId(users.getParentId());
+                if (listUsers != null) {
+                    userHostelService.addHostelToExistingUsers(users.getParentId(), listUsers, hostelV1.getHostelId());
+                }
+            }
 
             return new ResponseEntity<>("Created successfully", HttpStatus.CREATED);
         }
@@ -167,35 +188,50 @@ public class HostelService {
             return new ResponseEntity<>("Invalid user", HttpStatus.OK);
         }
         String userId = authentication.getName();
+        Users users = usersService.findUserByUserId(userId);
 
-        List<Hostels> listOfHostels = userHostelRepo.findByUserId(userId).stream().map(item -> new HostelsMapper().apply(Objects.requireNonNull(hostelV1Repository.findById(item.getHostelId()).orElse(null)))).toList();
+        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
+        if (roles == null || !roles.isCanRead()) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<Hostels> listOfHostels = userHostelService.findByUserId(userId).stream().map(item -> new HostelsMapper().apply(Objects.requireNonNull(hostelV1Repository.findById(item.getHostelId()).orElse(null)))).toList();
 
         return new ResponseEntity<>(listOfHostels, HttpStatus.OK);
     }
 
-    public void mapUserHostel(String userId, String hostelId) {
-        UserHostel userHostel = new UserHostel();
-        userHostel.setHostelId(hostelId);
-        userHostel.setUserId(userId);
-        userHostelRepo.save(userHostel);
-    }
-
     public ResponseEntity<?> deleteHostelFromUser(RemoveUserFromHostel removeUserPayload) {
-        UserHostel userHostel = userHostelRepo.findByUserIdAndHostelId(removeUserPayload.userId(), removeUserPayload.hostelId());
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user", HttpStatus.OK);
+        }
+        String userId = authentication.getName();
+        Users users = usersService.findUserByUserId(userId);
 
-        userHostelRepo.delete(userHostel);
+        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
+        if (roles == null || !roles.isCanDelete()) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+       userHostelService.deleteUserFromHostel(removeUserPayload.userId(), removeUserPayload.hostelId());
         return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
     }
 
     public ResponseEntity<?> deleteHostel(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user", HttpStatus.OK);
+        }
+        String userId = authentication.getName();
+        Users users = usersService.findUserByUserId(userId);
+
+        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
+        if (roles == null || !roles.isCanDelete()) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
         HostelV1 hostelV1 = hostelV1Repository.findById(hostelId).orElse(null);
         assert hostelV1 != null;
         hostelV1Repository.delete(hostelV1);
 
-        List<UserHostel> listUserHostel = userHostelRepo.findAllByHostelId(hostelId);
-        if (listUserHostel != null) {
-            userHostelRepo.deleteAll(listUserHostel);
-        }
+        userHostelService.deleteAllHostels(hostelId);
 
         if (hostelV1 != null) {
             return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);

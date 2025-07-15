@@ -15,4 +15,6 @@ public class UserHostel {
     private int id;
     private String userId;
     private String hostelId;
+    private String parentId;
+
 }

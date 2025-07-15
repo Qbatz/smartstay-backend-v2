@@ -20,6 +20,7 @@ public class Users {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String userId;
+    private String parentId;
     private String firstName;
     private String lastName;
     private String mobileNo;
@@ -28,6 +29,7 @@ public class Users {
     private String profileUrl;
     private int roleId;
     private Long country;
+    private String createdBy;
     private boolean twoStepVerificationStatus;
     private boolean emailAuthenticationStatus;
     private boolean smsAuthenticationStatus;

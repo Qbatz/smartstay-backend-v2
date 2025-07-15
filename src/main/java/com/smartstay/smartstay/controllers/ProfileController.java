@@ -1,10 +1,13 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.AddAdminPayload;
+import com.smartstay.smartstay.payloads.CreateAccount;
 import com.smartstay.smartstay.payloads.UpdateUserProfilePayloads;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,5 +35,10 @@ public class ProfileController {
     @PutMapping("")
     public ResponseEntity<Object> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart("profilePic") MultipartFile profilePic) {
         return usersService.updateProfileInformations(updateProfile, profilePic);
+    }
+
+    @PostMapping("/add-admin")
+    public ResponseEntity<?> addAdminUser(@Valid @RequestPart("accountInfo") AddAdminPayload createAccount, @RequestPart("profilePic") MultipartFile profilePic) {
+        return usersService.createAdmin(createAccount, profilePic);
     }
 }
