@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("api/v2/profile")
+@RequestMapping("v2/profile")
 @SecurityScheme(
         name = "Authorization",
         type = SecuritySchemeType.HTTP,
