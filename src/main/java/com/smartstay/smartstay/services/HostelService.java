@@ -9,6 +9,7 @@ import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
+import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserHostelRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.Hostels;
@@ -38,8 +39,13 @@ public class HostelService {
     @Autowired
     private Authentication authentication;
 
+//    @Autowired
+//    private RolesPermissionServie rolesPermission;
+//    @Autowired
+//    private RolesRepository rolesRepository;
+
     @Autowired
-    private RolesPermissionServie rolesPermission;
+    private RolesService rolesService;
 
     @Autowired
     private UserHostelService userHostelService;
@@ -59,9 +65,7 @@ public class HostelService {
         String emailId = payloads.emailId();
         Users users = usersService.findUserByUserId(userId);
 
-        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
-
-        if (roles == null || !roles.isCanWrite()) {
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
@@ -190,8 +194,7 @@ public class HostelService {
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
 
-        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
-        if (roles == null || !roles.isCanRead()) {
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
@@ -207,10 +210,10 @@ public class HostelService {
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
 
-        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
-        if (roles == null || !roles.isCanDelete()) {
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
        userHostelService.deleteUserFromHostel(removeUserPayload.userId(), removeUserPayload.hostelId());
         return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
     }
@@ -222,8 +225,7 @@ public class HostelService {
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
 
-        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
-        if (roles == null || !roles.isCanDelete()) {
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 

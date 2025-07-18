@@ -7,6 +7,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @SpringBootApplication
 public class SmartstayApplication {
 
@@ -18,11 +21,33 @@ public class SmartstayApplication {
 	CommandLineRunner loadData(RolesRepository rolesRepository) {
 		return args -> {
 //			RolesV1 v1 = new RolesV1();
-//			v1.setRoleName("Smartstay - Admin");
+//			v1.setRoleName("Smartstay - Super Admin");
+//			List<RolesPermission> listPermissions1 = new ArrayList<>();
+//			for (int i=1; i<20; i++) {
+//				RolesPermission pr1 = new RolesPermission();
+//				pr1.setCanUpdate(true);
+//				pr1.setCanRead(true);
+//				pr1.setCanWrite(true);
+//				pr1.setCanDelete(true);
+//				pr1.setModuleId(i);
+//				listPermissions1.add(pr1);
+//			}
+//			v1.setPermissions(listPermissions1);
 //			rolesRepository.save(v1);
 //
 //			RolesV1 v2 = new RolesV1();
-//			v2.setRoleName("Admin");
+//			v2.setRoleName("Smartstay - Admin");
+//			List<RolesPermission> listPermissions2 = new ArrayList<>();
+//			for (int i=1; i<20; i++) {
+//				RolesPermission pr2 = new RolesPermission();
+//				pr2.setModuleId(i);
+//				pr2.setCanUpdate(false);
+//				pr2.setCanRead(true);
+//				pr2.setCanWrite(true);
+//				pr2.setCanDelete(false);
+//				listPermissions2.add(pr2);
+//			}
+//			v2.setPermissions(listPermissions2);
 //			rolesRepository.save(v2);
 
 		};
@@ -85,9 +110,9 @@ public class SmartstayApplication {
 		};
 	}
 
-	@Bean
-	CommandLineRunner addPermissions(RolesPermissionRepository rolesPermissionRepo) {
-		return args -> {
+//	@Bean
+//	CommandLineRunner addPermissions(RolesPermissionRepository rolesPermissionRepo) {
+//		return args -> {
 
 //			RolesPermission rolesPermission101 = new RolesPermission();
 //			rolesPermission101.setRoleId(1);
@@ -431,8 +456,8 @@ public class SmartstayApplication {
 //			rolesPermission19.setCanUpdate(false);
 //			rolesPermissionRepo.save(rolesPermission19);
 
-		};
-	}
+//		};
+//	}
 
 	@Bean
 	CommandLineRunner addModules(ModulesRepository modulesRepository) {
