@@ -41,8 +41,11 @@ public class HostelService {
 
 //    @Autowired
 //    private RolesPermissionServie rolesPermission;
+//    @Autowired
+//    private RolesRepository rolesRepository;
+
     @Autowired
-    private RolesRepository rolesRepository;
+    private RolesService rolesService;
 
     @Autowired
     private UserHostelService userHostelService;
@@ -61,21 +64,8 @@ public class HostelService {
 
         String emailId = payloads.emailId();
         Users users = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
 
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        List<RolesPermission> rolesPermissionsList = rolesV1.getPermissions().stream().filter(item -> item.getModuleId() == Utils.MODULE_ID_PAYING_GUEST).toList();
-        RolesPermission roles = null;
-        if (!rolesPermissionsList.isEmpty()) {
-            roles = rolesPermissionsList.get(0);
-        }
-
-//        RolesPermission roles1 = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
-
-        if (roles == null || !roles.isCanWrite()) {
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
@@ -204,20 +194,7 @@ public class HostelService {
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
 
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
-
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        List<RolesPermission> rolesPermissionsList = rolesV1.getPermissions().stream().filter(item -> item.getModuleId() == Utils.MODULE_ID_PAYING_GUEST).toList();
-        RolesPermission roles = null;
-        if (!rolesPermissionsList.isEmpty()) {
-            roles = rolesPermissionsList.get(0);
-        }
-
-//        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
-        if (roles == null || !roles.isCanRead()) {
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
@@ -233,21 +210,10 @@ public class HostelService {
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
 
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
-
-        if (rolesV1 == null) {
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<RolesPermission> rolesPermissionsList = rolesV1.getPermissions().stream().filter(item -> item.getModuleId() == Utils.MODULE_ID_PAYING_GUEST).toList();
-        RolesPermission roles = null;
-        if (!rolesPermissionsList.isEmpty()) {
-            roles = rolesPermissionsList.get(0);
-        }
-//        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
-        if (roles == null || !roles.isCanDelete()) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
        userHostelService.deleteUserFromHostel(removeUserPayload.userId(), removeUserPayload.hostelId());
         return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
     }
@@ -259,20 +225,7 @@ public class HostelService {
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
 
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
-
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        List<RolesPermission> rolesPermissionsList = rolesV1.getPermissions().stream().filter(item -> item.getModuleId() == Utils.MODULE_ID_PAYING_GUEST).toList();
-        RolesPermission roles = null;
-        if (!rolesPermissionsList.isEmpty()) {
-            roles = rolesPermissionsList.get(0);
-        }
-
-//        RolesPermission roles = rolesPermission.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST).orElse(null);
-        if (roles == null || !roles.isCanDelete()) {
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 

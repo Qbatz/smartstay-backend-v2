@@ -24,6 +24,12 @@ public class Utils {
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
 
+    public static final String PERMISSION_READ = "READ";
+    public static final String PERMISSION_WRITE = "WRITE";
+    public static final String PERMISSION_UPDATE = "UPDATE";
+    public static final String PERMISSION_DELETE = "DELETE";
+
+
     /**
      *  Defining module Id's here
      *
