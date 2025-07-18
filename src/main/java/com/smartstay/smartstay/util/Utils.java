@@ -18,6 +18,8 @@ public class Utils {
 
     public static final String ACCESS_RESTRICTED = "Access Restricted";
     public static final String UN_AUTHORIZED = "Unauthorized";
+    public static final String INVALID = "Invalid";
+    public static final String UPDATED = "Updated Successfully";
     public static final String CREATED = "Created Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";

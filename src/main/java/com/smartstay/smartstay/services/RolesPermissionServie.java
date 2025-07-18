@@ -21,4 +21,6 @@ public class RolesPermissionServie {
     public Optional<RolesPermission> checkRoleAccess(int roleId, int moduleId) {
         return rolesPermissionRepository.findByRoleIdAndModuleId(roleId, moduleId);
     }
+
+
 }
