@@ -7,7 +7,6 @@ import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.*;
-import com.smartstay.smartstay.repositories.RolesPermissionRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
@@ -15,7 +14,6 @@ import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -47,6 +45,7 @@ public class UsersService {
     @Autowired
     RolesPermissionServie rolesPermissionService;
 
+
     @Autowired
     JWTService jwtService;
 
@@ -74,6 +73,7 @@ public class UsersService {
 
     public ResponseEntity<com.smartstay.smartstay.responses.CreateAccount> createAccount(CreateAccount createAccount) {
 
+        System.out.println("reached --->");
         Users usr = userRepository.findUserByEmailId(createAccount.mailId());
         if (usr == null) {
             if (createAccount.password().equalsIgnoreCase(createAccount.confirmPassword())) {
@@ -277,7 +277,16 @@ public class UsersService {
             Users users = userRepository.findUserByUserId(authentication.getName());
 
             if (users != null) {
-                RolesPermission rolesPermission = rolesPermissionService.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PROFILE).orElse(null);
+                RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
+                if (rolesV1 == null) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
+                List<RolesPermission> lisRoles = rolesV1.getPermissions().stream().filter(item -> item.getModuleId() == Utils.MODULE_ID_PROFILE).toList();
+                RolesPermission rolesPermission = null;
+                if (!lisRoles.isEmpty()) {
+                    rolesPermission = lisRoles.get(0);
+                }
+//                RolesPermission rolesPermission1 = rolesPermissionService.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PROFILE).orElse(null);
 
                 if (rolesPermission == null || !rolesPermission.isCanWrite()) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
