@@ -7,7 +7,7 @@ import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.roles.AddRoles;
-import com.smartstay.smartstay.payloads.UpdateRoles;
+import com.smartstay.smartstay.payloads.roles.UpdateRoles;
 import com.smartstay.smartstay.payloads.roles.Permission;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.responses.Roles;
@@ -136,6 +136,16 @@ public class RolesService {
         if (updatedRole.isDeleted()!=null){
             existingRole.setIsDeleted(updatedRole.isDeleted());
         }
+        if (updatedRole.permissionList() != null && !updatedRole.permissionList().isEmpty()) {
+            Map<Integer, Permission> incomingPermissions = updatedRole.permissionList().stream()
+                    .collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
+
+            List<RolesPermission> finalPermissions = Arrays.stream(ModuleId.values())
+                    .map(module -> updatePermission(module.getId(), incomingPermissions, existingRole.getPermissions()))
+                    .collect(Collectors.toList());
+
+            existingRole.setPermissions(finalPermissions);
+        }
         existingRole.setUpdatedAt(new Date());
         rolesRepository.save(existingRole);
         return new ResponseEntity<>(Utils.UPDATED,HttpStatus.OK);
@@ -176,6 +186,23 @@ public class RolesService {
         role.setPermissions(rolesPermissions);
         rolesRepository.save(role);
         return new ResponseEntity<>(Utils.CREATED,HttpStatus.CREATED);
+    }
+    public ResponseEntity<?> deleteRoleById(int roleId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users users = usersService.findUserByUserId(userId);
+        if (!checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        RolesV1 existingRole = rolesRepository.findById(roleId).orElse(null);
+        if (existingRole != null) {
+            rolesRepository.delete(existingRole);
+            return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
+        }
+        return new ResponseEntity<>("No Roles found", HttpStatus.BAD_REQUEST);
+
     }
 
     public boolean checkPermission(int roleId, int moduleId, String type) {
@@ -225,6 +252,30 @@ public class RolesService {
 
         return result;
     }
+
+
+    private RolesPermission updatePermission(
+            int moduleId,
+            Map<Integer, Permission> incomingPermissions,
+            List<RolesPermission> existingPermissions
+    ) {
+        Permission incoming = incomingPermissions.get(moduleId);
+
+        RolesPermission existingDB = existingPermissions.stream()
+                .filter(p -> p.getModuleId() == moduleId)
+                .findFirst()
+                .orElse(new RolesPermission());
+
+        RolesPermission merged = new RolesPermission();
+        merged.setModuleId(moduleId);
+        merged.setCanRead(incoming != null && incoming.canRead() != null ? incoming.canRead() : existingDB.isCanRead());
+        merged.setCanWrite(incoming != null && incoming.canWrite() != null ? incoming.canWrite() : existingDB.isCanWrite());
+        merged.setCanUpdate(incoming != null && incoming.canUpdate() != null ? incoming.canUpdate() : existingDB.isCanUpdate());
+        merged.setCanDelete(incoming != null && incoming.canDelete() != null ? incoming.canDelete() : existingDB.isCanDelete());
+
+        return merged;
+    }
+
 
 
 }
