@@ -29,8 +29,6 @@ public class RolesService {
     @Autowired
     ModulesRepository modulesRepository;
     @Autowired
-    JWTService jwtService;
-    @Autowired
     private Authentication authentication;
     @Autowired
     private RolesPermissionServie rolesPermission;
