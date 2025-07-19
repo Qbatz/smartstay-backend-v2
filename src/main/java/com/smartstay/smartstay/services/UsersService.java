@@ -119,7 +119,6 @@ public class UsersService {
 
     public ResponseEntity<Object> login(Login login) {
         Users users = userRepository.findUserByEmailId(login.emailId());
-        System.out.println(users);
         if (users != null) {
             Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
 

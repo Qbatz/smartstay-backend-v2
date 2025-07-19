@@ -1,7 +1,8 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.payloads.AddRoles;
-import com.smartstay.smartstay.payloads.UpdateRoles;
+import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
+import com.smartstay.smartstay.payloads.roles.AddRoles;
+import com.smartstay.smartstay.payloads.roles.UpdateRoles;
 import com.smartstay.smartstay.services.RolesService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -40,5 +41,10 @@ public class RolesController {
     @PutMapping("/{roleId}")
     public ResponseEntity<?> updateRole(@PathVariable("roleId") int roleId, @RequestBody UpdateRoles updateRoles) {
         return rolesService.updateRoleById(roleId, updateRoles);
+    }
+
+    @DeleteMapping("remove-role/{roleId}")
+    public ResponseEntity<?> deleteRoleById(@PathVariable("roleId") int roleId) {
+        return rolesService.deleteRoleById(roleId);
     }
 }
