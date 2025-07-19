@@ -5,8 +5,10 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.RolesPermission;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
-import com.smartstay.smartstay.payloads.AddRoles;
+import com.smartstay.smartstay.ennum.ModuleId;
+import com.smartstay.smartstay.payloads.roles.AddRoles;
 import com.smartstay.smartstay.payloads.UpdateRoles;
+import com.smartstay.smartstay.payloads.roles.Permission;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.responses.Roles;
 import com.smartstay.smartstay.util.Utils;
@@ -15,8 +17,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class RolesService {
@@ -163,12 +166,14 @@ public class RolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         RolesV1 role = new RolesV1();
+        List<RolesPermission> rolesPermissions = permissionInsertion(roleData.permissionList());
         role.setCreatedAt(new Date());
         role.setUpdatedAt(new Date());
         role.setIsActive(true);
         role.setIsDeleted(false);
         role.setRoleName(roleData.roleName());
         role.setParentId(user.getParentId());
+        role.setPermissions(rolesPermissions);
         rolesRepository.save(role);
         return new ResponseEntity<>(Utils.CREATED,HttpStatus.CREATED);
     }
@@ -199,6 +204,26 @@ public class RolesService {
         }
 
         return false;
+    }
+
+    private List<RolesPermission> permissionInsertion(List<Permission> inputPermissions) {
+        Map<Integer, Permission> permissionMap = inputPermissions.stream()
+                .collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
+
+        List<RolesPermission> result = new ArrayList<>();
+
+        for (ModuleId module : ModuleId.values()) {
+            Permission p = permissionMap.get(module.getId());
+            RolesPermission rp = new RolesPermission();
+            rp.setModuleId(module.getId());
+            rp.setCanRead(p != null && Boolean.TRUE.equals(p.canRead()));
+            rp.setCanWrite(p != null && Boolean.TRUE.equals(p.canWrite()));
+            rp.setCanUpdate(p != null && Boolean.TRUE.equals(p.canUpdate()));
+            rp.setCanDelete(p != null && Boolean.TRUE.equals(p.canDelete()));
+            result.add(rp);
+        }
+
+        return result;
     }
 
 

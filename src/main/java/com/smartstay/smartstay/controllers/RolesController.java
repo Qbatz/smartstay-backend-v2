@@ -1,6 +1,6 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.payloads.AddRoles;
+import com.smartstay.smartstay.payloads.roles.AddRoles;
 import com.smartstay.smartstay.payloads.UpdateRoles;
 import com.smartstay.smartstay.services.RolesService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
