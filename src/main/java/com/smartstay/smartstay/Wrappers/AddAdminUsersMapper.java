@@ -2,7 +2,7 @@ package com.smartstay.smartstay.Wrappers;
 
 import com.smartstay.smartstay.dao.Address;
 import com.smartstay.smartstay.dao.Users;
-import com.smartstay.smartstay.payloads.AddAdminPayload;
+import com.smartstay.smartstay.payloads.account.AddAdminPayload;
 
 import java.util.Date;
 import java.util.function.Function;
