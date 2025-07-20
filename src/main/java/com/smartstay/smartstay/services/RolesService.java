@@ -7,10 +7,11 @@ import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.roles.AddRoles;
-import com.smartstay.smartstay.payloads.roles.UpdateRoles;
 import com.smartstay.smartstay.payloads.roles.Permission;
+import com.smartstay.smartstay.payloads.roles.UpdateRoles;
+import com.smartstay.smartstay.repositories.ModulesRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
-import com.smartstay.smartstay.responses.Roles;
+import com.smartstay.smartstay.responses.roles.Roles;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -27,7 +28,7 @@ public class RolesService {
     @Autowired
     RolesRepository rolesRepository;
     @Autowired
-    JWTService jwtService;
+    ModulesRepository modulesRepository;
     @Autowired
     private Authentication authentication;
 
@@ -44,32 +45,21 @@ public class RolesService {
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-//        RolesPermission permission = rolesPermission.checkRoleAccess(user.getRoleId(), Utils.MODULE_ID_PROFILE).orElse(null);
         Users users = usersService.findUserByUserId(userId);
-
         RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
-
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-
-        List<RolesPermission> rolesPermissionsList = rolesV1.getPermissions().stream().filter(item -> item.getModuleId() == Utils.MODULE_ID_PAYING_GUEST).toList();
-        RolesPermission roles = null;
-        if (!rolesPermissionsList.isEmpty()) {
-            roles = rolesPermissionsList.get(0);
-        }
-
-        if (roles == null || !roles.isCanRead()){
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<RolesV1> listRoles = rolesRepository.findAllByParentId(user.getParentId());
-        List<Roles> rolesList = listRoles.stream().map(item ->
-            new RolesMapper().apply(item)).toList();
+        List<Roles> rolesList = listRoles.stream().map(item -> new RolesMapper(modulesRepository).apply(item)).toList();
         return new ResponseEntity<>(rolesList, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getRoleById(Integer id) {
-        if (id==null || id==0){
+        if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
         if (!authentication.isAuthenticated()) {
@@ -82,23 +72,16 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-
-        List<RolesPermission> rolesPermissionsList = rolesV1.getPermissions().stream().filter(item -> item.getModuleId() == Utils.MODULE_ID_PAYING_GUEST).toList();
-        RolesPermission roles = null;
-        if (!rolesPermissionsList.isEmpty()) {
-            roles = rolesPermissionsList.get(0);
-        }
-//        RolesPermission permission = rolesPermission.checkRoleAccess(user.getRoleId(), Utils.MODULE_ID_PROFILE).orElse(null);
-        if (roles == null || !roles.isCanRead()){
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         RolesV1 v1 = rolesRepository.findById(id).orElse(null);
-        if (v1 != null){
-            Roles rolesData = new RolesMapper().apply(v1);
+        if (v1 != null) {
+            Roles rolesData = new RolesMapper(modulesRepository).apply(v1);
             return new ResponseEntity<>(rolesData, HttpStatus.OK);
         }
 
-        return new ResponseEntity<>(Utils.INVALID,HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
 
     }
 
@@ -108,50 +91,36 @@ public class RolesService {
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-
-//        Users user = usersService.findUserByUserId(userId);
         RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
-
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-
-        List<RolesPermission> rolesPermissionsList = rolesV1.getPermissions().stream().filter(item -> item.getModuleId() == Utils.MODULE_ID_PAYING_GUEST).toList();
-        RolesPermission roles = null;
-        if (!rolesPermissionsList.isEmpty()) {
-            roles = rolesPermissionsList.get(0);
-        }
-
-//        RolesPermission permission = rolesPermission.checkRoleAccess(user.getRoleId(), Utils.MODULE_ID_PROFILE).orElse(null);
-        if (roles == null || !roles.isCanUpdate()){
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         RolesV1 existingRole = rolesRepository.findById(roleId).orElse(null);
         if (existingRole == null) {
-            return new ResponseEntity<>(Utils.INVALID,HttpStatus.NO_CONTENT);
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
-        if (updatedRole.roleName()!=null && !updatedRole.roleName().isEmpty()){
+        if (updatedRole.roleName() != null && !updatedRole.roleName().isEmpty()) {
             existingRole.setRoleName(updatedRole.roleName());
         }
-        if (updatedRole.isActive()!=null){
+        if (updatedRole.isActive() != null) {
             existingRole.setIsActive(updatedRole.isActive());
         }
-        if (updatedRole.isDeleted()!=null){
+        if (updatedRole.isDeleted() != null) {
             existingRole.setIsDeleted(updatedRole.isDeleted());
         }
         if (updatedRole.permissionList() != null && !updatedRole.permissionList().isEmpty()) {
-            Map<Integer, Permission> incomingPermissions = updatedRole.permissionList().stream()
-                    .collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
+            Map<Integer, Permission> incomingPermissions = updatedRole.permissionList().stream().collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
 
-            List<RolesPermission> finalPermissions = Arrays.stream(ModuleId.values())
-                    .map(module -> updatePermission(module.getId(), incomingPermissions, existingRole.getPermissions()))
-                    .collect(Collectors.toList());
+            List<RolesPermission> finalPermissions = Arrays.stream(ModuleId.values()).map(module -> updatePermission(module.getId(), incomingPermissions, existingRole.getPermissions())).collect(Collectors.toList());
 
             existingRole.setPermissions(finalPermissions);
         }
         existingRole.setUpdatedAt(new Date());
         rolesRepository.save(existingRole);
-        return new ResponseEntity<>(Utils.UPDATED,HttpStatus.OK);
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
 
@@ -161,21 +130,11 @@ public class RolesService {
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-
         RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
-
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-
-        List<RolesPermission> rolesPermissionsList = rolesV1.getPermissions().stream().filter(item -> item.getModuleId() == Utils.MODULE_ID_PAYING_GUEST).toList();
-        RolesPermission roles = null;
-        if (!rolesPermissionsList.isEmpty()) {
-            roles = rolesPermissionsList.get(0);
-        }
-
-//        RolesPermission permission = rolesPermission.checkRoleAccess(user.getRoleId(), Utils.MODULE_ID_PROFILE).orElse(null);
-        if (roles == null || !roles.isCanWrite()){
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         RolesV1 role = new RolesV1();
@@ -188,8 +147,9 @@ public class RolesService {
         role.setParentId(user.getParentId());
         role.setPermissions(rolesPermissions);
         rolesRepository.save(role);
-        return new ResponseEntity<>(Utils.CREATED,HttpStatus.CREATED);
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
+
     public ResponseEntity<?> deleteRoleById(int roleId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
@@ -215,7 +175,7 @@ public class RolesService {
             List<RolesPermission> rolesPermission = roles.getPermissions();
             if (!rolesPermission.isEmpty()) {
                 List<RolesPermission> filteredPermission = rolesPermission.stream().filter(item -> item.getModuleId() == moduleId).toList();
-                System.out.println(filteredPermission.toString());
+                System.out.println(filteredPermission);
                 if (!filteredPermission.isEmpty()) {
                     if (type.equalsIgnoreCase(Utils.PERMISSION_READ)) {
                         return filteredPermission.get(0).isCanRead();
@@ -237,8 +197,7 @@ public class RolesService {
     }
 
     private List<RolesPermission> permissionInsertion(List<Permission> inputPermissions) {
-        Map<Integer, Permission> permissionMap = inputPermissions.stream()
-                .collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
+        Map<Integer, Permission> permissionMap = inputPermissions.stream().collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
 
         List<RolesPermission> result = new ArrayList<>();
 
@@ -257,17 +216,10 @@ public class RolesService {
     }
 
 
-    private RolesPermission updatePermission(
-            int moduleId,
-            Map<Integer, Permission> incomingPermissions,
-            List<RolesPermission> existingPermissions
-    ) {
+    private RolesPermission updatePermission(int moduleId, Map<Integer, Permission> incomingPermissions, List<RolesPermission> existingPermissions) {
         Permission incoming = incomingPermissions.get(moduleId);
 
-        RolesPermission existingDB = existingPermissions.stream()
-                .filter(p -> p.getModuleId() == moduleId)
-                .findFirst()
-                .orElse(new RolesPermission());
+        RolesPermission existingDB = existingPermissions.stream().filter(p -> p.getModuleId() == moduleId).findFirst().orElse(new RolesPermission());
 
         RolesPermission merged = new RolesPermission();
         merged.setModuleId(moduleId);
@@ -282,7 +234,7 @@ public class RolesService {
     public boolean checkRoleId(int roleId) {
         return rolesRepository.existsByRoleId(roleId);
     }
-
+  
     public String findById(int roleId) {
         RolesV1 rolesV1 = rolesRepository.findById(roleId).orElse(null);
         if (rolesV1 != null) {
