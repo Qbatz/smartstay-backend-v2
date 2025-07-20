@@ -7,6 +7,10 @@ import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.*;
+import com.smartstay.smartstay.payloads.account.AddAdminPayload;
+import com.smartstay.smartstay.payloads.account.AddAdminUser;
+import com.smartstay.smartstay.payloads.account.CreateAccount;
+import com.smartstay.smartstay.payloads.account.Login;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
@@ -40,9 +44,6 @@ public class UsersService {
     AuthenticationManager authManager;
 
     @Autowired
-    RolesRepository rolesRepository;
-
-    @Autowired
     RolesPermissionServie rolesPermissionService;
 
 
@@ -60,6 +61,9 @@ public class UsersService {
 
     @Autowired
     private UserHostelService userHostelService;
+
+    @Autowired
+    private RolesService rolesService;
 
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
@@ -137,7 +141,7 @@ public class UsersService {
 
                 HashMap<String, Object> claims = new HashMap<>();
                 claims.put("userId", users.getUserId());
-                claims.put("role", rolesRepository.findById(users.getRoleId()).orElse(new RolesV1()).getRoleName());
+                claims.put("role", rolesService.findById(users.getRoleId()));
                 return new ResponseEntity<>(jwtService.generateToken(authentication.getName(), claims), HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(HttpStatus.FORBIDDEN);
@@ -154,7 +158,7 @@ public class UsersService {
         if (users != null && users.getOtpValidity().after(new Date())) {
             HashMap<String, Object> claims = new HashMap<>();
             claims.put("userId", users.getUsers().getUserId());
-            claims.put("role", rolesRepository.findById(users.getUsers().getRoleId()).orElse(new RolesV1()).getRoleName());
+            claims.put("role", rolesService.findById(users.getUsers().getRoleId()));
             return new ResponseEntity<>(jwtService.generateToken(users.getUsers().getEmailId(), claims), HttpStatus.OK);
         } else if (users != null && users.getOtpValidity().before(new Date())) {
             return new ResponseEntity<>("Otp expired.", HttpStatus.BAD_REQUEST);
@@ -276,18 +280,7 @@ public class UsersService {
             Users users = userRepository.findUserByUserId(authentication.getName());
 
             if (users != null) {
-                RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
-                if (rolesV1 == null) {
-                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-                }
-                List<RolesPermission> lisRoles = rolesV1.getPermissions().stream().filter(item -> item.getModuleId() == Utils.MODULE_ID_PROFILE).toList();
-                RolesPermission rolesPermission = null;
-                if (!lisRoles.isEmpty()) {
-                    rolesPermission = lisRoles.get(0);
-                }
-//                RolesPermission rolesPermission1 = rolesPermissionService.checkRoleAccess(users.getRoleId(), Utils.MODULE_ID_PROFILE).orElse(null);
-
-                if (rolesPermission == null || !rolesPermission.isCanWrite()) {
+                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
                 if (userRepository.existsByEmailId(createAccount.mailId())) {
@@ -297,7 +290,6 @@ public class UsersService {
                     return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
                 }
                 else {
-
                     Users adminUser  = new Users();
                     adminUser.setCreatedBy(users.getUserId());
                     adminUser.setParentId(users.getParentId());
@@ -340,5 +332,55 @@ public class UsersService {
 
     public List<Users> findAllByParentId(String parentId) {
         return userRepository.findAllByParentId(parentId);
+    }
+
+    public ResponseEntity<?> createAdminUser(AddAdminUser adminUser) {
+        if (authentication.isAuthenticated()) {
+            Users users = userRepository.findUserByUserId(authentication.getName());
+            if (users != null) {
+                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_WRITE)) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
+                if (userRepository.existsByEmailId(adminUser.emailId())) {
+                    return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);
+                }
+                if (userRepository.existsByMobileNo(adminUser.mobile())) {
+                    return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                }
+                if (!rolesService.checkRoleId(adminUser.roleId())) {
+                    return new ResponseEntity<>(Utils.INVALID_ROLE, HttpStatus.BAD_REQUEST);
+                }
+                else {
+                    Users admin = new Users();
+                    admin.setMobileNo(adminUser.mobile());
+                    admin.setEmailId(adminUser.emailId());
+                    admin.setPassword(encoder.encode(adminUser.password()));
+                    admin.setParentId(users.getParentId());
+                    admin.setDescription(adminUser.description());
+                    admin.setFirstName(adminUser.name());
+                    admin.setRoleId(adminUser.roleId());
+                    admin.setCreatedBy(users.getUserId());
+                    admin.setCreatedAt(new Date());
+                    admin.setCountry(1L);
+                    admin.setActive(true);
+                    admin.setDeleted(false);
+
+                    userRepository.save(admin);
+
+                    Users user = userRepository.findUserByEmailId(adminUser.emailId());
+                    if (user != null) {
+                        userHostelService.addUserToExistingHostel(users.getParentId(), user.getUserId());
+                    }
+
+                    return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+                }
+            }
+            else {
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+        }
+        else {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
     }
 }

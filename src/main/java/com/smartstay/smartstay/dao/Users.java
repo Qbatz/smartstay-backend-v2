@@ -37,6 +37,7 @@ public class Users {
     private boolean isDeleted;
     private Date createdAt;
     private Date lastUpdate;
+    private String description;
 
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)

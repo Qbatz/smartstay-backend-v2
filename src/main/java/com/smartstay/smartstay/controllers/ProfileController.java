@@ -1,8 +1,8 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.payloads.AddAdminPayload;
-import com.smartstay.smartstay.payloads.CreateAccount;
+import com.smartstay.smartstay.payloads.account.AddAdminPayload;
 import com.smartstay.smartstay.payloads.UpdateUserProfilePayloads;
+import com.smartstay.smartstay.payloads.account.AddAdminUser;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -40,5 +40,10 @@ public class ProfileController {
     @PostMapping("/add-admin")
     public ResponseEntity<?> addAdminUser(@Valid @RequestPart("accountInfo") AddAdminPayload createAccount, @RequestPart("profilePic") MultipartFile profilePic) {
         return usersService.createAdmin(createAccount, profilePic);
+    }
+
+    @PostMapping("/add-user")
+    public ResponseEntity<?> addUser(@Valid @RequestBody AddAdminUser adminUser) {
+        return usersService.createAdminUser(adminUser);
     }
 }

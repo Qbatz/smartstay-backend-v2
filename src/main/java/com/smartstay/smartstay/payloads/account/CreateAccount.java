@@ -1,4 +1,4 @@
-package com.smartstay.smartstay.payloads;
+package com.smartstay.smartstay.payloads.account;
 
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotBlank;

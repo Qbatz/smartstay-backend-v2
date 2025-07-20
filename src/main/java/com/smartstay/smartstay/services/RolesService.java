@@ -14,6 +14,7 @@ import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.responses.roles.Roles;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -30,11 +31,13 @@ public class RolesService {
     ModulesRepository modulesRepository;
     @Autowired
     private Authentication authentication;
-    @Autowired
-    private RolesPermissionServie rolesPermission;
-    @Autowired
+
     private UsersService usersService;
 
+    @Autowired
+    public void setUsersService(@Lazy  UsersService usersService) {
+        this.usersService = usersService;
+    }
 
     public ResponseEntity<?> getAllRoles() {
         if (!authentication.isAuthenticated()) {
@@ -228,5 +231,15 @@ public class RolesService {
         return merged;
     }
 
-
+    public boolean checkRoleId(int roleId) {
+        return rolesRepository.existsByRoleId(roleId);
+    }
+  
+    public String findById(int roleId) {
+        RolesV1 rolesV1 = rolesRepository.findById(roleId).orElse(null);
+        if (rolesV1 != null) {
+            return rolesV1.getRoleName();
+        }
+        return null;
+    }
 }

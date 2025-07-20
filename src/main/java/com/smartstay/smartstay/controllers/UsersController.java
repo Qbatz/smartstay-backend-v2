@@ -1,7 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.payloads.CreateAccount;
-import com.smartstay.smartstay.payloads.Login;
+import com.smartstay.smartstay.payloads.account.CreateAccount;
+import com.smartstay.smartstay.payloads.account.Login;
 import com.smartstay.smartstay.payloads.Password;
 import com.smartstay.smartstay.payloads.VerifyOtpPayloads;
 import com.smartstay.smartstay.services.UsersService;
