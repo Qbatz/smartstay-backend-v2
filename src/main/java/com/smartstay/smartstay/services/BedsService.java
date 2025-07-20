@@ -1,17 +1,12 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.FloorsMapper;
+import com.smartstay.smartstay.Wrappers.BedsMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.Floors;
-import com.smartstay.smartstay.dao.HostelV1;
-import com.smartstay.smartstay.dao.RolesV1;
-import com.smartstay.smartstay.dao.Users;
-import com.smartstay.smartstay.payloads.floor.AddFloors;
-import com.smartstay.smartstay.payloads.floor.UpdateFloor;
-import com.smartstay.smartstay.repositories.FloorRepository;
-import com.smartstay.smartstay.repositories.HostelV1Repository;
-import com.smartstay.smartstay.repositories.RolesRepository;
-import com.smartstay.smartstay.responses.floors.FloorsResponse;
+import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.payloads.beds.AddBed;
+import com.smartstay.smartstay.payloads.beds.UpdateBed;
+import com.smartstay.smartstay.repositories.*;
+import com.smartstay.smartstay.responses.beds.BedsResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,19 +15,18 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @Service
-public class FloorsService {
+public class BedsService {
 
     @Autowired
     RolesRepository rolesRepository;
 
     @Autowired
-    HostelV1Repository hostelV1Repository;
+    BedsRepository bedsRepository;
 
     @Autowired
-    FloorRepository floorRepository;
+    RoomRepository roomRepository;
     @Autowired
     private RolesService rolesService;
     @Autowired
@@ -40,7 +34,7 @@ public class FloorsService {
     @Autowired
     private UsersService usersService;
 
-    public ResponseEntity<?> getAllFloors(String hostelId) {
+    public ResponseEntity<?> getAllBeds(int roomId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -54,12 +48,12 @@ public class FloorsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<Floors> listFloor = floorRepository.findAllByHostelIdAndParentId(hostelId,user.getParentId());
-        List<FloorsResponse> floorsResponses = listFloor.stream().map(item -> new FloorsMapper().apply(item)).toList();
-        return new ResponseEntity<>(floorsResponses, HttpStatus.OK);
+        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId,users.getParentId());
+        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper().apply(item)).toList();
+        return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getFloorById(Integer id) {
+    public ResponseEntity<?> getBedById(Integer id) {
         if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
@@ -76,17 +70,17 @@ public class FloorsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Floors floors = floorRepository.findByFloorIdAndParentId(id,user.getParentId());
-        if (floors != null) {
-            FloorsResponse floorsResponse = new FloorsMapper().apply(floors);
-            return new ResponseEntity<>(floorsResponse, HttpStatus.OK);
+        Beds bed = bedsRepository.findByBedIdAndParentId(id,user.getParentId());
+        if (bed != null) {
+            BedsResponse bedsResponse = new BedsMapper().apply(bed);
+            return new ResponseEntity<>(bedsResponse, HttpStatus.OK);
+        }else {
+            return new ResponseEntity<>("Bed Doesn't exist", HttpStatus.BAD_REQUEST);
         }
-
-        return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
 
     }
 
-    public ResponseEntity<?> updateFloorById(int floorId, UpdateFloor updateFloor) {
+    public ResponseEntity<?> updateBedById(int bedId, UpdateBed updateBed) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -99,23 +93,23 @@ public class FloorsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Floors existingFloor = floorRepository.findByFloorIdAndParentId(floorId,user.getParentId());
-        if (existingFloor == null) {
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId,user.getParentId());
+        if (existingBed == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
-        if (updateFloor.floorName() != null && !updateFloor.floorName().isEmpty()) {
-            existingFloor.setFloorName(updateFloor.floorName());
+        if (updateBed.bedName() != null && !updateBed.bedName().isEmpty()) {
+            existingBed.setBedName(updateBed.bedName());
         }
-        if (updateFloor.isActive() != null) {
-            existingFloor.setIsActive(updateFloor.isActive());
+        if (updateBed.isActive() != null) {
+            existingBed.setIsActive(updateBed.isActive());
         }
-        existingFloor.setUpdatedAt(new Date());
-        floorRepository.save(existingFloor);
+        existingBed.setUpdatedAt(new Date());
+        bedsRepository.save(existingBed);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
 
-    public ResponseEntity<?> addFloor(AddFloors addFloors) {
+    public ResponseEntity<?> addBed(AddBed addBed) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -128,23 +122,24 @@ public class FloorsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        HostelV1 hostelV1 = hostelV1Repository.findByHostelIdAndParentId(addFloors.hostelId(),user.getParentId());
-        if (hostelV1==null){
-            return new ResponseEntity<>("Hostel Doesn't found", HttpStatus.BAD_REQUEST);
+        Rooms room = roomRepository.findByRoomIdAndParentId(addBed.roomId(),user.getParentId());
+        if (room==null){
+            return new ResponseEntity<>("Room Doesn't exist", HttpStatus.BAD_REQUEST);
         }
-        Floors floors = new Floors();
-        floors.setCreatedAt(new Date());
-        floors.setUpdatedAt(new Date());
-        floors.setParentId(user.getParentId());
-        floors.setIsActive(true);
-        floors.setIsDeleted(false);
-        floors.setFloorName(addFloors.floorName());
-        floors.setHostelId(addFloors.hostelId());
-        floorRepository.save(floors);
+
+        Beds beds = new Beds();
+        beds.setCreatedAt(new Date());
+        beds.setUpdatedAt(new Date());
+        beds.setIsActive(true);
+        beds.setIsDeleted(false);
+        beds.setBedName(addBed.bedName());
+        beds.setParentId(user.getParentId());
+        beds.setRoomId(addBed.roomId());
+        bedsRepository.save(beds);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
-    public ResponseEntity<?> deleteFloorById(int floorId) {
+    public ResponseEntity<?> deleteBedById(int roomId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -153,13 +148,12 @@ public class FloorsService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Floors existingFloor = floorRepository.findByFloorIdAndParentId(floorId,users.getParentId());
-        if (existingFloor != null) {
-            floorRepository.delete(existingFloor);
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(roomId,users.getParentId());
+        if (existingBed != null) {
+            bedsRepository.delete(existingBed);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
-        return new ResponseEntity<>("No Floor found", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>("No Bed found", HttpStatus.BAD_REQUEST);
 
     }
-
 }

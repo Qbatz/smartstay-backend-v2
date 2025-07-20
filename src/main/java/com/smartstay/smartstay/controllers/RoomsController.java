@@ -21,7 +21,7 @@ public class RoomsController {
     private RoomsService roomsService;
 
 
-    @GetMapping("/all-rooms/{floorId}")
+    @GetMapping("/all-floors/{floorId}")
     public ResponseEntity<?> getAllRooms(@PathVariable("floorId") int floorId) {
         return roomsService.getAllRooms(floorId);
     }
@@ -41,8 +41,8 @@ public class RoomsController {
         return roomsService.updateRoomById(roomId, updateRoom);
     }
 
-    @DeleteMapping("remove-room/{roomId}")
-    public ResponseEntity<?> deleteRoleById(@PathVariable("roomId") int roomId) {
+    @DeleteMapping("/{roomId}")
+    public ResponseEntity<?> deleteRoomById(@PathVariable("roomId") int roomId) {
         return roomsService.deleteRoomById(roomId);
     }
 }

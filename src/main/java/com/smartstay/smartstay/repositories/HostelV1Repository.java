@@ -9,4 +9,6 @@ import org.springframework.stereotype.Repository;
 public interface HostelV1Repository extends JpaRepository<HostelV1, String> {
 
     HostelV1 findByHostelId(String hostelId);
+
+    HostelV1 findByHostelIdAndParentId(String hostelId,String parentId);
 }
