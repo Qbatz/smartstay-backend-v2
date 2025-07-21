@@ -3,8 +3,6 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.RoomsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.payloads.floor.AddFloors;
-import com.smartstay.smartstay.payloads.floor.UpdateFloor;
 import com.smartstay.smartstay.payloads.rooms.AddRoom;
 import com.smartstay.smartstay.payloads.rooms.UpdateRoom;
 import com.smartstay.smartstay.repositories.FloorRepository;
@@ -20,7 +18,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class RoomsService {
@@ -57,7 +54,7 @@ public class RoomsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<Rooms> listRooms = roomRepository.findAllByFloorId(floorId);
+        List<Rooms> listRooms = roomRepository.findAllByFloorIdAndParentId(floorId,users.getParentId());
         List<RoomsResponse> roomsResponses = listRooms.stream().map(item -> new RoomsMapper().apply(item)).toList();
         return new ResponseEntity<>(roomsResponses, HttpStatus.OK);
     }
@@ -79,7 +76,7 @@ public class RoomsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Rooms rooms = roomRepository.findById(id).orElse(null);
+        Rooms rooms = roomRepository.findByRoomIdAndParentId(id,user.getParentId());
         if (rooms != null) {
             RoomsResponse roomsResponse = new RoomsMapper().apply(rooms);
             return new ResponseEntity<>(roomsResponse, HttpStatus.OK);
@@ -102,7 +99,7 @@ public class RoomsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Rooms existingRoom = roomRepository.findById(roomId).orElse(null);
+        Rooms existingRoom = roomRepository.findByRoomIdAndParentId(roomId,user.getParentId());
         if (existingRoom == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
@@ -111,9 +108,6 @@ public class RoomsService {
         }
         if (updateRoom.isActive() != null) {
             existingRoom.setIsActive(updateRoom.isActive());
-        }
-        if (updateRoom.isDeleted() != null) {
-            existingRoom.setIsDeleted(updateRoom.isDeleted());
         }
         existingRoom.setUpdatedAt(new Date());
         roomRepository.save(existingRoom);
@@ -134,12 +128,7 @@ public class RoomsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-
-        HostelV1 hostelV1 = hostelV1Repository.findByHostelId(addRoom.hostelId());
-        if (hostelV1==null){
-            return new ResponseEntity<>("Hostel Doesn't found", HttpStatus.BAD_REQUEST);
-        }
-        Floors floors = floorRepository.findByFloorId(addRoom.floorId());
+        Floors floors = floorRepository.findByFloorIdAndParentId(addRoom.floorId(),user.getParentId());
         if (floors==null){
             return new ResponseEntity<>("Floor Doesn't exist", HttpStatus.BAD_REQUEST);
         }
@@ -150,7 +139,7 @@ public class RoomsService {
         room.setIsActive(true);
         room.setIsDeleted(false);
         room.setRoomName(addRoom.roomName());
-        room.setHostelId(addRoom.hostelId());
+        room.setParentId(user.getParentId());
         room.setFloorId(addRoom.floorId());
         roomRepository.save(room);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -165,7 +154,7 @@ public class RoomsService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Rooms existingRoom = roomRepository.findById(roomId).orElse(null);
+        Rooms existingRoom = roomRepository.findByRoomIdAndParentId(roomId,users.getParentId());
         if (existingRoom != null) {
             roomRepository.delete(existingRoom);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
