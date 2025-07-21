@@ -14,17 +14,17 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Rooms {
+public class Beds {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer roomId;
-    private String roomName;
+    private Integer bedId;
+    private String bedName;
     private Boolean isActive;
     private Boolean isDeleted;
     private Date createdAt;
     private Date updatedAt;
     private String parentId;
-    private Integer floorId;
-
+    private Integer roomId;
+    private boolean isBooked;
 }
