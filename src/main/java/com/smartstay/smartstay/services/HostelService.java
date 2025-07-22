@@ -15,6 +15,7 @@ import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.Hostels;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -39,11 +40,8 @@ public class HostelService {
     @Autowired
     private Authentication authentication;
 
-//    @Autowired
-//    private RolesPermissionServie rolesPermission;
-//    @Autowired
-//    private RolesRepository rolesRepository;
-
+    @Value("ZOHO_SUBSCRIPTION_PLAN")
+    private String zohoPlan;
     @Autowired
     private RolesService rolesService;
 
@@ -159,7 +157,7 @@ public class HostelService {
         Calendar cal = Calendar.getInstance();
 
         ZohoSubscriptionRequest.Plan plan = new ZohoSubscriptionRequest.Plan();
-        plan.setPlan_code("one_day");
+        plan.setPlan_code(zohoPlan);
 
         ZohoSubscriptionRequest.Customer customer = new ZohoSubscriptionRequest.Customer();
         customer.setDisplay_name(payloads.hostelName());
