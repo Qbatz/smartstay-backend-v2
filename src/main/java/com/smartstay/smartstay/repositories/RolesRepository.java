@@ -10,5 +10,7 @@ public interface RolesRepository extends JpaRepository<RolesV1, Integer> {
 
     List<RolesV1> findAllByParentId(String parentId);
     RolesV1 findByRoleId(int roleId);
+
+    RolesV1 findByRoleIdAndParentId(int roleId,String parentId);
     boolean existsByRoleId(int roleId);
 }

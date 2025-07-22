@@ -50,7 +50,7 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<RolesV1> listRoles = rolesRepository.findAllByParentId(user.getParentId());
@@ -72,10 +72,10 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        RolesV1 v1 = rolesRepository.findById(id).orElse(null);
+        RolesV1 v1 = rolesRepository.findByRoleIdAndParentId(id,user.getParentId());
         if (v1 != null) {
             Roles rolesData = new RolesMapper(modulesRepository).apply(v1);
             return new ResponseEntity<>(rolesData, HttpStatus.OK);
@@ -95,21 +95,18 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        RolesV1 existingRole = rolesRepository.findById(roleId).orElse(null);
+        RolesV1 existingRole = rolesRepository.findByRoleIdAndParentId(roleId,user.getParentId());
         if (existingRole == null) {
-            return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         if (updatedRole.roleName() != null && !updatedRole.roleName().isEmpty()) {
             existingRole.setRoleName(updatedRole.roleName());
         }
         if (updatedRole.isActive() != null) {
             existingRole.setIsActive(updatedRole.isActive());
-        }
-        if (updatedRole.isDeleted() != null) {
-            existingRole.setIsDeleted(updatedRole.isDeleted());
         }
         if (updatedRole.permissionList() != null && !updatedRole.permissionList().isEmpty()) {
             Map<Integer, Permission> incomingPermissions = updatedRole.permissionList().stream().collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
@@ -134,7 +131,7 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         RolesV1 role = new RolesV1();
@@ -156,10 +153,10 @@ public class RolesService {
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
-        if (!checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
+        if (!checkPermission(users.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        RolesV1 existingRole = rolesRepository.findById(roleId).orElse(null);
+        RolesV1 existingRole = rolesRepository.findByRoleIdAndParentId(roleId,users.getParentId());
         if (existingRole != null) {
             rolesRepository.delete(existingRole);
             return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
