@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 public record AddBed(
         @NotNull(message = "Bed name is required") @NotEmpty(message = "Bed name is required") String bedName,
         @NotNull
-        int roomId
+        int roomId,
+        double amount
 ) {
 }

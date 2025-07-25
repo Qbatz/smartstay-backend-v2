@@ -19,7 +19,7 @@ public class Advance {
     private double paidAmount;
     private Date invoiceDate;
     private Date dueDate;
-    private int status;
+    private String status;
     private Date createdAt;
     private Date updatedAt;
     private String createdBy;

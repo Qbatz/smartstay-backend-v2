@@ -12,6 +12,5 @@ public record AddCustomer(@NotNull(message = "First name is required")
                           @NotNull(message = "city is required")
                           @NotEmpty(message = "city is required") String city,
                           @NotNull(message = "state is required")
-                          @NotEmpty(message = "state is required") String state,
-                          int type) {
+                          @NotEmpty(message = "state is required") String state) {
 }

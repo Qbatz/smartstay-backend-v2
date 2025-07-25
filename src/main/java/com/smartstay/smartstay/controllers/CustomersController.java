@@ -1,16 +1,15 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.account.AddCustomer;
+import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
@@ -27,8 +26,13 @@ public class CustomersController {
     @Autowired
     private CustomersService customersService;
 
-    @PostMapping("")
-    public ResponseEntity<?> getAllCustomers(@RequestPart MultipartFile file, @RequestPart AddCustomer payloads) {
+    @PostMapping("/check-in")
+    public ResponseEntity<?> getAllCustomers(@RequestPart(value = "file", required = false) MultipartFile file, @Valid @RequestPart AddCustomer payloads) {
         return customersService.createCustomer(file, payloads);
+    }
+
+    @PostMapping("/assign-bed")
+    public ResponseEntity<?> assignBed(@Valid @RequestBody AssignBed assignBed) {
+        return customersService.assignBed(assignBed);
     }
  }

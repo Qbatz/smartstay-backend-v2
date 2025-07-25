@@ -27,4 +27,7 @@ public class Beds {
     private String parentId;
     private Integer roomId;
     private boolean isBooked;
+    private double rentAmount;
+    private String status;
+    private Date freeFrom;
 }

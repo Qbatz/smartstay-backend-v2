@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.BedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
@@ -135,6 +136,10 @@ public class BedsService {
         beds.setBedName(addBed.bedName());
         beds.setParentId(user.getParentId());
         beds.setRoomId(addBed.roomId());
+        beds.setRentAmount(addBed.amount());
+        beds.setStatus(BedStatus.VACANT.name());
+        beds.setFreeFrom(new Date());
+        beds.setRentAmount(addBed.amount());
         bedsRepository.save(beds);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
@@ -155,5 +160,33 @@ public class BedsService {
         }
         return new ResponseEntity<>("No Bed found", HttpStatus.BAD_REQUEST);
 
+    }
+
+    public int addUserToBed(int bedId, String joiningDate) {
+        if (!authentication.isAuthenticated()) {
+            return 403;
+        }
+        String userId = authentication.getName();
+        Users users = usersService.findUserByUserId(userId);
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_WRITE)) {
+            return 401;
+        }
+
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId,users.getParentId());
+        if (existingBed != null) {
+            if (Utils.compareWithTodayDate(Utils.stringToDate(joiningDate))) {
+                existingBed.setBooked(true);
+                existingBed.setUpdatedAt(new Date());
+                existingBed.setFreeFrom(null);
+            }
+            else {
+                existingBed.setStatus(BedStatus.BOOKED.name());
+                existingBed.setBooked(true);
+                existingBed.setUpdatedAt(new Date());
+                existingBed.setFreeFrom(null);
+            }
+
+        }
+        return 1;
     }
 }
