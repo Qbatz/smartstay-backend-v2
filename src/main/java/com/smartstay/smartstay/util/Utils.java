@@ -24,6 +24,8 @@ public class Utils {
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
     public static final String INVALID_ROLE = "Invalid role";
+    public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
+    public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
 
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
@@ -94,5 +96,9 @@ public class Utils {
     public static String generateRandomUUID() {
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
+    }
+
+    public static int compareWithTwoDates(Date date1, Date date2) {
+        return date1.compareTo(date2);
     }
 }

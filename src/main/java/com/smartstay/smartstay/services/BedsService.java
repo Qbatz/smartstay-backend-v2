@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.BedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -33,6 +35,9 @@ public class BedsService {
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
+
+    @Autowired
+    private BookingsService bookingService;
 
     public ResponseEntity<?> getAllBeds(int roomId) {
         if (!authentication.isAuthenticated()) {
@@ -135,6 +140,11 @@ public class BedsService {
         beds.setBedName(addBed.bedName());
         beds.setParentId(user.getParentId());
         beds.setRoomId(addBed.roomId());
+        beds.setHostelId(addBed.hostelId());
+        beds.setRentAmount(addBed.amount());
+        beds.setStatus(BedStatus.VACANT.name());
+        beds.setFreeFrom(new Date());
+        beds.setRentAmount(addBed.amount());
         bedsRepository.save(beds);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
@@ -154,6 +164,73 @@ public class BedsService {
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>("No Bed found", HttpStatus.BAD_REQUEST);
+
+    }
+
+    //assign bed
+    public int addUserToBed(int bedId, String joiningDate) {
+        if (!authentication.isAuthenticated()) {
+            return 403;
+        }
+        String userId = authentication.getName();
+        Users users = usersService.findUserByUserId(userId);
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_WRITE)) {
+            return 401;
+        }
+
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId,users.getParentId());
+        if (existingBed != null) {
+            if (Utils.compareWithTodayDate(Utils.stringToDate(joiningDate))) {
+                existingBed.setBooked(true);
+                existingBed.setUpdatedAt(new Date());
+                existingBed.setFreeFrom(null);
+            }
+            else {
+                existingBed.setStatus(BedStatus.BOOKED.name());
+                existingBed.setBooked(true);
+                existingBed.setUpdatedAt(new Date());
+                existingBed.setFreeFrom(null);
+            }
+            bedsRepository.save(existingBed);
+
+        }
+        return 1;
+    }
+
+    public boolean isBedAvailable(int bedId, String parentId, Date date) {
+        Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
+        if (beds.getStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+            return true;
+        }
+        else if (beds.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+            return false;
+        }
+        else if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+            BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
+            if (bookingsV1.getLeavingDate() != null) {
+                if (Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), date) > 0) {
+                    return false;
+                }
+                else  {
+                    return true;
+                }
+            }
+
+        }
+        else if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
+            BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
+
+            if (bookingsV1.getLeavingDate() != null) {
+                if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), date) > 0) {
+                    return true;
+                }
+                else  {
+                    return false;
+                }
+            }
+        }
+
+        return true;
 
     }
 }

@@ -539,5 +539,46 @@ public class SmartstayApplication {
 //			modulesRepository.save(modules19);
 		};
 	}
+	@Bean
+	CommandLineRunner addPaymentStatus(PaymentStatusRepository paymentStatusRepository) {
+		return args -> {
+//			PaymentStatus paymentStatus = new PaymentStatus();
+//			paymentStatus.setStatus("Paid");
+//			paymentStatusRepository.save(paymentStatus);
+//
+//			PaymentStatus paymentStatus2 = new PaymentStatus();
+//			paymentStatus2.setStatus("Partially Paid");
+//			paymentStatusRepository.save(paymentStatus2);
+//
+//			PaymentStatus paymentStatus3 = new PaymentStatus();
+//			paymentStatus3.setStatus("Pending");
+//			paymentStatusRepository.save(paymentStatus3);
+		};
+	}
+
+	@Bean
+	CommandLineRunner addCustomersType(CustomerTypeRepository customerTypeRepository) {
+		return args -> {
+//			CustomersType customersType = new CustomersType();
+//			customersType.setActive(true);
+//			customersType.setType("Check in");
+//			customerTypeRepository.save(customersType);
+//
+//			CustomersType customersType2 = new CustomersType();
+//			customersType2.setActive(true);
+//			customersType2.setType("Booked in");
+//			customerTypeRepository.save(customersType2);
+//
+//			CustomersType customersType3 = new CustomersType();
+//			customersType3.setActive(true);
+//			customersType3.setType("Checked out");
+//			customerTypeRepository.save(customersType3);
+//
+//			CustomersType customersType4 = new CustomersType();
+//			customersType4.setActive(true);
+//			customersType4.setType("Walk in");
+//			customerTypeRepository.save(customersType4);
+		};
+	}
 
 }
