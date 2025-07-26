@@ -27,12 +27,17 @@ public class CustomersController {
     private CustomersService customersService;
 
     @PostMapping("/check-in")
-    public ResponseEntity<?> getAllCustomers(@RequestPart(value = "file", required = false) MultipartFile file, @Valid @RequestPart AddCustomer payloads) {
-        return customersService.createCustomer(file, payloads);
+    public ResponseEntity<?> createCustomer(@RequestPart(value = "profilePic", required = false) MultipartFile file, @Valid @RequestPart AddCustomer customer) {
+        return customersService.createCustomer(file, customer);
     }
 
     @PostMapping("/assign-bed")
     public ResponseEntity<?> assignBed(@Valid @RequestBody AssignBed assignBed) {
         return customersService.assignBed(assignBed);
+    }
+
+    @GetMapping("/{hostelId}")
+    public ResponseEntity<?> getAllCheckInCustomer(@PathVariable("hostelId") String hostelId) {
+        return customersService.getAllCheckInCustomers(hostelId);
     }
  }

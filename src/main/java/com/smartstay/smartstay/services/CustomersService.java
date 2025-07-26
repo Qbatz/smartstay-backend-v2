@@ -6,10 +6,7 @@ import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.Advance;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.Users;
-import com.smartstay.smartstay.ennum.AdvanceStatus;
-import com.smartstay.smartstay.ennum.CustomerStatus;
-import com.smartstay.smartstay.ennum.KycStatus;
-import com.smartstay.smartstay.ennum.ModuleId;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.repositories.CustomersRepository;
@@ -42,6 +39,9 @@ public class CustomersService {
 
     @Autowired
     private BookingsService bookingsService;
+
+    @Autowired
+    private UserHostelService userHostelService;
 
     public ResponseEntity<?> createCustomer(MultipartFile file, AddCustomer payloads) {
 
@@ -79,6 +79,7 @@ public class CustomersService {
         customers.setProfilePic(profileImage);
         customers.setKycStatus(KycStatus.PENDING.name());
         customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+        customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
         customers.setCountry(1L);
         customers.setCreatedBy(user.getUserId());
         customers.setCreatedAt(new Date());
@@ -123,8 +124,31 @@ public class CustomersService {
 
             bookingsService.assignBedToCustomer(assignBed);
 
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
         }
+        else {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+    }
+
+    public ResponseEntity<?> getAllCheckInCustomers(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+//        customersRepository.
+
         return null;
     }
 }

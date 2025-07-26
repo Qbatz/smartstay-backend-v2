@@ -119,4 +119,8 @@ public class UserHostelService {
         UserHostel userHostel = findByUserIdAndHostelId(userId, hostelId);
         userHostelRepo.delete(userHostel);
     }
+
+    public boolean checkHostelAccess(String userId, String hostelId) {
+        return userHostelRepo.findByUserIdAndHostelId(userId, hostelId) != null;
+    }
 }

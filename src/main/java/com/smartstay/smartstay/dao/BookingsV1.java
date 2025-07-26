@@ -19,12 +19,14 @@ public class BookingsV1 {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String bookingId;
     private Date joiningDate;
+    private Date leavingDate;
     private Double rentAmount;
     private Date createdAt;
     private Date updatedAt;
     private String createdBy;
     private String customerId;
     private String hostelId;
+    private String currretStatus;
     private int floorId;
     private int roomId;
     private int bedId;

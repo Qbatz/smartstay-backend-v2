@@ -27,6 +27,7 @@ public class Customers {
     private String state;
     private Long country;
     private String profilePic;
+    private String customerBedStatus;
     private Date joiningDate;
     private String currentStatus;
     private String kycStatus;

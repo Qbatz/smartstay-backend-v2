@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -34,6 +35,9 @@ public class BedsService {
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
+
+    @Autowired
+    private BookingsService bookingService;
 
     public ResponseEntity<?> getAllBeds(int roomId) {
         if (!authentication.isAuthenticated()) {
@@ -136,6 +140,7 @@ public class BedsService {
         beds.setBedName(addBed.bedName());
         beds.setParentId(user.getParentId());
         beds.setRoomId(addBed.roomId());
+        beds.setHostelId(addBed.hostelId());
         beds.setRentAmount(addBed.amount());
         beds.setStatus(BedStatus.VACANT.name());
         beds.setFreeFrom(new Date());
@@ -162,6 +167,7 @@ public class BedsService {
 
     }
 
+    //assign bed
     public int addUserToBed(int bedId, String joiningDate) {
         if (!authentication.isAuthenticated()) {
             return 403;
@@ -185,8 +191,46 @@ public class BedsService {
                 existingBed.setUpdatedAt(new Date());
                 existingBed.setFreeFrom(null);
             }
+            bedsRepository.save(existingBed);
 
         }
         return 1;
+    }
+
+    public boolean isBedAvailable(int bedId, String parentId, Date date) {
+        Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
+        if (beds.getStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+            return true;
+        }
+        else if (beds.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+            return false;
+        }
+        else if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+            BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
+            if (bookingsV1.getLeavingDate() != null) {
+                if (Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), date) > 0) {
+                    return false;
+                }
+                else  {
+                    return true;
+                }
+            }
+
+        }
+        else if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
+            BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
+
+            if (bookingsV1.getLeavingDate() != null) {
+                if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), date) > 0) {
+                    return true;
+                }
+                else  {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+
     }
 }
