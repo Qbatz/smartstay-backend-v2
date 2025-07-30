@@ -233,4 +233,8 @@ public class BedsService {
         return true;
 
     }
+
+    public boolean checkBedExistForRoom(int bedId, int roomId) {
+        return bedsRepository.findByBedIdAndRoomId(bedId, roomId) != null;
+    }
 }

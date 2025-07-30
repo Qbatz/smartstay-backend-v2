@@ -26,7 +26,7 @@ public class BookingsV1 {
     private String createdBy;
     private String customerId;
     private String hostelId;
-    private String currretStatus;
+    private String currentStatus;
     private int floorId;
     private int roomId;
     private int bedId;

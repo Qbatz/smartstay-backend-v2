@@ -14,4 +14,9 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
     Rooms findByRoomId(int roomId);
 
     Rooms findByRoomIdAndParentId(int roomId,String parentId);
+
+    Rooms findByRoomIdAndFloorId(int roomId,int floorId);
+
+
+
 }

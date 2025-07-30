@@ -4,11 +4,15 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.Advance;
+import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
+import com.smartstay.smartstay.payloads.customer.BookingRequest;
+import com.smartstay.smartstay.payloads.customer.CheckInRequest;
+import com.smartstay.smartstay.repositories.BookingsRepository;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,16 +33,28 @@ public class CustomersService {
     private CustomersRepository customersRepository;
 
     @Autowired
+    private BookingsService bookingsService;
+
+    @Autowired
     private RolesService rolesService;
 
     @Autowired
     private UsersService userService;
 
     @Autowired
-    private Authentication authentication;
+    private FloorsService floorsService;
 
     @Autowired
-    private BookingsService bookingsService;
+    private RoomsService roomsService;
+
+    @Autowired
+    private BedsService bedsService;
+
+
+
+
+    @Autowired
+    private Authentication authentication;
 
     @Autowired
     private UserHostelService userHostelService;
@@ -150,5 +166,148 @@ public class CustomersService {
 //        customersRepository.
 
         return null;
+    }
+
+    public ResponseEntity<?> createBooking(MultipartFile file, BookingRequest payloads, String hostelId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (customersRepository.existsByMobile(payloads.mobile())) {
+            return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
+        System.out.println("text---->>>"+hostelId);
+        if (!userHostelService.checkHostelAccess(user.getUserId(),hostelId)){
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        String profileImage = null;
+        if (file != null) {
+            profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "users/profile");
+        }
+
+        Customers customers = new Customers();
+        customers.setFirstName(payloads.firstName());
+        customers.setLastName(payloads.lastName());
+        customers.setMobile(payloads.mobile());
+        customers.setEmailId(payloads.mailId());
+        customers.setHouseNo(payloads.houseNo());
+        customers.setStreet(payloads.street());
+        customers.setLandmark(payloads.landmark());
+        customers.setPincode(payloads.pincode());
+        customers.setCity(payloads.city());
+        customers.setState(payloads.state());
+        customers.setCountry(customers.getCountry());
+        customers.setProfilePic(profileImage);
+        customers.setKycStatus(KycStatus.PENDING.name());
+        customers.setCurrentStatus(CustomerStatus.BOOKED.name());
+        customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
+        customers.setCountry(1L);
+        customers.setCreatedBy(user.getUserId());
+        customers.setCreatedAt(new Date());
+        customers.setExpJoiningDate(payloads.bookingDate());
+
+        Advance advance = new Advance();
+        advance.setCreatedAt(new Date());
+        advance.setCreatedBy(user.getCreatedBy());
+        advance.setAdvanceAmount(payloads.bookingAmount());
+        customers.setAdvance(advance);
+        Customers savedCustomer = customersRepository.save(customers);
+
+        BookingsV1 bookingsV1 = new BookingsV1();
+        bookingsV1.setHostelId(hostelId);
+        bookingsV1.setCustomerId(savedCustomer.getCustomerId());
+        bookingsV1.setCreatedAt(new Date());
+        bookingsV1.setUpdatedAt(new Date());
+        bookingsV1.setLeavingDate(null);
+        bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
+        bookingsService.saveBooking(bookingsV1);
+
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+
+    }
+
+    public ResponseEntity<?> addCheckIn(MultipartFile file, CheckInRequest payloads) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (customersRepository.existsByMobile(payloads.mobile())) {
+            return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), payloads.hostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!floorsService.checkFloorExistForHostel(payloads.floorId(), payloads.hostelId())) {
+            return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!roomsService.checkRoomExistForFloor(payloads.floorId(), payloads.roomId())) {
+            return new ResponseEntity<>(Utils.N0_ROOM_FOUND_FLOOR, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId())) {
+            return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.UNAUTHORIZED);
+        }
+
+        String profileImage = null;
+        if (file != null) {
+            profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "users/profile");
+        }
+
+        Customers customers = new Customers();
+        customers.setFirstName(payloads.firstName());
+        customers.setLastName(payloads.lastName());
+        customers.setMobile(payloads.mobile());
+        customers.setEmailId(payloads.mailId());
+        customers.setHouseNo(payloads.houseNo());
+        customers.setStreet(payloads.street());
+        customers.setLandmark(payloads.landmark());
+        customers.setPincode(payloads.pincode());
+        customers.setCity(payloads.city());
+        customers.setState(payloads.state());
+        customers.setCountry(customers.getCountry());
+        customers.setProfilePic(profileImage);
+        customers.setKycStatus(KycStatus.PENDING.name());
+        customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+        customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
+        customers.setCountry(1L);
+        customers.setCreatedBy(user.getUserId());
+        customers.setCreatedAt(new Date());
+        Customers savedCustomer = customersRepository.save(customers);
+
+        BookingsV1 bookingsV1 = new BookingsV1();
+        bookingsV1.setHostelId(payloads.hostelId());
+        bookingsV1.setBedId(payloads.bedId());
+        bookingsV1.setFloorId(payloads.floorId());
+        bookingsV1.setCustomerId(savedCustomer.getCustomerId());
+        bookingsV1.setCreatedAt(new Date());
+        bookingsV1.setUpdatedAt(new Date());
+        bookingsV1.setLeavingDate(null);
+        bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
+        bookingsV1.setRoomId(payloads.roomId());
+        bookingsV1.setJoiningDate(Utils.stringToDate(payloads.joiningDate()));
+        bookingsService.saveBooking(bookingsV1);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+
     }
 }

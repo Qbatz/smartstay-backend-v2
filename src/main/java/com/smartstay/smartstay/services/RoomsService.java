@@ -162,4 +162,8 @@ public class RoomsService {
         return new ResponseEntity<>("No Room found", HttpStatus.BAD_REQUEST);
 
     }
+
+    public boolean checkRoomExistForFloor(int floorId, int roomId) {
+        return roomRepository.findByRoomIdAndFloorId(roomId, floorId) != null;
+    }
 }

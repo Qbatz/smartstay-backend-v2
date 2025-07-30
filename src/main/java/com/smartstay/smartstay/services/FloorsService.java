@@ -162,4 +162,8 @@ public class FloorsService {
 
     }
 
+    public boolean checkFloorExistForHostel(int floorId, String hostelId) {
+        return floorRepository.findByFloorIdAndHostelId(floorId, hostelId) != null;
+    }
+
 }
