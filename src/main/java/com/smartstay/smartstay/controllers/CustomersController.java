@@ -2,6 +2,8 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
+import com.smartstay.smartstay.payloads.customer.BookingRequest;
+import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,8 +29,8 @@ public class CustomersController {
     private CustomersService customersService;
 
     @PostMapping("/check-in")
-    public ResponseEntity<?> createCustomer(@RequestPart(value = "profilePic", required = false) MultipartFile file, @Valid @RequestPart AddCustomer customer) {
-        return customersService.createCustomer(file, customer);
+    public ResponseEntity<?> createCustomer(@RequestPart(value = "profilePic", required = false) MultipartFile file, @Valid @RequestPart CheckInRequest payLoads) {
+        return customersService.addCheckIn(file, payLoads);
     }
 
     @PostMapping("/assign-bed")
@@ -39,5 +41,10 @@ public class CustomersController {
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getAllCheckInCustomer(@PathVariable("hostelId") String hostelId) {
         return customersService.getAllCheckInCustomers(hostelId);
+    }
+
+    @PostMapping("/add-booking/{hostelId}")
+    public ResponseEntity<?> createBooking(@PathVariable("hostelId") String hostelId,@RequestPart(value = "profilePic", required = false) MultipartFile file, @Valid @RequestPart BookingRequest bookingRequest) {
+        return customersService.createBooking(file, bookingRequest,hostelId);
     }
  }

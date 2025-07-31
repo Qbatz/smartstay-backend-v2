@@ -15,4 +15,6 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
     Floors findByFloorId(int floorId);
 
     Floors findByFloorIdAndParentId(int floorId,String parentId);
+
+    Floors findByFloorIdAndHostelId(int floorId,String hostelId);
 }

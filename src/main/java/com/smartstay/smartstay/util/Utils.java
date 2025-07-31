@@ -26,6 +26,9 @@ public class Utils {
     public static final String INVALID_ROLE = "Invalid role";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
+    public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
+    public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
+    public static final String N0_BED_FOUND_ROOM = "No bed found for the specified room.";
 
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
@@ -78,8 +81,12 @@ public class Utils {
     }
 
     public static String dateToString(Date date) {
+        if (date == null) {
+            return "";
+        }
         return new SimpleDateFormat(DATE_FORMAT).format(date);
     }
+
 
     public static boolean compareWithTodayDate(Date date2) {
         String dateString = new SimpleDateFormat(DATE_FORMAT).format(new Date());

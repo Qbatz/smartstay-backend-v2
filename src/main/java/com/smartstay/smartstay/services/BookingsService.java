@@ -5,7 +5,6 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.Bookings;
-import com.smartstay.smartstay.ennum.CustomerBedStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
@@ -16,7 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -48,7 +46,7 @@ public class BookingsService {
             bookings.setRentAmount(assignBed.rentalAmount());
             bookings.setCreatedAt(new Date());
             bookings.setCreatedBy(authentication.getName());
-            bookings.setCurrretStatus(CustomerStatus.CHECK_IN.name());
+            bookings.setCurrentStatus(CustomerStatus.CHECK_IN.name());
             bookings.setHostelId(assignBed.hostelId());
             bookings.setFloorId(assignBed.floorId());
             bookings.setRoomId(assignBed.roomId());
@@ -75,11 +73,8 @@ public class BookingsService {
             }
 
             List<Bookings> allCheckInList = bookingsRepository.findAllByHostelId(hostelId);
-            List<com.smartstay.smartstay.responses.bookings.Bookings> responseBookings = allCheckInList
-                    .stream()
-                    .map(item -> new BookingsMapper().apply(item))
-                    .toList();
-            return new ResponseEntity<>(allCheckInList, HttpStatus.OK);
+            List<com.smartstay.smartstay.responses.bookings.Bookings> responseBookings = allCheckInList.stream().map(item -> new BookingsMapper().apply(item)).toList();
+            return new ResponseEntity<>(responseBookings, HttpStatus.OK);
         }
 
         return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -88,5 +83,10 @@ public class BookingsService {
     public BookingsV1 checkLatestStatusForBed(int bedId) {
 
         return bookingsRepository.findLatestBooking(bedId);
+    }
+
+    public BookingsV1 saveBooking(BookingsV1 bookingsV1) {
+
+        return bookingsRepository.save(bookingsV1);
     }
 }

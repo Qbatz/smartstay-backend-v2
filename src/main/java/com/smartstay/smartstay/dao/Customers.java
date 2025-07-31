@@ -29,12 +29,13 @@ public class Customers {
     private String profilePic;
     private String customerBedStatus;
     private Date joiningDate;
+    private Date expJoiningDate;
     private String currentStatus;
     private String kycStatus;
     private String createdBy;
     private Date createdAt;
 
-    @OneToOne(mappedBy = "customers")
+    @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL)
     private Advance advance;
 
     @OneToOne(mappedBy = "customers")

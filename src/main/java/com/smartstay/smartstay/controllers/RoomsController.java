@@ -21,7 +21,7 @@ public class RoomsController {
     private RoomsService roomsService;
 
 
-    @GetMapping("/all-floors/{floorId}")
+    @GetMapping("/all-rooms/{floorId}")
     public ResponseEntity<?> getAllRooms(@PathVariable("floorId") int floorId) {
         return roomsService.getAllRooms(floorId);
     }
