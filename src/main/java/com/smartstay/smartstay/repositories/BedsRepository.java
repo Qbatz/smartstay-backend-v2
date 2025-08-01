@@ -10,7 +10,7 @@ public interface BedsRepository extends JpaRepository<Beds, Integer> {
     List<Beds> findAllByRoomIdAndParentId(int roomId, String parentId);
 
     Beds findByBedIdAndParentId(int bedId, String parentId);
-    Beds findByBedIdAndRoomId(int bedId, int RoomId);
+    Beds findByBedIdAndRoomIdAndHostelId(int bedId, int RoomId, String hostelId);
 
 
 }
