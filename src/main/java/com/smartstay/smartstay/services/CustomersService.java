@@ -184,7 +184,6 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
-        System.out.println("text---->>>"+hostelId);
         if (!userHostelService.checkHostelAccess(user.getUserId(),hostelId)){
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
@@ -213,7 +212,7 @@ public class CustomersService {
         customers.setCountry(1L);
         customers.setCreatedBy(user.getUserId());
         customers.setCreatedAt(new Date());
-        customers.setExpJoiningDate(payloads.bookingDate());
+        customers.setExpJoiningDate(Utils.stringToDate(payloads.bookingDate().replace("/", "-")));
 
         Advance advance = new Advance();
         advance.setCreatedAt(new Date());

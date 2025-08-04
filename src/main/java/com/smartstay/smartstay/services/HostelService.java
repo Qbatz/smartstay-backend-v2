@@ -40,7 +40,7 @@ public class HostelService {
     @Autowired
     private Authentication authentication;
 
-    @Value("ZOHO_SUBSCRIPTION_PLAN")
+    @Value("${ZOHO_SUBSCRIPTION_PLAN}")
     private String zohoPlan;
     @Autowired
     private RolesService rolesService;
@@ -121,7 +121,7 @@ public class HostelService {
 
         if (subscription != null) {
             subscription.setHostel(hostelV1);
-            hostelV1.setSubscription(subscription);
+            hostelV1.setSubscription(List.of(subscription));
             hostelV1Repository.save(hostelV1);
 //            mapUserHostel(userId, hostelV1.getHostelId(), users.getParentId());
 

@@ -18,7 +18,7 @@ public record BookingRequest(
         @NotEmpty(message = "city is required") String city,
         @NotNull(message = "state is required")
         @NotEmpty(message = "state is required") String state,
-        @NotNull(message = "Booking Date is required") Date bookingDate,
+        @NotNull(message = "Booking Date is required") String bookingDate,
         @NotNull(message = "Booking Amount is required")
         @Positive(message = "Booking Amount must be greater than 0") Double bookingAmount
 ) {}
