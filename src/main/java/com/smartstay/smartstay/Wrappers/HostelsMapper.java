@@ -26,8 +26,8 @@ public class HostelsMapper implements Function<HostelV1, Hostels> {
                 hostelV1.getState(),
                 hostelV1.getStreet(),
                 Utils.dateToString(hostelV1.getUpdatedAt()),
-                Utils.dateToString(hostelV1.getSubscription().getNextBillingAt()),
-                Utils.compareWithTodayDate(hostelV1.getSubscription().getNextBillingAt()),
+                Utils.dateToString(hostelV1.getSubscription().get(hostelV1.getSubscription().size()-1).getNextBillingAt()),
+                Utils.compareWithTodayDate(hostelV1.getSubscription().get(hostelV1.getSubscription().size()-1).getNextBillingAt()),
                 "");
     }
 }

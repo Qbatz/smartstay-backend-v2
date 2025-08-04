@@ -212,7 +212,7 @@ public class CustomersService {
         customers.setCountry(1L);
         customers.setCreatedBy(user.getUserId());
         customers.setCreatedAt(new Date());
-        customers.setExpJoiningDate(payloads.bookingDate());
+        customers.setExpJoiningDate(Utils.stringToDate(payloads.bookingDate().replace("/", "-")));
 
         Advance advance = new Advance();
         advance.setCreatedAt(new Date());
