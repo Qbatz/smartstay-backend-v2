@@ -263,7 +263,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.N0_ROOM_FOUND_FLOOR, HttpStatus.UNAUTHORIZED);
         }
 
-        if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId())) {
+        if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(),payloads.hostelId())) {
             return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.UNAUTHORIZED);
         }
 
@@ -303,7 +303,12 @@ public class CustomersService {
         bookingsV1.setLeavingDate(null);
         bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
         bookingsV1.setRoomId(payloads.roomId());
-        bookingsV1.setJoiningDate(Utils.stringToDate(payloads.joiningDate()));
+        String rawDateStr = payloads.joiningDate();
+        if (rawDateStr != null) {
+            rawDateStr = rawDateStr.replace("-", "/");
+        }
+        Date joiningDate = Utils.convertStringToDate(rawDateStr);
+        bookingsV1.setJoiningDate(joiningDate);
         bookingsService.saveBooking(bookingsV1);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);

@@ -80,6 +80,19 @@ public class Utils {
         }
     }
 
+    public static Date convertStringToDate(String dateStr) {
+        if (dateStr == null || dateStr.trim().isEmpty()) return null;
+
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+            sdf.setLenient(false);
+            return sdf.parse(dateStr);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     public static String dateToString(Date date) {
         if (date == null) {
             return "";

@@ -127,9 +127,9 @@ public class BedsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Rooms room = roomRepository.findByRoomIdAndParentId(addBed.roomId(),user.getParentId());
-        if (room==null){
-            return new ResponseEntity<>("Room Doesn't exist", HttpStatus.BAD_REQUEST);
+        boolean exists = roomRepository.findByRoomIdAndParentIdAndHostelId(addBed.roomId(),user.getParentId(), addBed.hostelId()) == 1;
+        if (!exists){
+            return new ResponseEntity<>("Room Doesn't exist for this hostel", HttpStatus.BAD_REQUEST);
         }
 
         Beds beds = new Beds();
@@ -234,7 +234,7 @@ public class BedsService {
 
     }
 
-    public boolean checkBedExistForRoom(int bedId, int roomId) {
-        return bedsRepository.findByBedIdAndRoomId(bedId, roomId) != null;
+    public boolean checkBedExistForRoom(int bedId, int roomId, String hostelId) {
+        return bedsRepository.findByBedIdAndRoomIdAndHostelId(bedId, roomId, hostelId) != null;
     }
 }
