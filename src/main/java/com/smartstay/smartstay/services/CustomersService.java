@@ -7,11 +7,13 @@ import com.smartstay.smartstay.dao.Advance;
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
+import com.smartstay.smartstay.payloads.customer.CheckinCustomer;
 import com.smartstay.smartstay.repositories.BookingsRepository;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.util.Utils;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class CustomersService {
@@ -50,14 +53,14 @@ public class CustomersService {
     @Autowired
     private BedsService bedsService;
 
-
-
-
     @Autowired
     private Authentication authentication;
 
     @Autowired
     private UserHostelService userHostelService;
+
+    @Autowired
+    private TransactionService transactionService;
 
     public ResponseEntity<?> createCustomer(MultipartFile file, AddCustomer payloads) {
 
@@ -163,9 +166,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
 
-//        customersRepository.
-
-        return null;
+        return bookingsService.getAllCheckInCustomers(hostelId);
     }
 
     public ResponseEntity<?> createBooking(MultipartFile file, BookingRequest payloads, String hostelId) {
@@ -312,6 +313,55 @@ public class CustomersService {
         bookingsService.saveBooking(bookingsV1);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+
+    }
+
+    public ResponseEntity<?> checkinBookedCustomer(String hostelId, CheckinCustomer checkinRequest) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!floorsService.checkFloorExistForHostel(checkinRequest.floorId(), hostelId)) {
+            return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!roomsService.checkRoomExistForFloor(checkinRequest.floorId(), checkinRequest.roomId())) {
+            return new ResponseEntity<>(Utils.N0_ROOM_FOUND_FLOOR, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!bedsService.checkBedExistForRoom(checkinRequest.bedId(), checkinRequest.roomId(), hostelId)) {
+            return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customers = customersRepository.findById(checkinRequest.customerId()).orElse(null);
+
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+        customers.setJoiningDate(Utils.stringToDate2(checkinRequest.joiningDate().replace("/", "-")));
+
+        Advance advance = customers.getAdvance();
+
+        if (advance == null) {
+            Advance ad = new Advance();
+            ad.setAdvanceAmount(checkinRequest.advanceAmount());
+            customers.setAdvance(ad);
+        }
+
+        transactionService.addAdvanceAmount(customers, checkinRequest.advanceAmount());
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
 
     }
 }

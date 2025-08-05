@@ -80,6 +80,16 @@ public class Utils {
         }
     }
 
+    //This accepts dd-MM-yyyy format. It uses all over the places
+    public static Date stringToDate2(String date) {
+        try {
+            return new SimpleDateFormat("dd-MM-yyyy").parse(date);
+        } catch (ParseException e) {
+            throw new RuntimeException("Invalid date format");
+        }
+    }
+
+
     public static Date convertStringToDate(String dateStr) {
         if (dateStr == null || dateStr.trim().isEmpty()) return null;
 
