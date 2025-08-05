@@ -10,6 +10,7 @@ import com.smartstay.smartstay.dao.Credentials;
 import com.smartstay.smartstay.dao.Subscription;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.repositories.CredentialsRepository;
+import com.smartstay.smartstay.repositories.SubscriptionRepository;
 import com.smartstay.smartstay.responses.AuthTokenResponse;
 import com.smartstay.smartstay.responses.ZohoSubscription;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,9 @@ import java.util.Collections;
 public class SubscriptionService {
     @Autowired
     CredentialsRepository credentialsRepo;
+
+    @Autowired
+    SubscriptionRepository subscriptionRepository;
 
     private final RestTemplate restTemplate;
 
@@ -100,5 +104,39 @@ public class SubscriptionService {
         }
 
         throw new RuntimeException("Unable to fetch client details");
+    }
+
+    public String getSubscriptionDetails(String subscriptionId) {
+
+        Credentials credentials = credentialsRepo.findById("zoho").orElse(null);
+
+
+        if (credentials != null) {
+            String url = String.format("https://www.zohoapis.in/billing/v1/subscriptions/%s", subscriptionId);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Zoho-oauthtoken " + credentials.getAuthToken());
+            headers.set("X-com-zoho-subscriptions-organizationid", "60027939659");
+
+            System.out.println("Token: " + credentials.getAuthToken());
+            System.out.println("URL: " + url);
+            System.out.println("Headers: " + headers);
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    String.class
+            );
+
+            return response.getBody();
+        }
+        return "";
+    }
+
+    public Subscription getSubscriptionByHostelId(String hostelId){
+        return subscriptionRepository.findTopByHostel_HostelIdOrderByCreatedAtDesc(hostelId);
     }
 }

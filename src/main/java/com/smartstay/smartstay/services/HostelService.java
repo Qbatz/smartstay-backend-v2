@@ -9,10 +9,9 @@ import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
-import com.smartstay.smartstay.repositories.RolesRepository;
-import com.smartstay.smartstay.repositories.UserHostelRepository;
-import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.Hostels;
+import com.smartstay.smartstay.responses.hostel.FloorDetails;
+import com.smartstay.smartstay.responses.hostel.HostelDetails;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
+
 @Service
 public class HostelService {
 
@@ -36,6 +36,9 @@ public class HostelService {
 
     @Autowired
     private SubscriptionService subscriptionService;
+
+    @Autowired
+    private FloorsService floorsService;
 
     @Autowired
     private Authentication authentication;
@@ -69,8 +72,7 @@ public class HostelService {
 
         if (payloads.emailId() == null || payloads.emailId().equalsIgnoreCase("")) {
             emailId = users.getEmailId();
-        }
-        else if (!Utils.verifyEmail(payloads.emailId())) {
+        } else if (!Utils.verifyEmail(payloads.emailId())) {
             emailId = usersService.findUserByUserId(userId).getEmailId();
         }
 
@@ -135,8 +137,7 @@ public class HostelService {
             }
 
             return new ResponseEntity<>("Created successfully", HttpStatus.CREATED);
-        }
-        else {
+        } else {
             return new ResponseEntity<>("Failed to subscribe in zoho", HttpStatus.BAD_REQUEST);
         }
     }
@@ -212,7 +213,7 @@ public class HostelService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-       userHostelService.deleteUserFromHostel(removeUserPayload.userId(), removeUserPayload.hostelId());
+        userHostelService.deleteUserFromHostel(removeUserPayload.userId(), removeUserPayload.hostelId());
         return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
     }
 
@@ -238,5 +239,38 @@ public class HostelService {
         }
         return new ResponseEntity<>("No hostels found", HttpStatus.BAD_REQUEST);
     }
+
+
+    public ResponseEntity<?> getHostelDetails(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid user");
+        }
+
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Utils.ACCESS_RESTRICTED);
+        }
+
+        HostelV1 hostel = hostelV1Repository.findByHostelIdAndParentId(hostelId, user.getParentId());
+        if (hostel == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No hostel found");
+        }
+
+        Subscription subscription = subscriptionService.getSubscriptionByHostelId(hostelId);
+        List<Floors> floors = floorsService.getFloorByHostelID(hostelId, user.getParentId());
+
+        List<FloorDetails> floorDetails = floors.stream().map(floor -> new FloorDetails(floor.getFloorId(), floor.getFloorName())).toList();
+
+        String nextBillingDate = Utils.dateToString(subscription.getNextBillingAt());
+        boolean isSubscriptionActive = Utils.compareWithTodayDate(subscription.getNextBillingAt());
+        int remainingDays = Utils.calculateRemainingDays(subscription.getNextBillingAt());
+
+        HostelDetails details = new HostelDetails(hostel.getHostelId(), hostel.getMainImage(), hostel.getCity(), String.valueOf(hostel.getCountry()), hostel.getEmailId(), hostel.getHostelName(), hostel.getHouseNo(), hostel.getLandmark(), hostel.getMobile(), hostel.getPincode(), hostel.getState(), hostel.getStreet(), Utils.dateToString(hostel.getUpdatedAt()), isSubscriptionActive, nextBillingDate, remainingDays, floorDetails.size(), floorDetails);
+
+        return ResponseEntity.ok(details);
+    }
+
 }
 

@@ -1,8 +1,10 @@
 package com.smartstay.smartstay.util;
 
-import java.security.SecureRandom;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -117,6 +119,20 @@ public class Utils {
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
     }
+
+
+    public static int calculateRemainingDays(Date nextBillingAt) {
+        if (nextBillingAt == null) return 0;
+
+        LocalDate billingDate = nextBillingAt.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        long remainingDays = ChronoUnit.DAYS.between(LocalDate.now(), billingDate);
+        return (int) Math.max(0, remainingDays);
+
+    }
+
 
     public static int compareWithTwoDates(Date date1, Date date2) {
         return date1.compareTo(date2);
