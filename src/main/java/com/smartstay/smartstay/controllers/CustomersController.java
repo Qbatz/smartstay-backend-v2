@@ -4,6 +4,7 @@ import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
+import com.smartstay.smartstay.payloads.customer.CheckinCustomer;
 import com.smartstay.smartstay.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -46,5 +47,10 @@ public class CustomersController {
     @PostMapping("/add-booking/{hostelId}")
     public ResponseEntity<?> createBooking(@PathVariable("hostelId") String hostelId,@RequestPart(value = "profilePic", required = false) MultipartFile file, @Valid @RequestPart BookingRequest bookingRequest) {
         return customersService.createBooking(file, bookingRequest,hostelId);
+    }
+
+    @PostMapping("/booked/check-in/{hostelId}")
+    public ResponseEntity<?> checkinExistingCustomer(@PathVariable("hostelId") String hostelId, @Valid @RequestBody CheckinCustomer checkinRequest) {
+        return customersService.checkinBookedCustomer(hostelId, checkinRequest);
     }
  }
