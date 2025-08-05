@@ -82,6 +82,18 @@ public class Utils {
         }
     }
 
+    public static String stringToDateFormat(String inputDate) {
+        try {
+            SimpleDateFormat inputFormat = new SimpleDateFormat("dd-MM-yyyy");
+            SimpleDateFormat outputFormat = new SimpleDateFormat("yyyy-MM-dd");
+            Date date = inputFormat.parse(inputDate);
+            return outputFormat.format(date);
+        } catch (ParseException e) {
+            throw new RuntimeException("Invalid date format. Expected format is dd-MM-yyyy.");
+        }
+    }
+
+
     public static Date convertStringToDate(String dateStr) {
         if (dateStr == null || dateStr.trim().isEmpty()) return null;
 
