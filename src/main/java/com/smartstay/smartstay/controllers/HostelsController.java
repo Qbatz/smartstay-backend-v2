@@ -47,5 +47,10 @@ public class HostelsController {
         return hostelService.deleteHostel(hostelId);
     }
 
+    @GetMapping("/{hostelId}")
+    public ResponseEntity<?> getHostelDetails(@PathVariable("hostelId") String hostelId) {
+        return hostelService.getHostelDetails(hostelId);
+    }
+
 
 }

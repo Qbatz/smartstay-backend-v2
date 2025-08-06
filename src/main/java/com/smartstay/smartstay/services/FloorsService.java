@@ -59,6 +59,10 @@ public class FloorsService {
         return new ResponseEntity<>(floorsResponses, HttpStatus.OK);
     }
 
+    public List<Floors> getFloorByHostelID(String hostelId, String parentID){
+        return floorRepository.findAllByHostelIdAndParentId(hostelId,parentID);
+    }
+
     public ResponseEntity<?> getFloorById(Integer id) {
         if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
