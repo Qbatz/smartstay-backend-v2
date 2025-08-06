@@ -82,6 +82,7 @@ public class Utils {
         }
     }
 
+
     public static String stringToDateFormat(String inputDate) {
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat("dd-MM-yyyy");

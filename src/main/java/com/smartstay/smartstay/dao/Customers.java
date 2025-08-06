@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Data
@@ -40,4 +41,7 @@ public class Customers {
 
     @OneToOne(mappedBy = "customers")
     private KycDetails kycDetails;
+
+    @OneToMany(mappedBy = "customers", cascade = CascadeType.ALL)
+    private List<TransactionV1> transactions;
 }
