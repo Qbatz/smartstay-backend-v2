@@ -349,7 +349,8 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
         customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
-        customers.setJoiningDate(Utils.stringToDate2(checkinRequest.joiningDate().replace("/", "-")));
+        String date = Utils.stringToDateFormat(checkinRequest.joiningDate().replace("/", "-"));
+        customers.setJoiningDate(Utils.stringToDate(date));
 
         Advance advance = customers.getAdvance();
 
@@ -360,6 +361,14 @@ public class CustomersService {
         }
 
         transactionService.addAdvanceAmount(customers, checkinRequest.advanceAmount());
+
+        BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(checkinRequest.customerId());
+        bookingsV1.setBedId(checkinRequest.bedId());
+        bookingsV1.setHostelId(hostelId);
+        bookingsV1.setUpdatedAt(new Date());
+        bookingsV1.setUpdatedBy(authentication.getName());
+        bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
+        bookingsService.saveBooking(bookingsV1);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
 

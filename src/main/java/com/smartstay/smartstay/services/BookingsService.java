@@ -89,4 +89,8 @@ public class BookingsService {
 
         return bookingsRepository.save(bookingsV1);
     }
+
+    public BookingsV1 getBookingsByCustomerId(String customerId) {
+        return bookingsRepository.findByCustomerId(customerId);
+    }
 }
