@@ -227,6 +227,7 @@ public class CustomersService {
         bookingsV1.setCustomerId(savedCustomer.getCustomerId());
         bookingsV1.setCreatedAt(new Date());
         bookingsV1.setUpdatedAt(new Date());
+        bookingsV1.setUpdatedBy(userId);
         bookingsV1.setLeavingDate(null);
         bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
         bookingsService.saveBooking(bookingsV1);
@@ -348,29 +349,43 @@ public class CustomersService {
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
-        customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+
         String date = Utils.stringToDateFormat(checkinRequest.joiningDate().replace("/", "-"));
-        customers.setJoiningDate(Utils.stringToDate(date));
 
-        Advance advance = customers.getAdvance();
+        if (bedsService.isBedAvailable(checkinRequest.bedId(), user.getParentId(), Utils.stringToDate(Utils.stringToDateFormat(date)))) {
 
-        if (advance == null) {
-            Advance ad = new Advance();
-            ad.setAdvanceAmount(checkinRequest.advanceAmount());
-            customers.setAdvance(ad);
+
+            customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+            customers.setJoiningDate(Utils.stringToDate(date));
+
+            Advance advance = customers.getAdvance();
+
+            if (advance == null) {
+                Advance ad = new Advance();
+                ad.setAdvanceAmount(checkinRequest.advanceAmount());
+                customers.setAdvance(ad);
+            }
+
+            transactionService.addAdvanceAmount(customers, checkinRequest.advanceAmount());
+
+            BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(checkinRequest.customerId());
+            bookingsV1.setBedId(checkinRequest.bedId());
+            bookingsV1.setHostelId(hostelId);
+            bookingsV1.setFloorId(checkinRequest.floorId());
+            bookingsV1.setRoomId(checkinRequest.roomId());
+            bookingsV1.setRentAmount(checkinRequest.rentAmount());
+            bookingsV1.setUpdatedAt(new Date());
+            bookingsV1.setUpdatedBy(authentication.getName());
+            bookingsV1.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+            bookingsService.saveBooking(bookingsV1);
+
+            bedsService.addUserToBed(checkinRequest.bedId(), date);
+
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+        }else {
+            return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
         }
 
-        transactionService.addAdvanceAmount(customers, checkinRequest.advanceAmount());
-
-        BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(checkinRequest.customerId());
-        bookingsV1.setBedId(checkinRequest.bedId());
-        bookingsV1.setHostelId(hostelId);
-        bookingsV1.setUpdatedAt(new Date());
-        bookingsV1.setUpdatedBy(authentication.getName());
-        bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
-        bookingsService.saveBooking(bookingsV1);
-
-        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
 
     }
 }

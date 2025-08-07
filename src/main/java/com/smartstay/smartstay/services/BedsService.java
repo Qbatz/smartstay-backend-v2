@@ -168,33 +168,31 @@ public class BedsService {
     }
 
     //assign bed
-    public int addUserToBed(int bedId, String joiningDate) {
+//    use it for checkin user
+    public ResponseEntity<?> addUserToBed(int bedId, String joiningDate) {
         if (!authentication.isAuthenticated()) {
-            return 403;
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
+
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_WRITE)) {
-            return 401;
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
         Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId,users.getParentId());
         if (existingBed != null) {
             if (Utils.compareWithTodayDate(Utils.stringToDate(joiningDate))) {
+                existingBed.setStatus(BedStatus.OCCUPIED.name());
                 existingBed.setBooked(true);
                 existingBed.setUpdatedAt(new Date());
                 existingBed.setFreeFrom(null);
             }
-            else {
-                existingBed.setStatus(BedStatus.BOOKED.name());
-                existingBed.setBooked(true);
-                existingBed.setUpdatedAt(new Date());
-                existingBed.setFreeFrom(null);
-            }
+
             bedsRepository.save(existingBed);
 
         }
-        return 1;
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
     public boolean isBedAvailable(int bedId, String parentId, Date date) {
