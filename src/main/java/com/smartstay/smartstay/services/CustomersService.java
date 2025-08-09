@@ -14,6 +14,7 @@ import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.payloads.customer.CheckinCustomer;
+import com.smartstay.smartstay.payloads.customer.CheckoutRequest;
 import com.smartstay.smartstay.repositories.BookingsRepository;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.util.Utils;
@@ -388,4 +389,8 @@ public class CustomersService {
 
 
     }
+
+//    public ResponseEntity<?> requestCheckout(CheckoutRequest checkoutRequest) {
+//
+//    }
 }

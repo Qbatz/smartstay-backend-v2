@@ -28,6 +28,7 @@ public class BookingsV1 {
     private String hostelId;
     private String currentStatus;
     private String updatedBy;
+    private String reasonForLeaving;
     private int floorId;
     private int roomId;
     private int bedId;
