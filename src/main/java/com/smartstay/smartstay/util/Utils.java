@@ -31,6 +31,7 @@ public class Utils {
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
     public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
     public static final String N0_BED_FOUND_ROOM = "No bed found for the specified room.";
+    public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable for check in";
 
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
@@ -83,6 +84,7 @@ public class Utils {
     }
 
 
+    //this accepts only dd-MM-yyyy format
     public static String stringToDateFormat(String inputDate) {
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat("dd-MM-yyyy");

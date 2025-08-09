@@ -14,6 +14,7 @@ import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.payloads.customer.CheckinCustomer;
+import com.smartstay.smartstay.payloads.customer.CheckoutRequest;
 import com.smartstay.smartstay.repositories.BookingsRepository;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.util.Utils;
@@ -227,6 +228,7 @@ public class CustomersService {
         bookingsV1.setCustomerId(savedCustomer.getCustomerId());
         bookingsV1.setCreatedAt(new Date());
         bookingsV1.setUpdatedAt(new Date());
+        bookingsV1.setUpdatedBy(userId);
         bookingsV1.setLeavingDate(null);
         bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
         bookingsService.saveBooking(bookingsV1);
@@ -348,20 +350,47 @@ public class CustomersService {
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
-        customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
-        customers.setJoiningDate(Utils.stringToDate2(checkinRequest.joiningDate().replace("/", "-")));
 
-        Advance advance = customers.getAdvance();
+        String date = Utils.stringToDateFormat(checkinRequest.joiningDate().replace("/", "-"));
 
-        if (advance == null) {
-            Advance ad = new Advance();
-            ad.setAdvanceAmount(checkinRequest.advanceAmount());
-            customers.setAdvance(ad);
+        if (bedsService.isBedAvailable(checkinRequest.bedId(), user.getParentId(), Utils.stringToDate(Utils.stringToDateFormat(date)))) {
+
+
+            customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+            customers.setJoiningDate(Utils.stringToDate(date));
+
+            Advance advance = customers.getAdvance();
+
+            if (advance == null) {
+                Advance ad = new Advance();
+                ad.setAdvanceAmount(checkinRequest.advanceAmount());
+                customers.setAdvance(ad);
+            }
+
+            transactionService.addAdvanceAmount(customers, checkinRequest.advanceAmount());
+
+            BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(checkinRequest.customerId());
+            bookingsV1.setBedId(checkinRequest.bedId());
+            bookingsV1.setHostelId(hostelId);
+            bookingsV1.setFloorId(checkinRequest.floorId());
+            bookingsV1.setRoomId(checkinRequest.roomId());
+            bookingsV1.setRentAmount(checkinRequest.rentAmount());
+            bookingsV1.setUpdatedAt(new Date());
+            bookingsV1.setUpdatedBy(authentication.getName());
+            bookingsV1.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+            bookingsService.saveBooking(bookingsV1);
+
+            bedsService.addUserToBed(checkinRequest.bedId(), date);
+
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+        }else {
+            return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
         }
 
-        transactionService.addAdvanceAmount(customers, checkinRequest.advanceAmount());
-
-        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
 
     }
+
+//    public ResponseEntity<?> requestCheckout(CheckoutRequest checkoutRequest) {
+//
+//    }
 }

@@ -5,6 +5,7 @@ import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.payloads.customer.CheckinCustomer;
+import com.smartstay.smartstay.payloads.customer.CheckoutRequest;
 import com.smartstay.smartstay.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -53,4 +54,9 @@ public class CustomersController {
     public ResponseEntity<?> checkinExistingCustomer(@PathVariable("hostelId") String hostelId, @Valid @RequestBody CheckinCustomer checkinRequest) {
         return customersService.checkinBookedCustomer(hostelId, checkinRequest);
     }
+
+//    @PostMapping("/booked/check-out")
+//    public ResponseEntity<?> checkoutExistingCustomer(@Valid @RequestBody CheckoutRequest checkoutRequest) {
+//        return customersService.requestCheckout(checkoutRequest);
+//    }
  }
