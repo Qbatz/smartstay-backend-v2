@@ -34,6 +34,7 @@ public class Customers {
     private String currentStatus;
     private String kycStatus;
     private String createdBy;
+    private String hostelId;
     private Date createdAt;
 
     @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL)
