@@ -11,12 +11,10 @@ import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
-import com.smartstay.smartstay.payloads.customer.BookingRequest;
-import com.smartstay.smartstay.payloads.customer.CheckInRequest;
-import com.smartstay.smartstay.payloads.customer.CheckinCustomer;
-import com.smartstay.smartstay.payloads.customer.CheckoutRequest;
+import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.repositories.BookingsRepository;
 import com.smartstay.smartstay.repositories.CustomersRepository;
+import com.smartstay.smartstay.responses.customer.CustomerData;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -104,6 +102,7 @@ public class CustomersService {
         customers.setCreatedBy(user.getUserId());
         customers.setCreatedAt(new Date());
 
+
         customersRepository.save(customers);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -153,7 +152,7 @@ public class CustomersService {
 
     }
 
-    public ResponseEntity<?> getAllCheckInCustomers(String hostelId) {
+    public ResponseEntity<?>   getAllCheckInCustomers(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -168,6 +167,33 @@ public class CustomersService {
         }
 
         return bookingsService.getAllCheckInCustomers(hostelId);
+    }
+
+    public List<CustomerData> searchAndGetCustomers(String hostelId,CustomersListRequest request) {
+        return customersRepository.getCustomerData(
+                hostelId,
+                request.name() != null && !request.name().isBlank() ? request.name() : null,
+                request.status() != null && !request.status().isBlank() ? request.status() : null
+        );
+    }
+
+
+    public ResponseEntity<?>   getAllCustomersForHostel(String hostelId, CustomersListRequest request) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        List<CustomerData> customerData = searchAndGetCustomers(hostelId,request);
+        return new ResponseEntity<>(customerData, HttpStatus.OK);
     }
 
     public ResponseEntity<?> createBooking(MultipartFile file, BookingRequest payloads, String hostelId) {
@@ -214,6 +240,7 @@ public class CustomersService {
         customers.setCountry(1L);
         customers.setCreatedBy(user.getUserId());
         customers.setCreatedAt(new Date());
+        customers.setHostelId(hostelId);
         customers.setExpJoiningDate(Utils.stringToDate(payloads.bookingDate().replace("/", "-")));
 
         Advance advance = new Advance();
@@ -294,6 +321,7 @@ public class CustomersService {
         customers.setCountry(1L);
         customers.setCreatedBy(user.getUserId());
         customers.setCreatedAt(new Date());
+        customers.setHostelId(payloads.hostelId());
         Customers savedCustomer = customersRepository.save(customers);
 
         BookingsV1 bookingsV1 = new BookingsV1();

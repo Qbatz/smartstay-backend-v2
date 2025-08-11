@@ -2,10 +2,7 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
-import com.smartstay.smartstay.payloads.customer.BookingRequest;
-import com.smartstay.smartstay.payloads.customer.CheckInRequest;
-import com.smartstay.smartstay.payloads.customer.CheckinCustomer;
-import com.smartstay.smartstay.payloads.customer.CheckoutRequest;
+import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -59,4 +56,9 @@ public class CustomersController {
 //    public ResponseEntity<?> checkoutExistingCustomer(@Valid @RequestBody CheckoutRequest checkoutRequest) {
 //        return customersService.requestCheckout(checkoutRequest);
 //    }
+
+    @PostMapping("/customer-list/{hostelId}")
+    public ResponseEntity<?> getAllCustomerForHostel(@PathVariable("hostelId") String hostelId,@RequestBody CustomersListRequest request) {
+        return customersService.getAllCustomersForHostel(hostelId,request);
+    }
  }
