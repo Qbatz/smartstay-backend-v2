@@ -20,6 +20,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
         state,
         country,
         current_status AS currentStatus,
+        customer_id as customerId,
         email_id AS emailId,
         profile_pic AS profilePic
     FROM customers 
