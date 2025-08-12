@@ -8,4 +8,5 @@ public interface CustomerData {
     String getCurrentStatus();
     String getEmailId();
     String getProfilePic();
+    String getCustomerId();
 }
