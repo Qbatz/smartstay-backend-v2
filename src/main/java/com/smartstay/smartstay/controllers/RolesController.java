@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("v2/role")
 @SecurityScheme(name = "Authorization", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @SecurityRequirement(name = "Authorization")
+@CrossOrigin("*")
 public class RolesController {
 
     @Autowired
@@ -46,5 +47,10 @@ public class RolesController {
     @DeleteMapping("remove-role/{roleId}")
     public ResponseEntity<?> deleteRoleById(@PathVariable("roleId") int roleId) {
         return rolesService.deleteRoleById(roleId);
+    }
+
+    @GetMapping("modules")
+    public ResponseEntity<?> getModules() {
+        return rolesService.getAllModules();
     }
 }

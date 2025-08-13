@@ -22,6 +22,7 @@ import java.util.List;
         scheme = "bearer"
 )
 @SecurityRequirement(name = "Authorization")
+@CrossOrigin("*")
 public class HostelsController {
 
     @Autowired

@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.RolesMapper;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.dao.Modules;
 import com.smartstay.smartstay.dao.RolesPermission;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
@@ -238,5 +239,13 @@ public class RolesService {
             return rolesV1.getRoleName();
         }
         return null;
+    }
+
+    public ResponseEntity<?> getAllModules() {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+        List<Modules> listModules = modulesRepository.findAll();
+        return new ResponseEntity<>(listModules, HttpStatus.OK);
     }
 }

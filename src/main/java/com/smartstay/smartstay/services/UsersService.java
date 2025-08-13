@@ -77,7 +77,6 @@ public class UsersService {
 
     public ResponseEntity<com.smartstay.smartstay.responses.CreateAccount> createAccount(CreateAccount createAccount) {
 
-        System.out.println("reached --->");
         Users usr = userRepository.findUserByEmailId(createAccount.mailId());
         if (usr == null) {
             if (createAccount.password().equalsIgnoreCase(createAccount.confirmPassword())) {
@@ -109,7 +108,7 @@ public class UsersService {
 
                 com.smartstay.smartstay.responses.CreateAccount response = new com.smartstay.smartstay.responses.CreateAccount("Created Successfully");
 
-                return new ResponseEntity<>(response, HttpStatus.OK);
+                return new ResponseEntity<>(response, HttpStatus.CREATED);
             } else {
                 com.smartstay.smartstay.responses.CreateAccount response = new com.smartstay.smartstay.responses.CreateAccount("Password and confirm password is not matching");
                 return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);

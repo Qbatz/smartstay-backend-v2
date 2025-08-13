@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
         scheme = "bearer"
 )
 @SecurityRequirement(name = "Authorization")
+@CrossOrigin("*")
 public class CustomersController {
 
     @Autowired
