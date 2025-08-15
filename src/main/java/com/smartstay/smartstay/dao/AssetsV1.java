@@ -14,11 +14,11 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Assets {
+public class AssetsV1 {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String assetId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer assetId;
 
     private String assetName;
     private String productName;

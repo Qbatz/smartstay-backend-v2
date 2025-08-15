@@ -8,29 +8,29 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 @Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Vendor {
+public class ExpensesV1 {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String vendorId;
+    private String expenseId;
 
-    private String firstName;
-    private String lastName;
-    private String mobileNumber;
-    private String emailId;
-    private String businessName;
-    private String houseNo;
-    private String area;
-    private String landMark;
-    private String city;
-    private String pinCode;
-    private String state;
-    private String country;
-    private String profilePic;
+    private Date createdAt;
+    private Date updatedAt;
+    private String createdBy;
+    private Boolean isActive;
+    private String categoryId;
+    private Date purchaseDate;
     private String hostelId;
+    private int unitCount;
+    private Double perUnitAmount;
+    private Double purchaseAmount;
+    private String modeOfTransaction;
+    private String description;
     private String parentId;
 }
