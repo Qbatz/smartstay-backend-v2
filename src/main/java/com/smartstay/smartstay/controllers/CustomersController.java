@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
         scheme = "bearer"
 )
 @SecurityRequirement(name = "Authorization")
+@CrossOrigin("*")
 public class CustomersController {
 
     @Autowired
@@ -37,19 +39,19 @@ public class CustomersController {
         return customersService.assignBed(assignBed);
     }
 
-    @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getAllCheckInCustomer(@PathVariable("hostelId") String hostelId) {
-        return customersService.getAllCheckInCustomers(hostelId);
-    }
+//    @GetMapping("/{hostelId}")
+//    public ResponseEntity<?> getAllCheckInCustomer(@PathVariable("hostelId") String hostelId) {
+//        return customersService.getAllCheckInCustomers(hostelId);
+//    }
 
     @PostMapping("/add-booking/{hostelId}")
     public ResponseEntity<?> createBooking(@PathVariable("hostelId") String hostelId,@RequestPart(value = "profilePic", required = false) MultipartFile file, @Valid @RequestPart BookingRequest bookingRequest) {
         return customersService.createBooking(file, bookingRequest,hostelId);
     }
 
-    @PostMapping("/booked/check-in/{hostelId}")
-    public ResponseEntity<?> checkinExistingCustomer(@PathVariable("hostelId") String hostelId, @Valid @RequestBody CheckinCustomer checkinRequest) {
-        return customersService.checkinBookedCustomer(hostelId, checkinRequest);
+    @PostMapping("/booked/check-in")
+    public ResponseEntity<?> checkinExistingCustomer(@Valid @RequestBody CheckinCustomer checkinRequest) {
+        return customersService.checkinBookedCustomer(checkinRequest);
     }
 
 //    @PostMapping("/booked/check-out")
@@ -57,8 +59,8 @@ public class CustomersController {
 //        return customersService.requestCheckout(checkoutRequest);
 //    }
 
-    @PostMapping("/customer-list/{hostelId}")
-    public ResponseEntity<?> getAllCustomerForHostel(@PathVariable("hostelId") String hostelId,@RequestBody CustomersListRequest request) {
-        return customersService.getAllCustomersForHostel(hostelId,request);
+    @GetMapping("/{hostelId}")
+    public ResponseEntity<?> getAllCustomerForHostel(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required=false) String name, @RequestParam(value = "type", required = false) String type) {
+        return customersService.getAllCustomersForHostel(hostelId, name, type);
     }
  }

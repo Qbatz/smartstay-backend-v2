@@ -169,16 +169,16 @@ public class CustomersService {
         return bookingsService.getAllCheckInCustomers(hostelId);
     }
 
-    public List<CustomerData> searchAndGetCustomers(String hostelId,CustomersListRequest request) {
+    public List<CustomerData> searchAndGetCustomers(String hostelId, String name, String type) {
         return customersRepository.getCustomerData(
                 hostelId,
-                request.name() != null && !request.name().isBlank() ? request.name() : null,
-                request.status() != null && !request.status().isBlank() ? request.status() : null
+                name != null && !name.isBlank() ? name : null,
+                type != null && !type.isBlank() ? type : null
         );
     }
 
 
-    public ResponseEntity<?>   getAllCustomersForHostel(String hostelId, CustomersListRequest request) {
+    public ResponseEntity<?>   getAllCustomersForHostel(String hostelId, String name, String type) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -192,7 +192,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
 
-        List<CustomerData> customerData = searchAndGetCustomers(hostelId,request);
+        List<CustomerData> customerData = searchAndGetCustomers(hostelId, name, type);
         return new ResponseEntity<>(customerData, HttpStatus.OK);
     }
 
@@ -346,22 +346,28 @@ public class CustomersService {
 
     }
 
-    public ResponseEntity<?> checkinBookedCustomer(String hostelId, CheckinCustomer checkinRequest) {
+    public ResponseEntity<?> checkinBookedCustomer(CheckinCustomer checkinRequest) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = userService.findUserByUserId(userId);
 
+        Customers customers = customersRepository.findById(checkinRequest.customerId()).orElse(null);
+
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
         if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+        if (!userHostelService.checkHostelAccess(user.getUserId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
 
-        if (!floorsService.checkFloorExistForHostel(checkinRequest.floorId(), hostelId)) {
+        if (!floorsService.checkFloorExistForHostel(checkinRequest.floorId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.BAD_REQUEST);
         }
 
@@ -369,14 +375,8 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.N0_ROOM_FOUND_FLOOR, HttpStatus.BAD_REQUEST);
         }
 
-        if (!bedsService.checkBedExistForRoom(checkinRequest.bedId(), checkinRequest.roomId(), hostelId)) {
+        if (!bedsService.checkBedExistForRoom(checkinRequest.bedId(), checkinRequest.roomId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.BAD_REQUEST);
-        }
-
-        Customers customers = customersRepository.findById(checkinRequest.customerId()).orElse(null);
-
-        if (customers == null) {
-            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
         String date = Utils.stringToDateFormat(checkinRequest.joiningDate().replace("/", "-"));
@@ -399,7 +399,7 @@ public class CustomersService {
 
             BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(checkinRequest.customerId());
             bookingsV1.setBedId(checkinRequest.bedId());
-            bookingsV1.setHostelId(hostelId);
+            bookingsV1.setHostelId(customers.getHostelId());
             bookingsV1.setFloorId(checkinRequest.floorId());
             bookingsV1.setRoomId(checkinRequest.roomId());
             bookingsV1.setRentAmount(checkinRequest.rentAmount());

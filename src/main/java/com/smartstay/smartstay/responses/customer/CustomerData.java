@@ -11,4 +11,5 @@ public interface CustomerData {
     String getBedId();
     String getFloorId();
     String getRoomId();
+    String getCustomerId();
 }
