@@ -297,7 +297,7 @@ public class UsersService {
             Users users = userRepository.findUserByUserId(authentication.getName());
 
             if (users != null) {
-                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_WRITE)) {
+                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
                 String mobileStatus = "";
@@ -366,7 +366,7 @@ public class UsersService {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
             if (users != null) {
-                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_WRITE)) {
+                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
 

@@ -51,7 +51,7 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_READ)) {
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<RolesV1> listRoles = rolesRepository.findAllByParentId(user.getParentId());
@@ -73,7 +73,7 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_READ)) {
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         RolesV1 v1 = rolesRepository.findByRoleIdAndParentId(id,user.getParentId());
@@ -96,7 +96,7 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_UPDATE)) {
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         RolesV1 existingRole = rolesRepository.findByRoleIdAndParentId(roleId,user.getParentId());
@@ -132,7 +132,7 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_WRITE)) {
+        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
@@ -159,7 +159,7 @@ public class RolesService {
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
-        if (!checkPermission(users.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_DELETE)) {
+        if (!checkPermission(users.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         RolesV1 existingRole = rolesRepository.findByRoleIdAndParentId(roleId,users.getParentId());
