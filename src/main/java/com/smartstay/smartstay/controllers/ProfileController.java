@@ -39,7 +39,7 @@ public class ProfileController {
     }
 
     @PostMapping("/add-admin")
-    public ResponseEntity<?> addAdminUser(@Valid @RequestPart("accountInfo") AddAdminPayload createAccount, @RequestPart("profilePic") MultipartFile profilePic) {
+    public ResponseEntity<?> addAdminUser(@Valid @RequestPart("accountInfo") AddAdminPayload createAccount, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.createAdmin(createAccount, profilePic);
     }
 
