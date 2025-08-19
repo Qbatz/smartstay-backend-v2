@@ -15,6 +15,7 @@ import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
 import com.smartstay.smartstay.responses.OtpRequired;
+import com.smartstay.smartstay.responses.account.AdminUserResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -75,7 +76,7 @@ public class UsersService {
         restTemplate.setInterceptors(Collections.singletonList(new RestTemplateLoggingInterceptor()));
     }
 
-    public ResponseEntity<com.smartstay.smartstay.responses.CreateAccount> createAccount(CreateAccount createAccount) {
+    public ResponseEntity<AdminUserResponse> createAccount(CreateAccount createAccount) {
 
         Users usr = userRepository.findUserByEmailId(createAccount.mailId());
         if (usr == null) {
@@ -106,16 +107,33 @@ public class UsersService {
 //
 //                otpService.insertOTP(userData);
 
-                com.smartstay.smartstay.responses.CreateAccount response = new com.smartstay.smartstay.responses.CreateAccount("Created Successfully");
-
-                return new ResponseEntity<>(response, HttpStatus.CREATED);
+                return new ResponseEntity<>(new AdminUserResponse("", "", "Created successfully"), HttpStatus.CREATED);
             } else {
-                com.smartstay.smartstay.responses.CreateAccount response = new com.smartstay.smartstay.responses.CreateAccount("Password and confirm password is not matching");
-                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(new AdminUserResponse("", "", "Password and confirm password is not matching"), HttpStatus.BAD_REQUEST);
             }
         } else {
-            com.smartstay.smartstay.responses.CreateAccount response = new com.smartstay.smartstay.responses.CreateAccount("Email Id already registered");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+            String mobileStatus = "";
+            String emailStatus = "";
+
+            if (userRepository.existsByEmailId(createAccount.mailId())) {
+                emailStatus = Utils.EMAIL_ID_EXISTS;
+            }
+
+            if (userRepository.existsByMobileNo(createAccount.mobile())) {
+                mobileStatus = Utils.MOBILE_NO_EXISTS;
+            }
+
+            if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
+                return new ResponseEntity<>(
+                        new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
+                        HttpStatus.BAD_REQUEST
+                );
+            }else {
+                return new ResponseEntity<>(
+                        new AdminUserResponse("", "", "Failed"),
+                        HttpStatus.BAD_REQUEST
+                );
+            }
         }
 
     }
@@ -282,11 +300,22 @@ public class UsersService {
                 if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
+                String mobileStatus = "";
+                String emailStatus = "";
+
                 if (userRepository.existsByEmailId(createAccount.mailId())) {
-                    return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);
+                    emailStatus = Utils.EMAIL_ID_EXISTS;
                 }
+
                 if (userRepository.existsByMobileNo(createAccount.mobile())) {
-                    return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                    mobileStatus = Utils.MOBILE_NO_EXISTS;
+                }
+
+                if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
+                    return new ResponseEntity<>(
+                            new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
+                            HttpStatus.BAD_REQUEST
+                    );
                 }
                 else {
                     Users adminUser  = new Users();
@@ -340,11 +369,23 @@ public class UsersService {
                 if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
+
+                String mobileStatus = "";
+                String emailStatus = "";
+
                 if (userRepository.existsByEmailId(adminUser.emailId())) {
-                    return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);
+                    emailStatus = Utils.EMAIL_ID_EXISTS;
                 }
+
                 if (userRepository.existsByMobileNo(adminUser.mobile())) {
-                    return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                    mobileStatus = Utils.MOBILE_NO_EXISTS;
+                }
+
+                if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
+                    return new ResponseEntity<>(
+                            new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
+                            HttpStatus.BAD_REQUEST
+                    );
                 }
                 if (!rolesService.checkRoleId(adminUser.roleId())) {
                     return new ResponseEntity<>(Utils.INVALID_ROLE, HttpStatus.BAD_REQUEST);
