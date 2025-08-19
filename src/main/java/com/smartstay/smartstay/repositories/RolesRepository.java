@@ -2,6 +2,8 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.RolesV1;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -13,4 +15,12 @@ public interface RolesRepository extends JpaRepository<RolesV1, Integer> {
 
     RolesV1 findByRoleIdAndParentId(int roleId,String parentId);
     boolean existsByRoleId(int roleId);
+
+    @Query(value = """
+    SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+    FROM rolesv1 role
+    WHERE role.role_name = :roleName
+      AND role.parent_id = :parentId
+    """, nativeQuery = true)
+    int existsByParentIdAndRoleName(@Param("roleName") String roleName, @Param("parentId") String parentId);
 }

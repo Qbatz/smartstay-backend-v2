@@ -26,6 +26,7 @@ public class Utils {
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
     public static final String INVALID_ROLE = "Invalid role";
+    public static final String ROLE_NAME_EXISTS = "Role name already exists";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
@@ -66,6 +67,12 @@ public class Utils {
     public static int MODULE_ID_BANKING = 17;
     public static int MODULE_ID_PROFILE = 18;
     public static int MODULE_ID_AMENITIES = 19;
+
+    public static int MODULE_ID_RECEIPT = 20;
+    public static int MODULE_ID_INVOICE = 21;
+    public static int MODULE_ID_USER = 22;
+    public static int MODULE_ID_ROLES = 23;
+    public static int MODULE_ID_AGREEMENT = 24;
     public static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
     public static int generateOtp() {
         return (int)(Math.random() * 900000) + 100000;
