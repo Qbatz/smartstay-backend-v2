@@ -34,7 +34,7 @@ public class ProfileController {
     }
 
     @PutMapping("")
-    public ResponseEntity<Object> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart("profilePic") MultipartFile profilePic) {
+    public ResponseEntity<Object> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.updateProfileInformations(updateProfile, profilePic);
     }
 

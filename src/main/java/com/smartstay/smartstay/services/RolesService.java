@@ -135,6 +135,11 @@ public class RolesService {
         if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        if (rolesRepository.existsByParentIdAndRoleName(roleData.roleName(), user.getParentId()) > 0) {
+            return new ResponseEntity<>(Utils.ROLE_NAME_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
         RolesV1 role = new RolesV1();
         List<RolesPermission> rolesPermissions = permissionInsertion(roleData.permissionList());
         role.setCreatedAt(new Date());
