@@ -34,12 +34,12 @@ public class ProfileController {
     }
 
     @PutMapping("")
-    public ResponseEntity<Object> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart("profilePic") MultipartFile profilePic) {
+    public ResponseEntity<Object> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.updateProfileInformations(updateProfile, profilePic);
     }
 
     @PostMapping("/add-admin")
-    public ResponseEntity<?> addAdminUser(@Valid @RequestPart("accountInfo") AddAdminPayload createAccount, @RequestPart("profilePic") MultipartFile profilePic) {
+    public ResponseEntity<?> addAdminUser(@Valid @RequestPart("accountInfo") AddAdminPayload createAccount, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.createAdmin(createAccount, profilePic);
     }
 

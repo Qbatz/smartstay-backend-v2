@@ -23,7 +23,7 @@ public class SmartstayApplication {
 //			RolesV1 v1 = new RolesV1();
 //			v1.setRoleName("Smartstay - Super Admin");
 //			List<RolesPermission> listPermissions1 = new ArrayList<>();
-//			for (int i=1; i<20; i++) {
+//			for (int i=1; i<25; i++) {
 //				RolesPermission pr1 = new RolesPermission();
 //				pr1.setCanUpdate(true);
 //				pr1.setCanRead(true);
@@ -38,7 +38,7 @@ public class SmartstayApplication {
 //			RolesV1 v2 = new RolesV1();
 //			v2.setRoleName("Smartstay - Admin");
 //			List<RolesPermission> listPermissions2 = new ArrayList<>();
-//			for (int i=1; i<20; i++) {
+//			for (int i=1; i<25; i++) {
 //				RolesPermission pr2 = new RolesPermission();
 //				pr2.setModuleId(i);
 //				pr2.setCanUpdate(false);
@@ -188,6 +188,26 @@ public class SmartstayApplication {
 //			Modules modules19 = new Modules();
 //			modules19.setModuleName("Amenities");
 //			modulesRepository.save(modules19);
+//
+//			Modules modules20 = new Modules();
+//			modules20.setModuleName("Receipt");
+//			modulesRepository.save(modules20);
+//
+//			Modules modules21 = new Modules();
+//			modules21.setModuleName("Invoice");
+//			modulesRepository.save(modules21);
+//
+//			Modules modules22 = new Modules();
+//			modules22.setModuleName("User");
+//			modulesRepository.save(modules22);
+//
+//			Modules modules23 = new Modules();
+//			modules23.setModuleName("Role");
+//			modulesRepository.save(modules23);
+//
+//			Modules modules24 = new Modules();
+//			modules24.setModuleName("Agreement");
+//			modulesRepository.save(modules24);
 		};
 	}
 	@Bean
