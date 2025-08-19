@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
         scheme = "bearer"
 )
 @SecurityRequirement(name = "Authorization")
+@CrossOrigin("*")
 public class FloorsController {
 
 
