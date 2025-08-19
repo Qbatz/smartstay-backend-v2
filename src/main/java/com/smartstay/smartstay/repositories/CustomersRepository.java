@@ -14,20 +14,16 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     boolean existsByMobile(String mobileNo);
 
     @Query(value = """
-    SELECT 
-        first_name AS firstName,
-        city,
-        state,
-        country,
-        current_status AS currentStatus,
-        customer_id as customerId,
-        email_id AS emailId,
-        profile_pic AS profilePic
-    FROM customers 
-    WHERE hostel_id = :hostelId
-      AND (:name IS NULL OR LOWER(first_name) LIKE LOWER(CONCAT('%', :name, '%'))
-                           OR LOWER(last_name) LIKE LOWER(CONCAT('%', :name, '%')))
-      AND (:status IS NULL OR current_status = :status)
+    SELECT cus.first_name AS firstName, cus.city, cus.state, cus.joining_date, 
+    cus.created_at, cus.country, cus.current_status AS currentStatus, 
+    cus.customer_id as customerId, cus.email_id AS emailId, 
+    cus.profile_pic AS profilePic, booking.bed_id, booking.floor_id, 
+    booking.room_id FROM customers cus inner join 
+    bookingsv1 booking on booking.customer_id=cus.customer_id 
+    WHERE cus.hostel_id = :hostelId
+    AND (:name IS NULL OR LOWER(cus.first_name) LIKE LOWER(CONCAT('%', :name, '%'))
+                           OR LOWER(cus.last_name) LIKE LOWER(CONCAT('%', :name, '%')))
+      AND (:status IS NULL OR cus.current_status = :status)
     """, nativeQuery = true)
     List<CustomerData> getCustomerData(
             @Param("hostelId") String hostelId,
