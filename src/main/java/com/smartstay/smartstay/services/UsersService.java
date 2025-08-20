@@ -167,6 +167,9 @@ public class UsersService {
 
         if (authentication.isAuthenticated()) {
             LoginUsersDetails usersDetails = userRepository.getLoginUserDetails(authentication.getName());
+            if (usersDetails.roleId() == 1) {
+                //usersDetails.roleName();
+            }
             return new ResponseEntity<>(usersDetails, HttpStatus.OK);
         }
 

@@ -5,11 +5,13 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.responses.Hostels;
+import com.smartstay.smartstay.responses.beds.BedsStatusCount;
 import com.smartstay.smartstay.responses.hostel.FloorDetails;
 import com.smartstay.smartstay.responses.hostel.HostelDetails;
 import com.smartstay.smartstay.util.Utils;
@@ -22,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 
@@ -39,6 +42,9 @@ public class HostelService {
 
     @Autowired
     private FloorsService floorsService;
+
+    @Autowired
+    private BedsService bedsService;
 
     @Autowired
     private Authentication authentication;
@@ -180,7 +186,7 @@ public class HostelService {
     public ResponseEntity<?> getAllHostels() {
         List<HostelV1> listHotels = hostelV1Repository.findAll();
 
-        List<Hostels> list = listHotels.stream().map(hostelV1 -> new HostelsMapper().apply(hostelV1)).toList();
+        List<Hostels> list = listHotels.stream().map(hostelV1 -> new HostelsMapper(0, 0, 0,0, 0).apply(hostelV1)).toList();
 
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
@@ -197,7 +203,26 @@ public class HostelService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<Hostels> listOfHostels = userHostelService.findByUserId(userId).stream().map(item -> new HostelsMapper().apply(Objects.requireNonNull(hostelV1Repository.findById(item.getHostelId()).orElse(null)))).toList();
+        List<Hostels> listOfHostels = userHostelService.findByUserId(userId).stream().map(item -> {
+            System.out.println(item);
+            int noOfFloors = 0;
+            int noOfRooms = 0;
+            final int[] noOfBeds = {0};
+            AtomicInteger noOfOccupiedBeds = new AtomicInteger();
+            final long[] noOfAvailableBeds = {0};
+            List<BedsStatusCount> bedsCounts = bedsService.findBedCount(item.getHostelId());
+            bedsCounts.forEach(itm -> {
+                noOfBeds[0] = noOfBeds[0] + Integer.parseInt(String.valueOf(itm.getCount()));
+                if (itm.getStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+                    noOfAvailableBeds[0] = itm.getCount();
+                }
+                if (itm.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+                    noOfOccupiedBeds.set(Integer.valueOf(String.valueOf(itm.getStatus())));
+                }
+            });
+            noOfFloors = floorsService.getFloorCounts(item.getHostelId());
+            return new HostelsMapper(noOfFloors, 0, noOfBeds[0], noOfOccupiedBeds.get(), Integer.parseInt(String.valueOf(noOfAvailableBeds[0]))).apply(Objects.requireNonNull(hostelV1Repository.findById(item.getHostelId()).orElse(null)));
+        }).toList();
 
         return new ResponseEntity<>(listOfHostels, HttpStatus.OK);
     }
