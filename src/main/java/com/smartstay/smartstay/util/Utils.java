@@ -27,6 +27,7 @@ public class Utils {
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
     public static final String INVALID_ROLE = "Invalid role";
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
+    public static final String ACTIVE_USERS_FOUND = "Active users found";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";

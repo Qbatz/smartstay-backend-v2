@@ -47,5 +47,12 @@ public interface UserRepository extends JpaRepository<Users, String> {
     boolean existsByEmailId(String emailId);
     boolean existsByMobileNo(String mobileNo);
 
+    @Query(value = """
+            select * from users where role_id=:roleId and is_active=true and is_deleted=false
+            """, nativeQuery = true)
+    Optional<Users> findUsersByActiveRoles(@Param("roleId") int roleId);
+
+    List<Users> findByRoleIdAndIsActiveTrueAndIsDeletedFalse(int roleId);
+
 
 }

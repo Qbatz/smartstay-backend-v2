@@ -162,6 +162,9 @@ public class RolesService {
         if (!checkPermission(users.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        if (usersService.findActiveUsersByRole(roleId) != null && !usersService.findActiveUsersByRole(roleId).isEmpty()) {
+            return new ResponseEntity<>(Utils.ACTIVE_USERS_FOUND, HttpStatus.BAD_REQUEST);
+        }
         RolesV1 existingRole = rolesRepository.findByRoleIdAndParentId(roleId,users.getParentId());
         if (existingRole != null) {
             rolesRepository.delete(existingRole);
@@ -178,7 +181,6 @@ public class RolesService {
             List<RolesPermission> rolesPermission = roles.getPermissions();
             if (!rolesPermission.isEmpty()) {
                 List<RolesPermission> filteredPermission = rolesPermission.stream().filter(item -> item.getModuleId() == moduleId).toList();
-                System.out.println(filteredPermission);
                 if (!filteredPermission.isEmpty()) {
                     if (type.equalsIgnoreCase(Utils.PERMISSION_READ)) {
                         return filteredPermission.get(0).isCanRead();
