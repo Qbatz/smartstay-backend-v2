@@ -86,7 +86,7 @@ public class RoomsService {
 
     }
 
-    public ResponseEntity<?> updateRoomById(int roomId, UpdateRoom updateRoom) {
+    public ResponseEntity<?> updateRoomById(String hostelId,int roomId, UpdateRoom updateRoom) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -99,7 +99,7 @@ public class RoomsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Rooms existingRoom = roomRepository.findByRoomIdAndParentId(roomId,user.getParentId());
+        Rooms existingRoom = roomRepository.findByRoomIdAndParentIdAndHostelId(roomId,user.getParentId(),hostelId);
         if (existingRoom == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
@@ -133,6 +133,11 @@ public class RoomsService {
             return new ResponseEntity<>("Floor Doesn't exist", HttpStatus.BAD_REQUEST);
         }
 
+        Floors floors1 = floorRepository.findByFloorIdAndParentIdAndHostelId(addRoom.floorId(),user.getParentId(), addRoom.hostelId());
+        if (floors1==null){
+            return new ResponseEntity<>("Floor Doesn't exist for this hostel", HttpStatus.BAD_REQUEST);
+        }
+
         Rooms room = new Rooms();
         room.setCreatedAt(new Date());
         room.setUpdatedAt(new Date());
@@ -141,6 +146,7 @@ public class RoomsService {
         room.setRoomName(addRoom.roomName());
         room.setParentId(user.getParentId());
         room.setFloorId(addRoom.floorId());
+        room.setHostelId(addRoom.hostelId());
         roomRepository.save(room);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }

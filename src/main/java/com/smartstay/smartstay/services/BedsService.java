@@ -14,7 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -127,7 +126,7 @@ public class BedsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        boolean exists = roomRepository.findByRoomIdAndParentIdAndHostelId(addBed.roomId(),user.getParentId(), addBed.hostelId()) == 1;
+        boolean exists = roomRepository.checkRoomExistInTable(addBed.roomId(),user.getParentId(), addBed.hostelId()) == 1;
         if (!exists){
             return new ResponseEntity<>("Room Doesn't exist for this hostel", HttpStatus.BAD_REQUEST);
         }

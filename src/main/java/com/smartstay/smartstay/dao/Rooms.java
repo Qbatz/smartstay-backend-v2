@@ -25,6 +25,7 @@ public class Rooms {
     private Date createdAt;
     private Date updatedAt;
     private String parentId;
+    private String hostelId;
     private Integer floorId;
 
 }

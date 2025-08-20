@@ -19,5 +19,8 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
     @Query(value = "SELECT * FROM smart_stay.floors where floor_id=:floorId and parent_id=:parentId", nativeQuery = true)
     Floors findByFloorIdAndParentId(@Param("floorId") int floorId, @Param("parentId")  String parentId);
 
+    @Query(value = "SELECT * FROM smart_stay.floors where floor_id=:floorId and parent_id=:parentId and hostelId=:hostelId", nativeQuery = true)
+    Floors findByFloorIdAndParentIdAndHostelId(@Param("floorId") int floorId, @Param("parentId")  String parentId,@Param("hostelId")  String hostelId);
+
     Floors findByFloorIdAndHostelId(int floorId,String hostelId);
 }

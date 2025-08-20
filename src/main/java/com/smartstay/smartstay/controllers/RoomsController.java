@@ -37,9 +37,11 @@ public class RoomsController {
         return roomsService.addRoom(roomDto);
     }
 
-    @PutMapping("/{roomId}")
-    public ResponseEntity<?> updateRoomById(@PathVariable("roomId") int roomId, @RequestBody UpdateRoom updateRoom) {
-        return roomsService.updateRoomById(roomId, updateRoom);
+    @PutMapping("/{roomId}/{hostelId}")
+    public ResponseEntity<?> updateRoomById(@PathVariable("roomId") int roomId,
+                                            @PathVariable("hostelId") String hostelId,
+                                            @RequestBody UpdateRoom updateRoom) {
+        return roomsService.updateRoomById(hostelId,roomId, updateRoom);
     }
 
     @DeleteMapping("/{roomId}")

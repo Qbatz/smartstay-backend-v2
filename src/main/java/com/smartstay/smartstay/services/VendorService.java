@@ -1,21 +1,17 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.RoomsMapper;
 import com.smartstay.smartstay.Wrappers.VendorMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.ennum.*;
-import com.smartstay.smartstay.payloads.customer.CheckInRequest;
-import com.smartstay.smartstay.payloads.rooms.AddRoom;
-import com.smartstay.smartstay.payloads.rooms.UpdateRoom;
+import com.smartstay.smartstay.dao.RolesV1;
+import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.VendorV1;
+import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
 import com.smartstay.smartstay.repositories.RolesRepository;
-import com.smartstay.smartstay.repositories.RoomRepository;
 import com.smartstay.smartstay.repositories.VendorRepository;
-import com.smartstay.smartstay.responses.rooms.RoomsResponse;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,20 +27,15 @@ import java.util.List;
 public class VendorService {
 
     @Autowired
-    private Authentication authentication;
-
-    @Autowired
-    private UsersService usersService;
-
-    @Autowired
-    private RolesService rolesService;
-
-    @Autowired
     VendorRepository vendorRepository;
-
     @Autowired
     RolesRepository rolesRepository;
-
+    @Autowired
+    private Authentication authentication;
+    @Autowired
+    private UsersService usersService;
+    @Autowired
+    private RolesService rolesService;
     @Autowired
     private UploadFileToS3 uploadToS3;
 
