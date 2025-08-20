@@ -101,7 +101,14 @@ public class BedsService {
         if (existingBed == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
+
         if (updateBed.bedName() != null && !updateBed.bedName().isEmpty()) {
+            int duplicateCount = bedsRepository.countByBedNameAndBedId(
+                    user.getParentId(),bedId,existingBed.getRoomId()
+            );
+            if (duplicateCount > 0) {
+                return new ResponseEntity<>("Bed name already exists in this room", HttpStatus.CONFLICT);
+            }
             existingBed.setBedName(updateBed.bedName());
         }
         if (updateBed.isActive() != null) {
@@ -129,6 +136,16 @@ public class BedsService {
         boolean exists = roomRepository.checkRoomExistInTable(addBed.roomId(),user.getParentId(), addBed.hostelId()) == 1;
         if (!exists){
             return new ResponseEntity<>("Room Doesn't exist for this hostel", HttpStatus.BAD_REQUEST);
+        }
+
+        int duplicateCount = bedsRepository.countByBedNameAndRoomAndHostelAndParent(
+                addBed.bedName(),
+                addBed.roomId(),
+                addBed.hostelId(),
+                user.getParentId()
+        );
+        if (duplicateCount > 0) {
+            return new ResponseEntity<>("Bed name already exists in this room", HttpStatus.CONFLICT);
         }
 
         Beds beds = new Beds();

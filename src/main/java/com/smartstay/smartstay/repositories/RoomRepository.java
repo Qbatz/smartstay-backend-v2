@@ -31,5 +31,16 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
     Rooms findByRoomIdAndFloorId(int roomId,int floorId);
 
 
+    @Query("SELECT COUNT(r) FROM Rooms r WHERE r.roomName = :roomName AND r.floorId = :floorId AND r.hostelId = :hostelId AND r.parentId = :parentId AND r.isDeleted = false")
+    int countByRoomNameAndRoomAndHostelAndParent(@Param("roomName") String roomName,
+                                                @Param("floorId") Integer floorId,
+                                                @Param("hostelId") String hostelId,
+                                                @Param("parentId") String parentId);
+
+    @Query("SELECT COUNT(r) FROM Rooms r WHERE r.roomName = :roomName AND r.roomId != :roomId AND r.floorId = :floorId AND r.isDeleted = false")
+    int countByRoomNameAndRoomId(@Param("roomName") String roomName,
+                               @Param("floorId") Integer floorId,@Param("roomId") Integer roomId);
+
+
 
 }

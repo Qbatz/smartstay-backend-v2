@@ -104,6 +104,12 @@ public class RoomsService {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
         if (updateRoom.roomName() != null && !updateRoom.roomName().isEmpty()) {
+            int duplicateCount = roomRepository.countByRoomNameAndRoomId(
+                    updateRoom.roomName(),existingRoom.getFloorId(),roomId
+            );
+            if (duplicateCount > 0) {
+                return new ResponseEntity<>("Room name already exists in this Floor", HttpStatus.CONFLICT);
+            }
             existingRoom.setRoomName(updateRoom.roomName());
         }
         if (updateRoom.isActive() != null) {
@@ -136,6 +142,16 @@ public class RoomsService {
         Floors floors1 = floorRepository.findByFloorIdAndParentIdAndHostelId(addRoom.floorId(),user.getParentId(), addRoom.hostelId());
         if (floors1==null){
             return new ResponseEntity<>("Floor Doesn't exist for this hostel", HttpStatus.BAD_REQUEST);
+        }
+
+        int duplicateCount = roomRepository.countByRoomNameAndRoomAndHostelAndParent(
+                addRoom.roomName(),
+                addRoom.floorId(),
+                addRoom.hostelId(),
+                user.getParentId()
+        );
+        if (duplicateCount > 0) {
+            return new ResponseEntity<>("Room name already exists in this Floor", HttpStatus.CONFLICT);
         }
 
         Rooms room = new Rooms();
