@@ -13,6 +13,7 @@ import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
 import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
+import com.smartstay.smartstay.responses.user.OtpResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -202,11 +203,14 @@ public class UsersService {
             if (user == null) {
                 return new ResponseEntity<>("User not found", HttpStatus.BAD_REQUEST);
             }
+            int otp = Utils.generateOtp();
+            String otpMessage = "Dear user, your SmartStay Login OTP is " + otp + ". Use this OTP to verify your login. Do not share it with anyone. - SmartStay";
+            otpService.insertOrUpdateOTP(user, otp);
 
             String encodedPassword = encoder.encode(password.password());
             user.setPassword(encodedPassword);
             userRepository.save(user);
-            return new ResponseEntity<>("Password changed successfully", HttpStatus.OK);
+            return new ResponseEntity<>(new OtpResponse("Password changed successfully",otp), HttpStatus.OK);
         }
 
         return new ResponseEntity<>("Invalid user.", HttpStatus.BAD_REQUEST);
