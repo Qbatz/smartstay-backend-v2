@@ -16,7 +16,7 @@ public class AddAdminUsersMapper implements Function<AddAdminPayload, Users> {
 
     @Override
     public Users apply(AddAdminPayload addAdminPayload) {
-        users.setRoleId(1);
+        users.setRoleId(2);
         users.setFirstName(addAdminPayload.firstName());
         users.setLastName(addAdminPayload.lastName());
         users.setMobileNo(addAdminPayload.mobile());

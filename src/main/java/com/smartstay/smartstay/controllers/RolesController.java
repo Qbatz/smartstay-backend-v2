@@ -44,7 +44,7 @@ public class RolesController {
         return rolesService.updateRoleById(roleId, updateRoles);
     }
 
-    @DeleteMapping("remove-role/{roleId}")
+    @DeleteMapping("/{roleId}")
     public ResponseEntity<?> deleteRoleById(@PathVariable("roleId") int roleId) {
         return rolesService.deleteRoleById(roleId);
     }

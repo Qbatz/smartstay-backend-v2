@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.Floors;
+import com.smartstay.smartstay.dto.FloorsCount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,5 +34,8 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
     int countByFloorNameAndFloorId(@Param("floorName") String floorName,
                                    @Param("hostelId") String hostelId,
                                    @Param("floorId") Integer floorId);
+
+    @Query(value = "select count(fl.floor_id) as count from smart_stay.floors fl where fl.hostel_id=:hostelId and fl.is_active=true and fl.is_deleted=false", nativeQuery = true)
+    FloorsCount findFloorCountsBasedOnHostelId(@Param("hostelId") String hostelId);
 
 }

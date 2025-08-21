@@ -8,6 +8,7 @@ import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.beds.BedsResponse;
+import com.smartstay.smartstay.responses.beds.BedsStatusCount;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -250,5 +251,10 @@ public class BedsService {
 
     public boolean checkBedExistForRoom(int bedId, int roomId, String hostelId) {
         return bedsRepository.findByBedIdAndRoomIdAndHostelId(bedId, roomId, hostelId) != null;
+    }
+
+    public List<BedsStatusCount> findBedCount(String hostelId) {
+
+        return bedsRepository.getBedCountByStatus(hostelId);
     }
 }

@@ -186,4 +186,8 @@ public class FloorsService {
         return floorRepository.findByFloorIdAndHostelId(floorId, hostelId) != null;
     }
 
+    public int getFloorCounts(String hostelId) {
+        return floorRepository.findFloorCountsBasedOnHostelId(hostelId).getCount().intValue();
+    }
+
 }
