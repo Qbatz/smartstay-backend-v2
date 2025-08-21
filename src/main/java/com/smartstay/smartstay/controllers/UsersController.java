@@ -1,9 +1,10 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.payloads.account.CreateAccount;
-import com.smartstay.smartstay.payloads.account.Login;
 import com.smartstay.smartstay.payloads.Password;
 import com.smartstay.smartstay.payloads.VerifyOtpPayloads;
+import com.smartstay.smartstay.payloads.account.CreateAccount;
+import com.smartstay.smartstay.payloads.account.Login;
+import com.smartstay.smartstay.responses.account.AdminUserResponse;
 import com.smartstay.smartstay.services.UsersService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +20,7 @@ public class UsersController {
     UsersService userService;
 
     @PostMapping("")
-    public ResponseEntity<com.smartstay.smartstay.responses.CreateAccount> createAccount(@Valid @RequestBody CreateAccount createAccount) {
+    public ResponseEntity<AdminUserResponse> createAccount(@Valid @RequestBody CreateAccount createAccount) {
         return userService.createAccount(createAccount);
     }
 

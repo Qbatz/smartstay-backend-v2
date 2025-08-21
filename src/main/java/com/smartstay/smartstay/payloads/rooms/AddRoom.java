@@ -6,7 +6,9 @@ import jakarta.validation.constraints.NotNull;
 public record AddRoom(
         @NotNull(message = "Room name is required") @NotEmpty(message = "Room name is required") String roomName,
         @NotNull
-        int floorId
+        int floorId,
+        @NotNull(message = "HostelId is required") @NotEmpty(message = "HostelId is required")
+        String hostelId
 
 ) {
 }

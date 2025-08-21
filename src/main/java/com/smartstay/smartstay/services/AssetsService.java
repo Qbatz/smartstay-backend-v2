@@ -5,6 +5,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.AssetsV1;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.payloads.asset.AssetRequest;
 import com.smartstay.smartstay.repositories.AssetsRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.responses.assets.AssetResponse;
@@ -47,6 +48,39 @@ public class AssetsService {
         List<AssetsV1> listAssets = assetsRepository.findAllByHostelId(hostelId);
         List<AssetResponse> assetResponse = listAssets.stream().map(item -> new AssetMapper().apply(item)).toList();
         return new ResponseEntity<>(assetResponse, HttpStatus.OK);
+    }
+
+
+    public ResponseEntity<?> addAsset(AssetRequest request) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+        Users users = usersService.findUserByUserId(userId);
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
+        if (rolesV1 == null) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        AssetsV1 asset = new AssetsV1();
+        asset.setAssetName(request.assetName());
+        asset.setProductName(request.productName());
+        asset.setVendorId(request.vendorId());
+        asset.setBrandName(request.brandName());
+        asset.setSerialNumber(request.serialNumber());
+        asset.setPurchaseDate(request.purchaseDate());
+        asset.setPrice(request.price());
+        asset.setModeOfPayment(request.modeOfPayment());
+        asset.setCreatedBy(request.createdBy());
+        asset.setCreatedAt(new java.util.Date());
+        asset.setIsActive(true);
+        asset.setHostelId(request.hostelId());
+        asset.setParentId(request.parentId());
+        AssetsV1 saved = assetsRepository.save(asset);
+        return new ResponseEntity<>(new AssetResponse(saved.getAssetId(), saved.getAssetName(), saved.getBrandName()), HttpStatus.OK);
     }
 
 

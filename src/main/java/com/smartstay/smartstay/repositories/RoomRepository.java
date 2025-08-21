@@ -16,18 +16,30 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
     Rooms findByRoomId(int roomId);
 
     Rooms findByRoomIdAndParentId(int roomId,String parentId);
+    Rooms findByRoomIdAndParentIdAndHostelId(int roomId, String parentId, String hostelId);
 
     @Query(value = """
     SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM rooms rm
     INNER JOIN floors fl ON rm.floor_id = fl.floor_id
     WHERE rm.room_id = :roomId AND rm.parent_id = :parentId AND fl.hostel_id = :hostelId
     """, nativeQuery = true)
-    int findByRoomIdAndParentIdAndHostelId(@Param("roomId") int roomId,
-                   @Param("parentId") String parentId,
-                   @Param("hostelId") String hostelId);
+    int checkRoomExistInTable(@Param("roomId") int roomId,
+                              @Param("parentId") String parentId,
+                              @Param("hostelId") String hostelId);
 
 
     Rooms findByRoomIdAndFloorId(int roomId,int floorId);
+
+
+    @Query("SELECT COUNT(r) FROM Rooms r WHERE r.roomName = :roomName AND r.floorId = :floorId AND r.hostelId = :hostelId AND r.parentId = :parentId AND r.isDeleted = false")
+    int countByRoomNameAndRoomAndHostelAndParent(@Param("roomName") String roomName,
+                                                @Param("floorId") Integer floorId,
+                                                @Param("hostelId") String hostelId,
+                                                @Param("parentId") String parentId);
+
+    @Query("SELECT COUNT(r) FROM Rooms r WHERE r.roomName = :roomName AND r.roomId != :roomId AND r.floorId = :floorId AND r.isDeleted = false")
+    int countByRoomNameAndRoomId(@Param("roomName") String roomName,
+                               @Param("floorId") Integer floorId,@Param("roomId") Integer roomId);
 
 
 

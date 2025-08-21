@@ -2,8 +2,6 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
-import com.smartstay.smartstay.payloads.rooms.AddRoom;
-import com.smartstay.smartstay.payloads.rooms.UpdateRoom;
 import com.smartstay.smartstay.services.BedsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

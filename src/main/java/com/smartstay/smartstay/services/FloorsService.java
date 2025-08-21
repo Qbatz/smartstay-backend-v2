@@ -107,7 +107,14 @@ public class FloorsService {
         if (existingFloor == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
+
         if (updateFloor.floorName() != null && !updateFloor.floorName().isEmpty()) {
+            int duplicateCount = floorRepository.countByFloorNameAndFloorId(
+                    updateFloor.floorName(), existingFloor.getHostelId(), floorId
+            );
+            if (duplicateCount > 0) {
+                return new ResponseEntity<>("Floor name already exists in this hostel", HttpStatus.CONFLICT);
+            }
             existingFloor.setFloorName(updateFloor.floorName());
         }
         if (updateFloor.isActive() != null) {
@@ -136,6 +143,15 @@ public class FloorsService {
         if (hostelV1==null){
             return new ResponseEntity<>("Hostel Doesn't found", HttpStatus.BAD_REQUEST);
         }
+        int duplicateCount = floorRepository.countByFloorNameAndRoomAndHostelAndParent(
+                addFloors.floorName(),
+                addFloors.hostelId(),
+                user.getParentId()
+        );
+        if (duplicateCount > 0) {
+            return new ResponseEntity<>("Floor name already exists in this hostel", HttpStatus.CONFLICT);
+        }
+
         Floors floors = new Floors();
         floors.setCreatedAt(new Date());
         floors.setUpdatedAt(new Date());
