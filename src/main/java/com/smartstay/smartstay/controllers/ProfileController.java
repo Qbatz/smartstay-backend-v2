@@ -3,6 +3,7 @@ package com.smartstay.smartstay.controllers;
 import com.smartstay.smartstay.payloads.account.AddAdminPayload;
 import com.smartstay.smartstay.payloads.UpdateUserProfilePayloads;
 import com.smartstay.smartstay.payloads.account.AddAdminUser;
+import com.smartstay.smartstay.payloads.account.UpdateVerificationStatus;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -46,5 +47,10 @@ public class ProfileController {
     @PostMapping("/add-user")
     public ResponseEntity<?> addUser(@Valid @RequestBody AddAdminUser adminUser) {
         return usersService.createAdminUser(adminUser);
+    }
+
+    @PutMapping("/two-step-verification")
+    public ResponseEntity<?> updateAuthenticationStatus(@RequestBody UpdateVerificationStatus verificationStatus) {
+        return usersService.updateTwoStepVerification(verificationStatus);
     }
 }

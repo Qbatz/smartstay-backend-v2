@@ -7,10 +7,7 @@ import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.*;
-import com.smartstay.smartstay.payloads.account.AddAdminPayload;
-import com.smartstay.smartstay.payloads.account.AddAdminUser;
-import com.smartstay.smartstay.payloads.account.CreateAccount;
-import com.smartstay.smartstay.payloads.account.Login;
+import com.smartstay.smartstay.payloads.account.*;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
@@ -170,6 +167,9 @@ public class UsersService {
 
         if (authentication.isAuthenticated()) {
             LoginUsersDetails usersDetails = userRepository.getLoginUserDetails(authentication.getName());
+            if (usersDetails.roleId() == 1) {
+                //usersDetails.roleName();
+            }
             return new ResponseEntity<>(usersDetails, HttpStatus.OK);
         }
 
@@ -381,5 +381,24 @@ public class UsersService {
         else {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+    }
+
+    public ResponseEntity<?> updateTwoStepVerification(UpdateVerificationStatus verificationStatus) {
+        if (authentication.isAuthenticated()) {
+            Users user = userRepository.findById(authentication.getName()).orElse(null);
+            if (user == null) {
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+            user.setTwoStepVerificationStatus(verificationStatus.isStatus());
+            userRepository.save(user);
+            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+        }
+        else {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    public List<Users> findActiveUsersByRole(int roleId) {
+        return userRepository.findByRoleIdAndIsActiveTrueAndIsDeletedFalse(roleId);
     }
 }

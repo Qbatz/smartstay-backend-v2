@@ -8,6 +8,20 @@ import java.util.function.Function;
 
 public class HostelsMapper implements Function<HostelV1, Hostels> {
 
+    private int noOfFloors = 0;
+    private int noOfRooms = 0;
+    private int noOfBeds = 0;
+    private int noOfOccupiedBeds = 0;
+    private int noOfAvailableBeds = 0;
+
+    public HostelsMapper(int noOfFloors, int noOfRooms, int noOfBeds, int noOfOccupiedBeds, int noOfAvailableBeds) {
+        this.noOfFloors = noOfFloors;
+        this.noOfRooms = noOfRooms;
+        this.noOfBeds = noOfBeds;
+        this.noOfOccupiedBeds = noOfOccupiedBeds;
+        this.noOfAvailableBeds = noOfAvailableBeds;
+    }
+
     @Override
     public Hostels apply(HostelV1 hostelV1) {
         return new Hostels(hostelV1.getHostelId(),
@@ -25,6 +39,6 @@ public class HostelsMapper implements Function<HostelV1, Hostels> {
                 Utils.dateToString(hostelV1.getUpdatedAt()),
                 Utils.dateToString(hostelV1.getSubscription().get(hostelV1.getSubscription().size()-1).getNextBillingAt()),
                 Utils.compareWithTodayDate(hostelV1.getSubscription().get(hostelV1.getSubscription().size()-1).getNextBillingAt()),
-                "");
+                "", noOfFloors, noOfRooms , noOfBeds, noOfOccupiedBeds, noOfAvailableBeds);
     }
 }
