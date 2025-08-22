@@ -1,15 +1,16 @@
 package com.smartstay.smartstay.responses.customer;
 
-public interface CustomerData {
-    String getFirstName();
-    String getCity();
-    String getState();
-    String getCountry();
-    String getCurrentStatus();
-    String getEmailId();
-    String getProfilePic();
-    String getBedId();
-    String getFloorId();
-    String getRoomId();
-    String getCustomerId();
+public record CustomerData(String firstName,
+                           String city,
+                           String state,
+                           String country,
+                           String mobile,
+                           String currentStatus,
+                           String emailId,
+                           String profilePic,
+                           String bedId,
+                           String floorId,
+                           String roomId,
+                           String customerId,
+                           String initials) {
 }

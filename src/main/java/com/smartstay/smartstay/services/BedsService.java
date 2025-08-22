@@ -199,7 +199,7 @@ public class BedsService {
 
         Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId,users.getParentId());
         if (existingBed != null) {
-            if (Utils.compareWithTodayDate(Utils.stringToDate(joiningDate))) {
+            if (Utils.compareWithTodayDate(Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT))) {
                 existingBed.setStatus(BedStatus.OCCUPIED.name());
                 existingBed.setBooked(true);
                 existingBed.setUpdatedAt(new Date());
@@ -209,7 +209,7 @@ public class BedsService {
             bedsRepository.save(existingBed);
 
         }
-        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 
     public boolean isBedAvailable(int bedId, String parentId, Date date) {

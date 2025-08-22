@@ -16,7 +16,11 @@ public class Utils {
     public static final String ENVIRONMENT_QA = "QA";
     public static final String ENVIRONMENT_PROD = "PROD";
 
-    private static final String DATE_FORMAT = "dd/MM/yyyy";
+    public static final String USER_INPUT_DATE_FORMAT = "dd-MM-yyyy";
+
+    public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
+    public static final String DATE_FORMAT_YY = "yyyy/MM/dd";
+    public static final String DATE_FORMAT_ZOHO = "yyyy-MM-dd";
 
     public static final String ACCESS_RESTRICTED = "Access Restricted";
     public static final String UN_AUTHORIZED = "Unauthorized";
@@ -33,7 +37,10 @@ public class Utils {
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
     public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
     public static final String N0_BED_FOUND_ROOM = "No bed found for the specified room.";
-    public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable for check in";
+    public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable";
+
+
+    public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";
 
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
@@ -82,10 +89,10 @@ public class Utils {
         return EMAIL_PATTERN.matcher(email).matches();
     }
 
-//    this accepts only yyyy-MM-dd format only
-    public static Date stringToDate(String date) {
+    public static Date stringToDate(String date, String inputFormat) {
         try {
-            return new SimpleDateFormat("yyyy-MM-dd").parse(date);
+            System.out.println(date);
+            return new SimpleDateFormat(inputFormat).parse(date);
         } catch (ParseException e) {
             throw new RuntimeException("Invalid date format");
         }
@@ -122,15 +129,15 @@ public class Utils {
         if (date == null) {
             return "";
         }
-        return new SimpleDateFormat(DATE_FORMAT).format(date);
+        return new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(date);
     }
 
 
     public static boolean compareWithTodayDate(Date date2) {
-        String dateString = new SimpleDateFormat(DATE_FORMAT).format(new Date());
+        String dateString = new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(new Date());
         Date today;
         try {
-            today = new SimpleDateFormat(DATE_FORMAT).parse(dateString);
+            today = new SimpleDateFormat(OUTPUT_DATE_FORMAT).parse(dateString);
         } catch (ParseException e) {
             throw new RuntimeException("Invalid date");
         }

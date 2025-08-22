@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.services.CustomersService;
@@ -39,14 +38,19 @@ public class CustomersController {
         return customersService.assignBed(assignBed);
     }
 
+    @PostMapping("/{hostelId}")
+    public ResponseEntity<?> addCustomer(@PathVariable("hostelId") String hostelId, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic, @Valid @RequestPart AddCustomer customerInfo) {
+        return customersService.addCustomer(hostelId, profilePic, customerInfo);
+    }
+
 //    @GetMapping("/{hostelId}")
 //    public ResponseEntity<?> getAllCheckInCustomer(@PathVariable("hostelId") String hostelId) {
 //        return customersService.getAllCheckInCustomers(hostelId);
 //    }
 
     @PostMapping("/add-booking/{hostelId}")
-    public ResponseEntity<?> createBooking(@PathVariable("hostelId") String hostelId,@RequestPart(value = "profilePic", required = false) MultipartFile file, @Valid @RequestPart BookingRequest bookingRequest) {
-        return customersService.createBooking(file, bookingRequest,hostelId);
+    public ResponseEntity<?> createBooking(@PathVariable("hostelId") String hostelId, @Valid @RequestBody BookingRequest bookingRequest) {
+        return customersService.createBooking(bookingRequest,hostelId);
     }
 
     @PostMapping("/booked/check-in")

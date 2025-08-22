@@ -1,7 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.Users;
-import com.smartstay.smartstay.responses.LoginUsersDetails;
+import com.smartstay.smartstay.dto.LoginUsersDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

@@ -41,12 +41,13 @@ public class VendorService {
 
     public ResponseEntity<?> getAllVendors(String hostelId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
         Users users = usersService.findUserByUserId(userId);
         RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
+
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
@@ -54,6 +55,7 @@ public class VendorService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<VendorV1> vendorV1List = vendorRepository.findAllByHostelId(hostelId);
+        System.out.println(vendorV1List);
         List<VendorResponse> vendorResponses = vendorV1List.stream().map(item -> new VendorMapper().apply(item)).toList();
         return new ResponseEntity<>(vendorResponses, HttpStatus.OK);
     }
@@ -126,19 +128,19 @@ public class VendorService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        if (vendorRepository.existsByMobileNumber(payloads.mobile())) {
+        if (vendorRepository.existsByMobile(payloads.mobile())) {
             return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
         String profileImage = null;
         if (file != null) {
-            profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "users/profile");
+            profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "Vendor/Logo");
         }
 
         VendorV1 vendorV1 = new VendorV1();
         vendorV1.setFirstName(payloads.firstName());
         vendorV1.setLastName(payloads.lastName());
-        vendorV1.setMobileNumber(payloads.mobile());
+        vendorV1.setMobile(payloads.mobile());
         vendorV1.setEmailId(payloads.mailId());
         vendorV1.setHouseNo(payloads.houseNo());
         vendorV1.setLandMark(payloads.landmark());
@@ -146,10 +148,11 @@ public class VendorService {
         vendorV1.setCity(payloads.city());
         vendorV1.setState(payloads.state());
         vendorV1.setProfilePic(profileImage);
-        vendorV1.setCountry("");
-        vendorV1.setCity(user.getUserId());
+        vendorV1.setCountry(1l);
         vendorV1.setCreatedAt(new Date());
         vendorV1.setUpdatedAt(new Date());
+        vendorV1.setCreatedBy(userId);
+        vendorV1.setHostelId(payloads.hostelId());
         vendorV1.setActive(true);
         vendorRepository.save(vendorV1);
 

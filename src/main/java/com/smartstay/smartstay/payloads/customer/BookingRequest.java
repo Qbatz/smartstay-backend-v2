@@ -7,19 +7,20 @@ import jakarta.validation.constraints.Positive;
 import java.util.Date;
 
 public record BookingRequest(
-        @NotNull(message = "First name is required")
-        @NotEmpty(message = "First name is required") String firstName,
-        String lastName,
-        @NotNull(message = "Mobile no is required")
-        @NotEmpty(message = "Mobile no is required") String mobile,
-        String mailId, String houseNo, String street, String landmark,
-        @NotNull(message = "pincode is required") int pincode,
-        @NotNull(message = "city is required")
-        @NotEmpty(message = "city is required") String city,
-        @NotNull(message = "state is required")
-        @NotEmpty(message = "state is required") String state,
+        @NotNull(message = "Joining date is required")
+        @NotEmpty(message = "Joining date is required")
+        String joiningDate,
         @NotNull(message = "Booking Date is required") String bookingDate,
         @NotNull(message = "Booking Amount is required")
-        @Positive(message = "Booking Amount must be greater than 0") Double bookingAmount
+        @Positive(message = "Booking Amount must be greater than 0") Double bookingAmount,
+        @NotNull(message = "Floor id required")
+        int floorId,
+        @NotNull(message = "Room id required")
+        int roomId,
+        @NotNull(message = "Bed id required")
+        int bedId,
+        @NotNull(message = "Customer id required")
+        @NotEmpty(message = "Customer id required")
+        String customerId
 ) {}
 

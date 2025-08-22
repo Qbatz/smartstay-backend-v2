@@ -47,6 +47,9 @@ public class HostelService {
     private BedsService bedsService;
 
     @Autowired
+    private RoomsService roomsService;
+
+    @Autowired
     private Authentication authentication;
 
     @Value("${ZOHO_SUBSCRIPTION_PLAN}")
@@ -204,7 +207,6 @@ public class HostelService {
         }
 
         List<Hostels> listOfHostels = userHostelService.findByUserId(userId).stream().map(item -> {
-            System.out.println(item);
             int noOfFloors = 0;
             int noOfRooms = 0;
             final int[] noOfBeds = {0};
@@ -217,11 +219,12 @@ public class HostelService {
                     noOfAvailableBeds[0] = itm.getCount();
                 }
                 if (itm.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
-                    noOfOccupiedBeds.set(Integer.valueOf(String.valueOf(itm.getStatus())));
+                    noOfOccupiedBeds.set(Integer.valueOf(String.valueOf(itm.getCount())));
                 }
             });
             noOfFloors = floorsService.getFloorCounts(item.getHostelId());
-            return new HostelsMapper(noOfFloors, 0, noOfBeds[0], noOfOccupiedBeds.get(), Integer.parseInt(String.valueOf(noOfAvailableBeds[0]))).apply(Objects.requireNonNull(hostelV1Repository.findById(item.getHostelId()).orElse(null)));
+            noOfRooms = roomsService.getRoomCount(item.getHostelId());
+            return new HostelsMapper(noOfFloors, noOfRooms, noOfBeds[0], noOfOccupiedBeds.get(), Integer.parseInt(String.valueOf(noOfAvailableBeds[0]))).apply(Objects.requireNonNull(hostelV1Repository.findById(item.getHostelId()).orElse(null)));
         }).toList();
 
         return new ResponseEntity<>(listOfHostels, HttpStatus.OK);
@@ -264,8 +267,6 @@ public class HostelService {
         }
         return new ResponseEntity<>("No hostels found", HttpStatus.BAD_REQUEST);
     }
-
-
     public ResponseEntity<?> getHostelDetails(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid user");
@@ -296,6 +297,8 @@ public class HostelService {
 
         return ResponseEntity.ok(details);
     }
+
+
 
 }
 
