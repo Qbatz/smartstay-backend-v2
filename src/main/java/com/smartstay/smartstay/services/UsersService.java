@@ -8,6 +8,7 @@ import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.*;
 import com.smartstay.smartstay.payloads.account.*;
+import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
@@ -198,22 +199,53 @@ public class UsersService {
     public ResponseEntity<Object> changePassword(Password password) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication.isAuthenticated()) {
-
             Users user = userRepository.findUserByUserId(authentication.getName());
             if (user == null) {
                 return new ResponseEntity<>("User not found", HttpStatus.BAD_REQUEST);
             }
-            int otp = Utils.generateOtp();
-            String otpMessage = "Dear user, your SmartStay Login OTP is " + otp + ". Use this OTP to verify your login. Do not share it with anyone. - SmartStay";
-            otpService.insertOrUpdateOTP(user, otp);
-
             String encodedPassword = encoder.encode(password.password());
             user.setPassword(encodedPassword);
             userRepository.save(user);
-            return new ResponseEntity<>(new OtpResponse("Password changed successfully",otp), HttpStatus.OK);
+            return new ResponseEntity<>("Password changed successfully", HttpStatus.OK);
         }
-
         return new ResponseEntity<>("Invalid user.", HttpStatus.BAD_REQUEST);
+    }
+
+    public ResponseEntity<Object> requestPasswordReset(String email) {
+        Users user = userRepository.findUserByEmailId(email);
+        if (user == null) {
+            return new ResponseEntity<>("User not found with email: " + email, HttpStatus.NOT_FOUND);
+        }
+        int otp = Utils.generateOtp();
+        otpService.insertOrUpdateOTP(user, otp);
+
+        String otpMessage = "Dear user, your password reset OTP is " + otp
+                + ". It is valid for 15 minutes.";
+        if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+            otpService.sendOtp(user.getMobileNo(), otpMessage);
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("userId", user.getUserId());
+        response.put("message", "OTP has been sent successfully.");
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> verifyOtpAndResetPassword(ResetPasswordRequest request) {
+        Users user = userRepository.findUserByUserId(request.userId());
+        if (user == null) {
+            return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+        }
+        UserOtp usersOtp = otpService.verifyOtp(request.userId(),request.otp());
+        if (usersOtp == null) {
+            return new ResponseEntity<>("Invalid Otp", HttpStatus.OK);
+        } else if (usersOtp.getOtpValidity().before(new Date())) {
+            return new ResponseEntity<>("Otp expired.", HttpStatus.BAD_REQUEST);
+        }
+        String encodedPassword = encoder.encode(request.password());
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
+
+        return new ResponseEntity<>("Password reset successful", HttpStatus.OK);
     }
 
 

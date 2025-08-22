@@ -4,6 +4,7 @@ import com.smartstay.smartstay.payloads.Password;
 import com.smartstay.smartstay.payloads.VerifyOtpPayloads;
 import com.smartstay.smartstay.payloads.account.CreateAccount;
 import com.smartstay.smartstay.payloads.account.Login;
+import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
 import com.smartstay.smartstay.services.UsersService;
 import jakarta.validation.Valid;
@@ -43,6 +44,16 @@ public class UsersController {
     @PostMapping("/change-password")
     public ResponseEntity<Object> changePassword(@RequestBody Password password) {
         return userService.changePassword(password);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        return userService.verifyOtpAndResetPassword(request);
+    }
+
+    @GetMapping("/request-otp/{emailId}")
+    public ResponseEntity<Object> requestOtp(@PathVariable("emailId") String emailId) {
+        return userService.requestPasswordReset(emailId);
     }
 
 

@@ -109,4 +109,13 @@ public class OTPService {
         }
         return userOtp;
     }
+
+    public UserOtp verifyOtp(String userId, Integer otp) {
+        UserOtp userOtp = userOtpRepository.findByUsers_UserIdAndOtpAndIsVerifiedFalse(userId, otp).orElse(null);
+        if (userOtp != null && userOtp.getOtpValidity().after(new Date())) {
+            userOtp.setVerified(true);
+            userOtpRepository.save(userOtp);
+        }
+        return userOtp;
+    }
 }
