@@ -184,11 +184,49 @@ public class UsersService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication.isAuthenticated()) {
-            LoginUsersDetails usersDetails = userRepository.getLoginUserDetails(authentication.getName());
-            if (usersDetails.roleId() == 1) {
-                //usersDetails.roleName();
+            LoginUsersDetails details1 = null;
+            com.smartstay.smartstay.dto.LoginUsersDetails usersDetails = userRepository.getLoginUserDetails(authentication.getName());
+            StringBuilder initials = new StringBuilder();
+            initials.append(usersDetails.firstName().toUpperCase().charAt(0));
+            if (usersDetails.lastName() != null && !usersDetails.lastName().equalsIgnoreCase("")) {
+                initials.append(usersDetails.lastName().toUpperCase().charAt(0));
             }
-            return new ResponseEntity<>(usersDetails, HttpStatus.OK);
+            else {
+                initials.append(usersDetails.firstName().toUpperCase().charAt(0));
+            }
+            if (usersDetails.roleId() == 1 || usersDetails.roleId() == 2) {
+                details1 = new LoginUsersDetails(usersDetails.userId(),
+                        usersDetails.firstName(),
+                        usersDetails.lastName(),
+                        usersDetails.mobileNo(),
+                        usersDetails.mailId(),
+                        usersDetails.roleId(),
+                        "Admin",
+                        usersDetails.countryId(),
+                        usersDetails.email_authentication_status(),
+                        usersDetails.sms_authentication_status(),
+                        usersDetails.two_step_verification_status(),
+                        usersDetails.countryName(),
+                        usersDetails.currency(),
+                        usersDetails.countryCode(), initials.toString());
+            }
+            else {
+                details1 = new LoginUsersDetails(usersDetails.userId(),
+                        usersDetails.firstName(),
+                        usersDetails.lastName(),
+                        usersDetails.mobileNo(),
+                        usersDetails.mailId(),
+                        usersDetails.roleId(),
+                        usersDetails.roleName(),
+                        usersDetails.countryId(),
+                        usersDetails.email_authentication_status(),
+                        usersDetails.sms_authentication_status(),
+                        usersDetails.two_step_verification_status(),
+                        usersDetails.countryName(),
+                        usersDetails.currency(),
+                        usersDetails.countryCode(), initials.toString());
+            }
+            return new ResponseEntity<>(details1, HttpStatus.OK);
         }
 
         return new ResponseEntity<>("Invalid user.", HttpStatus.BAD_REQUEST);

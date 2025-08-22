@@ -27,12 +27,12 @@ public class ZohoSubscriptionMapper implements Function<ZohoSubscription, Subscr
         subscription.setDiscountAmount(plan.getDiscountAmount());
         subscription.setDiscount(plan.getDiscount());
         subscription.setStatus(sub.getStatus());
-        subscription.setCreatedAt(Utils.stringToDate(sub.getCreatedAt()));
-        subscription.setActivatedAt(Utils.stringToDate(sub.getActivatedAt()));
-        subscription.setTrialStartsAt(Utils.stringToDate(sub.getTrialStartsAt()));
-        subscription.setTrialEndsAt(Utils.stringToDate(sub.getTrialEndsAt()));
+        subscription.setCreatedAt(Utils.stringToDate(sub.getCreatedAt(), Utils.DATE_FORMAT_ZOHO));
+        subscription.setActivatedAt(Utils.stringToDate(sub.getActivatedAt(), Utils.DATE_FORMAT_ZOHO));
+        subscription.setTrialStartsAt(Utils.stringToDate(sub.getTrialStartsAt(), Utils.DATE_FORMAT_ZOHO));
+        subscription.setTrialEndsAt(Utils.stringToDate(sub.getTrialEndsAt(), Utils.DATE_FORMAT_ZOHO));
         subscription.setTrialRemainingDays(sub.getTrialRemainingDays());
-        subscription.setNextBillingAt(Utils.stringToDate(sub.getNextBillingAt()));
+        subscription.setNextBillingAt(Utils.stringToDate(sub.getNextBillingAt(), Utils.DATE_FORMAT_ZOHO));
         return subscription;
     }
 }
