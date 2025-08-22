@@ -15,6 +15,7 @@ import com.smartstay.smartstay.responses.LoginUsersDetails;
 import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
 import com.smartstay.smartstay.responses.user.OtpResponse;
+import com.smartstay.smartstay.responses.user.UsersData;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -328,10 +329,30 @@ public class UsersService {
         return configUUID();
     }
 
+
+    public ResponseEntity<?> listAllAdmins() {
+        if (authentication.isAuthenticated()) {
+            Users users = userRepository.findUserByUserId(authentication.getName());
+            if (users != null) {
+                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_READ)) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
+                List<UsersData> admins = userRepository.getAdminUserList(2, users.getParentId());
+                if (admins.isEmpty()) {
+                    return new ResponseEntity<>("No admins found", HttpStatus.NOT_FOUND);
+                }
+                return new ResponseEntity<>(admins, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+        }else {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+    }
+
     public ResponseEntity<?> createAdmin(AddAdminPayload createAccount, MultipartFile file) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
-
             if (users != null) {
                 if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);

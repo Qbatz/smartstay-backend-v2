@@ -1,6 +1,20 @@
 package com.smartstay.smartstay.responses.vendor;
 
 public record VendorResponse(
-        int id, String vendorName,String businessName,String mobileNumber, String emailId, String profilePic
+        int id,
+        String firstName,
+        String lastName,
+        String fullName,
+        String businessName,
+        String mobileNumber,
+        String emailId,
+        String profilePic,
+        String houseNo,
+        String area,
+        String landMark,
+        String city,
+        int pinCode,
+        String state,
+        String country
 ) {
 }

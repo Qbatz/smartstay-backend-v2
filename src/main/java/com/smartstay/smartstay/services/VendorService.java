@@ -45,8 +45,7 @@ public class VendorService {
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        Users users = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
