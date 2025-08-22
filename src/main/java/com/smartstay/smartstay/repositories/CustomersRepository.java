@@ -17,7 +17,8 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     SELECT cus.first_name AS firstName, cus.city, cus.mobile, cus.state, cus.joining_date, 
     cus.created_at, cus.country, cus.current_status AS currentStatus, 
     cus.customer_id as customerId, cus.email_id AS emailId, 
-    cus.profile_pic AS profilePic FROM customers cus
+    cus.profile_pic AS profilePic, cus.joining_date as actualJoiningDate, cus.exp_joining_date as joiningDate, 
+    cus.created_at as createdAt FROM customers cus
     WHERE cus.hostel_id = :hostelId
     AND (:name IS NULL OR LOWER(cus.first_name) LIKE LOWER(CONCAT('%', :name, '%'))
                            OR LOWER(cus.last_name) LIKE LOWER(CONCAT('%', :name, '%')))

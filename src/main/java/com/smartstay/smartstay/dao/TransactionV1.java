@@ -24,6 +24,6 @@ public class TransactionV1 {
     private String status;
 
     @ManyToOne()
-    @JoinColumn(name = "transactions")
+    @JoinColumn(name = "customer_id")
     private Customers customers;
 }

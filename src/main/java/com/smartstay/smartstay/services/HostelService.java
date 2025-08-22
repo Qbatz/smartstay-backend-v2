@@ -210,7 +210,7 @@ public class HostelService {
             int noOfFloors = 0;
             int noOfRooms = 0;
             final int[] noOfBeds = {0};
-            AtomicInteger noOfOccupiedBeds = new AtomicInteger();
+            AtomicInteger noOfOccupiedBeds = new AtomicInteger(0);
             final long[] noOfAvailableBeds = {0};
             List<BedsStatusCount> bedsCounts = bedsService.findBedCount(item.getHostelId());
             bedsCounts.forEach(itm -> {
@@ -218,8 +218,8 @@ public class HostelService {
                 if (itm.getStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
                     noOfAvailableBeds[0] = itm.getCount();
                 }
-                if (itm.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
-                    noOfOccupiedBeds.set(Integer.valueOf(String.valueOf(itm.getCount())));
+                if (itm.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) || itm.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
+                    noOfOccupiedBeds.set(noOfOccupiedBeds.get() + Integer.valueOf(String.valueOf(itm.getCount())));
                 }
             });
             noOfFloors = floorsService.getFloorCounts(item.getHostelId());
