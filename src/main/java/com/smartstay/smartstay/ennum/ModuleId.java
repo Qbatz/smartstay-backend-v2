@@ -19,7 +19,12 @@ public enum ModuleId {
     REPORTS(16),
     BANKING(17),
     PROFILE(18),
-    AMENITIES(19);
+    AMENITIES(19),
+    RECEIPT(20),
+    INVOICE(21),
+    USER(22),
+    ROLES(23),
+    AGREEMENT(24);
 
     private final int id;
 

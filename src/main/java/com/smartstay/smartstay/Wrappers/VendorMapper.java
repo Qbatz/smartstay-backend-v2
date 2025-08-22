@@ -14,7 +14,7 @@ public class VendorMapper implements Function<VendorV1, VendorResponse> {
                 vendorV1.getLastName(),
                 vendorV1.getFirstName() + " " + vendorV1.getLastName(),
                 vendorV1.getBusinessName(),
-                vendorV1.getMobileNumber(),
+                vendorV1.getMobile(),
                 vendorV1.getEmailId(),
                 vendorV1.getProfilePic(),
                 vendorV1.getHouseNo(),

@@ -181,11 +181,15 @@ public class RoomsService {
             roomRepository.delete(existingRoom);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
-        return new ResponseEntity<>("No Room found", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
 
     }
 
     public boolean checkRoomExistForFloor(int floorId, int roomId) {
         return roomRepository.findByRoomIdAndFloorId(roomId, floorId) != null;
+    }
+
+    public int getRoomCount(String hostelId) {
+        return roomRepository.getCountOfRoomsBasedOnHostel(hostelId);
     }
 }

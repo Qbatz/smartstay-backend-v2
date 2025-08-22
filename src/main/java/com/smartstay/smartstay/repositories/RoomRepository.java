@@ -4,9 +4,11 @@ import com.smartstay.smartstay.dao.Rooms;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+@Repository
 public interface RoomRepository extends JpaRepository<Rooms,Integer> {
 
     List<Rooms> findAllByFloorId(int floorId);
@@ -42,5 +44,7 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
                                @Param("floorId") Integer floorId,@Param("roomId") Integer roomId);
 
 
+    @Query("SELECT count(r) FROM Rooms r where r.hostelId=:hostelId and r.isActive=true and r.isDeleted=false")
+    int getCountOfRoomsBasedOnHostel(@Param("hostelId") String hostelId);
 
 }

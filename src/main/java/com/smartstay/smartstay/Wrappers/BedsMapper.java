@@ -8,6 +8,13 @@ import java.util.function.Function;
 public class BedsMapper implements Function<Beds, BedsResponse> {
     @Override
     public BedsResponse apply(Beds beds) {
-        return new BedsResponse(beds.getBedId(), beds.getBedName(), beds.getRoomId());
+        return new BedsResponse(beds.getBedId(),
+                beds.getBedName(),
+                beds.getRoomId(),
+                false,
+                false,
+                false,
+                null,
+                beds.getRentAmount());
     }
 }

@@ -22,7 +22,7 @@ public class VendorV1 {
 
     private String firstName;
     private String lastName;
-    private String mobileNumber;
+    private String mobile;
     private String emailId;
     private String businessName;
     private String houseNo;
@@ -31,7 +31,7 @@ public class VendorV1 {
     private String city;
     private int pinCode;
     private String state;
-    private String country;
+    private Long country;
     private String profilePic;
     private String hostelId;
     private boolean isActive;

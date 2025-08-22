@@ -3,6 +3,9 @@ package com.smartstay.smartstay.controllers;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
 import com.smartstay.smartstay.services.VendorService;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +14,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("v2/vendors")
+@SecurityScheme(
+        name = "Authorization",
+        type = SecuritySchemeType.HTTP,
+        bearerFormat = "JWT",
+        scheme = "bearer"
+)
+@SecurityRequirement(name = "Authorization")
 @CrossOrigin("*")
 public class VendorController {
 
