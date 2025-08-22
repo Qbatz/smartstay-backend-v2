@@ -240,20 +240,20 @@ public class UsersService {
         if (authentication.isAuthenticated()) {
             Users user = userRepository.findUserByUserId(authentication.getName());
             if (user == null) {
-                return new ResponseEntity<>("User not found", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
             String encodedPassword = encoder.encode(password.password());
             user.setPassword(encodedPassword);
             userRepository.save(user);
-            return new ResponseEntity<>("Password changed successfully", HttpStatus.OK);
+            return new ResponseEntity<>(Utils.PASSWORD_CHANGED_SUCCESS, HttpStatus.OK);
         }
-        return new ResponseEntity<>("Invalid user.", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
     }
 
     public ResponseEntity<Object> requestPasswordReset(String email) {
         Users user = userRepository.findUserByEmailId(email);
         if (user == null) {
-            return new ResponseEntity<>("User not found with email: " + email, HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Utils.INVALID_EMAIL, HttpStatus.NOT_FOUND);
         }
         int otp = Utils.generateOtp();
         otpService.insertOrUpdateOTP(user, otp);
@@ -265,26 +265,26 @@ public class UsersService {
         }
         Map<String, Object> response = new HashMap<>();
         response.put("userId", user.getUserId());
-        response.put("message", "OTP has been sent successfully.");
+        response.put("message", Utils.OTP_SENT_SUCCESSFULLY);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> verifyOtpAndResetPassword(ResetPasswordRequest request) {
         Users user = userRepository.findUserByUserId(request.userId());
         if (user == null) {
-            return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
         UserOtp usersOtp = otpService.verifyOtp(request.userId(),request.otp());
         if (usersOtp == null) {
-            return new ResponseEntity<>("Invalid Otp", HttpStatus.OK);
+            return new ResponseEntity<>(Utils.INVALID_OTP, HttpStatus.OK);
         } else if (usersOtp.getOtpValidity().before(new Date())) {
-            return new ResponseEntity<>("Otp expired.", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.OTP_EXPIRED, HttpStatus.BAD_REQUEST);
         }
         String encodedPassword = encoder.encode(request.password());
         user.setPassword(encodedPassword);
         userRepository.save(user);
 
-        return new ResponseEntity<>("Password reset successful", HttpStatus.OK);
+        return new ResponseEntity<>(Utils.PASSWORD_RESET_SUCCESS, HttpStatus.OK);
     }
 
 
@@ -308,7 +308,7 @@ public class UsersService {
     public ResponseEntity<Object> verifyPassword(Password currentPassword) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = userRepository.findUserByUserId(userId);

@@ -23,7 +23,7 @@ public class VendorMapper implements Function<VendorV1, VendorResponse> {
                 vendorV1.getCity(),
                 vendorV1.getPinCode(),
                 vendorV1.getState(),
-                vendorV1.getCountry()
+                ""
         );
     }
 }

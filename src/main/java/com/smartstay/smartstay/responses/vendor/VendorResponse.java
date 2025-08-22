@@ -6,7 +6,7 @@ public record VendorResponse(
         String lastName,
         String fullName,
         String businessName,
-        String mobileNumber,
+        String mobile,
         String emailId,
         String profilePic,
         String houseNo,
@@ -15,6 +15,6 @@ public record VendorResponse(
         String city,
         int pinCode,
         String state,
-        Long country
+        String country
 ) {
 }

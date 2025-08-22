@@ -25,6 +25,14 @@ public class Utils {
     public static final String ACCESS_RESTRICTED = "Access Restricted";
     public static final String UN_AUTHORIZED = "Unauthorized";
     public static final String INVALID = "Invalid";
+    public static final String INVALID_EMAIL = "Invalid Email";
+    public static final String INVALID_VENDOR = "Invalid Vendor";
+    public static final String INVALID_USER = "Invalid User";
+    public static final String INVALID_OTP = "Invalid Otp";
+    public static final String OTP_EXPIRED = "Otp Expired";
+    public static final String PASSWORD_RESET_SUCCESS = "Password reset successfully.";
+    public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
+    public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
     public static final String CREATED = "Created Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
@@ -38,6 +46,7 @@ public class Utils {
     public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
     public static final String N0_BED_FOUND_ROOM = "No bed found for the specified room.";
     public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable";
+    public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
 
 
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";

@@ -52,9 +52,8 @@ public class VendorService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<VendorV1> vendorV1List = vendorRepository.findAllByHostelId(hostelId);
-        List<VendorResponse> vendorResponses = vendorV1List.stream().map(item -> new VendorMapper().apply(item)).toList();
-        return new ResponseEntity<>(vendorResponses, HttpStatus.OK);
+        List<VendorResponse> vendorV1List = vendorRepository.findAllVendorsByHostelId(hostelId);
+        return new ResponseEntity<>(vendorV1List, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getVendorById(Integer id) {
@@ -84,7 +83,7 @@ public class VendorService {
 
     }
 
-    public ResponseEntity<?> updateVendorById(int vendorId, UpdateVendor updateVendor) {
+    public ResponseEntity<?> updateVendorById(int vendorId, UpdateVendor updateVendor,MultipartFile file) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -99,16 +98,55 @@ public class VendorService {
         }
         VendorV1 existingVendor = vendorRepository.findByVendorId(vendorId);
         if (existingVendor == null) {
-            return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
+            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.NO_CONTENT);
         }
-//        if (updateVendor.roomName() != null && !updateVendor.roomName().isEmpty()) {
-//            existingVendor.setRoomName(updateVendor.roomName());
-//        }
-//        if (updateVendor.isActive() != null) {
-//            existingVendor.setIsActive(updateVendor.isActive());
-//        }
-//        existingVendor.setUpdatedAt(new Date());
-//        roomRepository.save(existingVendor);
+        String profileImage = null;
+        if (file != null) {
+            profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "Vendor/Logo");
+        }
+
+        if (updateVendor.firstName() != null && !updateVendor.firstName().isEmpty()) {
+            existingVendor.setFirstName(updateVendor.firstName());
+        }
+        if (updateVendor.lastName() != null && !updateVendor.lastName().isEmpty()) {
+            existingVendor.setLastName(updateVendor.lastName());
+        }
+        if (updateVendor.mobile() != null && !updateVendor.mobile().isEmpty()) {
+            existingVendor.setMobile(updateVendor.mobile());
+        }
+        if (updateVendor.mailId() != null && !updateVendor.mailId().isEmpty()) {
+            existingVendor.setEmailId(updateVendor.mailId());
+        }
+        if (updateVendor.houseNo() != null && !updateVendor.houseNo().isEmpty()) {
+            existingVendor.setHouseNo(updateVendor.houseNo());
+        }
+        if (updateVendor.landmark() != null && !updateVendor.landmark().isEmpty()) {
+            existingVendor.setLandMark(updateVendor.landmark());
+        }
+        if (updateVendor.area() != null && !updateVendor.area().isEmpty()) {
+            existingVendor.setArea(updateVendor.area());
+        }
+        if (updateVendor.pinCode() != null) {
+            existingVendor.setPinCode(updateVendor.pinCode());
+        }
+        if (updateVendor.city() != null && !updateVendor.city().isEmpty()) {
+            existingVendor.setCity(updateVendor.city());
+        }
+        if (updateVendor.state() != null && !updateVendor.state().isEmpty()) {
+            existingVendor.setState(updateVendor.state());
+        }
+        if (updateVendor.businessName() != null && !updateVendor.businessName().isEmpty()) {
+            existingVendor.setBusinessName(updateVendor.businessName());
+        }
+        if (updateVendor.country() != null ) {
+            existingVendor.setCountry(updateVendor.country());
+        }
+        if (profileImage != null ) {
+            existingVendor.setProfilePic(profileImage);
+        }
+
+        existingVendor.setUpdatedAt(new Date());
+        vendorRepository.save(existingVendor);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -145,7 +183,7 @@ public class VendorService {
         vendorV1.setCity(payloads.city());
         vendorV1.setState(payloads.state());
         vendorV1.setProfilePic(profileImage);
-        vendorV1.setCountry(1l);
+        vendorV1.setCountry(1L);
         vendorV1.setCreatedAt(new Date());
         vendorV1.setUpdatedAt(new Date());
         vendorV1.setCreatedBy(userId);
