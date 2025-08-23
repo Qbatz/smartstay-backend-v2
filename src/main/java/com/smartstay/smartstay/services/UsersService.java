@@ -1,11 +1,13 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.AddAdminUsersMapper;
+import com.smartstay.smartstay.Wrappers.AdminDataMapper;
 import com.smartstay.smartstay.Wrappers.ProfileUplodWrapper;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.Admin.UsersData;
 import com.smartstay.smartstay.payloads.*;
 import com.smartstay.smartstay.payloads.account.*;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
@@ -15,7 +17,6 @@ import com.smartstay.smartstay.responses.LoginUsersDetails;
 import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
 import com.smartstay.smartstay.responses.user.OtpResponse;
-import com.smartstay.smartstay.responses.user.UsersData;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UsersService {
@@ -238,7 +240,7 @@ public class UsersService {
     public ResponseEntity<Object> changePassword(Password password) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication.isAuthenticated()) {
-            Users user = userRepository.findUserByUserId(authentication.getName());
+            Users user = userRepository.findUserByUserId(password.adminId());
             if (user == null) {
                 return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
@@ -379,7 +381,9 @@ public class UsersService {
                 if (admins.isEmpty()) {
                     return new ResponseEntity<>("No admins found", HttpStatus.NOT_FOUND);
                 }
-                return new ResponseEntity<>(admins, HttpStatus.OK);
+
+                List<com.smartstay.smartstay.responses.user.UsersData> listAdmins = admins.stream().map(itm -> new AdminDataMapper().apply(itm)).toList();
+                return new ResponseEntity<>(listAdmins, HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
@@ -477,7 +481,7 @@ public class UsersService {
         return userRepository.findAllByParentId(parentId);
     }
 
-    public ResponseEntity<?> createAdminUser(AddAdminUser adminUser) {
+    public ResponseEntity<?> createAdminUser(AddAdminUser adminUser, String hostelId) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
             if (users != null) {
@@ -524,7 +528,7 @@ public class UsersService {
 
                     Users user = userRepository.findUserByEmailId(adminUser.emailId());
                     if (user != null) {
-                        userHostelService.addUserToExistingHostel(users.getParentId(), user.getUserId());
+                        userHostelService.mapUserHostel(user.getUserId(), user.getParentId(), hostelId);
                     }
 
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -546,6 +550,7 @@ public class UsersService {
                 return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
             user.setTwoStepVerificationStatus(verificationStatus.isStatus());
+            user.setLastUpdate(new Date());
             userRepository.save(user);
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
         }
@@ -556,5 +561,90 @@ public class UsersService {
 
     public List<Users> findActiveUsersByRole(int roleId) {
         return userRepository.findByRoleIdAndIsActiveTrueAndIsDeletedFalse(roleId);
+    }
+
+    public ResponseEntity<?> updateAdminProfile(String adminId, EditAdmin payloads, MultipartFile profilePic) {
+        if (payloads != null) {
+            if (authentication.isAuthenticated()) {
+                Users user = userRepository.findById(authentication.getName()).orElse(null);
+                if (user == null) {
+                    return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+                }
+
+                if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_UPDATE)) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
+
+                Users adminUser = userRepository.findUserByUserId(adminId);
+
+                if (adminUser == null) {
+                    return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                }
+
+                Address add = adminUser.getAddress();
+                if (add == null ) {
+                    add = new Address();
+                }
+                if (payloads.mailId() != null && !payloads.mailId().equalsIgnoreCase("")) {
+                    if (userRepository.getUsersCountByEmail(adminId, adminUser.getEmailId()) > 0) {
+                        return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);
+                    }
+                    adminUser.setEmailId(payloads.mailId());
+                }
+
+                String pic = null;
+                if (profilePic != null && !profilePic.isEmpty()) {
+                    pic = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(profilePic));
+                }
+
+                if (pic != null && !pic.equalsIgnoreCase("")) {
+                    adminUser.setProfileUrl(pic);
+                }
+
+                if (payloads.firstName() != null && !payloads.firstName().equalsIgnoreCase("")) {
+                    adminUser.setFirstName(payloads.firstName());
+                }
+
+                if (payloads.lastName() != null && !payloads.lastName().equalsIgnoreCase("")) {
+                    adminUser.setLastName(payloads.lastName());
+                }
+                if (payloads.mobile() != null && !payloads.mobile().equalsIgnoreCase("")) {
+                    adminUser.setMobileNo(payloads.mobile());
+                    //high priority, check mobile exist
+                }
+
+                if (payloads.houseNo() != null && !payloads.houseNo().equalsIgnoreCase("")) {
+                    add.setHouseNo(payloads.houseNo());
+                }
+                if (payloads.street() != null && !payloads.street().equalsIgnoreCase("")) {
+                    add.setStreet(payloads.street());
+                }
+                if (payloads.landmark() != null && !payloads.landmark().equalsIgnoreCase("")) {
+                    add.setLandMark(payloads.landmark());
+                }
+                if (payloads.city() != null && !payloads.city().equalsIgnoreCase("")) {
+                    add.setCity(payloads.city());
+                }
+                if (payloads.pincode() != null) {
+                    add.setPincode(payloads.pincode());
+                }
+                if (payloads.state() != null && !payloads.state().equalsIgnoreCase("")) {
+                    add.setState(payloads.state());
+                }
+                adminUser.setAddress(add);
+                adminUser.setLastUpdate(new Date());
+
+                userRepository.save(adminUser);
+
+                return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+            }
+            else {
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+        }
+        else {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
     }
 }

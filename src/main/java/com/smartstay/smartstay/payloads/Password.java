@@ -8,6 +8,9 @@ import jakarta.validation.constraints.Size;
 public record Password(
         @NotBlank(message = "Password is required and cannot be blank")
         @Size(min = 8, max = 100, message = "Password must be at least 8 characters and less than 100")
-        String password
+        String password,
+        @NotNull(message = "Admin Id required")
+        @NotEmpty(message = "Admin Id required")
+        String adminId
 ) {
 }
