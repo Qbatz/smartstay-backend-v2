@@ -3,10 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.Advance;
-import com.smartstay.smartstay.dao.BookingsV1;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
@@ -211,7 +208,10 @@ public class CustomersService {
                     item.getFloorId(),
                     item.getRoomId(),
                     item.getCustomerId(),
-                    initials.toString());
+                    initials.toString(),
+                    Utils.dateToString(item.getJoiningDate()),
+                    Utils.dateToString(item.getActualJoiningDate()),
+                    Utils.dateToString(item.getCreatedAt()));
         }).collect(Collectors.toList());
         return new ResponseEntity<>(listCustomers, HttpStatus.OK);
     }
@@ -249,11 +249,15 @@ public class CustomersService {
                 customers.setHostelId(hostelId);
 
                 customers.setExpJoiningDate(dt);
-
+                List<TransactionV1> transactions = transactionService.addBookingAmount(customers, payloads.bookingAmount());
+                customers.setTransactions(transactions);
                 customersRepository.save(customers);
 
                 BookingsV1 bookingsV1 = new BookingsV1();
                 bookingsV1.setHostelId(hostelId);
+                bookingsV1.setFloorId(payloads.floorId());
+                bookingsV1.setRoomId(payloads.roomId());
+                bookingsV1.setBedId(payloads.bedId());
                 bookingsV1.setCustomerId(customers.getCustomerId());
                 bookingsV1.setCreatedAt(new Date());
                 bookingsV1.setUpdatedAt(new Date());
@@ -261,6 +265,8 @@ public class CustomersService {
                 bookingsV1.setLeavingDate(null);
                 bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
                 bookingsService.saveBooking(bookingsV1);
+
+
 
                 return bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate());
             } else {

@@ -45,15 +45,14 @@ public class BedsService {
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        Users users = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId,users.getParentId());
+        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId,user.getParentId());
         List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper().apply(item)).toList();
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
@@ -200,7 +199,7 @@ public class BedsService {
         Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId,users.getParentId());
         if (existingBed != null) {
             if (Utils.compareWithTodayDate(Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT))) {
-                existingBed.setStatus(BedStatus.OCCUPIED.name());
+                existingBed.setStatus(BedStatus.BOOKED.name());
                 existingBed.setBooked(true);
                 existingBed.setUpdatedAt(new Date());
                 existingBed.setFreeFrom(null);
