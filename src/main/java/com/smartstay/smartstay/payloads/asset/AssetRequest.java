@@ -14,7 +14,7 @@ public record AssetRequest(
 
         String brandName,
         String serialNumber,
-        Date purchaseDate,
+        String purchaseDate,
         Double price,
         String modeOfPayment,
         String createdBy,

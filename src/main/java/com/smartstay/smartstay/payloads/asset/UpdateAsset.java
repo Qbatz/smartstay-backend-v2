@@ -7,7 +7,7 @@ public record UpdateAsset(
         String productName,
         String brandName,
         String serialNumber,
-        Date purchaseDate,
+        String purchaseDate,
         Double price,
         String modeOfPayment,
         String createdBy,

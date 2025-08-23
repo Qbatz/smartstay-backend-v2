@@ -87,7 +87,10 @@ public class AssetsService {
         asset.setVendorId(request.vendorId());
         asset.setBrandName(request.brandName());
         asset.setSerialNumber(request.serialNumber());
-        asset.setPurchaseDate(request.purchaseDate());
+        if (request.purchaseDate() != null) {
+            String formattedDate = request.purchaseDate().replace("-", "/");
+            asset.setPurchaseDate(Utils.stringToDate(formattedDate, Utils.DATE_FORMAT_YY));
+        }
         asset.setPrice(request.price());
         asset.setModeOfPayment(request.modeOfPayment());
         asset.setCreatedBy(request.createdBy());
@@ -126,7 +129,10 @@ public class AssetsService {
         if (request.productName() != null) asset.setProductName(request.productName());
         if (request.brandName() != null) asset.setBrandName(request.brandName());
         if (request.serialNumber() != null) asset.setSerialNumber(request.serialNumber());
-        if (request.purchaseDate() != null) asset.setPurchaseDate(request.purchaseDate());
+        if (request.purchaseDate() != null) {
+            String formattedDate = request.purchaseDate().replace("-", "/");
+            asset.setPurchaseDate(Utils.stringToDate(formattedDate, Utils.DATE_FORMAT_YY));
+        }
         if (request.price() != null) asset.setPrice(request.price());
         if (request.modeOfPayment() != null) asset.setModeOfPayment(request.modeOfPayment());
         if (request.createdBy() != null) asset.setCreatedBy(request.createdBy());
