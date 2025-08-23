@@ -58,8 +58,13 @@ public class ProfileController {
     }
 
     @GetMapping("/admin-list")
-    public ResponseEntity<?> getAddUserList() {
+    public ResponseEntity<?> getAdminUserList() {
         return usersService.listAllAdmins();
+    }
+
+    @GetMapping("/users-list")
+    public ResponseEntity<?> getUserList() {
+        return usersService.listAllUsers();
     }
 
     @PostMapping("/change-password")
