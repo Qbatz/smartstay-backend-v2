@@ -240,7 +240,7 @@ public class UsersService {
     public ResponseEntity<Object> changePassword(Password password) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication.isAuthenticated()) {
-            Users user = userRepository.findUserByUserId(authentication.getName());
+            Users user = userRepository.findUserByUserId(password.adminId());
             if (user == null) {
                 return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
