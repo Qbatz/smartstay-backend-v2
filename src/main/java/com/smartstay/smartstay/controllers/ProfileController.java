@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.Password;
 import com.smartstay.smartstay.payloads.account.AddAdminPayload;
 import com.smartstay.smartstay.payloads.UpdateUserProfilePayloads;
 import com.smartstay.smartstay.payloads.account.AddAdminUser;
@@ -57,7 +58,17 @@ public class ProfileController {
     }
 
     @GetMapping("/admin-list")
-    public ResponseEntity<?> getAddUserList() {
+    public ResponseEntity<?> getAdminUserList() {
         return usersService.listAllAdmins();
+    }
+
+    @GetMapping("/users-list")
+    public ResponseEntity<?> getUserList() {
+        return usersService.listAllUsers();
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Object> changePassword(@RequestBody Password password) {
+        return usersService.changePassword(password);
     }
 }
