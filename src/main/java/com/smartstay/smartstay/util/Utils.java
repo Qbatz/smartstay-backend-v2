@@ -27,6 +27,7 @@ public class Utils {
     public static final String INVALID = "Invalid";
     public static final String INVALID_EMAIL = "Invalid Email";
     public static final String INVALID_VENDOR = "Invalid Vendor";
+    public static final String INVALID_ASSET = "Invalid Asset";
     public static final String INVALID_USER = "Invalid User";
     public static final String INVALID_OTP = "Invalid Otp";
     public static final String OTP_EXPIRED = "Otp Expired";

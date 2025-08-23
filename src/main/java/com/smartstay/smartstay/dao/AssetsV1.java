@@ -22,7 +22,7 @@ public class AssetsV1 {
 
     private String assetName;
     private String productName;
-    private String vendorId;
+    private int vendorId;
     private String brandName;
     private String serialNumber;
     private Date purchaseDate;

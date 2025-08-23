@@ -2,12 +2,13 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.AssetMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.AssetsV1;
-import com.smartstay.smartstay.dao.RolesV1;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.asset.AssetRequest;
+import com.smartstay.smartstay.payloads.asset.UpdateAsset;
 import com.smartstay.smartstay.repositories.AssetsRepository;
+import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.repositories.RolesRepository;
+import com.smartstay.smartstay.repositories.VendorRepository;
 import com.smartstay.smartstay.responses.assets.AssetResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,12 @@ public class AssetsService {
 
     @Autowired
     RolesRepository rolesRepository;
+
+    @Autowired
+    HostelV1Repository hostelV1Repository;
+
+    @Autowired
+    VendorRepository vendorRepository;
     @Autowired
     AssetsRepository assetsRepository;
     @Autowired
@@ -53,7 +60,7 @@ public class AssetsService {
 
     public ResponseEntity<?> addAsset(AssetRequest request) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
@@ -65,6 +72,15 @@ public class AssetsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        VendorV1 vendorV1 = vendorRepository.findByVendorIdAndHostelId(request.vendorId(), request.hostelId());
+        HostelV1 hostelV1 = hostelV1Repository.findByHostelIdAndParentId(request.hostelId(), users.getParentId());
+        if (hostelV1 == null) {
+            return new ResponseEntity<>("Invalid Hostel", HttpStatus.FORBIDDEN);
+        }
+        if (vendorV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.FORBIDDEN);
+        }
+
         AssetsV1 asset = new AssetsV1();
         asset.setAssetName(request.assetName());
         asset.setProductName(request.productName());
@@ -78,10 +94,54 @@ public class AssetsService {
         asset.setCreatedAt(new java.util.Date());
         asset.setIsActive(true);
         asset.setHostelId(request.hostelId());
-        asset.setParentId(request.parentId());
+        asset.setParentId(user.getParentId());
         AssetsV1 saved = assetsRepository.save(asset);
         return new ResponseEntity<>(new AssetResponse(saved.getAssetId(), saved.getAssetName(), saved.getBrandName()), HttpStatus.OK);
     }
+
+    public ResponseEntity<?> updateAsset(UpdateAsset request, int assetId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+        if (user == null) {
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
+        }
+
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
+        if (rolesV1 == null) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        AssetsV1 asset = assetsRepository.findByAssetId(assetId);
+        if (asset == null) {
+            return new ResponseEntity<>(Utils.INVALID_ASSET, HttpStatus.NOT_FOUND);
+        }
+        if (request.assetName() != null) asset.setAssetName(request.assetName());
+        if (request.productName() != null) asset.setProductName(request.productName());
+        if (request.brandName() != null) asset.setBrandName(request.brandName());
+        if (request.serialNumber() != null) asset.setSerialNumber(request.serialNumber());
+        if (request.purchaseDate() != null) asset.setPurchaseDate(request.purchaseDate());
+        if (request.price() != null) asset.setPrice(request.price());
+        if (request.modeOfPayment() != null) asset.setModeOfPayment(request.modeOfPayment());
+        if (request.createdBy() != null) asset.setCreatedBy(request.createdBy());
+        if (request.isActive() != null) asset.setIsActive(request.isActive());
+        asset.setUpdatedAt(new java.util.Date());
+        asset.setParentId(user.getParentId());
+
+        AssetsV1 saved = assetsRepository.save(asset);
+
+        return new ResponseEntity<>(
+                new AssetResponse(saved.getAssetId(), saved.getAssetName(), saved.getBrandName()),
+                HttpStatus.OK
+        );
+    }
+
 
 
     public ResponseEntity<?> getAssetById(Integer id) {
