@@ -73,9 +73,8 @@ public class VendorService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        VendorV1 vendorV1 = vendorRepository.findByVendorId(id);
-        if (vendorV1 != null) {
-            VendorResponse vendorResponse = new VendorMapper().apply(vendorV1);
+        VendorResponse vendorResponse = vendorRepository.getVendor(id);
+        if (vendorResponse != null) {
             return new ResponseEntity<>(vendorResponse, HttpStatus.OK);
         }
 
