@@ -13,6 +13,8 @@ import java.util.List;
 public interface CustomersRepository extends JpaRepository<Customers, String> {
     boolean existsByMobile(String mobileNo);
 
+    boolean existsByEmailId(String emailId);
+
     @Query(value = """
     SELECT cus.first_name AS firstName, cus.city, cus.mobile, cus.state, cus.joining_date, 
     cus.created_at, cus.country, cus.current_status AS currentStatus, 
