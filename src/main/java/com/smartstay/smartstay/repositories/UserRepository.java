@@ -104,5 +104,8 @@ public interface UserRepository extends JpaRepository<Users, String> {
             """, nativeQuery = true)
     List<UsersData> getUserList();
 
+    @Query("SELECT count(u) FROM Users u where u.emailId=:emailId and u.userId !=:userId")
+    int getUsersCountByEmail(String userId, String emailId);
+
 
 }

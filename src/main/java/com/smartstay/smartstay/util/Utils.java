@@ -48,6 +48,7 @@ public class Utils {
     public static final String N0_BED_FOUND_ROOM = "No bed found for the specified room.";
     public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable";
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
+    public static final String PAYLOADS_REQUIRED = "Payloads required";
 
 
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";

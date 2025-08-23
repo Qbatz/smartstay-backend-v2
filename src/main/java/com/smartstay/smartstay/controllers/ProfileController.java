@@ -4,6 +4,7 @@ import com.smartstay.smartstay.payloads.Password;
 import com.smartstay.smartstay.payloads.account.AddAdminPayload;
 import com.smartstay.smartstay.payloads.UpdateUserProfilePayloads;
 import com.smartstay.smartstay.payloads.account.AddAdminUser;
+import com.smartstay.smartstay.payloads.account.EditAdmin;
 import com.smartstay.smartstay.payloads.account.UpdateVerificationStatus;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -70,5 +71,10 @@ public class ProfileController {
     @PostMapping("/change-password")
     public ResponseEntity<Object> changePassword(@RequestBody Password password) {
         return usersService.changePassword(password);
+    }
+
+    @PutMapping("/admin/{adminId}")
+    public ResponseEntity<?> updateUdminInformation(@PathVariable(value = "adminId") String adminId, @RequestPart(name = "payload", required = false) EditAdmin payloads, @RequestPart(name = "profilePic", required = false) MultipartFile profilePic) {
+        return usersService.updateAdminProfile(adminId, payloads, profilePic);
     }
 }

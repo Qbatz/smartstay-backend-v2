@@ -550,6 +550,7 @@ public class UsersService {
                 return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
             user.setTwoStepVerificationStatus(verificationStatus.isStatus());
+            user.setLastUpdate(new Date());
             userRepository.save(user);
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
         }
@@ -560,5 +561,90 @@ public class UsersService {
 
     public List<Users> findActiveUsersByRole(int roleId) {
         return userRepository.findByRoleIdAndIsActiveTrueAndIsDeletedFalse(roleId);
+    }
+
+    public ResponseEntity<?> updateAdminProfile(String adminId, EditAdmin payloads, MultipartFile profilePic) {
+        if (payloads != null) {
+            if (authentication.isAuthenticated()) {
+                Users user = userRepository.findById(authentication.getName()).orElse(null);
+                if (user == null) {
+                    return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+                }
+
+                if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_UPDATE)) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
+
+                Users adminUser = userRepository.findUserByUserId(adminId);
+
+                if (adminUser == null) {
+                    return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                }
+
+                Address add = adminUser.getAddress();
+                if (add == null ) {
+                    add = new Address();
+                }
+                if (payloads.mailId() != null && !payloads.mailId().equalsIgnoreCase("")) {
+                    if (userRepository.getUsersCountByEmail(adminId, adminUser.getEmailId()) > 0) {
+                        return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);
+                    }
+                    adminUser.setEmailId(payloads.mailId());
+                }
+
+                String pic = null;
+                if (profilePic != null && !profilePic.isEmpty()) {
+                    pic = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(profilePic));
+                }
+
+                if (pic != null && !pic.equalsIgnoreCase("")) {
+                    adminUser.setProfileUrl(pic);
+                }
+
+                if (payloads.firstName() != null && !payloads.firstName().equalsIgnoreCase("")) {
+                    adminUser.setFirstName(payloads.firstName());
+                }
+
+                if (payloads.lastName() != null && !payloads.lastName().equalsIgnoreCase("")) {
+                    adminUser.setLastName(payloads.lastName());
+                }
+                if (payloads.mobile() != null && !payloads.mobile().equalsIgnoreCase("")) {
+                    adminUser.setMobileNo(payloads.mobile());
+                    //high priority, check mobile exist
+                }
+
+                if (payloads.houseNo() != null && !payloads.houseNo().equalsIgnoreCase("")) {
+                    add.setHouseNo(payloads.houseNo());
+                }
+                if (payloads.street() != null && !payloads.street().equalsIgnoreCase("")) {
+                    add.setStreet(payloads.street());
+                }
+                if (payloads.landmark() != null && !payloads.landmark().equalsIgnoreCase("")) {
+                    add.setLandMark(payloads.landmark());
+                }
+                if (payloads.city() != null && !payloads.city().equalsIgnoreCase("")) {
+                    add.setCity(payloads.city());
+                }
+                if (payloads.pincode() != null) {
+                    add.setPincode(payloads.pincode());
+                }
+                if (payloads.state() != null && !payloads.state().equalsIgnoreCase("")) {
+                    add.setState(payloads.state());
+                }
+                adminUser.setAddress(add);
+                adminUser.setLastUpdate(new Date());
+
+                userRepository.save(adminUser);
+
+                return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+            }
+            else {
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+        }
+        else {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
     }
 }
