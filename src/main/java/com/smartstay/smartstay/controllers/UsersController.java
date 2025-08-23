@@ -41,10 +41,7 @@ public class UsersController {
         return userService.verifyPassword(password);
     }
 
-    @PostMapping("/change-password")
-    public ResponseEntity<Object> changePassword(@RequestBody Password password) {
-        return userService.changePassword(password);
-    }
+
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {

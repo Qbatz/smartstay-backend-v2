@@ -392,6 +392,26 @@ public class UsersService {
         }
     }
 
+    public ResponseEntity<?> listAllUsers() {
+        if (authentication.isAuthenticated()) {
+            Users users = userRepository.findUserByUserId(authentication.getName());
+            if (users != null) {
+                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_READ)) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
+                List<UsersData> usersList = userRepository.getUserList();
+                if (usersList.isEmpty()) {
+                    return new ResponseEntity<>("No users found", HttpStatus.NOT_FOUND);
+                }
+                return new ResponseEntity<>(usersList, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+        }else {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+    }
+
     public ResponseEntity<?> createAdmin(AddAdminPayload createAccount, MultipartFile file) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
