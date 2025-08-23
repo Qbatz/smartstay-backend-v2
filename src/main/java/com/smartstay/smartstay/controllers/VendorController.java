@@ -43,8 +43,8 @@ public class VendorController {
     }
 
     @PutMapping("/{vendorId}")
-    public ResponseEntity<?> updateVendorId(@PathVariable("vendorId") int vendorId, @RequestBody UpdateVendor updateVendor) {
-        return vendorService.updateVendorById(vendorId, updateVendor);
+    public ResponseEntity<?> updateVendorId(@PathVariable("vendorId") int vendorId, @Valid @RequestPart UpdateVendor updateVendor,@RequestPart(value = "profilePic", required = false) MultipartFile file) {
+        return vendorService.updateVendorById(vendorId, updateVendor,file);
     }
 
     @DeleteMapping("/{vendorId}")

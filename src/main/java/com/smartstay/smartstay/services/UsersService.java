@@ -8,11 +8,14 @@ import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.*;
 import com.smartstay.smartstay.payloads.account.*;
+import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
 import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
+import com.smartstay.smartstay.responses.user.OtpResponse;
+import com.smartstay.smartstay.responses.user.UsersData;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -235,19 +238,53 @@ public class UsersService {
     public ResponseEntity<Object> changePassword(Password password) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication.isAuthenticated()) {
-
             Users user = userRepository.findUserByUserId(authentication.getName());
             if (user == null) {
-                return new ResponseEntity<>("User not found", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
-
             String encodedPassword = encoder.encode(password.password());
             user.setPassword(encodedPassword);
             userRepository.save(user);
-            return new ResponseEntity<>("Password changed successfully", HttpStatus.OK);
+            return new ResponseEntity<>(Utils.PASSWORD_CHANGED_SUCCESS, HttpStatus.OK);
         }
+        return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
+    }
 
-        return new ResponseEntity<>("Invalid user.", HttpStatus.BAD_REQUEST);
+    public ResponseEntity<Object> requestPasswordReset(String email) {
+        Users user = userRepository.findUserByEmailId(email);
+        if (user == null) {
+            return new ResponseEntity<>(Utils.INVALID_EMAIL, HttpStatus.NOT_FOUND);
+        }
+        int otp = Utils.generateOtp();
+        otpService.insertOrUpdateOTP(user, otp);
+
+        String otpMessage = "Dear user, your password reset OTP is " + otp
+                + ". It is valid for 15 minutes.";
+        if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+            otpService.sendOtp(user.getMobileNo(), otpMessage);
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("userId", user.getUserId());
+        response.put("message", Utils.OTP_SENT_SUCCESSFULLY);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> verifyOtpAndResetPassword(ResetPasswordRequest request) {
+        Users user = userRepository.findUserByUserId(request.userId());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+        UserOtp usersOtp = otpService.verifyOtp(request.userId(),request.otp());
+        if (usersOtp == null) {
+            return new ResponseEntity<>(Utils.INVALID_OTP, HttpStatus.OK);
+        } else if (usersOtp.getOtpValidity().before(new Date())) {
+            return new ResponseEntity<>(Utils.OTP_EXPIRED, HttpStatus.BAD_REQUEST);
+        }
+        String encodedPassword = encoder.encode(request.password());
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
+
+        return new ResponseEntity<>(Utils.PASSWORD_RESET_SUCCESS, HttpStatus.OK);
     }
 
 
@@ -271,7 +308,7 @@ public class UsersService {
     public ResponseEntity<Object> verifyPassword(Password currentPassword) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = userRepository.findUserByUserId(userId);
@@ -330,10 +367,30 @@ public class UsersService {
         return configUUID();
     }
 
+
+    public ResponseEntity<?> listAllAdmins() {
+        if (authentication.isAuthenticated()) {
+            Users users = userRepository.findUserByUserId(authentication.getName());
+            if (users != null) {
+                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_READ)) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
+                List<UsersData> admins = userRepository.getAdminUserList(2, users.getParentId());
+                if (admins.isEmpty()) {
+                    return new ResponseEntity<>("No admins found", HttpStatus.NOT_FOUND);
+                }
+                return new ResponseEntity<>(admins, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+        }else {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+    }
+
     public ResponseEntity<?> createAdmin(AddAdminPayload createAccount, MultipartFile file) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
-
             if (users != null) {
                 if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);

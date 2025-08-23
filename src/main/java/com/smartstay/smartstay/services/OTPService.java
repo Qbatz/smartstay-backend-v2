@@ -63,6 +63,19 @@ public class OTPService {
         userOtpRepository.save(userOtp);
     }
 
+    public void insertOrUpdateOTP(Users users, int otp) {
+        UserOtp userOtp = userOtpRepository.findByUsers(users).orElse(new UserOtp());
+        userOtp.setVerified(false);
+        userOtp.setOtp(otp);
+        userOtp.setUsers(users);
+        userOtp.setCreatedAt(new Date());
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.MINUTE, calendar.get(Calendar.MINUTE) + 15);
+        userOtp.setOtpValidity(calendar.getTime());
+
+        userOtpRepository.save(userOtp);
+    }
+
     public void sendOtp(String mobileNo,String message) {
 
         try {
@@ -90,6 +103,15 @@ public class OTPService {
 
     public UserOtp verifyOtp(VerifyOtpPayloads verifyOtp) {
         UserOtp userOtp = userOtpRepository.findByUsers_UserIdAndOtpAndIsVerifiedFalse(verifyOtp.userId(), verifyOtp.otp()).orElse(null);
+        if (userOtp != null && userOtp.getOtpValidity().after(new Date())) {
+            userOtp.setVerified(true);
+            userOtpRepository.save(userOtp);
+        }
+        return userOtp;
+    }
+
+    public UserOtp verifyOtp(String userId, Integer otp) {
+        UserOtp userOtp = userOtpRepository.findByUsers_UserIdAndOtpAndIsVerifiedFalse(userId, otp).orElse(null);
         if (userOtp != null && userOtp.getOtpValidity().after(new Date())) {
             userOtp.setVerified(true);
             userOtpRepository.save(userOtp);

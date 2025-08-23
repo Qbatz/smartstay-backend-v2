@@ -34,6 +34,8 @@ public class ProfileController {
         return usersService.getProfileInformation();
     }
 
+
+
     @PutMapping("")
     public ResponseEntity<Object> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.updateProfileInformations(updateProfile, profilePic);
@@ -52,5 +54,10 @@ public class ProfileController {
     @PutMapping("/two-step-verification")
     public ResponseEntity<?> updateAuthenticationStatus(@RequestBody UpdateVerificationStatus verificationStatus) {
         return usersService.updateTwoStepVerification(verificationStatus);
+    }
+
+    @GetMapping("/admin-list")
+    public ResponseEntity<?> getAddUserList() {
+        return usersService.listAllAdmins();
     }
 }

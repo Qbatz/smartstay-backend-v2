@@ -8,12 +8,22 @@ import java.util.function.Function;
 public class VendorMapper implements Function<VendorV1, VendorResponse> {
     @Override
     public VendorResponse apply(VendorV1 vendorV1) {
-        return new VendorResponse(vendorV1.getVendorId(),
-                vendorV1.getFirstName() + vendorV1.getLastName(),
+        return new VendorResponse(
+                vendorV1.getVendorId(),
+                vendorV1.getFirstName(),
+                vendorV1.getLastName(),
+                vendorV1.getFirstName() + " " + vendorV1.getLastName(),
                 vendorV1.getBusinessName(),
                 vendorV1.getMobile(),
                 vendorV1.getEmailId(),
-                vendorV1.getProfilePic()
-                );
+                vendorV1.getProfilePic(),
+                vendorV1.getHouseNo(),
+                vendorV1.getArea(),
+                vendorV1.getLandMark(),
+                vendorV1.getCity(),
+                vendorV1.getPinCode(),
+                vendorV1.getState(),
+                ""
+        );
     }
 }

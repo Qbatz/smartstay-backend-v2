@@ -15,9 +15,8 @@ public record UpdateVendor(
         String city,
 
         String state,
+        Long country,
 
-        String businessName,
-
-        String hostelId
+        String businessName
 ) {
 }
