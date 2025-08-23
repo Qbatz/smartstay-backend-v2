@@ -16,7 +16,14 @@ public class UserHostelService {
     private UserHostelRepository userHostelRepo;
 
     public void mapUserHostel(String userId, String hostelId, String parentId) {
+        List<UserHostel> listHostels = userHostelRepo.findAllByHostelId(hostelId);
+        UserHostel uh = new UserHostel();
+        uh.setUserId(userId);
+        uh.setHostelId(hostelId);
+        uh.setParentId(parentId);
+        listHostels.add(uh);
 
+        userHostelRepo.saveAll(listHostels);
     }
 
     public List<UserHostel> listAllUserHostel(String parentId) {

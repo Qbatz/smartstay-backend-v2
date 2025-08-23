@@ -1,8 +1,8 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.Admin.UsersData;
 import com.smartstay.smartstay.dto.LoginUsersDetails;
-import com.smartstay.smartstay.responses.user.UsersData;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -70,13 +70,16 @@ public interface UserRepository extends JpaRepository<Users, String> {
                     usr.two_step_verification_status AS two_step_verification_status,
                     country.country_name AS countryName,
                     country.currency AS currency,
-                    country.country_code AS countryCode
+                    country.country_code AS countryCode,
+                    ad.pincode, ad.city, ad.house_no as houseNo, ad.land_mark as landmark, ad.state, ad.street,
+                                        usr.profile_url as profilePic
                 FROM smart_stay.users usr
                 LEFT OUTER JOIN smart_stay.rolesv1 roles ON roles.role_id = usr.role_id
                 LEFT OUTER JOIN smart_stay.countries country ON country.country_id = usr.country
+                LEFT OUTER JOIN smart_stay.address ad on ad.user_id=usr.user_id
                 WHERE usr.role_id = :roleId and usr.parent_id =:parentId
             """, nativeQuery = true)
-    List<UsersData> getAdminUserList(@Param("roleId") int roleId,@Param("parentId") String parentId);
+    List<UsersData> getAdminUserList(@Param("roleId") int roleId, @Param("parentId") String parentId);
 
 
 }

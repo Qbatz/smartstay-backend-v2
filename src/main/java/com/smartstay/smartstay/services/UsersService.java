@@ -1,11 +1,13 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.AddAdminUsersMapper;
+import com.smartstay.smartstay.Wrappers.AdminDataMapper;
 import com.smartstay.smartstay.Wrappers.ProfileUplodWrapper;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.Admin.UsersData;
 import com.smartstay.smartstay.payloads.*;
 import com.smartstay.smartstay.payloads.account.*;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
@@ -15,7 +17,6 @@ import com.smartstay.smartstay.responses.LoginUsersDetails;
 import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
 import com.smartstay.smartstay.responses.user.OtpResponse;
-import com.smartstay.smartstay.responses.user.UsersData;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UsersService {
@@ -379,7 +381,9 @@ public class UsersService {
                 if (admins.isEmpty()) {
                     return new ResponseEntity<>("No admins found", HttpStatus.NOT_FOUND);
                 }
-                return new ResponseEntity<>(admins, HttpStatus.OK);
+
+                List<com.smartstay.smartstay.responses.user.UsersData> listAdmins = admins.stream().map(itm -> new AdminDataMapper().apply(itm)).toList();
+                return new ResponseEntity<>(listAdmins, HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
@@ -457,7 +461,7 @@ public class UsersService {
         return userRepository.findAllByParentId(parentId);
     }
 
-    public ResponseEntity<?> createAdminUser(AddAdminUser adminUser) {
+    public ResponseEntity<?> createAdminUser(AddAdminUser adminUser, String hostelId) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
             if (users != null) {
@@ -504,7 +508,7 @@ public class UsersService {
 
                     Users user = userRepository.findUserByEmailId(adminUser.emailId());
                     if (user != null) {
-                        userHostelService.addUserToExistingHostel(users.getParentId(), user.getUserId());
+                        userHostelService.mapUserHostel(user.getUserId(), user.getParentId(), hostelId);
                     }
 
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);

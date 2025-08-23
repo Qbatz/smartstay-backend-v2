@@ -46,9 +46,9 @@ public class ProfileController {
         return usersService.createAdmin(createAccount, profilePic);
     }
 
-    @PostMapping("/add-user")
-    public ResponseEntity<?> addUser(@Valid @RequestBody AddAdminUser adminUser) {
-        return usersService.createAdminUser(adminUser);
+    @PostMapping("/add-user/{hostelId}")
+    public ResponseEntity<?> addUser(@Valid @RequestBody AddAdminUser adminUser, @PathVariable("hostelId") String hostelId) {
+        return usersService.createAdminUser(adminUser, hostelId);
     }
 
     @PutMapping("/two-step-verification")
