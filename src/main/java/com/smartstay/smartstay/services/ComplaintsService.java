@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.ComplaintMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.complaints.AddComplaints;
@@ -30,6 +29,8 @@ public class ComplaintsService {
     RoomRepository roomRepository;
     @Autowired
     ComplaintRepository complaintRepository;
+
+
     @Autowired
     private Authentication authentication;
     @Autowired
@@ -73,7 +74,7 @@ public class ComplaintsService {
 
         ComplaintsV1 complaint = new ComplaintsV1();
         complaint.setCustomerId(request.customerId());
-        complaint.setComplaintType(request.complaintType());
+        complaint.setComplaintTypeId(request.complaintTypeId());
         complaint.setFloorId(request.floorId());
         complaint.setRoomId(request.roomId());
         if (request.complaintDate() != null) {
@@ -149,10 +150,7 @@ public class ComplaintsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<ComplaintsV1> complaintsV1s = complaintRepository.findAllByHostelId(hostelId);
-        List<ComplaintResponse> complaintResponses = complaintsV1s.stream()
-                .map(new ComplaintMapper())
-                .toList();
+        List<ComplaintResponse> complaintResponses = complaintRepository.getAllComplaintsWithType(hostelId);
         return new ResponseEntity<>(complaintResponses, HttpStatus.OK);
     }
 
@@ -170,11 +168,11 @@ public class ComplaintsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        ComplaintsV1 complaintsV1 = complaintRepository.findByComplaintIdAndParentId(complaintId, user.getParentId());
-        if (complaintsV1 == null) {
+        ComplaintResponse complaintResponse = complaintRepository.getComplaintsWithType(complaintId, user.getParentId());
+        if (complaintResponse == null) {
             return new ResponseEntity<>("Complaint not found.", HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(new ComplaintMapper().apply(complaintsV1), HttpStatus.OK);
+        return new ResponseEntity<>(complaintResponse, HttpStatus.OK);
     }
 
     public ComplaintsV1 updateComplaint(ComplaintsV1 existingComplaint, UpdateComplaint request) {
@@ -182,8 +180,8 @@ public class ComplaintsService {
         if (request.customerId() != null) {
             existingComplaint.setCustomerId(request.customerId());
         }
-        if (request.complaintType() != null) {
-            existingComplaint.setComplaintType(request.complaintType());
+        if (request.complaintTypeId() != null) {
+            existingComplaint.setComplaintTypeId(request.complaintTypeId());
         }
         if (request.floorId() != null) {
             existingComplaint.setFloorId(request.floorId());

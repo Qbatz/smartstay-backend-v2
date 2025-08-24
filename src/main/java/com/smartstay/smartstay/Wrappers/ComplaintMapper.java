@@ -5,16 +5,8 @@ import com.smartstay.smartstay.responses.complaint.ComplaintResponse;
 
 import java.util.function.Function;
 
-public class ComplaintMapper implements Function<ComplaintsV1, ComplaintResponse> {
-    @Override
-    public ComplaintResponse apply(ComplaintsV1 complaints) {
-        return new ComplaintResponse(
-                complaints.getComplaintId(),
-                complaints.getComplaintDate(),
-                complaints.getStatus(),
-                complaints.getComplaintType()
-        );
-    }
+public class ComplaintMapper  {
+
 
 
 }

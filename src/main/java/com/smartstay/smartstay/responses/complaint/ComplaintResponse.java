@@ -2,9 +2,14 @@ package com.smartstay.smartstay.responses.complaint;
 
 import java.util.Date;
 
-public record ComplaintResponse(
-        Integer complaintId,
-        Date complaintDate,
-        Integer status,
-        String complaintType
-) {}
+public interface ComplaintResponse {
+    Integer getComplaintId();
+    Integer getCustomerId();
+    Integer getComplaintTypeId();
+    String getComplaintTypeName();
+    Integer getFloorId();
+    Integer getRoomId();
+    Date getComplaintDate();
+    String getDescription();
+    String getStatus();
+}

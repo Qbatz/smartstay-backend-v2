@@ -2,7 +2,7 @@ package com.smartstay.smartstay.payloads.complaints;
 
 public record AddComplaints(
         String customerId,
-        String complaintType,
+        Integer complaintTypeId,
         Integer floorId,
         Integer roomId,
         String complaintDate,
