@@ -4,7 +4,7 @@ import java.util.Date;
 
 public interface ComplaintResponse {
     Integer getComplaintId();
-    Integer getCustomerId();
+    String getCustomerId();
     Integer getComplaintTypeId();
     String getComplaintTypeName();
     Integer getFloorId();

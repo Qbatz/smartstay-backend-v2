@@ -30,6 +30,9 @@ public class ComplaintsService {
     @Autowired
     ComplaintRepository complaintRepository;
 
+    @Autowired
+    CustomersRepository customersRepository;
+
 
     @Autowired
     private Authentication authentication;
@@ -63,12 +66,13 @@ public class ComplaintsService {
         }
 
         Floors floors = floorRepository.findByFloorIdAndHostelId(request.floorId(), request.hostelId());
+        boolean customerExist = customersRepository.existsByHostelIdAndCustomerId(request.hostelId(), request.customerId());
+        Rooms rooms = roomRepository.findByRoomIdAndParentIdAndHostelId(request.roomId(), user.getParentId(), request.hostelId());
         if (floors == null) {
             return new ResponseEntity<>("Floor not found.", HttpStatus.BAD_REQUEST);
-        }
-
-        Rooms rooms = roomRepository.findByRoomIdAndParentIdAndHostelId(request.roomId(), user.getParentId(), request.hostelId());
-        if (rooms == null) {
+        }else if (!customerExist){
+            return new ResponseEntity<>("Customer not found.", HttpStatus.BAD_REQUEST);
+        }else if (rooms == null) {
             return new ResponseEntity<>("Room not found.", HttpStatus.BAD_REQUEST);
         }
 
@@ -117,18 +121,22 @@ public class ComplaintsService {
             return new ResponseEntity<>("Complaint not found.", HttpStatus.NOT_FOUND);
         }
 
-        Floors floors = floorRepository.findByFloorIdAndHostelId(request.floorId(), complaint.getHostelId());
-        if (floors == null) {
-            return new ResponseEntity<>("Floor not found.", HttpStatus.BAD_REQUEST);
+        if (request.floorId() !=null){
+            Floors floors = floorRepository.findByFloorIdAndHostelId(request.floorId(), complaint.getHostelId());
+            if (floors == null) {
+                return new ResponseEntity<>("Floor not found.", HttpStatus.BAD_REQUEST);
+            }
         }
 
-        Rooms rooms = roomRepository.findByRoomIdAndParentIdAndHostelId(
-                request.roomId(),
-                user.getParentId(),
-                complaint.getHostelId()
-        );
-        if (rooms == null) {
-            return new ResponseEntity<>("Room not found.", HttpStatus.BAD_REQUEST);
+        if (request.roomId() !=null){
+            Rooms rooms = roomRepository.findByRoomIdAndParentIdAndHostelId(
+                    request.roomId(),
+                    user.getParentId(),
+                    complaint.getHostelId()
+            );
+            if (rooms == null) {
+                return new ResponseEntity<>("Room not found.", HttpStatus.BAD_REQUEST);
+            }
         }
 
         updateComplaint(complaint, request);

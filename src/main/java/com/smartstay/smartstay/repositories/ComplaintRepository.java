@@ -23,10 +23,12 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
             ct.complaint_type_name AS complaintTypeName,
             c.floor_id AS floorId,
             c.room_id AS roomId,
+                c.status AS status,
             c.complaint_date AS complaintDate,
-            c.description AS description
-        FROM complaints_v1 c
-        JOIN complaint_type_v1 ct 
+                c.description AS description,
+                 c.customer_id AS customerId
+            FROM complaintsv1 c
+            JOIN complaint_typev1 ct 
             ON c.complaint_type_id = ct.complaint_type_id
         WHERE c.hostel_id = :hostelId
         """, nativeQuery = true)
@@ -37,10 +39,14 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
             c.complaint_id AS complaintId,
             c.complaint_date AS complaintDate,
             c.status AS status,
+                  c.floor_id AS floorId,
+                c.room_id AS roomId,
+                c.customer_id AS customerId,
             ct.complaint_type_id AS complaintTypeId,
+             c.description AS description,
             ct.complaint_type_name AS complaintTypeName
-        FROM complaints_v1 c
-        JOIN complaint_type_v1 ct 
+            FROM complaintsv1 c
+            JOIN complaint_typev1 ct 
             ON c.complaint_type_id = ct.complaint_type_id
         WHERE c.complaint_id = :complaintId
           AND c.parent_id = :parentId

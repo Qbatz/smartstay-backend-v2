@@ -157,6 +157,7 @@ public class ComplaintTypeService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        System.out.println("complaints--->"+hostelId);
         List<ComplaintTypeResponse> complaintTypeResponses = complaintTypeV1Repository.getAllComplaintsType(hostelId);
         return new ResponseEntity<>(complaintTypeResponses, HttpStatus.OK);
     }
