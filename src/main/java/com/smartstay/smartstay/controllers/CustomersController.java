@@ -33,6 +33,16 @@ public class CustomersController {
         return customersService.addCheckIn(file, payLoads);
     }
 
+    @PostMapping("/save/{hostelId}")
+    public ResponseEntity<?> addCustomer(@PathVariable("hostelId") String hostelId, @Valid @RequestPart(value = "payloads") AddCustomerPartialInfo customerInfo, @RequestPart(value = "profilePic", required = false) MultipartFile file) {
+        return customersService.addCustomerPartialInfo(hostelId, customerInfo, file);
+    }
+
+    @PutMapping("/update/{customerId}")
+    public ResponseEntity<?> updateCustomerInfo(@PathVariable("customerId") String customerId, @RequestPart(value = "payloads", required = false) UpdateCustomerInfo updateInfo, @RequestPart(value = "profilePic", required = false) MultipartFile file) {
+        return customersService.updateCustomerInfo(customerId, updateInfo, file);
+    }
+
     @PostMapping("/assign-bed")
     public ResponseEntity<?> assignBed(@Valid @RequestBody AssignBed assignBed) {
         return customersService.assignBed(assignBed);
