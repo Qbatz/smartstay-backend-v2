@@ -488,6 +488,128 @@ public class CustomersService {
         }
     }
 
+    public ResponseEntity<?> addCustomerPartialInfo(String hostelId, AddCustomerPartialInfo customerInfo, MultipartFile file) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        String loginId = authentication.getName();
+        Users user = userService.findUserByUserId(loginId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(loginId, hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (customersRepository.existsByMobile(customerInfo.mobile())) {
+            return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
+        String profileImage = null;
+        if (file != null) {
+            profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "users/profile");
+        }
+
+        Customers customers = new Customers();
+        customers.setFirstName(customerInfo.firstName());
+        customers.setLastName(customerInfo.lastName());
+        customers.setCountry(1l);
+        customers.setMobile(customerInfo.mobile());
+        customers.setEmailId(customerInfo.emailId());
+        customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
+        customers.setCurrentStatus(CustomerStatus.INACTIVE.name());
+        customers.setHostelId(hostelId);
+        customers.setCreatedBy(loginId);
+        customers.setCreatedAt(new Date());
+        customers.setKycStatus(KycStatus.NOT_AVAILABLE.name());
+        customers.setProfilePic(profileImage);
+
+        customersRepository.save(customers);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+    }
+
+    public ResponseEntity<?> updateCustomerInfo(String customerId, UpdateCustomerInfo updateInfo, MultipartFile file) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        String loginId = authentication.getName();
+        Users user = userService.findUserByUserId(loginId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!userHostelService.checkHostelAccess(loginId, customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (updateInfo != null) {
+            if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
+                if (customersRepository.findCustomersByMobile(customers.getCustomerId(), updateInfo.mobile()) > 0) {
+                    return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                }
+                customers.setMobile(updateInfo.mobile());
+            }
+
+            String profileImage = null;
+            if (file != null) {
+                profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "users/profile");
+                customers.setProfilePic(profileImage);
+            }
+
+            if (updateInfo.firstName() != null && !updateInfo.firstName().equalsIgnoreCase("")) {
+                customers.setFirstName(updateInfo.firstName());
+            }
+            if (updateInfo.lastName() != null && !updateInfo.lastName().equalsIgnoreCase("")) {
+                customers.setLastName(updateInfo.lastName());
+            }
+            if (updateInfo.mailId() != null && !updateInfo.mailId().equalsIgnoreCase("")) {
+                customers.setEmailId(updateInfo.mailId());
+            }
+            if (updateInfo.houseNo() != null && !updateInfo.houseNo().equalsIgnoreCase("")) {
+                customers.setHouseNo(updateInfo.houseNo());
+            }
+            if (updateInfo.street() != null && !updateInfo.street().equalsIgnoreCase("")) {
+                customers.setStreet(updateInfo.street());
+            }
+            if (updateInfo.landmark() != null && !updateInfo.landmark().equalsIgnoreCase("")) {
+                customers.setLandmark(updateInfo.landmark());
+            }
+            if (updateInfo.pincode() != null) {
+                customers.setPincode(updateInfo.pincode());
+            }
+            if (updateInfo.city() != null && !updateInfo.city().equalsIgnoreCase("")) {
+                customers.setCity(updateInfo.city());
+            }
+            if (updateInfo.state() != null && !updateInfo.state().equalsIgnoreCase("")) {
+                customers.setState(updateInfo.state());
+            }
+
+            customersRepository.save(customers);
+
+            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
+        }
+        else {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+
+
+
+
+
+    }
+
 //    public ResponseEntity<?> requestCheckout(CheckoutRequest checkoutRequest) {
 //
 //    }

@@ -30,4 +30,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             @Param("status") String status
     );
 
+    @Query("SELECT COUNT(c) FROM Customers c where c.mobile=:mobile and c.customerId!=:customerId")
+    int findCustomersByMobile(@Param("customerId") String customerId, @Param("mobile") String mobile);
+
 }
