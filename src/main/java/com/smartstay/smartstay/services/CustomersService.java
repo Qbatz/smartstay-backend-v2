@@ -214,6 +214,7 @@ public class CustomersService {
                     initials.toString(),
                     Utils.dateToString(item.getJoiningDate()),
                     Utils.dateToString(item.getActualJoiningDate()),
+                    item.getCountryCode(),
                     Utils.dateToString(item.getCreatedAt()));
         }).collect(Collectors.toList());
         return new ResponseEntity<>(listCustomers, HttpStatus.OK);
@@ -454,11 +455,11 @@ public class CustomersService {
             String mobileStatus = "";
             String emailStatus = "";
 
-            if (customersRepository.existsByEmailId(customerInfo.emailId())) {
+            if (customerInfo.emailId() !=null && !customerInfo.emailId().isEmpty() && customersRepository.existsByEmailId(customerInfo.emailId())) {
                 emailStatus = Utils.EMAIL_ID_EXISTS;
             }
 
-            if (customersRepository.existsByMobile(customerInfo.mobileNumber())) {
+            if (customerInfo.mobileNumber() !=null && !customerInfo.mobileNumber().isEmpty() && customersRepository.existsByMobile(customerInfo.mobileNumber())) {
                 mobileStatus = Utils.MOBILE_NO_EXISTS;
             }
 

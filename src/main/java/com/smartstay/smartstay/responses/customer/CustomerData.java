@@ -15,5 +15,6 @@ public record CustomerData(String firstName,
                            String initials,
                            String expectedJoiningDate,
                            String actualJoining,
+                           String countryCode,
                            String bookedAt) {
 }

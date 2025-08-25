@@ -117,11 +117,11 @@ public class UsersService {
             String mobileStatus = "";
             String emailStatus = "";
 
-            if (userRepository.existsByEmailId(createAccount.mailId())) {
+            if (createAccount.mailId() !=null && !createAccount.mailId().isEmpty() && userRepository.existsByEmailId(createAccount.mailId())) {
                 emailStatus = Utils.EMAIL_ID_EXISTS;
             }
 
-            if (userRepository.existsByMobileNo(createAccount.mobile())) {
+            if (createAccount.mobile() !=null && !createAccount.mobile().isEmpty() && userRepository.existsByMobileNo(createAccount.mobile())) {
                 mobileStatus = Utils.MOBILE_NO_EXISTS;
             }
 
@@ -422,11 +422,11 @@ public class UsersService {
                 String mobileStatus = "";
                 String emailStatus = "";
 
-                if (userRepository.existsByEmailId(createAccount.mailId())) {
+                if (createAccount.mailId() !=null && !createAccount.mailId().isEmpty() && userRepository.existsByEmailId(createAccount.mailId())) {
                     emailStatus = Utils.EMAIL_ID_EXISTS;
                 }
 
-                if (userRepository.existsByMobileNo(createAccount.mobile())) {
+                if (createAccount.mobile() !=null && !createAccount.mobile().isEmpty() && userRepository.existsByMobileNo(createAccount.mobile())) {
                     mobileStatus = Utils.MOBILE_NO_EXISTS;
                 }
 
@@ -492,11 +492,11 @@ public class UsersService {
                 String mobileStatus = "";
                 String emailStatus = "";
 
-                if (userRepository.existsByEmailId(adminUser.emailId())) {
+                if (adminUser.emailId() !=null && !adminUser.emailId().isEmpty() && userRepository.existsByEmailId(adminUser.emailId())) {
                     emailStatus = Utils.EMAIL_ID_EXISTS;
                 }
 
-                if (userRepository.existsByMobileNo(adminUser.mobile())) {
+                if (adminUser.mobile() !=null && !adminUser.mobile().isEmpty() && userRepository.existsByMobileNo(adminUser.mobile())) {
                     mobileStatus = Utils.MOBILE_NO_EXISTS;
                 }
 
