@@ -15,6 +15,7 @@ public record VendorResponse(
         String city,
         int pinCode,
         String state,
-        String country
+        String country,
+        Long countryId
 ) {
 }

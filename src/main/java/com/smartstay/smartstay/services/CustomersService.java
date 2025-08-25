@@ -4,12 +4,14 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.customer.CustomerData;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
-import com.smartstay.smartstay.payloads.customer.*;
+import com.smartstay.smartstay.payloads.customer.BookingRequest;
+import com.smartstay.smartstay.payloads.customer.CheckInRequest;
+import com.smartstay.smartstay.payloads.customer.CheckinCustomer;
 import com.smartstay.smartstay.repositories.CustomersRepository;
-import com.smartstay.smartstay.dto.customer.CustomerData;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -448,8 +451,27 @@ public class CustomersService {
                 return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
             }
 
+            String mobileStatus = "";
+            String emailStatus = "";
+
+            if (customersRepository.existsByEmailId(customerInfo.emailId())) {
+                emailStatus = Utils.EMAIL_ID_EXISTS;
+            }
+
             if (customersRepository.existsByMobile(customerInfo.mobileNumber())) {
-                return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                mobileStatus = Utils.MOBILE_NO_EXISTS;
+            }
+
+            if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
+                Map<String, String> map = Map.of(
+                        "mobileStatus", mobileStatus,
+                        "emailStatus", emailStatus,
+                        "message", "Validation failed"
+                );
+                return new ResponseEntity<>(
+                        map,
+                        HttpStatus.BAD_REQUEST
+                );
             }
 
             String profileImage = null;
@@ -460,7 +482,7 @@ public class CustomersService {
             Customers customers = new Customers();
             customers.setFirstName(customerInfo.firstName());
             customers.setLastName(customerInfo.lastName());
-            customers.setCountry(1l);
+            customers.setCountry(1L);
             customers.setMobile(customerInfo.mobileNumber());
             customers.setEmailId(customerInfo.emailId());
             customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());

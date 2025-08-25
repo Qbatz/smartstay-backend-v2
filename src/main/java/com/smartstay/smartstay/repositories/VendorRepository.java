@@ -23,10 +23,18 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
     @Query("SELECT new com.smartstay.smartstay.responses.vendor.VendorResponse(" +
             "v.vendorId, v.firstName, v.lastName, CONCAT(v.firstName, ' ', v.lastName), " +
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
-            "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, c.countryName) " +
+            "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, c.countryName, c.countryId) " +
             "FROM VendorV1 v JOIN Countries c ON v.country = c.countryId " +
             "WHERE v.hostelId = :hostelId")
     List<VendorResponse> findAllVendorsByHostelId(@Param("hostelId") String hostelId);
+
+    @Query("SELECT new com.smartstay.smartstay.responses.vendor.VendorResponse(" +
+            "v.vendorId, v.firstName, v.lastName, CONCAT(v.firstName, ' ', v.lastName), " +
+            "v.businessName, v.mobile, v.emailId, v.profilePic, " +
+            "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, c.countryName, c.countryId) " +
+            "FROM VendorV1 v JOIN Countries c ON v.country = c.countryId " +
+            "WHERE v.vendorId = :vendorId")
+    VendorResponse getVendor(@Param("vendorId") int vendorId);
 
 
 
