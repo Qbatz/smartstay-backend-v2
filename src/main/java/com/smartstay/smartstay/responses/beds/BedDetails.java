@@ -1,0 +1,22 @@
+package com.smartstay.smartstay.responses.beds;
+
+public record BedDetails(String bedName,
+                         int bedId,
+                         String hostelId,
+                         boolean isBooked,
+                         boolean isOnNotice,
+                         boolean isOccupied,
+                         Double rentAmount,
+                         int roomId,
+                         String freeFrom,
+                         Double currentRent,
+                         String oldTenantLeavingOn,
+                         String bookingId,
+                         String expectedJoiningDate,
+                         String joiningDate,
+                         String firstName,
+                         String lastName,
+                         String profilePic,
+                         String fullName,
+                         String initials) {
+}

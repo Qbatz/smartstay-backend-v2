@@ -50,8 +50,9 @@ public class Utils {
     public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable";
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
     public static final String PAYLOADS_REQUIRED = "Payloads required";
+    public static final String INVALID_BED_ID = "Invalid bed id passed";
 
-
+    public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";
 
     public static final String PERMISSION_READ = "READ";
@@ -103,7 +104,6 @@ public class Utils {
 
     public static Date stringToDate(String date, String inputFormat) {
         try {
-            System.out.println(date);
             return new SimpleDateFormat(inputFormat).parse(date);
         } catch (ParseException e) {
             throw new RuntimeException("Invalid date format");
@@ -178,5 +178,24 @@ public class Utils {
 
     public static int compareWithTwoDates(Date date1, Date date2) {
         return date1.compareTo(date2);
+    }
+
+    public static boolean checkNullOrEmpty(Object data) {
+        if (data == null) {
+            return false;
+        }
+        if (data instanceof String) {
+            if (((String)data).equalsIgnoreCase("")) {
+                return false;
+            }
+        }
+        if (data instanceof Integer) {
+            if ((Integer) data == 0) {
+                return false;
+            }
+        }
+
+
+        return true;
     }
 }
