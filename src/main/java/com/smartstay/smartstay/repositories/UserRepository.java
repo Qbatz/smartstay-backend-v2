@@ -37,9 +37,9 @@ public interface UserRepository extends JpaRepository<Users, String> {
                     country.country_name AS countryName,
                     country.currency AS currency,
                     country.country_code AS countryCode
-                FROM smart_stay.users usr
-                LEFT OUTER JOIN smart_stay.rolesv1 roles ON roles.role_id = usr.role_id
-                LEFT OUTER JOIN smart_stay.countries country ON country.country_id = usr.country
+                FROM users usr
+                LEFT OUTER JOIN rolesv1 roles ON roles.role_id = usr.role_id
+                LEFT OUTER JOIN countries country ON country.country_id = usr.country
                 WHERE usr.user_id = :userId
             """, nativeQuery = true)
     LoginUsersDetails getLoginUserDetails(@Param("userId") String userId);
@@ -73,10 +73,10 @@ public interface UserRepository extends JpaRepository<Users, String> {
                     country.country_code AS countryCode,
                     ad.pincode, ad.city, ad.house_no as houseNo, ad.land_mark as landmark, ad.state, ad.street,
                                         usr.profile_url as profilePic
-                FROM smart_stay.users usr
-                LEFT OUTER JOIN smart_stay.rolesv1 roles ON roles.role_id = usr.role_id
-                LEFT OUTER JOIN smart_stay.countries country ON country.country_id = usr.country
-                LEFT OUTER JOIN smart_stay.address ad on ad.user_id=usr.user_id
+                FROM users usr
+                LEFT OUTER JOIN rolesv1 roles ON roles.role_id = usr.role_id
+                LEFT OUTER JOIN countries country ON country.country_id = usr.country
+                LEFT OUTER JOIN address ad on ad.user_id=usr.user_id
                 WHERE usr.role_id = :roleId and usr.parent_id =:parentId
             """, nativeQuery = true)
     List<UsersData> getAdminUserList(@Param("roleId") int roleId, @Param("parentId") String parentId);
@@ -102,11 +102,11 @@ public interface UserRepository extends JpaRepository<Users, String> {
                                                           ad.state AS state,
                                                           ad.street AS street,
                                                           usr.profile_url AS profilePic
-                                                      FROM smart_stay.users usr
-                                                      LEFT JOIN smart_stay.rolesv1 roles ON roles.role_id = usr.role_id
-                                                      LEFT JOIN smart_stay.address ad ON ad.user_id = usr.user_id
-                                                      LEFT JOIN smart_stay.countries country ON country.country_id = usr.country
-                                                      WHERE usr.role_id NOT IN (1,2)
+                                                      FROM users usr
+                                                      LEFT JOIN rolesv1 roles ON roles.role_id = usr.role_id
+                                                      LEFT JOIN address ad ON ad.user_id = usr.user_id
+                                                      LEFT JOIN countries country ON country.country_id = usr.country
+                                                      WHERE usr.role_id NOT IN (1,2) and usr.is_active=1 and usr.is_deleted = 0
             """, nativeQuery = true)
     List<UsersData> getUserList();
 

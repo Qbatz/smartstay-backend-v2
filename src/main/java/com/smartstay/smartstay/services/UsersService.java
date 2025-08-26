@@ -559,6 +559,32 @@ public class UsersService {
         }
     }
 
+    public ResponseEntity<?> deleteUser(String userId) {
+        if (authentication.isAuthenticated()) {
+            Users users = userRepository.findUserByUserId(userId);
+            if (users != null) {
+                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
+
+                if (users.getRoleId() == 1 || users.getRoleId() == 2) {
+                    return new ResponseEntity<>("Admin users cannot be deleted", HttpStatus.FORBIDDEN);
+                }
+
+                users.setDeleted(true);
+                users.setActive(false);
+                userRepository.save(users);
+                return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+
+            } else {
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+        } else {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+
     public List<Users> findActiveUsersByRole(int roleId) {
         return userRepository.findByRoleIdAndIsActiveTrueAndIsDeletedFalse(roleId);
     }
