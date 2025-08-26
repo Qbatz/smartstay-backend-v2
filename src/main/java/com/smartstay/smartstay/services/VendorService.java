@@ -82,16 +82,14 @@ public class VendorService {
 
     }
 
-    public ResponseEntity<?> updateVendorById(int vendorId, UpdateVendor updateVendor,MultipartFile file) {
+    public ResponseEntity<?> updateVendorById(int vendorId, UpdateVendor updateVendor, MultipartFile file) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
         RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
+
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
@@ -182,6 +180,8 @@ public class VendorService {
         vendorV1.setCity(payloads.city());
         vendorV1.setState(payloads.state());
         vendorV1.setProfilePic(profileImage);
+        vendorV1.setBusinessName(payloads.businessName());
+        vendorV1.setArea(payloads.area());
         vendorV1.setCountry(1L);
         vendorV1.setCreatedAt(new Date());
         vendorV1.setUpdatedAt(new Date());

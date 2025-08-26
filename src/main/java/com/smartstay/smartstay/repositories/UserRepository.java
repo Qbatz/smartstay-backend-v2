@@ -72,7 +72,7 @@ public interface UserRepository extends JpaRepository<Users, String> {
                     country.currency AS currency,
                     country.country_code AS countryCode,
                     ad.pincode, ad.city, ad.house_no as houseNo, ad.land_mark as landmark, ad.state, ad.street,
-                                        usr.profile_url as profilePic
+                                        usr.profile_url as profilePic, usr.description
                 FROM smart_stay.users usr
                 LEFT OUTER JOIN smart_stay.rolesv1 roles ON roles.role_id = usr.role_id
                 LEFT OUTER JOIN smart_stay.countries country ON country.country_id = usr.country
@@ -101,14 +101,16 @@ public interface UserRepository extends JpaRepository<Users, String> {
                                                           ad.land_mark AS landmark,
                                                           ad.state AS state,
                                                           ad.street AS street,
-                                                          usr.profile_url AS profilePic
+                                                          usr.profile_url AS profilePic,
+                                                          usr.description
                                                       FROM smart_stay.users usr
                                                       LEFT JOIN smart_stay.rolesv1 roles ON roles.role_id = usr.role_id
                                                       LEFT JOIN smart_stay.address ad ON ad.user_id = usr.user_id
                                                       LEFT JOIN smart_stay.countries country ON country.country_id = usr.country
-                                                      WHERE usr.role_id NOT IN (1,2)
+                                                      LEFT JOIN user_hostel uh on uh.user_id=usr.user_id
+                                                      WHERE uh.hostel_id=:hostelId AND usr.role_id NOT IN (1,2)
             """, nativeQuery = true)
-    List<UsersData> getUserList();
+    List<UsersData> getUserList(@Param("hostelId") String hostelId);
 
     @Query("SELECT count(u) FROM Users u where u.emailId=:emailId and u.userId !=:userId")
     int getUsersCountByEmail(String userId, String emailId);

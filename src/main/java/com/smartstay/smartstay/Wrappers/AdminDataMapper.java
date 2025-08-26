@@ -41,7 +41,8 @@ public class AdminDataMapper implements Function<UsersData, com.smartstay.smarts
                 usersData.street(),
                 usersData.profilePic(),
                 initials.toString(),
-                usersData.firstName() + " " + usersData.lastName()
+                usersData.firstName() + " " + usersData.lastName(),
+                usersData.description()
         );
     }
 }

@@ -25,6 +25,7 @@ public class RolesV1 {
     private Date createdAt;
     private Date updatedAt;
     private String parentId;
+    private String hostelId;
 
     @Column(columnDefinition = "TEXT")
     @Convert(converter = RolesPermissionConverter.class)

@@ -10,6 +10,10 @@ public record AddRoles(
         @NotNull(message = "Role name is required")
         @NotEmpty(message = "Role name is required")
         String roleName,
+
+        @NotNull(message = "Hostel Id required")
+        @NotEmpty(message = "Hostel Id required")
+        String hostelId,
         @NotNull(message = "Permission list cannot be null")
         @Size(min = 1, max = 19, message = "Permission list must contain between 1 and 19 items")
         List<Permission> permissionList

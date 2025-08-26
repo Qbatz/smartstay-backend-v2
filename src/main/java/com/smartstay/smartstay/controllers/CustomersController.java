@@ -28,9 +28,9 @@ public class CustomersController {
     @Autowired
     private CustomersService customersService;
 
-    @PostMapping("/check-in")
-    public ResponseEntity<?> createCustomer(@RequestPart(value = "profilePic", required = false) MultipartFile file, @Valid @RequestPart CheckInRequest payLoads) {
-        return customersService.addCheckIn(file, payLoads);
+    @PostMapping("/check-in/{customerId}")
+    public ResponseEntity<?> createCustomer(@PathVariable("customerId") String customerId, @Valid @RequestBody CheckInRequest payloads) {
+        return customersService.addCheckIn(customerId, payloads);
     }
 
     @PostMapping("/save/{hostelId}")
@@ -63,11 +63,15 @@ public class CustomersController {
         return customersService.createBooking(bookingRequest,hostelId);
     }
 
-    @PostMapping("/booked/check-in")
+    @PostMapping("/check-in")
     public ResponseEntity<?> checkinExistingCustomer(@Valid @RequestBody CheckinCustomer checkinRequest) {
         return customersService.checkinBookedCustomer(checkinRequest);
     }
 
+    @PostMapping("/notice/{customerId}")
+    public ResponseEntity<?> moveToNotice(@PathVariable("customerId") String customerId, CheckoutNotice checkoutNotice) {
+        return customersService.requestNotice(customerId, checkoutNotice);
+    }
 //    @PostMapping("/booked/check-out")
 //    public ResponseEntity<?> checkoutExistingCustomer(@Valid @RequestBody CheckoutRequest checkoutRequest) {
 //        return customersService.requestCheckout(checkoutRequest);

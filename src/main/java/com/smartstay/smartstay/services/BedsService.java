@@ -5,6 +5,7 @@ import com.smartstay.smartstay.Wrappers.BedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.BedStatus;
+import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
@@ -212,12 +213,16 @@ public class BedsService {
 
         Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId,users.getParentId());
         if (existingBed != null) {
-            if (Utils.compareWithTodayDate(Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT))) {
-                existingBed.setStatus(BedStatus.OCCUPIED.name());
+            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(joiningDate, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+                existingBed.setStatus(BedStatus.BOOKED.name());
                 existingBed.setBooked(true);
-                existingBed.setUpdatedAt(new Date());
+            }else {
+                existingBed.setBooked(false);
+                existingBed.setStatus(BedStatus.OCCUPIED.name());
                 existingBed.setFreeFrom(null);
             }
+
+            existingBed.setUpdatedAt(new Date());
 
             bedsRepository.save(existingBed);
 
