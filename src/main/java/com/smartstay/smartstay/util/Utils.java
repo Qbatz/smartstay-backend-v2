@@ -36,6 +36,7 @@ public class Utils {
     public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
     public static final String CREATED = "Created Successfully";
+    public static final String DELETED = "Deleted Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
     public static final String INVALID_ROLE = "Invalid role";
