@@ -377,6 +377,10 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_CHECKED_IN, HttpStatus.BAD_REQUEST);
+        }
+
         if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
@@ -397,10 +401,9 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.BAD_REQUEST);
         }
 
-        String date = Utils.stringToDateFormat(checkinRequest.joiningDate().replace("/", "-"));
+        String date = checkinRequest.joiningDate().replace("/", "-");
 
         if (bedsService.isBedAvailable(checkinRequest.bedId(), user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
-
 
             customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
             customers.setJoiningDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
@@ -416,6 +419,10 @@ public class CustomersService {
             transactionService.addAdvanceAmount(customers, checkinRequest.advanceAmount());
 
             BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(checkinRequest.customerId());
+            if (bookingsV1 == null) {
+                bookingsV1 = new BookingsV1();
+            }
+            bookingsV1.setCustomerId(customers.getCustomerId());
             bookingsV1.setBedId(checkinRequest.bedId());
             bookingsV1.setHostelId(customers.getHostelId());
             bookingsV1.setFloorId(checkinRequest.floorId());
@@ -492,12 +499,24 @@ public class CustomersService {
             customers.setProfilePic(profileImage);
 
             if (customerInfo.address() != null) {
-                customers.setHouseNo(customerInfo.address().houseNo());
-                customers.setStreet(customerInfo.address().street());
-                customers.setLandmark(customerInfo.address().landmark());
-                customers.setPincode(customerInfo.address().pincode());
-                customers.setState(customerInfo.address().state());
-                customers.setCity(customerInfo.address().city());
+                if (Utils.checkNullOrEmpty(customerInfo.address().houseNo())) {
+                    customers.setHouseNo(customerInfo.address().houseNo());
+                }
+                if (Utils.checkNullOrEmpty(customerInfo.address().street())) {
+                    customers.setStreet(customerInfo.address().street());
+                }
+                if (Utils.checkNullOrEmpty(customerInfo.address().landmark())) {
+                    customers.setLandmark(customerInfo.address().landmark());
+                }
+                if (Utils.checkNullOrEmpty(customerInfo.address().pincode())) {
+                    customers.setPincode(customerInfo.address().pincode());
+                }
+                if (Utils.checkNullOrEmpty(customerInfo.address().state())) {
+                    customers.setState(customerInfo.address().state());
+                }
+                if (Utils.checkNullOrEmpty(customerInfo.address().city())) {
+                    customers.setCity(customerInfo.address().city());
+                }
             }
 
             customersRepository.save(customers);

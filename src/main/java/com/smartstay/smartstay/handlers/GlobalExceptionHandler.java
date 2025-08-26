@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.handlers;
 
+import io.jsonwebtoken.security.SignatureException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,4 +34,9 @@ public class GlobalExceptionHandler {
 //
 //        return new ResponseEntity<>("Something went wrong", HttpStatus.BAD_REQUEST);
 //    }
+
+    @ExceptionHandler(SignatureException.class)
+    public ResponseEntity<?> handleSignatureMismatchException(SignatureException se) {
+        return new ResponseEntity<>("Something went wrong", HttpStatus.UNAUTHORIZED);
+    }
 }
