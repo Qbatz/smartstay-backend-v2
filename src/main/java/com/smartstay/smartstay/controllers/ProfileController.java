@@ -1,11 +1,8 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.Password;
-import com.smartstay.smartstay.payloads.account.AddAdminPayload;
+import com.smartstay.smartstay.payloads.account.*;
 import com.smartstay.smartstay.payloads.UpdateUserProfilePayloads;
-import com.smartstay.smartstay.payloads.account.AddAdminUser;
-import com.smartstay.smartstay.payloads.account.EditAdmin;
-import com.smartstay.smartstay.payloads.account.UpdateVerificationStatus;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -63,9 +60,9 @@ public class ProfileController {
         return usersService.listAllAdmins();
     }
 
-    @GetMapping("/users-list")
-    public ResponseEntity<?> getUserList() {
-        return usersService.listAllUsers();
+    @GetMapping("/users-list/{hostelId}")
+    public ResponseEntity<?> getUserList(@PathVariable("hostelId") String hostelId) {
+        return usersService.listAllUsers(hostelId);
     }
 
     @PostMapping("/change-password")
@@ -76,5 +73,10 @@ public class ProfileController {
     @PutMapping("/admin/{adminId}")
     public ResponseEntity<?> updateUdminInformation(@PathVariable(value = "adminId") String adminId, @RequestPart(name = "payload", required = false) EditAdmin payloads, @RequestPart(name = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.updateAdminProfile(adminId, payloads, profilePic);
+    }
+
+    @PutMapping("/users/{hostelId}/{userId}")
+    public ResponseEntity<?> updateUserInformations(@PathVariable(value = "userId") String userId, @PathVariable("hostelId") String hostelId, @RequestBody(required = false) EditUsers payloads) {
+        return usersService.updateUsersProfile(hostelId, userId, payloads);
     }
 }

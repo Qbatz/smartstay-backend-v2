@@ -43,6 +43,7 @@ public class Utils {
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
     public static final String ACTIVE_USERS_FOUND = "Active users found";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
+    public static final String CUSTOMER_ON_NOTICE = "Customer is already on notice";
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
     public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
