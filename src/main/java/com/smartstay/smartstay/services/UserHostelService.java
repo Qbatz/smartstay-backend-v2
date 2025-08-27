@@ -15,7 +15,7 @@ public class UserHostelService {
     @Autowired
     private UserHostelRepository userHostelRepo;
 
-    public void mapUserHostel(String userId, String hostelId, String parentId) {
+    public void mapUserHostel(String userId, String parentId, String hostelId) {
         List<UserHostel> listHostels = userHostelRepo.findAllByHostelId(hostelId);
         UserHostel uh = new UserHostel();
         uh.setUserId(userId);

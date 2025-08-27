@@ -16,6 +16,7 @@ public record UsersData(String userId,
                         Integer pincode, String city, String houseNo,
                         String landmark, String state, String street, String profilePic,
                         String initials,
-                        String fullName
+                        String fullName,
+                        String description
 ) {
 }
