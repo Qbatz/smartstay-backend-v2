@@ -186,6 +186,8 @@ public class VendorService {
         vendorV1.setCreatedAt(new Date());
         vendorV1.setUpdatedAt(new Date());
         vendorV1.setCreatedBy(userId);
+        vendorV1.setBusinessName(payloads.businessName());
+        vendorV1.setArea(payloads.area());
         vendorV1.setHostelId(payloads.hostelId());
         vendorV1.setActive(true);
         vendorRepository.save(vendorV1);
