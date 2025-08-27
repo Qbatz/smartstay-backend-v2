@@ -1,12 +1,15 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.BedDetailsMapper;
 import com.smartstay.smartstay.Wrappers.BedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.BedStatus;
+import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
+import com.smartstay.smartstay.responses.beds.BedDetails;
 import com.smartstay.smartstay.responses.beds.BedsResponse;
 import com.smartstay.smartstay.responses.beds.BedsStatusCount;
 import com.smartstay.smartstay.util.Utils;
@@ -39,6 +42,9 @@ public class BedsService {
     @Autowired
     private BookingsService bookingService;
 
+    @Autowired
+    private UserHostelService userHostelService;
+
     public ResponseEntity<?> getAllBeds(int roomId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
@@ -62,25 +68,34 @@ public class BedsService {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
 
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Beds bed = bedsRepository.findByBedIdAndParentId(id,user.getParentId());
-        if (bed != null) {
-            BedsResponse bedsResponse = new BedsMapper().apply(bed);
+//        Beds bed = bedsRepository.findByBedIdAndParentId(id,user.getParentId());
+        List<com.smartstay.smartstay.dto.beds.Beds> listBeds = bedsRepository.getBedInfo(id, user.getParentId());
+
+        if (listBeds != null && !listBeds.isEmpty()) {
+            if (!userHostelService.checkHostelAccess(userId, listBeds.get(0).hostelId())) {
+                return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+            }
+            BedDetails bedsResponse = null;
+            if (listBeds.size() > 1) {
+                bedsResponse = new BedDetailsMapper(listBeds.get(0).leavingDate()).apply(listBeds.get(1));
+            }
+            else if (!listBeds.isEmpty()) {
+                bedsResponse = new BedDetailsMapper(null).apply(listBeds.get(0));
+            }
+
             return new ResponseEntity<>(bedsResponse, HttpStatus.OK);
-        }else {
-            return new ResponseEntity<>("Bed Doesn't exist", HttpStatus.BAD_REQUEST);
+        } else {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
+
 
     }
 
@@ -198,12 +213,16 @@ public class BedsService {
 
         Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId,users.getParentId());
         if (existingBed != null) {
-            if (Utils.compareWithTodayDate(Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT))) {
+            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(joiningDate, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
                 existingBed.setStatus(BedStatus.BOOKED.name());
                 existingBed.setBooked(true);
-                existingBed.setUpdatedAt(new Date());
+            }else {
+                existingBed.setBooked(false);
+                existingBed.setStatus(BedStatus.OCCUPIED.name());
                 existingBed.setFreeFrom(null);
             }
+
+            existingBed.setUpdatedAt(new Date());
 
             bedsRepository.save(existingBed);
 

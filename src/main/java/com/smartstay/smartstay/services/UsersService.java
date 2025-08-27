@@ -392,14 +392,17 @@ public class UsersService {
         }
     }
 
-    public ResponseEntity<?> listAllUsers() {
+    public ResponseEntity<?> listAllUsers(String hostelId) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
             if (users != null) {
                 if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_READ)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
-                List<UsersData> usersList = userRepository.getUserList();
+                if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+                    return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+                }
+                List<UsersData> usersList = userRepository.getUserList(hostelId);
                 if (usersList.isEmpty()) {
                     return new ResponseEntity<>("No users found", HttpStatus.NOT_FOUND);
                 }
@@ -671,6 +674,58 @@ public class UsersService {
         else {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
+
+    }
+
+    public ResponseEntity<?> updateUsersProfile(String hostelId, String userId, EditUsers payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        String loginId = authentication.getName();
+
+        Users users = userRepository.findUserByUserId(loginId);
+        if (payloads == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Users userToUpdate = userRepository.findUserByUserId(userId);
+        if (userToUpdate == null) {
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
+        }
+        if (Utils.checkNullOrEmpty(payloads.role())) {
+            if (!rolesService.checkRoleIdExistForHostel(payloads.role(), hostelId)) {
+                return new ResponseEntity<>(Utils.INVALID_ROLE, HttpStatus.BAD_REQUEST);
+            }
+            userToUpdate.setRoleId(payloads.role());
+        }
+
+        if (Utils.checkNullOrEmpty(payloads.name())) {
+            String[] names = payloads.name().split(" ");
+            userToUpdate.setFirstName(names[0]);
+            if (names.length > 1) {
+                StringBuilder builder = new StringBuilder();
+                for (int i=1; i<names.length; i++) {
+                    builder.append(names[i]);
+                }
+                userToUpdate.setLastName(builder.toString());
+            }
+        }
+        if (Utils.checkNullOrEmpty(payloads.mobile())) {
+            userToUpdate.setMobileNo(payloads.mobile());
+        }
+        if (Utils.checkNullOrEmpty(payloads.description())) {
+            userToUpdate.setDescription(payloads.description());
+        }
+        userToUpdate.setLastUpdate(new Date());
+
+        userRepository.save(userToUpdate);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
 }

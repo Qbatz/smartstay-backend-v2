@@ -244,6 +244,10 @@ public class RolesService {
     public boolean checkRoleId(int roleId) {
         return rolesRepository.existsByRoleId(roleId);
     }
+
+    public boolean checkRoleIdExistForHostel(int roleId, String hostelId) {
+        return rolesRepository.findByRoleIdAndHostelId(roleId, hostelId) != null;
+    }
   
     public String findById(int roleId) {
         RolesV1 rolesV1 = rolesRepository.findById(roleId).orElse(null);

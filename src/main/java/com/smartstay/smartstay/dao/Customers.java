@@ -40,7 +40,7 @@ public class Customers {
     @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL)
     private Advance advance;
 
-    @OneToOne(mappedBy = "customers")
+    @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL)
     private KycDetails kycDetails;
 
     @OneToMany(mappedBy = "customers", cascade = CascadeType.ALL)

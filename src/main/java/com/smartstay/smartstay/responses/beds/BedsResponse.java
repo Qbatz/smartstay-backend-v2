@@ -1,7 +1,7 @@
 package com.smartstay.smartstay.responses.beds;
 
 public record BedsResponse(int id,
-                           String name,
+                           String bedName,
                            int roomId,
                            boolean isOccupied,
                            boolean onNotice,
