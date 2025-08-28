@@ -52,5 +52,9 @@ public class UsersController {
         return userService.requestPasswordReset(emailId);
     }
 
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable("userId") String userId) {
+        return userService.deleteUser(userId);
+    }
 
 }

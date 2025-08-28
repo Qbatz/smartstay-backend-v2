@@ -103,7 +103,12 @@ public class RolesService {
         if (existingRole == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+
         if (updatedRole.roleName() != null && !updatedRole.roleName().isEmpty()) {
+            if (rolesRepository.existsByParentIdAndRole(roleId,updatedRole.roleName(), user.getParentId()) > 0) {
+                return new ResponseEntity<>(Utils.ROLE_NAME_EXISTS, HttpStatus.BAD_REQUEST);
+            }
             existingRole.setRoleName(updatedRole.roleName());
         }
         if (updatedRole.isActive() != null) {
