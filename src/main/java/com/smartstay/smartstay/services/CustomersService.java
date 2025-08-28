@@ -182,7 +182,7 @@ public class CustomersService {
         String userId = authentication.getName();
         Users user = userService.findUserByUserId(userId);
 
-        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_READ)) {
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
@@ -199,12 +199,31 @@ public class CustomersService {
             } else {
                 initials.append(nameArray[0].toUpperCase().charAt(1));
             }
+            String currentStatus = null;
+            if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
+                currentStatus = "Booked";
+            }
+            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+                currentStatus = "Vacated";
+            }
+            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ON_NOTICE.name())) {
+                currentStatus = "Notice Period";
+            }
+            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+                currentStatus = "Checked In";
+            }
+            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
+                currentStatus = "Inactive";
+            }
+            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ACTIVE.name())) {
+                currentStatus = "Active";
+            }
             return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
                     item.getCity(),
                     item.getState(),
                     item.getCountry(),
                     item.getMobile(),
-                    item.getCurrentStatus(),
+                    currentStatus,
                     item.getEmailId(),
                     item.getProfilePic(),
                     item.getBedId(),
@@ -215,7 +234,10 @@ public class CustomersService {
                     Utils.dateToString(item.getJoiningDate()),
                     Utils.dateToString(item.getActualJoiningDate()),
                     item.getCountryCode(),
-                    Utils.dateToString(item.getCreatedAt()));
+                    Utils.dateToString(item.getCreatedAt()),
+                    item.getBedName(),
+                    item.getRoomName(),
+                    item.getFloorName());
         }).collect(Collectors.toList());
         return new ResponseEntity<>(listCustomers, HttpStatus.OK);
     }
@@ -268,9 +290,8 @@ public class CustomersService {
                 bookingsV1.setUpdatedBy(userId);
                 bookingsV1.setLeavingDate(null);
                 bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
+
                 bookingsService.saveBooking(bookingsV1);
-
-
 
                 return bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate());
             } else {
@@ -285,6 +306,14 @@ public class CustomersService {
 
 
     }
+
+    /**
+     *
+     *  for check in the customers
+     *
+     *  use this only for booked customers
+     *
+     */
 
     public ResponseEntity<?> addCheckIn(String customerId, CheckInRequest payloads) {
 
@@ -332,23 +361,23 @@ public class CustomersService {
         customers.setJoiningDate(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
         Customers savedCustomer = customersRepository.save(customers);
 
-        BookingsV1 bookingsV1 = new BookingsV1();
-        bookingsV1.setHostelId(payloads.hostelId());
-        bookingsV1.setBedId(payloads.bedId());
-        bookingsV1.setFloorId(payloads.floorId());
-        bookingsV1.setCustomerId(savedCustomer.getCustomerId());
-        bookingsV1.setCreatedAt(new Date());
-        bookingsV1.setUpdatedAt(new Date());
-        bookingsV1.setLeavingDate(null);
-        bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
-        bookingsV1.setRoomId(payloads.roomId());
-        String rawDateStr = payloads.joiningDate();
-        if (rawDateStr != null) {
-            rawDateStr = rawDateStr.replace("-", "/");
+        BookingsV1 bookingsV1 = bookingsService.findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
+        if (bookingsV1 != null) {
+            bookingsV1.setUpdatedAt(new Date());
+            bookingsV1.setLeavingDate(null);
+            bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
+            bookingsV1.setRoomId(payloads.roomId());
+            String rawDateStr = payloads.joiningDate();
+            if (rawDateStr != null) {
+                rawDateStr = rawDateStr.replace("-", "/");
+            }
+            Date joiningDate = Utils.convertStringToDate(rawDateStr);
+            bookingsV1.setJoiningDate(joiningDate);
+            bookingsService.saveBooking(bookingsV1);
+        }else {
+            bookingsService.checkinCustomer(payloads, customerId);
         }
-        Date joiningDate = Utils.convertStringToDate(rawDateStr);
-        bookingsV1.setJoiningDate(joiningDate);
-        bookingsService.saveBooking(bookingsV1);
+
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
@@ -660,7 +689,7 @@ public class CustomersService {
         }
     }
 
-    public ResponseEntity<?> requestNotice(String customerId, CheckoutNotice checkoutNotice) {
+    public ResponseEntity<?> requestNotice(String customerId, String hostelId, CheckoutNotice checkoutNotice) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -673,9 +702,13 @@ public class CustomersService {
         if (customerId == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_CHECKOUT, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
 
         Customers customers = customersRepository.findById(customerId).orElse(null);
         if (customers == null) {
@@ -684,6 +717,13 @@ public class CustomersService {
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ON_NOTICE.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_ON_NOTICE, HttpStatus.BAD_REQUEST);
         }
+
+        customers.setCurrentStatus(CustomerStatus.ON_NOTICE.name());
+
+
+        bedsService.updateBedToNotice(bookingsService.getBedIdFromBooking(customerId, hostelId), checkoutNotice.checkoutDate());
+        bookingsService.moveToNotice(customerId, checkoutNotice.checkoutDate(), checkoutNotice.requestDate(), checkoutNotice.reason());
+        customersRepository.save(customers);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 

@@ -14,6 +14,9 @@ public interface CustomerData {
     String getBedId();
     String getFloorId();
     String getRoomId();
+    String getFloorName();
+    String getRoomName();
+    String getBedName();
     String getCustomerId();
     String getCountryCode();
     Date getActualJoiningDate();

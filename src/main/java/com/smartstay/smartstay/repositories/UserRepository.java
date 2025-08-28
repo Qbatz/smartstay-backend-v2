@@ -104,9 +104,9 @@ public interface UserRepository extends JpaRepository<Users, String> {
                                                           usr.profile_url AS profilePic,
                                                           usr.description
                                                       FROM smart_stay.users usr
-                                                      LEFT JOIN smart_stay.rolesv1 roles ON roles.role_id = usr.role_id
-                                                      LEFT JOIN smart_stay.address ad ON ad.user_id = usr.user_id
-                                                      LEFT JOIN smart_stay.countries country ON country.country_id = usr.country
+                                                      LEFT JOIN rolesv1 roles ON roles.role_id = usr.role_id
+                                                      LEFT JOIN address ad ON ad.user_id = usr.user_id
+                                                      LEFT JOIN countries country ON country.country_id = usr.country
                                                       LEFT JOIN user_hostel uh on uh.user_id=usr.user_id
                                                       WHERE uh.hostel_id=:hostelId AND usr.role_id NOT IN (1,2)
             """, nativeQuery = true)

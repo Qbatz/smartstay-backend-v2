@@ -21,5 +21,10 @@ public record Beds(int bedId,
                    String firstName,
                    String lastName,
                    String profilePic,
-                   String bookingStatus) {
+                   String bookingStatus,
+                   String mobile,
+                   Integer floorId,
+                   String floorName,
+                   String roomName,
+                   String countryCode) {
 }

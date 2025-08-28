@@ -68,9 +68,9 @@ public class CustomersController {
         return customersService.checkinBookedCustomer(checkinRequest);
     }
 
-    @PostMapping("/notice/{customerId}")
-    public ResponseEntity<?> moveToNotice(@PathVariable("customerId") String customerId, CheckoutNotice checkoutNotice) {
-        return customersService.requestNotice(customerId, checkoutNotice);
+    @PostMapping("/notice/{hostelId}/{customerId}")
+    public ResponseEntity<?> moveToNotice(@PathVariable("customerId") String customerId, @PathVariable("hostelId") String hostelId, CheckoutNotice checkoutNotice) {
+        return customersService.requestNotice(customerId, hostelId, checkoutNotice);
     }
 //    @PostMapping("/booked/check-out")
 //    public ResponseEntity<?> checkoutExistingCustomer(@Valid @RequestBody CheckoutRequest checkoutRequest) {
