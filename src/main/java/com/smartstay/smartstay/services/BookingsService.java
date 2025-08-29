@@ -5,9 +5,12 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.Bookings;
+import com.smartstay.smartstay.ennum.BedStatus;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
+import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.repositories.BookingsRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,5 +95,70 @@ public class BookingsService {
 
     public BookingsV1 getBookingsByCustomerId(String customerId) {
         return bookingsRepository.findByCustomerId(customerId);
+    }
+
+    public int getBedIdFromBooking(String customerId, String hostelId) {
+        if (customerId != null && !customerId.equalsIgnoreCase("") && hostelId != null && !hostelId.equalsIgnoreCase("")) {
+            BookingsV1 bookingsV1 = bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+            if (bookingsV1 == null) {
+                return 0;
+            }
+            return bookingsV1.getBedId();
+        }
+        return 0;
+    }
+
+    public BookingsV1 findBookingsByCustomerIdAndHostelId(String customerId, String hostelId) {
+        return bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+    }
+
+    public int moveToNotice(String customerId, String relievingDate, String requestedDate, String reason) {
+
+        if (!authentication.isAuthenticated()) {
+            return -1;
+        }
+
+        BookingsV1 booking = getBookingsByCustomerId(customerId);
+
+        if (booking == null) {
+            return 0;
+        }
+
+        booking.setReasonForLeaving(reason);
+        booking.setLeavingDate(Utils.stringToDate(relievingDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        booking.setNoticeDate(Utils.stringToDate(requestedDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        booking.setUpdatedAt(new Date());
+        booking.setCurrentStatus(BedStatus.NOTICE.name());
+        booking.setUpdatedBy(authentication.getName());
+
+        bookingsRepository.save(booking);
+
+        return 1;
+    }
+
+    /**
+     *
+     * this works only on the booked customers
+     * @return
+     */
+    public BookingsV1 checkinCustomer(CheckInRequest request, String customerId) {
+        BookingsV1 bookingv1 = new BookingsV1();
+        bookingv1.setCustomerId(customerId);
+        bookingv1.setHostelId(request.hostelId());
+        bookingv1.setCurrentStatus(BookingStatus.CHECKIN.name());
+        bookingv1.setUpdatedAt(new Date());
+        bookingv1.setUpdatedBy(authentication.getName());
+        bookingv1.setBedId(request.bedId());
+        bookingv1.setFloorId(request.floorId());
+        bookingv1.setHostelId(request.hostelId());
+        bookingv1.setRentAmount(request.rentalAmount());
+        bookingv1.setCreatedAt(new Date());
+        bookingv1.setCreatedBy(authentication.getName());
+        bookingv1.setRoomId(request.roomId());
+        bookingv1.setRentAmount(bookingv1.getRentAmount());
+        bookingv1.setJoiningDate(Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+
+        return bookingsRepository.save(bookingv1);
+
     }
 }

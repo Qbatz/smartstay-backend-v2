@@ -202,9 +202,9 @@ public class HostelService {
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
 
-        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
+//        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
+//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//        }
 
         List<Hostels> listOfHostels = userHostelService.findByUserId(userId).stream().map(item -> {
             int noOfFloors = 0;

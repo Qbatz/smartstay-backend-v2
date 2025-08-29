@@ -18,5 +18,10 @@ public record BedDetails(String bedName,
                          String lastName,
                          String profilePic,
                          String fullName,
-                         String initials) {
+                         String initials,
+                         String customerMobile,
+                         Integer floorId,
+                         String floorName,
+                         String roomName,
+                         String countryCode) {
 }

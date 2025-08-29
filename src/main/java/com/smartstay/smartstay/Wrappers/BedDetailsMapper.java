@@ -69,6 +69,11 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                 beds.lastName(),
                 beds.profilePic(),
                 fullName.toString(),
-                initials.toString());
+                initials.toString(),
+                beds.mobile(),
+                beds.floorId(),
+                beds.floorName(),
+                beds.roomName(),
+                beds.countryCode());
     }
 }

@@ -271,6 +271,21 @@ public class BedsService {
         return bedsRepository.findByBedIdAndRoomIdAndHostelId(bedId, roomId, hostelId) != null;
     }
 
+    public int updateBedToNotice(int bedId, String relievingDate) {
+        Beds bed = bedsRepository.findById(bedId).orElse(null);
+        if (bed == null) {
+            return 0;
+        }
+
+        bed.setUpdatedAt(new Date());
+        bed.setStatus(BedStatus.NOTICE.name());
+        bed.setFreeFrom(Utils.stringToDate(relievingDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+
+        bedsRepository.save(bed);
+
+        return 1;
+    }
+
     public List<BedsStatusCount> findBedCount(String hostelId) {
 
         return bedsRepository.getBedCountByStatus(hostelId);

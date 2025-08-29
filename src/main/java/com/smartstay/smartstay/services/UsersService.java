@@ -18,6 +18,7 @@ import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
 import com.smartstay.smartstay.responses.user.OtpResponse;
 import com.smartstay.smartstay.util.Utils;
+import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -404,7 +405,7 @@ public class UsersService {
                 }
                 List<UsersData> usersList = userRepository.getUserList(hostelId);
                 if (usersList.isEmpty()) {
-                    return new ResponseEntity<>("No users found", HttpStatus.NOT_FOUND);
+                    return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.NO_CONTENT);
                 }
                 return new ResponseEntity<>(usersList, HttpStatus.OK);
             } else {
