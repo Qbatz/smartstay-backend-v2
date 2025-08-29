@@ -20,6 +20,7 @@ public class BookingsV1 {
     private String bookingId;
     private Date joiningDate;
     private Date leavingDate;
+    private Date noticeDate;
     private Double rentAmount;
     private Date createdAt;
     private Date updatedAt;

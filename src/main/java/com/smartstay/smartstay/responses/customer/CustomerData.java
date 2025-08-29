@@ -16,5 +16,8 @@ public record CustomerData(String firstName,
                            String expectedJoiningDate,
                            String actualJoining,
                            String countryCode,
-                           String bookedAt) {
+                           String bookedAt,
+                           String bedName,
+                           String roomName,
+                           String floorName) {
 }
