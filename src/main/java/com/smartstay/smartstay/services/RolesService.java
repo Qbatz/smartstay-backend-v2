@@ -92,10 +92,12 @@ public class RolesService {
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
+        List<String> excludedRoles = Arrays.asList(Utils.SMART_STAY_ADMIN, Utils.SMART_STAY_ADMIN, Utils.READ_ONLY, Utils.WRITE_ONLY);
+        RolesV1 rolesV1 = rolesRepository.findByRoleIdAndRoleNameNotIn(user.getRoleId(),excludedRoles);
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
         if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
