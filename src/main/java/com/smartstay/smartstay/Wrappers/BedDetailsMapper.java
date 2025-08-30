@@ -74,6 +74,7 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                 beds.floorId(),
                 beds.floorName(),
                 beds.roomName(),
-                beds.countryCode());
+                beds.countryCode(),
+                beds.customerId());
     }
 }

@@ -35,7 +35,7 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
             "bed.bed_name as bedName, bed.status as status, booking.rent_amount as currentRent, " +
             "booking.joining_date as joiningDate, booking.leaving_date as leavingDate, booking.booking_id as bookingId, " +
             "booking.created_by as createdBy, cus.exp_joining_date as expectedJoinig, cus.joining_date as cusJoiningDate, " +
-            "cus.first_name as firstName, cus.last_name as lastName, cus.profile_pic as profilePic, " +
+            "cus.customer_id as customerId, cus.first_name as firstName, cus.last_name as lastName, cus.profile_pic as profilePic, " +
             "booking.current_status as bookingStatus, cus.mobile, flr.floor_id as floorId, flr.floor_name as floorName, rms.room_name as roomName," +
             "cntry.country_code countryCode FROM smart_stay.beds bed " +
             "left outer join bookingsv1 booking on booking.bed_id=bed.bed_id left outer join customers cus on " +

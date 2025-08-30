@@ -23,5 +23,6 @@ public record BedDetails(String bedName,
                          Integer floorId,
                          String floorName,
                          String roomName,
-                         String countryCode) {
+                         String countryCode,
+                         String customerId) {
 }
