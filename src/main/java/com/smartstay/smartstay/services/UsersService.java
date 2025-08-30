@@ -565,19 +565,48 @@ public class UsersService {
 
     public ResponseEntity<?> deleteUser(String userId) {
         if (authentication.isAuthenticated()) {
-            Users users = userRepository.findUserByUserId(userId);
-            if (users != null) {
-                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
+            Users users = userRepository.findUserByUserId(authentication.getName());
+            Users inputUser = userRepository.findUserByUserIdAndParentId(userId,users.getParentId());
+
+            if (inputUser != null) {
+                if (!rolesService.checkPermission(inputUser.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
 
-                if (users.getRoleId() == 1 || users.getRoleId() == 2) {
-                    return new ResponseEntity<>("Admin users cannot be deleted", HttpStatus.FORBIDDEN);
+                if (inputUser.getRoleId() == 1) {
+                    return new ResponseEntity<>("Admin user cannot be deleted", HttpStatus.FORBIDDEN);
                 }
 
-                users.setDeleted(true);
-                users.setActive(false);
-                userRepository.save(users);
+                inputUser.setDeleted(true);
+                inputUser.setActive(false);
+                userRepository.save(inputUser);
+                return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+
+            } else {
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+        } else {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    public ResponseEntity<?> deleteAdminUser(String userId) {
+        if (authentication.isAuthenticated()) {
+            Users users = userRepository.findUserByUserId(authentication.getName());
+            Users inputUser = userRepository.findUserByUserIdAndParentId(userId,users.getParentId());
+
+            if (inputUser != null) {
+                if (!rolesService.checkPermission(inputUser.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
+
+                if (inputUser.getRoleId() != 2) {
+                    return new ResponseEntity<>("This user cannot be deleted", HttpStatus.FORBIDDEN);
+                }
+
+                inputUser.setDeleted(true);
+                inputUser.setActive(false);
+                userRepository.save(inputUser);
                 return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
 
             } else {

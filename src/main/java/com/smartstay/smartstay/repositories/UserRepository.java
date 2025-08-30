@@ -16,6 +16,7 @@ public interface UserRepository extends JpaRepository<Users, String> {
     Users findUserByEmailId(String emailId);
 
     Users findUserByUserId(String userId);
+    Users findUserByUserIdAndParentId(String userId,String parentId);
 
     Users findUserByParentId(String parentId);
 
@@ -101,13 +102,14 @@ public interface UserRepository extends JpaRepository<Users, String> {
                                                           ad.land_mark AS landmark,
                                                           ad.state AS state,
                                                           ad.street AS street,
-                                                          usr.profile_url AS profilePic ,usr.description
+                                                          usr.profile_url AS profilePic,
+                                                          usr.description
                                                       FROM users usr
                                                       LEFT JOIN rolesv1 roles ON roles.role_id = usr.role_id
                                                       LEFT JOIN address ad ON ad.user_id = usr.user_id
                                                       LEFT JOIN countries country ON country.country_id = usr.country
                                                       LEFT JOIN user_hostel uh on uh.user_id=usr.user_id
-                                                      WHERE uh.hostel_id=:hostelId and usr.role_id NOT IN (1,2) and usr.is_active=1 and usr.is_deleted = 0
+                                                      WHERE uh.hostel_id=:hostelId AND usr.role_id NOT IN (1,2) and usr.is_active=1 and usr.is_deleted = 0
             """, nativeQuery = true)
     List<UsersData> getUserList(@Param("hostelId") String hostelId);
 
