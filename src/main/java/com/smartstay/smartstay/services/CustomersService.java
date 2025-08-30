@@ -356,30 +356,48 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_CHECKED_IN, HttpStatus.BAD_REQUEST);
         }
 
-        customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
-        customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
-        customers.setJoiningDate(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
-        Customers savedCustomer = customersRepository.save(customers);
+        String date = payloads.joiningDate().replace("/", "-");
+        if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+            return new ResponseEntity<>(Utils.CHECK_IN_FUTURE_DATE_ERROR, HttpStatus.BAD_REQUEST);
+        }
 
-        BookingsV1 bookingsV1 = bookingsService.findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
-        if (bookingsV1 != null) {
-            bookingsV1.setUpdatedAt(new Date());
-            bookingsV1.setLeavingDate(null);
-            bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
-            bookingsV1.setRoomId(payloads.roomId());
-            String rawDateStr = payloads.joiningDate();
-            if (rawDateStr != null) {
-                rawDateStr = rawDateStr.replace("-", "/");
+        if (bedsService.isBedAvailable(payloads.bedId(), user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
+            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+                customers.setCurrentStatus(CustomerStatus.BOOKED.name());
             }
-            Date joiningDate = Utils.convertStringToDate(rawDateStr);
-            bookingsV1.setJoiningDate(joiningDate);
-            bookingsService.saveBooking(bookingsV1);
+            else {
+                customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
+            }
+            customers.setJoiningDate(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+            Customers savedCustomer = customersRepository.save(customers);
+
+            BookingsV1 bookingsV1 = bookingsService.findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
+            if (bookingsV1 != null) {
+                bookingsV1.setUpdatedAt(new Date());
+                bookingsV1.setLeavingDate(null);
+                if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+                    bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
+                }
+                else {
+                    bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
+                }
+                bookingsV1.setRoomId(payloads.roomId());
+                String rawDateStr = payloads.joiningDate().replace("-", "/");
+
+                Date joiningDate = Utils.convertStringToDate(rawDateStr);
+                bookingsV1.setJoiningDate(joiningDate);
+                bookingsService.saveBooking(bookingsV1);
+            }else {
+                bookingsService.checkinCustomer(payloads, customerId);
+            }
+
+
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }else {
-            bookingsService.checkinCustomer(payloads, customerId);
+            return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);
         }
 
 
-        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
     }
 

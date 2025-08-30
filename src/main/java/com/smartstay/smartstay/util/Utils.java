@@ -49,9 +49,13 @@ public class Utils {
     public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
     public static final String N0_BED_FOUND_ROOM = "No bed found for the specified room.";
     public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable";
+    public static final String BED_UNAVAILABLE_DATE = "Bed is unavailable for selected date";
+    public static final String CHECK_IN_FUTURE_DATE_ERROR = "Check in cannot be accept for future dates";
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
     public static final String PAYLOADS_REQUIRED = "Payloads required";
     public static final String INVALID_BED_ID = "Invalid bed id passed";
+    public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
+    public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
 
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";

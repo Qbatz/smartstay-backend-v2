@@ -145,7 +145,14 @@ public class BookingsService {
         BookingsV1 bookingv1 = new BookingsV1();
         bookingv1.setCustomerId(customerId);
         bookingv1.setHostelId(request.hostelId());
-        bookingv1.setCurrentStatus(BookingStatus.CHECKIN.name());
+        String date = request.joiningDate().replace("/", "-");
+        if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+            bookingv1.setCurrentStatus(BookingStatus.CHECKIN.name());
+        }
+        else {
+            bookingv1.setCurrentStatus(BookingStatus.BOOKED.name());
+        }
+
         bookingv1.setUpdatedAt(new Date());
         bookingv1.setUpdatedBy(authentication.getName());
         bookingv1.setBedId(request.bedId());

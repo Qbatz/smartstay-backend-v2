@@ -21,129 +21,84 @@ public class SmartstayApplication {
 	@Bean
 	CommandLineRunner createDefaultRole(RolesRepository rolesRepository) {
 		return args -> {
-			RolesV1 existingRole = rolesRepository.findByRoleName("Smartstay - Super Admin");
-			RolesV1 existingAdmin = rolesRepository.findByRoleName("Smartstay - Admin");
-			RolesV1 existingReadRole = rolesRepository.findByRoleName("ReadOnly");
-			RolesV1 existingWriteRole = rolesRepository.findByRoleName("WriteOnly");
-
-			if (existingRole == null) {
-				RolesV1 superAdminRole = new RolesV1();
-				superAdminRole.setRoleName("Smartstay - Super Admin");
-				superAdminRole.setIsEditable(false);
-
-				List<RolesPermission> permissions = new ArrayList<>();
-				for (int i = 1; i <= 24; i++) {
-					RolesPermission perm = new RolesPermission();
-					perm.setModuleId(i);
-					perm.setCanRead(true);
-					perm.setCanWrite(true);
-					perm.setCanUpdate(true);
-					perm.setCanDelete(true);
-					permissions.add(perm);
-				}
-				superAdminRole.setPermissions(permissions);
-
-				rolesRepository.save(superAdminRole);
-			}
-
-			if (existingAdmin == null) {
-				RolesV1 adminRole = new RolesV1();
-				adminRole.setRoleName("Smartstay - Admin");
-				adminRole.setIsEditable(false);
-
-				List<RolesPermission> permissions = new ArrayList<>();
-				for (int i = 1; i <= 24; i++) {
-					RolesPermission perm = new RolesPermission();
-					perm.setModuleId(i);
-					perm.setCanRead(true);
-					perm.setCanWrite(true);
-					perm.setCanUpdate(false);
-					perm.setCanDelete(false);
-					permissions.add(perm);
-				}
-				adminRole.setPermissions(permissions);
-
-				rolesRepository.save(adminRole);
-			}
-
-			if (existingReadRole == null) {
-				RolesV1 readOnlyRole = new RolesV1();
-				readOnlyRole.setRoleName("ReadOnly");
-				readOnlyRole.setIsEditable(false);
-
-				List<RolesPermission> permissions = new ArrayList<>();
-				for (int i = 1; i <= 24; i++) {
-					RolesPermission perm = new RolesPermission();
-					perm.setModuleId(i);
-					perm.setCanRead(true);
-					perm.setCanWrite(false);
-					perm.setCanUpdate(false);
-					perm.setCanDelete(false);
-					permissions.add(perm);
-				}
-				readOnlyRole.setPermissions(permissions);
-
-				rolesRepository.save(readOnlyRole);
-			}
-
-			if (existingWriteRole == null) {
-				RolesV1 writeOnlyRole = new RolesV1();
-				writeOnlyRole.setRoleName("WriteOnly");
-				writeOnlyRole.setIsEditable(false);
-
-				List<RolesPermission> permissions = new ArrayList<>();
-				for (int i = 1; i <= 24; i++) {
-					RolesPermission perm = new RolesPermission();
-					perm.setModuleId(i);
-					perm.setCanRead(false);
-					perm.setCanWrite(true);
-					perm.setCanUpdate(false);
-					perm.setCanDelete(false);
-					permissions.add(perm);
-				}
-				writeOnlyRole.setPermissions(permissions);
-
-				rolesRepository.save(writeOnlyRole);
-			}
-		};
-	}
-
-
-	@Bean
-	CommandLineRunner loadData(RolesRepository rolesRepository) {
-		return args -> {
-//			RolesV1 v1 = new RolesV1();
-//			v1.setRoleName("Smartstay - Super Admin");
-//			List<RolesPermission> listPermissions1 = new ArrayList<>();
-//			for (int i=1; i<25; i++) {
-//				RolesPermission pr1 = new RolesPermission();
-//				pr1.setCanUpdate(true);
-//				pr1.setCanRead(true);
-//				pr1.setCanWrite(true);
-//				pr1.setCanDelete(true);
-//				pr1.setModuleId(i);
-//				listPermissions1.add(pr1);
-//			}
-//			v1.setPermissions(listPermissions1);
-//			rolesRepository.save(v1);
+//				RolesV1 superAdminRole = new RolesV1();
+//				superAdminRole.setRoleName("Smartstay - Super Admin");
+//				superAdminRole.setIsEditable(false);
 //
-//			RolesV1 v2 = new RolesV1();
-//			v2.setRoleName("Smartstay - Admin");
-//			List<RolesPermission> listPermissions2 = new ArrayList<>();
-//			for (int i=1; i<25; i++) {
-//				RolesPermission pr2 = new RolesPermission();
-//				pr2.setModuleId(i);
-//				pr2.setCanUpdate(false);
-//				pr2.setCanRead(true);
-//				pr2.setCanWrite(true);
-//				pr2.setCanDelete(false);
-//				listPermissions2.add(pr2);
+//				List<RolesPermission> permissions1 = new ArrayList<>();
+//				for (int i = 1; i <= 24; i++) {
+//					RolesPermission perm = new RolesPermission();
+//					perm.setModuleId(i);
+//					perm.setCanRead(true);
+//					perm.setCanWrite(true);
+//					perm.setCanUpdate(true);
+//					perm.setCanDelete(true);
+//					permissions1.add(perm);
+//				}
+//				superAdminRole.setPermissions(permissions1);
+//
+//				rolesRepository.save(superAdminRole);
+//
+//
+//				RolesV1 adminRole = new RolesV1();
+//				adminRole.setRoleName("Smartstay - Admin");
+//				adminRole.setIsEditable(false);
+//
+//				List<RolesPermission> permissions2 = new ArrayList<>();
+//				for (int i = 1; i <= 24; i++) {
+//					RolesPermission perm = new RolesPermission();
+//					perm.setModuleId(i);
+//					perm.setCanRead(true);
+//					perm.setCanWrite(true);
+//					perm.setCanUpdate(false);
+//					perm.setCanDelete(false);
+//					permissions2.add(perm);
+//				}
+//				adminRole.setPermissions(permissions2);
+//
+//				rolesRepository.save(adminRole);
+//
+//
+//				RolesV1 readOnlyRole = new RolesV1();
+//				readOnlyRole.setRoleName("ReadOnly");
+//				readOnlyRole.setIsEditable(false);
+//
+//				List<RolesPermission> permissions3 = new ArrayList<>();
+//				for (int i = 1; i <= 24; i++) {
+//					RolesPermission perm = new RolesPermission();
+//					perm.setModuleId(i);
+//					perm.setCanRead(true);
+//					perm.setCanWrite(false);
+//					perm.setCanUpdate(false);
+//					perm.setCanDelete(false);
+//					permissions3.add(perm);
+//				}
+//				readOnlyRole.setPermissions(permissions3);
+//
+//				rolesRepository.save(readOnlyRole);
+//
+//				RolesV1 writeOnlyRole = new RolesV1();
+//				writeOnlyRole.setRoleName("WriteOnly");
+//				writeOnlyRole.setIsEditable(false);
+//
+//				List<RolesPermission> permissions4 = new ArrayList<>();
+//				for (int i = 1; i <= 24; i++) {
+//					RolesPermission perm = new RolesPermission();
+//					perm.setModuleId(i);
+//					perm.setCanRead(true);
+//					perm.setCanWrite(true);
+//					perm.setCanUpdate(false);
+//					perm.setCanDelete(false);
+//					permissions4.add(perm);
+//				}
+//				writeOnlyRole.setPermissions(permissions4);
+//
+//				rolesRepository.save(writeOnlyRole);
 //			}
-//			v2.setPermissions(listPermissions2);
-//			rolesRepository.save(v2);
-
 		};
 	}
+
+
 
 	@Bean
 	CommandLineRunner loadCountryData(CountriesRepository countriesRepository) {

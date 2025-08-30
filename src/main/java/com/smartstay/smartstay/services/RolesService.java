@@ -54,7 +54,9 @@ public class RolesService {
         if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        List<RolesV1> getCommonRoles = rolesRepository.findDefaultRoles(List.of(3, 4));
         List<RolesV1> listRoles = rolesRepository.findAllByParentId(user.getParentId());
+        listRoles.addAll(0, getCommonRoles);
         List<Roles> rolesList = listRoles.stream().map(item -> new RolesMapper(modulesRepository).apply(item)).toList();
         return new ResponseEntity<>(rolesList, HttpStatus.OK);
     }
@@ -152,6 +154,7 @@ public class RolesService {
         role.setCreatedAt(new Date());
         role.setUpdatedAt(new Date());
         role.setIsActive(true);
+        role.setIsEditable(true);
         role.setIsDeleted(false);
         role.setRoleName(roleData.roleName());
         role.setParentId(user.getParentId());
