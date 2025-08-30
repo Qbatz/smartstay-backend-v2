@@ -4,5 +4,5 @@ import com.smartstay.smartstay.responses.roles.RolesPermissionDetails;
 
 import java.util.List;
 
-public record Roles(int id, String name, List<RolesPermissionDetails> rolesPermissionDetails) {
+public record Roles(int id, String name, boolean editable, List<RolesPermissionDetails> rolesPermissionDetails) {
 }

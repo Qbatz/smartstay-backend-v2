@@ -26,7 +26,7 @@ public class RolesMapper implements Function<RolesV1, Roles> {
     public Roles apply(RolesV1 rolesV1) {
         List<RolesPermission> rolePermissions = rolesV1.getPermissions();
         if (rolePermissions == null || rolePermissions.isEmpty()) {
-            return new Roles(rolesV1.getRoleId(), rolesV1.getRoleName(), Collections.emptyList());
+            return new Roles(rolesV1.getRoleId(), rolesV1.getRoleName(), rolesV1.getIsEditable(),  Collections.emptyList());
         }
         Set<Integer> moduleIds = rolePermissions.stream()
                 .map(RolesPermission::getModuleId)
@@ -44,7 +44,7 @@ public class RolesMapper implements Function<RolesV1, Roles> {
                 ))
                 .toList();
 
-        return new Roles(rolesV1.getRoleId(), rolesV1.getRoleName(), permissionDetails);
+        return new Roles(rolesV1.getRoleId(), rolesV1.getRoleName(), rolesV1.getIsEditable(), permissionDetails);
     }
 
 }

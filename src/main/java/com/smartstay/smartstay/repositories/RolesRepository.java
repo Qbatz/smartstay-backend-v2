@@ -11,6 +11,11 @@ public interface RolesRepository extends JpaRepository<RolesV1, Integer> {
 
 
     List<RolesV1> findAllByParentId(String parentId);
+    @Query(
+            value = "SELECT * FROM rolesv1 roles WHERE roles.role_id IN (:roleIds)",
+            nativeQuery = true
+    )
+    List<RolesV1> findDefaultRoles(List<Integer> roleIds);
     RolesV1 findByRoleId(int roleId);
     RolesV1 findByRoleIdAndRoleNameNotIn(int roleId, List<String> roleNames);
 
