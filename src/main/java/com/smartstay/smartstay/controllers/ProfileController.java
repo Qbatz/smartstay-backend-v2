@@ -79,4 +79,15 @@ public class ProfileController {
     public ResponseEntity<?> updateUserInformations(@PathVariable(value = "userId") String userId, @PathVariable("hostelId") String hostelId, @RequestBody(required = false) EditUsers payloads) {
         return usersService.updateUsersProfile(hostelId, userId, payloads);
     }
+
+    @DeleteMapping("/delete-user/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable("userId") String userId) {
+        return usersService.deleteUser(userId);
+    }
+
+
+    @DeleteMapping("/delete-admin/{userId}")
+    public ResponseEntity<?> deleteAdminUser(@PathVariable("userId") String userId) {
+        return usersService.deleteAdminUser(userId);
+    }
 }

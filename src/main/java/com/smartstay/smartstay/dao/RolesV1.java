@@ -22,6 +22,7 @@ public class RolesV1 {
     private String roleName;
     private Boolean isActive;
     private Boolean isDeleted;
+    private Boolean isEditable;
     private Date createdAt;
     private Date updatedAt;
     private String parentId;

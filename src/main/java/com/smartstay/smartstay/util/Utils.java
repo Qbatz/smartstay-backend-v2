@@ -60,6 +60,10 @@ public class Utils {
     public static final String PERMISSION_WRITE = "WRITE";
     public static final String PERMISSION_UPDATE = "UPDATE";
     public static final String PERMISSION_DELETE = "DELETE";
+    public static final String SMART_STAY_SUPER_ADMIN = "SmartStay - Super Admin";
+    public static final String SMART_STAY_ADMIN = "SmartStay - Admin";
+    public static final String READ_ONLY = "readOnly";
+    public static final String WRITE_ONLY = "writeOnly";
 
 
     /**

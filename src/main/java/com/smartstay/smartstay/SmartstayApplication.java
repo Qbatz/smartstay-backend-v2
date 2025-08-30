@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @SpringBootApplication
 public class SmartstayApplication {
@@ -16,6 +17,97 @@ public class SmartstayApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(SmartstayApplication.class, args);
 	}
+
+	@Bean
+	CommandLineRunner createDefaultRole(RolesRepository rolesRepository) {
+		return args -> {
+			RolesV1 existingRole = rolesRepository.findByRoleName("Smartstay - Super Admin");
+			RolesV1 existingAdmin = rolesRepository.findByRoleName("Smartstay - Admin");
+			RolesV1 existingReadRole = rolesRepository.findByRoleName("ReadOnly");
+			RolesV1 existingWriteRole = rolesRepository.findByRoleName("WriteOnly");
+
+			if (existingRole == null) {
+				RolesV1 superAdminRole = new RolesV1();
+				superAdminRole.setRoleName("Smartstay - Super Admin");
+				superAdminRole.setIsEditable(false);
+
+				List<RolesPermission> permissions = new ArrayList<>();
+				for (int i = 1; i <= 24; i++) {
+					RolesPermission perm = new RolesPermission();
+					perm.setModuleId(i);
+					perm.setCanRead(true);
+					perm.setCanWrite(true);
+					perm.setCanUpdate(true);
+					perm.setCanDelete(true);
+					permissions.add(perm);
+				}
+				superAdminRole.setPermissions(permissions);
+
+				rolesRepository.save(superAdminRole);
+			}
+
+			if (existingAdmin == null) {
+				RolesV1 adminRole = new RolesV1();
+				adminRole.setRoleName("Smartstay - Admin");
+				adminRole.setIsEditable(false);
+
+				List<RolesPermission> permissions = new ArrayList<>();
+				for (int i = 1; i <= 24; i++) {
+					RolesPermission perm = new RolesPermission();
+					perm.setModuleId(i);
+					perm.setCanRead(true);
+					perm.setCanWrite(true);
+					perm.setCanUpdate(false);
+					perm.setCanDelete(false);
+					permissions.add(perm);
+				}
+				adminRole.setPermissions(permissions);
+
+				rolesRepository.save(adminRole);
+			}
+
+			if (existingReadRole == null) {
+				RolesV1 readOnlyRole = new RolesV1();
+				readOnlyRole.setRoleName("ReadOnly");
+				readOnlyRole.setIsEditable(false);
+
+				List<RolesPermission> permissions = new ArrayList<>();
+				for (int i = 1; i <= 24; i++) {
+					RolesPermission perm = new RolesPermission();
+					perm.setModuleId(i);
+					perm.setCanRead(true);
+					perm.setCanWrite(false);
+					perm.setCanUpdate(false);
+					perm.setCanDelete(false);
+					permissions.add(perm);
+				}
+				readOnlyRole.setPermissions(permissions);
+
+				rolesRepository.save(readOnlyRole);
+			}
+
+			if (existingWriteRole == null) {
+				RolesV1 writeOnlyRole = new RolesV1();
+				writeOnlyRole.setRoleName("WriteOnly");
+				writeOnlyRole.setIsEditable(false);
+
+				List<RolesPermission> permissions = new ArrayList<>();
+				for (int i = 1; i <= 24; i++) {
+					RolesPermission perm = new RolesPermission();
+					perm.setModuleId(i);
+					perm.setCanRead(false);
+					perm.setCanWrite(true);
+					perm.setCanUpdate(false);
+					perm.setCanDelete(false);
+					permissions.add(perm);
+				}
+				writeOnlyRole.setPermissions(permissions);
+
+				rolesRepository.save(writeOnlyRole);
+			}
+		};
+	}
+
 
 	@Bean
 	CommandLineRunner loadData(RolesRepository rolesRepository) {
