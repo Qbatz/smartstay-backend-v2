@@ -13,6 +13,8 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
     List<com.smartstay.smartstay.dao.Beds> findAllByRoomIdAndParentId(int roomId, String parentId);
 
     com.smartstay.smartstay.dao.Beds findByBedIdAndParentId(int bedId, String parentId);
+    com.smartstay.smartstay.dao.Beds findByBedIdAndParentIdAndHostelId(int bedId, String parentId, String hostelId);
+    com.smartstay.smartstay.dao.Beds findByBedIdAndRoomIdAndParentId(int bedId,int roomId, String parentId);
     com.smartstay.smartstay.dao.Beds findByBedIdAndRoomIdAndHostelId(int bedId, int RoomId, String hostelId);
 
 

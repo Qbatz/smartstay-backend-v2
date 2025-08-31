@@ -19,6 +19,7 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
 
     Rooms findByRoomIdAndParentId(int roomId,String parentId);
     Rooms findByRoomIdAndParentIdAndHostelId(int roomId, String parentId, String hostelId);
+    Rooms findByRoomIdAndParentIdAndHostelIdAndFloorId(int roomId, String parentId, String hostelId,int floorId);
 
     @Query(value = """
     SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM rooms rm

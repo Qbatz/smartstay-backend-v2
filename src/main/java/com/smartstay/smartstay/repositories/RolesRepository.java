@@ -37,7 +37,7 @@ public interface RolesRepository extends JpaRepository<RolesV1, Integer> {
     SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
     FROM rolesv1 role
     WHERE role.role_name = :roleName
-      AND role.parent_id = :parentId AND role.role_id = :roleId
+      AND role.parent_id = :parentId AND role.role_id != :roleId
     """, nativeQuery = true)
     int existsByParentIdAndRole(@Param("roleId") int roleId,@Param("roleName") String roleName, @Param("parentId") String parentId);
 }

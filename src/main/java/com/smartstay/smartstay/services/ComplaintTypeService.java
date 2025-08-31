@@ -60,6 +60,11 @@ public class ComplaintTypeService {
             return new ResponseEntity<>("Hostel not found.", HttpStatus.BAD_REQUEST);
         }
 
+        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentId(request.complaintTypeName(), request.hostelId(), user.getParentId());
+        if (complaintType != null) {
+            return new ResponseEntity<>("Complaint type already exist", HttpStatus.BAD_REQUEST);
+        }
+
         ComplaintTypeV1 complaintTypeV1 = new ComplaintTypeV1();
         complaintTypeV1.setComplaintTypeName(request.complaintTypeName());
         complaintTypeV1.setCreatedAt(new Date());
@@ -92,12 +97,17 @@ public class ComplaintTypeService {
 
         ComplaintTypeV1 complaintTypeV1 = complaintTypeV1Repository.findById(complaintTypeId).orElse(null);
         if (complaintTypeV1 == null) {
-            return new ResponseEntity<>("Complaint type not found.", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>("Complaint type not found.", HttpStatus.BAD_REQUEST);
         }
 
         HostelV1 hostelV1 = hostelV1Repository.findByHostelIdAndParentId(complaintTypeV1.getHostelId(), user.getParentId());
         if (hostelV1 == null) {
             return new ResponseEntity<>("Hostel not found.", HttpStatus.BAD_REQUEST);
+        }
+
+        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentIdAndComplaintTypeIdNot(request.complaintTypeName(), request.hostelId(), user.getParentId(), complaintTypeId);
+        if (complaintType != null) {
+            return new ResponseEntity<>("Complaint type already exist", HttpStatus.BAD_REQUEST);
         }
 
         if (request.complaintTypeName() != null && !request.complaintTypeName().isEmpty()) {
@@ -135,7 +145,7 @@ public class ComplaintTypeService {
         ComplaintTypeV1 complaintTypeV1 = complaintTypeV1Repository.findById(complaintTypeId).orElse(null);
 
         if (complaintTypeV1 == null || !complaintTypeV1.getParentId().equals(user.getParentId())) {
-            return new ResponseEntity<>("Complaint type not found.", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>("Complaint type not found.", HttpStatus.BAD_REQUEST);
         }
 
         complaintTypeV1Repository.delete(complaintTypeV1);
@@ -157,7 +167,6 @@ public class ComplaintTypeService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        System.out.println("complaints--->"+hostelId);
         List<ComplaintTypeResponse> complaintTypeResponses = complaintTypeV1Repository.getAllComplaintsType(hostelId);
         return new ResponseEntity<>(complaintTypeResponses, HttpStatus.OK);
     }

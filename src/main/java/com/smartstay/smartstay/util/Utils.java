@@ -35,6 +35,7 @@ public class Utils {
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
     public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
+    public static final String STATUS_UPDATED = "Status Updated Successfully";
     public static final String CREATED = "Created Successfully";
     public static final String DELETED = "Deleted Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
@@ -68,6 +69,9 @@ public class Utils {
     public static final String SMART_STAY_ADMIN = "SmartStay - Admin";
     public static final String READ_ONLY = "readOnly";
     public static final String WRITE_ONLY = "writeOnly";
+    public static final String IN_PROGRESS = "INPROGRESS";
+    public static final String PENDING = "PENDING";
+    public static final String RESOLVED = "RESOLVED";
 
 
     /**
