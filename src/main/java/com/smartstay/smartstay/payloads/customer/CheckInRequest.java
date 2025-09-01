@@ -1,9 +1,11 @@
 package com.smartstay.smartstay.payloads.customer;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.Date;
+import java.util.List;
 
 public record CheckInRequest(
         @NotNull(message = "HostelId is required")
@@ -18,6 +20,9 @@ public record CheckInRequest(
         @NotNull(message = "Advance amount required")
         Double advanceAmount,
         @NotNull(message = "Advance amount required")
-        Double rentalAmount
+        Double rentalAmount,
+
+        @Valid
+        List<NonRefundable> deductions
 ) { }
 

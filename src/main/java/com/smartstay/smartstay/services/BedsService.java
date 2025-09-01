@@ -85,10 +85,10 @@ public class BedsService {
             }
             BedDetails bedsResponse = null;
             if (listBeds.size() > 1) {
-                bedsResponse = new BedDetailsMapper(listBeds.get(0).leavingDate()).apply(listBeds.get(1));
+                bedsResponse = new BedDetailsMapper(listBeds.get(0).leavingDate(), listBeds.get(0).joiningDate()).apply(listBeds.get(1));
             }
             else if (!listBeds.isEmpty()) {
-                bedsResponse = new BedDetailsMapper(null).apply(listBeds.get(0));
+                bedsResponse = new BedDetailsMapper(null, null).apply(listBeds.get(0));
             }
 
             return new ResponseEntity<>(bedsResponse, HttpStatus.OK);
@@ -199,7 +199,6 @@ public class BedsService {
     }
 
     //assign bed
-//    use it for checkin user
     public ResponseEntity<?> addUserToBed(int bedId, String joiningDate) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -230,31 +229,34 @@ public class BedsService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 
-    public boolean isBedAvailable(int bedId, String parentId, Date date) {
+    public boolean isBedAvailable(int bedId, String parentId, Date joiningDate) {
         Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
-        if (beds.getStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
-            return true;
+        if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+            BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
+            if (bookingsV1.getLeavingDate() != null) {
+//                30/09/2025 & 01-09-2025
+                return Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), joiningDate) <= 0;
+            }
         }
         else if (beds.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
             return false;
         }
-        else if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-            BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
-            if (bookingsV1.getLeavingDate() != null) {
-                if (Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), date) > 0) {
-                    return false;
-                }
-                else  {
-                    return true;
-                }
-            }
-
+        else if (beds.getStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+            return true;
         }
         else if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
 
             if (bookingsV1.getLeavingDate() != null) {
-                if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), date) > 0) {
+                if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), joiningDate) > 0) {
+                    return true;
+                }
+                else  {
+                    return false;
+                }
+            }
+            if (bookingsV1.getExpectedJoiningDate() != null) {
+                if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), joiningDate) > 0) {
                     return true;
                 }
                 else  {
@@ -263,7 +265,7 @@ public class BedsService {
             }
         }
 
-        return true;
+        return false;
 
     }
 

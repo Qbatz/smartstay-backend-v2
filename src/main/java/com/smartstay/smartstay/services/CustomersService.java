@@ -242,6 +242,15 @@ public class CustomersService {
         return new ResponseEntity<>(listCustomers, HttpStatus.OK);
     }
 
+    /**
+     * For Booking flow.
+     *
+     * Do not use anywhere else
+     * @param payloads
+     * @param hostelId
+     * @return
+     */
+
     public ResponseEntity<?> createBooking(BookingRequest payloads, String hostelId) {
 
         if (!authentication.isAuthenticated()) {
@@ -279,21 +288,9 @@ public class CustomersService {
                 customers.setTransactions(transactions);
                 customersRepository.save(customers);
 
-                BookingsV1 bookingsV1 = new BookingsV1();
-                bookingsV1.setHostelId(hostelId);
-                bookingsV1.setFloorId(payloads.floorId());
-                bookingsV1.setRoomId(payloads.roomId());
-                bookingsV1.setBedId(payloads.bedId());
-                bookingsV1.setCustomerId(customers.getCustomerId());
-                bookingsV1.setCreatedAt(new Date());
-                bookingsV1.setUpdatedAt(new Date());
-                bookingsV1.setUpdatedBy(userId);
-                bookingsV1.setLeavingDate(null);
-                bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
+                bookingsService.addBooking(hostelId, payloads);
 
-                bookingsService.saveBooking(bookingsV1);
-
-                return bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate());
+                return bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
             } else {
                 return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
             }
@@ -311,7 +308,6 @@ public class CustomersService {
      *
      *  for check in the customers
      *
-     *  use this only for booked customers
      *
      */
 
@@ -362,34 +358,17 @@ public class CustomersService {
         }
 
         if (bedsService.isBedAvailable(payloads.bedId(), user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
-            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
-                customers.setCurrentStatus(CustomerStatus.BOOKED.name());
-            }
-            else {
-                customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
-            }
+
+            customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
+            customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
             customers.setJoiningDate(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
             Customers savedCustomer = customersRepository.save(customers);
 
-            BookingsV1 bookingsV1 = bookingsService.findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
-            if (bookingsV1 != null) {
-                bookingsV1.setUpdatedAt(new Date());
-                bookingsV1.setLeavingDate(null);
-                if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
-                    bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
-                }
-                else {
-                    bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
-                }
-                bookingsV1.setRoomId(payloads.roomId());
-                String rawDateStr = payloads.joiningDate().replace("-", "/");
+            bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
 
-                Date joiningDate = Utils.convertStringToDate(rawDateStr);
-                bookingsV1.setJoiningDate(joiningDate);
-                bookingsService.saveBooking(bookingsV1);
-            }else {
-                bookingsService.checkinCustomer(payloads, customerId);
-            }
+            bookingsService.addChecking(customerId, payloads);
+
+            transactionService.addAdvanceAmount(customers, payloads.advanceAmount());
 
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -401,97 +380,97 @@ public class CustomersService {
 
     }
 
-    public ResponseEntity<?> checkinBookedCustomer(CheckinCustomer checkinRequest) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        String userId = authentication.getName();
-        Users user = userService.findUserByUserId(userId);
-
-        Customers customers = customersRepository.findById(checkinRequest.customerId()).orElse(null);
-
-        if (customers == null) {
-            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
-        }
-
-        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
-            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_CHECKED_IN, HttpStatus.BAD_REQUEST);
-        }
-
-        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        if (!userHostelService.checkHostelAccess(user.getUserId(), customers.getHostelId())) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
-        }
-
-        if (!floorsService.checkFloorExistForHostel(checkinRequest.floorId(), customers.getHostelId())) {
-            return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.BAD_REQUEST);
-        }
-
-        if (!roomsService.checkRoomExistForFloor(checkinRequest.floorId(), checkinRequest.roomId())) {
-            return new ResponseEntity<>(Utils.N0_ROOM_FOUND_FLOOR, HttpStatus.BAD_REQUEST);
-        }
-
-        if (!bedsService.checkBedExistForRoom(checkinRequest.bedId(), checkinRequest.roomId(), customers.getHostelId())) {
-            return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.BAD_REQUEST);
-        }
-
-        String date = checkinRequest.joiningDate().replace("/", "-");
-
-        if (bedsService.isBedAvailable(checkinRequest.bedId(), user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
-
-            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
-                //future booking
-                customers.setCurrentStatus(CustomerStatus.BOOKED.name());
-            }
-            else {
-                customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
-            }
-
-            customers.setJoiningDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
-
-            Advance advance = customers.getAdvance();
-
-            if (advance == null) {
-                Advance ad = new Advance();
-                ad.setAdvanceAmount(checkinRequest.advanceAmount());
-                customers.setAdvance(ad);
-            }
-
-            transactionService.addAdvanceAmount(customers, checkinRequest.advanceAmount());
-
-            BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(checkinRequest.customerId());
-            if (bookingsV1 == null) {
-                bookingsV1 = new BookingsV1();
-            }
-            bookingsV1.setCustomerId(customers.getCustomerId());
-            bookingsV1.setBedId(checkinRequest.bedId());
-            bookingsV1.setHostelId(customers.getHostelId());
-            bookingsV1.setFloorId(checkinRequest.floorId());
-            bookingsV1.setRoomId(checkinRequest.roomId());
-            bookingsV1.setRentAmount(checkinRequest.rentAmount());
-            bookingsV1.setUpdatedAt(new Date());
-            bookingsV1.setUpdatedBy(authentication.getName());
-            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
-                bookingsV1.setCurrentStatus(CustomerStatus.BOOKED.name());
-            }
-            else {
-                bookingsV1.setCurrentStatus(CustomerStatus.CHECK_IN.name());
-            }
-
-            bookingsService.saveBooking(bookingsV1);
-
-            bedsService.addUserToBed(checkinRequest.bedId(), date);
-
-            return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
-        }
-
-
-    }
+//    public ResponseEntity<?> checkinBookedCustomer(CheckinCustomer checkinRequest) {
+//        if (!authentication.isAuthenticated()) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//        String userId = authentication.getName();
+//        Users user = userService.findUserByUserId(userId);
+//
+//        Customers customers = customersRepository.findById(checkinRequest.customerId()).orElse(null);
+//
+//        if (customers == null) {
+//            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+//        }
+//
+//        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+//            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_CHECKED_IN, HttpStatus.BAD_REQUEST);
+//        }
+//
+//        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
+//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//        }
+//
+//        if (!userHostelService.checkHostelAccess(user.getUserId(), customers.getHostelId())) {
+//            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+//        }
+//
+//        if (!floorsService.checkFloorExistForHostel(checkinRequest.floorId(), customers.getHostelId())) {
+//            return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.BAD_REQUEST);
+//        }
+//
+//        if (!roomsService.checkRoomExistForFloor(checkinRequest.floorId(), checkinRequest.roomId())) {
+//            return new ResponseEntity<>(Utils.N0_ROOM_FOUND_FLOOR, HttpStatus.BAD_REQUEST);
+//        }
+//
+//        if (!bedsService.checkBedExistForRoom(checkinRequest.bedId(), checkinRequest.roomId(), customers.getHostelId())) {
+//            return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.BAD_REQUEST);
+//        }
+//
+//        String date = checkinRequest.joiningDate().replace("/", "-");
+//
+//        if (bedsService.isBedAvailable(checkinRequest.bedId(), user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
+//
+//            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+//                //future booking
+//                customers.setCurrentStatus(CustomerStatus.BOOKED.name());
+//            }
+//            else {
+//                customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+//            }
+//
+//            customers.setJoiningDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
+//
+//            Advance advance = customers.getAdvance();
+//
+//            if (advance == null) {
+//                Advance ad = new Advance();
+//                ad.setAdvanceAmount(checkinRequest.advanceAmount());
+//                customers.setAdvance(ad);
+//            }
+//
+//            transactionService.addAdvanceAmount(customers, checkinRequest.advanceAmount());
+//
+//            BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(checkinRequest.customerId());
+//            if (bookingsV1 == null) {
+//                bookingsV1 = new BookingsV1();
+//            }
+//            bookingsV1.setCustomerId(customers.getCustomerId());
+//            bookingsV1.setBedId(checkinRequest.bedId());
+//            bookingsV1.setHostelId(customers.getHostelId());
+//            bookingsV1.setFloorId(checkinRequest.floorId());
+//            bookingsV1.setRoomId(checkinRequest.roomId());
+//            bookingsV1.setRentAmount(checkinRequest.rentAmount());
+//            bookingsV1.setUpdatedAt(new Date());
+//            bookingsV1.setUpdatedBy(authentication.getName());
+//            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+//                bookingsV1.setCurrentStatus(CustomerStatus.BOOKED.name());
+//            }
+//            else {
+//                bookingsV1.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+//            }
+//
+//            bookingsService.saveBooking(bookingsV1);
+//
+//            bedsService.addUserToBed(checkinRequest.bedId(), date);
+//
+//            return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+//        } else {
+//            return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
+//        }
+//
+//
+//    }
 
     public ResponseEntity<?> addCustomer(String hostelId, MultipartFile profilePic, com.smartstay.smartstay.payloads.customer.AddCustomer customerInfo) {
         if (authentication.isAuthenticated()) {

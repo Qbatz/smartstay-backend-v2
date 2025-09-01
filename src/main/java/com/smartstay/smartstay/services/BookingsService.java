@@ -10,6 +10,7 @@ import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
+import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.repositories.BookingsRepository;
 import com.smartstay.smartstay.util.Utils;
@@ -88,10 +89,10 @@ public class BookingsService {
         return bookingsRepository.findLatestBooking(bedId);
     }
 
-    public BookingsV1 saveBooking(BookingsV1 bookingsV1) {
-
-        return bookingsRepository.save(bookingsV1);
-    }
+//    public BookingsV1 saveBooking(BookingsV1 bookingsV1) {
+//
+//        return bookingsRepository.save(bookingsV1);
+//    }
 
     public BookingsV1 getBookingsByCustomerId(String customerId) {
         return bookingsRepository.findByCustomerId(customerId);
@@ -167,5 +168,50 @@ public class BookingsService {
 
         return bookingsRepository.save(bookingv1);
 
+    }
+
+    public BookingsV1 addBooking(String hostelId, BookingRequest payload) {
+        if (authentication.isAuthenticated()) {
+            BookingsV1 bookingsV1 = new BookingsV1();
+            bookingsV1.setHostelId(hostelId);
+            bookingsV1.setFloorId(payload.floorId());
+            bookingsV1.setRoomId(payload.roomId());
+            bookingsV1.setBedId(payload.bedId());
+            bookingsV1.setCustomerId(payload.customerId());
+            bookingsV1.setCreatedAt(new Date());
+            bookingsV1.setUpdatedAt(new Date());
+            bookingsV1.setUpdatedBy(authentication.getName());
+            bookingsV1.setLeavingDate(null);
+            bookingsV1.setExpectedJoiningDate(Utils.stringToDate(payload.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+
+            bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
+
+            return bookingsRepository.save(bookingsV1);
+        }
+
+        return null;
+    }
+
+    public void addChecking(String customerId, CheckInRequest payloads) {
+        String date = payloads.joiningDate().replace("/", "-");
+        BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
+        if (bookingsV1 != null) {
+            bookingsV1.setUpdatedAt(new Date());
+            bookingsV1.setLeavingDate(null);
+            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+                bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
+            }
+            else {
+                bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
+            }
+            bookingsV1.setRoomId(payloads.roomId());
+            String rawDateStr = payloads.joiningDate().replace("-", "/");
+
+            Date joiningDate = Utils.convertStringToDate(rawDateStr);
+            bookingsV1.setJoiningDate(joiningDate);
+            bookingsRepository.save(bookingsV1);
+        }else {
+            checkinCustomer(payloads, customerId);
+        }
     }
 }
