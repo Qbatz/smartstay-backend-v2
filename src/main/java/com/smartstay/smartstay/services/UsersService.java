@@ -81,65 +81,58 @@ public class UsersService {
 
     public ResponseEntity<AdminUserResponse> createAccount(CreateAccount createAccount) {
 
-        Users usr = userRepository.findUserByEmailId(createAccount.mailId());
-        if (usr == null) {
-            if (createAccount.password().equalsIgnoreCase(createAccount.confirmPassword())) {
-                Users users = new Users();
-                users.setFirstName(createAccount.firstName());
-                users.setLastName(createAccount.lastName());
-                users.setMobileNo(createAccount.mobile());
-                users.setPassword(encoder.encode(createAccount.password()));
-                users.setEmailId(createAccount.mailId());
-                users.setRoleId(1);
-                users.setCountry(1L);
-                users.setParentId(configUUID());
-                users.setEmailAuthenticationStatus(false);
-                users.setSmsAuthenticationStatus(false);
-                users.setEmailAuthenticationStatus(false);
-                users.setActive(true);
-                users.setDeleted(false);
-                users.setCreatedAt(Calendar.getInstance().getTime());
-                users.setLastUpdate(Calendar.getInstance().getTime());
+        String mobileStatus = "";
+        String emailStatus = "";
 
-                Address address = new Address();
-                address.setUser(users);
-                users.setAddress(address);
-
-                userRepository.save(users);
-//                Users userData = userRepository.findUserByEmailId(createAccount.mailId());
-//
-//                otpService.insertOTP(userData);
-
-                return new ResponseEntity<>(new AdminUserResponse("", "", "Created successfully"), HttpStatus.CREATED);
-            } else {
-                return new ResponseEntity<>(new AdminUserResponse("", "", "Password and confirm password is not matching"), HttpStatus.BAD_REQUEST);
-            }
-        } else {
-            String mobileStatus = "";
-            String emailStatus = "";
-
-            if (createAccount.mailId() !=null && !createAccount.mailId().isEmpty() && userRepository.existsByEmailId(createAccount.mailId())) {
-                emailStatus = Utils.EMAIL_ID_EXISTS;
-            }
-
-            if (createAccount.mobile() !=null && !createAccount.mobile().isEmpty() && userRepository.existsByMobileNo(createAccount.mobile())) {
-                mobileStatus = Utils.MOBILE_NO_EXISTS;
-            }
-
-            if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
-                return new ResponseEntity<>(
-                        new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
-                        HttpStatus.BAD_REQUEST
-                );
-            }else {
-                return new ResponseEntity<>(
-                        new AdminUserResponse("", "", "Failed"),
-                        HttpStatus.BAD_REQUEST
-                );
-            }
+        if (createAccount.mailId() != null && !createAccount.mailId().isEmpty()
+                && userRepository.existsByEmailId(createAccount.mailId())) {
+            emailStatus = Utils.EMAIL_ID_EXISTS;
         }
 
+        if (createAccount.mobile() != null && !createAccount.mobile().isEmpty()
+                && userRepository.existsByMobileNo(createAccount.mobile())) {
+            mobileStatus = Utils.MOBILE_NO_EXISTS;
+        }
+
+        if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
+            return new ResponseEntity<>(
+                    new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        if (!createAccount.password().equalsIgnoreCase(createAccount.confirmPassword())) {
+            return new ResponseEntity<>(
+                    new AdminUserResponse("", "", "Password and confirm password is not matching"),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        Users users = new Users();
+        users.setFirstName(createAccount.firstName());
+        users.setLastName(createAccount.lastName());
+        users.setMobileNo(createAccount.mobile());
+        users.setPassword(encoder.encode(createAccount.password()));
+        users.setEmailId(createAccount.mailId());
+        users.setRoleId(1);
+        users.setCountry(1L);
+        users.setParentId(configUUID());
+        users.setEmailAuthenticationStatus(false);
+        users.setSmsAuthenticationStatus(false);
+        users.setActive(true);
+        users.setDeleted(false);
+        users.setCreatedAt(Calendar.getInstance().getTime());
+        users.setLastUpdate(Calendar.getInstance().getTime());
+
+        Address address = new Address();
+        address.setUser(users);
+        users.setAddress(address);
+
+        userRepository.save(users);
+
+        return new ResponseEntity<>(new AdminUserResponse("", "", "Created successfully"), HttpStatus.CREATED);
     }
+
 
     public ResponseEntity<Object> login(Login login) {
         Users users = userRepository.findUserByEmailId(login.emailId());

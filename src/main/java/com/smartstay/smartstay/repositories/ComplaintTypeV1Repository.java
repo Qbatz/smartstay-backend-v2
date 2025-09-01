@@ -20,4 +20,14 @@ public interface ComplaintTypeV1Repository extends JpaRepository<ComplaintTypeV1
     List<ComplaintTypeResponse> getAllComplaintsType(@Param("hostelId") String hostelId);
 
 
+    ComplaintTypeV1 findByComplaintTypeNameAndHostelIdAndParentId(String complaintTypeName,String hostelId, String parentId);
+
+    ComplaintTypeV1 findByComplaintTypeNameAndHostelIdAndParentIdAndComplaintTypeIdNot(
+            String complaintTypeName,
+            String hostelId,
+            String parentId,
+            int complaintTypeId
+    );
+
+
 }

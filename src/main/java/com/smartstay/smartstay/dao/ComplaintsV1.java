@@ -22,11 +22,11 @@ public class ComplaintsV1 {
 
 
     private String customerId;
-    private int complaintTypeId;
-    private int floorId;
-    private int roomId;
-    private int bedId;
-    private int status;
+    private Integer complaintTypeId;
+    private Integer floorId;
+    private Integer roomId;
+    private Integer bedId;
+    private String status;
     private Date complaintDate;
     private String description;
     private Date createdAt;

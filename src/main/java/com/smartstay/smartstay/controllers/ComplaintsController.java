@@ -3,6 +3,7 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.complaints.AddComplaints;
 import com.smartstay.smartstay.payloads.complaints.UpdateComplaint;
+import com.smartstay.smartstay.payloads.complaints.UpdateStatus;
 import com.smartstay.smartstay.services.ComplaintsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -30,6 +31,11 @@ public class ComplaintsController {
     @PutMapping("/{complaintId}")
     public ResponseEntity<?> updateComplaints(@PathVariable("complaintId") int complaintId, @Valid @RequestBody UpdateComplaint request) {
         return complaintsService.updateComplaints(complaintId, request);
+    }
+
+    @PutMapping("/update-status/{complaintId}")
+    public ResponseEntity<?> updateComplaintStatus(@PathVariable("complaintId") int complaintId, @Valid @RequestBody UpdateStatus request) {
+        return complaintsService.updateComplaintStatus(complaintId, request);
     }
 
     @GetMapping("/all-complaints/{hostelId}")
