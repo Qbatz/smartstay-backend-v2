@@ -242,6 +242,15 @@ public class CustomersService {
         return new ResponseEntity<>(listCustomers, HttpStatus.OK);
     }
 
+    /**
+     * For Booking flow.
+     *
+     * Do not use anywhere else
+     * @param payloads
+     * @param hostelId
+     * @return
+     */
+
     public ResponseEntity<?> createBooking(BookingRequest payloads, String hostelId) {
 
         if (!authentication.isAuthenticated()) {
@@ -311,7 +320,6 @@ public class CustomersService {
      *
      *  for check in the customers
      *
-     *  use this only for booked customers
      *
      */
 
@@ -362,14 +370,13 @@ public class CustomersService {
         }
 
         if (bedsService.isBedAvailable(payloads.bedId(), user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
-            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
-                customers.setCurrentStatus(CustomerStatus.BOOKED.name());
-            }
-            else {
-                customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
-            }
+
+            customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
+            customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
             customers.setJoiningDate(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
             Customers savedCustomer = customersRepository.save(customers);
+
+            bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
 
             BookingsV1 bookingsV1 = bookingsService.findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
             if (bookingsV1 != null) {
@@ -390,6 +397,8 @@ public class CustomersService {
             }else {
                 bookingsService.checkinCustomer(payloads, customerId);
             }
+
+            transactionService.addAdvanceAmount(customers, payloads.advanceAmount());
 
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);

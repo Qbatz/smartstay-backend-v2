@@ -14,10 +14,12 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
     boolean isOccupied = false;
 
     Date oldTenantLeavingOn = null;
+    Date currentTenentJoiningDate = null;
 
 
-    public BedDetailsMapper(Date oldTenantLeavingOn) {
+    public BedDetailsMapper(Date oldTenantLeavingOn, Date currentTenentJoiningDate) {
         this.oldTenantLeavingOn = oldTenantLeavingOn;
+        this.currentTenentJoiningDate = currentTenentJoiningDate;
     }
 
     @Override
@@ -25,8 +27,13 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
         String oldTenantLeaving = "";
         String expectedJoiningDate = null;
         String freeFrom = null;
+        String jd = Utils.dateToString(beds.joiningDate());
         if (oldTenantLeavingOn != null) {
             oldTenantLeaving = Utils.dateToString(oldTenantLeavingOn);
+            isOnNotice = true;
+            isOccupied = true;
+            jd = Utils.dateToString(currentTenentJoiningDate);
+
         }
         if (beds.bookingStatus() != null && beds.bookingStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
             expectedJoiningDate = Utils.dateToString(beds.expectedJoinig());
@@ -64,7 +71,7 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                 oldTenantLeaving,
                 beds.bookingId(),
                 expectedJoiningDate,
-                Utils.dateToString(beds.joiningDate()),
+                jd,
                 beds.firstName(),
                 beds.lastName(),
                 beds.profilePic(),

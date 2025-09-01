@@ -85,10 +85,10 @@ public class BedsService {
             }
             BedDetails bedsResponse = null;
             if (listBeds.size() > 1) {
-                bedsResponse = new BedDetailsMapper(listBeds.get(0).leavingDate()).apply(listBeds.get(1));
+                bedsResponse = new BedDetailsMapper(listBeds.get(0).leavingDate(), listBeds.get(0).joiningDate()).apply(listBeds.get(1));
             }
             else if (!listBeds.isEmpty()) {
-                bedsResponse = new BedDetailsMapper(null).apply(listBeds.get(0));
+                bedsResponse = new BedDetailsMapper(null, null).apply(listBeds.get(0));
             }
 
             return new ResponseEntity<>(bedsResponse, HttpStatus.OK);
@@ -241,7 +241,7 @@ public class BedsService {
         else if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
             if (bookingsV1.getLeavingDate() != null) {
-                if (Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), date) > 0) {
+                if (Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), date) < 0) {
                     return false;
                 }
                 else  {

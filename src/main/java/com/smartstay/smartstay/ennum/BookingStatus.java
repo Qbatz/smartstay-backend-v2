@@ -5,7 +5,8 @@ public enum BookingStatus {
     VACATED("VACATED"),
     NOTICE("NOTICE"),
     CHECKIN("CHECKED-IN"),
-    TERMINATED("TERMINATED");
+    TERMINATED("TERMINATED"),
+    CANCELLED("CANCELLED");
 
 
     BookingStatus(String booked) {
