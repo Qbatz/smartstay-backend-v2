@@ -1,15 +1,16 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.ComplaintListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.dto.ComplaintResponseDto;
+import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
+import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
 import com.smartstay.smartstay.payloads.complaints.AddComplaintComment;
 import com.smartstay.smartstay.payloads.complaints.AddComplaints;
 import com.smartstay.smartstay.payloads.complaints.UpdateComplaint;
 import com.smartstay.smartstay.payloads.complaints.UpdateStatus;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
-import com.smartstay.smartstay.responses.complaint.ComplaintResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,8 +22,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-
-import static java.util.stream.Collectors.toList;
 
 @Service
 public class ComplaintsService {
@@ -264,45 +263,13 @@ public class ComplaintsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<Map<String, Object>> rawComplaints = complaintRepository.getAllComplaintsRaw(hostelId);
-
-        List<ComplaintResponseDto> responses = new ArrayList<>();
-        for (Map<String, Object> row : rawComplaints) {
-            ComplaintResponseDto dto = new ComplaintResponseDto();
-            dto.setComplaintId((Integer) row.get("complaintId"));
-            dto.setCustomerId((String) row.get("customerId"));
-            dto.setCustomerName((String) row.get("customerName"));
-            dto.setCustomerProfile((String) row.get("customerProfile"));
-            dto.setHostelId((String) row.get("hostelId"));
-            dto.setFloorId((Integer) row.get("floorId"));
-            dto.setFloorName((String) row.get("floorName"));
-            dto.setRoomId((Integer) row.get("roomId"));
-            dto.setRoomName((String) row.get("roomName"));
-            dto.setBedId((Integer) row.get("bedId"));
-            dto.setBedName((String) row.get("bedName"));
-            dto.setComplaintDate(((Date) row.get("complaintDate")));
-            dto.setDescription((String) row.get("description"));
-            dto.setAssigneeName((String) row.get("assigneeName"));
-            dto.setComplaintTypeId((Integer) row.get("complaintTypeId"));
-            dto.setComplaintTypeName((String) row.get("complaintTypeName"));
-            dto.setStatus((String) row.get("status"));
-            dto.setCommentCount(((Number) row.get("commentCount")).intValue());
-
-            List<Map<String, Object>> commentRows = complaintRepository.getCommentsByComplaintId(dto.getComplaintId());
-            List<CommentResponse> comments = commentRows.stream()
-                    .map(c -> new CommentResponse(
-                            (Integer) c.get("commentId"),
-                            (Integer) c.get("complaintId"),
-                            (String) c.get("commentText"),
-                            (String) c.get("userName"),
-                            (Date) c.get("commentDate"))
-                    )
-                    .toList();
-
-            dto.setComments(comments);
-
-            responses.add(dto);
-        }
+        List<Map<String, Object>> rawComplaints = complaintRepository.getAllComplaintsRaw(hostelId,user.getParentId());
+        Map<String, Object> complaintsSummary = complaintRepository.getComplaintSummary(hostelId,user.getParentId());
+        List<ComplaintComments> commentsList = complaintRepository.getCommentsByHostelId(hostelId,user.getParentId());
+        ComplaintListMapper mapper = new ComplaintListMapper(commentsList,complaintsSummary);
+        List<ComplaintResponse> responses = rawComplaints.stream()
+                .map(mapper)
+                .toList();
         return new ResponseEntity<>(responses, HttpStatus.OK);
     }
 

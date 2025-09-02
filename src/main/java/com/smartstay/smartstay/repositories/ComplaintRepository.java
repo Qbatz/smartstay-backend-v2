@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.repositories;
 
+import com.smartstay.smartstay.dao.ComplaintComments;
 import com.smartstay.smartstay.dao.ComplaintsV1;
 import com.smartstay.smartstay.responses.complaint.ComplaintResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -7,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -98,10 +100,10 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
             LEFT JOIN rooms r ON c.room_id = r.room_id
             LEFT JOIN beds b ON c.bed_id = b.bed_id
             LEFT JOIN complaint_comments cc ON cc.complaint_id = c.complaint_id
-            WHERE c.hostel_id = :hostelId AND c.is_active=1
+            WHERE c.hostel_id = :hostelId and c.parent_id = :parentId AND c.is_active=1
             GROUP BY c.complaint_id
             """, nativeQuery = true)
-    List<Map<String, Object>> getAllComplaintsRaw(@Param("hostelId") String hostelId);
+    List<Map<String, Object>> getAllComplaintsRaw(@Param("hostelId") String hostelId, @Param("parentId") String parentId);
 
 
     @Query(value = """
@@ -116,6 +118,15 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
             ORDER BY cc.comment_date DESC
             """, nativeQuery = true)
     List<Map<String, Object>> getCommentsByComplaintId(@Param("complaintId") Integer complaintId);
+
+    @Query(value = """
+        SELECT cc.* 
+        FROM complaint_comments cc
+        JOIN complaintsv1 c ON cc.complaint_id = c.complaint_id
+        WHERE c.hostel_id = :hostelId AND c.parent_id = :parentId
+          AND cc.is_active = 1
+        """, nativeQuery = true)
+    List<ComplaintComments> getCommentsByHostelId(@Param("hostelId") String hostelId,@Param("parentId") String parentId);
 
 
     @Query(value = """
@@ -162,4 +173,20 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
     Map<String, Object> getComplaintsWithType(@Param("complaintId") int complaintId,
                                             @Param("parentId") String parentId);
     List<ComplaintsV1> findAllByHostelId(String hostelId);
+
+
+    @Query(value = """
+    SELECT 
+        MIN(c.complaint_date) AS startDate,
+        MAX(c.complaint_date) AS endDate,
+        COUNT(*) AS totalComplaints
+    FROM complaintsv1 c
+    WHERE c.hostel_id = :hostelId 
+      AND c.parent_id = :parentId 
+      AND c.is_active = 1
+    """, nativeQuery = true)
+    Map<String, Object> getComplaintSummary(
+            @Param("hostelId") String hostelId,
+            @Param("parentId") String parentId
+    );
 }
