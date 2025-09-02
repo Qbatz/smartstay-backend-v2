@@ -14,7 +14,7 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ComplaintsV1 {
+public class  ComplaintsV1 {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

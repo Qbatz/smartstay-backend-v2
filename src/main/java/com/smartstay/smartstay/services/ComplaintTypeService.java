@@ -1,12 +1,10 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.ComplaintTypeV1;
-import com.smartstay.smartstay.dao.HostelV1;
-import com.smartstay.smartstay.dao.RolesV1;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.complaints.AddComplaintType;
 import com.smartstay.smartstay.payloads.complaints.UpdateComplaintType;
+import com.smartstay.smartstay.repositories.ComplaintRepository;
 import com.smartstay.smartstay.repositories.ComplaintTypeV1Repository;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.repositories.RolesRepository;
@@ -31,6 +29,8 @@ public class ComplaintTypeService {
     @Autowired
     ComplaintTypeV1Repository complaintTypeV1Repository;
 
+    @Autowired
+    ComplaintRepository complaintRepository;
     @Autowired
     private Authentication authentication;
     @Autowired
@@ -141,6 +141,15 @@ public class ComplaintTypeService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        boolean exist = complaintRepository.existsByComplaintTypeIdAndIsActive(complaintTypeId,true);
+        if (exist) {
+            return new ResponseEntity<>(
+                    "Complaint exists for this ComplaintType so it can't be deleted",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
 
         ComplaintTypeV1 complaintTypeV1 = complaintTypeV1Repository.findById(complaintTypeId).orElse(null);
 

@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 
+import com.smartstay.smartstay.payloads.complaints.AddComplaintComment;
 import com.smartstay.smartstay.payloads.complaints.AddComplaints;
 import com.smartstay.smartstay.payloads.complaints.UpdateComplaint;
 import com.smartstay.smartstay.payloads.complaints.UpdateStatus;
@@ -26,6 +27,11 @@ public class ComplaintsController {
     @PostMapping("")
     public ResponseEntity<?> addComplaints(@Valid @RequestBody AddComplaints complaints) {
         return complaintsService.addComplaints(complaints);
+    }
+
+    @PostMapping("/add-comment/{complaintId}")
+    public ResponseEntity<?> addComplaintComments(@PathVariable("complaintId") int complaintId,@Valid @RequestBody AddComplaintComment comment) {
+        return complaintsService.addComplaintComments(comment,complaintId);
     }
 
     @PutMapping("/{complaintId}")
