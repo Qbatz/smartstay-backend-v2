@@ -1,4 +1,4 @@
-package com.smartstay.smartstay.dto;
+package com.smartstay.smartstay.dto.complaint;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
