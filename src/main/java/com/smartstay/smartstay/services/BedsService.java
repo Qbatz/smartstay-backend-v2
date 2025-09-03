@@ -59,7 +59,14 @@ public class BedsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId,user.getParentId());
-        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper().apply(item)).toList();
+
+        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> {
+            boolean isBedOccupied = false;
+            if (item.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+                isBedOccupied = bookingService.checkIsBedOccupied(item.getBedId());
+            }
+            return new BedsMapper(isBedOccupied).apply(item);
+        }).toList();
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
 

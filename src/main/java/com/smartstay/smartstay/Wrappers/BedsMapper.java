@@ -9,13 +9,18 @@ import java.util.Date;
 import java.util.function.Function;
 
 public class BedsMapper implements Function<Beds, BedsResponse> {
+
+    boolean isOccupied = false;
+
+    public BedsMapper(boolean isOccupied) {
+        this.isOccupied = isOccupied;
+    }
+
     @Override
     public BedsResponse apply(Beds beds) {
 
-        boolean isOccupied = false;
         boolean onNotice = false;
         boolean isBooked = false;
-        String nextAvailableFrom = null;
         if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
             isBooked = true;
         }
@@ -24,11 +29,7 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
         }
         if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             onNotice = true;
-            if (beds.getFreeFrom() != null) {
-                if (Utils.compareWithTwoDates(beds.getFreeFrom(), new Date()) < 0) {
-                    nextAvailableFrom = Utils.dateToString(new Date());
-                }
-            }
+            isBooked = beds.isBooked();
         }
 
 
@@ -38,7 +39,6 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
                 isOccupied,
                 onNotice,
                 isBooked,
-                nextAvailableFrom,
                 beds.getRentAmount());
     }
 }

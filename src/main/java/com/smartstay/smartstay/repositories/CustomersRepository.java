@@ -22,7 +22,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             cus.customer_id as customerId, cus.email_id AS emailId, 
             cus.profile_pic AS profilePic, cus.joining_date as actualJoiningDate, cus.exp_joining_date as joiningDate, 
             ct.country_code as countryCode, booking.floor_id as floorId, booking.room_id as roomId, booking.bed_id as bedId, flr.floor_name as floorName,
-            rms.room_name as roomName, bed.bed_name as bedName,
+            rms.room_name as roomName, bed.bed_name as bedName, booking.expected_joining_date as expectedJoiningDate,
             cus.created_at as createdAt FROM customers cus inner join countries as ct on ct.country_id = cus.country
             left outer join bookingsv1 booking on booking.customer_id=cus.customer_id left outer join floors flr on flr.floor_id=booking.floor_id
             left outer join rooms rms on rms.room_id=booking.room_id left outer join beds bed on bed.bed_id=booking.bed_id

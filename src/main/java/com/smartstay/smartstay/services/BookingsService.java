@@ -214,4 +214,14 @@ public class BookingsService {
             checkinCustomer(payloads, customerId);
         }
     }
+
+    public boolean checkIsBedOccupied(Integer bedId) {
+        BookingsV1 bookingsV1 = bookingsRepository.findLatestBooking(bedId);
+        if (bookingsV1.getLeavingDate() != null) {
+            if (Utils.compareWithTwoDates(new Date(), bookingsV1.getLeavingDate()) < 0) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
