@@ -78,7 +78,7 @@ public interface UserRepository extends JpaRepository<Users, String> {
                 LEFT OUTER JOIN rolesv1 roles ON roles.role_id = usr.role_id
                 LEFT OUTER JOIN countries country ON country.country_id = usr.country
                 LEFT OUTER JOIN address ad on ad.user_id=usr.user_id
-                WHERE usr.role_id = :roleId and usr.parent_id =:parentId
+                WHERE usr.role_id = :roleId and usr.parent_id =:parentId and usr.is_deleted=0 and usr.is_active=1
             """, nativeQuery = true)
     List<UsersData> getAdminUserList(@Param("roleId") int roleId, @Param("parentId") String parentId);
 
