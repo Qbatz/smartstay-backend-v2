@@ -5,6 +5,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.Bookings;
+import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
@@ -223,5 +224,9 @@ public class BookingsService {
             }
         }
         return false;
+    }
+
+    public CustomersBookingDetails getCustomerBookingDetails(String customerId) {
+        return bookingsRepository.getCustomerBookingDetails(customerId);
     }
 }

@@ -81,4 +81,9 @@ public class CustomersController {
     public ResponseEntity<?> getAllCustomerForHostel(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required=false) String name, @RequestParam(value = "type", required = false) String type) {
         return customersService.getAllCustomersForHostel(hostelId, name, type);
     }
+
+    @GetMapping("/details/{customerId}")
+    public ResponseEntity<?> getCustomerDetails(@PathVariable("customerId") String customerId) {
+        return customersService.getCustomerDetails(customerId);
+    }
  }

@@ -2,6 +2,7 @@ package com.smartstay.smartstay.util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -210,5 +211,12 @@ public class Utils {
 
 
         return true;
+    }
+
+    public static long findNumberOfDays(Date date1, Date date2) {
+        LocalDate start = date1.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate end   = date2.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+
+        return ChronoUnit.DAYS.between(start, end);
     }
 }

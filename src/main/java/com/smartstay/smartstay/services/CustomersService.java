@@ -5,13 +5,14 @@ import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.customer.CustomerData;
+import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.repositories.CustomersRepository;
-import com.smartstay.smartstay.responses.customer.AddCustomerError;
+import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -751,4 +752,87 @@ public class CustomersService {
     }
 
 
+    public ResponseEntity<?> getCustomerDetails(String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = userService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (customerId == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        StringBuilder initials = new StringBuilder();
+        initials.append(customers.getFirstName().toUpperCase().charAt(0));
+        if (customers.getLastName() != null && !customers.getLastName().equalsIgnoreCase("")) {
+            initials.append(customers.getLastName().toUpperCase().charAt(0));
+        }
+        else {
+            initials.append(customers.getFirstName().toUpperCase().charAt(1));
+        }
+        String fullName = customers.getFirstName() + " " + customers.getLastName();
+
+        CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
+        HostelInformation hostelInformation = null;
+        if (bookingDetails != null) {
+            hostelInformation = new HostelInformation(bookingDetails.getRoomName(),
+                    bookingDetails.getRoomId(),
+                    bookingDetails.getFloorName(),
+                    bookingDetails.getFloorId(),
+                    bookingDetails.getBedName(),
+                    bookingDetails.getBedId(),
+                    Utils.dateToString(bookingDetails.getJoiningDate()),
+                    bookingDetails.getCurrentStatus(),
+                    customers.getAdvance().getAdvanceAmount(),
+                    null,
+                    null,
+                    bookingDetails.getRentAmount());
+        }
+
+        CustomerAddress address = new CustomerAddress(customers.getStreet(),
+                customers.getHouseNo(),
+                customers.getLandmark(),
+                customers.getPincode(),
+                customers.getCity(),
+                customers.getState());
+        KycDetails kycDetails = customers.getKycDetails();
+        KycInformations kycInfo = null;
+        if (kycDetails == null) {
+            kycInfo = new KycInformations(customers.getKycStatus(),
+                    null,
+                    null,
+                    null);
+        }
+        else {
+            kycInfo = new KycInformations(kycDetails.getCurrentStatus(),
+                    null,
+                    null,
+                    null);
+        }
+
+        CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
+                customers.getFirstName(),
+                customers.getLastName(),
+                fullName,
+                customers.getEmailId(),
+                user.getMobileNo(),
+                "91",
+                initials.toString(),
+                customers.getProfilePic(),
+                address,
+                hostelInformation,
+                kycInfo);
+
+        return new ResponseEntity<>(details, HttpStatus.OK);
+    }
 }

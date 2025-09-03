@@ -30,5 +30,6 @@ public class Beds {
     private boolean isBooked;
     private double rentAmount;
     private String status;
+    private String currentStatus;
     private Date freeFrom;
 }

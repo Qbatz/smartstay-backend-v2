@@ -47,4 +47,5 @@ public class BedsController {
     public ResponseEntity<?> deleteBedById(@PathVariable("bedId") int bedId) {
         return bedsService.deleteBedById(bedId);
     }
+
 }

@@ -2,8 +2,10 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.BedDetailsMapper;
 import com.smartstay.smartstay.Wrappers.BedsMapper;
+import com.smartstay.smartstay.Wrappers.FreeBedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.beds.FreeBeds;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.beds.AddBed;
@@ -181,6 +183,7 @@ public class BedsService {
         beds.setHostelId(addBed.hostelId());
         beds.setRentAmount(addBed.amount());
         beds.setStatus(BedStatus.VACANT.name());
+        beds.setCurrentStatus(BedStatus.VACANT.name());
         beds.setFreeFrom(new Date());
         beds.setRentAmount(addBed.amount());
         bedsRepository.save(beds);
@@ -225,6 +228,7 @@ public class BedsService {
             }else {
                 existingBed.setBooked(false);
                 existingBed.setStatus(BedStatus.OCCUPIED.name());
+                existingBed.setCurrentStatus(BedStatus.OCCUPIED.name());
                 existingBed.setFreeFrom(null);
             }
 
@@ -296,7 +300,26 @@ public class BedsService {
     }
 
     public List<BedsStatusCount> findBedCount(String hostelId) {
-
         return bedsRepository.getBedCountByStatus(hostelId);
+    }
+
+    public ResponseEntity<?> findFreeBeds(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        List<FreeBeds> freeBeds = bedsRepository.getFreeBeds(hostelId);
+        List<com.smartstay.smartstay.responses.beds.FreeBeds> beds = freeBeds
+                .stream()
+                .map(item -> new FreeBedsMapper().apply(item))
+                .toList();
+        return new ResponseEntity<>(beds, HttpStatus.OK);
     }
 }

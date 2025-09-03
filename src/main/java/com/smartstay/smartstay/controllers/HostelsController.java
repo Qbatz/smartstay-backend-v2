@@ -53,5 +53,9 @@ public class HostelsController {
         return hostelService.getHostelDetails(hostelId);
     }
 
+    @GetMapping("/free-beds/{hostelId}")
+    public ResponseEntity<?> getFreeBeds(@PathVariable("hostelId") String hostelId) {
+        return hostelService.findFreeBeds(hostelId);
+    }
 
 }
