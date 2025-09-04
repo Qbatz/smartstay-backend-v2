@@ -15,6 +15,11 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
 
     boolean existsByEmailId(String emailId);
     boolean existsByHostelIdAndCustomerId(String hostelId,String customerId);
+    boolean existsByHostelIdAndCustomerIdAndCurrentStatusIn(
+            String hostelId,
+            String customerId,
+            List<String> statuses
+    );
 
     @Query(value = """
             SELECT cus.first_name AS firstName, cus.city, cus.mobile, cus.state, cus.joining_date, 
@@ -29,7 +34,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             WHERE cus.hostel_id = :hostelId
             AND (:name IS NULL OR LOWER(cus.first_name) LIKE LOWER(CONCAT('%', :name, '%'))
                                    OR LOWER(cus.last_name) LIKE LOWER(CONCAT('%', :name, '%')))
-              AND (:status IS NULL OR cus.current_status = :status) order by cus.created_at
+              AND (:status IS NULL OR cus.current_status = :status) order by cus.created_at desc
             """, nativeQuery = true)
     List<CustomerData> getCustomerData(
             @Param("hostelId") String hostelId,

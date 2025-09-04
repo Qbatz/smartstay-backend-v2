@@ -5,6 +5,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
+import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.complaints.*;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
@@ -17,10 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class ComplaintsService {
@@ -130,8 +128,12 @@ public class ComplaintsService {
         }else {
             complaint.setBedId(0);
         }
+        List<String> currentStatus = Arrays.asList(
+                CustomerStatus.CHECK_IN.name(),
+                CustomerStatus.ON_NOTICE.name()
+        );
 
-        boolean customerExist = customersRepository.existsByHostelIdAndCustomerId(request.hostelId(), request.customerId());
+        boolean customerExist = customersRepository.existsByHostelIdAndCustomerIdAndCurrentStatusIn(request.hostelId(), request.customerId(),currentStatus);
          if (!customerExist){
             return new ResponseEntity<>("Customer not found.", HttpStatus.BAD_REQUEST);
         }
@@ -173,14 +175,14 @@ public class ComplaintsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        ComplaintsV1 customerExist = complaintRepository.findByComplaintIdAndParentId(complaintId, user.getParentId());
-        if (customerExist == null){
+        ComplaintsV1 complaintExist = complaintRepository.findByComplaintIdAndParentId(complaintId, user.getParentId());
+        if (complaintExist == null){
             return new ResponseEntity<>("Complaint not found.", HttpStatus.BAD_REQUEST);
         }
 
         ComplaintComments complaintComments = new ComplaintComments();
         complaintComments.setCommentDate(new Date());
-        complaintComments.setComplaint(customerExist);
+        complaintComments.setComplaint(complaintExist);
         complaintComments.setComment(request.message());
         complaintComments.setIsActive(true);
         complaintComments.setCreatedBy(user.getUserId());
@@ -292,29 +294,30 @@ public class ComplaintsService {
         LocalDate start;
         LocalDate end;
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Utils.USER_INPUT_DATE_FORMAT);
 
-        // Handle start date
         if (startDate != null && !startDate.isBlank()) {
-            start = LocalDate.parse(startDate, formatter);
+            start = LocalDate.parse(startDate.replace("/", "-"), formatter);
         } else {
             start = LocalDate.of(2025, 4, 1); // default start date
         }
         requestStartDate = start.format(formatter);
 
-        // Handle end date
         if (endDate != null && !endDate.isBlank()) {
-            end = LocalDate.parse(endDate, formatter);
+            end = LocalDate.parse(endDate.replace("/", "-"), formatter);
         } else {
-            end = LocalDate.now(); // default to today
+            end = LocalDate.now();
         }
         requestEndDate = end.format(formatter);
 
         Date sqlStart = java.sql.Date.valueOf(start);
         Date sqlEnd = java.sql.Date.valueOf(end);
 
-        System.out.println("sql_start------>" + sqlStart);
-        System.out.println("sql_end------>" + sqlEnd);
+
+        List<String> currentStatus = Arrays.asList(
+                CustomerStatus.CHECK_IN.name(),
+                CustomerStatus.ON_NOTICE.name()
+        );
 
         List<Map<String, Object>> rawComplaints = complaintRepository.getAllComplaintsRaw(
                 hostelId,
@@ -322,7 +325,8 @@ public class ComplaintsService {
                 (customerName != null && !customerName.isBlank()) ? customerName : null,
                 (status != null && !status.isBlank()) ? status : null,
                 sqlStart,
-                sqlEnd
+                sqlEnd,
+                currentStatus
         );
 
         ComplaintListMapper mapper = new ComplaintListMapper(
@@ -354,7 +358,11 @@ public class ComplaintsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Map<String,Object> row = complaintRepository.getComplaintsWithType(complaintId, user.getParentId());
+        List<String> currentStatus = Arrays.asList(
+                CustomerStatus.CHECK_IN.name(),
+                CustomerStatus.ON_NOTICE.name()
+        );
+        Map<String,Object> row = complaintRepository.getComplaintsWithType(complaintId, user.getParentId(),currentStatus);
         if (row == null) {
             return new ResponseEntity<>("Complaint not found.", HttpStatus.BAD_REQUEST);
         }
