@@ -33,7 +33,7 @@ public class ComplaintListMapper implements Function<Map<String, Object>, Compla
 
         response.setStartDate((String) Utils.dateToString((Date) complaintsSummary.get("startDate")));
         response.setEndDate((String) Utils.dateToString((Date) complaintsSummary.get("endDate")));
-        response.setComplaintCount((Integer) complaintsSummary.get("totalComplaints"));
+        response.setComplaintCount((Long) complaintsSummary.get("totalComplaints"));
 
         ComplaintResponseDto dto = new ComplaintResponseDto();
         dto.setComplaintId((Integer) raw.get("complaintId"));
@@ -52,6 +52,7 @@ public class ComplaintListMapper implements Function<Map<String, Object>, Compla
         dto.setComplaintDate((Date) raw.get("complaintDate"));
         dto.setDescription((String) raw.get("description"));
         dto.setAssigneeName((String) raw.get("assigneeName"));
+        dto.setAssigneeId((String) raw.get("assigneeId"));
 
         dto.setComplaintTypeId((Integer) raw.get("complaintTypeId"));
         dto.setComplaintTypeName((String) raw.get("complaintTypeName"));

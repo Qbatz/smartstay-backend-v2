@@ -5,10 +5,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
-import com.smartstay.smartstay.payloads.complaints.AddComplaintComment;
-import com.smartstay.smartstay.payloads.complaints.AddComplaints;
-import com.smartstay.smartstay.payloads.complaints.UpdateComplaint;
-import com.smartstay.smartstay.payloads.complaints.UpdateStatus;
+import com.smartstay.smartstay.payloads.complaints.*;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
 import com.smartstay.smartstay.util.Utils;
@@ -306,6 +303,7 @@ public class ComplaintsService {
         dto.setComplaintDate(((Date) row.get("complaintDate")));
         dto.setDescription((String) row.get("description"));
         dto.setAssigneeName((String) row.get("assigneeName"));
+        dto.setAssigneeId((String) row.get("assigneeId"));
         dto.setComplaintTypeId((Integer) row.get("complaintTypeId"));
         dto.setComplaintTypeName((String) row.get("complaintTypeName"));
         dto.setStatus((String) row.get("status"));
@@ -325,6 +323,43 @@ public class ComplaintsService {
         dto.setComments(comments);
         return new ResponseEntity<>(dto, HttpStatus.OK);
     }
+
+    public ResponseEntity<?> assignUser(int complaintId, AssignUser request) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
+        if (rolesV1 == null) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        ComplaintsV1 complaint = complaintRepository.findByComplaintIdAndParentId(complaintId, user.getParentId());
+        if (complaint == null) {
+            return new ResponseEntity<>("Complaint not found.", HttpStatus.NOT_FOUND);
+        }
+
+        boolean users = usersService.existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(request.userId(), user.getParentId());
+
+        if (!users) {
+            return new ResponseEntity<>("User not found.", HttpStatus.NOT_FOUND);
+        }
+        complaint.setAssigneeId(request.userId());
+        complaint.setAssignedDate(new Date());
+        complaint.setUpdatedAt(new Date());
+        complaintRepository.save(complaint);
+
+        return new ResponseEntity<>(Utils.USER_ASSIGNED, HttpStatus.OK);
+    }
+
+
 
     public ComplaintsV1 updateComplaint(ComplaintsV1 existingComplaint, UpdateComplaint request) {
 

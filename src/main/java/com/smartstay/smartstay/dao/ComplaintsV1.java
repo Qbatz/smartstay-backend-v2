@@ -34,7 +34,7 @@ public class  ComplaintsV1 {
     private String createdBy;
     private String parentId;
     private String hostelId;
-    private String assignee;
+    private String assigneeId;
     private Date assignedDate;
     private Boolean isActive;
 }
