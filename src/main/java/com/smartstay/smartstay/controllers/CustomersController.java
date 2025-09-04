@@ -58,7 +58,7 @@ public class CustomersController {
 //        return customersService.getAllCheckInCustomers(hostelId);
 //    }
 
-    @PostMapping("/add-booking/{hostelId}")
+    @PostMapping("/booking/{hostelId}")
     public ResponseEntity<?> createBooking(@PathVariable("hostelId") String hostelId, @Valid @RequestBody BookingRequest bookingRequest) {
         return customersService.createBooking(bookingRequest,hostelId);
     }
@@ -68,9 +68,9 @@ public class CustomersController {
 //        return customersService.checkinBookedCustomer(checkinRequest);
 //    }
 
-    @PostMapping("/notice/{hostelId}/{customerId}")
-    public ResponseEntity<?> moveToNotice(@PathVariable("customerId") String customerId, @PathVariable("hostelId") String hostelId, CheckoutNotice checkoutNotice) {
-        return customersService.requestNotice(customerId, hostelId, checkoutNotice);
+    @PostMapping("/notice/{hostelId}")
+    public ResponseEntity<?> moveToNotice(@PathVariable("hostelId") String hostelId, @Valid @RequestBody CheckoutNotice checkoutNotice) {
+        return customersService.requestNotice(hostelId, checkoutNotice);
     }
 //    @PostMapping("/booked/check-out")
 //    public ResponseEntity<?> checkoutExistingCustomer(@Valid @RequestBody CheckoutRequest checkoutRequest) {
@@ -80,5 +80,10 @@ public class CustomersController {
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getAllCustomerForHostel(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required=false) String name, @RequestParam(value = "type", required = false) String type) {
         return customersService.getAllCustomersForHostel(hostelId, name, type);
+    }
+
+    @GetMapping("/details/{customerId}")
+    public ResponseEntity<?> getCustomerDetails(@PathVariable("customerId") String customerId) {
+        return customersService.getCustomerDetails(customerId);
     }
  }

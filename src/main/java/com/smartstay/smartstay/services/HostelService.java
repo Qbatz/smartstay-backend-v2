@@ -299,6 +299,8 @@ public class HostelService {
     }
 
 
-
+    public ResponseEntity<?> findFreeBeds(String hostelId) {
+        return bedsService.findFreeBeds(hostelId);
+    }
 }
 

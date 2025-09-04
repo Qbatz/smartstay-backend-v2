@@ -6,6 +6,5 @@ public record BedsResponse(int id,
                            boolean isOccupied,
                            boolean onNotice,
                            boolean isBooked,
-                           String nextAvailableFrom,
                            double rentAmount) {
 }

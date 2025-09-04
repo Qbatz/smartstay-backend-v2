@@ -22,4 +22,5 @@ public interface CustomerData {
     Date getActualJoiningDate();
     Date getJoiningDate();
     Date getCreatedAt();
+    Date getExpectedJoiningDate();
 }

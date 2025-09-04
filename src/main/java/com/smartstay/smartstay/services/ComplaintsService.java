@@ -329,7 +329,7 @@ public class ComplaintsService {
     public ComplaintsV1 updateComplaint(ComplaintsV1 existingComplaint, UpdateComplaint request) {
 
         if (request.complaintDate() != null) {
-            existingComplaint.setComplaintDate(Utils.stringToDate(request.complaintDate(), Utils.DATE_FORMAT_YY));
+            existingComplaint.setComplaintDate(Utils.stringToDate(request.complaintDate(), Utils.USER_INPUT_DATE_FORMAT));
         }
         if (request.description() != null) {
             existingComplaint.setDescription(request.description());

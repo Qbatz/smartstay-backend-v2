@@ -5,6 +5,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.Bookings;
+import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
@@ -213,5 +214,19 @@ public class BookingsService {
         }else {
             checkinCustomer(payloads, customerId);
         }
+    }
+
+    public boolean checkIsBedOccupied(Integer bedId) {
+        BookingsV1 bookingsV1 = bookingsRepository.findLatestBooking(bedId);
+        if (bookingsV1.getLeavingDate() != null) {
+            if (Utils.compareWithTwoDates(new Date(), bookingsV1.getLeavingDate()) < 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public CustomersBookingDetails getCustomerBookingDetails(String customerId) {
+        return bookingsRepository.getCustomerBookingDetails(customerId);
     }
 }

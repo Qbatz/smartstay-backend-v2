@@ -10,5 +10,8 @@ public record CheckoutNotice(
         @NotNull(message = "Checkout date required")
         @NotEmpty(message = "Checkout date required")
         String checkoutDate,
+        @NotNull(message = "Customer id required")
+        @NotEmpty(message = "Customer id required")
+        String customerId,
         String reason) {
 }

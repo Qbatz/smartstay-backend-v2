@@ -562,7 +562,7 @@ public class UsersService {
             Users inputUser = userRepository.findUserByUserIdAndParentId(userId,users.getParentId());
 
             if (inputUser != null) {
-                if (!rolesService.checkPermission(inputUser.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
+                if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
 
