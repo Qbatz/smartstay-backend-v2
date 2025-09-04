@@ -36,6 +36,7 @@ public class Utils {
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
     public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
+    public static final String USER_ASSIGNED = "User Assigned Successfully";
     public static final String STATUS_UPDATED = "Status Updated Successfully";
     public static final String CREATED = "Created Successfully";
     public static final String DELETED = "Deleted Successfully";

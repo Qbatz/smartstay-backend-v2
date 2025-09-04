@@ -46,8 +46,10 @@ public interface UserRepository extends JpaRepository<Users, String> {
     LoginUsersDetails getLoginUserDetails(@Param("userId") String userId);
 
     Optional<Users> findByEmailIdOrMobileNo(String emailId, String mobileNo);
-    boolean existsByEmailId(String emailId);
-    boolean existsByMobileNo(String mobileNo);
+
+    boolean existsByEmailIdAndIsDeletedFalse(String emailId);
+
+    boolean existsByMobileNoAndIsDeletedFalse(String mobileNo);
 
     @Query(value = """
             select * from users where role_id=:roleId and is_active=true and is_deleted=false
@@ -115,6 +117,10 @@ public interface UserRepository extends JpaRepository<Users, String> {
 
     @Query("SELECT count(u) FROM Users u where u.emailId=:emailId and u.userId !=:userId")
     int getUsersCountByEmail(String userId, String emailId);
+
+    boolean existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(String userId,String parentId);
+
+
 
 
 }

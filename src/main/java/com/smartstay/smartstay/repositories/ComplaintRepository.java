@@ -84,7 +84,8 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
                 c.complaint_date AS complaintDate,
                 c.description AS description,
 
-                c.assignee AS assigneeName,
+                 c.assignee_id AS assigneeId,
+                 CONCAT_WS(' ', usr.first_name, usr.last_name) AS assigneeName,
 
                 ct.complaint_type_id AS complaintTypeId,
                 ct.complaint_type_name AS complaintTypeName,
@@ -99,6 +100,7 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
             LEFT JOIN floors f ON c.floor_id = f.floor_id
             LEFT JOIN rooms r ON c.room_id = r.room_id
             LEFT JOIN beds b ON c.bed_id = b.bed_id
+            LEFT JOIN users usr ON c.assignee_id = usr.user_id
             LEFT JOIN complaint_comments cc ON cc.complaint_id = c.complaint_id
             WHERE c.hostel_id = :hostelId and c.parent_id = :parentId AND c.is_active=1
             GROUP BY c.complaint_id
@@ -149,7 +151,8 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
         c.complaint_date AS complaintDate,
         c.description AS description,
 
-        c.assignee AS assigneeName,
+        c.assignee_id AS assigneeId,
+        CONCAT_WS(' ', usr.first_name, usr.last_name) AS assigneeName,
 
         ct.complaint_type_id AS complaintTypeId,
         ct.complaint_type_name AS complaintTypeName,
@@ -165,6 +168,8 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
         ON c.floor_id = f.floor_id
     LEFT JOIN rooms r 
         ON c.room_id = r.room_id
+     LEFT JOIN users usr
+        ON c.assignee_id = usr.user_id    
     LEFT JOIN beds b 
         ON c.bed_id = b.bed_id
                  LEFT JOIN complaint_comments cc ON cc.complaint_id = c.complaint_id
