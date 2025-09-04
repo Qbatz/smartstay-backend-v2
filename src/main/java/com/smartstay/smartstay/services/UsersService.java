@@ -81,12 +81,12 @@ public class UsersService {
         String emailStatus = "";
 
         if (createAccount.mailId() != null && !createAccount.mailId().isEmpty()
-                && userRepository.existsByEmailId(createAccount.mailId())) {
+                && userRepository.existsByEmailIdAndIsDeletedFalse(createAccount.mailId())) {
             emailStatus = Utils.EMAIL_ID_EXISTS;
         }
 
         if (createAccount.mobile() != null && !createAccount.mobile().isEmpty()
-                && userRepository.existsByMobileNo(createAccount.mobile())) {
+                && userRepository.existsByMobileNoAndIsDeletedFalse(createAccount.mobile())) {
             mobileStatus = Utils.MOBILE_NO_EXISTS;
         }
 
@@ -415,11 +415,11 @@ public class UsersService {
                 String mobileStatus = "";
                 String emailStatus = "";
 
-                if (createAccount.mailId() !=null && !createAccount.mailId().isEmpty() && userRepository.existsByEmailId(createAccount.mailId())) {
+                if (createAccount.mailId() !=null && !createAccount.mailId().isEmpty() && userRepository.existsByEmailIdAndIsDeletedFalse(createAccount.mailId())) {
                     emailStatus = Utils.EMAIL_ID_EXISTS;
                 }
 
-                if (createAccount.mobile() !=null && !createAccount.mobile().isEmpty() && userRepository.existsByMobileNo(createAccount.mobile())) {
+                if (createAccount.mobile() !=null && !createAccount.mobile().isEmpty() && userRepository.existsByMobileNoAndIsDeletedFalse(createAccount.mobile())) {
                     mobileStatus = Utils.MOBILE_NO_EXISTS;
                 }
 
@@ -485,11 +485,11 @@ public class UsersService {
                 String mobileStatus = "";
                 String emailStatus = "";
 
-                if (adminUser.emailId() !=null && !adminUser.emailId().isEmpty() && userRepository.existsByEmailId(adminUser.emailId())) {
+                if (adminUser.emailId() !=null && !adminUser.emailId().isEmpty() && userRepository.existsByEmailIdAndIsDeletedFalse(adminUser.emailId())) {
                     emailStatus = Utils.EMAIL_ID_EXISTS;
                 }
 
-                if (adminUser.mobile() !=null && !adminUser.mobile().isEmpty() && userRepository.existsByMobileNo(adminUser.mobile())) {
+                if (adminUser.mobile() !=null && !adminUser.mobile().isEmpty() && userRepository.existsByMobileNoAndIsDeletedFalse(adminUser.mobile())) {
                     mobileStatus = Utils.MOBILE_NO_EXISTS;
                 }
 
@@ -609,6 +609,10 @@ public class UsersService {
 
     public List<Users> findActiveUsersByRole(int roleId) {
         return userRepository.findByRoleIdAndIsActiveTrueAndIsDeletedFalse(roleId);
+    }
+
+    public Boolean existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(String userId,String parentId) {
+        return userRepository.existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(userId,parentId);
     }
 
     public ResponseEntity<?> updateAdminProfile(String adminId, EditAdmin payloads, MultipartFile profilePic) {

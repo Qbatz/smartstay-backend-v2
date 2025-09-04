@@ -9,7 +9,7 @@ public class ComplaintResponse {
 
     private String startDate;
     private String endDate;
-    private Integer complaintCount;
+    private Long complaintCount;
 
     private ComplaintResponseDto complaintResponseDto;
 }

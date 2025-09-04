@@ -30,6 +30,7 @@ public class ComplaintResponseDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
     private java.util.Date complaintDate;
     private String description;
+    private String assigneeId;
     private String assigneeName;
 
     private Integer complaintTypeId;
