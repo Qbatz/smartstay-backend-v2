@@ -3,6 +3,8 @@ package com.smartstay.smartstay.Wrappers;
 import com.smartstay.smartstay.dao.ComplaintComments;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
+import com.smartstay.smartstay.repositories.ComplaintCommentsRepository;
+import com.smartstay.smartstay.repositories.ComplaintRepository;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
 import com.smartstay.smartstay.util.Utils;
 
@@ -17,22 +19,25 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class ComplaintListMapper implements Function<Map<String, Object>, ComplaintResponse> {
-
-    private final Map<Integer, List<ComplaintComments>> commentsByComplaint;
     private final Map<String, Object> complaintsSummary;
+    private final ComplaintCommentsRepository commentsRepository;
 
-    public ComplaintListMapper(List<ComplaintComments> commentsList, Map<String, Object> complaintsSummary) {
-        this.commentsByComplaint = commentsList.stream()
-                .collect(Collectors.groupingBy(c -> c.getComplaint().getComplaintId()));
+    private final String startDate;
+    private final String endDate;
+
+    public ComplaintListMapper(String startDate, String endDate, Map<String, Object> complaintsSummary,ComplaintCommentsRepository commentsRepository) {
         this.complaintsSummary = complaintsSummary;
+        this.commentsRepository = commentsRepository;
+        this.startDate = startDate;
+        this.endDate = endDate;
     }
 
     @Override
     public ComplaintResponse apply(Map<String, Object> raw) {
         ComplaintResponse response = new ComplaintResponse();
 
-        response.setStartDate((String) Utils.dateToString((Date) complaintsSummary.get("startDate")));
-        response.setEndDate((String) Utils.dateToString((Date) complaintsSummary.get("endDate")));
+        response.setStartDate(startDate);
+        response.setEndDate(endDate);
         response.setComplaintCount((Long) complaintsSummary.get("totalComplaints"));
 
         ComplaintResponseDto dto = new ComplaintResponseDto();
@@ -59,7 +64,7 @@ public class ComplaintListMapper implements Function<Map<String, Object>, Compla
         dto.setStatus((String) raw.get("status"));
 
 
-        List<ComplaintComments> complaintComments = commentsByComplaint.getOrDefault(dto.getComplaintId(), Collections.emptyList());
+        List<ComplaintComments> complaintComments = commentsRepository.findByComplaint_ComplaintIdAndIsActiveTrue(dto.getComplaintId());
         List<CommentResponse> commentResponses = complaintComments.stream()
                 .map(c -> new CommentResponse(
                         c.getCommentId(),

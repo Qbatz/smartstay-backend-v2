@@ -29,7 +29,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             WHERE cus.hostel_id = :hostelId
             AND (:name IS NULL OR LOWER(cus.first_name) LIKE LOWER(CONCAT('%', :name, '%'))
                                    OR LOWER(cus.last_name) LIKE LOWER(CONCAT('%', :name, '%')))
-              AND (:status IS NULL OR cus.current_status = :status)
+              AND (:status IS NULL OR cus.current_status = :status) order by cus.created_at
             """, nativeQuery = true)
     List<CustomerData> getCustomerData(
             @Param("hostelId") String hostelId,

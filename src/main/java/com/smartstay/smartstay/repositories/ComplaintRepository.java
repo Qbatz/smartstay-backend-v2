@@ -102,10 +102,19 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
             LEFT JOIN beds b ON c.bed_id = b.bed_id
             LEFT JOIN users usr ON c.assignee_id = usr.user_id
             LEFT JOIN complaint_comments cc ON cc.complaint_id = c.complaint_id
-            WHERE c.hostel_id = :hostelId and c.parent_id = :parentId AND c.is_active=1
+            WHERE c.hostel_id = :hostelId and c.parent_id = :parentId AND c.is_active=1 and c.is_deleted=0
+             AND (:customerName IS NULL OR CONCAT(cus.first_name, ' ', cus.last_name) LIKE %:customerName%)
+                      AND (:status IS NULL OR c.status = :status)
+                      AND (:startDate IS NULL OR c.complaint_date >= :startDate)
+                      AND (:endDate IS NULL OR c.complaint_date <= :endDate)
             GROUP BY c.complaint_id
             """, nativeQuery = true)
-    List<Map<String, Object>> getAllComplaintsRaw(@Param("hostelId") String hostelId, @Param("parentId") String parentId);
+    List<Map<String, Object>> getAllComplaintsRaw(@Param("hostelId") String hostelId, @Param("parentId") String parentId,
+                                                  @Param("customerName") String customerName,
+                                                  @Param("status") String status,
+                                                  @Param("startDate") Date startDate,
+                                                  @Param("endDate") Date endDate
+    );
 
 
     @Query(value = """
@@ -177,18 +186,15 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
     """, nativeQuery = true)
     Map<String, Object> getComplaintsWithType(@Param("complaintId") int complaintId,
                                             @Param("parentId") String parentId);
-    List<ComplaintsV1> findAllByHostelId(String hostelId);
 
 
     @Query(value = """
     SELECT 
-        MIN(c.complaint_date) AS startDate,
-        MAX(c.complaint_date) AS endDate,
         COUNT(*) AS totalComplaints
     FROM complaintsv1 c
     WHERE c.hostel_id = :hostelId 
       AND c.parent_id = :parentId 
-      AND c.is_active = 1
+      AND c.is_active = 1 and c.is_deleted=0
     """, nativeQuery = true)
     Map<String, Object> getComplaintSummary(
             @Param("hostelId") String hostelId,

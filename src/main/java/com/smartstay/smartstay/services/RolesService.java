@@ -10,6 +10,7 @@ import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.roles.AddRoles;
 import com.smartstay.smartstay.payloads.roles.Permission;
 import com.smartstay.smartstay.payloads.roles.UpdateRoles;
+import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.repositories.ModulesRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.responses.roles.Roles;
@@ -28,6 +29,10 @@ import java.util.stream.Collectors;
 public class RolesService {
     @Autowired
     RolesRepository rolesRepository;
+
+    @Autowired
+    HostelV1Repository hostelV1Repository;
+
     @Autowired
     ModulesRepository modulesRepository;
     @Autowired
@@ -149,6 +154,10 @@ public class RolesService {
             return new ResponseEntity<>(Utils.ROLE_NAME_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
+        if (hostelV1Repository.findByHostelIdAndParentId(roleData.hostelId(),user.getParentId()) == null){
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.BAD_REQUEST);
+        }
+
         RolesV1 role = new RolesV1();
         List<RolesPermission> rolesPermissions = permissionInsertion(roleData.permissionList());
         role.setCreatedAt(new Date());
@@ -158,6 +167,7 @@ public class RolesService {
         role.setIsDeleted(false);
         role.setRoleName(roleData.roleName());
         role.setParentId(user.getParentId());
+        role.setHostelId(roleData.hostelId());
         role.setPermissions(rolesPermissions);
         rolesRepository.save(role);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
