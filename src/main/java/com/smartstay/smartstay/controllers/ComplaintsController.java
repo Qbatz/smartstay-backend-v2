@@ -48,13 +48,19 @@ public class ComplaintsController {
     }
 
     @GetMapping("/all-complaints/{hostelId}")
-    public ResponseEntity<?> getAllComplaints(@PathVariable("hostelId") String hostelId) {
-        return complaintsService.getAllComplaints(hostelId);
+    public ResponseEntity<?> getAllComplaints(@PathVariable("hostelId") String hostelId,@RequestParam(value = "customerName", required=false) String customerName, @RequestParam(value = "status", required = false) String status,@RequestParam(value = "startDate", required = false) String startDate,@RequestParam(value = "endDate", required = false) String endDate) {
+        return complaintsService.getAllComplaints(hostelId,customerName,status,startDate,endDate);
     }
 
     @GetMapping("/{complaintId}")
     public ResponseEntity<?> getComplaintsById(@PathVariable("complaintId") int complaintId) {
         return complaintsService.getComplaintById(complaintId);
     }
+
+    @DeleteMapping("/delete-complaint/{complaintId}")
+    public ResponseEntity<?> deleteComplaint(@PathVariable("complaintId") Integer complaintId) {
+        return complaintsService.deleteComplaint(complaintId);
+    }
+
 
 }
