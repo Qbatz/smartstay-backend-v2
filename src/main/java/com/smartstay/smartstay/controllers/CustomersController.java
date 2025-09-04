@@ -86,4 +86,9 @@ public class CustomersController {
     public ResponseEntity<?> getCustomerDetails(@PathVariable("customerId") String customerId) {
         return customersService.getCustomerDetails(customerId);
     }
+
+    @PutMapping("/status/{customerId}")
+    public ResponseEntity<?> markCustomerInActive(@PathVariable("customerId") String customerId, @RequestParam(name = "status", required = true) Boolean status) {
+        return customersService.markCustomerInActive(customerId, status);
+    }
  }

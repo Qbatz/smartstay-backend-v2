@@ -36,6 +36,8 @@ public class Customers {
     private String createdBy;
     private String hostelId;
     private Date createdAt;
+    private Date lastUpdatedAt;
+    private String updatedBy;
 
     @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL)
     private Advance advance;

@@ -5,6 +5,7 @@ import java.util.Date;
 public interface FreeBeds {
     Integer getBedId();
     String getBedName();
+    Double getRentAmount();
     Integer getFloorId();
     Integer getRoomId();
     String getRoomName();

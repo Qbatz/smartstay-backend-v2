@@ -58,9 +58,12 @@ public class Utils {
     public static final String INVALID_BED_ID = "Invalid bed id passed";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
+    public static final String ACCOUNT_NO_ALREAY_EXISTS = "Account number already exists";
 
+    public static final String NO_ACCOUNT_NO_FOUND = "No account number found";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";
+    public static final String CUSTOMER_CHECKED_IN_INACTIVE_STATUS = "Cannot changed status to inactive for checked in customers";
 
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";

@@ -20,7 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -784,6 +783,34 @@ public class CustomersService {
 
         CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
         HostelInformation hostelInformation = null;
+        Advance advance = customers.getAdvance();
+        List<Deductions> listDeduction = null;
+        List<Deductions> otherDeductionBreakup = null;
+        double maintenance = 0;
+        double otherDeductions = 0;
+        double advanceAmount = 0;
+        if (advance != null) {
+            advanceAmount = advance.getAdvanceAmount();
+            listDeduction = advance.getDeductions();
+            if (listDeduction != null) {
+                maintenance = listDeduction
+                        .stream()
+                        .filter(item -> item.getType().equalsIgnoreCase("maintenance"))
+                        .mapToDouble(Deductions::getAmount)
+                        .sum();
+                otherDeductions = listDeduction
+                        .stream()
+                        .filter(item -> !item.getType().equalsIgnoreCase("maintenance"))
+                        .mapToDouble(Deductions::getAmount)
+                        .sum();
+                otherDeductionBreakup = listDeduction
+                        .stream()
+                        .filter(item -> !item.getType().equalsIgnoreCase("maintenance"))
+                        .collect(Collectors.toList());
+
+            }
+
+        }
         if (bookingDetails != null) {
             hostelInformation = new HostelInformation(bookingDetails.getRoomName(),
                     bookingDetails.getRoomId(),
@@ -793,10 +820,11 @@ public class CustomersService {
                     bookingDetails.getBedId(),
                     Utils.dateToString(bookingDetails.getJoiningDate()),
                     bookingDetails.getCurrentStatus(),
-                    customers.getAdvance().getAdvanceAmount(),
-                    null,
-                    null,
-                    bookingDetails.getRentAmount());
+                    advanceAmount,
+                    otherDeductions,
+                    maintenance,
+                    bookingDetails.getRentAmount(),
+                    otherDeductionBreakup);
         }
 
         CustomerAddress address = new CustomerAddress(customers.getStreet(),
@@ -834,5 +862,39 @@ public class CustomersService {
                 kycInfo);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> markCustomerInActive(String customerId, Boolean status) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (customerId == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_CHECKED_IN_INACTIVE_STATUS, HttpStatus.BAD_REQUEST);
+        }
+
+        customers.setCurrentStatus(CustomerStatus.INACTIVE.name());
+        customers.setLastUpdatedAt(new Date());
+        customers.setUpdatedBy(users.getUserId());
+        customersRepository.save(customers);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }

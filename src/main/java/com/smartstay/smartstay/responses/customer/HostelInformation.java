@@ -1,5 +1,9 @@
 package com.smartstay.smartstay.responses.customer;
 
+import com.smartstay.smartstay.dto.customer.Deductions;
+
+import java.util.List;
+
 public record HostelInformation(String roomName,
                                 Integer roomId,
                                 String floorName,
@@ -11,5 +15,6 @@ public record HostelInformation(String roomName,
                                 Double advanceAmount,
                                 Double otherDeductions,
                                 Double maintenance,
-                                Double monthlyRent) {
+                                Double monthlyRent,
+                                List<Deductions> otherDeductionsBreakup) {
 }
