@@ -48,10 +48,6 @@ public class UsersService {
     AuthenticationManager authManager;
 
     @Autowired
-    RolesPermissionServie rolesPermissionService;
-
-
-    @Autowired
     JWTService jwtService;
 
     @Autowired

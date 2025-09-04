@@ -38,7 +38,7 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
     @Query(value = """
                 SELECT 
                 b.bed_id as bedId, 
-                b.bed_name as bedName,  floor.floor_id as floorId, b.room_id as roomId,
+                b.bed_name as bedName, b.rent_amount as rentAmount, floor.floor_id as floorId, b.room_id as roomId,
                 b.current_status as bedStatus, 
                 ab.expected_joining_date AS expectedJoiningDate,
                 nb.leaving_date AS leavingDate,
