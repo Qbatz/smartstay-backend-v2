@@ -37,4 +37,5 @@ public class  ComplaintsV1 {
     private String assigneeId;
     private Date assignedDate;
     private Boolean isActive;
+    private Boolean isDeleted;
 }

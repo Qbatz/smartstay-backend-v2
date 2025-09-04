@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -147,6 +149,7 @@ public class ComplaintsService {
         complaint.setParentId(user.getParentId());
         complaint.setHostelId(request.hostelId());
         complaint.setIsActive(true);
+        complaint.setIsDeleted(false);
 
         complaintRepository.save(complaint);
 
@@ -245,7 +248,12 @@ public class ComplaintsService {
         return new ResponseEntity<>(Utils.STATUS_UPDATED, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getAllComplaints(String hostelId) {
+    public ResponseEntity<?> getAllComplaints(String hostelId,
+                                              String customerName,
+                                              String status,
+                                              String startDate,
+                                              String endDate
+                                              ) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -260,15 +268,77 @@ public class ComplaintsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<Map<String, Object>> rawComplaints = complaintRepository.getAllComplaintsRaw(hostelId,user.getParentId());
+
         Map<String, Object> complaintsSummary = complaintRepository.getComplaintSummary(hostelId,user.getParentId());
-        List<ComplaintComments> commentsList = complaintRepository.getCommentsByHostelId(hostelId,user.getParentId());
-        ComplaintListMapper mapper = new ComplaintListMapper(commentsList,complaintsSummary);
-        List<ComplaintResponse> responses = rawComplaints.stream()
-                .map(mapper)
-                .toList();
+        List<ComplaintResponse> responses = getComplaintResponse(
+                complaintsSummary,
+                hostelId,user.getParentId(),customerName,status,startDate,endDate
+        );
         return new ResponseEntity<>(responses, HttpStatus.OK);
     }
+
+    public List<ComplaintResponse> getComplaintResponse(
+            Map<String, Object> complaintsSummary,
+            String hostelId,
+            String parentId,
+            String customerName,
+            String status,
+            String startDate,
+            String endDate
+    ) {
+        String requestStartDate;
+        String requestEndDate;
+
+        LocalDate start;
+        LocalDate end;
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        // Handle start date
+        if (startDate != null && !startDate.isBlank()) {
+            start = LocalDate.parse(startDate, formatter);
+        } else {
+            start = LocalDate.of(2025, 4, 1); // default start date
+        }
+        requestStartDate = start.format(formatter);
+
+        // Handle end date
+        if (endDate != null && !endDate.isBlank()) {
+            end = LocalDate.parse(endDate, formatter);
+        } else {
+            end = LocalDate.now(); // default to today
+        }
+        requestEndDate = end.format(formatter);
+
+        Date sqlStart = java.sql.Date.valueOf(start);
+        Date sqlEnd = java.sql.Date.valueOf(end);
+
+        System.out.println("sql_start------>" + sqlStart);
+        System.out.println("sql_end------>" + sqlEnd);
+
+        List<Map<String, Object>> rawComplaints = complaintRepository.getAllComplaintsRaw(
+                hostelId,
+                parentId,
+                (customerName != null && !customerName.isBlank()) ? customerName : null,
+                (status != null && !status.isBlank()) ? status : null,
+                sqlStart,
+                sqlEnd
+        );
+
+        ComplaintListMapper mapper = new ComplaintListMapper(
+                requestStartDate,
+                requestEndDate,
+                complaintsSummary,
+                commentsRepository
+        );
+
+        return rawComplaints.stream()
+                .map(mapper)
+                .toList();
+    }
+
+
+
 
     public ResponseEntity<?> getComplaintById(int complaintId) {
         if (!authentication.isAuthenticated()) {
@@ -359,6 +429,33 @@ public class ComplaintsService {
         return new ResponseEntity<>(Utils.USER_ASSIGNED, HttpStatus.OK);
     }
 
+    public ResponseEntity<?> deleteComplaint(Integer complaintId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
+        if (rolesV1 == null) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        ComplaintsV1 complaint = complaintRepository.findByComplaintIdAndParentId(complaintId, user.getParentId());
+        if (complaint == null) {
+            return new ResponseEntity<>("Complaint not found.", HttpStatus.NOT_FOUND);
+        }
+        complaint.setUpdatedAt(new Date());
+        complaint.setIsDeleted(true);
+        complaint.setIsActive(false);
+        complaintRepository.save(complaint);
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
 
 
     public ComplaintsV1 updateComplaint(ComplaintsV1 existingComplaint, UpdateComplaint request) {
