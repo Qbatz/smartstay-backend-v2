@@ -35,9 +35,9 @@ public class AssetController {
         return assetsService.getAllAssets(hostelId);
     }
 
-    @PostMapping("/add-assets")
-    public ResponseEntity<?> addAsset(@Valid @RequestBody AssetRequest request) {
-        return assetsService.addAsset(request);
+    @PostMapping("/{hostelId}")
+    public ResponseEntity<?> addAsset(@Valid @RequestBody AssetRequest request,@PathVariable("hostelId") String hostelId) {
+        return assetsService.addAsset(request,hostelId);
     }
 
     @GetMapping("/{assetId}")
@@ -45,9 +45,9 @@ public class AssetController {
         return assetsService.getAssetById(assetId);
     }
 
-    @PutMapping("/{assetId}")
-    public ResponseEntity<?> updateAsset(@RequestBody UpdateAsset updateAsset, @PathVariable("assetId") int assetId) {
-        return assetsService.updateAsset(updateAsset, assetId);
+    @PutMapping("/{assetId}/{hostelId}")
+    public ResponseEntity<?> updateAsset(@RequestBody UpdateAsset updateAsset, @PathVariable("assetId") int assetId,@PathVariable("hostelId") String hostelId) {
+        return assetsService.updateAsset(updateAsset, assetId,hostelId);
     }
 
     @PutMapping("/assign-asset/{assetId}")

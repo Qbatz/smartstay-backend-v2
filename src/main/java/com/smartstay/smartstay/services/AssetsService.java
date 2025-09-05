@@ -48,6 +48,9 @@ public class AssetsService {
     @Autowired
     private RolesService rolesService;
 
+    @Autowired
+    private UserHostelService userHostelService;
+
     public ResponseEntity<?> getAllAssets(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
@@ -67,7 +70,7 @@ public class AssetsService {
     }
 
 
-    public ResponseEntity<?> addAsset(AssetRequest request) {
+    public ResponseEntity<?> addAsset(AssetRequest request,String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
@@ -81,15 +84,15 @@ public class AssetsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        VendorV1 vendorV1 = vendorRepository.findByVendorIdAndHostelId(request.vendorId(), request.hostelId());
-        HostelV1 hostelV1 = hostelV1Repository.findByHostelIdAndParentId(request.hostelId(), users.getParentId());
-        if (hostelV1 == null) {
-            return new ResponseEntity<>("Invalid Hostel", HttpStatus.FORBIDDEN);
+        VendorV1 vendorV1 = vendorRepository.findByVendorIdAndHostelId(request.vendorId(), hostelId);
+        boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
+        if (!hostelV1) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
         if (vendorV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.FORBIDDEN);
         }
-        boolean bankingV1 = bankingRepository.existsByHostelIdAndBankId(request.hostelId(),request.bankingId());
+        boolean bankingV1 = bankingRepository.existsByHostelIdAndBankId(hostelId,request.bankingId());
         if (!bankingV1) {
             return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
         }
@@ -117,17 +120,17 @@ public class AssetsService {
         }
         asset.setPrice(request.price());
         asset.setModeOfPayment(bankingRepository.findByBankId(request.bankingId()));
-        asset.setCreatedBy(request.createdBy());
+        asset.setCreatedBy(users.getUserId());
         asset.setCreatedAt(new java.util.Date());
         asset.setIsActive(true);
         asset.setIsDeleted(false);
-        asset.setHostelId(request.hostelId());
+        asset.setHostelId(hostelId);
         asset.setParentId(user.getParentId());
         assetsRepository.save(asset);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> updateAsset(UpdateAsset request, int assetId) {
+    public ResponseEntity<?> updateAsset(UpdateAsset request, int assetId, String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
@@ -172,7 +175,7 @@ public class AssetsService {
         }
         if (request.price() != null) asset.setPrice(request.price());
         if (request.modeOfPayment() != null) {
-            boolean bankingExist = bankingRepository.existsByHostelIdAndBankId(request.hostelId(),request.modeOfPayment());
+            boolean bankingExist = bankingRepository.existsByHostelIdAndBankId(hostelId,request.modeOfPayment());
             if (!bankingExist) {
                 return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
             }
