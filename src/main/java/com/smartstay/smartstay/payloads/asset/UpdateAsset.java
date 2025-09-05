@@ -7,6 +7,7 @@ public record UpdateAsset(
         String productName,
         String brandName,
         String serialNumber,
+        String hostelId,
         String purchaseDate,
         Double price,
         String modeOfPayment,

@@ -16,7 +16,7 @@ public record AssetRequest(
         String serialNumber,
         String purchaseDate,
         Double price,
-        String modeOfPayment,
+        String bankingId,
         String createdBy,
 
         @NotBlank(message = "Hostel ID must not be empty")

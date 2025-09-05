@@ -2,7 +2,6 @@ package com.smartstay.smartstay.util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -28,15 +27,20 @@ public class Utils {
     public static final String INVALID = "Invalid";
     public static final String INVALID_EMAIL = "Invalid Email";
     public static final String INVALID_VENDOR = "Invalid Vendor";
+    public static final String INVALID_BANKING = "Invalid Banking";
     public static final String INVALID_ASSET = "Invalid Asset";
+    public static final String INVALID_FLOOR = "Invalid Floor";
     public static final String INVALID_USER = "Invalid User";
     public static final String INVALID_OTP = "Invalid Otp";
     public static final String OTP_EXPIRED = "Otp Expired";
+    public static final String ASSET_NAME_ALREADY_EXISTS = "Asset name already exists";
+    public static final String SERIAL_NUMBER_ALREADY_EXISTS = "Serial number already exists";
     public static final String PASSWORD_RESET_SUCCESS = "Password reset successfully.";
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
     public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
     public static final String USER_ASSIGNED = "User Assigned Successfully";
+    public static final String ASSIGNED = "Asset Assigned Successfully";
     public static final String STATUS_UPDATED = "Status Updated Successfully";
     public static final String CREATED = "Created Successfully";
     public static final String DELETED = "Deleted Successfully";

@@ -1,9 +1,6 @@
 package com.smartstay.smartstay.dao;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,11 +24,19 @@ public class AssetsV1 {
     private String serialNumber;
     private Date purchaseDate;
     private Double price;
-    private String modeOfPayment;
+    @ManyToOne
+    @JoinColumn(name = "bank_id", referencedColumnName = "bankId")
+    private BankingV1 modeOfPayment;
+
     private Date createdAt;
     private String createdBy;
     private Date updatedAt;
+    private Date assignedAt;
     private Boolean isActive;
+    private Boolean isDeleted;
     private String hostelId;
+    private Integer floorId;
+    private Integer roomId;
+    private Integer bedId;
     private String parentId;
 }

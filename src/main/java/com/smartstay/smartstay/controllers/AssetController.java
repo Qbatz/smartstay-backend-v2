@@ -2,7 +2,9 @@ package com.smartstay.smartstay.controllers;
 
 
 import com.smartstay.smartstay.payloads.asset.AssetRequest;
+import com.smartstay.smartstay.payloads.asset.AssignAsset;
 import com.smartstay.smartstay.payloads.asset.UpdateAsset;
+import com.smartstay.smartstay.payloads.complaints.AssignUser;
 import com.smartstay.smartstay.services.AssetsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -46,6 +48,11 @@ public class AssetController {
     @PutMapping("/{assetId}")
     public ResponseEntity<?> updateAsset(@RequestBody UpdateAsset updateAsset, @PathVariable("assetId") int assetId) {
         return assetsService.updateAsset(updateAsset, assetId);
+    }
+
+    @PutMapping("/assign-asset/{assetId}")
+    public ResponseEntity<?> assignAsset(@PathVariable("assetId") int assetId, @Valid @RequestBody AssignAsset request) {
+        return assetsService.assignAsset(assetId, request);
     }
 
 }
