@@ -9,6 +9,8 @@ public record AddBank(
         @NotEmpty(message = "Holder name required")
         String holderName,
         String bankName,
+        String branchName,
+        String branchCode,
         @Pattern(regexp = "^(\\\\d{9,18})?$", message = "Account number must be 9–18 digits")
         String accountNo,
         String ifscCode,

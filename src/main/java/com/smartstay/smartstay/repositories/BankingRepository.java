@@ -25,4 +25,6 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
 
     List<BankingV1> findByBankIdIn(List<String> bankIds);
 
+    BankingV1 findByBankIdInAndIsDefaultAccountTrue(List<String> bankIds);
+
 }

@@ -26,7 +26,7 @@ public class BankingController {
     BankingService bankingService;
 
     @PostMapping("/{hostelId}")
-    public ResponseEntity<?> addBankAccount(@PathVariable("hostelId") String hostelId, @RequestBody @Valid AddBank addBank) {
+    public ResponseEntity<?> addBankAccount(@PathVariable("hostelId") String hostelId, @Valid @RequestBody AddBank addBank) {
         return bankingService.addNewBankAccount(hostelId, addBank);
     }
 
