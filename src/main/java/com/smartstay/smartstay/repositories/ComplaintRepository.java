@@ -18,51 +18,21 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
 
     ComplaintsV1 findByComplaintIdAndParentId(int complaintId, String parentId);
 
-    boolean existsByComplaintTypeIdAndIsActive(Integer complaintTypeId, Boolean isActive);
-
     @Query(value = """
-    SELECT 
-        c.complaint_id AS complaintId,
-        c.customer_id AS customerId,
-        CONCAT(cus.first_name, ' ', cus.last_name) AS customerName,
-        cus.profile_pic AS customerProfile,
-        c.hostel_id AS hostelId,
+    SELECT cus.* 
+    FROM customers cus
+    JOIN complaintsv1 c ON c.customer_id = cus.customer_id
+    WHERE c.complaint_id = :complaintId
+      AND c.parent_id = :parentId
+      AND cus.current_status IN (:currentStatus)
+""", nativeQuery = true)
+    ComplaintsV1 findCustomerForComplaint(
+            @Param("complaintId") int complaintId,
+            @Param("parentId") String parentId,
+            @Param("currentStatus") List<String> currentStatus
+    );
 
-        c.floor_id AS floorId,
-        f.floor_name AS floorName,
-
-        c.room_id AS roomId,
-        r.room_name AS roomName,
-
-        c.bed_id AS bedId,
-        b.bed_name AS bedName,
-
-        c.complaint_date AS complaintDate,
-        c.description AS description,
-
-        c.assignee AS assigneeName,
-
-        ct.complaint_type_id AS complaintTypeId,
-        ct.complaint_type_name AS complaintTypeName,
-
-                c.status AS status,
-                COUNT(cc.complaint_id) AS commentCount
-    FROM complaintsv1 c
-    JOIN complaint_typev1 ct 
-        ON c.complaint_type_id = ct.complaint_type_id
-    JOIN customers cus 
-        ON c.customer_id = cus.customer_id
-    LEFT JOIN floors f 
-        ON c.floor_id = f.floor_id
-    LEFT JOIN rooms r 
-        ON c.room_id = r.room_id
-    LEFT JOIN beds b 
-        ON c.bed_id = b.bed_id
-            LEFT JOIN complaint_comments cc 
-            ON cc.complaint_id = c.complaint_id
-    WHERE c.hostel_id = :hostelId and c.is_active=1
-    """, nativeQuery = true)
-    List<ComplaintResponse> getAllComplaintsWithType(@Param("hostelId") String hostelId);
+    boolean existsByComplaintTypeIdAndIsActive(Integer complaintTypeId, Boolean isActive);
 
     @Query(value = """
             SELECT 
@@ -103,17 +73,19 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
             LEFT JOIN users usr ON c.assignee_id = usr.user_id
             LEFT JOIN complaint_comments cc ON cc.complaint_id = c.complaint_id
             WHERE c.hostel_id = :hostelId and c.parent_id = :parentId AND c.is_active=1 and c.is_deleted=0
+            AND cus.current_status IN (:currentStatus)
              AND (:customerName IS NULL OR CONCAT(cus.first_name, ' ', cus.last_name) LIKE %:customerName%)
                       AND (:status IS NULL OR c.status = :status)
                       AND (:startDate IS NULL OR c.complaint_date >= :startDate)
                       AND (:endDate IS NULL OR c.complaint_date <= :endDate)
-            GROUP BY c.complaint_id
+            order BY c.complaint_id
             """, nativeQuery = true)
     List<Map<String, Object>> getAllComplaintsRaw(@Param("hostelId") String hostelId, @Param("parentId") String parentId,
                                                   @Param("customerName") String customerName,
                                                   @Param("status") String status,
                                                   @Param("startDate") Date startDate,
-                                                  @Param("endDate") Date endDate
+                                                  @Param("endDate") Date endDate,
+                                                  @Param("currentStatus") List<String> currentStatus
     );
 
 
@@ -129,15 +101,6 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
             ORDER BY cc.comment_date DESC
             """, nativeQuery = true)
     List<Map<String, Object>> getCommentsByComplaintId(@Param("complaintId") Integer complaintId);
-
-    @Query(value = """
-        SELECT cc.* 
-        FROM complaint_comments cc
-        JOIN complaintsv1 c ON cc.complaint_id = c.complaint_id
-        WHERE c.hostel_id = :hostelId AND c.parent_id = :parentId
-          AND cc.is_active = 1
-        """, nativeQuery = true)
-    List<ComplaintComments> getCommentsByHostelId(@Param("hostelId") String hostelId,@Param("parentId") String parentId);
 
 
     @Query(value = """
@@ -183,9 +146,12 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
         ON c.bed_id = b.bed_id
                  LEFT JOIN complaint_comments cc ON cc.complaint_id = c.complaint_id
     WHERE c.complaint_id = :complaintId and c.parent_id =:parentId and c.is_active=1
+     AND cus.current_status IN (:currentStatus)
     """, nativeQuery = true)
     Map<String, Object> getComplaintsWithType(@Param("complaintId") int complaintId,
-                                            @Param("parentId") String parentId);
+                                            @Param("parentId") String parentId,
+                                              @Param("currentStatus") List<String> currentStatus
+    );
 
 
     @Query(value = """
