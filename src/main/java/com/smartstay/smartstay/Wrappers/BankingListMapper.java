@@ -21,6 +21,7 @@ public class BankingListMapper implements Function<BankingV1, Bank>{
                 bankingV1.getUpiId(),
                 bankingV1.getCreditCardNumber(),
                 bankingV1.getDebitCardNumber(),
-                bankingV1.getAccountType());
+                bankingV1.getAccountType(),
+                bankingV1.isDefaultAccount());
     }
 }

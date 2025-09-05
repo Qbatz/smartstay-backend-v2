@@ -32,6 +32,7 @@ public class BankingV1 {
     String accountType;
     boolean isActive;
     boolean isDeleted;
+    boolean isDefaultAccount;
     String createdBy;
     String updatedBy;
     Date createdAt;

@@ -108,13 +108,24 @@ public class BankingService {
 
         }
 
+        if (addBank.isDefault() != null && addBank.isDefault()) {
+            List<String> listHostelBanks = hostelBankingMapper.getAllBanksAccountNoBasedOnHostel(hostelId);
+            if (listHostelBanks != null) {
+                BankingV1 defaultBank = bankingV1Repository.findByBankIdInAndIsDefaultAccountTrue(listHostelBanks);
+                if (defaultBank != null) {
+                    defaultBank.setDefaultAccount(false);
+                    bankingV1Repository.save(defaultBank);
+                }
+            }
+        }
+
         BankingV1 bankingV1 = new BankingV1();
         bankingV1.setBankName(addBank.bankName());
         bankingV1.setAccountNumber(addBank.accountNo());
         bankingV1.setIfscCode(addBank.ifscCode());
-        bankingV1.setBranchName(bankingV1.getBranchName());
-        bankingV1.setBranchCode(bankingV1.getBranchCode());
-        bankingV1.setAccountHolderName(bankingV1.getAccountHolderName());
+        bankingV1.setBranchName(addBank.branchName());
+        bankingV1.setBranchCode(addBank.branchCode());
+        bankingV1.setAccountHolderName(addBank.holderName());
         bankingV1.setTransactionType(BankPurpose.BOTH.name());
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
             bankingV1.setAccountType(BankAccountType.BANK.name());
@@ -134,6 +145,9 @@ public class BankingService {
         }
         else if(addBank.cardType().equalsIgnoreCase(CardType.DEBIT.name())) {
             bankingV1.setDebitCardNumber(addBank.cardNumber());
+        }
+        if (addBank.isDefault() != null) {
+            bankingV1.setDefaultAccount(addBank.isDefault());
         }
         bankingV1.setActive(true);
         bankingV1.setDeleted(false);
