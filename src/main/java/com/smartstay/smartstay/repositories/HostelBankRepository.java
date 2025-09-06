@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.repositories;
 
+import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.HostelBank;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,4 +15,9 @@ public interface HostelBankRepository extends JpaRepository<HostelBank, Integer>
 
     @Query("select hb.bankAccountId from HostelBank hb where hb.hostelId=:hostelId")
     List<String> findAllByHostelId(String hostelId);
+
+
+
+
+
 }
