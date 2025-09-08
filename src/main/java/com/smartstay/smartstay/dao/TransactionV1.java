@@ -22,6 +22,9 @@ public class TransactionV1 {
     private String createdBy;
     private Date createdAt;
     private String status;
+    private String invoiceId;
+    private String isInvoice;
+    private String mode;
 
     @ManyToOne()
     @JoinColumn(name = "customer_id")

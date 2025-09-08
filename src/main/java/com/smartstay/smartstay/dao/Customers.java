@@ -45,6 +45,4 @@ public class Customers {
     @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL)
     private KycDetails kycDetails;
 
-    @OneToMany(mappedBy = "customers", cascade = CascadeType.ALL)
-    private List<TransactionV1> transactions;
 }

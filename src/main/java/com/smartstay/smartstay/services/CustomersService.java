@@ -59,8 +59,11 @@ public class CustomersService {
     @Autowired
     private UserHostelService userHostelService;
 
+//    @Autowired
+//    private TransactionService transactionService;
+
     @Autowired
-    private TransactionService transactionService;
+    private InvoiceV1Service invoiceService;
 
     public ResponseEntity<?> createCustomer(MultipartFile file, AddCustomer payloads) {
 
@@ -102,7 +105,6 @@ public class CustomersService {
         customers.setCountry(1L);
         customers.setCreatedBy(user.getUserId());
         customers.setCreatedAt(new Date());
-
 
         customersRepository.save(customers);
 
@@ -285,8 +287,10 @@ public class CustomersService {
                 customers.setHostelId(hostelId);
 
                 customers.setExpJoiningDate(dt);
-                List<TransactionV1> transactions = transactionService.addBookingAmount(customers, payloads.bookingAmount());
-                customers.setTransactions(transactions);
+
+                invoiceService.addInvoice(customers.getCustomerId(), payloads.bookingAmount(), InvoiceType.BOOKING.name(), hostelId);
+//                List<TransactionV1> transactions = transactionService.addBookingAmount(customers, payloads.bookingAmount());
+//                customers.setTransactions(transactions);
                 customersRepository.save(customers);
 
                 bookingsService.addBooking(hostelId, payloads);
@@ -391,9 +395,19 @@ public class CustomersService {
             bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
 
             bookingsService.addChecking(customerId, payloads);
+            Double advanceAmount = payloads.advanceAmount();
 
-            transactionService.addAdvanceAmount(customers, payloads.advanceAmount());
+//            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId());
+            if (!listDeductions.isEmpty()) {
+//                invoiceService.addInvoice(customerId, );
+                advanceAmount = advanceAmount + listDeductions
+                        .stream()
+                        .mapToDouble(Deductions::getAmount)
+                        .sum();
 
+            }
+
+            invoiceService.addInvoice(customerId, advanceAmount, InvoiceType.ADVANCE.name(), payloads.hostelId());
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }else {

@@ -11,7 +11,7 @@ public record AddBank(
         String bankName,
         String branchName,
         String branchCode,
-        @Pattern(regexp = "^(\\\\d{9,18})?$", message = "Account number must be 9–18 digits")
+        @Pattern(regexp = "^(\\d{9,18})?$", message = "Account number must be 9–18 digits")
         String accountNo,
         String ifscCode,
         String description,

@@ -369,7 +369,7 @@ public class UsersService {
                 }
                 List<UsersData> admins = userRepository.getAdminUserList(2, users.getParentId());
                 if (admins.isEmpty()) {
-                    return new ResponseEntity<>("No admins found", HttpStatus.NOT_FOUND);
+                    return new ResponseEntity<>("No admins found", HttpStatus.NO_CONTENT);
                 }
 
                 List<com.smartstay.smartstay.responses.user.UsersData> listAdmins = admins.stream().map(itm -> new AdminDataMapper().apply(itm)).toList();
@@ -720,7 +720,7 @@ public class UsersService {
         if (userToUpdate == null) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
         }
-        if (Utils.checkNullOrEmpty(payloads.role())) {
+        if (!Utils.checkNullOrEmpty(payloads.role())) {
             if (!rolesService.checkRoleIdExistForHostel(payloads.role(), hostelId)) {
                 return new ResponseEntity<>(Utils.INVALID_ROLE, HttpStatus.BAD_REQUEST);
             }
