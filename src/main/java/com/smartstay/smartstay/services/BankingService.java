@@ -8,6 +8,7 @@ import com.smartstay.smartstay.ennum.BankAccountType;
 import com.smartstay.smartstay.ennum.BankPurpose;
 import com.smartstay.smartstay.ennum.CardType;
 import com.smartstay.smartstay.payloads.banking.AddBank;
+import com.smartstay.smartstay.payloads.banking.UpdateBank;
 import com.smartstay.smartstay.repositories.BankingRepository;
 import com.smartstay.smartstay.responses.beds.Bank;
 import com.smartstay.smartstay.util.Utils;
@@ -188,4 +189,138 @@ public class BankingService {
         return new ResponseEntity<>(listBankings, HttpStatus.OK);
 
     }
+
+    public ResponseEntity<?>  updateBankAccount(String hostelId, String bankId, UpdateBank updateBank) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        BankingV1 bankingV1 = bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId, bankId);
+        if (bankingV1 == null) {
+            return new ResponseEntity<>(Utils.NO_ACCOUNT_NO_FOUND, HttpStatus.NO_CONTENT);
+        }
+
+        String accountType = updateBank.accountType() != null ? updateBank.accountType().toUpperCase() : null;
+
+        boolean valid = switch (accountType) {
+            case "BANK" -> handleBankAccountUpdate(updateBank, bankingV1, hostelId, bankId);
+            case "CARD" -> handleCardAccountUpdate(updateBank, bankingV1, hostelId, bankId);
+            case "CASH" -> { bankingV1.setAccountType(BankAccountType.CASH.name()); yield true; }
+            case "UPI"  -> handleUpiAccountUpdate(updateBank, bankingV1, hostelId, bankId);
+            default     -> false;
+        };
+
+        if (!valid) {
+            return new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
+        if (isNotBlank(updateBank.holderName())) {
+            bankingV1.setAccountHolderName(updateBank.holderName());
+        }
+        if (updateBank.isActive() != null) {
+            bankingV1.setActive(updateBank.isActive());
+        }
+        if (updateBank.isDeleted() != null) {
+            bankingV1.setDeleted(updateBank.isDeleted());
+        }
+        if (Boolean.TRUE.equals(updateBank.isDefault())) {
+            resetDefaultBank(hostelId, bankId);
+            bankingV1.setDefaultAccount(true);
+        }
+
+        bankingV1.setUpdatedAt(new Date());
+        bankingV1Repository.save(bankingV1);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    private boolean handleBankAccountUpdate(UpdateBank updateBank, BankingV1 bankingV1, String hostelId, String bankId) {
+        String accountType = BankAccountType.BANK.name();
+
+        if (isNotBlank(updateBank.accountNo())) {
+            List<String> existingAccounts = bankingV1Repository
+                    .findBankIdsByAccountNumberAndAccountTypeNotEqualBankId(updateBank.accountNo(), accountType, bankId);
+
+            if (existingAccounts != null && hostelBankingMapper.checkBankAccountExists(existingAccounts, hostelId)) {
+                return false;
+            }
+            bankingV1.setAccountNumber(updateBank.accountNo());
+        }
+
+        if (isNotBlank(updateBank.bankName()))  bankingV1.setBankName(updateBank.bankName());
+        if (isNotBlank(updateBank.ifscCode()))  bankingV1.setIfscCode(updateBank.ifscCode());
+        if (isNotBlank(updateBank.branchName())) bankingV1.setBranchName(updateBank.branchName());
+        if (isNotBlank(updateBank.branchCode())) bankingV1.setBranchCode(updateBank.branchCode());
+        return true;
+    }
+
+    private boolean handleCardAccountUpdate(UpdateBank updateBank, BankingV1 bankingV1, String hostelId, String bankId) {
+        String accountType = BankAccountType.CARD.name();
+        String cardType = updateBank.cardType() != null ? updateBank.cardType().toUpperCase() : "";
+
+        if (isNotBlank(updateBank.cardNumber())) {
+            List<String> existingAccounts;
+
+            if (CardType.DEBIT.name().equals(cardType)) {
+                existingAccounts = bankingV1Repository.findBankIdsByDebitCardAndAccountTypeNotEqualBankId(updateBank.cardNumber(), accountType, bankId);
+            } else {
+                existingAccounts = bankingV1Repository.findBankIdsByCreditCardAndAccountTypeNotEqualBankId(updateBank.cardNumber(), accountType, bankId);
+            }
+
+            if (existingAccounts != null && hostelBankingMapper.checkBankAccountExists(existingAccounts, hostelId)) {
+                return false;
+            }
+
+            if (CardType.CREDIT.name().equals(cardType)) {
+                bankingV1.setCreditCardNumber(updateBank.cardNumber());
+            } else if (CardType.DEBIT.name().equals(cardType)) {
+                bankingV1.setDebitCardNumber(updateBank.cardNumber());
+            }
+        }
+        return true;
+    }
+
+    private boolean handleUpiAccountUpdate(UpdateBank updateBank, BankingV1 bankingV1, String hostelId, String bankId) {
+        String accountType = BankAccountType.UPI.name();
+
+        if (isNotBlank(updateBank.upiId())) {
+            List<String> existingAccounts = bankingV1Repository
+                    .findBankIdsByUpiIdAndAccountTypeNotEqualBankId(updateBank.upiId(), accountType, bankId);
+
+            if (existingAccounts != null && hostelBankingMapper.checkBankAccountExists(existingAccounts, hostelId)) {
+                return false;
+            }
+            bankingV1.setUpiId(updateBank.upiId());
+        }
+        return true;
+    }
+
+    private void resetDefaultBank(String hostelId, String currentBankId) {
+        List<String> listHostelBanks = hostelBankingMapper.getAllBanksAccountNoBasedOnHostel(hostelId);
+        if (listHostelBanks != null) {
+            BankingV1 defaultBank = bankingV1Repository.findByBankIdInAndIsDefaultAccountTrue(listHostelBanks);
+            if (defaultBank != null && !defaultBank.getBankId().equals(currentBankId)) {
+                defaultBank.setDefaultAccount(false);
+                bankingV1Repository.save(defaultBank);
+            }
+        }
+    }
+
+    private boolean isNotBlank(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
 }

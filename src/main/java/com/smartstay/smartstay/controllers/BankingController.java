@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.account.EditUsers;
 import com.smartstay.smartstay.payloads.banking.AddBank;
+import com.smartstay.smartstay.payloads.banking.UpdateBank;
 import com.smartstay.smartstay.services.BankingService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -33,6 +35,11 @@ public class BankingController {
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getBankAccounts(@PathVariable("hostelId") String hostelId) {
         return bankingService.getAllBankAccounts(hostelId);
+    }
+
+    @PutMapping("/{hostelId}/{bankId}")
+    public ResponseEntity<?> updateBanking(@PathVariable(value = "hostelId") String hostelId, @PathVariable("bankId") String bankId, @RequestBody(required = false) UpdateBank payloads) {
+        return bankingService.updateBankAccount(hostelId, bankId, payloads);
     }
 
 }

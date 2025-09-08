@@ -23,5 +23,6 @@ public record AddBank(
         @NotEmpty(message = "Account type required")
         @Pattern(regexp = "upi|card|cash|bank|UPI|CARD|CASH|BANK", message = "Type must be either 'upi' or 'card' or 'cash' or 'bank'")
         String accountType,
-        String cardNumber) {
+        String cardNumber
+) {
 }
