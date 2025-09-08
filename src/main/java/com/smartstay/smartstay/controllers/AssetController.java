@@ -55,4 +55,9 @@ public class AssetController {
         return assetsService.assignAsset(assetId, request);
     }
 
+    @DeleteMapping("/{assetId}")
+    public ResponseEntity<?> deleteAssetById(@PathVariable("assetId") int assetId) {
+        return assetsService.deleteAssetById(assetId);
+    }
+
 }

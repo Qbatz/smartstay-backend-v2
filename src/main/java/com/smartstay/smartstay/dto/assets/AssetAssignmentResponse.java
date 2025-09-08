@@ -11,7 +11,6 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AssetAssignmentResponse {
-
     private Integer assetId;
     private String assetName;
     private String brandName;
@@ -21,5 +20,16 @@ public class AssetAssignmentResponse {
     private Date purchaseDate;
     private Double price;
     private String hostelName;
+    private String hostelId;
+    private Integer floorId;
+    private Integer vendorId;
+    private String vendorName;
+    private String floorName;
+    private Integer roomId;
+    private String roomName;
+    private Integer bedId;
+    private String bedName;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy HH:mm:ss")
+    private Date assignedAt;
     private String assignmentStatus;
 }
