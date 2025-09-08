@@ -274,6 +274,10 @@ public class BedsService {
                     return false;
                 }
             }
+
+            if (bookingsV1.getLeavingDate() == null && bookingsV1.getExpectedJoiningDate() == null) {
+
+            }
         }
 
         return false;

@@ -26,7 +26,7 @@ public class TransactionService {
             transactionV1.setAmount(amount);
             transactionV1.setType(TransactionType.BOOKING.name());
             transactionV1.setCreatedAt(new Date());
-            transactionV1.setStatus(PaymentStatus.PAID.name());
+            transactionV1.setStatus(PaymentStatus.PENDING.name());
             transactionV1.setCreatedBy(authentication.getName());
             transactionRespository.save(transactionV1);
 
@@ -44,7 +44,7 @@ public class TransactionService {
             transactionV1.setAmount(amount);
             transactionV1.setType(TransactionType.ADVANCE.name());
             transactionV1.setCreatedAt(new Date());
-            transactionV1.setStatus(PaymentStatus.PAID.name());
+            transactionV1.setStatus(PaymentStatus.PENDING.name());
             transactionV1.setCreatedBy(authentication.getName());
 
             transactionRespository.save(transactionV1);

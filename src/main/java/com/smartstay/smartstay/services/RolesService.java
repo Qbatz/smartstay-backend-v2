@@ -261,6 +261,9 @@ public class RolesService {
     }
 
     public boolean checkRoleIdExistForHostel(int roleId, String hostelId) {
+        if (roleId == 1 || roleId == 2 || roleId == 3 || roleId == 4) {
+            return true;
+        }
         return rolesRepository.findByRoleIdAndHostelId(roleId, hostelId) != null;
     }
   
