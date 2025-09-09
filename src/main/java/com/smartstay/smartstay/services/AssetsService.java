@@ -84,13 +84,18 @@ public class AssetsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        VendorV1 vendorV1 = vendorRepository.findByVendorIdAndHostelId(request.vendorId(), hostelId);
+
         boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
         if (!hostelV1) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
-        if (vendorV1 == null) {
-            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.FORBIDDEN);
+        AssetsV1 asset = new AssetsV1();
+        if (request.vendorId() != null && request.vendorId() != 0) {
+            VendorV1 vendorV1 = vendorRepository.findByVendorIdAndHostelId(request.vendorId(), hostelId);
+            if (vendorV1 == null) {
+                return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.FORBIDDEN);
+            }
+            asset.setVendorId(request.vendorId());
         }
         boolean bankingV1 = bankingRepository.existsByHostelIdAndBankId(hostelId,request.bankingId());
         if (!bankingV1) {
@@ -108,10 +113,10 @@ public class AssetsService {
             }
         }
 
-        AssetsV1 asset = new AssetsV1();
+
         asset.setAssetName(request.assetName());
         asset.setProductName(request.productName());
-        asset.setVendorId(request.vendorId());
+
         asset.setBrandName(request.brandName());
         asset.setSerialNumber(request.serialNumber());
         if (request.purchaseDate() != null) {
@@ -276,6 +281,26 @@ public class AssetsService {
         assetsRepository.save(asset);
 
         return ResponseEntity.ok(Utils.ASSIGNED);
+    }
+
+    public ResponseEntity<?> deleteAssetById(int assetId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users users = usersService.findUserByUserId(userId);
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        AssetsV1 existingAsset = assetsRepository.findByAssetId(assetId);
+        if (existingAsset != null) {
+            existingAsset.setIsDeleted(true);
+            existingAsset.setUpdatedAt(new Date());
+            assetsRepository.save(existingAsset);
+            return new ResponseEntity<>("Deleted", HttpStatus.OK);
+        }
+        return new ResponseEntity<>("No Asset found", HttpStatus.BAD_REQUEST);
+
     }
 
 

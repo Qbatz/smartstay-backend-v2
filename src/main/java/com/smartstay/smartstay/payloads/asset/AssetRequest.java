@@ -9,7 +9,6 @@ public record AssetRequest(
         String assetName,
         String productName,
 
-        @NotNull(message = "Vendor ID must not be null")
         Integer vendorId,
 
         String brandName,
