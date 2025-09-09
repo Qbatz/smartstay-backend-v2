@@ -29,7 +29,7 @@ public class AssetAssignmentResponse {
     private String roomName;
     private Integer bedId;
     private String bedName;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
     private Date assignedAt;
     private String assignmentStatus;
 }

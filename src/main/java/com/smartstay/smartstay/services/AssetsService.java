@@ -102,12 +102,12 @@ public class AssetsService {
             return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
         }
 
-        boolean assetNameExists = assetsRepository.existsByAssetNameAndIsDeletedFalse(request.assetName());
+        boolean assetNameExists = assetsRepository.existsByAssetNameAndIsDeletedFalseAndHostelId(request.assetName(),hostelId);
         if (assetNameExists) {
             return new ResponseEntity<>(Utils.ASSET_NAME_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
         }
         if (request.serialNumber() != null && !request.serialNumber().isEmpty()) {
-            boolean serialNumberExists = assetsRepository.existsBySerialNumberAndIsDeletedFalse(request.serialNumber());
+            boolean serialNumberExists = assetsRepository.existsBySerialNumberAndIsDeletedFalseAndHostelId(request.serialNumber(),hostelId);
             if (serialNumberExists) {
                 return new ResponseEntity<>(Utils.SERIAL_NUMBER_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
             }
@@ -120,8 +120,8 @@ public class AssetsService {
         asset.setBrandName(request.brandName());
         asset.setSerialNumber(request.serialNumber());
         if (request.purchaseDate() != null) {
-            String formattedDate = request.purchaseDate().replace("-", "/");
-            asset.setPurchaseDate(Utils.stringToDate(formattedDate, Utils.DATE_FORMAT_YY));
+            String formattedDate = request.purchaseDate().replace("/", "-");
+            asset.setPurchaseDate(Utils.stringToDate(formattedDate, Utils.USER_INPUT_DATE_FORMAT));
         }
         asset.setPrice(request.price());
         asset.setModeOfPayment(bankingRepository.findByBankId(request.bankingId()));
@@ -159,7 +159,7 @@ public class AssetsService {
             return new ResponseEntity<>(Utils.INVALID_ASSET, HttpStatus.NOT_FOUND);
         }
         if (request.assetName() != null) {
-            boolean assetNameExists = assetsRepository.existsByAssetNameAndIsDeletedFalseAndAssetIdNot(request.assetName(), assetId);
+            boolean assetNameExists = assetsRepository.existsByAssetNameAndIsDeletedFalseAndAssetIdNotAndHostelId(request.assetName(), assetId, hostelId);
             if (assetNameExists) {
                 return new ResponseEntity<>(Utils.ASSET_NAME_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
             }
@@ -168,15 +168,15 @@ public class AssetsService {
         if (request.productName() != null) asset.setProductName(request.productName());
         if (request.brandName() != null) asset.setBrandName(request.brandName());
         if (request.serialNumber() != null) {
-            boolean serialNumberExists = assetsRepository.existsBySerialNumberAndIsDeletedFalseAndAssetIdNot(request.serialNumber(), assetId);
+            boolean serialNumberExists = assetsRepository.existsBySerialNumberAndIsDeletedFalseAndAssetIdNotAndHostelId(request.serialNumber(), assetId, hostelId);
             if (serialNumberExists) {
                 return new ResponseEntity<>(Utils.SERIAL_NUMBER_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
             }
             asset.setSerialNumber(request.serialNumber());
         }
         if (request.purchaseDate() != null) {
-            String formattedDate = request.purchaseDate().replace("-", "/");
-            asset.setPurchaseDate(Utils.stringToDate(formattedDate, Utils.DATE_FORMAT_YY));
+            String formattedDate = request.purchaseDate().replace("/", "-");
+            asset.setPurchaseDate(Utils.stringToDate(formattedDate, Utils.USER_INPUT_DATE_FORMAT));
         }
         if (request.price() != null) asset.setPrice(request.price());
         if (request.modeOfPayment() != null) {
@@ -273,8 +273,8 @@ public class AssetsService {
         asset.setUpdatedAt(new Date());
         if (request.assignedAt() != null) {
             asset.setAssignedAt(Utils.stringToDate(
-                    request.assignedAt().replace("-", "/"),
-                    Utils.DATE_FORMAT_YY
+                    request.assignedAt().replace("/", "-"),
+                    Utils.USER_INPUT_DATE_FORMAT
             ));
         }
 

@@ -11,10 +11,10 @@ import java.util.List;
 public interface AssetsRepository extends JpaRepository<AssetsV1, Integer> {
 
     List<AssetsV1> findAllByHostelId(String hostelId);
-    boolean existsByAssetNameAndIsDeletedFalse(String assetName);
-    boolean existsByAssetNameAndIsDeletedFalseAndAssetIdNot(String assetName, Integer assetId);
-    boolean existsBySerialNumberAndIsDeletedFalse(String serialNumber);
-    boolean existsBySerialNumberAndIsDeletedFalseAndAssetIdNot(String serialNumber, Integer assetId);
+    boolean existsByAssetNameAndIsDeletedFalseAndHostelId(String assetName,String hostelId);
+    boolean existsByAssetNameAndIsDeletedFalseAndAssetIdNotAndHostelId(String assetName, Integer assetId, String hostelId);
+    boolean existsBySerialNumberAndIsDeletedFalseAndHostelId(String serialNumber, String hostelId);
+    boolean existsBySerialNumberAndIsDeletedFalseAndAssetIdNotAndHostelId(String serialNumber, Integer assetId, String hostelId);
     AssetsV1 findByAssetId(int assetId);
     AssetsV1 findByAssetIdAndHostelId(int assetId,String hostelId);
 
