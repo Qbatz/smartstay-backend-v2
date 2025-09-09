@@ -4,12 +4,13 @@ import com.smartstay.smartstay.dto.customer.Deductions;
 
 import java.util.List;
 
-public record InvoicesList(String customerFirstName,
-                           String customerLastName,
+public record InvoicesList(String firstName,
+                           String lastName,
                            String fullName,
                            String customerId,
                            Double invoiceAmount,
                            String invoiceId,
+                           Double paidAmount,
                            Double cgst,
                            Double sgst,
                            Double gst,

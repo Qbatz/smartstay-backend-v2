@@ -5,6 +5,7 @@ import java.util.Date;
 public interface Invoices {
     String getInvoiceId();
     Double getInvoiceAmount();
+    Double getAmount();
     Double getGst();
     Double getCgst();
     Double getSgst();
