@@ -35,7 +35,7 @@ public class InvoicesV1 {
     String invoiceMode;
     String createdBy;
     String updatedBy;
-    Date invoicGeneratedDate;
+    Date invoiceGeneratedDate;
     Date invoiceDueDate;
     Date createdAt;
     Date updatedAt;
