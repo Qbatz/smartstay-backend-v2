@@ -5,9 +5,10 @@ import com.smartstay.smartstay.responses.complaint.CommentResponse;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.smartstay.smartstay.util.Utils.OUTPUT_DATE_FORMAT;
 
 @Setter
 @Getter
@@ -27,7 +28,7 @@ public class ComplaintResponseDto {
     private Integer bedId;
     private String bedName;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = OUTPUT_DATE_FORMAT, timezone = "Asia/Kolkata")
     private java.util.Date complaintDate;
     private String description;
     private String assigneeId;
