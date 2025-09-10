@@ -1,7 +1,10 @@
 package com.smartstay.smartstay;
 
-import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.BillTemplates;
+import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.repositories.*;
+import com.smartstay.smartstay.services.TemplatesService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -13,6 +16,9 @@ import java.util.Optional;
 
 @SpringBootApplication
 public class SmartstayApplication {
+
+	@Autowired
+	TemplatesService templatesService;
 
 	public static void main(String[] args) {
 		SpringApplication.run(SmartstayApplication.class, args);
@@ -298,5 +304,26 @@ public class SmartstayApplication {
 //			customerTypeRepository.save(customersType4);
 		};
 	}
+
+	@Bean
+	CommandLineRunner addBilltemplateToExistingHostels(BillTemplatesRepository billTemplatesRepository, HostelV1Repository hostelV1Repository) {
+		return args -> {
+			List<HostelV1> listHostels = hostelV1Repository.findAll();
+			listHostels.forEach(item -> {
+				BillTemplates billTemplates = billTemplatesRepository.getByHostelId(item.getHostelId());
+				if (billTemplates == null) {
+					com.smartstay.smartstay.payloads.templates.BillTemplates templates = new com.smartstay.smartstay.payloads.templates.BillTemplates(
+							item.getHostelId(),
+							item.getMobile(),
+							item.getEmailId(),
+							item.getHostelName()
+					);
+					templatesService.initialTemplateSetup(templates, item.getCreatedBy());
+				}
+			});
+		};
+	}
+
+
 
 }

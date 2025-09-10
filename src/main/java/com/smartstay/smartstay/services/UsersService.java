@@ -720,7 +720,13 @@ public class UsersService {
         if (userToUpdate == null) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
         }
-        if (!Utils.checkNullOrEmpty(payloads.role())) {
+        if (Utils.checkNullOrEmpty(payloads.emailId())) {
+            if (userRepository.getUsersCountByEmail(userToUpdate.getUserId(), payloads.emailId()) > 0) {
+                return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);
+            }
+            userToUpdate.setEmailId(payloads.emailId());
+        }
+        if (Utils.checkNullOrEmpty(payloads.role())) {
             if (!rolesService.checkRoleIdExistForHostel(payloads.role(), hostelId)) {
                 return new ResponseEntity<>(Utils.INVALID_ROLE, HttpStatus.BAD_REQUEST);
             }
