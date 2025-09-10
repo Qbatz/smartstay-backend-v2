@@ -55,6 +55,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     @Query("SELECT COUNT(c) FROM Customers c where c.mobile=:mobile and c.customerId!=:customerId")
     int findCustomersByMobile(@Param("customerId") String customerId, @Param("mobile") String mobile);
 
+           
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
             "FROM Customers c " +
             "WHERE c.emailId = :emailId AND c.hostelId = :hostelId " +
