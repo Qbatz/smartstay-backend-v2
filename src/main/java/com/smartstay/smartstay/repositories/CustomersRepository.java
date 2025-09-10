@@ -15,11 +15,21 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
 
     boolean existsByEmailId(String emailId);
     boolean existsByHostelIdAndCustomerId(String hostelId,String customerId);
-    boolean existsByHostelIdAndCustomerIdAndCurrentStatusIn(
-            String hostelId,
-            String customerId,
-            List<String> statuses
-    );
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
+            "FROM Customers c " +
+            "WHERE c.hostelId = :hostelId " +
+            "AND c.customerId = :customerId " +
+            "AND c.currentStatus IN (:statuses)")
+    boolean existsByHostelIdAndCustomerIdAndStatusesIn(@Param("hostelId") String hostelId,
+                                                          @Param("customerId") String customerId,
+                                                          @Param("statuses") List<String> statuses);
+
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
+            "FROM Customers c " +
+            "WHERE c.hostelId = :hostelId " +
+            "AND c.currentStatus IN (:statuses)")
+    boolean existsByHostelIdAndCurrentStatusIn(@Param("hostelId") String hostelId,
+                                               @Param("statuses") List<String> statuses);
 
     @Query(value = """
             SELECT cus.first_name AS firstName, cus.city, cus.mobile, cus.state, cus.joining_date, 
@@ -45,12 +55,21 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     @Query("SELECT COUNT(c) FROM Customers c where c.mobile=:mobile and c.customerId!=:customerId")
     int findCustomersByMobile(@Param("customerId") String customerId, @Param("mobile") String mobile);
 
-//    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
-//           "FROM Customers c " +
-//           "WHERE c.emailId = :emailId AND c.hostelId = :hostelId " +
-//           "AND c.isActive = true AND c.currentStatus != :status")
-//    boolean existsByEmailIdAndHostelIdAndActiveStatus(@Param("emailId") String emailId,
-//                                                      @Param("hostelId") String hostelId,
-//                                                      @Param("status") String status);
+           
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
+            "FROM Customers c " +
+            "WHERE c.emailId = :emailId AND c.hostelId = :hostelId " +
+            "AND c.currentStatus NOT IN (:statuses)")
+    boolean existsByEmailIdAndHostelIdAndStatusesNotIn(@Param("emailId") String emailId,
+                                                       @Param("hostelId") String hostelId,
+                                                       @Param("statuses") List<String> statuses);
+
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
+            "FROM Customers c " +
+            "WHERE c.mobile = :mobile AND c.hostelId = :hostelId " +
+            "AND c.currentStatus NOT IN (:statuses)")
+    boolean existsByMobileAndHostelIdAndStatusesNotIn(@Param("mobile") String mobile,
+                                                      @Param("hostelId") String hostelId,
+                                                      @Param("statuses") List<String> statuses);
 
 }

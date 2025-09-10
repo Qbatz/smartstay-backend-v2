@@ -133,7 +133,8 @@ public class ComplaintsService {
                 CustomerStatus.ON_NOTICE.name()
         );
 
-        boolean customerExist = customersRepository.existsByHostelIdAndCustomerIdAndCurrentStatusIn(request.hostelId(), request.customerId(),currentStatus);
+
+        boolean customerExist = customersRepository.existsByHostelIdAndCustomerIdAndStatusesIn(request.hostelId(), request.customerId(),currentStatus);
          if (!customerExist){
             return new ResponseEntity<>("Customer not found.", HttpStatus.BAD_REQUEST);
         }
@@ -141,8 +142,8 @@ public class ComplaintsService {
         complaint.setCustomerId(request.customerId());
         complaint.setComplaintTypeId(request.complaintTypeId());
         if (request.complaintDate() != null) {
-            String formattedDate = request.complaintDate().replace("-", "/");
-            complaint.setComplaintDate(Utils.stringToDate(formattedDate, Utils.DATE_FORMAT_YY));
+            String formattedDate = request.complaintDate().replace("/", "-");
+            complaint.setComplaintDate(Utils.stringToDate(formattedDate, Utils.USER_INPUT_DATE_FORMAT));
         }
         complaint.setDescription(request.description());
         complaint.setCreatedAt(new Date());
