@@ -23,9 +23,18 @@ public class BillTemplateType {
     String qrCode;
     String invoiceNotes;
     String receiptNotes;
-    String termsAndCondition;
+    String invoiceTermsAndCondition;
+    String receiptTermsAndCondition;
     String invoiceTemplateColor;
     String receiptTemplateColor;
+    String receiptLogoUrl;
+    String invoiceLogoUrl;
+    String receiptPhoneNumber;
+    String invoicePhoneNumber;
+    String receiptMailId;
+    String invoiceMailId;
+    String receiptSignatureUrl;
+    String invoiceSignatureUrl;
 
     @ManyToOne
     @JoinColumn(name = "template_id")

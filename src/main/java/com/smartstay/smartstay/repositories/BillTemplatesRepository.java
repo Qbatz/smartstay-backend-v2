@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface BillTemplatesRepository extends JpaRepository<BillTemplates, Integer> {
 
+    BillTemplates getByHostelId(String hostelId);
 }

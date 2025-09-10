@@ -9,6 +9,7 @@ import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
+import com.smartstay.smartstay.payloads.templates.BillTemplates;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.responses.Hostels;
 import com.smartstay.smartstay.responses.beds.BedsStatusCount;
@@ -62,6 +63,9 @@ public class HostelService {
 
     @Autowired
     private UsersService usersService;
+
+    @Autowired
+    private TemplatesService hostelTemplates;
 
 
     public ResponseEntity<?> addHostel(MultipartFile mainImage, List<MultipartFile> additionalImages, AddHostelPayloads payloads) {
@@ -127,6 +131,8 @@ public class HostelService {
 
             hostelV1.setAdditionalImages(listHostelImages);
         }
+        BillTemplates templates = new BillTemplates(hostelV1.getHostelId(), payloads.mobile(), payloads.emailId(), payloads.hostelName());
+        hostelTemplates.initialTemplateSetup(templates);
 
         Subscription subscription = subscriptionService.addSubscription(request, 1);
 

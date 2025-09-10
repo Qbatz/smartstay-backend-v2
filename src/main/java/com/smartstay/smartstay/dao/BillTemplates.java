@@ -19,9 +19,14 @@ public class BillTemplates {
     String hostelLogo;
     String hostelId;
     String mobile;
+    Long countryCode;
     String emailId;
     String digitalSignature;
     boolean isTemplateUpdated;
+    boolean isLogoCustomized;
+    boolean isEmailCustomized;
+    boolean isMobileCustomized;
+    boolean isSignatureCustomized;
     Date updatedAt;
     Date createdAt;
     String createdBy;
