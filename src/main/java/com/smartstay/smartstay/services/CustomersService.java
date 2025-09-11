@@ -393,7 +393,6 @@ public class CustomersService {
 
             bookingsService.addChecking(customerId, payloads);
 
-
             invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId());
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);

@@ -4,7 +4,6 @@ import com.smartstay.smartstay.Wrappers.BankingListMapper;
 import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.InvoicesV1;
-import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
@@ -28,7 +27,6 @@ public class InvoiceV1Service {
 
     @Autowired
     Authentication authentication;
-
     @Autowired
     TemplatesService templateService;
 
@@ -73,6 +71,18 @@ public class InvoiceV1Service {
         }
 
 
+    }
+
+    /**
+     * Using in transaction service.
+     * Changing anything here may impact in trasaction service
+     *
+     * userd inside transaction service
+     * @param invoiceId
+     * @return
+     */
+    public InvoicesV1 findInvoiceDetails(String invoiceId) {
+        return invoicesV1Repository.findById(invoiceId).orElse(null);
     }
 
     public ResponseEntity<?> getTransactions(String hostelId) {

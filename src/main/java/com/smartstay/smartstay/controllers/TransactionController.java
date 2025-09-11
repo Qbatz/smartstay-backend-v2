@@ -1,15 +1,14 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.services.TransactionService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/v2/transaction")
@@ -26,8 +25,8 @@ public class TransactionController {
     @Autowired
     TransactionService transactionService;
 
-    @PostMapping("/")
-    public ResponseEntity<?> recordPayment() {
-        return transactionService.recordPayment();
+    @PostMapping("/{hostelId}/{transactionId}")
+    public ResponseEntity<?> recordPayment(@PathVariable("hostelId") String hostelId, @PathVariable("transactionId") String invoiceId, @Valid  @RequestBody AddPayment addPayment) {
+        return transactionService.recordPayment(hostelId, invoiceId, addPayment);
     }
 }
