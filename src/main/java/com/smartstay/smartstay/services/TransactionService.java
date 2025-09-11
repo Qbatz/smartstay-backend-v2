@@ -7,6 +7,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.TransactionType;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -49,5 +50,10 @@ public class TransactionService {
 
             transactionRespository.save(transactionV1);
         }
+    }
+
+
+    public ResponseEntity<?> recordPayment() {
+        return null;
     }
 }

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TemplatesService {
@@ -37,15 +38,15 @@ public class TemplatesService {
         StringBuilder findPrefixRent = new StringBuilder();
         findPrefix.append("#ADV");
         findPrefixRent.append("#INV");
-        if (hostelName.length() > 3) {
-            String hostelNameShort = hostelName.replaceAll(" ", "").substring(0, 4).toUpperCase();
-            findPrefixRent.append(hostelNameShort);
-            findPrefix.append(hostelNameShort);
-        }
-        else {
-            findPrefixRent.append(hostelName.replaceAll(" ", "").toUpperCase());
-            findPrefix.append(hostelName.replaceAll(" ", "").toUpperCase());
-        }
+//        if (hostelName.length() > 3) {
+//            String hostelNameShort = hostelName.replaceAll(" ", "").substring(0, 4).toUpperCase();
+//            findPrefixRent.append(hostelNameShort);
+//            findPrefix.append(hostelNameShort);
+//        }
+//        else {
+//            findPrefixRent.append(hostelName.replaceAll(" ", "").toUpperCase());
+//            findPrefix.append(hostelName.replaceAll(" ", "").toUpperCase());
+//        }
 
         BillTemplates templates = new BillTemplates();
         templates.setMobile(tmpl.mobile());
@@ -184,5 +185,23 @@ public class TemplatesService {
             return new ResponseEntity<>(Utils.TEMPLATE_NOT_AVAILABLE, HttpStatus.NO_CONTENT);
         }
         return new ResponseEntity<>(new TemplateMapper().apply(templates), HttpStatus.OK);
+    }
+
+    public String[] getBillTemplate(String hostelId, String type) {
+        String[] templates = new String[2];
+        BillTemplates tmp = templateRepository.getByHostelId(hostelId);
+        if (tmp == null) {
+            return null;
+        }
+        List<BillTemplateType> templateType = tmp.getTemplateTypes()
+                .stream()
+                .filter(item -> item.getInvoiceType().equalsIgnoreCase(type))
+                .toList();
+        if (!templateType.isEmpty()) {
+            templates[0] = templateType.get(0).getInvoicePrefix();
+            templates[1] = templateType.get(0).getInvoiceSuffix();
+        }
+
+        return templates;
     }
 }

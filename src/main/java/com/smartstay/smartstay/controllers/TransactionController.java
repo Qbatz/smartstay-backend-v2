@@ -1,15 +1,18 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.services.InvoiceV1Service;
+import com.smartstay.smartstay.services.TransactionService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/v2/bills")
+@RequestMapping("/v2/transaction")
 @SecurityScheme(
         name = "Authorization",
         type = SecuritySchemeType.HTTP,
@@ -18,15 +21,13 @@ import org.springframework.web.bind.annotation.*;
 )
 @SecurityRequirement(name = "Authorization")
 @CrossOrigin("*")
-public class InvoiceController {
+public class TransactionController {
 
     @Autowired
-    private InvoiceV1Service invoiceV1Service;
+    TransactionService transactionService;
 
-    @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getAllTransactions(@PathVariable("hostelId") String hostelId) {
-        return invoiceV1Service.getTransactions(hostelId);
+    @PostMapping("/")
+    public ResponseEntity<?> recordPayment() {
+        return transactionService.recordPayment();
     }
-
-
 }

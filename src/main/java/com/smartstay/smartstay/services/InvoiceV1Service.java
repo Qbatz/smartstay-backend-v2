@@ -7,10 +7,13 @@ import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.ennum.InvoiceMode;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -26,12 +29,38 @@ public class InvoiceV1Service {
     @Autowired
     Authentication authentication;
 
+    @Autowired
+    TemplatesService templateService;
+
     public void addInvoice(String customerId, Double amount, String type, String hostelId) {
         if (authentication.isAuthenticated()) {
+            StringBuilder invoiceNumber = new StringBuilder();
+            String[] prefixSuffix = templateService.getBillTemplate(hostelId, InvoiceType.ADVANCE.name());
+            InvoicesV1 existingV1 = null;
+            if (prefixSuffix != null) {
+                invoiceNumber.append(prefixSuffix[0]);
+                invoiceNumber.append("-");
+                invoiceNumber.append(prefixSuffix[1]);
+                existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(prefixSuffix[0]);
+            }
             InvoicesV1 invoicesV1 = new InvoicesV1();
+            if (existingV1 != null) {
+                invoiceNumber = new StringBuilder();
+                invoiceNumber.append(prefixSuffix[0]);
+
+                String[] suffix = existingV1.getInvoiceNumber().split("-");
+                if (suffix.length > 1) {
+                    invoiceNumber.append("-");
+                    int suff = Integer.parseInt(suffix[1]) + 1;
+                    invoiceNumber.append(String.format("%03d", suff));
+                }
+            }
+
+
             invoicesV1.setAmount(amount);
             invoicesV1.setInvoiceType(type);
             invoicesV1.setCustomerId(customerId);
+            invoicesV1.setInvoiceNumber(invoiceNumber.toString());
             invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
             invoicesV1.setCreatedBy(authentication.getName());
             invoicesV1.setCreatedAt(new Date());

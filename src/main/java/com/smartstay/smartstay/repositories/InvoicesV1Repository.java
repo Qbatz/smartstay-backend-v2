@@ -2,12 +2,14 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.invoices.Invoices;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> {
@@ -25,4 +27,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """, nativeQuery = true)
     List<Invoices> findByHostelId(@Param("hostelId") String hostelId);
 
+    @Query(value = """
+    SELECT * FROM invoicesv1
+    WHERE invoice_number LIKE CONCAT(:prefix, '%')
+    ORDER BY CAST(SUBSTRING(invoice_number, LENGTH(:prefix) + 2) AS UNSIGNED) DESC
+    LIMIT 1
+""", nativeQuery = true)
+    InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix);
 }

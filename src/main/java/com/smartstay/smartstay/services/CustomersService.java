@@ -392,19 +392,9 @@ public class CustomersService {
             bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
 
             bookingsService.addChecking(customerId, payloads);
-            Double advanceAmount = payloads.advanceAmount();
 
-//            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId());
-            if (!listDeductions.isEmpty()) {
-//                invoiceService.addInvoice(customerId, );
-                advanceAmount = advanceAmount + listDeductions
-                        .stream()
-                        .mapToDouble(Deductions::getAmount)
-                        .sum();
 
-            }
-
-            invoiceService.addInvoice(customerId, advanceAmount, InvoiceType.ADVANCE.name(), payloads.hostelId());
+            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId());
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }else {
