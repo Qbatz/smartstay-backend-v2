@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
+import static com.smartstay.smartstay.util.Utils.OUTPUT_DATE_FORMAT;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,7 +18,7 @@ public class AssetAssignmentResponse {
     private String brandName;
     private String productName;
     private String serialNumber;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = OUTPUT_DATE_FORMAT, timezone = "Asia/Kolkata")
     private Date purchaseDate;
     private Double price;
     private String hostelName;
@@ -29,7 +31,7 @@ public class AssetAssignmentResponse {
     private String roomName;
     private Integer bedId;
     private String bedName;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = OUTPUT_DATE_FORMAT, timezone = "Asia/Kolkata")
     private Date assignedAt;
     private String assignmentStatus;
 }

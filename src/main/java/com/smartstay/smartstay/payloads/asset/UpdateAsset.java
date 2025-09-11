@@ -11,6 +11,7 @@ public record UpdateAsset(
         Double price,
         String modeOfPayment,
         String createdBy,
+        int vendorId,
          Boolean isActive
 ) {
 }

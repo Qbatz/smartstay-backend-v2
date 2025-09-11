@@ -158,6 +158,13 @@ public class AssetsService {
         if (asset == null) {
             return new ResponseEntity<>(Utils.INVALID_ASSET, HttpStatus.NOT_FOUND);
         }
+        VendorV1 vendorV1 = vendorRepository.findByVendorIdAndHostelId(request.vendorId(), hostelId);
+        if (vendorV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.FORBIDDEN);
+        }else {
+            asset.setVendorId(request.vendorId());
+        }
+
         if (request.assetName() != null) {
             boolean assetNameExists = assetsRepository.existsByAssetNameAndIsDeletedFalseAndAssetIdNotAndHostelId(request.assetName(), assetId, hostelId);
             if (assetNameExists) {
