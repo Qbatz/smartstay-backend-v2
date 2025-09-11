@@ -2,9 +2,10 @@ package com.smartstay.smartstay.responses.complaint;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+
+import static com.smartstay.smartstay.util.Utils.OUTPUT_DATE_FORMAT;
 
 public interface ComplaintResponse {
     Integer getComplaintId();
@@ -22,8 +23,8 @@ public interface ComplaintResponse {
     Integer getBedId();
     String getBedName();
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
-    LocalDate getComplaintDate();
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = OUTPUT_DATE_FORMAT, timezone = "Asia/Kolkata")
+    Date getComplaintDate();
     String getDescription();
     String getAssigneeName();
 

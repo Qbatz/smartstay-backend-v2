@@ -864,7 +864,7 @@ public class CustomersService {
                 customers.getLastName(),
                 fullName,
                 customers.getEmailId(),
-                user.getMobileNo(),
+                customers.getMobile(),
                 "91",
                 initials.toString(),
                 customers.getProfilePic(),
