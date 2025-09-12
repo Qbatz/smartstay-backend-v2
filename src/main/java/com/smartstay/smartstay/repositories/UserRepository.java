@@ -87,6 +87,7 @@ public interface UserRepository extends JpaRepository<Users, String> {
     @Query(value = """
                SELECT usr.user_id AS userId, usr.first_name AS firstName,
                                                           usr.last_name AS lastName,
+                                                          CONCAT_WS(' ', usr.first_name, usr.last_name) AS userName,
                                                           usr.mobile_no AS mobileNo,
                                                           usr.email_id AS mailId,
                                                           usr.role_id AS roleId,
