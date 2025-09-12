@@ -5,10 +5,9 @@ import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
-import com.smartstay.smartstay.ennum.PaymentStatus;
-import com.smartstay.smartstay.ennum.TransactionMode;
-import com.smartstay.smartstay.ennum.TransactionType;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
 import com.smartstay.smartstay.util.Utils;
@@ -36,6 +35,8 @@ public class TransactionService {
     private PaymentSummaryService paymentSummaryService;
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private BankTransactionService bankTransactionService;
     @Autowired
     private TransactionV1Repository transactionRespository;
 
@@ -161,6 +162,16 @@ public class TransactionService {
 
         if (response == 1) {
             invoiceService.recordPayment(invoiceId, typeOfPayment);
+
+            TransactionDto transaction = new TransactionDto(payment.bankId(),
+                    payment.referenceId(),
+                    payment.amount(),
+                    BankTransactionType.CREDIT.name(),
+                    BankSource.INVOICE.name(),
+                    hostelId);
+
+            bankTransactionService.addTransaction(transaction);
+
             return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
         }
 

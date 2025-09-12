@@ -237,11 +237,27 @@ public class Utils {
         return ChronoUnit.DAYS.between(start, end);
     }
 
-    public static long findNoOfDaysInCurrentMonth(Date date) {
+    public static long findNoOfDaysLeftInCurrentMonth(Date date) {
         LocalDate localDate = date.toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate();
         LocalDate lastDayOfMonth = localDate.withDayOfMonth(localDate.lengthOfMonth());
         return ChronoUnit.DAYS.between(localDate, lastDayOfMonth) + 1;
+    }
+
+    public static long findNoOfDaysInCurrentMonth(Date date) {
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return localDate.lengthOfMonth();
+    }
+
+    public static Date addDaysToDate(Date date, int noOfDays) {
+        return Date.from(date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .plusDays(noOfDays)
+                .atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 }

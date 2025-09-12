@@ -21,7 +21,7 @@ public class BankTransactionsV1 {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int transactionId;
     private String bankId;
-    private String referenceId;
+    private String referenceNumber;
     private Double amount;
     //credit or debit
     private String type;
@@ -29,5 +29,5 @@ public class BankTransactionsV1 {
     private String source;
     private String hostelId;
     private Date createdAt;
-    private Date createdBy;
+    private String createdBy;
 }

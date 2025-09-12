@@ -907,10 +907,11 @@ public class CustomersService {
 
     public void calculateRentAndCreateRentalInvoice(Customers customers,  CheckInRequest payloads) {
         long noOfDaysInCurrentMonth = Utils.findNoOfDaysInCurrentMonth(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        long noOfDaysLeftInCurrentMonth = Utils.findNoOfDaysLeftInCurrentMonth(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
         double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
         double finalRent = 0.0;
         if (noOfDaysInCurrentMonth < 24) {
-            finalRent = calculateRentPerDay * noOfDaysInCurrentMonth;
+            finalRent = calculateRentPerDay * noOfDaysLeftInCurrentMonth;
             if (finalRent > payloads.rentalAmount()) {
                 finalRent = payloads.rentalAmount();
             }
