@@ -56,8 +56,8 @@ public class InvoiceV1Service {
                 }
             }
 
-
-            invoicesV1.setAmount(amount);
+            int amount1 = amount.intValue();
+            invoicesV1.setAmount(Double.valueOf(String.valueOf(amount1)));
             invoicesV1.setInvoiceType(type);
             invoicesV1.setCustomerId(customerId);
             invoicesV1.setInvoiceNumber(invoiceNumber.toString());

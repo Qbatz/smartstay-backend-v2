@@ -5,8 +5,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public record AddPayment(
-        @Pattern(regexp = "CARD|BANK|UPI|CASH|card|bank|upi|cash", message = "Mode of transaction must be either 'card' or 'upi' or 'bank' or 'cash'")
-        String modeOfTransaction,
+        @NotNull(message = "Select bank account required")
+        @NotEmpty(message = "Select bank account required")
+        String bankId,
         String paymentDate,
         String referenceId,
         @NotNull(message = "Amount required")

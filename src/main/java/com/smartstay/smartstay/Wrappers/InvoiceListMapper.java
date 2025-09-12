@@ -18,6 +18,10 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         fullNameBuilder.append(invoices.getFirstName());
         fullNameBuilder.append(" ");
         fullNameBuilder.append(invoices.getLastName());
+        Double paidAmount = 0.0;
+        if (invoices.getPaidAmount() != null) {
+            paidAmount = invoices.getPaidAmount();
+        }
 
         ObjectMapper mapper = new ObjectMapper();
         List<Deductions> listDeductions = null;
@@ -36,7 +40,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 invoices.getCustomerId(),
                 invoices.getAmount(),
                 invoices.getInvoiceId(),
-                invoices.getPaidAmount(),
+                paidAmount,
                 invoices.getCgst(),
                 invoices.getSgst(),
                 invoices.getGst(),

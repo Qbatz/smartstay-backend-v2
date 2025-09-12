@@ -324,4 +324,8 @@ public class BankingService {
         return value != null && !value.trim().isEmpty();
     }
 
+    public boolean checkBankExist(String bankId) {
+        return bankingV1Repository.findByBankId(bankId) != null;
+    }
+
 }

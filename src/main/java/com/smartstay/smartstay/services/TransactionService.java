@@ -35,6 +35,8 @@ public class TransactionService {
     @Autowired
     private PaymentSummaryService paymentSummaryService;
     @Autowired
+    private BankingService bankingService;
+    @Autowired
     private TransactionV1Repository transactionRespository;
 
     /**
@@ -87,6 +89,7 @@ public class TransactionService {
         if (!Utils.checkNullOrEmpty(invoiceId)) {
             return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
         }
+
         Users user = usersService.findUserByUserId(authentication.getName());
         if (user == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -97,11 +100,14 @@ public class TransactionService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BILLS, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!Utils.checkNullOrEmpty(payment.modeOfTransaction())) {
+        if (!Utils.checkNullOrEmpty(payment.bankId())) {
             return new ResponseEntity<>(Utils.REQUIRED_TRANSACTION_MODE, HttpStatus.BAD_REQUEST);
         }
         if (!Utils.checkNullOrEmpty(payment.amount())) {
             return new ResponseEntity<>(Utils.AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (!bankingService.checkBankExist(payment.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
 
         InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(invoiceId);
@@ -142,19 +148,8 @@ public class TransactionService {
             transactionV1.setPaidAt(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
         }
 
-        if (payment.modeOfTransaction().equalsIgnoreCase(TransactionMode.BANK.name())) {
-            transactionV1.setMode(TransactionMode.BANK.name());
-        }
-        else if (payment.modeOfTransaction().equalsIgnoreCase(TransactionMode.CARD.name())) {
-            transactionV1.setMode(TransactionMode.CARD.name());
-        }
-        else if (payment.modeOfTransaction().equalsIgnoreCase(TransactionMode.CASH.name())) {
-            transactionV1.setMode(TransactionMode.CASH.name());
-        }
-        else if (payment.modeOfTransaction().equalsIgnoreCase(TransactionMode.UPI.name())) {
-            transactionV1.setMode(TransactionMode.UPI.name());
-        }
 
+        transactionV1.setBankId(payment.bankId());
         transactionV1.setReferenceNumber(payment.referenceId());
         transactionV1.setUpdatedBy(authentication.getName());
         transactionV1.setInvoiceId(invoiceId);

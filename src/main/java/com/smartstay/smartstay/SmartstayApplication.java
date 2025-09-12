@@ -1,7 +1,6 @@
 package com.smartstay.smartstay;
 
-import com.smartstay.smartstay.dao.BillTemplates;
-import com.smartstay.smartstay.dao.HostelV1;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.services.TemplatesService;
 import org.springframework.beans.factory.annotation.Autowired;

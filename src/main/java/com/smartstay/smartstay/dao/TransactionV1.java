@@ -25,7 +25,7 @@ public class TransactionV1 {
     private String invoiceId;
     private String isInvoice;
     //card/gpay or cash or bank
-    private String mode;
+    private String bankId;
     private String referenceNumber;
     private Date paidAt;
     private String updatedBy;

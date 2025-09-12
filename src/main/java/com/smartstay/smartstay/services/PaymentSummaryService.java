@@ -37,7 +37,7 @@ public class PaymentSummaryService {
             paymentSummary.setCustomerMobile(summary.customerMobile());
             paymentSummary.setHostelId(summary.hostelId());
             paymentSummary.setDebitAmount(summary.amount());
-            paymentSummary.setBalance(-summary.amount());
+            paymentSummary.setBalance(summary.amount());
             paymentSummary.setLastInvoice(summary.invoiceId());
             paymentSummary.setLastUpdate(new Date());
         }
@@ -74,14 +74,18 @@ public class PaymentSummaryService {
             paymentSummary.setHostelId(summary.hostelId());
             paymentSummary.setCreditAmount(summary.amount());
             paymentSummary.setDebitAmount(0.0);
-            paymentSummary.setBalance(0.0);
+            paymentSummary.setBalance(-summary.amount());
             paymentSummary.setLastInvoice(summary.invoiceId());
             paymentSummary.setLastPayment(summary.amount());
             paymentSummary.setLastUpdate(new Date());
         }
         else {
+            Double creditAmount = paymentSummary.getCreditAmount();
+            if (creditAmount == null) {
+                creditAmount = 0.0;
+            }
             paymentSummary.setLastInvoice(summary.invoiceId());
-            paymentSummary.setCreditAmount(paymentSummary.getCreditAmount() + summary.amount());
+            paymentSummary.setCreditAmount(creditAmount + summary.amount());
             paymentSummary.setBalance(paymentSummary.getBalance() - summary.amount());
             paymentSummary.setLastUpdate(new Date());
             paymentSummary.setLastPayment(summary.amount());
