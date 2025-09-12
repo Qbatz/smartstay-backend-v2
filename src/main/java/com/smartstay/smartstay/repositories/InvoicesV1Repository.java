@@ -2,12 +2,14 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.invoices.Invoices;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> {
@@ -19,10 +21,18 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             invc.invoice_due_date as invoiceDueDate, invc.invoice_type as invoiceType, 
             invc.payment_status as paymentStatus, invc.updated_at as updatedAt, 
             invc.invoice_number as invoiceNumber, customers.first_name as firstName, customers.last_name as lastName, 
-            advance.advance_amount as advanceAmount, advance.deductions as deductions from 
-            invoicesv1 invc inner join customers customers on customers.customer_id=invc.customer_id 
+            advance.advance_amount as advanceAmount, advance.deductions as deductions,
+            (SELECT sum(trans.paid_amount) FROM transactionv1 trans where trans.invoice_id=invc.invoice_id) as paidAmount  
+            from invoicesv1 invc inner join customers customers on customers.customer_id=invc.customer_id 
             left outer join advance advance on advance.customer_id=invc.customer_id where invc.hostel_id=:hostelId AND invc.invoice_type not in('BOOKING')
             """, nativeQuery = true)
     List<Invoices> findByHostelId(@Param("hostelId") String hostelId);
 
+    @Query(value = """
+    SELECT * FROM invoicesv1
+    WHERE invoice_number LIKE CONCAT(:prefix, '%')
+    ORDER BY CAST(SUBSTRING(invoice_number, LENGTH(:prefix) + 2) AS UNSIGNED) DESC
+    LIMIT 1
+""", nativeQuery = true)
+    InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix);
 }

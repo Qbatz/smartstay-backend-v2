@@ -11,4 +11,8 @@ import java.util.List;
 public interface TransactionV1Repository extends JpaRepository<TransactionV1, String> {
 
         List<TransactionV1> findByCustomers(Customers customer);
+
+        List<TransactionV1> findByInvoiceId(String invoiceId);
+
+
 }

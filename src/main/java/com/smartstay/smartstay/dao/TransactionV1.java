@@ -18,13 +18,17 @@ public class TransactionV1 {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String transactionId;
     private String type;
-    private double amount;
+    private Double paidAmount;
     private String createdBy;
     private Date createdAt;
     private String status;
     private String invoiceId;
     private String isInvoice;
-    private String mode;
+    //card/gpay or cash or bank
+    private String bankId;
+    private String referenceNumber;
+    private Date paidAt;
+    private String updatedBy;
 
     @ManyToOne()
     @JoinColumn(name = "customer_id")

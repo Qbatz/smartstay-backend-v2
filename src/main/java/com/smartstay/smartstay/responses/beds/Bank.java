@@ -12,6 +12,8 @@ public record Bank(String bankingId,
                    String creditCardNumber,
                    String debitCardNumber,
                    String accountType,
-                   boolean isDefault) {
+                   boolean isDefault,
+                   String description,
+                   String cardType) {
 
 }

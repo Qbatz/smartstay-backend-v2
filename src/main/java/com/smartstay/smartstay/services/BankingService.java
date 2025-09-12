@@ -4,12 +4,14 @@ import com.smartstay.smartstay.Wrappers.BankingListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.transaction.TransactionDto;
 import com.smartstay.smartstay.ennum.BankAccountType;
 import com.smartstay.smartstay.ennum.BankPurpose;
 import com.smartstay.smartstay.ennum.CardType;
 import com.smartstay.smartstay.payloads.banking.AddBank;
 import com.smartstay.smartstay.payloads.banking.UpdateBank;
 import com.smartstay.smartstay.repositories.BankingRepository;
+import com.smartstay.smartstay.responses.banking.BankList;
 import com.smartstay.smartstay.responses.beds.Bank;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +44,8 @@ public class BankingService {
     @Autowired
     private HostelBankingService hostelBankingMapper;
 
-
+    @Autowired
+    private BankTransactionService transactionService;
 
     public ResponseEntity<?> addNewBankAccount(String hostelId, AddBank addBank) {
         if (!authentication.isAuthenticated()) {
@@ -128,6 +131,7 @@ public class BankingService {
         bankingV1.setBranchCode(addBank.branchCode());
         bankingV1.setAccountHolderName(addBank.holderName());
         bankingV1.setTransactionType(BankPurpose.BOTH.name());
+        bankingV1.setDescription(addBank.description());
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
             bankingV1.setAccountType(BankAccountType.BANK.name());
         }
@@ -186,7 +190,10 @@ public class BankingService {
                 .map(i -> new BankingListMapper().apply(i))
                 .collect(Collectors.toList());
 
-        return new ResponseEntity<>(listBankings, HttpStatus.OK);
+        List<TransactionDto> listTransactions =  transactionService.getAllTransactions(listMapping);
+
+        BankList listBank = new BankList(listBankings, listTransactions);
+        return new ResponseEntity<>(listBank, HttpStatus.OK);
 
     }
 
@@ -321,6 +328,10 @@ public class BankingService {
 
     private boolean isNotBlank(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    public boolean checkBankExist(String bankId) {
+        return bankingV1Repository.findByBankId(bankId) != null;
     }
 
 }

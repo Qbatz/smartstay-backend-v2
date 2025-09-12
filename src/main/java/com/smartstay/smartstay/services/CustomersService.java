@@ -14,6 +14,8 @@ import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.util.Utils;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -285,7 +287,7 @@ public class CustomersService {
 
                 customers.setExpJoiningDate(dt);
 
-                invoiceService.addInvoice(customers.getCustomerId(), payloads.bookingAmount(), InvoiceType.BOOKING.name(), hostelId);
+                invoiceService.addInvoice(customers.getCustomerId(), payloads.bookingAmount(), InvoiceType.BOOKING.name(), hostelId, customers.getMobile(), customers.getEmailId());
 //                List<TransactionV1> transactions = transactionService.addBookingAmount(customers, payloads.bookingAmount());
 //                customers.setTransactions(transactions);
                 customersRepository.save(customers);
@@ -392,19 +394,12 @@ public class CustomersService {
             bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
 
             bookingsService.addChecking(customerId, payloads);
-            Double advanceAmount = payloads.advanceAmount();
 
-//            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId());
-            if (!listDeductions.isEmpty()) {
-//                invoiceService.addInvoice(customerId, );
-                advanceAmount = advanceAmount + listDeductions
-                        .stream()
-                        .mapToDouble(Deductions::getAmount)
-                        .sum();
+            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId());
 
-            }
 
-            invoiceService.addInvoice(customerId, advanceAmount, InvoiceType.ADVANCE.name(), payloads.hostelId());
+
+            calculateRentAndCreateRentalInvoice(customers, payloads);
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }else {
@@ -907,5 +902,26 @@ public class CustomersService {
         customersRepository.save(customers);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+
+    public void calculateRentAndCreateRentalInvoice(Customers customers,  CheckInRequest payloads) {
+        long noOfDaysInCurrentMonth = Utils.findNoOfDaysInCurrentMonth(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        long noOfDaysLeftInCurrentMonth = Utils.findNoOfDaysLeftInCurrentMonth(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+        double finalRent = 0.0;
+        if (noOfDaysInCurrentMonth < 24) {
+            finalRent = calculateRentPerDay * noOfDaysLeftInCurrentMonth;
+            if (finalRent > payloads.rentalAmount()) {
+                finalRent = payloads.rentalAmount();
+            }
+        }
+        else {
+            finalRent = payloads.rentalAmount();
+        }
+
+        invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId());
+
+
     }
 }

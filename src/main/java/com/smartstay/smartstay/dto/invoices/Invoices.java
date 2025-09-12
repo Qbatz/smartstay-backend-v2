@@ -23,5 +23,6 @@ public interface Invoices {
     String getLastName();
     Double getAdvanceAmount();
     String getDeductions();
+    Double getPaidAmount();
 
 }

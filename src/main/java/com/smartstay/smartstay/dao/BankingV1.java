@@ -30,6 +30,7 @@ public class BankingV1 {
     String creditCardNumber;
     String debitCardNumber;
     String accountType;
+    String description;
     boolean isActive;
     boolean isDeleted;
     boolean isDefaultAccount;

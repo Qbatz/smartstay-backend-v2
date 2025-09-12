@@ -37,6 +37,7 @@ public class Utils {
     public static final String SERIAL_NUMBER_ALREADY_EXISTS = "Serial number already exists";
     public static final String PASSWORD_RESET_SUCCESS = "Password reset successfully.";
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
+
     public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
     public static final String USER_ASSIGNED = "User Assigned Successfully";
@@ -50,6 +51,10 @@ public class Utils {
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
     public static final String ACTIVE_USERS_FOUND = "Active users found";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
+    public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
+    public static final String INVALID_TRANSACTION_ID = "Invalid transaction id";
+    public static final String INVALID_INVOICE_ID = "Invalid invoice id";
+    public static final String PAYMENT_SUCCESS = "Payment Success";
     public static final String CUSTOMER_ON_NOTICE = "Customer is already on notice";
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
@@ -60,11 +65,14 @@ public class Utils {
     public static final String CHECK_IN_FUTURE_DATE_ERROR = "Check in cannot be accept for future dates";
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
     public static final String PAYLOADS_REQUIRED = "Payloads required";
+    public static final String TRY_AGAIN = "Try Again";
     public static final String INVALID_BED_ID = "Invalid bed id passed";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
     public static final String ACCOUNT_NO_ALREAY_EXISTS = "Account number already exists";
-
+    public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
+    public static final String INVALID_BANK_ID = "Invalid bank id";
+    public static final String AMOUNT_REQUIRED = "Amount required";
     public static final String NO_ACCOUNT_NO_FOUND = "No account number found";
     public static final String TEMPLATE_NOT_AVAILABLE = "Template not available for this hostel";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
@@ -227,5 +235,29 @@ public class Utils {
         LocalDate end   = date2.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
         return ChronoUnit.DAYS.between(start, end);
+    }
+
+    public static long findNoOfDaysLeftInCurrentMonth(Date date) {
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        LocalDate lastDayOfMonth = localDate.withDayOfMonth(localDate.lengthOfMonth());
+        return ChronoUnit.DAYS.between(localDate, lastDayOfMonth) + 1;
+    }
+
+    public static long findNoOfDaysInCurrentMonth(Date date) {
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return localDate.lengthOfMonth();
+    }
+
+    public static Date addDaysToDate(Date date, int noOfDays) {
+        return Date.from(date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .plusDays(noOfDays)
+                .atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 }
