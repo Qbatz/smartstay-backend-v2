@@ -128,6 +128,7 @@ public class BankingService {
         bankingV1.setBranchCode(addBank.branchCode());
         bankingV1.setAccountHolderName(addBank.holderName());
         bankingV1.setTransactionType(BankPurpose.BOTH.name());
+        bankingV1.setDescription(addBank.description());
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
             bankingV1.setAccountType(BankAccountType.BANK.name());
         }

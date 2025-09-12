@@ -54,6 +54,7 @@ public class Utils {
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
     public static final String INVALID_TRANSACTION_ID = "Invalid transaction id";
     public static final String INVALID_INVOICE_ID = "Invalid invoice id";
+    public static final String PAYMENT_SUCCESS = "Payment Success";
     public static final String CUSTOMER_ON_NOTICE = "Customer is already on notice";
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
@@ -64,6 +65,7 @@ public class Utils {
     public static final String CHECK_IN_FUTURE_DATE_ERROR = "Check in cannot be accept for future dates";
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
     public static final String PAYLOADS_REQUIRED = "Payloads required";
+    public static final String TRY_AGAIN = "Try Again";
     public static final String INVALID_BED_ID = "Invalid bed id passed";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
@@ -232,5 +234,13 @@ public class Utils {
         LocalDate end   = date2.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
         return ChronoUnit.DAYS.between(start, end);
+    }
+
+    public static long findNoOfDaysInCurrentMonth(Date date) {
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        LocalDate lastDayOfMonth = localDate.withDayOfMonth(localDate.lengthOfMonth());
+        return ChronoUnit.DAYS.between(localDate, lastDayOfMonth) + 1;
     }
 }

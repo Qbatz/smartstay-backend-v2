@@ -36,7 +36,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 invoices.getCustomerId(),
                 invoices.getAmount(),
                 invoices.getInvoiceId(),
-                0.0,
+                invoices.getPaidAmount(),
                 invoices.getCgst(),
                 invoices.getSgst(),
                 invoices.getGst(),

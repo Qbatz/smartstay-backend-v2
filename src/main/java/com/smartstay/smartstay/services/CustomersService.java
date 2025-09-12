@@ -14,6 +14,8 @@ import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.util.Utils;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -285,7 +287,7 @@ public class CustomersService {
 
                 customers.setExpJoiningDate(dt);
 
-                invoiceService.addInvoice(customers.getCustomerId(), payloads.bookingAmount(), InvoiceType.BOOKING.name(), hostelId);
+                invoiceService.addInvoice(customers.getCustomerId(), payloads.bookingAmount(), InvoiceType.BOOKING.name(), hostelId, customers.getMobile(), customers.getEmailId());
 //                List<TransactionV1> transactions = transactionService.addBookingAmount(customers, payloads.bookingAmount());
 //                customers.setTransactions(transactions);
                 customersRepository.save(customers);
@@ -393,7 +395,11 @@ public class CustomersService {
 
             bookingsService.addChecking(customerId, payloads);
 
-            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId());
+            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId());
+
+
+
+            calculateRentAndCreateRentalInvoice(customers, payloads.rentalAmount(), InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads);
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }else {
@@ -896,5 +902,19 @@ public class CustomersService {
         customersRepository.save(customers);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+
+    public void calculateRentAndCreateRentalInvoice(Customers customers,  Double aDouble, String name, String s, String mobile, String emailId, CheckInRequest payloads) {
+        long noOfDaysInCurrentMonth = Utils.findNoOfDaysInCurrentMonth(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+        double finalRent = payloads.rentalAmount();
+        if (noOfDaysInCurrentMonth < 25) {
+            finalRent = calculateRentPerDay * noOfDaysInCurrentMonth;
+        }
+
+        invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId());
+
+
     }
 }

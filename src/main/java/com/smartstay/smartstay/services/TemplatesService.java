@@ -36,8 +36,8 @@ public class TemplatesService {
         String hostelName = tmpl.hostelName();
         StringBuilder findPrefix = new StringBuilder();
         StringBuilder findPrefixRent = new StringBuilder();
-        findPrefix.append("#ADV");
-        findPrefixRent.append("#INV");
+        findPrefix.append("ADV");
+        findPrefixRent.append("INV");
 //        if (hostelName.length() > 3) {
 //            String hostelNameShort = hostelName.replaceAll(" ", "").substring(0, 4).toUpperCase();
 //            findPrefixRent.append(hostelNameShort);

@@ -267,7 +267,7 @@ public class BedsService {
                 }
             }
             if (bookingsV1.getExpectedJoiningDate() != null) {
-                if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), joiningDate) > 0) {
+                if (Utils.compareWithTwoDates(bookingsV1.getExpectedJoiningDate(), joiningDate) > 0) {
                     return true;
                 }
                 else  {

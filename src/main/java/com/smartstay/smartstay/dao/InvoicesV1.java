@@ -21,6 +21,8 @@ public class InvoicesV1 {
     String customerId;
     String hostelId;
     String invoiceNumber;
+    String customerMobile;
+    String customerMailId;
     //Advance or monthly rent or Booking amount
     String invoiceType;
     Double amount;

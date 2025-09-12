@@ -18,14 +18,15 @@ public class TransactionV1 {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String transactionId;
     private String type;
-    private Double amount;
-    private Double balanceAmount;
+    private Double paidAmount;
     private String createdBy;
     private Date createdAt;
     private String status;
     private String invoiceId;
     private String isInvoice;
+    //card/gpay or cash or bank
     private String mode;
+    private String referenceNumber;
     private Date paidAt;
     private String updatedBy;
 

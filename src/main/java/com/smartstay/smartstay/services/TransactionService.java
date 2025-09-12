@@ -5,7 +5,9 @@ import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.ennum.PaymentStatus;
+import com.smartstay.smartstay.ennum.TransactionMode;
 import com.smartstay.smartstay.ennum.TransactionType;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
@@ -31,13 +33,21 @@ public class TransactionService {
     @Autowired
     private InvoiceV1Service invoiceService;
     @Autowired
+    private PaymentSummaryService paymentSummaryService;
+    @Autowired
     private TransactionV1Repository transactionRespository;
 
+    /**
+     * not using it
+     * @param customer
+     * @param amount
+     * @return
+     */
     public List<TransactionV1> addBookingAmount(Customers customer, double amount) {
         if (authentication.isAuthenticated()) {
             TransactionV1 transactionV1 = new TransactionV1();
             transactionV1.setCustomers(customer);
-            transactionV1.setAmount(amount);
+            transactionV1.setPaidAmount(amount);
             transactionV1.setType(TransactionType.BOOKING.name());
             transactionV1.setCreatedAt(new Date());
             transactionV1.setStatus(PaymentStatus.PENDING.name());
@@ -55,7 +65,7 @@ public class TransactionService {
         if (authentication.isAuthenticated()) {
             TransactionV1 transactionV1 = new TransactionV1();
             transactionV1.setCustomers(customer);
-            transactionV1.setAmount(amount);
+            transactionV1.setPaidAmount(amount);
             transactionV1.setType(TransactionType.ADVANCE.name());
             transactionV1.setCreatedAt(new Date());
             transactionV1.setStatus(PaymentStatus.PENDING.name());
@@ -66,15 +76,16 @@ public class TransactionService {
     }
 
 
-    public ResponseEntity<?> recordPayment(String hostelId, String transactionId, AddPayment payment) {
+    public ResponseEntity<?> recordPayment(String hostelId, String invoiceId, AddPayment payment) {
+        String typeOfPayment = null;
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         if (!Utils.checkNullOrEmpty(hostelId)) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
-        if (!Utils.checkNullOrEmpty(transactionId)) {
-            return new ResponseEntity<>(Utils.INVALID_TRANSACTION_ID, HttpStatus.BAD_REQUEST);
+        if (!Utils.checkNullOrEmpty(invoiceId)) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
         }
         Users user = usersService.findUserByUserId(authentication.getName());
         if (user == null) {
@@ -92,22 +103,37 @@ public class TransactionService {
         if (!Utils.checkNullOrEmpty(payment.amount())) {
             return new ResponseEntity<>(Utils.AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
         }
-        TransactionV1 transactionV1 = transactionRespository.findById(transactionId).orElse(null);
-        if (transactionV1 == null) {
-            return new ResponseEntity<>(Utils.INVALID_TRANSACTION_ID, HttpStatus.BAD_REQUEST);
-        }
-        InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(transactionV1.getInvoiceId());
+
+        InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(invoiceId);
         if (invoicesV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
         }
 
+        double paidAmount = findPaidAmountForInvoice(invoiceId);
 
-        if (invoicesV1.getAmount() == payment.amount() || invoicesV1.getAmount() < payment.amount()) {
+        TransactionV1 transactionV1 = new TransactionV1();
+
+        if (invoicesV1.getAmount() == payment.amount()) {
+            typeOfPayment = PaymentStatus.PAID.name();
             transactionV1.setStatus(PaymentStatus.PAID.name());
+            transactionV1.setPaidAmount(payment.amount());
         }
-        if (invoicesV1.getAmount() > payment.amount()) {
-            transactionV1.setStatus(PaymentStatus.PARTIAL_PAYMENT.name());
-            transactionV1.setBalanceAmount(invoicesV1.getAmount() - payment.amount());
+        else if (invoicesV1.getAmount() > payment.amount()) {
+            if (paidAmount + payment.amount() == invoicesV1.getAmount()) {
+                transactionV1.setStatus(PaymentStatus.PAID.name());
+                typeOfPayment = PaymentStatus.PAID.name();
+                transactionV1.setPaidAmount(payment.amount());
+            }
+            else if (paidAmount + payment.amount() > invoicesV1.getAmount()) {
+                transactionV1.setPaidAmount(paidAmount + payment.amount());
+                transactionV1.setStatus(PaymentStatus.ADVANCE_IN_HAND.name());
+                typeOfPayment = PaymentStatus.PAID.name();
+            }
+            else {
+                transactionV1.setPaidAmount(payment.amount());
+                transactionV1.setStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+                typeOfPayment = PaymentStatus.PARTIAL_PAYMENT.name();
+            }
         }
         if (Utils.checkNullOrEmpty(payment.paymentDate())) {
             transactionV1.setPaidAt(new Date());
@@ -115,11 +141,45 @@ public class TransactionService {
         else {
             transactionV1.setPaidAt(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
         }
-        transactionV1.setUpdatedBy(authentication.getName());
 
+        if (payment.modeOfTransaction().equalsIgnoreCase(TransactionMode.BANK.name())) {
+            transactionV1.setMode(TransactionMode.BANK.name());
+        }
+        else if (payment.modeOfTransaction().equalsIgnoreCase(TransactionMode.CARD.name())) {
+            transactionV1.setMode(TransactionMode.CARD.name());
+        }
+        else if (payment.modeOfTransaction().equalsIgnoreCase(TransactionMode.CASH.name())) {
+            transactionV1.setMode(TransactionMode.CASH.name());
+        }
+        else if (payment.modeOfTransaction().equalsIgnoreCase(TransactionMode.UPI.name())) {
+            transactionV1.setMode(TransactionMode.UPI.name());
+        }
+
+        transactionV1.setReferenceNumber(payment.referenceId());
+        transactionV1.setUpdatedBy(authentication.getName());
+        transactionV1.setInvoiceId(invoiceId);
 
         transactionRespository.save(transactionV1);
 
-        return null;
+        PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(), payment.amount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(), "Active");
+        int response = paymentSummaryService.addPayment(summary);
+
+        if (response == 1) {
+            invoiceService.recordPayment(invoiceId, typeOfPayment);
+            return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+    }
+
+    private Double findPaidAmountForInvoice(String invoiceId) {
+        List<TransactionV1> listTransaction = transactionRespository.findByInvoiceId(invoiceId);
+        double paidAmount = 0.0;
+        if (!listTransaction.isEmpty()) {
+            paidAmount = listTransaction.stream()
+                    .mapToDouble(TransactionV1::getPaidAmount)
+                    .sum();
+        }
+        return paidAmount;
     }
 }

@@ -25,8 +25,8 @@ public class TransactionController {
     @Autowired
     TransactionService transactionService;
 
-    @PostMapping("/{hostelId}/{transactionId}")
-    public ResponseEntity<?> recordPayment(@PathVariable("hostelId") String hostelId, @PathVariable("transactionId") String invoiceId, @Valid  @RequestBody AddPayment addPayment) {
+    @PostMapping("/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> recordPayment(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @Valid  @RequestBody AddPayment addPayment) {
         return transactionService.recordPayment(hostelId, invoiceId, addPayment);
     }
 }
