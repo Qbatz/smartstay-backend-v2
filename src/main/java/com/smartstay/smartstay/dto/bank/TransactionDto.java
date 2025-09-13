@@ -5,5 +5,6 @@ public record TransactionDto(String bankId,
                              Double amount,
                              String type,
                              String source,
-                             String hostelId) {
+                             String hostelId,
+                             String transactionDate) {
 }

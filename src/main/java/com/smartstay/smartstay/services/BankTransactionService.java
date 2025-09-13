@@ -4,7 +4,10 @@ import com.smartstay.smartstay.Wrappers.transactions.TransactionsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
+import com.smartstay.smartstay.ennum.BankTransactionType;
+import com.smartstay.smartstay.ennum.TransactionType;
 import com.smartstay.smartstay.repositories.BankTransactionRepository;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +30,24 @@ public class BankTransactionService {
     public int addTransaction(TransactionDto transactionDto) {
         if (authentication.isAuthenticated()) {
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
+            BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
+            if (v1 == null) {
+                if (transactionDto.type().equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+                    transactionsV1.setAccountBalance(-transactionDto.amount());
+                }
+                else {
+                    transactionsV1.setAccountBalance(transactionDto.amount());
+                }
+            }
+            else {
+                if (transactionDto.type().equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+                    transactionsV1.setAccountBalance(v1.getAccountBalance() - transactionDto.amount());
+                }
+                else {
+                    transactionsV1.setAccountBalance(transactionDto.amount() + v1.getAccountBalance());
+                }
+            }
+            transactionsV1.setTransactionDate(Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
             transactionsV1.setBankId(transactionDto.bankId());
             transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
             transactionsV1.setAmount(transactionDto.amount());

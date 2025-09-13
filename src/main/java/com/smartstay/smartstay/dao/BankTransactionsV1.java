@@ -23,11 +23,13 @@ public class BankTransactionsV1 {
     private String bankId;
     private String referenceNumber;
     private Double amount;
+    private Double accountBalance;
     //credit or debit
     private String type;
     //assets or rent or advance or expence
     private String source;
     private String hostelId;
+    private Date transactionDate;
     private Date createdAt;
     private String createdBy;
 }

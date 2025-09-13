@@ -3,6 +3,7 @@ package com.smartstay.smartstay;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.services.TemplatesService;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -320,6 +321,21 @@ public class SmartstayApplication {
 					templatesService.initialTemplateSetup(templates, item.getCreatedBy());
 				}
 			});
+		};
+	}
+
+	@Bean
+	CommandLineRunner addInvoiceDueDate(InvoicesV1Repository invoicesV1Repository) {
+		return args -> {
+			List<InvoicesV1> listInvoices = invoicesV1Repository.findAll();
+			if (!listInvoices.isEmpty()) {
+				listInvoices.stream().forEach(item -> {
+					if (item.getInvoiceDueDate() == null) {
+                        item.setInvoiceDueDate(Utils.addDaysToDate(item.getInvoiceGeneratedDate(), 5));
+						invoicesV1Repository.save(item);
+					}
+				});
+			}
 		};
 	}
 
