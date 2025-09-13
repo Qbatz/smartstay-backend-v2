@@ -300,7 +300,7 @@ public class ComplaintsService {
         if (startDate != null && !startDate.isBlank()) {
             start = LocalDate.parse(startDate.replace("/", "-"), formatter);
         } else {
-            start = LocalDate.of(2025, 4, 1); // default start date
+            start = LocalDate.of(2025, 4, 1);
         }
         requestStartDate = start.format(formatter);
 
@@ -320,7 +320,7 @@ public class ComplaintsService {
                 CustomerStatus.ON_NOTICE.name()
         );
 
-        List<Map<String, Object>> rawComplaints = complaintRepository.getAllComplaintsRaw(
+        List<Map<String, Object>> rawComplaints = complaintRepository. getAllComplaintsRaw(
                 hostelId,
                 parentId,
                 (customerName != null && !customerName.isBlank()) ? customerName : null,
@@ -380,6 +380,7 @@ public class ComplaintsService {
         dto.setBedId((Integer) row.get("bedId"));
         dto.setBedName((String) row.get("bedName"));
         dto.setComplaintDate(((Date) row.get("complaintDate")));
+        dto.setAssignedDate(((Date) row.get("assignedDate")));
         dto.setDescription((String) row.get("description"));
         dto.setAssigneeName((String) row.get("assigneeName"));
         dto.setAssigneeId((String) row.get("assigneeId"));

@@ -55,6 +55,7 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
                 c.description AS description,
 
                  c.assignee_id AS assigneeId,
+                 c.assigned_date AS assignedDate,
                  CONCAT_WS(' ', usr.first_name, usr.last_name) AS assigneeName,
 
                 ct.complaint_type_id AS complaintTypeId,
@@ -77,8 +78,13 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
              AND (:customerName IS NULL OR CONCAT(cus.first_name, ' ', cus.last_name) LIKE %:customerName%)
                       AND (:status IS NULL OR c.status = :status)
                       AND (:startDate IS NULL OR c.complaint_date >= :startDate)
-                      AND (:endDate IS NULL OR c.complaint_date <= :endDate)
-            order BY c.complaint_id
+                      AND (:endDate IS NULL OR c.complaint_date <= :endDate) 
+            GROUP BY c.complaint_id, c.customer_id, cus.first_name, cus.last_name, cus.profile_pic,
+                     c.hostel_id, c.floor_id, f.floor_name, c.room_id, r.room_name,
+                     c.bed_id, b.bed_name, c.complaint_date, c.description,
+                     c.assignee_id, usr.first_name, usr.last_name,
+                     ct.complaint_type_id, ct.complaint_type_name, c.status 
+            ORDER BY c.complaint_id DESC;
             """, nativeQuery = true)
     List<Map<String, Object>> getAllComplaintsRaw(@Param("hostelId") String hostelId, @Param("parentId") String parentId,
                                                   @Param("customerName") String customerName,
@@ -124,6 +130,7 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
         c.description AS description,
 
         c.assignee_id AS assigneeId,
+        c.assigned_date AS assignedDate,
         CONCAT_WS(' ', usr.first_name, usr.last_name) AS assigneeName,
 
         ct.complaint_type_id AS complaintTypeId,

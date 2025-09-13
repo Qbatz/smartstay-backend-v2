@@ -518,11 +518,11 @@ public class CustomersService {
             String mobileStatus = "";
             String emailStatus = "";
 
-            if (customerInfo.emailId() !=null && !customerInfo.emailId().isEmpty() && customersRepository.existsByEmailIdAndHostelIdAndStatusesNotIn(customerInfo.emailId(),hostelId, Arrays.asList(CustomerStatus.VACATED.name(), CustomerStatus.INACTIVE.name()))) {
+            if (customerInfo.emailId() !=null && !customerInfo.emailId().isEmpty() && customersRepository.existsByEmailIdAndHostelIdAndStatusesNotIn(customerInfo.emailId(),hostelId, List.of("VACATED"))) {
                 emailStatus = Utils.EMAIL_ID_EXISTS;
             }
 
-            if (customerInfo.mobileNumber() !=null && !customerInfo.mobileNumber().isEmpty() && customersRepository.existsByMobileAndHostelIdAndStatusesNotIn(customerInfo.mobileNumber(),hostelId,Arrays.asList(CustomerStatus.VACATED.name(), CustomerStatus.INACTIVE.name()))) {
+            if (customerInfo.mobileNumber() !=null && !customerInfo.mobileNumber().isEmpty() && customersRepository.existsByMobileAndHostelIdAndStatusesNotIn(customerInfo.mobileNumber(),hostelId, List.of("VACATED"))) {
                 mobileStatus = Utils.MOBILE_NO_EXISTS;
             }
 
@@ -604,12 +604,12 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        if (customersRepository.existsByMobileAndHostelIdAndStatusesNotIn(customerInfo.mobile(), hostelId, Arrays.asList(CustomerStatus.VACATED.name(), CustomerStatus.INACTIVE.name()))) {
+        if (customersRepository.existsByMobileAndHostelIdAndStatusesNotIn(customerInfo.mobile(), hostelId, List.of("VACATED"))) {
             mobileStatus = Utils.MOBILE_NO_EXISTS;
 //            return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
         }
         if (Utils.checkNullOrEmpty(customerInfo.emailId())) {
-            if (customersRepository.existsByEmailIdAndHostelIdAndStatusesNotIn(customerInfo.emailId(), hostelId,  Arrays.asList(CustomerStatus.VACATED.name(), CustomerStatus.INACTIVE.name()))) {
+            if (customersRepository.existsByEmailIdAndHostelIdAndStatusesNotIn(customerInfo.emailId(), hostelId, List.of("VACATED"))) {
                 emailStatus = Utils.EMAIL_ID_EXISTS;
             }
         }

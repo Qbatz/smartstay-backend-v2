@@ -55,6 +55,7 @@ public class ComplaintListMapper implements Function<Map<String, Object>, Compla
         dto.setBedName((String) raw.get("bedName"));
 
         dto.setComplaintDate((Date) raw.get("complaintDate"));
+        dto.setAssignedDate((Date) raw.get("assignedDate"));
         dto.setDescription((String) raw.get("description"));
         dto.setAssigneeName((String) raw.get("assigneeName"));
         dto.setAssigneeId((String) raw.get("assigneeId"));

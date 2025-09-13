@@ -58,7 +58,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
            
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
             "FROM Customers c " +
-            "WHERE c.emailId = :emailId AND c.hostelId = :hostelId " +
+            "WHERE c.emailId = :emailId and c.emailId != '' AND c.hostelId = :hostelId " +
             "AND c.currentStatus NOT IN (:statuses)")
     boolean existsByEmailIdAndHostelIdAndStatusesNotIn(@Param("emailId") String emailId,
                                                        @Param("hostelId") String hostelId,
