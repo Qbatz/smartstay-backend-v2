@@ -28,6 +28,7 @@ public class Utils {
     public static final String INVALID_EMAIL = "Invalid Email";
     public static final String INVALID_VENDOR = "Invalid Vendor";
     public static final String INVALID_BANKING = "Invalid Banking";
+    public static final String INVALID_BANKING_DETAILS = "Bank details not found. Please add bank details first.";
     public static final String INVALID_ASSET = "Invalid Asset";
     public static final String INVALID_FLOOR = "Invalid Floor";
     public static final String INVALID_USER = "Invalid User";
@@ -37,6 +38,7 @@ public class Utils {
     public static final String SERIAL_NUMBER_ALREADY_EXISTS = "Serial number already exists";
     public static final String PASSWORD_RESET_SUCCESS = "Password reset successfully.";
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
+    public static final String TEMPLATE_TYPE_NOT_FOUND = "Template type not found for given templateTypeId!";
 
     public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
@@ -259,5 +261,9 @@ public class Utils {
                 .toLocalDate()
                 .plusDays(noOfDays)
                 .atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static boolean isNotBlank(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

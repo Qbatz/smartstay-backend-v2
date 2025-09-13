@@ -2,27 +2,49 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Bills.TemplateMapper;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.config.FilesConfig;
+import com.smartstay.smartstay.config.UploadFileToS3;
+import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.BillTemplateType;
 import com.smartstay.smartstay.dao.BillTemplates;
+import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.ennum.BillConfigTypes;
 import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.ModuleId;
+import com.smartstay.smartstay.payloads.billTemplate.UpdateBillTemplate;
 import com.smartstay.smartstay.repositories.BillTemplatesRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.smartstay.smartstay.util.Utils.isNotBlank;
 
 @Service
 public class TemplatesService {
 
     @Autowired
     private Authentication authentication;
+
+    @Autowired
+    private UsersService userService;
+
+    @Autowired
+    private BankingService bankingService;
+
+    @Autowired
+    private UploadFileToS3 uploadToS3;
+
+    @Autowired
+    UserHostelService userHostelService;
+
+    @Autowired
+    private RolesService rolesService;
 
     @Autowired
     private BillTemplatesRepository templateRepository;
@@ -187,6 +209,85 @@ public class TemplatesService {
         return new ResponseEntity<>(new TemplateMapper().apply(templates), HttpStatus.OK);
     }
 
+    public ResponseEntity<?> updateTemplate(String hostelId,
+                                            String mobile,
+                                            String email,
+                                            Boolean isMobileCustomized,
+                                            Boolean isEmailCustomized,
+                                            Boolean isLogoCustomized,
+                                            Boolean isSignatureCustomized,
+                                            MultipartFile hostelLogo,
+                                            MultipartFile billSignature,
+                                            MultipartFile invoiceLogo,
+                                            MultipartFile invSignature,
+                                            MultipartFile qrCode,
+                                            MultipartFile receiptLogo,
+                                            MultipartFile receiptSignature,
+                                            UpdateBillTemplate payloads) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        String loginId = authentication.getName();
+        Users user = userService.findUserByUserId(loginId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.BILLS.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(loginId, hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        BillTemplates templates = templateRepository.getByHostelId(hostelId);
+        if (templates == null) {
+            return new ResponseEntity<>(Utils.TEMPLATE_NOT_AVAILABLE, HttpStatus.NO_CONTENT);
+        }
+
+        if (payloads != null && isNotBlank(payloads.bankId())) {
+            boolean bankingExist = bankingService.findBankingRecordByHostelIdAndBankId(payloads.bankId(), hostelId);
+            if (!bankingExist) {
+                return new ResponseEntity<>(Utils.INVALID_BANKING_DETAILS, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        updateBasicFields(templates, mobile, email, isMobileCustomized, isEmailCustomized, isLogoCustomized, isSignatureCustomized);
+        updateLogosAndSignatures(templates, hostelLogo, billSignature);
+        if (payloads != null) {
+            Optional<BillTemplateType> templateTypeOpt = templates.getTemplateTypes().stream()
+                    .filter(item -> Objects.equals(item.getTemplateTypeId(), payloads.templateTypeId()))
+                    .findFirst();
+
+            if (templateTypeOpt.isEmpty()) {
+                return new ResponseEntity<>(Utils.TEMPLATE_TYPE_NOT_FOUND,
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            BillTemplateType templateType = templateTypeOpt.get();
+            updateTemplateTypeFields(templateType,
+                    payloads,
+                    invoiceLogo,
+                    invSignature,
+                    receiptLogo,
+                    receiptSignature,
+                    qrCode,
+                    templates.isLogoCustomized(),
+                    templates.isSignatureCustomized(),
+                    templates.isMobileCustomized(),
+                    templates.isEmailCustomized()
+            );
+        }
+
+        templates.setUpdatedAt(new Date());
+        templates.setUpdatedBy(loginId);
+        templateRepository.save(templates);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+
+
     public String[] getBillTemplate(String hostelId, String type) {
         String[] templates = new String[2];
         BillTemplates tmp = templateRepository.getByHostelId(hostelId);
@@ -203,5 +304,124 @@ public class TemplatesService {
         }
 
         return templates;
+    }
+
+
+    private void updateBasicFields(BillTemplates templates,
+                                   String mobile, String email,
+                                   Boolean isMobileCustomized, Boolean isEmailCustomized,
+                                   Boolean isLogoCustomized, Boolean isSignatureCustomized) {
+        if (isNotBlank(mobile)) templates.setMobile(mobile);
+        if (isNotBlank(email)) templates.setEmailId(email);
+        if (isMobileCustomized != null) templates.setMobileCustomized(isMobileCustomized);
+        if (isEmailCustomized != null) templates.setEmailCustomized(isEmailCustomized);
+        if (isLogoCustomized != null) templates.setLogoCustomized(isLogoCustomized);
+        if (isSignatureCustomized != null) templates.setSignatureCustomized(isSignatureCustomized);
+    }
+
+    private void updateLogosAndSignatures(BillTemplates templates,
+                                          MultipartFile hostelLogo, MultipartFile billSignature) {
+        if (hostelLogo != null) {
+            templates.setHostelLogo(uploadIfPresent(hostelLogo));
+        }
+        if (billSignature != null) {
+            templates.setDigitalSignature(uploadIfPresent(billSignature));
+        }
+    }
+
+    private void updateTemplateTypeFields(BillTemplateType templateType,
+                                          UpdateBillTemplate payloads,
+                                          MultipartFile invoiceLogo, MultipartFile invSignature,
+                                          MultipartFile receiptLogo, MultipartFile receiptSignature,
+                                          MultipartFile qrCode,
+                                          Boolean isLogoCustomized, Boolean isSignatureCustomized,
+                                          Boolean isMobileCustomized, Boolean isEmailCustomized) {
+
+        if (isNotBlank(payloads.gstPercentile())) {
+            try {
+                Double gst = Double.parseDouble(payloads.gstPercentile());
+                templateType.setGstPercentage(Math.max(gst, 0.0));
+                templateType.setCgst(Math.max(gst, 0.0) / 2);
+                templateType.setSgst(Math.max(gst, 0.0) / 2);
+            } catch (NumberFormatException e) {
+
+            }
+        }
+
+        if (isNotBlank(payloads.bankId())) templateType.setBankAccountId(payloads.bankId());
+        if (isNotBlank(payloads.invoiceTermsAndCondition())) templateType.setInvoiceTermsAndCondition(payloads.invoiceTermsAndCondition());
+
+        if (Boolean.TRUE.equals(isLogoCustomized)) {
+
+            if (invoiceLogo != null){
+                String invoiceImage = uploadIfPresent(invoiceLogo);
+                templateType.setInvoiceLogoUrl(invoiceImage);
+            }
+            if (receiptLogo != null){
+                String receiptImage = uploadIfPresent(receiptLogo);
+                templateType.setReceiptLogoUrl(receiptImage);
+            }
+        }else {
+            templateType.setInvoiceLogoUrl(null);
+            templateType.setReceiptLogoUrl(null);
+        }
+
+        if (Boolean.TRUE.equals(isSignatureCustomized)) {
+
+            if (invSignature != null) {
+                String invSignatureImage = uploadIfPresent(invSignature);
+                templateType.setInvoiceSignatureUrl(invSignatureImage);
+            }
+            if (receiptSignature != null) {
+                String receiptSignatureImage = uploadIfPresent(receiptSignature);
+                templateType.setReceiptSignatureUrl(receiptSignatureImage);
+            }
+        }else {
+            templateType.setInvoiceSignatureUrl(null);
+            templateType.setReceiptSignatureUrl(null);
+        }
+
+        if (Boolean.TRUE.equals(isMobileCustomized)) {
+
+            if (isNotBlank(payloads.invoicePhoneNumber())){
+                templateType.setInvoicePhoneNumber(payloads.invoicePhoneNumber());
+            }
+
+            if (isNotBlank(payloads.receiptPhoneNumber())){
+                templateType.setReceiptPhoneNumber(payloads.receiptPhoneNumber());
+            }
+
+        }else {
+            templateType.setInvoicePhoneNumber(null);
+            templateType.setReceiptPhoneNumber(null);
+        }
+
+        if (Boolean.TRUE.equals(isEmailCustomized)) {
+
+            if (isNotBlank(payloads.invoiceMailId())){
+                templateType.setInvoiceMailId(payloads.invoiceMailId());
+            }
+
+            if (isNotBlank(payloads.receiptMailId())){
+                templateType.setReceiptMailId(payloads.receiptMailId());
+            }
+
+        }else {
+            templateType.setInvoiceMailId(null);
+            templateType.setReceiptMailId(null);
+        }
+
+        if (isNotBlank(payloads.invoiceTemplateColor())) templateType.setInvoiceTemplateColor(payloads.invoiceTemplateColor());
+        if (isNotBlank(payloads.receiptTemplateColor())) templateType.setReceiptTemplateColor(payloads.receiptTemplateColor());
+        if (qrCode != null) templateType.setQrCode(uploadIfPresent(qrCode));
+        if (isNotBlank(payloads.invoiceNotes())) templateType.setInvoiceNotes(payloads.invoiceNotes());
+        if (isNotBlank(payloads.receiptNotes())) templateType.setReceiptNotes(payloads.receiptNotes());
+        if (isNotBlank(payloads.prefix())) templateType.setInvoicePrefix(payloads.prefix());
+        if (isNotBlank(payloads.suffix())) templateType.setInvoiceSuffix(payloads.suffix());
+
+    }
+
+    private String uploadIfPresent(MultipartFile file) {
+        return uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "users/Bills");
     }
 }
