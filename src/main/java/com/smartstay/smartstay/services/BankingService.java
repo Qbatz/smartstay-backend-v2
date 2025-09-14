@@ -334,4 +334,8 @@ public class BankingService {
         return bankingV1Repository.findByBankId(bankId) != null;
     }
 
+    public boolean findBankingRecordByHostelIdAndBankId(String bankId,String hostelId) {
+        return bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId,bankId) != null;
+    }
+
 }
