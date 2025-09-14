@@ -339,6 +339,32 @@ public class SmartstayApplication {
 		};
 	}
 
+	@Bean
+	CommandLineRunner addBillingRuleForExistingHostel(HostelV1Repository hostelV1Repository) {
+		return args -> {
+			List<HostelV1> listHostels = hostelV1Repository.findAll();
+			if (!listHostels.isEmpty()) {
+				listHostels
+						.forEach(item -> {
+							if (item.getBillingRulesList() == null || item.getBillingRulesList().isEmpty()) {
+								List<BillingRules> listBillingRules = new ArrayList<>();
+								BillingRules rules = new BillingRules();
+								rules.setBillingStartDate(1);
+								rules.setBillingDueDate(5);
+								rules.setNoticePeriod(30);
+								rules.setHostel(item);
+
+								listBillingRules.add(rules);
+								item.setBillingRulesList(listBillingRules);
+
+								hostelV1Repository.save(item);
+							}
+
+						});
+			}
+		};
+	}
+
 
 
 }
