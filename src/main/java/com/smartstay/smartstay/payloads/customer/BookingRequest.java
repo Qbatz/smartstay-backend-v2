@@ -21,6 +21,10 @@ public record BookingRequest(
         int bedId,
         @NotNull(message = "Customer id required")
         @NotEmpty(message = "Customer id required")
-        String customerId
+        String customerId,
+        @NotNull(message = "Bank id required")
+        @NotEmpty(message = "Bank id required")
+        String bankId,
+        String referenceNumber
 ) {}
 

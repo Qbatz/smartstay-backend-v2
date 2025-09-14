@@ -9,6 +9,7 @@ import com.smartstay.smartstay.ennum.TransactionType;
 import com.smartstay.smartstay.repositories.BankTransactionRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -44,7 +45,11 @@ public class BankTransactionService {
                     transactionsV1.setAccountBalance(v1.getAccountBalance() - transactionDto.amount());
                 }
                 else {
-                    transactionsV1.setAccountBalance(transactionDto.amount() + v1.getAccountBalance());
+                    Double accountBalance = 0.0;
+                    if (v1.getAccountBalance() != null) {
+                        accountBalance = v1.getAccountBalance();
+                    }
+                    transactionsV1.setAccountBalance(transactionDto.amount() + accountBalance);
                 }
             }
             transactionsV1.setTransactionDate(Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));

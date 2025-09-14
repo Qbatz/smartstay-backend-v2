@@ -5,6 +5,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.invoices.Invoices;
+import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
 import com.smartstay.smartstay.util.Utils;
 
@@ -21,6 +23,33 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         Double paidAmount = 0.0;
         if (invoices.getPaidAmount() != null) {
             paidAmount = invoices.getPaidAmount();
+        }
+        String invoiceType = null;
+        String paymentStatus = null;
+        if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+            paymentStatus = "Paid";
+        }
+        else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+            paymentStatus = "Pending";
+        }
+        else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            paymentStatus = "Partial Payment";
+        }
+        else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.ADVANCE_IN_HAND.name())) {
+            paymentStatus = "Over pay";
+        }
+
+        if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
+            invoiceType = "Rent";
+        }
+        else if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            invoiceType = "Booking";
+        }
+        else if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            invoiceType = "Advance";
+        }
+        else if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHERS.name())) {
+            invoiceType = "Others";
         }
 
         ObjectMapper mapper = new ObjectMapper();
@@ -41,6 +70,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 invoices.getAmount(),
                 invoices.getInvoiceId(),
                 paidAmount,
+                invoices.getAmount()-paidAmount,
                 invoices.getCgst(),
                 invoices.getSgst(),
                 invoices.getGst(),
@@ -49,8 +79,8 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 invoices.getHostelId(),
                 Utils.dateToString(invoices.getInvoiceGeneratedAt()),
                 Utils.dateToString(invoices.getInvoiceDueDate()),
-                invoices.getInvoiceType(),
-                invoices.getPaymentStatus(),
+                invoiceType,
+                paymentStatus,
                 Utils.dateToString(invoices.getUpdatedAt()),
                 invoices.getInvoiceNumber(),
                 listDeductions);
