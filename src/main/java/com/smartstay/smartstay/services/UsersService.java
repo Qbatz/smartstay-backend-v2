@@ -367,7 +367,7 @@ public class UsersService {
                 if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_READ)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
-                List<UsersData> admins = userRepository.getAdminUserList(2, users.getParentId());
+                List<UsersData> admins = userRepository.getAdminUserList(2, users.getParentId(),authentication.getName());
                 if (admins.isEmpty()) {
                     return new ResponseEntity<>("No admins found", HttpStatus.NO_CONTENT);
                 }
