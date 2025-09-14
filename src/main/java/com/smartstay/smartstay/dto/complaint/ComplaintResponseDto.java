@@ -32,6 +32,8 @@ public class ComplaintResponseDto {
     private java.util.Date complaintDate;
     private String description;
     private String assigneeId;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = OUTPUT_DATE_FORMAT, timezone = "Asia/Kolkata")
+    private java.util.Date assignedDate;
     private String assigneeName;
 
     private Integer complaintTypeId;
