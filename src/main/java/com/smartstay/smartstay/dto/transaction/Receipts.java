@@ -15,4 +15,8 @@ public interface Receipts {
     String getFirstName();
     String getLastName();
     String getReferenceNumber();
+    String getBankId();
+    String getBankName();
+    String getHolderName();
+    String getProfilePic();
 }

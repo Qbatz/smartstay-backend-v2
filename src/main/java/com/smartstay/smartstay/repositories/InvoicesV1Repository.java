@@ -29,13 +29,15 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     @Query(value = """
             SELECT invc.invoice_id as invoiceId, invc.invoice_number as invoiceNumber, invc.invoice_mode as invoiceMode, invc.invoice_type as invoiceType, 
-            invc.payment_status as paymentStatus, 
+            invc.payment_status as paymentStatus, cus.profile_pic as profilePic,
             transaction.paid_amount as paidAmount, transaction.paid_at as paidAt, invc.customer_id as customerId, transaction.transaction_id as transactionId, cus.first_name as firstName, cus.last_name as lastName, 
-            transaction.reference_number as referenceNumber FROM smart_stay.invoicesv1 invc 
+            transaction.reference_number as referenceNumber,
+            transaction.bank_id as bankId, bank.bank_name as bankName, bank.account_holder_name as holderName 
+            FROM smart_stay.invoicesv1 invc 
             inner join transactionv1 transaction on transaction.invoice_id=invc.invoice_id 
             inner join customers cus on cus.customer_id=invc.customer_id 
             inner join bankingv1 bank on bank.bank_id=transaction.bank_id 
-            where invc.payment_status in ('PARTIAL_PAYMENT', 'PAID');
+            where invc.hostel_id=:hostelId and invc.payment_status in ('PARTIAL_PAYMENT', 'PAID')
             """, nativeQuery = true)
     List<Receipts> findReceipts(@Param("hostelId") String hostelId);
 

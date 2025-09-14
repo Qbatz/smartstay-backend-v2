@@ -1,17 +1,20 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.BankingListMapper;
+import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.invoices.Invoices;
+import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
+import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -247,5 +250,15 @@ public class InvoiceV1Service {
             return 1;
         }
         return 0;
+    }
+
+
+    public ResponseEntity<?> getAllReceipts(String hostelId) {
+        List<Receipts> listReceipts = invoicesV1Repository.findReceipts(hostelId);
+        List<ReceiptsList> receipts = listReceipts
+                .stream()
+                .map(item -> new ReceiptMapper().apply(item))
+                .toList();
+        return new ResponseEntity<>(receipts, HttpStatus.OK);
     }
 }
