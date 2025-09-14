@@ -11,6 +11,7 @@ import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.*;
+import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.util.Utils;
@@ -58,8 +59,8 @@ public class CustomersService {
     @Autowired
     private UserHostelService userHostelService;
 
-//    @Autowired
-//    private TransactionService transactionService;
+    @Autowired
+    private TransactionService transactionService;
 
     @Autowired
     private InvoiceV1Service invoiceService;
@@ -287,13 +288,15 @@ public class CustomersService {
 
                 customers.setExpJoiningDate(dt);
 
-                invoiceService.addInvoice(customers.getCustomerId(), payloads.bookingAmount(), InvoiceType.BOOKING.name(), hostelId, customers.getMobile(), customers.getEmailId());
+                String invoiceId = invoiceService.addBookingInvoice(customers.getCustomerId(), payloads.bookingAmount(), InvoiceType.BOOKING.name(), hostelId, customers.getMobile(), customers.getEmailId(), payloads.bankId(), payloads.referenceNumber());
 //                List<TransactionV1> transactions = transactionService.addBookingAmount(customers, payloads.bookingAmount());
 //                customers.setTransactions(transactions);
                 customersRepository.save(customers);
 
                 bookingsService.addBooking(hostelId, payloads);
 
+                AddPayment addPayment = new AddPayment(payloads.bankId(), payloads.bookingDate(), payloads.referenceNumber(), payloads.bookingAmount());
+                transactionService.recordPayment(hostelId, invoiceId, addPayment);
                 return bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
             } else {
                 return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);

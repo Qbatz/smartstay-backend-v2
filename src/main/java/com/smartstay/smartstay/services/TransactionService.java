@@ -168,7 +168,8 @@ public class TransactionService {
                     payment.amount(),
                     BankTransactionType.CREDIT.name(),
                     BankSource.INVOICE.name(),
-                    hostelId);
+                    hostelId,
+                    payment.paymentDate());
 
             bankTransactionService.addTransaction(transaction);
 
