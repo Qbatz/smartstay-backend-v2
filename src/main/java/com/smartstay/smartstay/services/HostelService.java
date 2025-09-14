@@ -131,6 +131,16 @@ public class HostelService {
 
             hostelV1.setAdditionalImages(listHostelImages);
         }
+        //Adding billing rules for a hostel
+        //By default
+        BillingRules billingRules = new BillingRules();
+        billingRules.setBillingStartDate(1);
+        billingRules.setBillingDueDate(10);
+        billingRules.setNoticePeriod(30);
+        billingRules.setHostel(hostelV1);
+        List<BillingRules> listBillings = new ArrayList<>();
+        listBillings.add(billingRules);
+
         BillTemplates templates = new BillTemplates(hostelV1.getHostelId(), payloads.mobile(), payloads.emailId(), payloads.hostelName());
         hostelTemplates.initialTemplateSetup(templates);
 

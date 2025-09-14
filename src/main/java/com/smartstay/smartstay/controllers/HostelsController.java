@@ -38,7 +38,7 @@ public class HostelsController {
         return hostelService.fetchAllHostels();
     }
 
-    @DeleteMapping("remove-user")
+    @DeleteMapping("/remove-user")
     public ResponseEntity<?> deletedHostelFromUser(@RequestBody RemoveUserFromHostel removeUserPayload) {
         return hostelService.deleteHostelFromUser(removeUserPayload);
     }
