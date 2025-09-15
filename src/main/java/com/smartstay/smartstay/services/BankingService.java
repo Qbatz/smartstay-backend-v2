@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -190,7 +191,29 @@ public class BankingService {
                 .map(i -> new BankingListMapper().apply(i))
                 .collect(Collectors.toList());
 
-        List<TransactionDto> listTransactions =  transactionService.getAllTransactions(listMapping);
+        List<TransactionDto> transactions =  transactionService.getAllTransactions(listMapping);
+        List<TransactionDto> listTransactions = new ArrayList<>();
+        if (!transactions.isEmpty()) {
+            listTransactions = transactions.stream()
+                    .map(item -> {
+                        Bank accountHolderBank = listBankings
+                                .stream()
+                                .filter(i -> i.bankingId().equalsIgnoreCase(item.bankId()))
+                                .toList().get(0);
+                        String accountHolder = accountHolderBank.accountHolderName() + "-" + accountHolderBank.accountType();
+                        return new TransactionDto(item.transactionId(),
+                                item.referenceNumber(),
+                                item.amount(),
+                                item.type(),
+                                item.source(),
+                                item.createdBy(),
+                                item.createdAt(),
+                                item.isCredit(),
+                                item.bankId(),
+                                accountHolder);
+                    })
+                    .toList();
+        }
 
         BankList listBank = new BankList(listBankings, listTransactions);
         return new ResponseEntity<>(listBank, HttpStatus.OK);
