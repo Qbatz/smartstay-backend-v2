@@ -1,17 +1,16 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.Bills.BillingRulesMapper;
 import com.smartstay.smartstay.Wrappers.Bills.TemplateMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.BankingV1;
-import com.smartstay.smartstay.dao.BillTemplateType;
-import com.smartstay.smartstay.dao.BillTemplates;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.BillConfigTypes;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillTemplate;
+import com.smartstay.smartstay.payloads.billTemplate.UpdateBillingRule;
 import com.smartstay.smartstay.repositories.BillTemplatesRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +32,9 @@ public class TemplatesService {
 
     @Autowired
     private UsersService userService;
+
+    @Autowired
+    private HostelConfigService hostelConfigService;
 
     @Autowired
     private BankingService bankingService;
@@ -285,6 +287,75 @@ public class TemplatesService {
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
+
+    public ResponseEntity<?> updateBillingRule(String hostelId, Integer billingRuleId,
+                                               UpdateBillingRule payloads) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        String loginId = authentication.getName();
+        Users user = userService.findUserByUserId(loginId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.BILLS.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(loginId, hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        Optional<BillingRules> optionalBillingRule =
+                hostelConfigService.getBillingRuleByIdAndHostelId(billingRuleId, hostelId);
+
+        if (optionalBillingRule.isEmpty()) {
+            return new ResponseEntity<>(Utils.BILLING_RULE_NOT_AVAILABLE, HttpStatus.NO_CONTENT);
+        }
+
+        BillingRules billingRule = optionalBillingRule.get();
+        if (payloads.billingStartDate() != null) {
+            billingRule.setBillingStartDate(payloads.billingStartDate());
+        }
+        if (payloads.billingDueDate() != null) {
+            billingRule.setBillingDueDate(payloads.billingDueDate());
+        }
+        if (payloads.noticePeriod() != null) {
+            billingRule.setNoticePeriod(payloads.noticePeriod());
+        }
+
+        hostelConfigService.saveBillingRule(billingRule);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+
+    public ResponseEntity<?> getBillingRule(String hostelId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        String loginId = authentication.getName();
+        Users user = userService.findUserByUserId(loginId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.BILLS.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(loginId, hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        Optional<BillingRules> optionalBillingRule =
+                hostelConfigService.getBillingRuleByHostelId(hostelId);
+
+        if (optionalBillingRule.isEmpty()) {
+            return new ResponseEntity<>(Utils.BILLING_RULE_NOT_AVAILABLE, HttpStatus.NO_CONTENT);
+        }
+        return new ResponseEntity<>(BillingRulesMapper.toDto(optionalBillingRule.get()), HttpStatus.OK);
+    }
+
 
 
 

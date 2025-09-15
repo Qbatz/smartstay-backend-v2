@@ -2,10 +2,12 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.banking.UpdateBank;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillTemplate;
+import com.smartstay.smartstay.payloads.billTemplate.UpdateBillingRule;
 import com.smartstay.smartstay.services.TemplatesService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -54,4 +56,24 @@ public class TemplatesController {
                 hostelLogo, billSignature, invLogo, invSign, qrCode, receiptLogo, receiptSign,
                 payloads);
     }
+
+    @PostMapping("billing-rule/{hostelId}/{billingRuleId}")
+    public ResponseEntity<?> updateBillingRule(
+            @PathVariable("hostelId") String hostelId,
+            @PathVariable("billingRuleId") Integer billingRuleId,
+            @Valid @RequestBody UpdateBillingRule payloads
+    ) {
+        return templateService.updateBillingRule(hostelId, billingRuleId,
+                payloads);
+    }
+
+
+    @GetMapping("billing-rule/{hostelId}")
+    public ResponseEntity<?> getBillingRule(
+            @PathVariable("hostelId") String hostelId
+    ) {
+        return templateService.getBillingRule(hostelId);
+    }
+
+
 }

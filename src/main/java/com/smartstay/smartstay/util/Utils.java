@@ -77,6 +77,7 @@ public class Utils {
     public static final String AMOUNT_REQUIRED = "Amount required";
     public static final String NO_ACCOUNT_NO_FOUND = "No account number found";
     public static final String TEMPLATE_NOT_AVAILABLE = "Template not available for this hostel";
+    public static final String BILLING_RULE_NOT_AVAILABLE = "Billing Rule not found";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";
     public static final String CUSTOMER_CHECKED_IN_INACTIVE_STATUS = "Cannot changed status to inactive for checked in customers";
