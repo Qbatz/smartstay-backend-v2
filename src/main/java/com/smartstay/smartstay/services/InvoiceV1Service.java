@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -37,7 +38,7 @@ public class InvoiceV1Service {
     @Autowired
     PaymentSummaryService paymentSummaryService;
 
-    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId) {
+    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, Integer dueDate) {
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
             String[] prefixSuffix = templateService.getBillTemplate(hostelId, InvoiceType.ADVANCE.name());
@@ -61,6 +62,12 @@ public class InvoiceV1Service {
                 }
             }
 
+            Calendar calDueDate = Calendar.getInstance();
+            calDueDate.set(Calendar.DATE, dueDate);
+            if (!Utils.compareWithTodayDate(calDueDate.getTime())) {
+                calDueDate.set(Calendar.MONTH, calDueDate.get(Calendar.MONTH) + 1);
+            }
+
             int amount1 = amount.intValue();
             invoicesV1.setAmount(Double.valueOf(String.valueOf(amount1)));
             invoicesV1.setInvoiceType(type);
@@ -68,7 +75,7 @@ public class InvoiceV1Service {
             invoicesV1.setInvoiceNumber(invoiceNumber.toString());
             invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
             invoicesV1.setCreatedBy(authentication.getName());
-            invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(new Date(), 5));
+            invoicesV1.setInvoiceDueDate(calDueDate.getTime());
             invoicesV1.setCustomerMobile(customerMobile);
             invoicesV1.setCustomerMailId(customerMailId);
             invoicesV1.setCreatedAt(new Date());

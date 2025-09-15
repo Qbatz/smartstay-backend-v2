@@ -39,7 +39,7 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
             if (receipts.getHolderName() != null) {
                 bankName.append("-");
             }
-            bankName.append(receipts.getBankId());
+            bankName.append(receipts.getBankName());
         }
 
         String type = switch (receipts.getInvoiceType()) {

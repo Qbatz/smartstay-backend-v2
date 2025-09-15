@@ -314,6 +314,10 @@ public class HostelService {
         return ResponseEntity.ok(details);
     }
 
+    public HostelV1 getHostelInfo(String hostelId) {
+        return hostelV1Repository.findByHostelId(hostelId);
+    }
+
 
     public ResponseEntity<?> findFreeBeds(String hostelId) {
         return bedsService.findFreeBeds(hostelId);
