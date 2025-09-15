@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.Bills.BillTemplateMapper;
 import com.smartstay.smartstay.Wrappers.Bills.BillingRulesMapper;
 import com.smartstay.smartstay.Wrappers.Bills.TemplateMapper;
 import com.smartstay.smartstay.config.Authentication;
@@ -11,6 +12,7 @@ import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillTemplate;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillingRule;
+import com.smartstay.smartstay.repositories.BankingRepository;
 import com.smartstay.smartstay.repositories.BillTemplatesRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +52,9 @@ public class TemplatesService {
 
     @Autowired
     private BillTemplatesRepository templateRepository;
+
+    @Autowired
+    private BankingRepository bankingRepository;
 
 
     public int initialTemplateSetup(com.smartstay.smartstay.payloads.templates.BillTemplates tmpl) {
@@ -208,7 +213,7 @@ public class TemplatesService {
         if (templates == null) {
             return new ResponseEntity<>(Utils.TEMPLATE_NOT_AVAILABLE, HttpStatus.NO_CONTENT);
         }
-        return new ResponseEntity<>(new TemplateMapper().apply(templates), HttpStatus.OK);
+        return new ResponseEntity<>(new BillTemplateMapper(bankingRepository).toResponse(templates), HttpStatus.OK);
     }
 
     public ResponseEntity<?> updateTemplate(String hostelId,
