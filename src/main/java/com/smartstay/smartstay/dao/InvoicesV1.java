@@ -25,11 +25,13 @@ public class InvoicesV1 {
     String customerMailId;
     //Advance or monthly rent or Booking amount
     String invoiceType;
-    Double amount;
+    Double basePrice;
+    //this includes GST
+    Double totalAmount;
     Double gst;
     Double cgst;
     Double sgst;
-    Integer gstPercentile;
+    Double gstPercentile;
     String paymentStatus;
     //will be applicable only for additional amount deduction when invoice type is others
     String othersDescription;

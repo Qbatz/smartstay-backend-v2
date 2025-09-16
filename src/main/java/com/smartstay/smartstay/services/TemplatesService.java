@@ -364,8 +364,8 @@ public class TemplatesService {
 
 
 
-    public String[] getBillTemplate(String hostelId, String type) {
-        String[] templates = new String[2];
+    public com.smartstay.smartstay.dto.bills.BillTemplates getBillTemplate(String hostelId, String type) {
+
         BillTemplates tmp = templateRepository.getByHostelId(hostelId);
         if (tmp == null) {
             return null;
@@ -375,11 +375,15 @@ public class TemplatesService {
                 .filter(item -> item.getInvoiceType().equalsIgnoreCase(type))
                 .toList();
         if (!templateType.isEmpty()) {
-            templates[0] = templateType.get(0).getInvoicePrefix();
-            templates[1] = templateType.get(0).getInvoiceSuffix();
+            com.smartstay.smartstay.dto.bills.BillTemplates templates = new com.smartstay.smartstay.dto.bills.BillTemplates(
+                    templateType.get(0).getInvoicePrefix(),
+                    templateType.get(0).getInvoiceSuffix(),
+                    templateType.get(0).getGstPercentage()
+            );
+            return templates;
         }
 
-        return templates;
+        return null;
     }
 
 

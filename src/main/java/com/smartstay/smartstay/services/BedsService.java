@@ -322,4 +322,8 @@ public class BedsService {
                 .toList();
         return new ResponseEntity<>(beds, HttpStatus.OK);
     }
+
+    public void findFreeBeds(String hostelId, String expectedJoiningDate) {
+
+    }
 }

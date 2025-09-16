@@ -445,11 +445,10 @@ public class UsersService {
                     }
 
                     adminUser = new AddAdminUsersMapper(adminUser).apply(createAccount);
-                    userRepository.save(adminUser);
+                    Users createdAccount = userRepository.save(adminUser);
 
-                    Users user = userRepository.findUserByEmailId(createAccount.mailId());
-                    if (user != null) {
-                        userHostelService.addUserToExistingHostel(users.getParentId(), user.getUserId());
+                    if (createdAccount != null) {
+                        userHostelService.addUserToExistingHostel(users.getParentId(), createdAccount.getUserId(), users.getUserId());
                     }
 
 

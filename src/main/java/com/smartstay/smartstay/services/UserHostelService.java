@@ -26,8 +26,8 @@ public class UserHostelService {
         userHostelRepo.saveAll(listHostels);
     }
 
-    public List<UserHostel> listAllUserHostel(String parentId) {
-        return userHostelRepo.findAllByParentId(parentId);
+    public List<UserHostel> listAllUserHostel(String parentId, String userId) {
+        return userHostelRepo.findAllByParentIdAndUserId(parentId, userId);
     }
 
     public List<UserHostel> listAllUsers(String parentId) {
@@ -79,8 +79,8 @@ public class UserHostelService {
      * @param userId
      */
 
-    public void addUserToExistingHostel(String parentId, String userId) {
-        List<UserHostel> listUserHostel = listAllUserHostel(parentId);
+    public void addUserToExistingHostel(String parentId, String userId, String loggedInUserId) {
+        List<UserHostel> listUserHostel = listAllUserHostel(parentId, loggedInUserId);
 
         List<UserHostel> newListForNewUser = new ArrayList<>();
 

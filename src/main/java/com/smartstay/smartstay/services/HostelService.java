@@ -291,7 +291,7 @@ public class HostelService {
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
 
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Utils.ACCESS_RESTRICTED);
         }
 
@@ -312,6 +312,10 @@ public class HostelService {
         HostelDetails details = new HostelDetails(hostel.getHostelId(), hostel.getMainImage(), hostel.getCity(), String.valueOf(hostel.getCountry()), hostel.getEmailId(), hostel.getHostelName(), hostel.getHouseNo(), hostel.getLandmark(), hostel.getMobile(), hostel.getPincode(), hostel.getState(), hostel.getStreet(), Utils.dateToString(hostel.getUpdatedAt()), isSubscriptionActive, nextBillingDate, remainingDays, floorDetails.size(), floorDetails);
 
         return ResponseEntity.ok(details);
+    }
+
+    public HostelV1 getHostelInfo(String hostelId) {
+        return hostelV1Repository.findByHostelId(hostelId);
     }
 
 
