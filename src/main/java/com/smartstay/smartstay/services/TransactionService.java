@@ -120,18 +120,18 @@ public class TransactionService {
 
         TransactionV1 transactionV1 = new TransactionV1();
 
-        if (invoicesV1.getAmount() == payment.amount()) {
+        if (invoicesV1.getTotalAmount() == payment.amount()) {
             typeOfPayment = PaymentStatus.PAID.name();
             transactionV1.setStatus(PaymentStatus.PAID.name());
             transactionV1.setPaidAmount(payment.amount());
         }
-        else if (invoicesV1.getAmount() > payment.amount()) {
-            if (paidAmount + payment.amount() == invoicesV1.getAmount()) {
+        else if (invoicesV1.getTotalAmount() > payment.amount()) {
+            if (paidAmount + payment.amount() == invoicesV1.getTotalAmount()) {
                 transactionV1.setStatus(PaymentStatus.PAID.name());
                 typeOfPayment = PaymentStatus.PAID.name();
                 transactionV1.setPaidAmount(payment.amount());
             }
-            else if (paidAmount + payment.amount() > invoicesV1.getAmount()) {
+            else if (paidAmount + payment.amount() > invoicesV1.getTotalAmount()) {
                 transactionV1.setPaidAmount(paidAmount + payment.amount());
                 transactionV1.setStatus(PaymentStatus.ADVANCE_IN_HAND.name());
                 typeOfPayment = PaymentStatus.PAID.name();

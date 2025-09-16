@@ -200,10 +200,10 @@ public class BookingsService {
             bookingsV1.setUpdatedAt(new Date());
             bookingsV1.setLeavingDate(null);
             if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
-                bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
+                bookingsV1.setCurrentStatus(BookingStatus.BOOKED.name());
             }
             else {
-                bookingsV1.setCurrentStatus(BedStatus.OCCUPIED.name());
+                bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
             }
             bookingsV1.setRoomId(payloads.roomId());
             String rawDateStr = payloads.joiningDate().replace("-", "/");

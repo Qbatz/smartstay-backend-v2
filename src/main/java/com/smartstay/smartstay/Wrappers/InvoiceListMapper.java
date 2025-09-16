@@ -62,18 +62,28 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
             throw new RuntimeException(e);
         }
 
+        double totalAmount = invoices.getTotalAmount();
+        long gstAmount = 0;
+        if (invoices.getGst() != null) {
+            totalAmount = totalAmount + invoices.getGst();
+        }
+        if (invoices.getGst() != null) {
+            gstAmount = Math.round(invoices.getGst());
+        }
+
 
         return new InvoicesList(invoices.getFirstName(),
                 invoices.getLastName(),
                 fullNameBuilder.toString(),
                 invoices.getCustomerId(),
-                invoices.getAmount(),
+                Math.round(totalAmount),
+                Math.round(invoices.getTotalAmount()),
                 invoices.getInvoiceId(),
-                paidAmount,
-                invoices.getAmount()-paidAmount,
+                Math.round(paidAmount),
+                Math.round(totalAmount-paidAmount),
                 invoices.getCgst(),
                 invoices.getSgst(),
-                invoices.getGst(),
+                gstAmount,
                 Utils.dateToString(invoices.getCreatedAt()),
                 invoices.getCreatedBy(),
                 invoices.getHostelId(),
