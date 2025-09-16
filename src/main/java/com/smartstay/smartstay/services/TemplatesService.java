@@ -430,6 +430,7 @@ public class TemplatesService {
 
         if (isNotBlank(payloads.bankId())) templateType.setBankAccountId(payloads.bankId());
         if (isNotBlank(payloads.invoiceTermsAndCondition())) templateType.setInvoiceTermsAndCondition(payloads.invoiceTermsAndCondition());
+        if (isNotBlank(payloads.receiptTermsAndCondition())) templateType.setReceiptTermsAndCondition(payloads.receiptTermsAndCondition());
 
         if (Boolean.TRUE.equals(isLogoCustomized)) {
 

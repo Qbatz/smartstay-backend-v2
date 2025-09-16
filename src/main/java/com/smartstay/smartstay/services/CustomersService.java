@@ -273,6 +273,18 @@ public class CustomersService {
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
+
+        if (!floorsService.checkFloorExistForHostel(payloads.floorId(), hostelId)) {
+            return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!roomsService.checkRoomExistForFloor(payloads.floorId(), payloads.roomId())) {
+            return new ResponseEntity<>(Utils.N0_ROOM_FOUND_FLOOR, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(), hostelId)) {
+            return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.BAD_REQUEST);
+        }
         Date dt = Utils.stringToDate(payloads.bookingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         if (bedsService.isBedAvailable(payloads.bedId(), user.getParentId(), joiningDate)) {
