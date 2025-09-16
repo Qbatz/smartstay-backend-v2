@@ -62,7 +62,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
             throw new RuntimeException(e);
         }
 
-        double totalAmount = invoices.getAmount();
+        double totalAmount = invoices.getTotalAmount();
         long gstAmount = 0;
         if (invoices.getGst() != null) {
             totalAmount = totalAmount + invoices.getGst();
@@ -77,7 +77,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 fullNameBuilder.toString(),
                 invoices.getCustomerId(),
                 Math.round(totalAmount),
-                Math.round(invoices.getAmount()),
+                Math.round(invoices.getTotalAmount()),
                 invoices.getInvoiceId(),
                 Math.round(paidAmount),
                 Math.round(totalAmount-paidAmount),

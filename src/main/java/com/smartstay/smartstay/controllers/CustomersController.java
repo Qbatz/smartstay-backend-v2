@@ -91,4 +91,9 @@ public class CustomersController {
     public ResponseEntity<?> markCustomerInActive(@PathVariable("customerId") String customerId, @RequestParam(name = "status", required = true) Boolean status) {
         return customersService.markCustomerInActive(customerId, status);
     }
+
+    @GetMapping("/booking/initialize/{hostelId}")
+    public ResponseEntity<?> initializeCheckIn(@PathVariable("hostelId") String hostelId, @RequestParam("joiningDate") String joiningDate) {
+        return customersService.initializeCheckIn(hostelId, joiningDate);
+    }
  }
