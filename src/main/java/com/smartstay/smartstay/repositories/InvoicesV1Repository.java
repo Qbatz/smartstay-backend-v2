@@ -14,7 +14,7 @@ import java.util.List;
 public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> {
 
     @Query(value = """
-            select invc.invoice_id as invoiceId, invc.amount, invc.gst, invc.cgst, 
+            select invc.invoice_id as invoiceId, invc.amount, invc.gst, invc.cgst, invc.sgst,
             invc.created_at as createdAt, invc.created_by as createdBy, invc.customer_id as customerId, 
             invc.hostel_id as hostelId, invc.invoice_generated_date as invoiceGeneratedAt, 
             invc.invoice_due_date as invoiceDueDate, invc.invoice_type as invoiceType, 
