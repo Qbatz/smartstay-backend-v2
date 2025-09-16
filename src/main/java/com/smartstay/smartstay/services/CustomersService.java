@@ -65,6 +65,9 @@ public class CustomersService {
     @Autowired
     private InvoiceV1Service invoiceService;
 
+    @Autowired
+    private HostelService hostelService;
+
     public ResponseEntity<?> createCustomer(MultipartFile file, AddCustomer payloads) {
 
         if (!authentication.isAuthenticated()) {
@@ -398,9 +401,10 @@ public class CustomersService {
 
             bookingsService.addChecking(customerId, payloads);
 
-            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId());
+            Calendar calendar = Calendar.getInstance();
+            int dueDate = calendar.get(Calendar.DAY_OF_MONTH) + 5;
 
-
+            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), dueDate);
 
             calculateRentAndCreateRentalInvoice(customers, payloads);
 
@@ -909,21 +913,30 @@ public class CustomersService {
 
 
     public void calculateRentAndCreateRentalInvoice(Customers customers,  CheckInRequest payloads) {
-        long noOfDaysInCurrentMonth = Utils.findNoOfDaysInCurrentMonth(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
-        long noOfDaysLeftInCurrentMonth = Utils.findNoOfDaysLeftInCurrentMonth(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
-        double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
-        double finalRent = 0.0;
-        if (noOfDaysInCurrentMonth < 24) {
-            finalRent = calculateRentPerDay * noOfDaysLeftInCurrentMonth;
-            if (finalRent > payloads.rentalAmount()) {
-                finalRent = payloads.rentalAmount();
-            }
-        }
-        else {
-            finalRent = payloads.rentalAmount();
-        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(payloads.hostelId());
+        if (hostelV1 != null) {
+            int lastRulingDueDate = hostelV1.getBillingRulesList().get(0).getBillingDueDate();
+            int lastRulingBillDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
 
-        invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId());
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.DAY_OF_MONTH, lastRulingBillDate);
+
+            Calendar calLastDate = Calendar.getInstance();
+            calLastDate.set(Calendar.DAY_OF_MONTH, lastRulingBillDate-1);
+            calLastDate.set(Calendar.MONTH, calLastDate.get(Calendar.MONTH) + 1);
+
+            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(cal.getTime(), calLastDate.getTime());
+            long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), calLastDate.getTime());
+            double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+            double finalRent  = calculateRentPerDay * noOfDaysLeftInCurrentMonth;
+                if (finalRent > payloads.rentalAmount()) {
+                    finalRent = payloads.rentalAmount();
+                }
+
+
+            invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), 5);
+
+        }
 
 
     }

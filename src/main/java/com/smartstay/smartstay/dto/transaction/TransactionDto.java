@@ -7,5 +7,7 @@ public record TransactionDto(Integer transactionId,
                              String source,
                              String createdBy,
                              String createdAt,
-                             boolean isCredit) {
+                             boolean isCredit,
+                             String bankId,
+                             String accountHolder) {
 }
