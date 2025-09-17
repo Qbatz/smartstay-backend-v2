@@ -39,6 +39,7 @@ public class Utils {
     public static final String PASSWORD_RESET_SUCCESS = "Password reset successfully.";
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
     public static final String TEMPLATE_TYPE_NOT_FOUND = "Template type not found for given templateTypeId!";
+    public static final String INVALID_JOINING_DATE = "Invalid Joining Date";
 
     public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
@@ -211,7 +212,14 @@ public class Utils {
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
-        return date1.compareTo(date2);
+        LocalDate localDate1 = date1.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        LocalDate localDate2 = date2.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return localDate1.compareTo(localDate2);
     }
 
     public static boolean checkNullOrEmpty(Object data) {

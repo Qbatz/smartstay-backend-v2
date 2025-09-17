@@ -2,11 +2,13 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dto.beds.Beds;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
+import com.smartstay.smartstay.dto.beds.InitializeBooking;
 import com.smartstay.smartstay.responses.beds.BedsStatusCount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Date;
 import java.util.List;
 
 public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.dao.Beds, Integer> {
@@ -32,7 +34,7 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
     @Query(value = "SELECT b.status as status, COUNT(b.bed_id) as count FROM beds b WHERE b.hostel_id = :hostelId GROUP BY b.status", nativeQuery = true)
     List<BedsStatusCount> getBedCountByStatus(@Param("hostelId") String hostelId);
 
-    @Query(value = "SELECT bed.bed_id as bedId, bed.hostel_id as hostelId, bed.is_active as isActive, " + "bed.is_booked as isBooked, bed.rent_amount as roomRent, bed.room_id as roomId, bed.free_from as freeFrom, " + "bed.bed_name as bedName, bed.status as status, booking.rent_amount as currentRent, " + "booking.joining_date as joiningDate, booking.leaving_date as leavingDate, booking.booking_id as bookingId, " + "booking.created_by as createdBy, booking.expected_joining_date as expectedJoinig, cus.joining_date as cusJoiningDate, " + "cus.customer_id as customerId, cus.first_name as firstName, cus.last_name as lastName, cus.profile_pic as profilePic, " + "booking.current_status as bookingStatus, cus.mobile, flr.floor_id as floorId, flr.floor_name as floorName, rms.room_name as roomName," + "cntry.country_code countryCode FROM smart_stay.beds bed " + "left outer join bookingsv1 booking on booking.bed_id=bed.bed_id left outer join customers cus on " + "cus.customer_id=booking.customer_id left outer join rooms rms on rms.room_id=bed.room_id " + "left outer join floors flr on flr.floor_id=rms.floor_id left outer join countries cntry on cntry.country_id=cus.country" + " where bed.bed_id=:bedId and bed.parent_id=:parentId " + "order by booking.created_at limit 2", nativeQuery = true)
+    @Query(value = "SELECT bed.bed_id as bedId, bed.hostel_id as hostelId, bed.is_active as isActive, " + "bed.is_booked as isBooked, bed.rent_amount as roomRent, bed.room_id as roomId, bed.free_from as freeFrom, " + "bed.bed_name as bedName, bed.status as status, booking.rent_amount as currentRent, " + "booking.joining_date as joiningDate, booking.leaving_date as leavingDate, booking.booking_id as bookingId, " + "booking.created_by as createdBy, booking.expected_joining_date as expectedJoinig, cus.joining_date as cusJoiningDate, " + "cus.customer_id as customerId, cus.first_name as firstName, cus.last_name as lastName, cus.profile_pic as profilePic, " + "booking.current_status as bookingStatus, cus.mobile, flr.floor_id as floorId, flr.floor_name as floorName, rms.room_name as roomName," + "cntry.country_code countryCode FROM beds bed " + "left outer join bookingsv1 booking on booking.bed_id=bed.bed_id left outer join customers cus on " + "cus.customer_id=booking.customer_id left outer join rooms rms on rms.room_id=bed.room_id " + "left outer join floors flr on flr.floor_id=rms.floor_id left outer join countries cntry on cntry.country_id=cus.country" + " where bed.bed_id=:bedId and bed.parent_id=:parentId " + "order by booking.created_at limit 2", nativeQuery = true)
     List<Beds> getBedInfo(@Param("bedId") int bedId, @Param("parentId") String parentId);
 
     @Query(value = """
@@ -62,5 +64,14 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
                         """, nativeQuery = true)
     List<FreeBeds> getFreeBeds(@Param("hostelId") String hostelId);
 
+    @Query(value = """
+            SELECT b.bed_id as bedId, flr.floor_id as floorId, rms.room_id as roomId, 
+            b.rent_amount as rentAmount, b.bed_name as bedName, flr.floor_name as floorName, 
+            rms.room_name as roomName, b.current_status as currentStatus FROM beds b 
+            inner join rooms rms on rms.room_id=b.room_id inner join floors flr on flr.floor_id= rms.floor_id 
+            where b.status in ('NOTICE', 'VACANT') and (b.free_from IS NULL OR b.free_from <= :joiningDate) 
+            and b.hostel_id=:hostelId and b.is_active=true
+            """, nativeQuery = true)
+    List<InitializeBooking> getFreeBeds(@Param("hostelId") String hostelId, @Param("joiningDate") Date joiningDate);
 
 }

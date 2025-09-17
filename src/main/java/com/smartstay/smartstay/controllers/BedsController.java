@@ -47,5 +47,9 @@ public class BedsController {
     public ResponseEntity<?> deleteBedById(@PathVariable("bedId") int bedId) {
         return bedsService.deleteBedById(bedId);
     }
+    @GetMapping("/initialize/{hostelId}")
+    public ResponseEntity<?> initializeBooking(@PathVariable("hostelId") String hostelId, @RequestParam("joiningDate") String joiningDate) {
+        return bedsService.initializeBooking(hostelId, joiningDate);
+    }
 
 }

@@ -17,10 +17,10 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
 
     Floors findByFloorId(int floorId);
 
-    @Query(value = "SELECT * FROM smart_stay.floors where floor_id=:floorId and parent_id=:parentId", nativeQuery = true)
+    @Query(value = "SELECT * FROM floors where floor_id=:floorId and parent_id=:parentId", nativeQuery = true)
     Floors findByFloorIdAndParentId(@Param("floorId") int floorId, @Param("parentId")  String parentId);
 
-    @Query(value = "SELECT * FROM smart_stay.floors where floor_id=:floorId and parent_id=:parentId and hostel_id=:hostelId", nativeQuery = true)
+    @Query(value = "SELECT * FROM floors where floor_id=:floorId and parent_id=:parentId and hostel_id=:hostelId", nativeQuery = true)
     Floors findByFloorIdAndParentIdAndHostelId(@Param("floorId") int floorId, @Param("parentId")  String parentId,@Param("hostelId")  String hostelId);
 
     Floors findByFloorIdAndHostelId(int floorId,String hostelId);
@@ -35,7 +35,7 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
                                    @Param("hostelId") String hostelId,
                                    @Param("floorId") Integer floorId);
 
-    @Query(value = "select count(fl.floor_id) as count from smart_stay.floors fl where fl.hostel_id=:hostelId and fl.is_active=true and fl.is_deleted=false", nativeQuery = true)
+    @Query(value = "select count(fl.floor_id) as count from floors fl where fl.hostel_id=:hostelId and fl.is_active=true and fl.is_deleted=false", nativeQuery = true)
     FloorsCount findFloorCountsBasedOnHostelId(@Param("hostelId") String hostelId);
 
 }

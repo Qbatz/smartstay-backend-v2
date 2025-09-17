@@ -33,7 +33,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             transaction.paid_amount as paidAmount, transaction.paid_at as paidAt, invc.customer_id as customerId, transaction.transaction_id as transactionId, cus.first_name as firstName, cus.last_name as lastName, 
             transaction.reference_number as referenceNumber,
             transaction.bank_id as bankId, bank.bank_name as bankName, bank.account_holder_name as holderName 
-            FROM smart_stay.invoicesv1 invc 
+            FROM invoicesv1 invc 
             inner join transactionv1 transaction on transaction.invoice_id=invc.invoice_id 
             inner join customers cus on cus.customer_id=invc.customer_id 
             inner join bankingv1 bank on bank.bank_id=transaction.bank_id 

@@ -1,9 +1,11 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.Banking.BookingBankMapper;
 import com.smartstay.smartstay.Wrappers.BankingListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.transaction.TransactionDto;
 import com.smartstay.smartstay.ennum.BankAccountType;
 import com.smartstay.smartstay.ennum.BankPurpose;
@@ -359,6 +361,16 @@ public class BankingService {
 
     public boolean findBankingRecordByHostelIdAndBankId(String bankId,String hostelId) {
         return bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId,bankId) != null;
+    }
+
+    public List<BookingBankInfo> getAllAccounts(String hostelId) {
+        List<String> listHostelBankAccounts = hostelBankingMapper.getAllBanksAccountNoBasedOnHostel(hostelId);
+        List<BankingV1> listBankAccounts = bankingV1Repository.findByBankIdInAndActiveAccount(listHostelBankAccounts);
+
+        List<BookingBankInfo> listBanks = listBankAccounts.stream()
+                .map(item -> new BookingBankMapper().apply(item))
+                .toList();
+        return listBanks;
     }
 
 }
