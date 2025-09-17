@@ -140,7 +140,9 @@ public class BookingsService {
 
     /**
      *
-     * this works only on the booked customers
+     * this works only for the customer who are directly checkin
+     *
+     * not booked then check in
      * @return
      */
     public BookingsV1 checkinCustomer(CheckInRequest request, String customerId) {
@@ -148,7 +150,7 @@ public class BookingsService {
         bookingv1.setCustomerId(customerId);
         bookingv1.setHostelId(request.hostelId());
         String date = request.joiningDate().replace("/", "-");
-        if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+        if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) <= 0) {
             bookingv1.setCurrentStatus(BookingStatus.CHECKIN.name());
         }
         else {
@@ -199,11 +201,11 @@ public class BookingsService {
         if (bookingsV1 != null) {
             bookingsV1.setUpdatedAt(new Date());
             bookingsV1.setLeavingDate(null);
-            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
-                bookingsV1.setCurrentStatus(BookingStatus.BOOKED.name());
+            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) <= 0) {
+                bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
             }
             else {
-                bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
+                bookingsV1.setCurrentStatus(BookingStatus.BOOKED.name());
             }
             bookingsV1.setRoomId(payloads.roomId());
             String rawDateStr = payloads.joiningDate().replace("-", "/");

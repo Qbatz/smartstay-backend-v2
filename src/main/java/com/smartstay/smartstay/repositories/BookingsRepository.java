@@ -13,7 +13,7 @@ import java.util.List;
 @Repository
 public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
-    @Query(value = "SELECT bookings.booking_id, bookings.customer_id, bookings.joining_date, bookings.rent_amount, bookings.hostel_id, cus.first_name, cus.city, cus.state, cus.country, cus.current_status, cus.email_id, cus.profile_pic FROM smart_stay.bookingsv1 bookings left outer join customers cus on cus.customer_id=bookings.customer_id where bookings.hostel_id=:hostelId", nativeQuery = true)
+    @Query(value = "SELECT bookings.booking_id, bookings.customer_id, bookings.joining_date, bookings.rent_amount, bookings.hostel_id, cus.first_name, cus.city, cus.state, cus.country, cus.current_status, cus.email_id, cus.profile_pic FROM bookingsv1 bookings left outer join customers cus on cus.customer_id=bookings.customer_id where bookings.hostel_id=:hostelId", nativeQuery = true)
     List<Bookings> findAllByHostelId(@Param("hostelId") String hostelId);
 
     @Query(value = "SELECT * FROM bookingsv1 where bed_id=:bedId ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
@@ -30,7 +30,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             bookingv1.current_status as currentStatus, bookingv1.reason_for_leaving as reasonForLeaving, 
             bookingv1.expected_joining_date as expectedJoiningDate, usr.first_name as firstName, 
             usr.last_name as lastName, room.room_name as roomName, flr.floor_name as floorName, 
-            bed.bed_name as bedName  FROM smart_stay.bookingsv1 bookingv1 
+            bed.bed_name as bedName  FROM bookingsv1 bookingv1 
             left outer join users usr on usr.user_id=bookingv1.created_by 
             left outer join rooms room on room.room_id=bookingv1.room_id 
             left outer join floors flr on flr.floor_id=bookingv1.floor_id 

@@ -261,7 +261,7 @@ public class TemplatesService {
 
         updateBasicFields(templates, mobile, email, isMobileCustomized, isEmailCustomized, isLogoCustomized, isSignatureCustomized);
         updateLogosAndSignatures(templates, hostelLogo, billSignature);
-        if (payloads != null) {
+        if (payloads != null && !Utils.checkNullOrEmpty(payloads.templateTypeId())) {
             Optional<BillTemplateType> templateTypeOpt = templates.getTemplateTypes().stream()
                     .filter(item -> Objects.equals(item.getTemplateTypeId(), payloads.templateTypeId()))
                     .findFirst();

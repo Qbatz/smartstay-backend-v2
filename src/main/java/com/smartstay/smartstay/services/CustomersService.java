@@ -4,6 +4,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.customer.CustomerData;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.customer.Deductions;
@@ -67,6 +68,9 @@ public class CustomersService {
 
     @Autowired
     private HostelService hostelService;
+
+    @Autowired
+    private BankingService bankingService;
 
     public ResponseEntity<?> createCustomer(MultipartFile file, AddCustomer payloads) {
 
@@ -927,8 +931,12 @@ public class CustomersService {
     public void calculateRentAndCreateRentalInvoice(Customers customers,  CheckInRequest payloads) {
         HostelV1 hostelV1 = hostelService.getHostelInfo(payloads.hostelId());
         if (hostelV1 != null) {
-            int lastRulingDueDate = hostelV1.getBillingRulesList().get(0).getBillingDueDate();
-            int lastRulingBillDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
+
+            int lastRulingBillDate = 1;
+            if (!hostelV1.getBillingRulesList().isEmpty()) {
+                lastRulingBillDate  = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
+            }
+
 
             Calendar cal = Calendar.getInstance();
             cal.set(Calendar.DAY_OF_MONTH, lastRulingBillDate);
@@ -951,24 +959,5 @@ public class CustomersService {
         }
 
 
-    }
-
-    public ResponseEntity<?> initializeCheckIn(String hostelId, String joiningDate) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        Users users = userService.findUserByUserId(authentication.getName());
-        if (users == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
-        }
-
-        bedsService.findFreeBeds(hostelId);
-        return null;
     }
 }

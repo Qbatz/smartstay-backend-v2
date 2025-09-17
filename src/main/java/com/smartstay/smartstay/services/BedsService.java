@@ -5,6 +5,7 @@ import com.smartstay.smartstay.Wrappers.BedsMapper;
 import com.smartstay.smartstay.Wrappers.FreeBedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
@@ -14,6 +15,7 @@ import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.beds.BedDetails;
 import com.smartstay.smartstay.responses.beds.BedsResponse;
 import com.smartstay.smartstay.responses.beds.BedsStatusCount;
+import com.smartstay.smartstay.responses.customer.InitializeBooking;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -46,6 +48,9 @@ public class BedsService {
 
     @Autowired
     private UserHostelService userHostelService;
+
+    @Autowired
+    private BankingService bankingService;
 
     public ResponseEntity<?> getAllBeds(int roomId) {
         if (!authentication.isAuthenticated()) {
@@ -323,7 +328,34 @@ public class BedsService {
         return new ResponseEntity<>(beds, HttpStatus.OK);
     }
 
-    public void findFreeBeds(String hostelId, String expectedJoiningDate) {
+    public ResponseEntity<?> initializeBooking(String hostelId, String joiningDate) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
 
+        if (!Utils.checkNullOrEmpty(joiningDate)) {
+            return new ResponseEntity<>(Utils.INVALID_JOINING_DATE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        List<com.smartstay.smartstay.dto.beds.InitializeBooking> freeBeds = bedsRepository
+                .getFreeBeds(hostelId, Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        List<BookingBankInfo> listBanks = bankingService.getAllAccounts(hostelId);
+
+        InitializeBooking initializeBooking = new InitializeBooking(freeBeds, listBanks);
+        return new ResponseEntity<>(initializeBooking, HttpStatus.OK);
     }
 }
