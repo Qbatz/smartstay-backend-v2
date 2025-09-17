@@ -915,8 +915,12 @@ public class CustomersService {
     public void calculateRentAndCreateRentalInvoice(Customers customers,  CheckInRequest payloads) {
         HostelV1 hostelV1 = hostelService.getHostelInfo(payloads.hostelId());
         if (hostelV1 != null) {
-            int lastRulingDueDate = hostelV1.getBillingRulesList().get(0).getBillingDueDate();
-            int lastRulingBillDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
+
+            int lastRulingBillDate = 1;
+            if (!hostelV1.getBillingRulesList().isEmpty()) {
+                lastRulingBillDate  = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
+            }
+
 
             Calendar cal = Calendar.getInstance();
             cal.set(Calendar.DAY_OF_MONTH, lastRulingBillDate);
