@@ -420,7 +420,7 @@ public class CustomersService {
             Calendar calendar = Calendar.getInstance();
             int dueDate = calendar.get(Calendar.DAY_OF_MONTH) + 5;
 
-            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), dueDate);
+            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate());
 
             calculateRentAndCreateRentalInvoice(customers, payloads);
 
@@ -954,7 +954,7 @@ public class CustomersService {
                 }
 
 
-            invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), 5);
+            invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate());
 
         }
 

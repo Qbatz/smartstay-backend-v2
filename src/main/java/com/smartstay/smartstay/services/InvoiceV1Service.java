@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.BankingListMapper;
 import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.config.Authentication;
@@ -12,19 +11,17 @@ import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
-import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
 import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
@@ -39,7 +36,7 @@ public class InvoiceV1Service {
     @Autowired
     PaymentSummaryService paymentSummaryService;
 
-    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, Integer dueDate) {
+    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate) {
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
             BillTemplates templates = templateService.getBillTemplate(hostelId, InvoiceType.ADVANCE.name());
@@ -79,11 +76,10 @@ public class InvoiceV1Service {
                 }
             }
 
-            Calendar calDueDate = Calendar.getInstance();
-            calDueDate.set(Calendar.DATE, dueDate);
-            if (!Utils.compareWithTodayDate(calDueDate.getTime())) {
-                calDueDate.set(Calendar.MONTH, calDueDate.get(Calendar.MONTH) + 1);
-            }
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Utils.USER_INPUT_DATE_FORMAT);
+            LocalDate joiningDate1 = LocalDate.parse(joiningDate.replace("/", "-"), formatter);
+            LocalDate dueDate = joiningDate1.plusDays(5);
+
 
             invoicesV1.setTotalAmount(amount);
             invoicesV1.setBasePrice(baseAmount);
@@ -96,11 +92,11 @@ public class InvoiceV1Service {
             invoicesV1.setCgst(cgst);
             invoicesV1.setSgst(sgst);
             invoicesV1.setGstPercentile(gstPercentile);
-            invoicesV1.setInvoiceDueDate(calDueDate.getTime());
+            invoicesV1.setInvoiceDueDate(java.sql.Date.valueOf(dueDate));
             invoicesV1.setCustomerMobile(customerMobile);
             invoicesV1.setCustomerMailId(customerMailId);
             invoicesV1.setCreatedAt(new Date());
-            invoicesV1.setInvoiceGeneratedDate(new Date());
+            invoicesV1.setInvoiceGeneratedDate(java.sql.Date.valueOf(joiningDate1));
             invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
             invoicesV1.setHostelId(hostelId);
 
