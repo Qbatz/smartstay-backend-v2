@@ -39,4 +39,5 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """, nativeQuery = true)
     CustomersBookingDetails getCustomerBookingDetails(@Param("customerId") String customerId);
 
+
 }

@@ -16,6 +16,7 @@ import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.repositories.BookingsRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,13 @@ public class BookingsService {
 
     @Autowired
     private UserHostelService userHostelService;
+
+    private BedsService bedsService;
+
+    @Autowired
+    public void setBedsService(@Lazy BedsService bedsService) {
+        this.bedsService = bedsService;
+    }
 
     public void assignBedToCustomer(AssignBed assignBed) {
 
@@ -230,5 +238,18 @@ public class BookingsService {
 
     public CustomersBookingDetails getCustomerBookingDetails(String customerId) {
         return bookingsRepository.getCustomerBookingDetails(customerId);
+    }
+
+    /**
+     * this works only for booked customers will not work normally
+     *
+     * @param hostelId
+     * @param customerId
+     * @return
+     */
+    public ResponseEntity<?> initializeCheckIn(String hostelId, String customerId) {
+        BookingsV1 bookingsV1 = bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+        bedsService.isBedAvailabeForCheckIn(bookingsV1.getBedId(),bookingsV1.getExpectedJoiningDate() );
+        return null;
     }
 }

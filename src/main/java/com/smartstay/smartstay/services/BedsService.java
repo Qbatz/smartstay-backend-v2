@@ -358,4 +358,16 @@ public class BedsService {
         InitializeBooking initializeBooking = new InitializeBooking(freeBeds, listBanks);
         return new ResponseEntity<>(initializeBooking, HttpStatus.OK);
     }
+
+    /**
+     * this is compatible only for the booked users.
+     * @param bedId
+     * @param joiningDate
+     * @return
+     */
+    public boolean isBedAvailabeForCheckIn(Integer bedId, Date joiningDate) {
+        return false;
+    }
+
+
 }
