@@ -1,6 +1,7 @@
 package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.services.TemplatesService;
 import com.smartstay.smartstay.util.Utils;
@@ -11,6 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -100,7 +102,6 @@ public class SmartstayApplication {
 //				writeOnlyRole.setPermissions(permissions4);
 //
 //				rolesRepository.save(writeOnlyRole);
-//			}
 		};
 	}
 
@@ -302,6 +303,33 @@ public class SmartstayApplication {
 //			customersType4.setActive(true);
 //			customersType4.setType("Walk in");
 //			customerTypeRepository.save(customersType4);
+		};
+	}
+
+	@Bean
+	CommandLineRunner addEbConfiguration(HostelV1Repository hostelRepo) {
+		return args -> {
+			List<HostelV1> listHostels = hostelRepo.findAll();
+			if (!listHostels.isEmpty()) {
+				listHostels
+						.stream()
+						.forEach(item -> {
+							if (item.getElectricityConfig() == null) {
+								ElectricityConfig config = new ElectricityConfig();
+								config.setProRate(true);
+								config.setHostel(item);
+								config.setCharge(5.0);
+								config.setShouldIncludeInRent(true);
+								config.setLastUpdate(new Date());
+								config.setUpdatedBy(item.getCreatedBy());
+								config.setTypeOfReading(EBReadingType.ROOM_READING.name());
+
+								item.setElectricityConfig(config);
+
+								hostelRepo.save(item);
+							}
+						});
+			}
 		};
 	}
 

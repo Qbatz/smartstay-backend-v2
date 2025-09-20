@@ -69,9 +69,19 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
             b.rent_amount as rentAmount, b.bed_name as bedName, flr.floor_name as floorName, 
             rms.room_name as roomName, b.current_status as currentStatus FROM beds b 
             inner join rooms rms on rms.room_id=b.room_id inner join floors flr on flr.floor_id= rms.floor_id 
-            where b.status in ('NOTICE', 'VACANT') and (b.free_from IS NULL OR b.free_from <= :joiningDate) 
+            where b.status in ('NOTICE', 'VACANT') and (b.free_from IS NULL OR DATE(b.free_from) <= DATE(:joiningDate)) 
             and b.hostel_id=:hostelId and b.is_active=true
             """, nativeQuery = true)
     List<InitializeBooking> getFreeBeds(@Param("hostelId") String hostelId, @Param("joiningDate") Date joiningDate);
 
+    @Query(value = """
+           SELECT * FROM beds b WHERE b.bed_id=:bedId and b.current_status in ('NOTICE', 'VACANT') and b.is_active=true
+            """, nativeQuery = true)
+    com.smartstay.smartstay.dao.Beds checkBedAvailability(@Param("bedId") Integer bedId);
+
+
+    @Query(value = """
+            SELECT * FROM beds where current_status != 'OCCUPIED' and (free_from IS NULL OR free_from <= DATE(:joiningDate)) and bed_id=:bedId
+            """, nativeQuery = true)
+    com.smartstay.smartstay.dao.Beds checkIsBedAvailable(@Param("bedId") Integer bedId, @Param("joiningDate")  Date joiningDate);
 }

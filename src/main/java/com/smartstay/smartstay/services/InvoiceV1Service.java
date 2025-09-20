@@ -166,6 +166,7 @@ public class InvoiceV1Service {
             invoicesV1.setInvoiceType(type);
             invoicesV1.setCustomerId(customerId);
             invoicesV1.setInvoiceNumber(invoiceNumber.toString());
+            invoicesV1.setInvoiceType(InvoiceType.BOOKING.name());
             invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
             invoicesV1.setCreatedBy(authentication.getName());
             invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(new Date(), 0));
@@ -323,5 +324,17 @@ public class InvoiceV1Service {
                 .map(item -> new ReceiptMapper().apply(item))
                 .toList();
         return new ResponseEntity<>(receipts, HttpStatus.OK);
+    }
+
+    /**
+     * use only for getting booking amount
+     *
+     * @param customerId
+     * @param hostelId
+     * @return
+     */
+    public Double getBookingAmount(String customerId, String hostelId) {
+        InvoicesV1 invoiceV1 = invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.BOOKING.name());
+        return invoiceV1.getTotalAmount();
     }
 }

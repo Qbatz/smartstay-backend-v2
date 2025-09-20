@@ -22,7 +22,7 @@ public record CheckInRequest(
         @NotEmpty(message = "Joining Date is required") String joiningDate,
         @NotNull(message = "Advance amount required")
         Double advanceAmount,
-        @NotNull(message = "Advance amount required")
+        @NotNull(message = "Rental amount required")
         Double rentalAmount,
 
         @NotNull(message = "Stay type required")
