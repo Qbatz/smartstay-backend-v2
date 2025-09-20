@@ -17,6 +17,7 @@ import com.smartstay.smartstay.responses.beds.BedsResponse;
 import com.smartstay.smartstay.responses.beds.BedsStatusCount;
 import com.smartstay.smartstay.responses.customer.InitializeBooking;
 import com.smartstay.smartstay.util.Utils;
+import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -68,11 +69,11 @@ public class BedsService {
         List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId,user.getParentId());
 
         List<BedsResponse> bedsResponses = listBeds.stream().map(item -> {
-            boolean isBedOccupied = false;
-            if (item.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-                isBedOccupied = bookingService.checkIsBedOccupied(item.getBedId());
-            }
-            return new BedsMapper(isBedOccupied).apply(item);
+            boolean onNotice = false;
+           if (item.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name()) && item.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+               onNotice = bookingService.checkIsBedOccupied(item.getBedId());
+           }
+            return new BedsMapper(onNotice).apply(item);
         }).toList();
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
@@ -263,21 +264,26 @@ public class BedsService {
         else if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
 
-            if (bookingsV1.getLeavingDate() != null) {
-                if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), joiningDate) > 0) {
-                    return true;
+            if (bookingsV1 != null) {
+                if (bookingsV1.getLeavingDate() != null) {
+                    if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), joiningDate) > 0) {
+                        return true;
+                    }
+                    else  {
+                        return false;
+                    }
                 }
-                else  {
-                    return false;
+                if (bookingsV1.getExpectedJoiningDate() != null) {
+                    if (Utils.compareWithTwoDates(bookingsV1.getExpectedJoiningDate(), joiningDate) > 0) {
+                        return true;
+                    }
+                    else  {
+                        return false;
+                    }
                 }
             }
-            if (bookingsV1.getExpectedJoiningDate() != null) {
-                if (Utils.compareWithTwoDates(bookingsV1.getExpectedJoiningDate(), joiningDate) > 0) {
-                    return true;
-                }
-                else  {
-                    return false;
-                }
+            else {
+                return true;
             }
         }
 
@@ -365,8 +371,22 @@ public class BedsService {
      * @param joiningDate
      * @return
      */
-    public boolean isBedAvailabeForCheckIn(Integer bedId, Date joiningDate) {
-        return false;
+    public Beds isBedAvailabeForCheckIn(Integer bedId, Date joiningDate) {
+        Beds bed = bedsRepository.checkBedAvailability(bedId);
+        if (bed != null) {
+            if (bed.getFreeFrom() != null) {
+                if (Utils.compareWithTwoDates(new Date(), joiningDate) <= 0) {
+                    return bed;
+                }
+                return null;
+            }
+            return bed;
+        }
+        return null;
+    }
+
+    public Beds checkAvailabilityForCheckIn(Integer bedId, Date joiningDate) {
+        return bedsRepository.checkIsBedAvailable(bedId, joiningDate);
     }
 
 

@@ -22,7 +22,10 @@ public class BookingsV1 {
     private Date leavingDate;
     private Date expectedJoiningDate;
     private Date noticeDate;
+    private Date bookingDate;
     private Double rentAmount;
+    private Double advanceAmount;
+    private Double bookingAmount;
     private Date createdAt;
     private Date updatedAt;
     private String createdBy;

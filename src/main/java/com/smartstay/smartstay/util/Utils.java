@@ -67,6 +67,7 @@ public class Utils {
     public static final String BED_UNAVAILABLE_DATE = "Bed is unavailable for selected date";
     public static final String CHECK_IN_FUTURE_DATE_ERROR = "Check in cannot be accept for future dates";
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
+    public static final String INVALID_BOOKING_ID = "Invalid booking id";
     public static final String PAYLOADS_REQUIRED = "Payloads required";
     public static final String TRY_AGAIN = "Try Again";
     public static final String INVALID_BED_ID = "Invalid bed id passed";

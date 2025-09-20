@@ -28,7 +28,7 @@ public class BookingsController {
         return bookingService.getAllCheckInCustomers(hostelId);
     }
 
-    @GetMapping("/initialize/{hostelId}/{customerId}")
+    @GetMapping("/initialize-check-in/{hostelId}/{customerId}")
     public ResponseEntity<?> initializeCheckIn(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
         return bookingService.initializeCheckIn(hostelId, customerId);
     }

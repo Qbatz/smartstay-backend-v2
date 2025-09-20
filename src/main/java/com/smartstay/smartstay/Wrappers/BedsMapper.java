@@ -11,25 +11,27 @@ import java.util.function.Function;
 public class BedsMapper implements Function<Beds, BedsResponse> {
 
     boolean isOccupied = false;
+    boolean onNotice = false;
 
-    public BedsMapper(boolean isOccupied) {
-        this.isOccupied = isOccupied;
+    public BedsMapper(boolean onNotice) {
+        this.onNotice = onNotice;
     }
 
     @Override
     public BedsResponse apply(Beds beds) {
 
-        boolean onNotice = false;
         boolean isBooked = false;
-        if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
-            isBooked = true;
+
+        if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+            if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
+                isBooked = true;
+            }
         }
-        if (beds.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+        if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
             isOccupied = true;
         }
-        if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-            onNotice = true;
-            isBooked = beds.isBooked();
+        if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
+            isBooked = true;
         }
 
 

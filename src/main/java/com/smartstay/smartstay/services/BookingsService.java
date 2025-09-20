@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.BookingsMapper;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.dao.Beds;
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.Bookings;
@@ -14,6 +15,7 @@ import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.repositories.BookingsRepository;
+import com.smartstay.smartstay.responses.bookings.InitializeCheckIn;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -43,6 +45,9 @@ public class BookingsService {
     private UserHostelService userHostelService;
 
     private BedsService bedsService;
+
+    @Autowired
+    private InvoiceV1Service invoiceService;
 
     @Autowired
     public void setBedsService(@Lazy BedsService bedsService) {
@@ -160,12 +165,17 @@ public class BookingsService {
         String date = request.joiningDate().replace("/", "-");
         if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) <= 0) {
             bookingv1.setCurrentStatus(BookingStatus.CHECKIN.name());
+            bookingv1.setBookingDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
         }
         else {
+            bookingv1.setBookingDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
             bookingv1.setCurrentStatus(BookingStatus.BOOKED.name());
         }
 
+        bookingv1.setBookingAmount(0.0);
+        bookingv1.setAdvanceAmount(request.advanceAmount());
         bookingv1.setUpdatedAt(new Date());
+        bookingv1.setBookingDate(Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
         bookingv1.setUpdatedBy(authentication.getName());
         bookingv1.setBedId(request.bedId());
         bookingv1.setFloorId(request.floorId());
@@ -174,7 +184,9 @@ public class BookingsService {
         bookingv1.setCreatedAt(new Date());
         bookingv1.setCreatedBy(authentication.getName());
         bookingv1.setRoomId(request.roomId());
-        bookingv1.setRentAmount(bookingv1.getRentAmount());
+        bookingv1.setUpdatedBy(authentication.getName());
+        bookingv1.setUpdatedAt(new Date());
+
         bookingv1.setJoiningDate(Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
 
         return bookingsRepository.save(bookingv1);
@@ -190,7 +202,10 @@ public class BookingsService {
             bookingsV1.setBedId(payload.bedId());
             bookingsV1.setCustomerId(payload.customerId());
             bookingsV1.setCreatedAt(new Date());
+            bookingsV1.setCreatedBy(authentication.getName());
             bookingsV1.setUpdatedAt(new Date());
+            bookingsV1.setBookingAmount(payload.bookingAmount());
+            bookingsV1.setBookingDate(Utils.stringToDate(payload.bookingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
             bookingsV1.setUpdatedBy(authentication.getName());
             bookingsV1.setLeavingDate(null);
             bookingsV1.setExpectedJoiningDate(Utils.stringToDate(payload.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
@@ -220,6 +235,7 @@ public class BookingsService {
 
             Date joiningDate = Utils.convertStringToDate(rawDateStr);
             bookingsV1.setJoiningDate(joiningDate);
+            bookingsV1.setAdvanceAmount(payloads.advanceAmount());
             bookingsRepository.save(bookingsV1);
         }else {
             checkinCustomer(payloads, customerId);
@@ -240,6 +256,10 @@ public class BookingsService {
         return bookingsRepository.getCustomerBookingDetails(customerId);
     }
 
+    public BookingsV1 getBookingDetails(String bookingId) {
+        return bookingsRepository.findById(bookingId).orElse(null);
+    }
+
     /**
      * this works only for booked customers will not work normally
      *
@@ -248,8 +268,35 @@ public class BookingsService {
      * @return
      */
     public ResponseEntity<?> initializeCheckIn(String hostelId, String customerId) {
+        Double bookingAmount = 0.0;
+        boolean canCheckIn = true;
         BookingsV1 bookingsV1 = bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
-        bedsService.isBedAvailabeForCheckIn(bookingsV1.getBedId(),bookingsV1.getExpectedJoiningDate() );
-        return null;
+        Beds bed = bedsService.isBedAvailabeForCheckIn(bookingsV1.getBedId(),bookingsV1.getExpectedJoiningDate());
+        bookingAmount = invoiceService.getBookingAmount(customerId, hostelId);
+        if (bookingAmount == null) {
+            bookingAmount = 0.0;
+        }
+
+        if (bed != null) {
+            if (Utils.compareWithTwoDates(new Date(), bed.getFreeFrom()) > 0) {
+                canCheckIn = false;
+            }
+            InitializeCheckIn initializeCheckIn = new InitializeCheckIn(
+                    bed.getBedId(),
+                    bed.getBedName(),
+                    bookingAmount,
+                    Utils.dateToString(bookingsV1.getBookingDate()),
+                    bed.getRentAmount(),
+                    canCheckIn,
+                    bookingsV1.getBookingId()
+            );
+
+            return new ResponseEntity<>(initializeCheckIn, HttpStatus.OK);
+        }
+        return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
+    }
+
+    public BookingsV1 findByBookingId(String bookingId) {
+        return bookingsRepository.findById(bookingId).orElse(null);
     }
 }
