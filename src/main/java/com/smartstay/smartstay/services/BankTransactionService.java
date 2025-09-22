@@ -5,11 +5,9 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.ennum.BankTransactionType;
-import com.smartstay.smartstay.ennum.TransactionType;
 import com.smartstay.smartstay.repositories.BankTransactionRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -74,5 +72,13 @@ public class BankTransactionService {
                 .stream()
                 .map(item -> new TransactionsMapper().apply(item))
                 .toList();
+    }
+
+    public BankTransactionsV1 getTransaction(String bankId,String hostelId) {
+        return bankRepository.findByBankIdAndHostelId(bankId,hostelId);
+    }
+
+    public void saveTransaction(BankTransactionsV1 transaction) {
+        bankRepository.save(transaction);
     }
 }

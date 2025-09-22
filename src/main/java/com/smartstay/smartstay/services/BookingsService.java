@@ -60,7 +60,7 @@ public class BookingsService {
             BookingsV1 bookings = new BookingsV1();
             bookings.setCustomerId(assignBed.customerId());
             bookings.setUpdatedAt(new Date());
-            bookings.setJoiningDate(Utils.stringToDate(assignBed.joiningDate(), Utils.DATE_FORMAT_YY));
+            bookings.setJoiningDate(Utils.stringToDate(assignBed.joiningDate(), Utils.USER_INPUT_DATE_FORMAT));
             bookings.setRentAmount(assignBed.rentalAmount());
             bookings.setCreatedAt(new Date());
             bookings.setCreatedBy(authentication.getName());
