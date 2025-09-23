@@ -72,6 +72,8 @@ public class BedsService {
             boolean onNotice = false;
            if (item.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name()) && item.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
                onNotice = bookingService.checkIsBedOccupied(item.getBedId());
+           }else if (item.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+               onNotice = true;
            }
             return new BedsMapper(onNotice).apply(item);
         }).toList();
@@ -251,7 +253,6 @@ public class BedsService {
         if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
             if (bookingsV1.getLeavingDate() != null) {
-//                30/09/2025 & 01-09-2025
                 return Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), joiningDate) <= 0;
             }
         }
