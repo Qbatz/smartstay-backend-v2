@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.Banking.BookingBankMapper;
 import com.smartstay.smartstay.Wrappers.BankingListMapper;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
@@ -12,6 +13,7 @@ import com.smartstay.smartstay.ennum.BankPurpose;
 import com.smartstay.smartstay.ennum.CardType;
 import com.smartstay.smartstay.payloads.banking.AddBank;
 import com.smartstay.smartstay.payloads.banking.UpdateBank;
+import com.smartstay.smartstay.payloads.banking.UpdateBankBalance;
 import com.smartstay.smartstay.repositories.BankingRepository;
 import com.smartstay.smartstay.responses.banking.BankList;
 import com.smartstay.smartstay.responses.beds.Bank;
@@ -276,6 +278,41 @@ public class BankingService {
         bankingV1.setUpdatedAt(new Date());
         bankingV1Repository.save(bankingV1);
 
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+
+    public ResponseEntity<?>  updateBankBalance(String hostelId, UpdateBankBalance balance) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        BankingV1 bankingV1 = bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId, balance.bankId());
+        if (bankingV1 == null) {
+            return new ResponseEntity<>(Utils.NO_ACCOUNT_NO_FOUND, HttpStatus.NO_CONTENT);
+        }
+
+        BankTransactionsV1 bankTransactionsV1 = transactionService.getTransaction(balance.bankId(), hostelId);
+        if (bankTransactionsV1 == null) {
+            return new ResponseEntity<>(Utils.NO_ACCOUNT_NO_FOUND, HttpStatus.NO_CONTENT);
+        }
+        if (balance.balance() != null){
+            bankTransactionsV1.setAccountBalance(balance.balance());
+        }
+        transactionService.saveTransaction(bankTransactionsV1);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
