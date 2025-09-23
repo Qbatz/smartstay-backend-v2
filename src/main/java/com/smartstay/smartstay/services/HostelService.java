@@ -322,5 +322,13 @@ public class HostelService {
     public ResponseEntity<?> findFreeBeds(String hostelId) {
         return bedsService.findFreeBeds(hostelId);
     }
+
+    public ElectricityConfig getElectricityConfig(String hostelId) {
+        HostelV1 hostelV1 = hostelV1Repository.findById(hostelId).orElse(null);
+        if (hostelV1 == null) {
+            return null;
+        }
+        return hostelV1.getElectricityConfig();
+    }
 }
 

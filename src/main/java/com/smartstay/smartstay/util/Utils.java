@@ -40,7 +40,9 @@ public class Utils {
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
     public static final String TEMPLATE_TYPE_NOT_FOUND = "Template type not found for given templateTypeId!";
     public static final String INVALID_JOINING_DATE = "Invalid Joining Date";
-
+    public static final String ELECTRICITY_CONFIG_NOT_SET_UP = "Electricity configuration is not setup";
+    public static final String ALREADY_READING_TAKEN_THIS_DATE = "Already Reading taken for this date";
+    public static final String PREVIOUD_CURRENT_READING_NOT_MATCHING = "Previous reading and current readings are not matching";
     public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
     public static final String USER_ASSIGNED = "User Assigned Successfully";
@@ -51,6 +53,7 @@ public class Utils {
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
     public static final String INVALID_ROLE = "Invalid role";
+    public static final String INVALID_ROOM_ID = "Invalid Room Id";
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
     public static final String ACTIVE_USERS_FOUND = "Active users found";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
