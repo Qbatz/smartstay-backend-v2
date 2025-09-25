@@ -51,7 +51,7 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
 
     @Query(value = """
             SELECT rms.floor_id as floorId, rms.room_id as roomId, rms.room_name as roomName, flrs.floor_name as floorName, 
-            flrs.hostel_id as hostelId, (SELECT count(booking_id) FROM bookingsv1 WHERE room_id=er.room_id and current_status in ('NOTICE', 'CHECKIN'))  as noOfTenants 
+            flrs.hostel_id as hostelId, (SELECT count(booking_id) FROM bookingsv1 WHERE room_id=rms.room_id and current_status in ('NOTICE', 'CHECKIN'))  as noOfTenants 
             FROM rooms rms left outer join floors flrs on flrs.floor_id=rms.floor_id 
             WHERE rms.room_id not in (:roomIds) and rms.is_active=true and rms.is_deleted=false
             """, nativeQuery = true)

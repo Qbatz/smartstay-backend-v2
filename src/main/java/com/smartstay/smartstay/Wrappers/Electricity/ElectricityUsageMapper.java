@@ -28,6 +28,6 @@ public class ElectricityUsageMapper implements Function<RoomInfoForEB, Electrici
                 0.0,
                 0.0,
                 0.0,
-                roomInfoForEB.noOfTenants());
+                roomInfoForEB.noOfTenants().intValue());
     }
 }
