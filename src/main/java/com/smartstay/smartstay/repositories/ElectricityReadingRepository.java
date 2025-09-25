@@ -13,7 +13,7 @@ import java.util.List;
 public interface ElectricityReadingRepository extends JpaRepository<ElectricityReadings, Integer> {
     ElectricityReadings findTopByHostelIdOrderByEntryDateDesc(String hostelId);
 
-    ElectricityReadings findTopByRoomIdOrderByEntryDateDesc(Integer roomId);
+    ElectricityReadings findTopByRoomIdAndHostelIdOrderByEntryDateDesc(Integer roomId, String hostelId);
 
     @Query(value = """
             SELECT er.id, er.room_id as roomId, er.entry_date as entryDate, 

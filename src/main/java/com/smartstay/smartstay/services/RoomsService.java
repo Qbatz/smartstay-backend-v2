@@ -9,6 +9,7 @@ import com.smartstay.smartstay.repositories.FloorRepository;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.RoomRepository;
+import com.smartstay.smartstay.responses.rooms.RoomInfoForEB;
 import com.smartstay.smartstay.responses.rooms.RoomsResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -191,5 +192,9 @@ public class RoomsService {
 
     public int getRoomCount(String hostelId) {
         return roomRepository.getCountOfRoomsBasedOnHostel(hostelId);
+    }
+
+    public List<RoomInfoForEB> getBedsNotRegisteredOnEB(List<Integer> listRoomsInMeterReadings) {
+        return roomRepository.getAllRoomsNotInEb(listRoomsInMeterReadings);
     }
 }

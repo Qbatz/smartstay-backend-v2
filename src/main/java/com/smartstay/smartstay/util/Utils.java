@@ -3,8 +3,10 @@ package com.smartstay.smartstay.util;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -280,4 +282,40 @@ public class Utils {
     public static boolean isNotBlank(String value) {
         return value != null && !value.trim().isEmpty();
     }
+
+    public static final int findDateFromDate(Date date) {
+        if (date != null) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+
+            return cal.get(Calendar.DAY_OF_MONTH);
+        }
+        return 0;
+    }
+
+    public static final Date findLastDate(Integer cycleStartDay) {
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = LocalDate.of(today.getYear(), today.getMonth(), cycleStartDay);
+
+        LocalDate cycleEnd;
+        if (cycleStartDay == 1) {
+            YearMonth ym = YearMonth.from(startDate);
+            cycleEnd = ym.atEndOfMonth();
+        } else {
+            LocalDate nextMonth = startDate.plusMonths(1);
+            int endDay = cycleStartDay - 1;
+
+            int lastDayOfNextMonth = YearMonth.from(nextMonth).lengthOfMonth();
+            if (endDay > lastDayOfNextMonth) {
+                endDay = lastDayOfNextMonth;
+            }
+
+            cycleEnd = nextMonth.withDayOfMonth(endDay);
+        }
+
+        return Date.from(cycleEnd.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+    }
+
+
 }

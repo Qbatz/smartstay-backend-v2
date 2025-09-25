@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.Electricity.ElectricityUsageMapper;
 import com.smartstay.smartstay.Wrappers.Electricity.ListReadingMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.ElectricityConfig;
@@ -11,16 +12,17 @@ import com.smartstay.smartstay.ennum.ElectricityBillStatus;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
 import com.smartstay.smartstay.repositories.ElectricityReadingRepository;
 import com.smartstay.smartstay.responses.electricity.ElectricityUsage;
+import com.smartstay.smartstay.responses.rooms.RoomInfoForEB;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ElectricityService {
@@ -34,6 +36,10 @@ public class ElectricityService {
     private UserHostelService userHostelService;
     @Autowired
     private RolesService rolesService;
+
+    @Autowired
+    private RoomsService roomsService;
+
     @Autowired
     private ElectricityReadingRepository electricityReadingRepository;
 
@@ -70,31 +76,20 @@ public class ElectricityService {
         else {
             date = Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
-        ElectricityReadings electricityReadings = findLastEntryByRoomId(readings.roomId());
+        ElectricityReadings electricityReadings = findLastEntryByRoomId(readings.roomId(), hostelId);
 
-        int billMonth = 0;
-        int billYear = 0;
+        Date billStartDate = new Date();
+        Date billEndDate = new Date();
+
         if (electricityConfig != null && electricityConfig.getBillDate() != null) {
             Calendar cal = Calendar.getInstance();
 
             cal.setTime(date);
             cal.set(Calendar.DAY_OF_MONTH, electricityConfig.getBillDate());
 
-            if (Utils.compareWithTwoDates(cal.getTime(), date) <= 5) {
-                Calendar cal2 = Calendar.getInstance();
-                cal2.setTime(date);
-                cal2.set(Calendar.MONTH, cal2.get(Calendar.MONTH));
+            billStartDate = cal.getTime();
+            billEndDate = Utils.findLastDate(electricityConfig.getBillDate());
 
-                billMonth = cal2.get(Calendar.MONTH);
-                billYear = cal2.get(Calendar.YEAR);
-            }
-            else {
-                Calendar cal2 = Calendar.getInstance();
-                cal2.setTime(date);
-
-                billMonth = cal2.get(Calendar.MONTH);
-                billYear = cal2.get(Calendar.YEAR);
-            }
         }
 
 
@@ -120,7 +115,7 @@ public class ElectricityService {
         }
 
         if (electricityReadings != null) {
-            if (Utils.compareWithTwoDates(electricityReadings.getEntryDate(), Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT)) >=0) {
+            if (Utils.compareWithTwoDates(Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), electricityReadings.getEntryDate()) <=0) {
                 return new ResponseEntity<>(Utils.ALREADY_READING_TAKEN_THIS_DATE, HttpStatus.BAD_REQUEST);
             }
         }
@@ -145,17 +140,17 @@ public class ElectricityService {
         newReadings.setUpdatedAt(new Date());
         newReadings.setCreatedBy(users.getUserId());
         newReadings.setUpdatedBy(users.getUserId());
-        newReadings.setBilledMonth(billMonth);
-        newReadings.setBilledYear(billYear);
+        newReadings.setBillStartDate(billStartDate);
+        newReadings.setBillEndDate(billEndDate);
 
         electricityReadingRepository.save(newReadings);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
     }
 
-    private ElectricityReadings findLastEntryByRoomId(Integer roomId) {
+    private ElectricityReadings findLastEntryByRoomId(Integer roomId, String hostelId) {
 //        ElectricityReadings electricityReadings = electricityReadingRepository.findTopByRoomIdOrderByEntryDateDesc(roomId);
-        return electricityReadingRepository.findTopByRoomIdOrderByEntryDateDesc(roomId);
+        return electricityReadingRepository.findTopByRoomIdAndHostelIdOrderByEntryDateDesc(roomId, hostelId);
     }
 
     private ElectricityReadings findLatestEntryByHostelId(String hostelId) {
@@ -189,11 +184,29 @@ public class ElectricityService {
 
 
         List<ElectricityReaddings> listElectricity = electricityReadingRepository.getElectricity(hostelId);
+        List<Integer> listRoomsInMeterReadings = new ArrayList<>();
 
-        List<ElectricityUsage> listUsages = listElectricity
+
+        List<ElectricityUsage> listUsages = new ArrayList<>(listElectricity
                 .stream()
-                .map(item -> new ListReadingMapper().apply(item))
-                .toList();
+                .map(item -> {
+                    listRoomsInMeterReadings.add(item.getRoomId());
+                    return new ListReadingMapper().apply(item);
+                })
+                .toList());
+
+        if (!listRoomsInMeterReadings.isEmpty()) {
+            List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings);
+            List<ElectricityUsage> usages =  listBedForEb.stream()
+                    .map(item -> new ElectricityUsageMapper().apply(item))
+                    .toList();
+
+            listUsages.addAll(usages);
+
+        }
+
+
+
 
         return new ResponseEntity<>(listUsages, HttpStatus.OK);
     }
