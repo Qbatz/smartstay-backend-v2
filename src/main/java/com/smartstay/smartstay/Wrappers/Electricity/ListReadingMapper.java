@@ -9,16 +9,9 @@ import java.util.function.Function;
 public class ListReadingMapper implements Function<ElectricityReaddings, ElectricityUsage> {
     @Override
     public ElectricityUsage apply(ElectricityReaddings electricityReaddings) {
-        StringBuilder fullName = new StringBuilder();
-        if (electricityReaddings.getFirstName() != null) {
-            fullName.append(electricityReaddings.getFirstName());
-        }
-        if (electricityReaddings.getLastName() != null && !electricityReaddings.getLastName().equalsIgnoreCase(" ")) {
-            fullName.append(" ");
-            fullName.append(electricityReaddings.getLastName());
-        }
 
         double totalPrice = 0.0;
+        double previousReading = electricityReaddings.getConsumption() - electricityReaddings.getCurrentReading() ;
         if (!electricityReaddings.getConsumption().isNaN()) {
             totalPrice = electricityReaddings.getConsumption() * electricityReaddings.getUnitPrice();
         }
@@ -26,14 +19,14 @@ public class ListReadingMapper implements Function<ElectricityReaddings, Electri
                 electricityReaddings.getId(),
                 electricityReaddings.getConsumption(),
                 electricityReaddings.getRoomId(),
-                fullName.toString(),
                 electricityReaddings.getFloorId(),
                 electricityReaddings.getRoomName(),
                 electricityReaddings.getFloorName(),
                 Utils.dateToString(electricityReaddings.getEntryDate()),
                 electricityReaddings.getUnitPrice(),
-                electricityReaddings.getPreviousReadings(),
+                previousReading,
                 electricityReaddings.getCurrentReading(),
-                totalPrice);
+                totalPrice,
+                electricityReaddings.getNoOfTenants());
     }
 }

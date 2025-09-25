@@ -25,6 +25,10 @@ public class ElectricityReadings {
     private String billStatus;
     private Integer roomId;
     private Integer floorId;
+    //this is for billed month and year. eg. 03/2025 reading will taken on 01/04/2025 or later
+    //or depends on billing cycle
+    private Integer billedMonth;
+    private Integer billedYear;
     private Date entryDate;
 //    no of unit consumed
     private Double consumption;

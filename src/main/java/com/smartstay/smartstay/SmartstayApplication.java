@@ -319,6 +319,8 @@ public class SmartstayApplication {
 								config.setProRate(true);
 								config.setHostel(item);
 								config.setCharge(5.0);
+								config.setBillDate(1);
+								config.setUpdated(false);
 								config.setShouldIncludeInRent(true);
 								config.setLastUpdate(new Date());
 								config.setUpdatedBy(item.getCreatedBy());
