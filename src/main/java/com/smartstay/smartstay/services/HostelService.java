@@ -9,6 +9,7 @@ import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
+import com.smartstay.smartstay.payloads.hostel.UpdateElectricityPrice;
 import com.smartstay.smartstay.payloads.templates.BillTemplates;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.responses.Hostels;
@@ -329,6 +330,39 @@ public class HostelService {
             return null;
         }
         return hostelV1.getElectricityConfig();
+    }
+
+    public ResponseEntity<?> updateEbPrice(String hostelId, UpdateElectricityPrice electricityPrice) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelV1Repository.findByHostelIdAndParentId(hostelId, users.getParentId());
+        if (hostel == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No hostel found");
+        }
+        if (electricityPrice == null) {
+            return new ResponseEntity<>(Utils.ELECTICITY_PRICE_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        ElectricityConfig config = hostel.getElectricityConfig();
+        config.setCharge(electricityPrice.unitPrice());
+
+        hostel.setElectricityConfig(config);
+
+        hostelV1Repository.save(hostel);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }
 

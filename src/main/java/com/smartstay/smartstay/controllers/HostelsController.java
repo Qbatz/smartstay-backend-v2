@@ -2,11 +2,14 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
+import com.smartstay.smartstay.payloads.hostel.UpdateElectricityPrice;
 import com.smartstay.smartstay.services.HostelService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -58,4 +61,8 @@ public class HostelsController {
         return hostelService.findFreeBeds(hostelId);
     }
 
+    @PutMapping("/electricity/{hostelId}")
+    public ResponseEntity<?> updateEBUnitPrice(@PathVariable("hostelId") String hostelId, @Valid @RequestBody UpdateElectricityPrice electricityPrice) {
+        return hostelService.updateEbPrice(hostelId, electricityPrice);
+    }
 }

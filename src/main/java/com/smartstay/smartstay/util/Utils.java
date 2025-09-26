@@ -87,6 +87,7 @@ public class Utils {
     public static final String BILLING_RULE_NOT_AVAILABLE = "Billing Rule not found";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";
+    public static final String ELECTICITY_PRICE_REQUIRED = "Electricity Price Required";
     public static final String CUSTOMER_CHECKED_IN_INACTIVE_STATUS = "Cannot changed status to inactive for checked in customers";
 
     public static final String PERMISSION_READ = "READ";

@@ -197,4 +197,8 @@ public class RoomsService {
     public List<RoomInfoForEB> getBedsNotRegisteredOnEB(List<Integer> listRoomsInMeterReadings) {
         return roomRepository.getAllRoomsNotInEb(listRoomsInMeterReadings);
     }
+
+    public List<RoomInfoForEB> findAllRoomsByHostelId(String hostelId) {
+        return roomRepository.getAllRoomsByHostelForEB(hostelId);
+    }
 }
