@@ -23,6 +23,8 @@ public class ElectricityConfig {
     private Date lastUpdate;
     private String updatedBy;
     private Double charge;
+    private boolean isUpdated;
+    private Integer billDate;
 
     @OneToOne()
     @JoinColumn(name = "hostel_id", referencedColumnName = "hostelId")

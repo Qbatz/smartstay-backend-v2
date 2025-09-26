@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.Rooms;
+import com.smartstay.smartstay.responses.rooms.RoomInfoForEB;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -47,5 +48,13 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
 
     @Query("SELECT count(r) FROM Rooms r where r.hostelId=:hostelId and r.isActive=true and r.isDeleted=false")
     int getCountOfRoomsBasedOnHostel(@Param("hostelId") String hostelId);
+
+    @Query(value = """
+            SELECT rms.floor_id as floorId, rms.room_id as roomId, rms.room_name as roomName, flrs.floor_name as floorName, 
+            flrs.hostel_id as hostelId, (SELECT count(booking_id) FROM bookingsv1 WHERE room_id=rms.room_id and current_status in ('NOTICE', 'CHECKIN'))  as noOfTenants 
+            FROM rooms rms left outer join floors flrs on flrs.floor_id=rms.floor_id 
+            WHERE rms.room_id not in (:roomIds) and rms.is_active=true and rms.is_deleted=false
+            """, nativeQuery = true)
+    List<RoomInfoForEB> getAllRoomsNotInEb(@Param("roomIds")  List<Integer> roomIds);
 
 }

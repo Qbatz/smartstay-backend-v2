@@ -309,27 +309,29 @@ public class SmartstayApplication {
 	@Bean
 	CommandLineRunner addEbConfiguration(HostelV1Repository hostelRepo) {
 		return args -> {
-			List<HostelV1> listHostels = hostelRepo.findAll();
-			if (!listHostels.isEmpty()) {
-				listHostels
-						.stream()
-						.forEach(item -> {
-							if (item.getElectricityConfig() == null) {
-								ElectricityConfig config = new ElectricityConfig();
-								config.setProRate(true);
-								config.setHostel(item);
-								config.setCharge(5.0);
-								config.setShouldIncludeInRent(true);
-								config.setLastUpdate(new Date());
-								config.setUpdatedBy(item.getCreatedBy());
-								config.setTypeOfReading(EBReadingType.ROOM_READING.name());
-
-								item.setElectricityConfig(config);
-
-								hostelRepo.save(item);
-							}
-						});
-			}
+//			List<HostelV1> listHostels = hostelRepo.findAll();
+//			if (!listHostels.isEmpty()) {
+//				listHostels
+//						.stream()
+//						.forEach(item -> {
+//							if (item.getElectricityConfig() == null) {
+//								ElectricityConfig config = new ElectricityConfig();
+//								config.setProRate(true);
+//								config.setHostel(item);
+//								config.setCharge(5.0);
+//								config.setBillDate(1);
+//								config.setUpdated(false);
+//								config.setShouldIncludeInRent(true);
+//								config.setLastUpdate(new Date());
+//								config.setUpdatedBy(item.getCreatedBy());
+//								config.setTypeOfReading(EBReadingType.ROOM_READING.name());
+//
+//								item.setElectricityConfig(config);
+//
+//								hostelRepo.save(item);
+//							}
+//						});
+//			}
 		};
 	}
 
