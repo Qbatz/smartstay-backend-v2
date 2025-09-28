@@ -152,6 +152,7 @@ public class ComplaintsService {
         complaint.setParentId(user.getParentId());
         complaint.setHostelId(request.hostelId());
         complaint.setIsActive(true);
+        complaint.setStatus("PENDING");
         complaint.setIsDeleted(false);
 
         complaintRepository.save(complaint);

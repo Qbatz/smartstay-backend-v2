@@ -111,9 +111,9 @@ public interface UserRepository extends JpaRepository<Users, String> {
                                                       LEFT JOIN address ad ON ad.user_id = usr.user_id
                                                       LEFT JOIN countries country ON country.country_id = usr.country
                                                       LEFT JOIN user_hostel uh on uh.user_id=usr.user_id
-                                                      WHERE uh.hostel_id=:hostelId AND usr.role_id NOT IN (1,2) and usr.is_active=1 and usr.is_deleted = 0
+                                                      WHERE uh.hostel_id=:hostelId AND usr.role_id NOT IN (1,2) and usr.is_active=1 and usr.is_deleted = 0 and usr.user_id !=:userId
             """, nativeQuery = true)
-    List<UsersData> getUserList(@Param("hostelId") String hostelId);
+    List<UsersData> getUserList(@Param("hostelId") String hostelId,@Param("userId") String userId);
 
     @Query("SELECT count(u) FROM Users u where u.emailId=:emailId and u.userId !=:userId")
     int getUsersCountByEmail(String userId, String emailId);
