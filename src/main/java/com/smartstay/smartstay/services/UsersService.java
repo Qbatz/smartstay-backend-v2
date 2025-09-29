@@ -392,7 +392,7 @@ public class UsersService {
                 if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
                     return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
                 }
-                List<UsersData> usersList = userRepository.getUserList(hostelId);
+                List<UsersData> usersList = userRepository.getUserList(hostelId,users.getUserId());
                 if (usersList.isEmpty()) {
                     return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.NO_CONTENT);
                 }
