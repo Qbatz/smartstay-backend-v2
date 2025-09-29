@@ -114,6 +114,18 @@ public class HostelService {
         hostelV1.setStreet(payloads.street());
         hostelV1.setState(payloads.state());
 
+        ElectricityConfig config = new ElectricityConfig();
+        config.setProRate(true);
+        config.setHostel(hostelV1);
+        config.setCharge(5.0);
+        config.setBillDate(1);
+        config.setUpdated(false);
+        config.setShouldIncludeInRent(true);
+        config.setLastUpdate(new Date());
+        config.setUpdatedBy(users.getUserId());
+        config.setTypeOfReading(EBReadingType.ROOM_READING.name());
+        hostelV1.setElectricityConfig(config);
+
         if (mainImage != null) {
             String mainImageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(mainImage), "Hostel-Images");
             hostelV1.setMainImage(mainImageUrl);
