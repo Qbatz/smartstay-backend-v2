@@ -66,15 +66,15 @@ public class BedsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId,user.getParentId());
+        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId, user.getParentId());
 
         List<BedsResponse> bedsResponses = listBeds.stream().map(item -> {
             boolean onNotice = false;
-           if (item.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name()) && item.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
-               onNotice = bookingService.checkIsBedOccupied(item.getBedId());
-           }else if (item.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-               onNotice = true;
-           }
+            if (item.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name()) && item.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+                onNotice = bookingService.checkIsBedOccupied(item.getBedId());
+            } else if (item.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+                onNotice = true;
+            }
             return new BedsMapper(onNotice).apply(item);
         }).toList();
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
@@ -102,10 +102,9 @@ public class BedsService {
             }
             BedDetails bedsResponse = null;
             if (listBeds.size() > 1) {
-                bedsResponse = new BedDetailsMapper(listBeds.get(0).leavingDate(), listBeds.get(0).joiningDate()).apply(listBeds.get(1));
-            }
-            else if (!listBeds.isEmpty()) {
-                bedsResponse = new BedDetailsMapper(null, null).apply(listBeds.get(0));
+                bedsResponse = new BedDetailsMapper(listBeds.get(0).leavingDate(), listBeds.get(0).joiningDate(), listBeds.get(0)).apply(listBeds.get(1));
+            } else if (!listBeds.isEmpty()) {
+                bedsResponse = new BedDetailsMapper(null, null, null).apply(listBeds.get(0));
             }
 
             return new ResponseEntity<>(bedsResponse, HttpStatus.OK);
@@ -129,14 +128,14 @@ public class BedsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId,user.getParentId());
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId, user.getParentId());
         if (existingBed == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
 
         if (updateBed.bedName() != null && !updateBed.bedName().isEmpty()) {
             int duplicateCount = bedsRepository.countByBedNameAndBedId(
-                    user.getParentId(),bedId,existingBed.getRoomId()
+                    user.getParentId(), bedId, existingBed.getRoomId()
             );
             if (duplicateCount > 0) {
                 return new ResponseEntity<>("Bed name already exists in this room", HttpStatus.CONFLICT);
@@ -165,8 +164,8 @@ public class BedsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        boolean exists = roomRepository.checkRoomExistInTable(addBed.roomId(),user.getParentId(), addBed.hostelId()) == 1;
-        if (!exists){
+        boolean exists = roomRepository.checkRoomExistInTable(addBed.roomId(), user.getParentId(), addBed.hostelId()) == 1;
+        if (!exists) {
             return new ResponseEntity<>("Room Doesn't exist for this hostel", HttpStatus.BAD_REQUEST);
         }
 
@@ -192,7 +191,7 @@ public class BedsService {
         beds.setRentAmount(addBed.amount());
         beds.setStatus(BedStatus.VACANT.name());
         beds.setCurrentStatus(BedStatus.VACANT.name());
-        beds.setFreeFrom(new Date());
+        beds.setFreeFrom(null);
         beds.setRentAmount(addBed.amount());
         bedsRepository.save(beds);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -207,7 +206,7 @@ public class BedsService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Beds existingBed = bedsRepository.findByBedIdAndParentId(roomId,users.getParentId());
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(roomId, users.getParentId());
         if (existingBed != null) {
             bedsRepository.delete(existingBed);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
@@ -228,17 +227,47 @@ public class BedsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId,users.getParentId());
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId, users.getParentId());
         if (existingBed != null) {
             if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(joiningDate, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
                 existingBed.setStatus(BedStatus.BOOKED.name());
                 existingBed.setBooked(true);
-            }else {
+            } else {
                 existingBed.setBooked(false);
                 existingBed.setStatus(BedStatus.OCCUPIED.name());
                 existingBed.setCurrentStatus(BedStatus.OCCUPIED.name());
                 existingBed.setFreeFrom(null);
             }
+
+            existingBed.setUpdatedAt(new Date());
+
+            bedsRepository.save(existingBed);
+
+        }
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+    }
+
+    /**
+     * this works when booking a customer
+     *
+     * @return
+     */
+    public ResponseEntity<?> assignCustomer(int bedId, String joiningDate) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users users = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId, users.getParentId());
+        if (existingBed != null) {
+
+            existingBed.setStatus(BedStatus.BOOKED.name());
+            existingBed.setBooked(true);
 
             existingBed.setUpdatedAt(new Date());
 
@@ -255,35 +284,29 @@ public class BedsService {
             if (bookingsV1.getLeavingDate() != null) {
                 return Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), joiningDate) <= 0;
             }
-        }
-        else if (beds.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+        } else if (beds.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
             return false;
-        }
-        else if (beds.getStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+        } else if (beds.getStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
             return true;
-        }
-        else if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
+        } else if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
 
             if (bookingsV1 != null) {
                 if (bookingsV1.getLeavingDate() != null) {
                     if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), joiningDate) > 0) {
                         return true;
-                    }
-                    else  {
+                    } else {
                         return false;
                     }
                 }
                 if (bookingsV1.getExpectedJoiningDate() != null) {
                     if (Utils.compareWithTwoDates(bookingsV1.getExpectedJoiningDate(), joiningDate) > 0) {
                         return true;
-                    }
-                    else  {
+                    } else {
                         return false;
                     }
                 }
-            }
-            else {
+            } else {
                 return true;
             }
         }
@@ -368,6 +391,7 @@ public class BedsService {
 
     /**
      * this is compatible only for the booked users.
+     *
      * @param bedId
      * @param joiningDate
      * @return

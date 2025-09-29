@@ -316,7 +316,7 @@ public class CustomersService {
 
                 AddPayment addPayment = new AddPayment(payloads.bankId(), payloads.bookingDate(), payloads.referenceNumber(), payloads.bookingAmount());
                 transactionService.recordPayment(hostelId, invoiceId, addPayment);
-                return bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
+                return bedsService.assignCustomer(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
             } else {
                 return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
             }
@@ -534,7 +534,7 @@ public class CustomersService {
                     checkinRequest.deductions()
             );
 
-            bookingsService.addChecking(customerId, request);
+            bookingsService.checkInBookedCustomer(customerId, request);
 
             Calendar calendar = Calendar.getInstance();
             int dueDate = calendar.get(Calendar.DAY_OF_MONTH) + 5;

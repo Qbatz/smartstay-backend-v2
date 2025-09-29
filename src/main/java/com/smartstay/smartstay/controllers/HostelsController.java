@@ -2,6 +2,7 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
+import com.smartstay.smartstay.payloads.electricity.UpdateEBConfigs;
 import com.smartstay.smartstay.payloads.hostel.UpdateElectricityPrice;
 import com.smartstay.smartstay.services.HostelService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -64,5 +65,15 @@ public class HostelsController {
     @PutMapping("/electricity/{hostelId}")
     public ResponseEntity<?> updateEBUnitPrice(@PathVariable("hostelId") String hostelId, @Valid @RequestBody UpdateElectricityPrice electricityPrice) {
         return hostelService.updateEbPrice(hostelId, electricityPrice);
+    }
+
+    @GetMapping("/electricity/{hostelId}")
+    public ResponseEntity<?> getEBSettings(@PathVariable("hostelId") String hostelId) {
+        return hostelService.getEBSettings(hostelId);
+    }
+
+    @PutMapping("/electricity/config/{hostelId}")
+    public ResponseEntity<?> updateElectricityConfiguration(@PathVariable("hostelId") String hostelId, UpdateEBConfigs ebConfigs) {
+        return hostelService.updateEbConfig(hostelId, ebConfigs);
     }
 }

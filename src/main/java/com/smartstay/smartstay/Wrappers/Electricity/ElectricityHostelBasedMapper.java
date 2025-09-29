@@ -24,6 +24,9 @@ public class ElectricityHostelBasedMapper implements Function<RoomInfoForEB, Ele
         double consumption = 0;
         double currentReading = 0;
         double totalPrice = 0;
+        Integer ebId = 0;
+        String date = null;
+        Double unitPrice = null;
         if (electricityReadings != null) {
             if (electricityReadings.getPreviousReading() != null) {
                 previousReading = electricityReadings.getPreviousReading() / size;
@@ -37,17 +40,26 @@ public class ElectricityHostelBasedMapper implements Function<RoomInfoForEB, Ele
             if (electricityReadings.getCurrentUnitPrice() != null) {
                 totalPrice = consumption * electricityReadings.getCurrentUnitPrice();
             }
+            if (electricityReadings.getId() != null) {
+                ebId = electricityReadings.getId();
+            }
+            if (electricityReadings.getEntryDate() != null) {
+                date = Utils.dateToString(electricityReadings.getEntryDate());
+            }
+            if (electricityReadings.getCurrentUnitPrice() != null) {
+                unitPrice = electricityReadings.getCurrentUnitPrice();
+            }
         }
 
         return new ElectricityUsage(hostelId,
-                electricityReadings.getId(),
+                ebId,
                 consumption,
                 roomInfoForEB.roomId(),
                 roomInfoForEB.floorId(),
                 roomInfoForEB.roomName(),
                 roomInfoForEB.floorName(),
-                Utils.dateToString(electricityReadings.getEntryDate()),
-                electricityReadings.getCurrentUnitPrice(),
+                date,
+                unitPrice,
                 previousReading,
                 currentReading,
                 totalPrice,

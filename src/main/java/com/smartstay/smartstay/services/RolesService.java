@@ -45,7 +45,7 @@ public class RolesService {
         this.usersService = usersService;
     }
 
-    public ResponseEntity<?> getAllRoles() {
+    public ResponseEntity<?> getAllRoles(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -60,13 +60,14 @@ public class RolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<RolesV1> getCommonRoles = rolesRepository.findDefaultRoles(List.of(3, 4));
-        List<RolesV1> listRoles = rolesRepository.findAllByParentId(user.getParentId());
+        List<RolesV1> listRoles = rolesRepository.findAllByHostelId(hostelId);
         listRoles.addAll(0, getCommonRoles);
         List<Roles> rolesList = listRoles.stream().map(item -> new RolesMapper(modulesRepository).apply(item)).toList();
         return new ResponseEntity<>(rolesList, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getRoleById(Integer id) {
+        System.out.println(id);
         if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
@@ -83,7 +84,14 @@ public class RolesService {
         if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        RolesV1 v1 = rolesRepository.findByRoleIdAndParentId(id,user.getParentId());
+        RolesV1 v1 = null;
+        if (id == 1 || id == 2 || id == 3 || id == 4) {
+            v1 = rolesRepository.findByRoleId(id);
+        }
+        else {
+            v1 = rolesRepository.findByRoleIdAndParentId(id,user.getParentId());
+
+        }
         if (v1 != null) {
             Roles rolesData = new RolesMapper(modulesRepository).apply(v1);
             return new ResponseEntity<>(rolesData, HttpStatus.OK);

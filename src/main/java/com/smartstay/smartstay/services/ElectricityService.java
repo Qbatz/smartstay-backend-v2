@@ -193,8 +193,8 @@ public class ElectricityService {
                     })
                     .toList());
 
-            if (!listRoomsInMeterReadings.isEmpty()) {
-                List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings);
+            List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings, hostelId);
+            if (!listBedForEb.isEmpty()) {
                 List<ElectricityUsage> usages =  listBedForEb.stream()
                         .map(item -> new ElectricityUsageMapper().apply(item))
                         .toList();
@@ -202,6 +202,7 @@ public class ElectricityService {
                 listUsages.addAll(usages);
 
             }
+
 
             ElectricityList list = new ElectricityList(false, listUsages);
 

@@ -24,6 +24,7 @@ public class RolesMapper implements Function<RolesV1, Roles> {
 
     @Override
     public Roles apply(RolesV1 rolesV1) {
+        String roleName = null;
         List<RolesPermission> rolePermissions = rolesV1.getPermissions();
         if (rolePermissions == null || rolePermissions.isEmpty()) {
             return new Roles(rolesV1.getRoleId(), rolesV1.getRoleName(), rolesV1.getIsEditable(),  Collections.emptyList());
@@ -44,7 +45,13 @@ public class RolesMapper implements Function<RolesV1, Roles> {
                 ))
                 .toList();
 
-        return new Roles(rolesV1.getRoleId(), rolesV1.getRoleName(), rolesV1.getIsEditable(), permissionDetails);
+        if (rolesV1.getRoleId() == 1 || rolesV1.getRoleId() == 2) {
+            roleName = "Admin";
+        }
+        else {
+            roleName = rolesV1.getRoleName();
+        }
+        return new Roles(rolesV1.getRoleId(), roleName, rolesV1.getIsEditable(), permissionDetails);
     }
 
 }
