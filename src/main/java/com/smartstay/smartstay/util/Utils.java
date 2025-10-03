@@ -88,8 +88,13 @@ public class Utils {
     public static final String BILLING_RULE_NOT_AVAILABLE = "Billing Rule not found";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";
+    public static final String ELECTICITY_PRICE_REQUIRED = "Electricity Price Required";
     public static final String CUSTOMER_CHECKED_IN_INACTIVE_STATUS = "Cannot changed status to inactive for checked in customers";
-
+    public static final String CUSTOMER_INACTIVE_VACTED_ERROR = "Cannot change status to inactive for vacated customers";
+    public static final String CUSTOMER_ALREADY_INACTIVE_ERROR = "Customer is already inactive";
+    public static final String CANNOT_CHECKOUT_ACTIVE_CUSTOMERS = "Customer is currently active";
+    public static final String CANNOT_ENABLE_HOSTEL_ROOM_READINGS = "Cannot enable hostel based and room based together";
+    public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
     public static final String PERMISSION_UPDATE = "UPDATE";
@@ -225,7 +230,6 @@ public class Utils {
         LocalDate localDate2 = date2.toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate();
-        System.out.println("Comparing----> " + localDate1 + " and " + localDate2);
 
         return localDate1.compareTo(localDate2);
     }

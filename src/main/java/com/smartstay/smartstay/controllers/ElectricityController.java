@@ -27,7 +27,6 @@ public class ElectricityController {
 
     @PostMapping("/{hostelId}")
     public ResponseEntity<?> addMeterReading(@PathVariable("hostelId") String hostelId,  @Valid @RequestBody AddReading readings) {
-
         return electricityService.addMeterReading(hostelId, readings);
     }
 
@@ -35,4 +34,6 @@ public class ElectricityController {
     public ResponseEntity<?> getAllReadings(@PathVariable("hostelId") String hostelId) {
         return electricityService.getEBReadings(hostelId);
     }
+
+
 }

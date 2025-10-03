@@ -194,7 +194,14 @@ public class RoomsService {
         return roomRepository.getCountOfRoomsBasedOnHostel(hostelId);
     }
 
-    public List<RoomInfoForEB> getBedsNotRegisteredOnEB(List<Integer> listRoomsInMeterReadings) {
-        return roomRepository.getAllRoomsNotInEb(listRoomsInMeterReadings);
+    public List<RoomInfoForEB> getBedsNotRegisteredOnEB(List<Integer> listRoomsInMeterReadings, String hostelId) {
+        if (listRoomsInMeterReadings.isEmpty()) {
+            return roomRepository.getAllRoomsForEb(hostelId);
+        }
+        return roomRepository.getAllRoomsNotInEb(listRoomsInMeterReadings, hostelId);
+    }
+
+    public List<RoomInfoForEB> findAllRoomsByHostelId(String hostelId) {
+        return roomRepository.getAllRoomsByHostelForEB(hostelId);
     }
 }

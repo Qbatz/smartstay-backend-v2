@@ -16,10 +16,15 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
     Date oldTenantLeavingOn = null;
     Date currentTenentJoiningDate = null;
 
+    Beds previousTenantBed = null;
+    String tag = null;
 
-    public BedDetailsMapper(Date oldTenantLeavingOn, Date currentTenentJoiningDate) {
+
+    public BedDetailsMapper(Date oldTenantLeavingOn, Date currentTenentJoiningDate, Beds previousTenant, String tag) {
         this.oldTenantLeavingOn = oldTenantLeavingOn;
         this.currentTenentJoiningDate = currentTenentJoiningDate;
+        this.previousTenantBed = previousTenant;
+        this.tag = tag;
     }
 
     @Override
@@ -58,6 +63,73 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
             if (beds.firstName() != null)
                 initials.append(beds.firstName().toUpperCase().charAt(1));
         }
+
+        String currentTenantFirstName = null;
+        String currentTenantLastName = null;
+        StringBuilder currentTenantFullName = new StringBuilder();
+        String currentTenantProfilePic = null;
+        StringBuilder currentTenantInitials = new StringBuilder();
+        String currentTenantMobile = null;
+        String currentTenantCustomerId = null;
+
+        if (previousTenantBed != null) {
+            currentTenantFirstName = previousTenantBed.firstName();
+            currentTenantLastName = previousTenantBed.lastName();
+            currentTenantInitials.append(previousTenantBed.firstName().toUpperCase().charAt(0));
+            currentTenantFullName.append(previousTenantBed.firstName());
+            currentTenantProfilePic = previousTenantBed.profilePic();
+            currentTenantMobile = previousTenantBed.mobile();
+            currentTenantCustomerId = previousTenantBed.customerId();
+
+            if (previousTenantBed.lastName() != null && !previousTenantBed.lastName().equalsIgnoreCase("")) {
+                currentTenantFullName.append(" ");
+                currentTenantFullName.append(previousTenantBed.lastName().toUpperCase().charAt(0));
+
+                currentTenantInitials.append(previousTenantBed.lastName().toUpperCase().charAt(0));
+            }
+            else {
+                if (previousTenantBed.firstName().length() > 1) {
+                    currentTenantInitials.append(previousTenantBed.firstName().toUpperCase().charAt(1));
+                }
+
+            }
+        }
+
+        if (tag != null && tag.equalsIgnoreCase("Current")) {
+            return new BedDetails(beds.bedName(),
+                    beds.bedId(),
+                    beds.hostelId(),
+                    beds.isBooked(),
+                    isOnNotice,
+                    isOccupied,
+                    beds.roomRent(),
+                    beds.roomId(),
+                    freeFrom,
+                    beds.currentRent(),
+                    oldTenantLeaving,
+                    beds.bookingId(),
+                    expectedJoiningDate,
+                    jd,
+                    beds.firstName(),
+                    beds.lastName(),
+                    beds.profilePic(),
+                    fullName.toString(),
+                    initials.toString(),
+                    beds.mobile(),
+                    beds.floorId(),
+                    beds.floorName(),
+                    beds.roomName(),
+                    beds.countryCode(),
+                    beds.customerId(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
+        }
+
         return new BedDetails(beds.bedName(),
                 beds.bedId(),
                 beds.hostelId(),
@@ -72,16 +144,23 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                 beds.bookingId(),
                 expectedJoiningDate,
                 jd,
-                beds.firstName(),
-                beds.lastName(),
-                beds.profilePic(),
-                fullName.toString(),
-                initials.toString(),
-                beds.mobile(),
+                currentTenantFirstName,
+                currentTenantLastName,
+                currentTenantProfilePic,
+                currentTenantFullName.toString(),
+                currentTenantInitials.toString(),
+                currentTenantMobile,
                 beds.floorId(),
                 beds.floorName(),
                 beds.roomName(),
                 beds.countryCode(),
+                currentTenantCustomerId,
+                beds.firstName(),
+                beds.lastName(),
+                fullName.toString(),
+                beds.profilePic(),
+                initials.toString(),
+                beds.mobile(),
                 beds.customerId());
     }
 }

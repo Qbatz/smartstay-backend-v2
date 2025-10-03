@@ -163,14 +163,8 @@ public class BookingsService {
         bookingv1.setCustomerId(customerId);
         bookingv1.setHostelId(request.hostelId());
         String date = request.joiningDate().replace("/", "-");
-        if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) <= 0) {
-            bookingv1.setCurrentStatus(BookingStatus.CHECKIN.name());
-            bookingv1.setBookingDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
-        }
-        else {
-            bookingv1.setBookingDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
-            bookingv1.setCurrentStatus(BookingStatus.BOOKED.name());
-        }
+
+        bookingv1.setCurrentStatus(BookingStatus.CHECKIN.name());
 
         bookingv1.setBookingAmount(0.0);
         bookingv1.setAdvanceAmount(request.advanceAmount());
@@ -224,12 +218,7 @@ public class BookingsService {
         if (bookingsV1 != null) {
             bookingsV1.setUpdatedAt(new Date());
             bookingsV1.setLeavingDate(null);
-            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) <= 0) {
-                bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
-            }
-            else {
-                bookingsV1.setCurrentStatus(BookingStatus.BOOKED.name());
-            }
+            bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
             bookingsV1.setRoomId(payloads.roomId());
             String rawDateStr = payloads.joiningDate().replace("-", "/");
 
@@ -242,11 +231,33 @@ public class BookingsService {
         }
     }
 
+    public void checkInBookedCustomer(String customerId, CheckInRequest payloads) {
+        String date = payloads.joiningDate().replace("/", "-");
+        BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
+        if (bookingsV1 != null) {
+            bookingsV1.setUpdatedAt(new Date());
+            bookingsV1.setLeavingDate(null);
+            bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
+            bookingsV1.setRoomId(payloads.roomId());
+            String rawDateStr = payloads.joiningDate().replace("-", "/");
+
+            Date joiningDate = Utils.convertStringToDate(rawDateStr);
+            bookingsV1.setJoiningDate(joiningDate);
+            bookingsV1.setAdvanceAmount(payloads.advanceAmount());
+            bookingsRepository.save(bookingsV1);
+        }
+    }
+
     public boolean checkIsBedOccupied(Integer bedId) {
-        BookingsV1 bookingsV1 = bookingsRepository.findLatestBooking(bedId);
+        BookingsV1 bookingsV1 = bookingsRepository.findCheckingOutDetails(bedId);
         if (bookingsV1.getLeavingDate() != null) {
-            if (Utils.compareWithTwoDates(new Date(), bookingsV1.getLeavingDate()) < 0) {
+            if (Utils.compareWithTwoDates(new Date(), bookingsV1.getLeavingDate()) >= 0) {
                 return true;
+            }
+            else if (Utils.compareWithTwoDates(new Date(), bookingsV1.getLeavingDate()) < 0) {
+                if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()) || bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
+                    return true;
+                }
             }
         }
         return false;
@@ -278,7 +289,10 @@ public class BookingsService {
         }
 
         if (bed != null) {
-            if (Utils.compareWithTwoDates(new Date(), bed.getFreeFrom()) > 0) {
+            if (bed.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+                canCheckIn = true;
+            }
+            else if (Utils.compareWithTwoDates(new Date(), bed.getFreeFrom()) > 0) {
                 canCheckIn = false;
             }
             InitializeCheckIn initializeCheckIn = new InitializeCheckIn(

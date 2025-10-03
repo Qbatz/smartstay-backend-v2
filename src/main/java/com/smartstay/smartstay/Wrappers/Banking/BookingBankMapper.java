@@ -23,6 +23,7 @@ public class BookingBankMapper implements Function<BankingV1, BookingBankInfo> {
                 bankingV1.getAccountHolderName(),
                 bankName,
                 bankingV1.getUpiId(),
+                bankingV1.getAccountType(),
                 isUpi
         );
     }

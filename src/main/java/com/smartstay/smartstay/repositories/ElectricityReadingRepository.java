@@ -32,4 +32,5 @@ public interface ElectricityReadingRepository extends JpaRepository<ElectricityR
             SELECT er.room_id as roomId FROM electricity_readings er where er.hostel_id=:hostelId GROUP by er.room_id
             """, nativeQuery = true)
     List<Integer> getRoomIds(@Param("hostelId") String hostelId);
+
 }

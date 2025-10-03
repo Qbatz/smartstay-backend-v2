@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.Electricity.ElectricityHostelBasedMapper;
 import com.smartstay.smartstay.Wrappers.Electricity.ElectricityUsageMapper;
 import com.smartstay.smartstay.Wrappers.Electricity.ListReadingMapper;
 import com.smartstay.smartstay.config.Authentication;
@@ -11,6 +12,7 @@ import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
 import com.smartstay.smartstay.repositories.ElectricityReadingRepository;
+import com.smartstay.smartstay.responses.electricity.ElectricityList;
 import com.smartstay.smartstay.responses.electricity.ElectricityUsage;
 import com.smartstay.smartstay.responses.rooms.RoomInfoForEB;
 import com.smartstay.smartstay.util.Utils;
@@ -177,37 +179,54 @@ public class ElectricityService {
         }
 
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        //this is for room reading
         if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            List<ElectricityReaddings> listElectricity = electricityReadingRepository.getElectricity(hostelId);
+            List<Integer> listRoomsInMeterReadings = new ArrayList<>();
 
+
+            List<ElectricityUsage> listUsages = new ArrayList<>(listElectricity
+                    .stream()
+                    .map(item -> {
+                        listRoomsInMeterReadings.add(item.getRoomId());
+                        return new ListReadingMapper().apply(item);
+                    })
+                    .toList());
+
+            List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings, hostelId);
+            if (!listBedForEb.isEmpty()) {
+                List<ElectricityUsage> usages =  listBedForEb.stream()
+                        .map(item -> new ElectricityUsageMapper().apply(item))
+                        .toList();
+
+                listUsages.addAll(usages);
+
+            }
+
+
+            ElectricityList list = new ElectricityList(false, listUsages);
+
+            return new ResponseEntity<>(list, HttpStatus.OK);
+        }
+        else {
+
+            ElectricityReadings latestEntry = findLatestEntryByHostelId(hostelId);
+            List<RoomInfoForEB> listRoomInfo =  roomsService.findAllRoomsByHostelId(hostelId);
+            ElectricityList list = null;
+                if (listRoomInfo != null) {
+                    List<ElectricityUsage> listUsage = listRoomInfo.stream()
+                            .map(item -> new ElectricityHostelBasedMapper(listRoomInfo.size(),
+                                    hostelId,
+                                    latestEntry).apply(item))
+                            .toList();
+
+                    list = new ElectricityList(true, listUsage);
+                    return new ResponseEntity<>(list, HttpStatus.OK);
+                }
+            list = new ElectricityList(true, null);
+            return new ResponseEntity<>(list, HttpStatus.OK);
         }
 
 
-
-        List<ElectricityReaddings> listElectricity = electricityReadingRepository.getElectricity(hostelId);
-        List<Integer> listRoomsInMeterReadings = new ArrayList<>();
-
-
-        List<ElectricityUsage> listUsages = new ArrayList<>(listElectricity
-                .stream()
-                .map(item -> {
-                    listRoomsInMeterReadings.add(item.getRoomId());
-                    return new ListReadingMapper().apply(item);
-                })
-                .toList());
-
-        if (!listRoomsInMeterReadings.isEmpty()) {
-            List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings);
-            List<ElectricityUsage> usages =  listBedForEb.stream()
-                    .map(item -> new ElectricityUsageMapper().apply(item))
-                    .toList();
-
-            listUsages.addAll(usages);
-
-        }
-
-
-
-
-        return new ResponseEntity<>(listUsages, HttpStatus.OK);
     }
 }
