@@ -79,6 +79,7 @@ public class Utils {
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
     public static final String ACCOUNT_NO_ALREAY_EXISTS = "Account number already exists";
+    public static final String CASH_ACCOUNT_ALREAY_EXISTS = "Cash Account already exists";
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
     public static final String AMOUNT_REQUIRED = "Amount required";
