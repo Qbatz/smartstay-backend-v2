@@ -91,4 +91,6 @@ public class CustomersController {
     public ResponseEntity<?> markCustomerInActive(@PathVariable("customerId") String customerId, @RequestParam(name = "status", required = true) Boolean status) {
         return customersService.markCustomerInActive(customerId, status);
     }
+
+
  }

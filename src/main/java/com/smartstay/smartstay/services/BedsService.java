@@ -102,9 +102,9 @@ public class BedsService {
             }
             BedDetails bedsResponse = null;
             if (listBeds.size() > 1) {
-                bedsResponse = new BedDetailsMapper(listBeds.get(0).leavingDate(), listBeds.get(0).joiningDate(), listBeds.get(0)).apply(listBeds.get(1));
+                bedsResponse = new BedDetailsMapper(listBeds.get(0).leavingDate(), listBeds.get(0).joiningDate(), listBeds.get(0), null).apply(listBeds.get(1));
             } else if (!listBeds.isEmpty()) {
-                bedsResponse = new BedDetailsMapper(null, null, null).apply(listBeds.get(0));
+                bedsResponse = new BedDetailsMapper(null, null, null, "Current").apply(listBeds.get(0));
             }
 
             return new ResponseEntity<>(bedsResponse, HttpStatus.OK);

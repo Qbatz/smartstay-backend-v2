@@ -479,13 +479,7 @@ public class CustomersService {
 
         if (bedsService.checkAvailabilityForCheckIn(booking.getBedId(), Utils.stringToDate(checkinRequest.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT)) != null) {
 
-            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
-                //future booking
-                customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
-            }
-            else {
-                customers.setCurrentStatus(CustomerStatus.BOOKED.name());
-            }
+            customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
 
             customers.setJoiningDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
 

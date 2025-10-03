@@ -17,12 +17,14 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
     Date currentTenentJoiningDate = null;
 
     Beds previousTenantBed = null;
+    String tag = null;
 
 
-    public BedDetailsMapper(Date oldTenantLeavingOn, Date currentTenentJoiningDate, Beds previousTenant) {
+    public BedDetailsMapper(Date oldTenantLeavingOn, Date currentTenentJoiningDate, Beds previousTenant, String tag) {
         this.oldTenantLeavingOn = oldTenantLeavingOn;
         this.currentTenentJoiningDate = currentTenentJoiningDate;
         this.previousTenantBed = previousTenant;
+        this.tag = tag;
     }
 
     @Override
@@ -74,7 +76,7 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
             currentTenantFirstName = previousTenantBed.firstName();
             currentTenantLastName = previousTenantBed.lastName();
             currentTenantInitials.append(previousTenantBed.firstName().toUpperCase().charAt(0));
-            currentTenantFullName.append(previousTenantBed.firstName().toUpperCase().charAt(0));
+            currentTenantFullName.append(previousTenantBed.firstName());
             currentTenantProfilePic = previousTenantBed.profilePic();
             currentTenantMobile = previousTenantBed.mobile();
             currentTenantCustomerId = previousTenantBed.customerId();
@@ -91,6 +93,41 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                 }
 
             }
+        }
+
+        if (tag != null && tag.equalsIgnoreCase("Current")) {
+            return new BedDetails(beds.bedName(),
+                    beds.bedId(),
+                    beds.hostelId(),
+                    beds.isBooked(),
+                    isOnNotice,
+                    isOccupied,
+                    beds.roomRent(),
+                    beds.roomId(),
+                    freeFrom,
+                    beds.currentRent(),
+                    oldTenantLeaving,
+                    beds.bookingId(),
+                    expectedJoiningDate,
+                    jd,
+                    beds.firstName(),
+                    beds.lastName(),
+                    beds.profilePic(),
+                    fullName.toString(),
+                    initials.toString(),
+                    beds.mobile(),
+                    beds.floorId(),
+                    beds.floorName(),
+                    beds.roomName(),
+                    beds.countryCode(),
+                    beds.customerId(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
         }
 
         return new BedDetails(beds.bedName(),
@@ -116,8 +153,8 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                 beds.floorId(),
                 beds.floorName(),
                 beds.roomName(),
+                beds.countryCode(),
                 currentTenantCustomerId,
-                beds.customerId(),
                 beds.firstName(),
                 beds.lastName(),
                 fullName.toString(),
