@@ -100,7 +100,7 @@ public class BankingService {
             }
         }
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
-            accountType = BankAccountType.CASH.name();
+            return  new ResponseEntity<>(Utils.CASH_ACCOUNT_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
         }
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
             accountType = BankAccountType.UPI.name();
@@ -167,6 +167,10 @@ public class BankingService {
         BankingV1 v1 = bankingV1Repository.save(bankingV1);
 
         return hostelBankingMapper.addBankToHostel(hostelId, v1.getBankId());
+    }
+
+    public BankingV1 saveBankingData(BankingV1 bankingV1) {
+        return bankingV1Repository.save(bankingV1);
     }
 
     public ResponseEntity<?> getAllBankAccounts(String hostelId) {

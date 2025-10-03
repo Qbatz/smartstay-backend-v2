@@ -5,6 +5,8 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.BankAccountType;
+import com.smartstay.smartstay.ennum.BankPurpose;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
@@ -68,6 +70,11 @@ public class HostelService {
     @Autowired
     private TemplatesService hostelTemplates;
 
+    @Autowired
+    private BankingService bankingService;
+    @Autowired
+    private HostelBankingService hostelBankingMapper;
+
 
     public ResponseEntity<?> addHostel(MultipartFile mainImage, List<MultipartFile> additionalImages, AddHostelPayloads payloads) {
 
@@ -92,8 +99,9 @@ public class HostelService {
 
         ZohoSubscriptionRequest request = formSubscription(payloads, emailId);
 
+        String hostelID = hostelIdGenerator();
         HostelV1 hostelV1 = new HostelV1();
-        hostelV1.setHostelId(hostelIdGenerator());
+        hostelV1.setHostelId(hostelID);
         hostelV1.setCreatedBy(userId);
         hostelV1.setParentId(users.getParentId());
         hostelV1.setHostelType(1);
@@ -109,6 +117,19 @@ public class HostelService {
         hostelV1.setPincode(payloads.pincode());
         hostelV1.setStreet(payloads.street());
         hostelV1.setState(payloads.state());
+
+        //Create a CashAccount for the hostel
+        BankingV1 bankingV1 = new BankingV1();
+        bankingV1.setActive(true);
+        bankingV1.setDeleted(false);
+        bankingV1.setCreatedBy(users.getUserId());
+        bankingV1.setCreatedAt(new Date());
+        bankingV1.setAccountType(BankAccountType.CASH.name());
+        bankingV1.setTransactionType(BankPurpose.BOTH.name());
+        bankingV1.setDefaultAccount(true);
+        BankingV1 v1 = bankingService.saveBankingData(bankingV1);
+
+        hostelBankingMapper.addBankToHostel(hostelID, v1.getBankId());
 
         ElectricityConfig config = new ElectricityConfig();
         config.setProRate(true);
