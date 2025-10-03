@@ -89,6 +89,9 @@ public class Utils {
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";
     public static final String ELECTICITY_PRICE_REQUIRED = "Electricity Price Required";
     public static final String CUSTOMER_CHECKED_IN_INACTIVE_STATUS = "Cannot changed status to inactive for checked in customers";
+    public static final String CUSTOMER_INACTIVE_VACTED_ERROR = "Cannot change status to inactive for vacated customers";
+    public static final String CUSTOMER_ALREADY_INACTIVE_ERROR = "Customer is already inactive";
+    public static final String CANNOT_CHECKOUT_ACTIVE_CUSTOMERS = "Customer is currently active";
     public static final String CANNOT_ENABLE_HOSTEL_ROOM_READINGS = "Cannot enable hostel based and room based together";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String PERMISSION_READ = "READ";

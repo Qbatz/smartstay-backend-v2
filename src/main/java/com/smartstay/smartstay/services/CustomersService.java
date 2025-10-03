@@ -915,7 +915,7 @@ public class CustomersService {
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> markCustomerInActive(String customerId, Boolean status) {
+    public ResponseEntity<?> markCustomerInActive(String customerId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -937,16 +937,21 @@ public class CustomersService {
         if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
-        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
-            return new ResponseEntity<>(Utils.CUSTOMER_CHECKED_IN_INACTIVE_STATUS, HttpStatus.BAD_REQUEST);
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_INACTIVE_ERROR, HttpStatus.BAD_REQUEST);
         }
 
-        customers.setCurrentStatus(CustomerStatus.INACTIVE.name());
-        customers.setLastUpdatedAt(new Date());
-        customers.setUpdatedBy(users.getUserId());
-        customersRepository.save(customers);
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            customers.setCurrentStatus(CustomerStatus.INACTIVE.name());
+            customers.setLastUpdatedAt(new Date());
+            customers.setUpdatedBy(users.getUserId());
+            customersRepository.save(customers);
 
-        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+        }
+
+      return new ResponseEntity<>(Utils.CANNOT_CHECKOUT_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);
+
     }
 
 
