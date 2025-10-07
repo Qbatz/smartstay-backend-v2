@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Banking.BookingBankMapper;
+import com.smartstay.smartstay.Wrappers.Banking.CashReturnMapper;
 import com.smartstay.smartstay.Wrappers.BankingListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
@@ -17,6 +18,7 @@ import com.smartstay.smartstay.payloads.banking.UpdateBankBalance;
 import com.smartstay.smartstay.repositories.BankingRepository;
 import com.smartstay.smartstay.responses.banking.BankList;
 import com.smartstay.smartstay.responses.beds.Bank;
+import com.smartstay.smartstay.responses.bookings.CashReturnBank;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -46,8 +48,6 @@ public class BankingService {
     @Autowired
     private BankingRepository bankingV1Repository;
 
-    @Autowired
-    private HostelBankingService hostelBankingMapper;
 
     @Autowired
     private BankTransactionService transactionService;
@@ -71,11 +71,10 @@ public class BankingService {
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
             accountType = BankAccountType.BANK.name();
             if (addBank.accountNo() != null && !addBank.accountNo().isEmpty()) {
-                List<String> existingAccounts = bankingV1Repository.findBankIdsByAccountNumberAndAccountType(addBank.accountNo(), accountType);
+                List<String> existingAccounts = bankingV1Repository.findBankIdsByAccountTypeAndHostelIdAndUserId(accountType, hostelId, authentication.getName());
+
                 if (existingAccounts != null) {
-                    if (hostelBankingMapper.checkBankAccountExists(existingAccounts, hostelId)) {
-                        return  new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
-                    }
+                    return new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
                 }
 
             }
@@ -83,19 +82,15 @@ public class BankingService {
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
             accountType = BankAccountType.CARD.name();
             if (addBank.cardType().equalsIgnoreCase(CardType.DEBIT.name())) {
-                List<String> existingAccounts = bankingV1Repository.findBankIdsByDebitCardAndAccountType(addBank.cardNumber(), accountType);
+                List<String> existingAccounts = bankingV1Repository.findBankIdsByDebitCardAndAccountType(addBank.cardNumber(), accountType, hostelId, authentication.getName());
                 if (existingAccounts != null) {
-                    if (hostelBankingMapper.checkBankAccountExists(existingAccounts, hostelId)) {
                         return  new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
-                    }
                 }
             }
             else {
-                List<String> existingAccounts = bankingV1Repository.findBankIdsByCreditCardAndAccountType(addBank.cardNumber(), accountType);
+                List<String> existingAccounts = bankingV1Repository.findBankIdsByCreditCardAndAccountType(addBank.cardNumber(), accountType, hostelId, authentication.getName());
                 if (existingAccounts != null) {
-                    if (hostelBankingMapper.checkBankAccountExists(existingAccounts, hostelId)) {
-                        return  new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
-                    }
+                    return  new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
                 }
             }
         }
@@ -106,11 +101,9 @@ public class BankingService {
             accountType = BankAccountType.UPI.name();
 
             if (addBank.upiId() != null && !addBank.upiId().isEmpty()) {
-                List<String> existingAccounts = bankingV1Repository.findBankIdsByUpiIdAndAccountType(addBank.upiId(), accountType);
+                List<String> existingAccounts = bankingV1Repository.findBankIdsByUpiIdAndAccountType(addBank.upiId(), accountType, hostelId, authentication.getName());
                 if (existingAccounts != null) {
-                    if (hostelBankingMapper.checkBankAccountExists(existingAccounts, hostelId)) {
-                        return  new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
-                    }
+                    return  new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
                 }
 
             }
@@ -118,18 +111,17 @@ public class BankingService {
         }
 
         if (addBank.isDefault() != null && addBank.isDefault()) {
-            List<String> listHostelBanks = hostelBankingMapper.getAllBanksAccountNoBasedOnHostel(hostelId);
-            if (listHostelBanks != null) {
-                BankingV1 defaultBank = bankingV1Repository.findByBankIdInAndIsDefaultAccountTrue(listHostelBanks);
-                if (defaultBank != null) {
-                    defaultBank.setDefaultAccount(false);
-                    bankingV1Repository.save(defaultBank);
-                }
+            BankingV1 defaultBank = bankingV1Repository.findByHostelIdAndIsDefaultAccountTrue(hostelId);
+            if (defaultBank != null) {
+                defaultBank.setDefaultAccount(false);
+                bankingV1Repository.save(defaultBank);
             }
         }
 
         BankingV1 bankingV1 = new BankingV1();
         bankingV1.setBankName(addBank.bankName());
+        bankingV1.setParentId(users.getParentId());
+        bankingV1.setUserId(authentication.getName());
         bankingV1.setAccountNumber(addBank.accountNo());
         bankingV1.setIfscCode(addBank.ifscCode());
         bankingV1.setBranchName(addBank.branchName());
@@ -166,7 +158,7 @@ public class BankingService {
 
         BankingV1 v1 = bankingV1Repository.save(bankingV1);
 
-        return hostelBankingMapper.addBankToHostel(hostelId, v1.getBankId());
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
     public BankingV1 saveBankingData(BankingV1 bankingV1) {
@@ -189,17 +181,12 @@ public class BankingService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<String> listMapping = hostelBankingMapper.getAllBanksAccountNoBasedOnHostel(hostelId);
-        if (listMapping == null) {
-            return new ResponseEntity<>(Utils.NO_ACCOUNT_NO_FOUND, HttpStatus.NO_CONTENT);
-        }
-
-        List<Bank> listBankings = bankingV1Repository.findByBankIdIn(listMapping)
+        List<Bank> listBankings = bankingV1Repository.findByHostelId(hostelId)
                 .stream()
                 .map(i -> new BankingListMapper().apply(i))
                 .collect(Collectors.toList());
 
-        List<TransactionDto> transactions =  transactionService.getAllTransactions(listMapping);
+        List<TransactionDto> transactions =  transactionService.getAllTransactions(hostelId);
         List<TransactionDto> listTransactions = new ArrayList<>();
         if (!transactions.isEmpty()) {
             listTransactions = transactions.stream()
@@ -327,9 +314,6 @@ public class BankingService {
             List<String> existingAccounts = bankingV1Repository
                     .findBankIdsByAccountNumberAndAccountTypeNotEqualBankId(updateBank.accountNo(), accountType, bankId);
 
-            if (existingAccounts != null && hostelBankingMapper.checkBankAccountExists(existingAccounts, hostelId)) {
-                return false;
-            }
             bankingV1.setAccountNumber(updateBank.accountNo());
         }
 
@@ -353,7 +337,7 @@ public class BankingService {
                 existingAccounts = bankingV1Repository.findBankIdsByCreditCardAndAccountTypeNotEqualBankId(updateBank.cardNumber(), accountType, bankId);
             }
 
-            if (existingAccounts != null && hostelBankingMapper.checkBankAccountExists(existingAccounts, hostelId)) {
+            if (existingAccounts != null) {
                 return false;
             }
 
@@ -373,7 +357,7 @@ public class BankingService {
             List<String> existingAccounts = bankingV1Repository
                     .findBankIdsByUpiIdAndAccountTypeNotEqualBankId(updateBank.upiId(), accountType, bankId);
 
-            if (existingAccounts != null && hostelBankingMapper.checkBankAccountExists(existingAccounts, hostelId)) {
+            if (existingAccounts != null) {
                 return false;
             }
             bankingV1.setUpiId(updateBank.upiId());
@@ -382,14 +366,12 @@ public class BankingService {
     }
 
     private void resetDefaultBank(String hostelId, String currentBankId) {
-        List<String> listHostelBanks = hostelBankingMapper.getAllBanksAccountNoBasedOnHostel(hostelId);
-        if (listHostelBanks != null) {
-            BankingV1 defaultBank = bankingV1Repository.findByBankIdInAndIsDefaultAccountTrue(listHostelBanks);
+            BankingV1 defaultBank = bankingV1Repository.findByHostelIdAndIsDefaultAccountTrue(hostelId);
             if (defaultBank != null && !defaultBank.getBankId().equals(currentBankId)) {
                 defaultBank.setDefaultAccount(false);
                 bankingV1Repository.save(defaultBank);
             }
-        }
+
     }
 
     private boolean isNotBlank(String value) {
@@ -405,8 +387,7 @@ public class BankingService {
     }
 
     public List<BookingBankInfo> getAllAccounts(String hostelId) {
-        List<String> listHostelBankAccounts = hostelBankingMapper.getAllBanksAccountNoBasedOnHostel(hostelId);
-        List<BankingV1> listBankAccounts = bankingV1Repository.findByBankIdInAndActiveAccount(listHostelBankAccounts);
+        List<BankingV1> listBankAccounts = bankingV1Repository.findByHostelId(hostelId);
 
         List<BookingBankInfo> listBanks = listBankAccounts.stream()
                 .map(item -> new BookingBankMapper().apply(item))
@@ -414,4 +395,32 @@ public class BankingService {
         return listBanks;
     }
 
+    /**
+     *
+     * this should be used only at the time of initialize cancel booking.
+     *
+     * @param hostelId
+     * @return
+     */
+
+    public List<CashReturnBank> getAllBankForReturn(String hostelId) {
+        List<BankingV1> listBankAccounts = bankingV1Repository.findByBankIdInAndActiveAccountDebit(hostelId);
+
+        return listBankAccounts
+                .stream()
+                .map(item -> new CashReturnMapper().apply(item))
+                .toList();
+
+    }
+
+    public void saveAllBankInfo(List<BankingV1> listBankings) {
+        bankingV1Repository.saveAll(listBankings);
+    }
+
+    public List<String> getAllBanksFromParentId(String parentId) {
+        return bankingV1Repository.findByParentId(parentId)
+                .stream()
+                .map(BankingV1::getBankId)
+                .toList();
+    }
 }

@@ -8,7 +8,6 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
 import com.smartstay.smartstay.ennum.BedStatus;
-import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
@@ -17,7 +16,6 @@ import com.smartstay.smartstay.responses.beds.BedsResponse;
 import com.smartstay.smartstay.responses.beds.BedsStatusCount;
 import com.smartstay.smartstay.responses.customer.InitializeBooking;
 import com.smartstay.smartstay.util.Utils;
-import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -419,4 +417,13 @@ public class BedsService {
     }
 
 
+    public void cancelBooking(int bedId, String parentId) {
+        Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
+        if (beds != null) {
+            beds.setBooked(false);
+            beds.setStatus(BedStatus.VACANT.name());
+
+            bedsRepository.save(beds);
+        }
+    }
 }

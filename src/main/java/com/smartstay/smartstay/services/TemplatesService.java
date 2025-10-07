@@ -2,13 +2,11 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Bills.BillTemplateMapper;
 import com.smartstay.smartstay.Wrappers.Bills.BillingRulesMapper;
-import com.smartstay.smartstay.Wrappers.Bills.TemplateMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.BillConfigTypes;
-import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillTemplate;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillingRule;
@@ -22,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.smartstay.smartstay.util.Utils.isNotBlank;
 
@@ -59,9 +56,6 @@ public class TemplatesService {
 
     public int initialTemplateSetup(com.smartstay.smartstay.payloads.templates.BillTemplates tmpl) {
 
-        if (!authentication.isAuthenticated()) {
-            return 0;
-        }
         String hostelName = tmpl.hostelName();
         StringBuilder findPrefix = new StringBuilder();
         StringBuilder findPrefixRent = new StringBuilder();
@@ -83,7 +77,7 @@ public class TemplatesService {
         templates.setHostelId(tmpl.hostelId());
         templates.setTemplateUpdated(false);
         templates.setCreatedAt(new Date());
-        templates.setCreatedBy(authentication.getName());
+        templates.setCreatedBy(tmpl.userId());
         templates.setSignatureCustomized(false);
         templates.setMobileCustomized(false);
         templates.setLogoCustomized(false);
@@ -128,9 +122,6 @@ public class TemplatesService {
 
         templateRepository.save(templates);
 
-
-
-
         return 1;
     }
 
@@ -139,8 +130,8 @@ public class TemplatesService {
         String hostelName = tmpl.hostelName();
         StringBuilder findPrefix = new StringBuilder();
         StringBuilder findPrefixRent = new StringBuilder();
-        findPrefix.append("#ADV");
-        findPrefixRent.append("#INV");
+        findPrefix.append("ADV");
+        findPrefixRent.append("INV");
         if (hostelName.length() > 3) {
             String hostelNameShort = hostelName.replaceAll(" ", "").substring(0, 4).toUpperCase();
             findPrefixRent.append(hostelNameShort);

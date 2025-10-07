@@ -1,8 +1,6 @@
 package com.smartstay.smartstay.Wrappers.Bills;
 
 import com.smartstay.smartstay.dto.transaction.Receipts;
-import com.smartstay.smartstay.ennum.InvoiceMode;
-import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.util.Utils;
 

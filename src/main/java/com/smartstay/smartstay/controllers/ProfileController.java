@@ -29,14 +29,14 @@ public class ProfileController {
     UsersService usersService;
 
     @GetMapping("")
-    public ResponseEntity<Object> getProfileInformation() {
+    public ResponseEntity<?> getProfileInformation() {
         return usersService.getProfileInformation();
     }
 
 
 
     @PutMapping("")
-    public ResponseEntity<Object> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
+    public ResponseEntity<?> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.updateProfileInformations(updateProfile, profilePic);
     }
 

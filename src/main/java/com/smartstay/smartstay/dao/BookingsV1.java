@@ -20,6 +20,7 @@ public class BookingsV1 {
     private String bookingId;
     private Date joiningDate;
     private Date leavingDate;
+    private Date cancelDate;
     private Date expectedJoiningDate;
     private Date noticeDate;
     private Date bookingDate;
@@ -34,6 +35,7 @@ public class BookingsV1 {
     private String currentStatus;
     private String updatedBy;
     private String reasonForLeaving;
+    private String reasonForCancellation;
     private int floorId;
     private int roomId;
     private int bedId;

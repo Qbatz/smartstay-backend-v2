@@ -26,7 +26,7 @@ public class BankTransactionsV1 {
     private Double accountBalance;
     //credit or debit
     private String type;
-    //assets or rent or advance or expence
+    //assets or rent or advance or expense
     private String source;
     private String hostelId;
     private Date transactionDate;

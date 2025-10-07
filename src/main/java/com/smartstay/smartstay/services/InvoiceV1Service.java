@@ -337,4 +337,20 @@ public class InvoiceV1Service {
         InvoicesV1 invoiceV1 = invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.BOOKING.name());
         return invoiceV1.getTotalAmount();
     }
+
+    /**
+     *
+     * this is used only for cancel the booking
+     *
+     * @param customerId
+     * @return
+     */
+    public InvoicesV1 getInvoiceDetails(String customerId, String hostelId) {
+        return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.BOOKING.name());
+    }
+
+    public void cancelBookingInvoice(InvoicesV1 invoicesV1) {
+        invoicesV1.setPaymentStatus(PaymentStatus.CANCELLED.name());
+        invoicesV1Repository.save(invoicesV1);
+    }
 }

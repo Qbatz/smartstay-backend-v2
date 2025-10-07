@@ -1,10 +1,8 @@
 package com.smartstay.smartstay.Wrappers.transactions;
 
 import com.smartstay.smartstay.dao.BankTransactionsV1;
-import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dto.transaction.TransactionDto;
 import com.smartstay.smartstay.ennum.BankTransactionType;
-import com.smartstay.smartstay.ennum.TransactionType;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.function.Function;

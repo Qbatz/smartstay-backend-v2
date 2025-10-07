@@ -2,5 +2,7 @@ package com.smartstay.smartstay.ennum;
 
 public enum BankSource {
     INVOICE,
-    ASSETS
+    ASSETS,
+    BOOKING_REFUND,
+    RENT_REFUND,
 }

@@ -69,6 +69,7 @@ public class Utils {
     public static final String INVALID_INVOICE_ID = "Invalid invoice id";
     public static final String PAYMENT_SUCCESS = "Payment Success";
     public static final String CUSTOMER_ON_NOTICE = "Customer is already on notice";
+    public static final String CUSTOMER_BOOKING_NOT_FOUND = "Booking not found for this customer";
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
     public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
@@ -97,7 +98,7 @@ public class Utils {
     public static final String CUSTOMER_CHECKED_IN_INACTIVE_STATUS = "Cannot changed status to inactive for checked in customers";
     public static final String CUSTOMER_INACTIVE_VACTED_ERROR = "Cannot change status to inactive for vacated customers";
     public static final String CUSTOMER_ALREADY_INACTIVE_ERROR = "Customer is already inactive";
-    public static final String CANNOT_CHECKOUT_ACTIVE_CUSTOMERS = "Customer is currently active";
+    public static final String CANNOT_INACTIVE_ACTIVE_CUSTOMERS = "Customer is currently active";
     public static final String CANNOT_ENABLE_HOSTEL_ROOM_READINGS = "Cannot enable hostel based and room based together";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String PERMISSION_READ = "READ";
