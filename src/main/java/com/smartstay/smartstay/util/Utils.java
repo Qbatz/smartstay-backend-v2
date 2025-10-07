@@ -32,6 +32,11 @@ public class Utils {
     public static final String INVALID_BANKING = "Invalid Banking";
     public static final String INVALID_BANKING_DETAILS = "Bank details not found. Please add bank details first.";
     public static final String INVALID_ASSET = "Invalid Asset";
+
+    public static final String INVALID_AMENITY = "Invalid Amenity";
+    public static final String AMENITY_ALREADY_DELETED = "Amenity already deleted";
+
+
     public static final String INVALID_FLOOR = "Invalid Floor";
     public static final String INVALID_USER = "Invalid User";
     public static final String INVALID_OTP = "Invalid Otp";
@@ -107,6 +112,11 @@ public class Utils {
     public static final String IN_PROGRESS = "INPROGRESS";
     public static final String PENDING = "PENDING";
     public static final String RESOLVED = "RESOLVED";
+    public static final String NO_RECORDS_FOUND = "No records found";
+
+
+
+    public static final String AMENITY_ALREADY_EXIST = "Amenity with the same name already exists in this hostel.";
 
 
     /**

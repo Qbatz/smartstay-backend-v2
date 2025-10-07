@@ -193,7 +193,11 @@ public class BedsService {
         beds.setCurrentStatus(BedStatus.VACANT.name());
         beds.setFreeFrom(null);
         beds.setRentAmount(addBed.amount());
-        bedsRepository.save(beds);
+        System.out.println("beds = " + addBed.toString());
+
+       Beds bedsV1 = bedsRepository.save(beds);
+
+        System.out.println("bedsV1 = " + bedsV1.toString());
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
