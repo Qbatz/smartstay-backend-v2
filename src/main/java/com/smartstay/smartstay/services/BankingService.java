@@ -266,6 +266,10 @@ public class BankingService {
             bankingV1.setDefaultAccount(true);
         }
 
+        if (isNotBlank(updateBank.description())) {
+            bankingV1.setDescription(updateBank.description());
+        }
+
         bankingV1.setUpdatedAt(new Date());
         bankingV1Repository.save(bankingV1);
 
