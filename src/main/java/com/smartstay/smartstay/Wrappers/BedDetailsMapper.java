@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.Wrappers;
 
 import com.smartstay.smartstay.dto.beds.Beds;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.responses.beds.BedDetails;
 import com.smartstay.smartstay.util.Utils;
@@ -96,6 +97,40 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
         }
 
         if (tag != null && tag.equalsIgnoreCase("Current")) {
+            if (beds.bookingStatus() != null && beds.bookingStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
+                return new BedDetails(beds.bedName(),
+                        beds.bedId(),
+                        beds.hostelId(),
+                        beds.isBooked(),
+                        isOnNotice,
+                        isOccupied,
+                        beds.roomRent(),
+                        beds.roomId(),
+                        freeFrom,
+                        beds.currentRent(),
+                        oldTenantLeaving,
+                        beds.bookingId(),
+                        expectedJoiningDate,
+                        jd,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        beds.floorId(),
+                        beds.floorName(),
+                        beds.roomName(),
+                        beds.countryCode(),
+                        beds.firstName(),
+                        beds.lastName(),
+                        fullName.toString(),
+                        beds.profilePic(),
+                        initials.toString(),
+                        beds.mobile(),
+                        beds.customerId());
+            }
             return new BedDetails(beds.bedName(),
                     beds.bedId(),
                     beds.hostelId(),
@@ -116,11 +151,11 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                     fullName.toString(),
                     initials.toString(),
                     beds.mobile(),
+                    beds.customerId(),
                     beds.floorId(),
                     beds.floorName(),
                     beds.roomName(),
                     beds.countryCode(),
-                    beds.customerId(),
                     null,
                     null,
                     null,
@@ -150,11 +185,11 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                 currentTenantFullName.toString(),
                 currentTenantInitials.toString(),
                 currentTenantMobile,
+                currentTenantCustomerId,
                 beds.floorId(),
                 beds.floorName(),
                 beds.roomName(),
                 beds.countryCode(),
-                currentTenantCustomerId,
                 beds.firstName(),
                 beds.lastName(),
                 fullName.toString(),

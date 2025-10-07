@@ -67,4 +67,10 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
             """, nativeQuery = true)
     List<BankingV1> findByBankIdInAndActiveAccount(List<String> bankIds);
 
+    @Query(value = """
+            SELECT * FROM bankingv1 banking where is_active=true and transaction_type in ('BOTH', 'DEBIT') and 
+            bank_id in (:bankIds)
+            """, nativeQuery = true)
+    List<BankingV1> findByBankIdInAndActiveAccountDebit(List<String> bankIds);
+
 }

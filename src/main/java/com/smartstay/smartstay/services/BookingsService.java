@@ -2,19 +2,20 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.BookingsMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.Beds;
-import com.smartstay.smartstay.dao.BookingsV1;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.Bookings;
+import com.smartstay.smartstay.dto.bank.TransactionDto;
+import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
-import com.smartstay.smartstay.ennum.BedStatus;
-import com.smartstay.smartstay.ennum.BookingStatus;
-import com.smartstay.smartstay.ennum.CustomerStatus;
-import com.smartstay.smartstay.ennum.ModuleId;
+import com.smartstay.smartstay.ennum.*;
+import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
+import com.smartstay.smartstay.payloads.booking.CancelBooking;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.repositories.BookingsRepository;
+import com.smartstay.smartstay.responses.bookings.CashReturnBank;
+import com.smartstay.smartstay.responses.bookings.InitializeCancel;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckIn;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,9 +50,25 @@ public class BookingsService {
     @Autowired
     private InvoiceV1Service invoiceService;
 
+    private CustomersService customersService;
+
+    @Autowired
+    private CreditDebitNoteService creditDebitNoteService;
+
+    @Autowired
+    private BankTransactionService bankTransactionService;
+
+    @Autowired
+    private BankingService bankingService;
+
     @Autowired
     public void setBedsService(@Lazy BedsService bedsService) {
         this.bedsService = bedsService;
+    }
+
+    @Autowired
+    public void setCustomersService(@Lazy CustomersService customersService) {
+        this.customersService = customersService;
     }
 
     public void assignBedToCustomer(AssignBed assignBed) {
@@ -312,5 +329,157 @@ public class BookingsService {
 
     public BookingsV1 findByBookingId(String bookingId) {
         return bookingsRepository.findById(bookingId).orElse(null);
+    }
+
+    public ResponseEntity<?> cancelBooking(String customerId, CancelBooking cancelBooking) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.BOOKING.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        BookingsV1 bookingsV1 = bookingsRepository.findByCustomerId(customerId);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.CUSTOMER_BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), bookingsV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+        if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_INACTIVE_ERROR, HttpStatus.BAD_REQUEST);
+        }
+        if (!bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_INACTIVE_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
+        Customers customers = customersService.getCustomerInformation(customerId);
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_INACTIVE_ERROR, HttpStatus.BAD_REQUEST);
+        }
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Date cancelDate = null;
+        if (cancelBooking.cancelDate() != null) {
+            cancelDate = Utils.stringToDate(cancelBooking.cancelDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        bookingsV1.setCancelDate(cancelDate);
+        bookingsV1.setReasonForCancellation(cancelBooking.reason());
+        bookingsV1.setCurrentStatus(BookingStatus.CANCELLED.name());
+
+        bookingsRepository.save(bookingsV1);
+
+        customersService.markCustomerInactive(customers);
+        InvoicesV1 invoicesV1 = invoiceService.getInvoiceDetails(customerId, bookingsV1.getHostelId());
+
+
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            invoiceService.cancelBookingInvoice(invoicesV1);
+            CancelBookingDto cancelBookingDto = new CancelBookingDto(cancelBooking.reason(),
+                    customerId,
+                    bookingsV1.getBookingAmount(),
+                    invoicesV1.getInvoiceId(),
+                    cancelBooking.bankId(),
+                    cancelBooking.referenceNumber());
+
+            creditDebitNoteService.cancelBooking(cancelBookingDto);
+
+
+            TransactionDto transactionDto = new TransactionDto(cancelBooking.bankId(),
+                    cancelBooking.referenceNumber(),
+                    bookingsV1.getBookingAmount(),
+                    BankTransactionType.DEBIT.name(),
+                    BankSource.INVOICE.name(),
+                    bookingsV1.getHostelId(),
+                    Utils.dateToString(cancelDate).replace("/", "-"));
+
+            bankTransactionService.cancelBooking(transactionDto);
+        }
+
+        bedsService.cancelBooking(bookingsV1.getBedId(), user.getParentId());
+
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
+    }
+
+    public ResponseEntity<?> initiateCancel(String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.BOOKING.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        BookingsV1 bookingsV1 = bookingsRepository.findByCustomerId(customerId);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.CUSTOMER_BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), bookingsV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+        if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_INACTIVE_ERROR, HttpStatus.BAD_REQUEST);
+        }
+
+
+        List<CashReturnBank> listBanks = bankingService.getAllBankForReturn(bookingsV1.getHostelId());
+
+        InitializeCancel initializeCancel = new InitializeCancel(bookingsV1.getBookingId(),
+                bookingsV1.getCustomerId(),
+                bookingsV1.getBookingAmount(),
+                Utils.dateToString(bookingsV1.getExpectedJoiningDate()),
+                listBanks);
+        return new ResponseEntity<>(initializeCancel, HttpStatus.OK);
+    }
+
+    /**
+     *
+     * this will be called while checking out the customer
+     *
+     * this should be trigered when cuctomer is in notice
+     *
+     * @param customerId
+     * @return
+     */
+    public ResponseEntity<?> initializeCheckout(String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.BOOKING.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        BookingsV1 bookingsV1 = bookingsRepository.findByCustomerId(customerId);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.CUSTOMER_BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), bookingsV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_INACTIVE_ERROR, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customers = customersService.getCustomerInformation(customerId);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        return null;
+
     }
 }

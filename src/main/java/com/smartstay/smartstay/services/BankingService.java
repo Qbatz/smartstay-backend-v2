@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Banking.BookingBankMapper;
+import com.smartstay.smartstay.Wrappers.Banking.CashReturnMapper;
 import com.smartstay.smartstay.Wrappers.BankingListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
@@ -17,6 +18,7 @@ import com.smartstay.smartstay.payloads.banking.UpdateBankBalance;
 import com.smartstay.smartstay.repositories.BankingRepository;
 import com.smartstay.smartstay.responses.banking.BankList;
 import com.smartstay.smartstay.responses.beds.Bank;
+import com.smartstay.smartstay.responses.bookings.CashReturnBank;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -412,6 +414,25 @@ public class BankingService {
                 .map(item -> new BookingBankMapper().apply(item))
                 .toList();
         return listBanks;
+    }
+
+    /**
+     *
+     * this should be used only at the time of initialize cancel booking.
+     *
+     * @param hostelId
+     * @return
+     */
+
+    public List<CashReturnBank> getAllBankForReturn(String hostelId) {
+        List<String> listHostelBankAccounts = hostelBankingMapper.getAllBanksAccountNoBasedOnHostel(hostelId);
+        List<BankingV1> listBankAccounts = bankingV1Repository.findByBankIdInAndActiveAccountDebit(listHostelBankAccounts);
+
+        return listBankAccounts
+                .stream()
+                .map(item -> new CashReturnMapper().apply(item))
+                .toList();
+
     }
 
 }

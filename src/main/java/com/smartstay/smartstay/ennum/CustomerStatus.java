@@ -7,7 +7,8 @@ public enum CustomerStatus {
     ON_NOTICE("notice"),
     BOOKED("Booked"),
     CHECK_IN("Checked in"),
-    WALKED_IN("walk in");
+    WALKED_IN("walk in"),
+    CANCELLED_BOOKING("Cancelled");
     CustomerStatus(String active) {
     }
 }

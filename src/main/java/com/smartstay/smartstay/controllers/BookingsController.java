@@ -1,9 +1,12 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.booking.CancelBooking;
 import com.smartstay.smartstay.services.BookingsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,5 +34,20 @@ public class BookingsController {
     @GetMapping("/initialize-check-in/{hostelId}/{customerId}")
     public ResponseEntity<?> initializeCheckIn(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
         return bookingService.initializeCheckIn(hostelId, customerId);
+    }
+
+    @PutMapping("/cancel/{customerId}")
+    public ResponseEntity<?> cancelBooking(@PathVariable("customerId") String customerId, @RequestBody @Valid  CancelBooking cancelBooking) {
+        return bookingService.cancelBooking(customerId, cancelBooking);
+    }
+
+    @GetMapping("/initialize/cancel/{customerId}")
+    public ResponseEntity<?> initiateCancel(@PathVariable("customerId") String customerId) {
+        return bookingService.initiateCancel(customerId);
+    }
+
+    @GetMapping("/initialize/checkout/customerId")
+    public ResponseEntity<?> initializeCheckout(@PathVariable("customerId") String customerId) {
+        return bookingService.initializeCheckout(customerId);
     }
 }

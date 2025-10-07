@@ -36,4 +36,6 @@ public class HostelBankingService {
     public List<String> getAllBanksAccountNoBasedOnHostel(String hostelId) {
         return hostelBankRepository.findAllByHostelId(hostelId);
     }
+
+
 }

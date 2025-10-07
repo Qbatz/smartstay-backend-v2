@@ -50,4 +50,5 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix);
 
     InvoicesV1 findByCustomerIdAndHostelIdAndInvoiceType(String customerId, String hostelId, String invoiceType);
+
 }

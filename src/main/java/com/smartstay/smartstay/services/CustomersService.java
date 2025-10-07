@@ -229,6 +229,9 @@ public class CustomersService {
             else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ACTIVE.name())) {
                 currentStatus = "Active";
             }
+            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
+                currentStatus = "Cancelled";
+            }
             return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
                     item.getCity(),
                     item.getState(),
@@ -915,45 +918,17 @@ public class CustomersService {
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> markCustomerInActive(String customerId) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        Users users = userService.findUserByUserId(authentication.getName());
-        if (users == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_UPDATE)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-        if (customerId == null) {
-            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
-        }
-        Customers customers = customersRepository.findById(customerId).orElse(null);
-
-        if (customers == null) {
-            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
-        }
-        if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-        }
-        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
-            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_INACTIVE_ERROR, HttpStatus.BAD_REQUEST);
-        }
-
-        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
-            customers.setCurrentStatus(CustomerStatus.INACTIVE.name());
-            customers.setLastUpdatedAt(new Date());
-            customers.setUpdatedBy(users.getUserId());
-            customersRepository.save(customers);
-
-            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
-        }
-
-      return new ResponseEntity<>(Utils.CANNOT_CHECKOUT_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);
-
+    public Customers getCustomerInformation(String customerId) {
+        return customersRepository.findById(customerId).orElse(null);
     }
 
+    public Customers markCustomerInactive(Customers customers) {
+        customers.setCurrentStatus(CustomerStatus.CANCELLED_BOOKING.name());
+        customers.setLastUpdatedAt(new Date());
+        customers.setUpdatedBy(authentication.getName());
+
+        return customersRepository.save(customers);
+    }
 
     public void calculateRentAndCreateRentalInvoice(Customers customers,  CheckInRequest payloads) {
         HostelV1 hostelV1 = hostelService.getHostelInfo(payloads.hostelId());
@@ -987,4 +962,5 @@ public class CustomersService {
 
 
     }
+
 }

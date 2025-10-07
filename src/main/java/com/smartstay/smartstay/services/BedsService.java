@@ -415,4 +415,13 @@ public class BedsService {
     }
 
 
+    public void cancelBooking(int bedId, String parentId) {
+        Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
+        if (beds != null) {
+            beds.setBooked(false);
+            beds.setStatus(BedStatus.VACANT.name());
+
+            bedsRepository.save(beds);
+        }
+    }
 }
