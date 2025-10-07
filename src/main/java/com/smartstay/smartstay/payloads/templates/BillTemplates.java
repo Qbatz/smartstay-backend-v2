@@ -16,5 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 public record BillTemplates(String hostelId,
                             String mobile,
                             String emailId,
-                            String hostelName) {
+                            String hostelName,
+                            String userId) {
 }

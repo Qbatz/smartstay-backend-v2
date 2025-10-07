@@ -3,9 +3,7 @@ package com.smartstay.smartstay.Wrappers;
 import com.smartstay.smartstay.dao.Beds;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.responses.beds.BedsResponse;
-import com.smartstay.smartstay.util.Utils;
 
-import java.util.Date;
 import java.util.function.Function;
 
 public class BedsMapper implements Function<Beds, BedsResponse> {

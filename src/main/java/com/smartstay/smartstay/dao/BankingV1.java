@@ -21,6 +21,7 @@ public class BankingV1 {
     String bankId;
     String bankName;
     String accountNumber;
+    String parentId;
     String ifscCode;
     String branchName;
     String branchCode;
@@ -31,6 +32,8 @@ public class BankingV1 {
     String debitCardNumber;
     String accountType;
     String description;
+    String userId;
+    String hostelId;
     boolean isActive;
     boolean isDeleted;
     boolean isDefaultAccount;

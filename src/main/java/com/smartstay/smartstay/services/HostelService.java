@@ -5,16 +5,14 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.ennum.BankAccountType;
-import com.smartstay.smartstay.ennum.BankPurpose;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.EBReadingType;
+import com.smartstay.smartstay.events.HostelEvents;
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.payloads.electricity.UpdateEBConfigs;
 import com.smartstay.smartstay.payloads.hostel.UpdateElectricityPrice;
-import com.smartstay.smartstay.payloads.templates.BillTemplates;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.responses.Hostels;
 import com.smartstay.smartstay.responses.beds.BedsStatusCount;
@@ -22,9 +20,9 @@ import com.smartstay.smartstay.responses.hostel.EBSettings;
 import com.smartstay.smartstay.responses.hostel.FloorDetails;
 import com.smartstay.smartstay.responses.hostel.HostelDetails;
 import com.smartstay.smartstay.util.Utils;
-import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -71,13 +69,14 @@ public class HostelService {
     @Autowired
     private UsersService usersService;
 
-    @Autowired
-    private TemplatesService hostelTemplates;
+//    @Autowired
+//    private TemplatesService hostelTemplates;
 
     @Autowired
     private BankingService bankingService;
+
     @Autowired
-    private HostelBankingService hostelBankingMapper;
+    private ApplicationEventPublisher eventPublisher;
 
 
     public ResponseEntity<?> addHostel(MultipartFile mainImage, List<MultipartFile> additionalImages, AddHostelPayloads payloads) {
@@ -122,30 +121,25 @@ public class HostelService {
         hostelV1.setStreet(payloads.street());
         hostelV1.setState(payloads.state());
 
+
+
+
         //Create a CashAccount for the hostel
-        BankingV1 bankingV1 = new BankingV1();
-        bankingV1.setActive(true);
-        bankingV1.setDeleted(false);
-        bankingV1.setCreatedBy(users.getUserId());
-        bankingV1.setCreatedAt(new Date());
-        bankingV1.setAccountType(BankAccountType.CASH.name());
-        bankingV1.setTransactionType(BankPurpose.BOTH.name());
-        bankingV1.setDefaultAccount(true);
-        BankingV1 v1 = bankingService.saveBankingData(bankingV1);
+//        BankingV1 bankingV1 = new BankingV1();
+//        bankingV1.setActive(true);
+//        bankingV1.setDeleted(false);
+//        bankingV1.setCreatedBy(users.getUserId());
+//        bankingV1.setCreatedAt(new Date());
+//        bankingV1.setAccountType(BankAccountType.CASH.name());
+//        bankingV1.setTransactionType(BankPurpose.BOTH.name());
+//        bankingV1.setDefaultAccount(true);
+//        BankingV1 v1 = bankingService.saveBankingData(bankingV1);
 
-        hostelBankingMapper.addBankToHostel(hostelID, v1.getBankId());
 
-        ElectricityConfig config = new ElectricityConfig();
-        config.setProRate(true);
-        config.setHostel(hostelV1);
-        config.setCharge(5.0);
-        config.setBillDate(1);
-        config.setUpdated(false);
-        config.setShouldIncludeInRent(true);
-        config.setLastUpdate(new Date());
-        config.setUpdatedBy(users.getUserId());
-        config.setTypeOfReading(EBReadingType.ROOM_READING.name());
-        hostelV1.setElectricityConfig(config);
+
+//        hostelBankingMapper.addBankToHostel(hostelID, v1.getBankId());
+
+
 
         if (mainImage != null) {
             String mainImageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(mainImage), "Hostel-Images");
@@ -176,11 +170,10 @@ public class HostelService {
         billingRules.setBillingDueDate(10);
         billingRules.setNoticePeriod(30);
         billingRules.setHostel(hostelV1);
-        List<BillingRules> listBillings = new ArrayList<>();
-        listBillings.add(billingRules);
 
-        BillTemplates templates = new BillTemplates(hostelV1.getHostelId(), payloads.mobile(), payloads.emailId(), payloads.hostelName());
-        hostelTemplates.initialTemplateSetup(templates);
+        //this piece of codes are already commented. need to uncommented.
+
+
 
         Subscription subscription = subscriptionService.addSubscription(request, 1);
 
@@ -198,11 +191,15 @@ public class HostelService {
                     userHostelService.addHostelToExistingUsers(users.getParentId(), listUsers, hostelV1.getHostelId());
                 }
             }
-
+            eventPublisher.publishEvent(new HostelEvents(this, hostelID, authentication.getName(), users.getParentId()));
             return new ResponseEntity<>("Created successfully", HttpStatus.CREATED);
         } else {
             return new ResponseEntity<>("Failed to subscribe in zoho", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    public void updateHostelFromEvents(HostelV1 hostelV1) {
+        hostelV1Repository.save(hostelV1);
     }
 
 
@@ -352,6 +349,12 @@ public class HostelService {
         return ResponseEntity.ok(details);
     }
 
+    /**
+     * this is used in event listeners side also.
+     *
+     * @param hostelId
+     * @return
+     */
     public HostelV1 getHostelInfo(String hostelId) {
         return hostelV1Repository.findByHostelId(hostelId);
     }

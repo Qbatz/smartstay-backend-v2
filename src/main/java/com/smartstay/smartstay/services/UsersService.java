@@ -8,6 +8,8 @@ import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.Admin.UsersData;
+import com.smartstay.smartstay.events.AddAdminEvents;
+import com.smartstay.smartstay.events.AddUserEvents;
 import com.smartstay.smartstay.payloads.*;
 import com.smartstay.smartstay.payloads.account.*;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
@@ -21,6 +23,7 @@ import com.smartstay.smartstay.util.Utils;
 import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -64,6 +67,9 @@ public class UsersService {
 
     @Autowired
     private RolesService rolesService;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
@@ -451,7 +457,15 @@ public class UsersService {
                         userHostelService.addUserToExistingHostel(users.getParentId(), createdAccount.getUserId(), users.getUserId());
                     }
 
-
+                    StringBuilder fullName = new StringBuilder();
+                    if (createdAccount.getFirstName() != null) {
+                        fullName.append(createdAccount.getFirstName());
+                    }
+                    if (createdAccount.getLastName() != null && !createdAccount.getLastName().equalsIgnoreCase("")) {
+                        fullName.append(" ");
+                        fullName.append(createdAccount.getLastName());
+                    }
+                    eventPublisher.publishEvent(new AddAdminEvents(this, users.getParentId(), createdAccount.getUserId(), fullName.toString()));
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             }
@@ -516,13 +530,21 @@ public class UsersService {
                     admin.setActive(true);
                     admin.setDeleted(false);
 
-                    userRepository.save(admin);
+                    Users user = userRepository.save(admin);
 
-                    Users user = userRepository.findUserByEmailId(adminUser.emailId());
                     if (user != null) {
                         userHostelService.mapUserHostel(user.getUserId(), user.getParentId(), hostelId);
                     }
 
+                    StringBuilder fullName = new StringBuilder();
+                    if (user.getFirstName() != null) {
+                        fullName.append(user.getFirstName());
+                    }
+                    if (user.getLastName() != null && !user.getLastName().equalsIgnoreCase("")) {
+                        fullName.append(" ");
+                        fullName.append(user.getLastName());
+                    }
+                    eventPublisher.publishEvent(new AddUserEvents(this, users.getUserId(), hostelId, fullName.toString(), user.getParentId()));
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             }
@@ -755,5 +777,18 @@ public class UsersService {
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
+    }
+
+    public List<Users> findAllUsersFromUserId(List<String> users) {
+        List<Users> listUsers = new ArrayList<>();
+
+        userRepository.findAllById(users)
+                .forEach(item -> {
+                    if (item.getRoleId() == 1 || item.getRoleId() == 2) {
+                        listUsers.add(item);
+                    }
+                });
+
+        return listUsers;
     }
 }

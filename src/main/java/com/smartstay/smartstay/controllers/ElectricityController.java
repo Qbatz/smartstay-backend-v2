@@ -35,5 +35,10 @@ public class ElectricityController {
         return electricityService.getEBReadings(hostelId);
     }
 
+    @GetMapping("/customers/{hostelId}")
+    public ResponseEntity<?> getAllCustomersElectricity(@PathVariable("hostelId") String hostelId) {
+        return electricityService.getCustomersListElectricity(hostelId);
+    }
+
 
 }

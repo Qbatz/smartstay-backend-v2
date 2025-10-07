@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.VendorMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
