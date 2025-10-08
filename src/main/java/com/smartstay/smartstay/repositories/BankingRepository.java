@@ -14,6 +14,9 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
     @Query("SELECT b.bankId FROM BankingV1 b WHERE b.accountType = :type and b.hostelId=:hostelId and b.userId=:userId")
     List<String> findBankIdsByAccountTypeAndHostelIdAndUserId(String type, String hostelId, String userId);
 
+    @Query("SELECT b.bankId FROM BankingV1 b WHERE b.accountNumber = :accountNumber and b.hostelId=:hostelId and b.userId=:userId")
+    List<String> findBankIdsByAccountNumberAndHostelIdAndUserId(String accountNumber, String hostelId, String userId);
+
     @Query("SELECT b.bankId FROM BankingV1 b " + "WHERE b.accountNumber = :accountNumber AND b.accountType = :type " + "AND b.bankId <> :excludedBankId")
     List<String> findBankIdsByAccountNumberAndAccountTypeNotEqualBankId(@Param("accountNumber") String accountNumber, @Param("type") String type, @Param("excludedBankId") String excludedBankId);
     @Query("SELECT b.bankId FROM BankingV1 b WHERE b.upiId = :upiId AND b.accountType = :type and b.hostelId=:hostelId and b.userId=:userId")
