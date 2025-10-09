@@ -5,8 +5,10 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
+import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
+import com.smartstay.smartstay.dto.electricity.CustomersBookings;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
@@ -481,5 +483,9 @@ public class BookingsService {
 
         return null;
 
+    }
+
+    public List<BookedCustomer> findBookedCustomers(List<Integer> roomIds, Date startDate, Date endDate) {
+        return bookingsRepository.findBookingsByListRooms(roomIds, startDate, endDate);
     }
 }

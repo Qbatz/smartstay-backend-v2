@@ -73,6 +73,7 @@ public class Utils {
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
     public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
+    public static final String NO_ROOM_FOUND_HOSTEL = "No room found for specified hostel";
     public static final String N0_BED_FOUND_ROOM = "No bed found for the specified room.";
     public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable";
     public static final String BED_UNAVAILABLE_DATE = "Bed is unavailable for selected date";
@@ -309,8 +310,10 @@ public class Utils {
         return 0;
     }
 
-    public static final Date findLastDate(Integer cycleStartDay) {
-        LocalDate today = LocalDate.now();
+    public static final Date findLastDate(Integer cycleStartDay, Date date) {
+        LocalDate today = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();;
         LocalDate startDate = LocalDate.of(today.getYear(), today.getMonth(), cycleStartDay);
 
         LocalDate cycleEnd;
