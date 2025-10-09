@@ -71,9 +71,8 @@ public class BankingService {
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
             accountType = BankAccountType.BANK.name();
             if (addBank.accountNo() != null && !addBank.accountNo().isEmpty()) {
-                List<String> existingAccounts = bankingV1Repository.findBankIdsByAccountTypeAndHostelIdAndUserId(accountType, hostelId, authentication.getName());
-
-                if (existingAccounts != null) {
+                List<String> existingAccounts = bankingV1Repository.findBankIdsByAccountNumberAndHostelIdAndUserId(addBank.accountNo(), hostelId, authentication.getName());
+                if (existingAccounts != null && !existingAccounts.isEmpty()) {
                     return new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
                 }
 
@@ -83,13 +82,13 @@ public class BankingService {
             accountType = BankAccountType.CARD.name();
             if (addBank.cardType().equalsIgnoreCase(CardType.DEBIT.name())) {
                 List<String> existingAccounts = bankingV1Repository.findBankIdsByDebitCardAndAccountType(addBank.cardNumber(), accountType, hostelId, authentication.getName());
-                if (existingAccounts != null) {
+                if (existingAccounts != null && !existingAccounts.isEmpty()) {
                         return  new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
                 }
             }
             else {
                 List<String> existingAccounts = bankingV1Repository.findBankIdsByCreditCardAndAccountType(addBank.cardNumber(), accountType, hostelId, authentication.getName());
-                if (existingAccounts != null) {
+                if (existingAccounts != null && !existingAccounts.isEmpty()) {
                     return  new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
                 }
             }
@@ -102,7 +101,7 @@ public class BankingService {
 
             if (addBank.upiId() != null && !addBank.upiId().isEmpty()) {
                 List<String> existingAccounts = bankingV1Repository.findBankIdsByUpiIdAndAccountType(addBank.upiId(), accountType, hostelId, authentication.getName());
-                if (existingAccounts != null) {
+                if (existingAccounts != null && !existingAccounts.isEmpty()) {
                     return  new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
                 }
 
@@ -155,6 +154,7 @@ public class BankingService {
         bankingV1.setDeleted(false);
         bankingV1.setCreatedBy(users.getUserId());
         bankingV1.setCreatedAt(new Date());
+        bankingV1.setHostelId(hostelId);
 
         BankingV1 v1 = bankingV1Repository.save(bankingV1);
 
@@ -266,6 +266,10 @@ public class BankingService {
             bankingV1.setDefaultAccount(true);
         }
 
+        if (isNotBlank(updateBank.description())) {
+            bankingV1.setDescription(updateBank.description());
+        }
+
         bankingV1.setUpdatedAt(new Date());
         bankingV1Repository.save(bankingV1);
 
@@ -313,6 +317,9 @@ public class BankingService {
         if (isNotBlank(updateBank.accountNo())) {
             List<String> existingAccounts = bankingV1Repository
                     .findBankIdsByAccountNumberAndAccountTypeNotEqualBankId(updateBank.accountNo(), accountType, bankId);
+            if (existingAccounts !=null && !existingAccounts.isEmpty()) {
+                return false;
+            }
 
             bankingV1.setAccountNumber(updateBank.accountNo());
         }
@@ -337,7 +344,7 @@ public class BankingService {
                 existingAccounts = bankingV1Repository.findBankIdsByCreditCardAndAccountTypeNotEqualBankId(updateBank.cardNumber(), accountType, bankId);
             }
 
-            if (existingAccounts != null) {
+            if (existingAccounts != null && !existingAccounts.isEmpty()) {
                 return false;
             }
 
@@ -357,7 +364,7 @@ public class BankingService {
             List<String> existingAccounts = bankingV1Repository
                     .findBankIdsByUpiIdAndAccountTypeNotEqualBankId(updateBank.upiId(), accountType, bankId);
 
-            if (existingAccounts != null) {
+            if (existingAccounts != null && !existingAccounts.isEmpty()) {
                 return false;
             }
             bankingV1.setUpiId(updateBank.upiId());
