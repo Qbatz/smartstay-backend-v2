@@ -368,6 +368,10 @@ public class CustomersService {
         if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(), payloads.hostelId())) {
             return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.UNAUTHORIZED);
         }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(payloads.hostelId());
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
 
         Customers customers = customersRepository.findById(customerId).orElse(null);
         if (customers == null) {
@@ -377,6 +381,7 @@ public class CustomersService {
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_CHECKED_IN, HttpStatus.BAD_REQUEST);
         }
+
 
         String date = payloads.joiningDate().replace("/", "-");
         if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
@@ -419,8 +424,12 @@ public class CustomersService {
 
             Calendar calendar = Calendar.getInstance();
             int dueDate = calendar.get(Calendar.DAY_OF_MONTH) + 5;
+            int day = 1;
+            if (hostelV1.getElectricityConfig() != null) {
+                day = hostelV1.getElectricityConfig().getBillDate();
+            }
 
-            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate());
+            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), day);
 
             calculateRentAndCreateRentalInvoice(customers, payloads);
 
@@ -441,7 +450,6 @@ public class CustomersService {
         Users user = userService.findUserByUserId(userId);
 
         Customers customers = customersRepository.findById(customerId).orElse(null);
-
         BookingsV1 booking = bookingsService.findByBookingId(checkinRequest.bookingId());
         if (booking == null) {
             return new ResponseEntity<>(Utils.INVALID_BOOKING_ID, HttpStatus.BAD_REQUEST);
@@ -451,6 +459,10 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
+        HostelV1 hostelV1 = hostelService.getHostelInfo(customers.getHostelId());
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_CHECKED_IN, HttpStatus.BAD_REQUEST);
         }
@@ -533,7 +545,12 @@ public class CustomersService {
             Calendar calendar = Calendar.getInstance();
             int dueDate = calendar.get(Calendar.DAY_OF_MONTH) + 5;
 
-            invoiceService.addInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date);
+            int day = 1;
+            if (hostelV1.getElectricityConfig() != null) {
+                day = hostelV1.getElectricityConfig().getBillDate();
+            }
+
+            invoiceService.addInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date, day);
 
             calculateRentAndCreateRentalInvoice(customers, request);
 
@@ -951,9 +968,12 @@ public class CustomersService {
                 if (finalRent > payloads.rentalAmount()) {
                     finalRent = payloads.rentalAmount();
                 }
+                int day = 1;
+                if (hostelV1.getElectricityConfig() != null) {
+                    day = hostelV1.getElectricityConfig().getBillDate();
+                }
 
-
-            invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate());
+            invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), day);
 
         }
 

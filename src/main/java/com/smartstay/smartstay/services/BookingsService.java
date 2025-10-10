@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.BookingsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
@@ -26,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -202,6 +204,23 @@ public class BookingsService {
 
         bookingv1.setJoiningDate(Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
 
+        CustomersBedHistory cbh = new CustomersBedHistory();
+        cbh.setRoomId(bookingv1.getRoomId());
+        cbh.setBedId(bookingv1.getBedId());
+        cbh.setFloorId(bookingv1.getFloorId());
+        cbh.setHostelId(bookingv1.getHostelId());
+        cbh.setStartDate(bookingv1.getJoiningDate());
+        cbh.setCustomerId(bookingv1.getCustomerId());
+        cbh.setChangedBy(authentication.getName());
+        cbh.setActive(true);
+        cbh.setCreatedAt(new Date());
+        cbh.setBooking(bookingv1);
+
+        List<CustomersBedHistory> listBedHistory = new ArrayList<>();
+        listBedHistory.add(cbh);
+
+        bookingv1.setCustomerBedHistory(listBedHistory);
+
         return bookingsRepository.save(bookingv1);
 
     }
@@ -244,6 +263,23 @@ public class BookingsService {
             Date joiningDate = Utils.convertStringToDate(rawDateStr);
             bookingsV1.setJoiningDate(joiningDate);
             bookingsV1.setAdvanceAmount(payloads.advanceAmount());
+
+            CustomersBedHistory cbh = new CustomersBedHistory();
+            cbh.setRoomId(bookingsV1.getRoomId());
+            cbh.setBedId(bookingsV1.getBedId());
+            cbh.setFloorId(bookingsV1.getFloorId());
+            cbh.setHostelId(bookingsV1.getHostelId());
+            cbh.setStartDate(bookingsV1.getJoiningDate());
+            cbh.setCustomerId(bookingsV1.getCustomerId());
+            cbh.setChangedBy(authentication.getName());
+            cbh.setActive(true);
+            cbh.setCreatedAt(new Date());
+            cbh.setBooking(bookingsV1);
+
+            List<CustomersBedHistory> listBedHistory = new ArrayList<>();
+            listBedHistory.add(cbh);
+
+            bookingsV1.setCustomerBedHistory(listBedHistory);
             bookingsRepository.save(bookingsV1);
         }else {
             checkinCustomer(payloads, customerId);
@@ -263,6 +299,24 @@ public class BookingsService {
             Date joiningDate = Utils.convertStringToDate(rawDateStr);
             bookingsV1.setJoiningDate(joiningDate);
             bookingsV1.setAdvanceAmount(payloads.advanceAmount());
+
+            CustomersBedHistory cbh = new CustomersBedHistory();
+            cbh.setRoomId(bookingsV1.getRoomId());
+            cbh.setBedId(bookingsV1.getBedId());
+            cbh.setFloorId(bookingsV1.getFloorId());
+            cbh.setHostelId(bookingsV1.getHostelId());
+            cbh.setStartDate(bookingsV1.getJoiningDate());
+            cbh.setCustomerId(bookingsV1.getCustomerId());
+            cbh.setChangedBy(authentication.getName());
+            cbh.setActive(true);
+            cbh.setCreatedAt(new Date());
+            cbh.setBooking(bookingsV1);
+
+            List<CustomersBedHistory> listBedHistory = new ArrayList<>();
+            listBedHistory.add(cbh);
+
+            bookingsV1.setCustomerBedHistory(listBedHistory);
+
             bookingsRepository.save(bookingsV1);
         }
     }
@@ -487,5 +541,9 @@ public class BookingsService {
 
     public List<BookedCustomer> findBookedCustomers(List<Integer> roomIds, Date startDate, Date endDate) {
         return bookingsRepository.findBookingsByListRooms(roomIds, startDate, endDate);
+    }
+
+    public BookingsV1 getBookingInfoByCustomerId(String customerId) {
+        return bookingsRepository.findByCustomerId(customerId);
     }
 }

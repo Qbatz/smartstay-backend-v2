@@ -41,6 +41,8 @@ public class InvoicesV1 {
     String updatedBy;
     Date invoiceGeneratedDate;
     Date invoiceDueDate;
+    Date invoiceStartDate;
+    Date invoiceEndDate;
     Date createdAt;
     Date updatedAt;
 }

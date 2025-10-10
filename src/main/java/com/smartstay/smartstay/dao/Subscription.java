@@ -34,7 +34,7 @@ public class Subscription {
     private int trialRemainingDays;
     private Date nextBillingAt;
 
-    @OneToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hostel_id")
     private HostelV1 hostel;
 }

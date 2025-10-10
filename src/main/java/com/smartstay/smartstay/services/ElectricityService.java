@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.stream.Collectors.toList;
+
 @Service
 public class ElectricityService {
     @Autowired
@@ -268,15 +270,19 @@ public class ElectricityService {
             String endDate = "";
             com.smartstay.smartstay.dao.ElectricityReadings ebReading = electricityReadingRepository.findTopByHostelIdOrderByEntryDateDesc(hostelId);
             Calendar calendar = Calendar.getInstance();
-            Calendar calendar2 = Calendar.getInstance();
             if (ebReading != null) {
                 calendar.setTime(ebReading.getBillEndDate());
-                calendar2.setTime(ebReading.getBillStartDate());
 
                 startDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + electricityConfig.getBillDate();
-                endDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.DAY_OF_MONTH);
+                if (Utils.compareWithTwoDates(new Date(), ebReading.getBillEndDate()) < 0) {
+                    endDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.DAY_OF_MONTH);
+                }
+                else {
+                    endDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.DAY_OF_MONTH);
+                }
+
             }
-            List<ElectricityReadings> listElectricity = electricityReadingRepository.getElectricity(hostelId, startDate, endDate);
+            List<ElectricityReadings> listElectricity = electricityReadingRepository.getElectricityForCustomers(hostelId, startDate, endDate);
 
             Date ebEndDate = Utils.stringToDate( calendar.get(Calendar.DAY_OF_MONTH) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.YEAR), Utils.USER_INPUT_DATE_FORMAT);
             Date ebStartDate = Utils.stringToDate(electricityConfig.getBillDate()+ "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.YEAR), Utils.USER_INPUT_DATE_FORMAT);
@@ -291,129 +297,130 @@ public class ElectricityService {
             roomIds.forEach(item -> {
                 List<BookedCustomer>  list = listCustomers.
                         stream().
-                        filter(cus -> Objects.equals(item, cus.getRoomId()))
-                        .toList();
+                        filter(cus -> Objects.equals(item, cus.getRoomId())).toList();
 
-                AtomicInteger count = new AtomicInteger(0);
-                list.forEach(filtered -> {
-                    System.out.println(filtered.toString());
-                    //joined before the eb cycle
-                    if (Utils.compareWithTwoDates(filtered.getJoiningDate(), ebStartDate) <= 0) {
-                        count.set(count.get() + 1);
-                    }
-                });
-
-                ElectricityReadings readings = listElectricity
-                        .stream()
-                        .filter(i -> item == i.getRoomId())
-                        .findFirst().orElse(null);
-
-                //this executed, when all the customers joined before eb start date
-                if (count.get() == list.size()) {
-                    double totalAmount = 0;
-                    double finalUnits;
-                    if (readings != null && readings.getConsumption() != null) {
-                        finalUnits = readings.getConsumption() / count.get();
-                        totalAmount = readings.getConsumption() * readings.getUnitPrice();
-                    } else {
-                        finalUnits = 0;
-                    }
-                    double finalPrice = totalAmount/count.get();
-                    System.out.println(finalPrice);
-
-                    listCustomerForEBReadings.addAll(list.stream()
-                            .map(i -> new CustomersListMapper(finalPrice, finalUnits, readings.getStartDate(), readings.getEntryDate()).apply(i))
-                            .toList());
-                }
-                else {
-                    AtomicInteger noOfpersons = new AtomicInteger();
-                    list.forEach(notOneToEnd -> {
-                        if (readings != null) {
-                            if (notOneToEnd.getLeavingDate() != null && Utils.compareWithTwoDates(notOneToEnd.getLeavingDate(), readings.getEntryDate()) <=0) {
-                                if (notOneToEnd.getJoiningDate() != null && Utils.compareWithTwoDates(notOneToEnd.getJoiningDate(), readings.getStartDate()) > 0) {
-                                    noOfpersons.set(noOfpersons.get() + (int) Utils.findNumberOfDays(notOneToEnd.getJoiningDate(), notOneToEnd.getLeavingDate()));
-                                }
-                                else {
-                                    noOfpersons.set(noOfpersons.get() + (int) Utils.findNumberOfDays(readings.getStartDate(), notOneToEnd.getLeavingDate()));
-                                }
-                            }
-                            else if (notOneToEnd.getLeavingDate() == null && notOneToEnd.getJoiningDate() != null) {
-                                if (Utils.compareWithTwoDates(notOneToEnd.getJoiningDate(), readings.getStartDate()) > 0) {
-                                    noOfpersons.set(noOfpersons.get() + (int) Utils.findNumberOfDays(notOneToEnd.getJoiningDate(), readings.getEndDate()));
-                                }
-                                else if (Utils.compareWithTwoDates(notOneToEnd.getJoiningDate(), readings.getStartDate()) <= 0) {
-                                    noOfpersons.set(noOfpersons.get() + (int) Utils.findNumberOfDays(readings.getStartDate(), readings.getEndDate()));
-                                }
-
-
-                            }
-
+                if (!list.isEmpty()) {
+                    AtomicInteger count = new AtomicInteger(0);
+                    list.forEach(filtered -> {
+                        System.out.println(filtered.toString());
+                        //joined before the eb cycle
+                        if (Utils.compareWithTwoDates(filtered.getJoiningDate(), ebStartDate) <= 0) {
+                            count.set(count.get() + 1);
                         }
-
                     });
-                    double ebPrice = 0;
-                    double finalPricePerPerson; //for individual day
-                    double finalUsagePerPerson;
-                    if (readings != null) {
-                        ebPrice = readings.getConsumption() * readings.getUnitPrice();
-                        finalPricePerPerson = ebPrice / noOfpersons.get();
-                        finalUsagePerPerson = readings.getConsumption() / noOfpersons.get();
-                    } else {
-                        finalUsagePerPerson = 0;
-                        finalPricePerPerson = 0;
+
+                    ElectricityReadings readings = listElectricity
+                            .stream()
+                            .filter(i -> item == i.getRoomId())
+                            .findFirst().orElse(null);
+
+                    //this executed, when all the customers joined before eb start date
+                    if (count.get() == list.size()) {
+                        double totalAmount = 0;
+                        double finalUnits;
+                        if (readings != null && readings.getConsumption() != null) {
+                            finalUnits = readings.getConsumption() / count.get();
+                            totalAmount = readings.getConsumption() * readings.getUnitPrice();
+                        } else {
+                            finalUnits = 0;
+                        }
+                        double finalPrice = totalAmount/count.get();
+                        System.out.println(finalPrice);
+
+                        listCustomerForEBReadings.addAll(list.stream()
+                                .map(i -> new CustomersListMapper(finalPrice, finalUnits, readings.getStartDate(), readings.getEntryDate()).apply(i))
+                                .toList());
                     }
-
-
-                    list.forEach(eachPerson -> {
-                        if (readings != null) {
-                            if (eachPerson.getLeavingDate() == null) {
-                                if (Utils.compareWithTwoDates(eachPerson.getJoiningDate(), readings.getStartDate()) <= 0) {
-                                    int noOfDays = (int) Utils.findNumberOfDays(readings.getStartDate(), readings.getEntryDate());
-                                    double finalPrice = finalPricePerPerson * noOfDays;
-                                    double finalUsage = finalUsagePerPerson * noOfDays;
-                                    listCustomerForEBReadings.add(new CustomersListMapper(finalPrice, finalUsage, readings.getStartDate(), readings.getEntryDate()).apply(eachPerson));
-                                }
-                                else if (Utils.compareWithTwoDates(eachPerson.getJoiningDate(), readings.getStartDate()) > 0) {
-                                    int noOfDays = (int) Utils.findNumberOfDays(eachPerson.getJoiningDate(), readings.getEntryDate());
-                                    double finalPrice = finalPricePerPerson * noOfDays;
-                                    double finalUsage = finalUsagePerPerson * noOfDays;
-                                    listCustomerForEBReadings.add(new CustomersListMapper(finalPrice, finalUsage, eachPerson.getJoiningDate(), readings.getEntryDate()).apply(eachPerson));
-                                }
-                            }
-                            else if (eachPerson.getLeavingDate() != null) {
-                                if (Utils.compareWithTwoDates(eachPerson.getLeavingDate(), readings.getEntryDate()) <= 0) {
-                                    if (Utils.compareWithTwoDates(eachPerson.getJoiningDate(), readings.getStartDate()) <= 0) {
-                                        int noOfDays = (int) Utils.findNumberOfDays(readings.getStartDate(), eachPerson.getLeavingDate());
-                                        double finalPrice = finalPricePerPerson * noOfDays;
-                                        double finalUsage = finalUsagePerPerson * noOfDays;
-                                        listCustomerForEBReadings.add(new CustomersListMapper(finalPrice, finalUsage, readings.getStartDate(), eachPerson.getLeavingDate()).apply(eachPerson));
+                    else {
+                        AtomicInteger noOfpersons = new AtomicInteger();
+                        list.forEach(notOneToEnd -> {
+                            if (readings != null) {
+                                if (notOneToEnd.getLeavingDate() != null && Utils.compareWithTwoDates(notOneToEnd.getLeavingDate(), readings.getEntryDate()) <=0) {
+                                    if (notOneToEnd.getJoiningDate() != null && Utils.compareWithTwoDates(notOneToEnd.getJoiningDate(), readings.getStartDate()) > 0) {
+                                        noOfpersons.set(noOfpersons.get() + (int) Utils.findNumberOfDays(notOneToEnd.getJoiningDate(), notOneToEnd.getLeavingDate()));
                                     }
                                     else {
-                                        int noOfDays = (int) Utils.findNumberOfDays(eachPerson.getJoiningDate(), eachPerson.getLeavingDate());
-                                        double finalPrice = finalPricePerPerson * noOfDays;
-                                        double finalUsage = finalUsagePerPerson * noOfDays;
-                                        listCustomerForEBReadings.add(new CustomersListMapper(finalPrice, finalUsage, eachPerson.getJoiningDate(), eachPerson.getLeavingDate()).apply(eachPerson));
+                                        noOfpersons.set(noOfpersons.get() + (int) Utils.findNumberOfDays(readings.getStartDate(), notOneToEnd.getLeavingDate()));
                                     }
                                 }
-                                else {
+                                else if (notOneToEnd.getLeavingDate() == null && notOneToEnd.getJoiningDate() != null) {
+                                    if (Utils.compareWithTwoDates(notOneToEnd.getJoiningDate(), readings.getStartDate()) > 0) {
+                                        noOfpersons.set(noOfpersons.get() + (int) Utils.findNumberOfDays(notOneToEnd.getJoiningDate(), readings.getEndDate()));
+                                    }
+                                    else if (Utils.compareWithTwoDates(notOneToEnd.getJoiningDate(), readings.getStartDate()) <= 0) {
+                                        noOfpersons.set(noOfpersons.get() + (int) Utils.findNumberOfDays(readings.getStartDate(), readings.getEndDate()));
+                                    }
+
+
+                                }
+
+                            }
+
+                        });
+                        double ebPrice = 0;
+                        double finalPricePerPerson; //for individual day
+                        double finalUsagePerPerson;
+                        if (readings != null) {
+                            ebPrice = readings.getConsumption() * readings.getUnitPrice();
+                            finalPricePerPerson = ebPrice / noOfpersons.get();
+                            finalUsagePerPerson = readings.getConsumption() / noOfpersons.get();
+                        } else {
+                            finalUsagePerPerson = 0;
+                            finalPricePerPerson = 0;
+                        }
+
+
+                        list.forEach(eachPerson -> {
+                            if (readings != null) {
+                                if (eachPerson.getLeavingDate() == null) {
                                     if (Utils.compareWithTwoDates(eachPerson.getJoiningDate(), readings.getStartDate()) <= 0) {
-                                        int noOfDays = (int) Utils.findNumberOfDays(readings.getStartDate(), readings.getEndDate());
+                                        int noOfDays = (int) Utils.findNumberOfDays(readings.getStartDate(), readings.getEntryDate());
                                         double finalPrice = finalPricePerPerson * noOfDays;
                                         double finalUsage = finalUsagePerPerson * noOfDays;
                                         listCustomerForEBReadings.add(new CustomersListMapper(finalPrice, finalUsage, readings.getStartDate(), readings.getEntryDate()).apply(eachPerson));
                                     }
-                                    else {
-                                        int noOfDays = (int) Utils.findNumberOfDays(eachPerson.getJoiningDate(), readings.getEndDate());
+                                    else if (Utils.compareWithTwoDates(eachPerson.getJoiningDate(), readings.getStartDate()) > 0) {
+                                        int noOfDays = (int) Utils.findNumberOfDays(eachPerson.getJoiningDate(), readings.getEntryDate());
                                         double finalPrice = finalPricePerPerson * noOfDays;
                                         double finalUsage = finalUsagePerPerson * noOfDays;
                                         listCustomerForEBReadings.add(new CustomersListMapper(finalPrice, finalUsage, eachPerson.getJoiningDate(), readings.getEntryDate()).apply(eachPerson));
                                     }
                                 }
+                                else if (eachPerson.getLeavingDate() != null) {
+                                    if (Utils.compareWithTwoDates(eachPerson.getLeavingDate(), readings.getEntryDate()) <= 0) {
+                                        if (Utils.compareWithTwoDates(eachPerson.getJoiningDate(), readings.getStartDate()) <= 0) {
+                                            int noOfDays = (int) Utils.findNumberOfDays(readings.getStartDate(), eachPerson.getLeavingDate());
+                                            double finalPrice = finalPricePerPerson * noOfDays;
+                                            double finalUsage = finalUsagePerPerson * noOfDays;
+                                            listCustomerForEBReadings.add(new CustomersListMapper(finalPrice, finalUsage, readings.getStartDate(), eachPerson.getLeavingDate()).apply(eachPerson));
+                                        }
+                                        else {
+                                            int noOfDays = (int) Utils.findNumberOfDays(eachPerson.getJoiningDate(), eachPerson.getLeavingDate());
+                                            double finalPrice = finalPricePerPerson * noOfDays;
+                                            double finalUsage = finalUsagePerPerson * noOfDays;
+                                            listCustomerForEBReadings.add(new CustomersListMapper(finalPrice, finalUsage, eachPerson.getJoiningDate(), eachPerson.getLeavingDate()).apply(eachPerson));
+                                        }
+                                    }
+                                    else {
+                                        if (Utils.compareWithTwoDates(eachPerson.getJoiningDate(), readings.getStartDate()) <= 0) {
+                                            int noOfDays = (int) Utils.findNumberOfDays(readings.getStartDate(), readings.getEndDate());
+                                            double finalPrice = finalPricePerPerson * noOfDays;
+                                            double finalUsage = finalUsagePerPerson * noOfDays;
+                                            listCustomerForEBReadings.add(new CustomersListMapper(finalPrice, finalUsage, readings.getStartDate(), readings.getEntryDate()).apply(eachPerson));
+                                        }
+                                        else {
+                                            int noOfDays = (int) Utils.findNumberOfDays(eachPerson.getJoiningDate(), readings.getEndDate());
+                                            double finalPrice = finalPricePerPerson * noOfDays;
+                                            double finalUsage = finalUsagePerPerson * noOfDays;
+                                            listCustomerForEBReadings.add(new CustomersListMapper(finalPrice, finalUsage, eachPerson.getJoiningDate(), readings.getEntryDate()).apply(eachPerson));
+                                        }
+                                    }
 
+                                }
                             }
-                        }
 
-                    });
+                        });
+                    }
                 }
             });
 

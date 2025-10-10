@@ -58,5 +58,9 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """, nativeQuery = true)
     List<BookedCustomer> findBookingsByListRooms(@Param("listRooms") List<Integer> listRooms, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
+    @Query(value = """
+            SELECT * FROM bookingsv1 WHERE current_status = 'CHECKIN';
+            """, nativeQuery = true)
+    List<BookingsV1> findAllCheckedInUsers();
 
 }

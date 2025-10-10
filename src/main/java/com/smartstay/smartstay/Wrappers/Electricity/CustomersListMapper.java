@@ -24,12 +24,6 @@ public class CustomersListMapper implements Function<BookedCustomer, CustomersLi
     @Override
     public CustomersList apply(BookedCustomer bookedCustomer) {
 
-        long factor = (long) Math.pow(10, 2);
-        totalPrice = totalPrice * factor;
-        long tmp = Math.round(totalPrice);
-
-        totalUnits = totalUnits * factor;
-        long tmp2 = Math.round(totalUnits);
 
         StringBuilder fullName = new StringBuilder();
         if (bookedCustomer.getFirstName() != null) {
@@ -49,8 +43,8 @@ public class CustomersListMapper implements Function<BookedCustomer, CustomersLi
                 bookedCustomer.getRoomName(),
                 bookedCustomer.getBedId(),
                 bookedCustomer.getBedName(),
-                (double) tmp2/factor,
-                (double) tmp/factor,
+                totalUnits,
+                totalPrice,
                 Utils.dateToString(startDate),
                 Utils.dateToString(endDate));
     }

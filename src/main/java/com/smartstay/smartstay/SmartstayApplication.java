@@ -1,9 +1,15 @@
 package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.EBReadingType;
+import com.smartstay.smartstay.ennum.InvoiceMode;
+import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.services.TemplatesService;
+import com.smartstay.smartstay.util.BillingCycle;
+import com.smartstay.smartstay.util.BillingCycleUtil;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -11,10 +17,12 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @SpringBootApplication
 public class SmartstayApplication {
@@ -335,5 +343,155 @@ public class SmartstayApplication {
 		};
 	}
 
+//	@Bean
+//	CommandLineRunner mapCustomerBedDetails(BookingsRepository bookingsRepository) {
+//		return args -> {
+//			List<BookingsV1> listBookings = bookingsRepository.findAll();
+//
+//			listBookings.forEach(item -> {
+//				if (item.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
+//					CustomersBedHistory cbh = new CustomersBedHistory();
+//					cbh.setBedId(item.getBedId());
+//					cbh.setFloorId(item.getFloorId());
+//					cbh.setRoomId(item.getRoomId());
+//					cbh.setHostelId(item.getHostelId());
+//					cbh.setStartDate(item.getJoiningDate());
+//					cbh.setCustomerId(item.getCustomerId());
+//					cbh.setChangedBy(item.getCreatedBy());
+//					cbh.setBooking(item);
+//					cbh.setCreatedAt(item.getCreatedAt());
+//					cbh.setActive(true);
+//
+//					List<CustomersBedHistory> listBedHistory = new ArrayList<>();
+//					listBedHistory.add(cbh);
+//
+//					item.setCustomerBedHistory(listBedHistory);
+//
+//					bookingsRepository.save(item);
+//				}
+//
+//			});
+//
+//		};
+//	}
+
+//	@Bean
+//	CommandLineRunner addJoiningDate(InvoicesV1Repository invoicesV1Repository, HostelV1Repository hostelV1Repository, BookingsRepository bookingsRepository) {
+//		return args -> {
+//			List<InvoicesV1> listInvoices = invoicesV1Repository.findAll();
+//			List<InvoicesV1> modified = listInvoices
+//					.stream()
+//					.map(item -> {
+//						if (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
+//							HostelV1 hostelV1 = hostelV1Repository.findByHostelId(item.getHostelId());
+//							BookingsV1 bookingsV1 = bookingsRepository.findByCustomerId(item.getCustomerId());
+//							item.setInvoiceStartDate(bookingsV1.getJoiningDate());
+//							if (hostelV1.getElectricityConfig() != null) {
+//								Date endDate = Utils.findLastDate(hostelV1.getElectricityConfig().getBillDate(), bookingsV1.getJoiningDate());
+//								item.setInvoiceEndDate(endDate);
+//							}
+//							else {
+//								Date endDate = Utils.findLastDate(1, bookingsV1.getJoiningDate());
+//								item.setInvoiceEndDate(endDate);
+//							}
+//						}
+//
+//						return item;
+//					})
+//					.toList();
+//
+//			invoicesV1Repository.saveAll(modified);
+//		};
+//	}
+
+//	@Bean
+//	CommandLineRunner addPendingInvoices(InvoicesV1Repository invoicesV1Repository, BookingsRepository bookingsRepository, HostelV1Repository hostelV1Repository) {
+//		return args -> {
+//			List<BookingsV1> listBookings = bookingsRepository.findAllCheckedInUsers();
+//			listBookings.stream()
+//					.forEach(item -> {
+//						HostelV1 hostelV1 = hostelV1Repository.findByHostelId(item.getHostelId());
+//						Date startDate = null;
+//						int day = 1;
+//						if (hostelV1.getElectricityConfig() != null) {
+//							day = hostelV1.getElectricityConfig().getBillDate();
+//						}
+//						InvoicesV1 latestInvoice = invoicesV1Repository.findLatestInvoiceByCustomerId(item.getCustomerId());
+//						if (latestInvoice != null) {
+//							Calendar cal = Calendar.getInstance();
+//							cal.setTime(latestInvoice.getInvoiceStartDate());
+//							cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+//
+//
+//							LocalDate startLocalDate = cal.getTime()
+//									.toInstant()
+//									.atZone(ZoneId.systemDefault())
+//									.toLocalDate();
+//							LocalDate todaysDate = new Date()
+//									.toInstant()
+//									.atZone(ZoneId.systemDefault())
+//									.toLocalDate();
+//
+//							List<BillingCycle> listBillingCycles = BillingCycleUtil.findBillingCycles(startLocalDate, todaysDate, day);
+//
+//							List<InvoicesV1> lisNewInvoices =  listBillingCycles.stream()
+//											.map(i -> {
+//												String prefix = latestInvoice.getInvoiceNumber().split("-")[0];
+//												String latestPrefix = invoicesV1Repository.findLatestInvoiceByPrefix(prefix).getInvoiceNumber();
+//												StringBuilder prefixSuffix = new StringBuilder();
+//												prefixSuffix.append(prefix);
+//
+//												if (latestPrefix != null) {
+//													String[] suffixArray = latestPrefix.split("-");
+//													if (suffixArray.length > 1) {
+//														prefixSuffix.append("-");
+//														Integer suffixNo = Integer.parseInt(suffixArray[1]);
+//														prefixSuffix.append(suffixNo);
+//													}
+//												}
+//
+//												Date invoiceCreatedDate = Date.from(i.getStartDate()
+//														.atStartOfDay(ZoneId.systemDefault())
+//														.toInstant());
+//												Date invoiceEndDate = Date.from(i.getEndDate()
+//														.atStartOfDay(ZoneId.systemDefault())
+//														.toInstant());
+//												Date dueDate = Utils.addDaysToDate(invoiceCreatedDate, 5);
+//												InvoicesV1 inv = new InvoicesV1();
+//												inv.setBasePrice(latestInvoice.getBasePrice());
+//												inv.setCgst(latestInvoice.getCgst());
+//												inv.setSgst(latestInvoice.getSgst());
+//												inv.setGst(latestInvoice.getGst());
+//												inv.setGstPercentile(latestInvoice.getGstPercentile());
+//												inv.setTotalAmount(inv.getTotalAmount());
+//												inv.setCreatedAt(Date.from(i.getStartDate()
+//														.atStartOfDay(ZoneId.systemDefault())
+//														.toInstant()));
+//												inv.setInvoiceDueDate(dueDate);
+//												inv.setInvoiceGeneratedDate(invoiceCreatedDate);
+//												inv.setCreatedBy(latestInvoice.getCreatedBy());
+//												inv.setCustomerId(latestInvoice.getCustomerId());
+//												inv.setCustomerMailId(latestInvoice.getCustomerMailId());
+//												inv.setCustomerMobile(latestInvoice.getCustomerMobile());
+//												inv.setHostelId(latestInvoice.getHostelId());
+//												inv.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+//												//find latest invoice number
+//												inv.setInvoiceNumber(prefixSuffix.toString());
+//												inv.setInvoiceType(InvoiceType.RENT.name());
+//												inv.setPaymentStatus(PaymentStatus.PENDING.name());
+//												inv.setInvoiceStartDate(invoiceCreatedDate);
+//												inv.setInvoiceEndDate(invoiceEndDate);
+//
+//												return inv;
+//											})
+//									.toList();
+//
+//							invoicesV1Repository.saveAll(lisNewInvoices);
+//
+//						}
+//
+//					});
+//		};
+//	}
 
 }

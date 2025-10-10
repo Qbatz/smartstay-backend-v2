@@ -30,6 +30,21 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
             """, nativeQuery = true)
     List<ElectricityReadings> getElectricity(@Param("hostelId") String hostelId, @Param("startDate") String startDate, @Param("endDate") String endDate);
 
+    @Query(value = """
+            SELECT MAX(er.id) as id, er.room_id as roomId, MAX(er.entry_date) as entryDate, er.bill_start_date as startDate, er.bill_end_date as endDate,
+            er.current_unit_price as unitPrice, er.hostel_id as hostelId, flrs.floor_id as floorId, er.current_reading as currentReading, 
+            rms.room_name as roomName, flrs.floor_name as floorName, (select sum(e2.consumption) 
+            from electricity_readings e2 where e2.room_id=er.room_id and e2.bill_start_date >= DATE(:startDate) 
+            and e2.bill_end_date <= DATE(:endDate)) as consumption, 
+            (SELECT count(booking_id) FROM bookingsv1 WHERE room_id=er.room_id and current_status in ('NOTICE', 'CHECKIN') and joining_date <= DATE(:endDate) 
+            and leaving_date is null or leaving_date >= DATE(:startDate))  as noOfTenants 
+            FROM electricity_readings er LEFT OUTER JOIN rooms rms on rms.room_id=er.room_id 
+            left outer join floors flrs on flrs.floor_id=rms.floor_id where er.hostel_id=:hostelId 
+            and er.bill_start_date >= DATE(:startDate) and er.bill_end_date <= DATE(:endDate) 
+            GROUP by er.room_id ORDER BY entryDate DESC
+            """, nativeQuery = true)
+    List<ElectricityReadings> getElectricityForCustomers(@Param("hostelId") String hostelId, @Param("startDate") String startDate, @Param("endDate") String endDate);
+
 
     @Query(value = """
             SELECT er.room_id as roomId FROM electricity_readings er where er.hostel_id=:hostelId GROUP by er.room_id
