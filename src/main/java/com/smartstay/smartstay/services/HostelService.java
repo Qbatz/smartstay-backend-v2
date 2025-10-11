@@ -163,17 +163,6 @@ public class HostelService {
 
             hostelV1.setAdditionalImages(listHostelImages);
         }
-        //Adding billing rules for a hostel
-        //By default
-        BillingRules billingRules = new BillingRules();
-        billingRules.setBillingStartDate(1);
-        billingRules.setBillingDueDate(10);
-        billingRules.setNoticePeriod(30);
-        billingRules.setHostel(hostelV1);
-
-        //this piece of codes are already commented. need to uncommented.
-
-
 
         Subscription subscription = subscriptionService.addSubscription(request, 1);
 

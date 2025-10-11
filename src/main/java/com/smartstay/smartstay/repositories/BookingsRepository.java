@@ -2,12 +2,15 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dto.Bookings;
+import com.smartstay.smartstay.dto.booking.BookedCustomer;
+import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -42,5 +45,34 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """, nativeQuery = true)
     CustomersBookingDetails getCustomerBookingDetails(@Param("customerId") String customerId);
 
+    @Query(value = """
+            SELECT customers.first_name as firstName, customers.last_name as lastName, booking.customer_id as customerId, 
+            booking.bed_id as bedId, booking.floor_id as floorId, booking.room_id as roomId, rms.room_name as roomName, 
+            flrs.floor_name as floorName, bed.bed_name as bedName, booking.joining_date as joiningDate, 
+            booking.leaving_date as leavingDate  FROM bookingsv1 booking 
+            INNER JOIN customers customers on customers.customer_id=booking.customer_id 
+            left outer join rooms rms on rms.room_id=booking.room_id 
+            left outer join floors flrs on flrs.floor_id=booking.floor_id 
+            left outer join beds bed on bed.bed_id=booking.bed_id 
+            where booking.current_status in ('CHECKIN', 'NOTICE') and booking.room_id in (:listRooms) 
+             and booking.joining_date <=DATE(:endDate) and booking.leaving_date IS NULL OR booking.leaving_date >= DATE(:startDate)
+            """, nativeQuery = true)
+    List<BookedCustomer> findBookingsByListRooms(@Param("listRooms") List<Integer> listRooms, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+    @Query(value = """
+            SELECT * FROM bookingsv1 WHERE current_status = 'CHECKIN';
+            """, nativeQuery = true)
+    List<BookingsV1> findAllCheckedInUsers();
+
+    @Query(value = """
+            SELECT booking.customer_id as customerId, booking.hostel_id as hostelId, booking.joining_date as joiningDate, 
+            booking.leaving_date as leavingDate, booking.room_id as roomId, booking.floor_id as floorId, 
+            booking.bed_id as bedId, flrs.floor_name as floorName, rms.room_name as roomName, bed.bed_name as bedName 
+            FROM bookingsv1 booking inner join beds bed on bed.bed_id=booking.bed_id inner join rooms rms on rms.room_id=booking.room_id 
+            INNER join floors flrs on flrs.floor_id=booking.floor_id WHERE booking.room_id=:roomId and 
+            booking.current_status in ('CHECKIN', 'NOTICE') and booking.joining_date <=DATE(:endDate) 
+            and booking.leaving_date is NULL or booking.leaving_date >= DATE(:startDate)
+            """, nativeQuery = true)
+    List<BookedCustomerInfoElectricity> getBookingInfoForElectricity(@Param("roomId")Integer roomId, @Param("startDate")Date startDate, @Param("endDate") Date endDate);
 
 }

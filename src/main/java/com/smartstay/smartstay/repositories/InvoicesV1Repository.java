@@ -49,6 +49,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 """, nativeQuery = true)
     InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix);
 
+
+    @Query(value = "SELECT * FROM invoicesv1 WHERE customer_id = :customerId ORDER BY invoice_start_date DESC LIMIT 1",
+            nativeQuery = true)
+    InvoicesV1 findLatestInvoiceByCustomerId(@Param("customerId") String customerId);
+
     InvoicesV1 findByCustomerIdAndHostelIdAndInvoiceType(String customerId, String hostelId, String invoiceType);
 
 }

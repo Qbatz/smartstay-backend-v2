@@ -1,19 +1,13 @@
 package com.smartstay.smartstay.dao;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Data
-@Setter
-@Getter
 public class BookingsV1 {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -39,4 +33,7 @@ public class BookingsV1 {
     private int floorId;
     private int roomId;
     private int bedId;
+
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CustomersBedHistory> customerBedHistory;
 }

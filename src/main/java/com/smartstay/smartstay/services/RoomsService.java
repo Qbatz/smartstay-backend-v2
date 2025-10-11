@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.RoomsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.payloads.rooms.AddRoom;
 import com.smartstay.smartstay.payloads.rooms.UpdateRoom;
 import com.smartstay.smartstay.repositories.FloorRepository;
@@ -189,6 +190,15 @@ public class RoomsService {
     public boolean checkRoomExistForFloor(int floorId, int roomId) {
         return roomRepository.findByRoomIdAndFloorId(roomId, floorId) != null;
     }
+
+    public boolean checkRoomExistForHostel(Integer roomId, String hostelId) {
+        return roomRepository.findByRoomIdAndHostelId(roomId, hostelId) != null;
+    }
+
+    public RoomInfo getRoom(Integer roomId) {
+        return roomRepository.getRoomInfo(roomId);
+    }
+
 
     public int getRoomCount(String hostelId) {
         return roomRepository.getCountOfRoomsBasedOnHostel(hostelId);

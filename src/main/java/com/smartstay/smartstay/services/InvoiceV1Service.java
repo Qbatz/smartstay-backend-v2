@@ -3,7 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.InvoicesV1;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.invoices.Invoices;
@@ -15,13 +15,16 @@ import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
 import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.util.Utils;
+import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -34,9 +37,30 @@ public class InvoiceV1Service {
     @Autowired
     TemplatesService templateService;
     @Autowired
+    private UsersService usersService;
+    private CustomersService customersService;
+    @Autowired
     PaymentSummaryService paymentSummaryService;
+    @Autowired
+    private RolesService rolesService;
+    private BookingsService bookingsService;
 
-    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate) {
+    private HostelService hostelService;
+    @Autowired
+    public void setCustomersService(@Lazy CustomersService customersService) {
+        this.customersService = customersService;
+    }
+    @Autowired
+    public void setBookingsService(@Lazy  BookingsService bookingService) {
+        this.bookingsService = bookingService;
+    }
+
+    @Autowired
+    public void setHostelService(@Lazy HostelService hostelService) {
+        this.hostelService = hostelService;
+    }
+
+    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate, int startDay) {
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
             BillTemplates templates = templateService.getBillTemplate(hostelId, InvoiceType.ADVANCE.name());
@@ -79,7 +103,7 @@ public class InvoiceV1Service {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Utils.USER_INPUT_DATE_FORMAT);
             LocalDate joiningDate1 = LocalDate.parse(joiningDate.replace("/", "-"), formatter);
             LocalDate dueDate = joiningDate1.plusDays(5);
-
+            Date endDate = Utils.findLastDate(startDay, Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
 
             invoicesV1.setTotalAmount(amount);
             invoicesV1.setBasePrice(baseAmount);
@@ -96,6 +120,8 @@ public class InvoiceV1Service {
             invoicesV1.setCustomerMobile(customerMobile);
             invoicesV1.setCustomerMailId(customerMailId);
             invoicesV1.setCreatedAt(new Date());
+            invoicesV1.setInvoiceStartDate(java.sql.Date.valueOf(joiningDate1));
+            invoicesV1.setInvoiceEndDate(endDate);
             invoicesV1.setInvoiceGeneratedDate(java.sql.Date.valueOf(joiningDate1));
             invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
             invoicesV1.setHostelId(hostelId);
@@ -352,5 +378,68 @@ public class InvoiceV1Service {
     public void cancelBookingInvoice(InvoicesV1 invoicesV1) {
         invoicesV1.setPaymentStatus(PaymentStatus.CANCELLED.name());
         invoicesV1Repository.save(invoicesV1);
+    }
+
+    public ResponseEntity<?> generateManualInvoice(String hostelId, String customerId, String startDate, String endDate, Double ebAmount) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        Customers customers = customersService.getCustomerInformation(customerId);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        BookingsV1 bookingV1 = bookingsService.getBookingDetails(customerId);
+        if (bookingV1 == null) {
+            return new ResponseEntity<>(Utils.NO_RECORDS_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        int day = 1;
+        if (hostelV1.getElectricityConfig() != null) {
+            day = hostelV1.getElectricityConfig().getBillDate();
+        }
+
+        Date dateStartDate = null;
+        Date dateEndDate = null;
+        Calendar cal = Calendar.getInstance();
+        if (!Utils.checkNullOrEmpty(startDate)) {
+            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
+            cal.set(Calendar.DAY_OF_MONTH, day);
+
+            dateStartDate = cal.getTime();
+        }
+        else {
+            dateStartDate = Utils.stringToDate(startDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            cal.setTime(dateStartDate);
+            cal.set(Calendar.DAY_OF_MONTH, day);
+        }
+
+        if (!Utils.checkNullOrEmpty(endDate)) {
+            Calendar endCal = Calendar.getInstance();
+            endCal.set(Calendar.MONTH, cal.get(Calendar.MONTH) -1);
+            endCal.setTime(Utils.findLastDate(day, endCal.getTime()));
+            dateEndDate = endCal.getTime();
+        }
+        else {
+            Calendar endCal = Calendar.getInstance();
+            Date dateEnd = Utils.stringToDate(endDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            endCal.setTime(Utils.findLastDate(day, dateEnd));
+
+            dateEndDate = endCal.getTime();
+
+        }
+
+        return null;
+
+
     }
 }

@@ -2,7 +2,7 @@ package com.smartstay.smartstay.dto.electricity;
 
 import java.util.Date;
 
-public interface ElectricityReaddings {
+public interface ElectricityReadings {
     Integer getId();
     Double getConsumption();
     Double getCurrentReading();
@@ -14,4 +14,6 @@ public interface ElectricityReaddings {
     String getRoomName();
     String getFloorName();
     Integer getNoOfTenants();
+    Date getStartDate();
+    Date getEndDate();
 }
