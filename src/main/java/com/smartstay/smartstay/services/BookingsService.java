@@ -7,6 +7,7 @@ import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
+import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.electricity.CustomersBookings;
@@ -212,6 +213,7 @@ public class BookingsService {
         cbh.setStartDate(bookingv1.getJoiningDate());
         cbh.setCustomerId(bookingv1.getCustomerId());
         cbh.setChangedBy(authentication.getName());
+        cbh.setType(CustomersBedType.CHECK_IN.name());
         cbh.setActive(true);
         cbh.setCreatedAt(new Date());
         cbh.setBooking(bookingv1);
@@ -244,13 +246,32 @@ public class BookingsService {
 
             bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
 
+            CustomersBedHistory customersBedHistory = new CustomersBedHistory();
+            customersBedHistory.setType(CustomersBedType.BOOKED.name());
+            customersBedHistory.setRoomId(payload.roomId());
+            customersBedHistory.setBedId(payload.bedId());
+            customersBedHistory.setFloorId(payload.floorId());
+            customersBedHistory.setHostelId(hostelId);
+            customersBedHistory.setCustomerId(payload.customerId());
+            customersBedHistory.setChangedBy(authentication.getName());
+            customersBedHistory.setActive(true);
+            customersBedHistory.setCreatedAt(new Date());
+
+
+            customersBedHistory.setBooking(bookingsV1);
+
+            ArrayList<CustomersBedHistory> listCustomerBeds = new ArrayList<>();
+            listCustomerBeds.add(customersBedHistory);
+
+            bookingsV1.setCustomerBedHistory(listCustomerBeds);
+
             return bookingsRepository.save(bookingsV1);
         }
 
         return null;
     }
 
-    public void addChecking(String customerId, CheckInRequest payloads) {
+    public void addCheckin(String customerId, CheckInRequest payloads) {
         String date = payloads.joiningDate().replace("/", "-");
         BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
         if (bookingsV1 != null) {
@@ -272,11 +293,12 @@ public class BookingsService {
             cbh.setStartDate(bookingsV1.getJoiningDate());
             cbh.setCustomerId(bookingsV1.getCustomerId());
             cbh.setChangedBy(authentication.getName());
+            cbh.setType(CustomersBedType.CHECK_IN.name());
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
             cbh.setBooking(bookingsV1);
 
-            List<CustomersBedHistory> listBedHistory = new ArrayList<>();
+            List<CustomersBedHistory> listBedHistory = bookingsV1.getCustomerBedHistory();
             listBedHistory.add(cbh);
 
             bookingsV1.setCustomerBedHistory(listBedHistory);
@@ -308,11 +330,12 @@ public class BookingsService {
             cbh.setStartDate(bookingsV1.getJoiningDate());
             cbh.setCustomerId(bookingsV1.getCustomerId());
             cbh.setChangedBy(authentication.getName());
+            cbh.setType(CustomersBedType.CHECK_IN.name());
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
             cbh.setBooking(bookingsV1);
 
-            List<CustomersBedHistory> listBedHistory = new ArrayList<>();
+            List<CustomersBedHistory> listBedHistory = bookingsV1.getCustomerBedHistory();
             listBedHistory.add(cbh);
 
             bookingsV1.setCustomerBedHistory(listBedHistory);
@@ -545,5 +568,9 @@ public class BookingsService {
 
     public BookingsV1 getBookingInfoByCustomerId(String customerId) {
         return bookingsRepository.findByCustomerId(customerId);
+    }
+
+    public List<BookedCustomerInfoElectricity> getAllCheckInCustomers(Integer roomId, Date startDate, Date endDate) {
+        return bookingsRepository.getBookingInfoForElectricity(roomId, startDate, endDate);
     }
 }

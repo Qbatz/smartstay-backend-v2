@@ -380,7 +380,7 @@ public class InvoiceV1Service {
         invoicesV1Repository.save(invoicesV1);
     }
 
-    public ResponseEntity<?> generateManualInvoice(String hostelId, String customerId, String startDate, String endDate) {
+    public ResponseEntity<?> generateManualInvoice(String hostelId, String customerId, String startDate, String endDate, Double ebAmount) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }

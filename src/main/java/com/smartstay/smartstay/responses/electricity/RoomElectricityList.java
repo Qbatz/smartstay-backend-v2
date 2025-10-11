@@ -7,5 +7,5 @@ public record RoomElectricityList(int ebId,
                                   String startDate,
                                   String endDate,
                                   Integer consumption,
-                                  Integer currentReading) {
+                                  Integer reading) {
 }

@@ -1,51 +1,50 @@
 package com.smartstay.smartstay.Wrappers.Electricity;
 
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
+import com.smartstay.smartstay.dto.electricity.ElectricityCustomersList;
 import com.smartstay.smartstay.responses.electricity.CustomersList;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.Date;
 import java.util.function.Function;
 
-public class CustomersListMapper implements Function<BookedCustomer, CustomersList> {
-    private Double totalPrice = null;
-    private Double totalUnits = null;
-
-    private Date startDate = null;
-    private Date endDate = null;
-
-    public CustomersListMapper(Double totalPrice, Double totalUnits, Date startDate, Date endDate) {
-        this.totalPrice = totalPrice;
-        this.totalUnits = totalUnits;
-        this.startDate = startDate;
-        this.endDate = endDate;
-    }
+public class CustomersListMapper implements Function<ElectricityCustomersList, CustomersList> {
 
     @Override
-    public CustomersList apply(BookedCustomer bookedCustomer) {
+    public CustomersList apply(ElectricityCustomersList customersList) {
 
 
         StringBuilder fullName = new StringBuilder();
-        if (bookedCustomer.getFirstName() != null) {
-            fullName.append(bookedCustomer.getFirstName());
+        StringBuilder initials = new StringBuilder();
+        if (customersList.getFirstName() != null) {
+            fullName.append(customersList.getFirstName());
+            initials.append(customersList.getFirstName().toUpperCase().charAt(0));
         }
-        if (bookedCustomer.getLastName() != null && !bookedCustomer.getLastName().equalsIgnoreCase("")) {
+        if (customersList.getLastName() != null && !customersList.getLastName().equalsIgnoreCase("")) {
             fullName.append(" ");
-            fullName.append(bookedCustomer.getLastName());
+            fullName.append(customersList.getLastName());
+            initials.append(customersList.getLastName().toUpperCase().charAt(0));
         }
-        return new CustomersList(bookedCustomer.getCustomerId(),
-                bookedCustomer.getFirstName(),
-                bookedCustomer.getLastName(),
+        else {
+            if (customersList.getFirstName().length() > 1) {
+                initials.append(customersList.getFirstName().toUpperCase().charAt(1));
+            }
+        }
+        return new CustomersList(customersList.getCustomerId(),
+                customersList.getFirstName(),
+                customersList.getLastName(),
                 fullName.toString(),
-                bookedCustomer.getFloorId(),
-                bookedCustomer.getFloorName(),
-                bookedCustomer.getRoomId(),
-                bookedCustomer.getRoomName(),
-                bookedCustomer.getBedId(),
-                bookedCustomer.getBedName(),
-                totalUnits,
-                totalPrice,
-                Utils.dateToString(startDate),
-                Utils.dateToString(endDate));
+                initials.toString(),
+                customersList.getProfilePic(),
+                customersList.getFloorId(),
+                customersList.getFloorName(),
+                customersList.getRoomId(),
+                customersList.getRoomName(),
+                customersList.getBedId(),
+                customersList.getBedName(),
+                customersList.getConsumption(),
+                customersList.getAmount(),
+                Utils.dateToString(customersList.getStartDate()),
+                Utils.dateToString(customersList.getEndDate()));
     }
 }

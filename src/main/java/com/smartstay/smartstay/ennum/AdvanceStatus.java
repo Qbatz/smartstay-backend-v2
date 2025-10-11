@@ -4,8 +4,8 @@ public enum AdvanceStatus {
     PAID("PAID"),
     PENDING("PENDING"),
     WAVED_OFF("WAVED"),
-    INVOICE_GENERATED("invoiced"),
-    DUE("in due");
+    INVOICE_GENERATED("INVOICED"),
+    DUE("DUE");
 
     AdvanceStatus(String paid) {
     }

@@ -446,7 +446,18 @@ public class SmartstayApplication {
 //													if (suffixArray.length > 1) {
 //														prefixSuffix.append("-");
 //														Integer suffixNo = Integer.parseInt(suffixArray[1]);
-//														prefixSuffix.append(suffixNo);
+//														if (suffixNo < 10) {
+//															prefixSuffix.append("00");
+//															prefixSuffix.append(suffixNo);
+//														}
+//														else if (suffixNo < 100) {
+//															prefixSuffix.append("0");
+//															prefixSuffix.append(suffixNo);
+//														}
+//														else {
+//															prefixSuffix.append(suffixNo);
+//														}
+//
 //													}
 //												}
 //
@@ -463,7 +474,7 @@ public class SmartstayApplication {
 //												inv.setSgst(latestInvoice.getSgst());
 //												inv.setGst(latestInvoice.getGst());
 //												inv.setGstPercentile(latestInvoice.getGstPercentile());
-//												inv.setTotalAmount(inv.getTotalAmount());
+//												inv.setTotalAmount(latestInvoice.getTotalAmount());
 //												inv.setCreatedAt(Date.from(i.getStartDate()
 //														.atStartOfDay(ZoneId.systemDefault())
 //														.toInstant()));
@@ -482,11 +493,12 @@ public class SmartstayApplication {
 //												inv.setInvoiceStartDate(invoiceCreatedDate);
 //												inv.setInvoiceEndDate(invoiceEndDate);
 //
+//												invoicesV1Repository.save(inv);
 //												return inv;
 //											})
 //									.toList();
 //
-//							invoicesV1Repository.saveAll(lisNewInvoices);
+////							invoicesV1Repository.saveAll(lisNewInvoices);
 //
 //						}
 //

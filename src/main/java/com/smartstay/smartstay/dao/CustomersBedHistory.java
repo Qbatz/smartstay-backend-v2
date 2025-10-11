@@ -24,6 +24,8 @@ public class CustomersBedHistory {
     private String reason;
     private boolean isActive;
     private Date createdAt;
+    //this is from CustomerBedType enum
+    private String type;
 
     @ManyToOne
     @JoinColumn(name = "booking_id")

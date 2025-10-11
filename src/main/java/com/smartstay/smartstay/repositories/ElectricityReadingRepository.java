@@ -17,7 +17,7 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
 
     @Query(value = """
             SELECT MAX(er.id) as id, er.room_id as roomId, MAX(er.entry_date) as entryDate, er.bill_start_date as startDate, er.bill_end_date as endDate,
-            er.current_unit_price as unitPrice, er.hostel_id as hostelId, flrs.floor_id as floorId, er.current_reading as currentReading, 
+            er.current_unit_price as unitPrice, er.hostel_id as hostelId, flrs.floor_id as floorId, MAX(er.current_reading) as currentReading, 
             rms.room_name as roomName, flrs.floor_name as floorName, (select sum(e2.consumption) 
             from electricity_readings e2 where e2.room_id=er.room_id and e2.bill_start_date >= DATE(:startDate) 
             and e2.bill_end_date <= DATE(:endDate)) as consumption, 
@@ -54,6 +54,7 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
     @Query(value = """
             SELECT er.id, er.consumption, er.current_reading as currentReading, er.current_unit_price as unitPrice, er.entry_date as entryDate, er.hostel_id as hostelId, er.room_id as roomId, er.bill_start_date as startDate FROM electricity_readings er WHERE er.room_id=:roomId
             """, nativeQuery = true)
-    List<ElectricityReadingForRoom> getRoomReading(@Param("roomId") String roomId);
+    List<ElectricityReadingForRoom> getRoomReading(@Param("roomId") Integer roomId);
+
 
 }

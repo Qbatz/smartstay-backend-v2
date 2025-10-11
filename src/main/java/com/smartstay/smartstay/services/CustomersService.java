@@ -420,7 +420,7 @@ public class CustomersService {
 
             bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
 
-            bookingsService.addChecking(customerId, payloads);
+            bookingsService.addCheckin(customerId, payloads);
 
             Calendar calendar = Calendar.getInstance();
             int dueDate = calendar.get(Calendar.DAY_OF_MONTH) + 5;
@@ -953,16 +953,20 @@ public class CustomersService {
                 lastRulingBillDate  = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
             }
 
+            Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
             Calendar cal = Calendar.getInstance();
+            cal.setTime(joiningDate);
             cal.set(Calendar.DAY_OF_MONTH, lastRulingBillDate);
 
-            Calendar calLastDate = Calendar.getInstance();
-            calLastDate.set(Calendar.DAY_OF_MONTH, lastRulingBillDate-1);
-            calLastDate.set(Calendar.MONTH, calLastDate.get(Calendar.MONTH) + 1);
+            Date lastDate = Utils.findLastDate(lastRulingBillDate, cal.getTime());
 
-            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(cal.getTime(), calLastDate.getTime());
-            long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), calLastDate.getTime());
+            Calendar c = Calendar.getInstance();
+            c.setTime(joiningDate);
+
+
+            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(cal.getTime(), lastDate);
+            long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), lastDate);
             double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
             double finalRent  = calculateRentPerDay * noOfDaysLeftInCurrentMonth;
                 if (finalRent > payloads.rentalAmount()) {
