@@ -58,6 +58,8 @@ public class HostelEventsListeners {
         List<BillingRules> listBillings = new ArrayList<>();
         listBillings.add(billingRules);
 
+        hostelV1.setBillingRulesList(listBillings);
+
         BillTemplates templates = new BillTemplates(hostelV1.getHostelId(),hostelV1.getMobile(), hostelV1.getEmailId(), hostelV1.getHostelName(), events.getUserId());
         hostelTemplates.initialTemplateSetup(templates);
 

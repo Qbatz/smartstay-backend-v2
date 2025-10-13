@@ -24,6 +24,7 @@ public class BankTransactionsV1 {
     private String referenceNumber;
     private Double amount;
     private Double accountBalance;
+    private String description;
     //credit or debit
     private String type;
     //assets or rent or advance or expense

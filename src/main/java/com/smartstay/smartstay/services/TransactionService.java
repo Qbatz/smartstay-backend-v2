@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class TransactionService {
@@ -120,7 +121,7 @@ public class TransactionService {
 
         TransactionV1 transactionV1 = new TransactionV1();
 
-        if (invoicesV1.getTotalAmount() == payment.amount()) {
+        if (Objects.equals(invoicesV1.getTotalAmount(), payment.amount())) {
             typeOfPayment = PaymentStatus.PAID.name();
             transactionV1.setStatus(PaymentStatus.PAID.name());
             transactionV1.setPaidAmount(payment.amount());

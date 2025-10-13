@@ -8,6 +8,7 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Random;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -73,6 +74,7 @@ public class Utils {
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
     public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
+    public static final String NO_ROOM_FOUND_HOSTEL = "No room found for specified hostel";
     public static final String N0_BED_FOUND_ROOM = "No bed found for the specified room.";
     public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable";
     public static final String BED_UNAVAILABLE_DATE = "Bed is unavailable for selected date";
@@ -84,6 +86,7 @@ public class Utils {
     public static final String INVALID_BED_ID = "Invalid bed id passed";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
+    public static final String FUTURE_DATES_NOT_ALLOWED = "Future Dates are not allowed";
     public static final String ACCOUNT_NO_ALREAY_EXISTS = "Account number already exists";
     public static final String CASH_ACCOUNT_ALREAY_EXISTS = "Cash Account already exists";
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
@@ -99,7 +102,17 @@ public class Utils {
     public static final String CUSTOMER_INACTIVE_VACTED_ERROR = "Cannot change status to inactive for vacated customers";
     public static final String CUSTOMER_ALREADY_INACTIVE_ERROR = "Customer is already inactive";
     public static final String CANNOT_INACTIVE_ACTIVE_CUSTOMERS = "Customer is currently active";
+    public static final String CUSTOMER_ALREADY_VACATED = "Customer already vacated";
+    public static final String CUSTOMER_NOT_CHECKED_IN_ERROR = "Customer is not checked in";
     public static final String CANNOT_ENABLE_HOSTEL_ROOM_READINGS = "Cannot enable hostel based and room based together";
+    public static final String CATEGORY_NAME_CATEGORY_ID_ERROR = "Category name or Category id is required";
+    public static final String CATEGORY_NAME_ALREADY_REGISTERED = "Category name is already exists";
+    public static final String SUB_CATEGORY_NAME_ALREADY_REGISTERED = "Subcategory name is already exists";
+    public static final String INSUFFICIENT_FUND_ERROR = "Insufficient funds";
+    public static final String INVALID_CATEGORY_ID = "Invalid category id";
+    public static final String SUB_CATEGORY_NAME_REQUIRED = "Sub category name required";
+    public static final String SUB_CATEGORY_ID_REQUIRED = "Sub category id required";
+    public static final String NO_BOOKING_INFORMATION_FOUND = "No booking information found";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
@@ -260,7 +273,11 @@ public class Utils {
             }
         }
 
-
+        if (data instanceof Long) {
+            if ((Long) data == 0) {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -309,8 +326,10 @@ public class Utils {
         return 0;
     }
 
-    public static final Date findLastDate(Integer cycleStartDay) {
-        LocalDate today = LocalDate.now();
+    public static final Date findLastDate(Integer cycleStartDay, Date date) {
+        LocalDate today = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();;
         LocalDate startDate = LocalDate.of(today.getYear(), today.getMonth(), cycleStartDay);
 
         LocalDate cycleEnd;
@@ -331,6 +350,13 @@ public class Utils {
 
         return Date.from(cycleEnd.atStartOfDay(ZoneId.systemDefault()).toInstant());
 
+    }
+
+    public static int generateExpenseNumber() {
+        Random random = new Random();
+        int number = 10000000 + random.nextInt(90000000);
+
+        return number;
     }
 
 

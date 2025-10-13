@@ -11,6 +11,7 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -107,5 +108,48 @@ public class BankTransactionService {
                 bankRepository.save(transactionsV1);
             }
         }
+    }
+
+    public boolean addExpenseTransaction(TransactionDto transactionDto) {
+        if (authentication.isAuthenticated()) {
+            BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
+            BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
+
+            if (v1 == null) {
+                return false;
+            }
+            else {
+                if (v1.getAccountBalance() < transactionDto.amount()) {
+                    return false;
+                }
+                 if (transactionDto.type().equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+                    transactionsV1.setAccountBalance(v1.getAccountBalance() - transactionDto.amount());
+                }
+            }
+            Calendar calendar = Calendar.getInstance();
+            Date dt = Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            calendar.setTime(dt);
+            if (calendar.get(Calendar.MINUTE) == 0 && calendar.get(Calendar.HOUR) == 0) {
+                Calendar cal2 = Calendar.getInstance();
+                calendar.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
+                calendar.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
+                calendar.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
+            }
+
+            transactionsV1.setTransactionDate(calendar.getTime());
+            transactionsV1.setBankId(transactionDto.bankId());
+            transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
+            transactionsV1.setAmount(transactionDto.amount());
+            transactionsV1.setType(transactionDto.type());
+            transactionsV1.setSource(transactionDto.source());
+            transactionsV1.setHostelId(transactionDto.hostelId());
+            transactionsV1.setCreatedAt(new Date());
+            transactionsV1.setCreatedBy(authentication.getName());
+
+            bankRepository.save(transactionsV1);
+
+            return true;
+        }
+        return false;
     }
 }

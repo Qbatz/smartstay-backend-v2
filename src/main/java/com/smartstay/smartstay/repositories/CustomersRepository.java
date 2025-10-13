@@ -44,7 +44,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             WHERE cus.hostel_id = :hostelId
             AND (:name IS NULL OR LOWER(cus.first_name) LIKE LOWER(CONCAT('%', :name, '%'))
                                    OR LOWER(cus.last_name) LIKE LOWER(CONCAT('%', :name, '%')))
-              AND (:status IS NULL OR cus.current_status = :status) and cus.current_status in ('INACTIVE', 'CHECK_IN', 'BOOKED') 
+              AND (:status IS NULL OR cus.current_status = :status) and cus.current_status in ('INACTIVE', 'CHECK_IN', 'BOOKED', 'NOTICE') 
                order by cus.created_at desc
             """, nativeQuery = true)
     List<CustomerData> getCustomerData(

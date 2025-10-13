@@ -19,18 +19,35 @@ public class ExpensesV1 {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String expenseId;
+    private Long categoryId;
+    private Long subCategoryId;
+    private String parentId;
+    private String hostelId;
+    private String bankId;
 
+//    this is for single product amount
+    private Double unitPrice;
+    private Integer unitCount;
+    private Double totalPrice;
+    private Double gst;
+    private Double cgst;
+    private Double sgst;
+    private Double gstAmount;
+    private Double cgstAmount;
+    private Double sgstAmount;
+    private Double discounts;
+    private Double discountAmount;
+    private String expenseNumber;
+    //final amount after discount and gst
+    private Double transactionAmount;
+    private String vendorId;
+    //from expense source
+    private String source;
+
+    private Date transactionDate;
     private Date createdAt;
     private Date updatedAt;
     private String createdBy;
-    private Boolean isActive;
-    private String categoryId;
-    private Date purchaseDate;
-    private String hostelId;
-    private int unitCount;
-    private Double perUnitAmount;
-    private Double purchaseAmount;
-    private String modeOfTransaction;
+    private boolean isActive;
     private String description;
-    private String parentId;
 }

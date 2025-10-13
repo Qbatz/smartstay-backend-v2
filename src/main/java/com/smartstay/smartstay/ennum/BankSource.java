@@ -5,4 +5,5 @@ public enum BankSource {
     ASSETS,
     BOOKING_REFUND,
     RENT_REFUND,
+    EXPENSE
 }

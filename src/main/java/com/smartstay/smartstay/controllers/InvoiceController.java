@@ -33,4 +33,9 @@ public class InvoiceController {
         return invoiceV1Service.getAllReceipts(hostelId);
     }
 
+    @GetMapping("/manual/{hostelId}/{customerId}")
+    public ResponseEntity<?> generateManualInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @RequestParam("startDate") String startDate, @RequestParam("endDate") String endDate, @RequestParam("ebAmount") Double ebAmount) {
+        return invoiceV1Service.generateManualInvoice(hostelId, customerId, startDate, endDate, ebAmount);
+    }
+
 }

@@ -18,7 +18,7 @@ import com.smartstay.smartstay.payloads.banking.UpdateBankBalance;
 import com.smartstay.smartstay.repositories.BankingRepository;
 import com.smartstay.smartstay.responses.banking.BankList;
 import com.smartstay.smartstay.responses.beds.Bank;
-import com.smartstay.smartstay.responses.bookings.CashReturnBank;
+import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -276,7 +277,6 @@ public class BankingService {
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
-
     public ResponseEntity<?>  updateBankBalance(String hostelId, UpdateBankBalance balance) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -410,7 +410,7 @@ public class BankingService {
      * @return
      */
 
-    public List<CashReturnBank> getAllBankForReturn(String hostelId) {
+    public List<DebitsBank> getAllBankForReturn(String hostelId) {
         List<BankingV1> listBankAccounts = bankingV1Repository.findByBankIdInAndActiveAccountDebit(hostelId);
 
         return listBankAccounts
@@ -429,5 +429,9 @@ public class BankingService {
                 .stream()
                 .map(BankingV1::getBankId)
                 .toList();
+    }
+
+    public List<BankingV1> findAllBanksById(Set<String> bankLists) {
+        return bankingV1Repository.findByBankIdIn(bankLists.stream().toList());
     }
 }

@@ -26,18 +26,21 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         }
         String invoiceType = null;
         String paymentStatus = null;
-        if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-            paymentStatus = "Paid";
+        if (invoices.getPaymentStatus() != null) {
+            if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                paymentStatus = "Paid";
+            }
+            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+                paymentStatus = "Pending";
+            }
+            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                paymentStatus = "Partial Payment";
+            }
+            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.ADVANCE_IN_HAND.name())) {
+                paymentStatus = "Over pay";
+            }
         }
-        else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
-            paymentStatus = "Pending";
-        }
-        else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-            paymentStatus = "Partial Payment";
-        }
-        else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.ADVANCE_IN_HAND.name())) {
-            paymentStatus = "Over pay";
-        }
+
 
         if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
             invoiceType = "Rent";

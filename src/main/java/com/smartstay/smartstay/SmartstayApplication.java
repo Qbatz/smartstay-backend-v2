@@ -1,9 +1,15 @@
 package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.EBReadingType;
+import com.smartstay.smartstay.ennum.InvoiceMode;
+import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.services.TemplatesService;
+import com.smartstay.smartstay.util.BillingCycle;
+import com.smartstay.smartstay.util.BillingCycleUtil;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -11,10 +17,12 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @SpringBootApplication
 public class SmartstayApplication {
@@ -305,35 +313,5 @@ public class SmartstayApplication {
 //			customerTypeRepository.save(customersType4);
 		};
 	}
-
-	@Bean
-	CommandLineRunner addEbConfiguration(HostelV1Repository hostelRepo) {
-		return args -> {
-			List<HostelV1> listHostels = hostelRepo.findAll();
-			if (!listHostels.isEmpty()) {
-				listHostels
-						.stream()
-						.forEach(item -> {
-							if (item.getElectricityConfig() == null) {
-								ElectricityConfig config = new ElectricityConfig();
-								config.setProRate(true);
-								config.setHostel(item);
-								config.setCharge(5.0);
-								config.setBillDate(1);
-								config.setUpdated(false);
-								config.setShouldIncludeInRent(true);
-								config.setLastUpdate(new Date());
-								config.setUpdatedBy(item.getCreatedBy());
-								config.setTypeOfReading(EBReadingType.ROOM_READING.name());
-
-								item.setElectricityConfig(config);
-
-								hostelRepo.save(item);
-							}
-						});
-			}
-		};
-	}
-
 
 }

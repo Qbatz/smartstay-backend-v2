@@ -3,8 +3,11 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.BookingsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
+import com.smartstay.smartstay.dto.booking.BookedCustomer;
+import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.ennum.*;
@@ -14,7 +17,7 @@ import com.smartstay.smartstay.payloads.booking.CancelBooking;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.repositories.BookingsRepository;
-import com.smartstay.smartstay.responses.bookings.CashReturnBank;
+import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.bookings.InitializeCancel;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckIn;
 import com.smartstay.smartstay.util.Utils;
@@ -24,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -200,6 +204,24 @@ public class BookingsService {
 
         bookingv1.setJoiningDate(Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
 
+        CustomersBedHistory cbh = new CustomersBedHistory();
+        cbh.setRoomId(bookingv1.getRoomId());
+        cbh.setBedId(bookingv1.getBedId());
+        cbh.setFloorId(bookingv1.getFloorId());
+        cbh.setHostelId(bookingv1.getHostelId());
+        cbh.setStartDate(bookingv1.getJoiningDate());
+        cbh.setCustomerId(bookingv1.getCustomerId());
+        cbh.setChangedBy(authentication.getName());
+        cbh.setType(CustomersBedType.CHECK_IN.name());
+        cbh.setActive(true);
+        cbh.setCreatedAt(new Date());
+        cbh.setBooking(bookingv1);
+
+        List<CustomersBedHistory> listBedHistory = new ArrayList<>();
+        listBedHistory.add(cbh);
+
+        bookingv1.setCustomerBedHistory(listBedHistory);
+
         return bookingsRepository.save(bookingv1);
 
     }
@@ -223,13 +245,32 @@ public class BookingsService {
 
             bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
 
+            CustomersBedHistory customersBedHistory = new CustomersBedHistory();
+            customersBedHistory.setType(CustomersBedType.BOOKED.name());
+            customersBedHistory.setRoomId(payload.roomId());
+            customersBedHistory.setBedId(payload.bedId());
+            customersBedHistory.setFloorId(payload.floorId());
+            customersBedHistory.setHostelId(hostelId);
+            customersBedHistory.setCustomerId(payload.customerId());
+            customersBedHistory.setChangedBy(authentication.getName());
+            customersBedHistory.setActive(true);
+            customersBedHistory.setCreatedAt(new Date());
+
+
+            customersBedHistory.setBooking(bookingsV1);
+
+            ArrayList<CustomersBedHistory> listCustomerBeds = new ArrayList<>();
+            listCustomerBeds.add(customersBedHistory);
+
+            bookingsV1.setCustomerBedHistory(listCustomerBeds);
+
             return bookingsRepository.save(bookingsV1);
         }
 
         return null;
     }
 
-    public void addChecking(String customerId, CheckInRequest payloads) {
+    public void addCheckin(String customerId, CheckInRequest payloads) {
         String date = payloads.joiningDate().replace("/", "-");
         BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
         if (bookingsV1 != null) {
@@ -242,6 +283,24 @@ public class BookingsService {
             Date joiningDate = Utils.convertStringToDate(rawDateStr);
             bookingsV1.setJoiningDate(joiningDate);
             bookingsV1.setAdvanceAmount(payloads.advanceAmount());
+
+            CustomersBedHistory cbh = new CustomersBedHistory();
+            cbh.setRoomId(bookingsV1.getRoomId());
+            cbh.setBedId(bookingsV1.getBedId());
+            cbh.setFloorId(bookingsV1.getFloorId());
+            cbh.setHostelId(bookingsV1.getHostelId());
+            cbh.setStartDate(bookingsV1.getJoiningDate());
+            cbh.setCustomerId(bookingsV1.getCustomerId());
+            cbh.setChangedBy(authentication.getName());
+            cbh.setType(CustomersBedType.CHECK_IN.name());
+            cbh.setActive(true);
+            cbh.setCreatedAt(new Date());
+            cbh.setBooking(bookingsV1);
+
+            List<CustomersBedHistory> listBedHistory = bookingsV1.getCustomerBedHistory();
+            listBedHistory.add(cbh);
+
+            bookingsV1.setCustomerBedHistory(listBedHistory);
             bookingsRepository.save(bookingsV1);
         }else {
             checkinCustomer(payloads, customerId);
@@ -261,6 +320,25 @@ public class BookingsService {
             Date joiningDate = Utils.convertStringToDate(rawDateStr);
             bookingsV1.setJoiningDate(joiningDate);
             bookingsV1.setAdvanceAmount(payloads.advanceAmount());
+
+            CustomersBedHistory cbh = new CustomersBedHistory();
+            cbh.setRoomId(bookingsV1.getRoomId());
+            cbh.setBedId(bookingsV1.getBedId());
+            cbh.setFloorId(bookingsV1.getFloorId());
+            cbh.setHostelId(bookingsV1.getHostelId());
+            cbh.setStartDate(bookingsV1.getJoiningDate());
+            cbh.setCustomerId(bookingsV1.getCustomerId());
+            cbh.setChangedBy(authentication.getName());
+            cbh.setType(CustomersBedType.CHECK_IN.name());
+            cbh.setActive(true);
+            cbh.setCreatedAt(new Date());
+            cbh.setBooking(bookingsV1);
+
+            List<CustomersBedHistory> listBedHistory = bookingsV1.getCustomerBedHistory();
+            listBedHistory.add(cbh);
+
+            bookingsV1.setCustomerBedHistory(listBedHistory);
+
             bookingsRepository.save(bookingsV1);
         }
     }
@@ -432,7 +510,7 @@ public class BookingsService {
         }
 
 
-        List<CashReturnBank> listBanks = bankingService.getAllBankForReturn(bookingsV1.getHostelId());
+        List<DebitsBank> listBanks = bankingService.getAllBankForReturn(bookingsV1.getHostelId());
 
         InitializeCancel initializeCancel = new InitializeCancel(bookingsV1.getBookingId(),
                 bookingsV1.getCustomerId(),
@@ -481,5 +559,17 @@ public class BookingsService {
 
         return null;
 
+    }
+
+    public List<BookedCustomer> findBookedCustomers(List<Integer> roomIds, Date startDate, Date endDate) {
+        return bookingsRepository.findBookingsByListRooms(roomIds, startDate, endDate);
+    }
+
+    public BookingsV1 getBookingInfoByCustomerId(String customerId) {
+        return bookingsRepository.findByCustomerId(customerId);
+    }
+
+    public List<BookedCustomerInfoElectricity> getAllCheckInCustomers(Integer roomId, Date startDate, Date endDate) {
+        return bookingsRepository.getBookingInfoForElectricity(roomId, startDate, endDate);
     }
 }
