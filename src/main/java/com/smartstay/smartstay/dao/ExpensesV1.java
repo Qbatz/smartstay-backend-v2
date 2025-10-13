@@ -37,6 +37,7 @@ public class ExpensesV1 {
     private Double sgstAmount;
     private Double discounts;
     private Double discountAmount;
+    private String expenseNumber;
     //final amount after discount and gst
     private Double transactionAmount;
     private String vendorId;

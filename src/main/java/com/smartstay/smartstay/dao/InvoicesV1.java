@@ -26,6 +26,7 @@ public class InvoicesV1 {
     //Advance or monthly rent or Booking amount
     String invoiceType;
     Double basePrice;
+    Double ebAmount;
     //this includes GST
     Double totalAmount;
     Double gst;

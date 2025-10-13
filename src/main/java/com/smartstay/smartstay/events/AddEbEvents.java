@@ -13,8 +13,9 @@ public class AddEbEvents extends ApplicationEvent {
     private Date entryDate;
     private String createdBy;
     private ElectricityReadings electricityReadings;
+    private Integer newReadingId;
 
-    public AddEbEvents(Object source, String hostelId, Integer roomId, Double currentReading, Double chargePerUnits, Date entrtDate, String createdBy, ElectricityReadings electricityReadings) {
+    public AddEbEvents(Object source, String hostelId, Integer roomId, Double currentReading, Double chargePerUnits, Date entrtDate, String createdBy, ElectricityReadings electricityReadings, int newReadingId) {
         super(source);
         this.hostelId = hostelId;
         this.roomId = roomId;
@@ -23,6 +24,7 @@ public class AddEbEvents extends ApplicationEvent {
         this.entryDate = entrtDate;
         this.createdBy = createdBy;
         this.electricityReadings = electricityReadings;
+        this.newReadingId = newReadingId;
     }
 
     public String getHostelId() {
@@ -51,5 +53,9 @@ public class AddEbEvents extends ApplicationEvent {
 
     public ElectricityReadings getElectricityReadings() {
         return electricityReadings;
+    }
+
+    public Integer getNewReadingId() {
+        return newReadingId;
     }
 }

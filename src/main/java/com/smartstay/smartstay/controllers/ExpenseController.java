@@ -47,4 +47,9 @@ public class ExpenseController {
     public ResponseEntity<?> addExpenses(@PathVariable("hostelId") String hostelId, @RequestBody @Valid Expense expense) {
         return expenseService.addExpense(hostelId, expense);
     }
+
+    @GetMapping("/{hostelId}")
+    public ResponseEntity<?> getExpenses(@PathVariable("hostelId") String hostelId) {
+        return expenseService.getAllExpenses(hostelId);
+    }
 }

@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -428,5 +429,9 @@ public class BankingService {
                 .stream()
                 .map(BankingV1::getBankId)
                 .toList();
+    }
+
+    public List<BankingV1> findAllBanksById(Set<String> bankLists) {
+        return bankingV1Repository.findByBankIdIn(bankLists.stream().toList());
     }
 }

@@ -18,6 +18,7 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -984,4 +985,70 @@ public class CustomersService {
 
     }
 
+    public ResponseEntity<?> getInformationForFinalSettlement(String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        BookingsV1 bookingDetails = bookingsService.getBookingsByCustomerId(customerId);
+        if (bookingDetails == null) {
+            return new ResponseEntity<>(Utils.NO_BOOKING_INFORMATION_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.VACATED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_VACATED, HttpStatus.BAD_REQUEST);
+        }
+        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
+        }
+        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
+        }
+        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.TERMINATED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
+        }
+
+        StringBuilder fullName = new StringBuilder();
+        StringBuilder initials = new StringBuilder();
+        if (customers.getFirstName() != null) {
+            fullName.append(customers.getFirstName());
+            initials.append(customers.getFirstName().toUpperCase().charAt(0));
+        }
+        if (customers.getLastName() != null && !customers.getLastName().equalsIgnoreCase("")) {
+            fullName.append(" ");
+            fullName.append(customers.getLastName());
+            initials.append(customers.getLastName().toUpperCase().charAt(0));
+        }
+        else {
+            if (customers.getFirstName().length() > 1) {
+                initials.append(customers.getFirstName().toUpperCase().charAt(1));
+            }
+        }
+        CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(),
+                customers.getFirstName(),
+                customers.getLastName(),
+                fullName.toString(),
+                customers.getProfilePic(),
+                initials.toString(),
+                Utils.dateToString(bookingDetails.getJoiningDate()),
+                customers.getAdvance().getAdvanceAmount(),
+                bookingDetails.getRentAmount(),
+                customers.getAdvance().getDeductions());
+
+        FinalSettlement finalSettlement = new FinalSettlement(customerInformations);
+
+        return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
+    }
 }

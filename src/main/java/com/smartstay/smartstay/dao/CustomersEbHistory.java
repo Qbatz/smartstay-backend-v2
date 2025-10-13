@@ -20,6 +20,7 @@ public class CustomersEbHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private Integer readingId;
     private String customerId;
     private Integer roomId;
     private Integer floorId;

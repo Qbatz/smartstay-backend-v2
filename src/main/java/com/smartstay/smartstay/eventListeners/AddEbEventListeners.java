@@ -85,6 +85,7 @@ public class AddEbEventListeners {
                         .stream()
                         .map(item -> {
                             CustomersEbHistory ebHistory = new CustomersEbHistory();
+                            ebHistory.setReadingId(ebEvents.getNewReadingId());
                             ebHistory.setCustomerId(item.getCustomerId());
                             ebHistory.setRoomId(item.getRoomId());
                             ebHistory.setFloorId(item.getFloorId());
@@ -182,6 +183,7 @@ public class AddEbEventListeners {
                             double finalAmount = noOfUnitsConsumed * ebEvents.getChargePerUnits();
 
                             CustomersEbHistory ebHistory = new CustomersEbHistory();
+                            ebHistory.setReadingId(ebEvents.getNewReadingId());
                             ebHistory.setCustomerId(item.getCustomerId());
                             ebHistory.setRoomId(item.getRoomId());
                             ebHistory.setFloorId(item.getFloorId());

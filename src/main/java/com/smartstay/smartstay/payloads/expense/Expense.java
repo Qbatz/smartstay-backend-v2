@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Positive;
 
 public record Expense(
         @NotNull(message = "Category id required")
-        @NotEmpty(message = "Category id required")
+        @Positive(message = "Category id required")
         Long categoryId,
         Long subCategory,
         @NotEmpty(message = "Purchase date is required")

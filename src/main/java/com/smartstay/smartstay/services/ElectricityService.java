@@ -75,18 +75,22 @@ public class ElectricityService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        Date date = null;
+        if (readings.readingDate() != null) {
+            date = Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (Utils.compareWithTwoDates(new Date(), date) < 0) {
+                return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+            }
+        }
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
         if (electricityConfig == null) {
             return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
-        Date date = null;
+
         Double previousReading = 0.0;
-        if (!Utils.checkNullOrEmpty(readings.readingDate())) {
+        if (date == null) {
             date = new Date();
-        }
-        else {
-            date = Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
         com.smartstay.smartstay.dao.ElectricityReadings electricityReadings = findLastEntryByRoomId(readings.roomId(), hostelId);
 
@@ -155,8 +159,8 @@ public class ElectricityService {
         newReadings.setBillStartDate(billStartDate);
         newReadings.setBillEndDate(billEndDate);
 
-        electricityReadingRepository.save(newReadings);
-        eventPublisher.publishEvent(new AddEbEvents(this, hostelId, readings.roomId(), readings.reading(), electricityConfig.getCharge(), date, users.getUserId(), electricityReadings));
+        com.smartstay.smartstay.dao.ElectricityReadings newReading = electricityReadingRepository.save(newReadings);
+        eventPublisher.publishEvent(new AddEbEvents(this, hostelId, readings.roomId(), readings.reading(), electricityConfig.getCharge(), date, users.getUserId(), electricityReadings, newReading.getId()));
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
     }
