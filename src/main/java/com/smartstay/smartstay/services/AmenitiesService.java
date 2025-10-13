@@ -150,6 +150,21 @@ public class AmenitiesService {
         amenitiesV1.setAmenityName(request.amenityName());
         amenitiesV1.setAmenityAmount(request.amount());
         amenitiesV1.setUpdatedAt(new java.util.Date());
+        if (request.proRate() != null) {
+            amenitiesV1.setIsProRate(request.proRate());
+            List<CustomerAmenity> customerAmenities = customerAmenityRepository.findByAmenityId(amenityId);
+            if (request.proRate()){
+                for (CustomerAmenity customerAmenity : customerAmenities) {
+                    customerAmenity.setStartDate(new Date());
+                    customerAmenityRepository.save(customerAmenity);
+                }
+            } else {
+                for (CustomerAmenity customerAmenity : customerAmenities) {
+                    customerAmenity.setEndDate(new Date());
+                    customerAmenityRepository.save(customerAmenity);
+                }
+            }
+        }
         amentityRepository.save(amenitiesV1);
 
         return new ResponseEntity<>(

@@ -23,6 +23,7 @@ public class AmenitiesV1 {
     Double amenityAmount;
     Boolean isActive;
     Boolean isDeleted;
+    Boolean isProRate;
     String createdBy;
     String updatedBy;
     Date createdAt;

@@ -13,6 +13,7 @@ public interface CustomerAmenityRepository extends JpaRepository<CustomerAmenity
     boolean existsByAmenityIdAndCustomerId(String amenityId, String customerId);
 
     CustomerAmenity findByAmenityIdAndCustomerId(String amenityId, String customerId);
+    List<CustomerAmenity> findByAmenityId(String amenityId);
 
     @Query(value = """
     SELECT c.customer_id as customerId,
@@ -30,6 +31,9 @@ public interface CustomerAmenityRepository extends JpaRepository<CustomerAmenity
             @Param("amenityId") String amenityId,
             @Param("hostelId") String hostelId
     );
+
+
+
 
 
 
