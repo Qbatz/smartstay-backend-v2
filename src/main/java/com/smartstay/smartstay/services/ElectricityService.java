@@ -2,16 +2,16 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Electricity.*;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.CustomersEbHistory;
-import com.smartstay.smartstay.dao.ElectricityConfig;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.electricity.ElectricityCustomersList;
+import com.smartstay.smartstay.dto.electricity.ElectricityHistoryBySingleCustomer;
 import com.smartstay.smartstay.dto.electricity.ElectricityReadingForRoom;
 import com.smartstay.smartstay.dto.electricity.ElectricityReadings;
 import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
+import com.smartstay.smartstay.ennum.KycStatus;
 import com.smartstay.smartstay.events.AddEbEvents;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
 import com.smartstay.smartstay.repositories.ElectricityReadingRepository;
@@ -50,6 +50,8 @@ public class ElectricityService {
     private BookingsService bookingsService;
     @Autowired
     private CustomerEbHistoryService ebHistoryService;
+    @Autowired
+    private CustomersService customerService;
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
@@ -350,4 +352,110 @@ public class ElectricityService {
         return new ResponseEntity<>(roomUsages, HttpStatus.OK);
     }
 
+    public ResponseEntity<?> getAllReadingByCustomer(String hostelId, String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!Utils.checkNullOrEmpty(customerId)) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        Customers customers = customerService.getCustomerInformation(customerId);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        int startDay = 1;
+        if (hostelV1.getElectricityConfig() != null) {
+            startDay = hostelV1.getElectricityConfig().getBillDate();
+        }
+
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.DAY_OF_MONTH, startDay);
+        cal.set(Calendar.MONTH, 1);
+
+
+
+        List<ElectricityHistoryBySingleCustomer> listEbHistory =  ebHistoryService.getAllReadingByCustomerId(customerId, cal.getTime(), new Date());
+
+        StringBuilder fullName = new StringBuilder();
+        StringBuilder initials = new StringBuilder();
+        String bedName = listEbHistory.stream()
+                .findFirst()
+                .map(ElectricityHistoryBySingleCustomer::getBedName).orElse(null);
+        String roomName = listEbHistory.stream()
+                .findFirst()
+                .map(ElectricityHistoryBySingleCustomer::getRoomName).orElse(null);;
+        String floorName = listEbHistory.stream()
+                .findFirst()
+                .map(ElectricityHistoryBySingleCustomer::getFloorName).orElse(null);;
+        String kycStatus = null;
+        boolean isKycCompleted = false;
+
+        if (customers.getFirstName() != null) {
+            fullName.append(customers.getFirstName());
+            initials.append(customers.getFirstName().toUpperCase().charAt(0));
+        }
+        if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
+            fullName.append(" ");
+            fullName.append(customers.getLastName());
+            initials.append(customers.getLastName().toUpperCase().charAt(0));
+        }
+        else {
+            if (customers.getFirstName() != null && customers.getFirstName().length() > 1) {
+                initials.append(customers.getFirstName().toUpperCase().charAt(1));
+            }
+        }
+
+        if (customers.getKycStatus().equalsIgnoreCase(KycStatus.NOT_AVAILABLE.name())) {
+            isKycCompleted = false;
+            kycStatus = "NA";
+        }
+        else if (customers.getKycStatus().equalsIgnoreCase(KycStatus.PENDING.name())) {
+            isKycCompleted = false;
+            kycStatus = "Pending";
+        }
+        else if (customers.getKycStatus().equalsIgnoreCase(KycStatus.REQUESTED.name())) {
+            isKycCompleted = false;
+            kycStatus = "Requested";
+        }
+        else if (customers.getKycStatus().equalsIgnoreCase(KycStatus.VERIFIED.name())) {
+            isKycCompleted = true;
+            kycStatus = "Verified";
+        }
+
+        List<CustomersElectricityHistory> listHistory = listEbHistory
+                .stream()
+                .map(item -> new CustomerHistoryMapper()
+                        .apply(item))
+                .toList();
+
+        ElectricitySingleCustomer singleCustomers = new ElectricitySingleCustomer(customers.getFirstName(),
+                customers.getLastName(),
+                initials.toString(),
+                customers.getProfilePic(),
+                customers.getCustomerId(),
+                bedName,
+                floorName,
+                roomName,
+                kycStatus,
+                isKycCompleted,
+                listHistory);
+
+        return new ResponseEntity<>(singleCustomers, HttpStatus.OK);
+
+    }
 }

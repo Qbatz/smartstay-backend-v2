@@ -10,7 +10,6 @@ import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
-import com.smartstay.smartstay.dto.electricity.CustomersBookings;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
@@ -18,7 +17,7 @@ import com.smartstay.smartstay.payloads.booking.CancelBooking;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.repositories.BookingsRepository;
-import com.smartstay.smartstay.responses.bookings.CashReturnBank;
+import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.bookings.InitializeCancel;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckIn;
 import com.smartstay.smartstay.util.Utils;
@@ -511,7 +510,7 @@ public class BookingsService {
         }
 
 
-        List<CashReturnBank> listBanks = bankingService.getAllBankForReturn(bookingsV1.getHostelId());
+        List<DebitsBank> listBanks = bankingService.getAllBankForReturn(bookingsV1.getHostelId());
 
         InitializeCancel initializeCancel = new InitializeCancel(bookingsV1.getBookingId(),
                 bookingsV1.getCustomerId(),

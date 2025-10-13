@@ -101,6 +101,12 @@ public class Utils {
     public static final String CUSTOMER_ALREADY_INACTIVE_ERROR = "Customer is already inactive";
     public static final String CANNOT_INACTIVE_ACTIVE_CUSTOMERS = "Customer is currently active";
     public static final String CANNOT_ENABLE_HOSTEL_ROOM_READINGS = "Cannot enable hostel based and room based together";
+    public static final String CATEGORY_NAME_CATEGORY_ID_ERROR = "Category name or Category id is required";
+    public static final String CATEGORY_NAME_ALREADY_REGISTERED = "Category name is already exists";
+    public static final String SUB_CATEGORY_NAME_ALREADY_REGISTERED = "Subcategory name is already exists";
+    public static final String INVALID_CATEGORY_ID = "Invalid category id";
+    public static final String SUB_CATEGORY_NAME_REQUIRED = "Sub category name required";
+    public static final String SUB_CATEGORY_ID_REQUIRED = "Sub category id required";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
@@ -261,7 +267,11 @@ public class Utils {
             }
         }
 
-
+        if (data instanceof Long) {
+            if ((Long) data == 0) {
+                return false;
+            }
+        }
         return true;
     }
 

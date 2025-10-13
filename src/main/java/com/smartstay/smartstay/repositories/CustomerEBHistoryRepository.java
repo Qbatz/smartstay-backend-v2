@@ -2,6 +2,7 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.CustomersEbHistory;
 import com.smartstay.smartstay.dto.electricity.ElectricityCustomersList;
+import com.smartstay.smartstay.dto.electricity.ElectricityHistoryBySingleCustomer;
 import com.smartstay.smartstay.dto.electricity.RoomElectricityCustomersList;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -40,4 +41,14 @@ public interface CustomerEBHistoryRepository extends JpaRepository<CustomersEbHi
             GROUP BY ebHis.customer_id ORDER BY ebHis.end_date;
             """, nativeQuery = true)
     List<ElectricityCustomersList> fetchAllCustomersList(List<Integer> roomIds);
+
+    @Query(value = """
+            SELECT ebHis.id, start_date as startDate, end_date as endDate, units as consumption, amount, 
+            bed.bed_name as bedName, flrs.floor_name as floorName, rms.room_name as roomName FROM 
+            customers_eb_history ebHis LEFT OUTER JOIN rooms rms on rms.room_id=ebHis.room_id left OUTER JOIN 
+            floors flrs on flrs.floor_id=ebHis.floor_id LEFT OUTER JOIN beds bed on bed.bed_id=ebHis.bed_id 
+            WHERE customer_id=(:customerId) and start_date >=DATE(:startDate) and end_date <=DATE(:endDate) 
+            ORDER BY ebHis.start_date DESC
+            """, nativeQuery = true)
+    List<ElectricityHistoryBySingleCustomer> getSingleCustomerEbHistory(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 }

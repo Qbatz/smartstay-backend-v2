@@ -45,4 +45,9 @@ public class ElectricityController {
         return electricityService.getRoomReadingsHistory(hostelId, roomId);
     }
 
+    @GetMapping("/customers/{hostelId}/{customerId}")
+    public ResponseEntity<?> getAllEbReadingsByCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
+        return electricityService.getAllReadingByCustomer(hostelId, customerId);
+    }
+
 }
