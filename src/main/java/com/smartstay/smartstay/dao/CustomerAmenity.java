@@ -23,6 +23,11 @@ public class CustomerAmenity {
     String customerId;
     boolean proRate;
     boolean isActive;
-    Date startDate;
-    Date endDate;
+    Date createdAt;
+    Date updatedAt;
+    String updatedBy;
+    Date assignedStartDate;
+    Date assignedEndDate;
+    Date proRatestartDate;
+    Date proRateendDate;
 }

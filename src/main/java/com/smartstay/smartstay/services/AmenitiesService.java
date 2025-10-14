@@ -152,15 +152,17 @@ public class AmenitiesService {
         amenitiesV1.setUpdatedAt(new java.util.Date());
         if (request.proRate() != null) {
             amenitiesV1.setIsProRate(request.proRate());
-            List<CustomerAmenity> customerAmenities = customerAmenityRepository.findByAmenityId(amenityId);
+            List<CustomerAmenity> customerAmenities = customerAmenityRepository.findLatestByAmenityId(amenityId);
             if (request.proRate()){
                 for (CustomerAmenity customerAmenity : customerAmenities) {
-                    customerAmenity.setStartDate(new Date());
+                    customerAmenity.setProRatestartDate(new Date());
+                    customerAmenity.setUpdatedAt(new Date());
                     customerAmenityRepository.save(customerAmenity);
                 }
             } else {
                 for (CustomerAmenity customerAmenity : customerAmenities) {
-                    customerAmenity.setEndDate(new Date());
+                    customerAmenity.setProRateendDate(new Date());
+                    customerAmenity.setUpdatedAt(new Date());
                     customerAmenityRepository.save(customerAmenity);
                 }
             }
@@ -225,25 +227,27 @@ public class AmenitiesService {
 
         if (request.assignedCustomers() != null) {
             for (String customerId : request.assignedCustomers()) {
-                boolean exists = customerAmenityRepository.existsByAmenityIdAndCustomerId(amenityId, customerId);
-                if (!exists) {
-                    CustomerAmenity customerAmenity = new CustomerAmenity();
-                    customerAmenity.setAmenityId(amenityId);
-                    customerAmenity.setCustomerId(customerId);
-                    customerAmenityRepository.save(customerAmenity);
-                }
+                CustomerAmenity customerAmenity = new CustomerAmenity();
+                customerAmenity.setAmenityId(amenityId);
+                customerAmenity.setCustomerId(customerId);
+                customerAmenity.setActive(true);
+                customerAmenity.setCreatedAt(new Date());
+                customerAmenity.setAssignedEndDate(null);
+                customerAmenity.setAssignedStartDate(new Date());
+                customerAmenity.setUpdatedBy(user.getUserId());
+                customerAmenityRepository.save(customerAmenity);
             }
         }
 
 
         if (request.unassignedCustomers() != null) {
             for (String customerId : request.unassignedCustomers()) {
-                boolean exists = customerAmenityRepository.existsByAmenityIdAndCustomerId(amenityId, customerId);
-                if (exists) {
-                    CustomerAmenity customerAmenity = customerAmenityRepository.findByAmenityIdAndCustomerId(amenityId, customerId);
-                    if (customerAmenity != null) {
-                        customerAmenityRepository.delete(customerAmenity);
-                    }
+                CustomerAmenity exists = customerAmenityRepository.findTopByAmenityIdAndCustomerIdAndAssignedEndDateIsNullOrderByCreatedAtDesc(amenityId, customerId);
+                if (exists != null) {
+                    exists.setAssignedEndDate(new Date());
+                    exists.setUpdatedAt(new Date());
+                    exists.setActive(false);
+                    customerAmenityRepository.save(exists);
                 }
             }
         }
