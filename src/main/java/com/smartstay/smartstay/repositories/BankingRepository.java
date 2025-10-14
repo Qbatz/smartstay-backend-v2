@@ -55,6 +55,18 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
 
     BankingV1 findByBankIdInAndIsDefaultAccountTrue(List<String> bankIds);
     BankingV1 findByHostelIdAndIsDefaultAccountTrue(String hostelId);
+
+    @Query(value = "SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END " +
+            "FROM bankingv1 " +
+            "WHERE hostel_id = :hostelId " +
+            "AND account_type = :accountType " +
+            "AND is_active = 1 " +
+            "AND is_deleted = 0",
+            nativeQuery = true)
+    int existsCashAccountForHostel(@Param("hostelId") String hostelId,
+                                       @Param("accountType") String accountType);
+
+
     BankingV1 findByBankId(String bankId);
 
     @Query("SELECT COUNT(b) > 0 " +

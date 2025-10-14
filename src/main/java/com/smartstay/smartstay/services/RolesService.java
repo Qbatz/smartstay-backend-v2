@@ -56,9 +56,9 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
+//        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_READ)) {
+//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//        }
         List<RolesV1> getCommonRoles = rolesRepository.findDefaultRoles(List.of(3, 4));
         List<RolesV1> listRoles = rolesRepository.findAllByHostelId(hostelId);
         listRoles.addAll(0, getCommonRoles);
@@ -81,9 +81,9 @@ public class RolesService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
+//        if (!checkPermission(user.getRoleId(), Utils.MODULE_ID_ROLES, Utils.PERMISSION_READ)) {
+//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//        }
         RolesV1 v1 = null;
         if (id == 1 || id == 2 || id == 3 || id == 4) {
             v1 = rolesRepository.findByRoleId(id);
