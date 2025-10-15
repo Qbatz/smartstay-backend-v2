@@ -73,6 +73,9 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
         String currentTenantMobile = null;
         String currentTenantCustomerId = null;
 
+        System.out.println(previousTenantBed.toString());
+        System.out.println("Booking Status---->"+previousTenantBed.bookingStatus().toString());
+
         if (previousTenantBed != null && previousTenantBed.bookingStatus() != null && !previousTenantBed.bookingStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
             currentTenantFirstName = previousTenantBed.firstName();
             currentTenantLastName = previousTenantBed.lastName();
