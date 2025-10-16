@@ -139,7 +139,7 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
         else {
-            return new ResponseEntity<>(Utils.INSUFFICIENT_FUND_ERROR, HttpStatus.CREATED);
+            return new ResponseEntity<>(Utils.INSUFFICIENT_FUND_ERROR, HttpStatus.BAD_REQUEST);
         }
 
     }

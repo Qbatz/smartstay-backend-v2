@@ -436,9 +436,18 @@ public class CustomersService {
 
             invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), day);
 
-            calculateRentAndCreateRentalInvoice(customers, payloads);
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.DAY_OF_MONTH, day);
 
+            Date startateOfCurrentCycle = cal.getTime();
+            Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            //checking joining date is fall under todays date
+            if (Utils.compareWithTwoDates(joiningDate, startateOfCurrentCycle) < 0) {
+                return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+            }
+            calculateRentAndCreateRentalInvoice(customers, payloads);
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+
         }else {
             return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);
         }
@@ -557,9 +566,20 @@ public class CustomersService {
 
             invoiceService.addInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date, day);
 
+            bedsService.addUserToBed(booking.getBedId(), date);
+
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.DAY_OF_MONTH, day);
+
+            Date currentCycleStartDate = cal.getTime();
+            Date joiningDate = Utils.stringToDate(checkinRequest.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            //check joining date is in this current cycle.
+            if (Utils.compareWithTwoDates(joiningDate, currentCycleStartDate) < 0) {
+                return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+            }
             calculateRentAndCreateRentalInvoice(customers, request);
 
-            bedsService.addUserToBed(booking.getBedId(), date);
+
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
         } else {
@@ -1042,6 +1062,7 @@ public class CustomersService {
         double totalAmountToBePaid = 0.0;
         Double totalDeductions = 0.0;
         boolean isRefundable = false;
+        boolean isCurrentRentPaid = false;
 
         if (customers.getFirstName() != null) {
             fullName.append(customers.getFirstName());
@@ -1094,10 +1115,7 @@ public class CustomersService {
 
         noOfDaySatayed = Utils.findNumberOfDays(calStartDate.getTime(), new Date()) + 1;
 
-        Double rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
-        currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay)*100.0/100.0;
-
-
+        //taken from unpaid invoices. So current month invoice is empty for paid
         if (!currentMonthInvoice.isEmpty()) {
             InvoicesV1 currentInvoice = currentMonthInvoice.get(0);
             currentMonthRent = currentInvoice.getTotalAmount();
@@ -1114,9 +1132,14 @@ public class CustomersService {
             //current month invoice is paid
             InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthInvoice(customerId);
             if (invoicesV1 != null) {
+                currentMonthRent = invoicesV1.getTotalAmount();
                 currentRentPaid = invoicesV1.getTotalAmount();
+                isCurrentRentPaid = true;
             }
         }
+
+        double rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
+        currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay)*100.0/100.0;
 
         List<InvoicesV1> advanceInvoice = listUnpaidInvoices
                 .stream()
@@ -1171,7 +1194,25 @@ public class CustomersService {
             totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
         }
         else {
-            totalAmountToBePaid = totalAmountToBePaid - advancePaidAmount + totalDeductions;
+            totalAmountToBePaid = totalAmountToBePaid - (advancePaidAmount - totalDeductions);
+        }
+
+        if (totalAmountToBePaid <= 0) {
+            if (isCurrentRentPaid) {
+                isRefundable = true;
+                totalAmountToBePaid = totalAmountToBePaid + currentRentPaid;
+            }
+            else {
+                totalAmountToBePaid = totalAmountToBePaid - currentRentPaid;
+            }
+        }
+        else {
+            if (isCurrentRentPaid) {
+                totalAmountToBePaid = totalAmountToBePaid - currentRentPaid;
+            }
+            else {
+                totalAmountToBePaid = totalAmountToBePaid + currentRentPaid;
+            }
         }
 
 
@@ -1199,7 +1240,7 @@ public class CustomersService {
                 (int) noOfDaySatayed,
                 currentMonthRent);
 
-        if (totalAmountToBePaid < advancePaidAmount-totalDeductions) {
+        if (totalAmountToBePaid < 0) {
             isRefundable = true;
         }
 
