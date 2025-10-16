@@ -15,5 +15,6 @@ public record CustomerInformations(String customerId,
                                    Double rentAmount,
                                    boolean isAdvancePaid,
                                    Double advancePaidAmount,
+                                   Double bookingAmount,
                                    List<Deductions> listDeductions) {
 }

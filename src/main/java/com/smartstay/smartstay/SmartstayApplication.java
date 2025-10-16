@@ -383,6 +383,9 @@ public class SmartstayApplication {
 								int noOfDaysInMonth = (int) Utils.findNumberOfDays(calTemp.getTime(), endDate);
 								double rentPerDay = customerBooking.getRentAmount() / noOfDaysInMonth;
 								double rentForThatMonth = rentPerDay * noOfDaysStayed;
+								if (rentForThatMonth > customerBooking.getRentAmount()) {
+									rentForThatMonth = customerBooking.getRentAmount();
+								}
 
 								InvoicesV1 invoicesV1 = new InvoicesV1();
 								invoicesV1.setCustomerId(item.getCustomerId());

@@ -527,7 +527,22 @@ public class HostelService {
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
+    }
 
+    public boolean checkIsValidSubscription(String hostelId) {
+        HostelV1 hostelV1 = hostelV1Repository.findByHostelId(hostelId);
+        if (hostelV1 == null) {
+            return false;
+        }
+
+        Subscription subscription = hostelV1.getSubscription().get(hostelV1.getSubscription().size() - 1);
+        if (subscription == null) {
+            return false;
+        }
+        if (Utils.compareWithTwoDates(new Date(), subscription.getNextBillingAt()) < 0) {
+            return false;
+        }
+        return true;
     }
 }
 

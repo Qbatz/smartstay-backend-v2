@@ -274,8 +274,8 @@ public class InvoiceV1Service {
                 }
             }
 
-            invoicesV1.setBasePrice(basePrice);
-            invoicesV1.setTotalAmount(amount);
+            invoicesV1.setBasePrice(Math.ceil(basePrice));
+            invoicesV1.setTotalAmount(Math.ceil(amount));
             invoicesV1.setInvoiceType(type);
             invoicesV1.setCustomerId(customerId);
             invoicesV1.setInvoiceNumber(invoiceNumber.toString());

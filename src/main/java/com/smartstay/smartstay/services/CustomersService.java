@@ -203,6 +203,7 @@ public class CustomersService {
         }
 
         List<CustomerData> customerData = searchAndGetCustomers(hostelId, name, type);
+        HashMap<String, String> filterOption = new HashMap<>();
         List<com.smartstay.smartstay.responses.customer.CustomerData> listCustomers = customerData.stream().map(item -> {
             StringBuilder initials = new StringBuilder();
             String[] nameArray = item.getFirstName().split(" ");
@@ -234,6 +235,11 @@ public class CustomersService {
             else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
                 currentStatus = "Cancelled";
             }
+
+            if (!filterOption.containsKey(currentStatus)) {
+                filterOption.put(currentStatus, currentStatus);
+            }
+
             return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
                     item.getCity(),
                     item.getState(),
@@ -255,6 +261,8 @@ public class CustomersService {
                     item.getRoomName(),
                     item.getFloorName());
         }).collect(Collectors.toList());
+
+//        CustomersList response = new CustomersList(listCustomers, null);
         return new ResponseEntity<>(listCustomers, HttpStatus.OK);
     }
 
@@ -1047,6 +1055,11 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.CUSTOMER_CHECKED_NOT_IN_NOTICE, HttpStatus.BAD_REQUEST);
         }
 
+        double bookingAmount = 0.0;
+        if (bookingDetails.getBookingAmount() != null) {
+            bookingAmount = bookingDetails.getBookingAmount();
+        }
+
         StringBuilder fullName = new StringBuilder();
         StringBuilder initials = new StringBuilder();
         boolean isAdvancePaid = false;
@@ -1153,8 +1166,7 @@ public class CustomersService {
             }
             else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                 isAdvancePaid = false;
-                Double paidAmount = transactionService.getAdvancePaidAmount(advInv.getInvoiceId());
-                advancePaidAmount = advInv.getTotalAmount() - paidAmount;
+                advancePaidAmount = transactionService.getAdvancePaidAmount(advInv.getInvoiceId());
             }
             else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
                 isAdvancePaid = true;
@@ -1169,6 +1181,8 @@ public class CustomersService {
                 advancePaidAmount = paidAmount;
             }
         }
+
+        advancePaidAmount = advancePaidAmount + bookingAmount;
 
 
         List<String> partialPaymentInvoices = listUnpaidRentalInvoices
@@ -1189,31 +1203,29 @@ public class CustomersService {
                 .mapToDouble(InvoicesV1::getTotalAmount)
                 .sum();
 
-        totalAmountToBePaid = unpaidInvoiceAmount - partialPaidAmount;
-        if (!isAdvancePaid) {
-            totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
+        double invoiceBalance = unpaidInvoiceAmount - partialPaidAmount;
+
+        if (isAdvancePaid) {
+            totalAmountToBePaid =  invoiceBalance - advancePaidAmount;
         }
         else {
-            totalAmountToBePaid = totalAmountToBePaid - (advancePaidAmount - totalDeductions);
+            totalAmountToBePaid = invoiceBalance - advancePaidAmount;
         }
 
-        if (totalAmountToBePaid <= 0) {
-            if (isCurrentRentPaid) {
-                isRefundable = true;
-                totalAmountToBePaid = totalAmountToBePaid + currentRentPaid;
-            }
-            else {
-                totalAmountToBePaid = totalAmountToBePaid - currentRentPaid;
-            }
+        if (isCurrentRentPaid) {
+            totalAmountToBePaid = totalAmountToBePaid - (currentRentPaid - currentMonthPayableRent);
         }
         else {
-            if (isCurrentRentPaid) {
-                totalAmountToBePaid = totalAmountToBePaid - currentRentPaid;
-            }
-            else {
-                totalAmountToBePaid = totalAmountToBePaid + currentRentPaid;
-            }
+            totalAmountToBePaid = totalAmountToBePaid + (currentMonthPayableRent - currentRentPaid);
         }
+
+//        totalAmountToBePaid = unpaidInvoiceAmount - partialPaidAmount;
+//        if (!isAdvancePaid) {
+//            totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
+//        }
+//        else {
+//            totalAmountToBePaid = totalAmountToBePaid - (advancePaidAmount - totalDeductions);
+//        }
 
 
 
@@ -1233,6 +1245,7 @@ public class CustomersService {
                 bookingDetails.getRentAmount(),
                 isAdvancePaid,
                 advancePaidAmount,
+                bookingAmount,
                 customers.getAdvance().getDeductions());
 
         RentInfo rentInfo = new RentInfo(currentMonthPayableRent,

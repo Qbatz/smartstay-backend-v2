@@ -315,6 +315,7 @@ public class BookingsService {
             bookingsV1.setLeavingDate(null);
             bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
             bookingsV1.setRoomId(payloads.roomId());
+            bookingsV1.setRentAmount(payloads.rentalAmount());
             String rawDateStr = payloads.joiningDate().replace("-", "/");
 
             Date joiningDate = Utils.convertStringToDate(rawDateStr);
