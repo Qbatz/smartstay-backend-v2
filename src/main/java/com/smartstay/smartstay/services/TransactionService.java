@@ -7,6 +7,7 @@ import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
+import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
@@ -50,7 +51,7 @@ public class TransactionService {
     public List<TransactionV1> addBookingAmount(Customers customer, double amount) {
         if (authentication.isAuthenticated()) {
             TransactionV1 transactionV1 = new TransactionV1();
-            transactionV1.setCustomers(customer);
+            transactionV1.setCustomerId(customer.getCustomerId());
             transactionV1.setPaidAmount(amount);
             transactionV1.setType(TransactionType.BOOKING.name());
             transactionV1.setCreatedAt(new Date());
@@ -58,7 +59,7 @@ public class TransactionService {
             transactionV1.setCreatedBy(authentication.getName());
             transactionRespository.save(transactionV1);
 
-            return transactionRespository.findByCustomers(customer);
+            return transactionRespository.findByCustomerId(customer.getCustomerId());
         }
         else {
             return null;
@@ -68,7 +69,7 @@ public class TransactionService {
     public void addAdvanceAmount(Customers customer, double amount) {
         if (authentication.isAuthenticated()) {
             TransactionV1 transactionV1 = new TransactionV1();
-            transactionV1.setCustomers(customer);
+            transactionV1.setCustomerId(customer.getCustomerId());
             transactionV1.setPaidAmount(amount);
             transactionV1.setType(TransactionType.ADVANCE.name());
             transactionV1.setCreatedAt(new Date());
@@ -155,6 +156,11 @@ public class TransactionService {
         transactionV1.setReferenceNumber(payment.referenceId());
         transactionV1.setUpdatedBy(authentication.getName());
         transactionV1.setInvoiceId(invoiceId);
+        transactionV1.setCustomerId(invoicesV1.getCustomerId());
+        transactionV1.setCreatedAt(new Date());
+        transactionV1.setCreatedBy(authentication.getName());
+        transactionV1.setPaymentDate(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
+
 
         transactionRespository.save(transactionV1);
 
@@ -189,5 +195,16 @@ public class TransactionService {
                     .sum();
         }
         return paidAmount;
+    }
+
+    public List<PartialPaidInvoiceInfo> getTransactionInfo(List<String> partialPaymentInvoices) {
+        return transactionRespository.findByInvoiceIdIn(partialPaymentInvoices)
+                .stream()
+                .map(item -> new PartialPaidInvoiceInfo(item.getInvoiceId(), item.getPaidAmount()))
+                .toList();
+    }
+
+    public Double getAdvancePaidAmount(String invoiceNumber) {
+        return transactionRespository.getTotalPaidAmountByInvoiceId(invoiceNumber);
     }
 }

@@ -8,8 +8,6 @@ import java.util.List;
 
 @Entity
 @Data
-@Setter
-@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 public class BillTemplates {
@@ -32,7 +30,8 @@ public class BillTemplates {
     String createdBy;
     String updatedBy;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "templates")
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "templates", fetch = FetchType.EAGER)
+    @ToString.Exclude
     List<BillTemplateType> templateTypes;
 
 }

@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.invoices.UnpaidInvoicesMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
@@ -7,7 +8,10 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.customer.CustomerData;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.ennum.*;
+import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.*;
@@ -215,7 +219,7 @@ public class CustomersService {
             else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
                 currentStatus = "Vacated";
             }
-            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ON_NOTICE.name())) {
+            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
                 currentStatus = "Notice Period";
             }
             else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
@@ -295,7 +299,7 @@ public class CustomersService {
         if (bedsService.isBedAvailable(payloads.bedId(), user.getParentId(), joiningDate)) {
             Customers customers = customersRepository.findById(payloads.customerId()).orElse(null);
             if (customers != null) {
-                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name()) || customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ON_NOTICE.name())) {
+                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name()) || customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
                     return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_BOOKED, HttpStatus.BAD_REQUEST);
                 }
                 customers.setKycStatus(KycStatus.PENDING.name());
@@ -804,11 +808,11 @@ public class CustomersService {
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
-        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ON_NOTICE.name())) {
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_ON_NOTICE, HttpStatus.BAD_REQUEST);
         }
 
-        customers.setCurrentStatus(CustomerStatus.ON_NOTICE.name());
+        customers.setCurrentStatus(CustomerStatus.NOTICE.name());
 
 
         bedsService.updateBedToNotice(bookingsService.getBedIdFromBooking(customers.getCustomerId(), hostelId), checkoutNotice.checkoutDate());
@@ -1019,9 +1023,26 @@ public class CustomersService {
         else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.TERMINATED.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
         }
+        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_CHECKED_NOT_IN_NOTICE, HttpStatus.BAD_REQUEST);
+        }
 
         StringBuilder fullName = new StringBuilder();
         StringBuilder initials = new StringBuilder();
+        boolean isAdvancePaid = false;
+
+        Double advancePaidAmount = 0.0;
+        double currentMonthPayableRent = 0.0;
+        long noOfDaySatayed = 0l;
+        double currentRentPaid = 0.0;
+        Double currentMonthRent = 0.0;
+
+        double unpaidInvoiceAmount = 0.0;
+        double partialPaidAmount = 0.0;
+        double totalAmountToBePaid = 0.0;
+        Double totalDeductions = 0.0;
+        boolean isRefundable = false;
+
         if (customers.getFirstName() != null) {
             fullName.append(customers.getFirstName());
             initials.append(customers.getFirstName().toUpperCase().charAt(0));
@@ -1036,6 +1057,130 @@ public class CustomersService {
                 initials.append(customers.getFirstName().toUpperCase().charAt(1));
             }
         }
+
+        BillingDates billDate = hostelService.getBillStartDate(customers.getHostelId());
+
+        if (customers.getAdvance() != null) {
+            totalDeductions = customers.getAdvance()
+                    .getDeductions()
+                    .stream()
+                    .mapToDouble(Deductions::getAmount)
+                    .sum();
+        }
+
+        StayInfo stayInfo = new StayInfo(Utils.dateToString(bookingDetails.getBookingDate()),
+                Utils.dateToString(bookingDetails.getNoticeDate()),
+                Utils.dateToString(bookingDetails.getLeavingDate()));
+
+        List<InvoicesV1> listUnpaidInvoices = invoiceService.listAllUnpaidInvoices(customerId, customers.getHostelId());
+
+        List<InvoicesV1> listUnpaidRentalInvoices = listUnpaidInvoices
+                .stream()
+                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
+                .toList();
+
+        List<InvoicesV1> currentMonthInvoice = listUnpaidInvoices
+                .stream()
+                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) >= 0)
+                .toList();
+
+        Calendar calStartDate = Calendar.getInstance();
+        calStartDate.setTime(billDate.currentBillStartDate());
+
+        Calendar calEndDate = Calendar.getInstance();
+        calEndDate.setTime(billDate.currentBillEndDate());
+
+        Long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(calStartDate.getTime(), calEndDate.getTime());
+
+        noOfDaySatayed = Utils.findNumberOfDays(calStartDate.getTime(), new Date()) + 1;
+
+        Double rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
+        currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay)*100.0/100.0;
+
+
+        if (!currentMonthInvoice.isEmpty()) {
+            InvoicesV1 currentInvoice = currentMonthInvoice.get(0);
+            currentMonthRent = currentInvoice.getTotalAmount();
+
+            List<String> currentMonthInfo = new ArrayList<>();
+            currentMonthInfo.add(currentInvoice.getInvoiceId());
+
+            currentRentPaid = transactionService.getTransactionInfo(currentMonthInfo)
+                    .stream()
+                    .mapToDouble(PartialPaidInvoiceInfo::paidAmount)
+                    .sum();
+        }
+        else {
+            //current month invoice is paid
+            InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthInvoice(customerId);
+            if (invoicesV1 != null) {
+                currentRentPaid = invoicesV1.getTotalAmount();
+            }
+        }
+
+        List<InvoicesV1> advanceInvoice = listUnpaidInvoices
+                .stream()
+                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
+                .toList();
+
+        if (!advanceInvoice.isEmpty()) {
+            InvoicesV1 advInv = advanceInvoice.get(0);
+            if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+                isAdvancePaid = false;
+            }
+            else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                isAdvancePaid = false;
+                Double paidAmount = transactionService.getAdvancePaidAmount(advInv.getInvoiceId());
+                advancePaidAmount = advInv.getTotalAmount() - paidAmount;
+            }
+            else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                isAdvancePaid = true;
+                advancePaidAmount = advInv.getTotalAmount();
+            }
+        }
+        else {
+            InvoicesV1 invAdvanceInvoice = invoiceService.getAdvanceInvoiceDetails(customerId, customers.getHostelId());
+            Double paidAmount = transactionService.getAdvancePaidAmount(invAdvanceInvoice.getInvoiceId());
+            if (paidAmount > 0 && invAdvanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                isAdvancePaid = true;
+                advancePaidAmount = paidAmount;
+            }
+        }
+
+
+        List<String> partialPaymentInvoices = listUnpaidRentalInvoices
+                .stream()
+                .filter(invoicesV1 -> invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                .map(InvoicesV1::getInvoiceId)
+                .toList();
+
+        List<PartialPaidInvoiceInfo> lisPartialPayments = transactionService.getTransactionInfo(partialPaymentInvoices);
+
+        partialPaidAmount = lisPartialPayments
+                .stream()
+                .mapToDouble(PartialPaidInvoiceInfo::paidAmount)
+                .sum();
+        unpaidInvoiceAmount = listUnpaidInvoices
+                .stream()
+                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
+                .mapToDouble(InvoicesV1::getTotalAmount)
+                .sum();
+
+        totalAmountToBePaid = unpaidInvoiceAmount - partialPaidAmount;
+        if (!isAdvancePaid) {
+            totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
+        }
+        else {
+            totalAmountToBePaid = totalAmountToBePaid - advancePaidAmount + totalDeductions;
+        }
+
+
+
+        List<UnpaidInvoices> unpaidInvoices = listUnpaidRentalInvoices
+                .stream()
+                .map(item -> new UnpaidInvoicesMapper(lisPartialPayments).apply(item))
+                .toList();
+
         CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(),
                 customers.getFirstName(),
                 customers.getLastName(),
@@ -1045,9 +1190,27 @@ public class CustomersService {
                 Utils.dateToString(bookingDetails.getJoiningDate()),
                 customers.getAdvance().getAdvanceAmount(),
                 bookingDetails.getRentAmount(),
+                isAdvancePaid,
+                advancePaidAmount,
                 customers.getAdvance().getDeductions());
 
-        FinalSettlement finalSettlement = new FinalSettlement(customerInformations);
+        RentInfo rentInfo = new RentInfo(currentMonthPayableRent,
+                currentRentPaid,
+                (int) noOfDaySatayed,
+                currentMonthRent);
+
+        if (totalAmountToBePaid < advancePaidAmount-totalDeductions) {
+            isRefundable = true;
+        }
+
+        SettlementInfo settlementInfo = new SettlementInfo(totalAmountToBePaid,
+                totalDeductions,
+                unpaidInvoiceAmount,
+                isRefundable);
+
+
+
+        FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, unpaidInvoices, rentInfo, settlementInfo);
 
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
     }

@@ -1,12 +1,10 @@
 package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.ennum.BookingStatus;
-import com.smartstay.smartstay.ennum.EBReadingType;
-import com.smartstay.smartstay.ennum.InvoiceMode;
-import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.repositories.*;
+import com.smartstay.smartstay.responses.templates.TemplateTypes;
 import com.smartstay.smartstay.services.TemplatesService;
 import com.smartstay.smartstay.util.BillingCycle;
 import com.smartstay.smartstay.util.BillingCycleUtil;
@@ -312,6 +310,121 @@ public class SmartstayApplication {
 //			customersType4.setType("Walk in");
 //			customerTypeRepository.save(customersType4);
 		};
+
+
 	}
 
+//	@Bean
+//	CommandLineRunner addPendingInvoice(CustomersRepository customersRepository, HostelV1Repository hostelV1Repository, InvoicesV1Repository invoicesV1Repository, BillTemplatesRepository billTemplatesRepository, BookingsRepository bookingsRepository) {
+//		return args -> {
+//			List<Customers> listCustomers = customersRepository.findAll();
+//			listCustomers.forEach(item -> {
+//				BookingsV1 customerBooking = bookingsRepository.findByCustomerIdAndHostelId(item.getCustomerId(), item.getHostelId());
+//				String prefix = "INV";
+//
+//				if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
+//					HostelV1 hostelV1 = hostelV1Repository.findById(item.getHostelId()).orElse(null);
+//					if (hostelV1 != null) {
+//						BillTemplates billTemplates = billTemplatesRepository.getByHostelId(hostelV1.getHostelId());
+//						if (billTemplates != null) {
+//							if (billTemplates.getTemplateTypes() != null && !billTemplates.getTemplateTypes().isEmpty()) {
+//								List<BillTemplateType> tempBillTemplates = billTemplates.getTemplateTypes()
+//										.stream()
+//										.filter(a -> a.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).toList();
+//								if (!tempBillTemplates.isEmpty()) {
+//									System.out.println(tempBillTemplates.size());
+//									System.out.println(tempBillTemplates.get(0).getInvoicePrefix());
+//									prefix = tempBillTemplates.get(0).getInvoicePrefix();
+//								}
+//							}
+//
+//						}
+//						int billingStartDate = 1;
+//						int billingDueDate = 10;
+//						if (hostelV1.getBillingRulesList() != null) {
+//							if (!hostelV1.getBillingRulesList().isEmpty()) {
+//								billingStartDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
+//								billingDueDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
+//							}
+//						}
+//
+//						InvoicesV1 invoicesV1 = invoicesV1Repository.findLatestRentInvoiceByCustomerId(item.getCustomerId());
+//						Calendar cal = Calendar.getInstance();
+//						cal.setTime(invoicesV1.getInvoiceStartDate());
+//						cal.set(Calendar.DAY_OF_MONTH, billingStartDate);
+//						cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+//
+//						LocalDate startDate = cal.getTime()
+//								.toInstant()
+//								.atZone(ZoneId.systemDefault())
+//								.toLocalDate();
+//
+//						LocalDate endDate = new Date()
+//								.toInstant()
+//								.atZone(ZoneId.systemDefault())
+//								.toLocalDate();
+//
+//						List<BillingCycle> listStartEndDate = BillingCycleUtil.findBillingCycles(startDate, endDate, billingStartDate);
+//
+//						String finalPrefix = prefix;
+//						listStartEndDate.forEach(days -> {
+//							InvoicesV1 findLatestPrefixSufix = invoicesV1Repository.findLatestInvoiceByCustomerId(item.getCustomerId());
+//							StringBuilder prefixSufix = new StringBuilder();
+//							prefixSufix.append(finalPrefix);
+//							String invoiceNumberLatest = findLatestPrefixSufix.getInvoiceNumber();
+//							String[] latestPrefixSuffix = invoiceNumberLatest.split("-");
+//							if (latestPrefixSuffix.length > 1) {
+//								String sux = latestPrefixSuffix[1];
+//								prefixSufix.append("-");
+//								int su = Integer.parseInt(sux) + 1;
+//								if (su < 10) {
+//									prefixSufix.append("00");
+//								}
+//								else if (su < 100) {
+//									prefixSufix.append("0");
+//								}
+//								prefixSufix.append(su);
+//
+//
+//							}
+//
+//							Date sDate = java.sql.Date.valueOf(days.getStartDate());
+//							Date eDate = java.sql.Date.valueOf(days.getEndDate());
+//							Calendar ca = Calendar.getInstance();
+//							ca.setTime(sDate);
+//							ca.set(Calendar.DAY_OF_MONTH, ca.get(Calendar.DAY_OF_MONTH) + 5);
+//
+//
+//							InvoicesV1 newInvoice = new InvoicesV1();
+//							newInvoice.setInvoiceNumber(prefixSufix.toString());
+//							newInvoice.setTotalAmount(customerBooking.getRentAmount());
+//							newInvoice.setBasePrice(customerBooking.getRentAmount());
+//							newInvoice.setInvoiceType(InvoiceType.RENT.name());
+//							newInvoice.setCustomerId(item.getCustomerId());
+//							newInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+//							newInvoice.setCreatedBy(invoicesV1.getCreatedBy());
+//							newInvoice.setGst(0.0);
+//							newInvoice.setCgst(0.0);
+//							newInvoice.setSgst(0.0);
+//							newInvoice.setGstPercentile(0.0);
+//							newInvoice.setInvoiceDueDate(ca.getTime());
+//							newInvoice.setCustomerMobile(item.getMobile());
+//							newInvoice.setCustomerMailId(item.getEmailId());
+//							newInvoice.setCreatedAt(new Date());
+//							newInvoice.setInvoiceStartDate(sDate);
+//							newInvoice.setInvoiceEndDate(eDate);
+//							newInvoice.setInvoiceGeneratedDate(sDate);
+//							newInvoice.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+//							newInvoice.setHostelId(item.getHostelId());
+//
+//							invoicesV1Repository.save(newInvoice);
+//
+//						});
+//
+//
+//					}
+//				}
+//			});
+//		};
+//	}
 }

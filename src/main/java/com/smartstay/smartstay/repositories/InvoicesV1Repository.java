@@ -23,7 +23,8 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             advance.advance_amount as advanceAmount, advance.deductions as deductions,
             (SELECT sum(trans.paid_amount) FROM transactionv1 trans where trans.invoice_id=invc.invoice_id) as paidAmount  
             from invoicesv1 invc inner join customers customers on customers.customer_id=invc.customer_id 
-            left outer join advance advance on advance.customer_id=invc.customer_id where invc.hostel_id=:hostelId AND invc.invoice_type not in('BOOKING')
+            left outer join advance advance on advance.customer_id=invc.customer_id where invc.hostel_id=:hostelId AND invc.invoice_type not in('BOOKING') 
+            order by invc.invoice_start_date desc
             """, nativeQuery = true)
     List<Invoices> findByHostelId(@Param("hostelId") String hostelId);
 
@@ -54,6 +55,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             nativeQuery = true)
     InvoicesV1 findLatestInvoiceByCustomerId(@Param("customerId") String customerId);
 
+    @Query(value = "SELECT * FROM invoicesv1 WHERE customer_id = :customerId and invoice_type='RENT' ORDER BY invoice_start_date DESC LIMIT 1",
+            nativeQuery = true)
+    InvoicesV1 findLatestRentInvoiceByCustomerId(@Param("customerId") String customerId);
+
     InvoicesV1 findByCustomerIdAndHostelIdAndInvoiceType(String customerId, String hostelId, String invoiceType);
+    List<InvoicesV1> findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCase(String hostelId, String customerId, String paymentStatus);
 
 }

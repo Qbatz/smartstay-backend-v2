@@ -104,6 +104,7 @@ public class Utils {
     public static final String CANNOT_INACTIVE_ACTIVE_CUSTOMERS = "Customer is currently active";
     public static final String CUSTOMER_ALREADY_VACATED = "Customer already vacated";
     public static final String CUSTOMER_NOT_CHECKED_IN_ERROR = "Customer is not checked in";
+    public static final String CUSTOMER_CHECKED_NOT_IN_NOTICE = "Customer is not on notice";
     public static final String CANNOT_ENABLE_HOSTEL_ROOM_READINGS = "Cannot enable hostel based and room based together";
     public static final String CATEGORY_NAME_CATEGORY_ID_ERROR = "Category name or Category id is required";
     public static final String CATEGORY_NAME_ALREADY_REGISTERED = "Category name is already exists";

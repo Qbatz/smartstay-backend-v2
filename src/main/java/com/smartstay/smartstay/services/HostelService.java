@@ -5,6 +5,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.events.HostelEvents;
@@ -346,6 +347,28 @@ public class HostelService {
      */
     public HostelV1 getHostelInfo(String hostelId) {
         return hostelV1Repository.findByHostelId(hostelId);
+    }
+
+    public BillingDates getBillStartDate(String hostelId) {
+        HostelV1 hostelV1 = hostelV1Repository.findByHostelId(hostelId);
+        if (hostelV1 != null) {
+            int billStartDate = 1;
+            if (hostelV1.getBillingRulesList() != null && !hostelV1.getBillingRulesList().isEmpty()) {
+                billStartDate = hostelV1.getBillingRulesList().get(hostelV1.getBillingRulesList().size() - 1).getBillingStartDate();
+            }
+            Calendar calendar = Calendar.getInstance();
+            calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
+
+            Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
+
+            return new BillingDates(calendar.getTime(), findEndDate);
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+
+        Date findEndDate = Utils.findLastDate(1, calendar.getTime());
+        return new BillingDates(calendar.getTime(), findEndDate);
     }
 
 

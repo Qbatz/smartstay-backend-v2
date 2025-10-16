@@ -63,7 +63,7 @@ public class InvoiceV1Service {
     public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate, int startDay) {
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
-            BillTemplates templates = templateService.getBillTemplate(hostelId, InvoiceType.ADVANCE.name());
+            BillTemplates templates = templateService.getBillTemplate(hostelId, type);
             InvoicesV1 existingV1 = null;
 
             double gstAmount = 0;
@@ -80,6 +80,9 @@ public class InvoiceV1Service {
                     sgst = templates.gstPercentile() / 2;
                     baseAmount = amount/(1+(templates.gstPercentile()/100));
                     gstAmount = amount - baseAmount;
+                    if (baseAmount == 0) {
+                        baseAmount = amount;
+                    }
                 }
 
                 invoiceNumber.append(templates.prefix());
@@ -375,6 +378,9 @@ public class InvoiceV1Service {
         return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.BOOKING.name());
     }
 
+    public InvoicesV1 getAdvanceInvoiceDetails(String customerId, String hostelId) {
+        return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.ADVANCE.name());
+    }
     public void cancelBookingInvoice(InvoicesV1 invoicesV1) {
         invoicesV1.setPaymentStatus(PaymentStatus.CANCELLED.name());
         invoicesV1Repository.save(invoicesV1);
@@ -441,5 +447,13 @@ public class InvoiceV1Service {
         return null;
 
 
+    }
+
+    public List<InvoicesV1> listAllUnpaidInvoices(String customerId, String hostelId) {
+        return invoicesV1Repository.findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCase(hostelId, customerId, PaymentStatus.PAID.name());
+    }
+
+    public InvoicesV1 getCurrentMonthInvoice(String customerId) {
+        return invoicesV1Repository.findLatestInvoiceByCustomerId(customerId);
     }
 }
