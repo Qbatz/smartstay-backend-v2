@@ -92,8 +92,11 @@ public class BedsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 //        Beds bed = bedsRepository.findByBedIdAndParentId(id,user.getParentId());
+        System.out.println("bed----->"+id+"   "+user.getParentId());
         List<com.smartstay.smartstay.dto.beds.Beds> listBeds = bedsRepository.getBedInfo(id, user.getParentId());
 
+        System.out.println("listBeds----->"+listBeds.size());
+        System.out.println("listBeds---rr-->"+listBeds.toString());
         if (listBeds != null && !listBeds.isEmpty()) {
             if (!userHostelService.checkHostelAccess(userId, listBeds.get(0).hostelId())) {
                 return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
@@ -421,8 +424,9 @@ public class BedsService {
         Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
         if (beds != null) {
             beds.setBooked(false);
-            beds.setStatus(BedStatus.VACANT.name());
-
+            if (!beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+                beds.setStatus(BedStatus.VACANT.name());
+            }
             bedsRepository.save(beds);
         }
     }

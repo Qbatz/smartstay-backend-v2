@@ -8,6 +8,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 @Entity
 @Data
 @AllArgsConstructor
@@ -21,4 +23,11 @@ public class CustomerAmenity {
     String customerId;
     boolean proRate;
     boolean isActive;
+    Date createdAt;
+    Date updatedAt;
+    String updatedBy;
+    Date assignedStartDate;
+    Date assignedEndDate;
+    Date proRatestartDate;
+    Date proRateendDate;
 }

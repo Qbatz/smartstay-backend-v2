@@ -21,10 +21,8 @@ public interface AmentityRepository extends JpaRepository<AmenitiesV1, String> {
                 SELECT a.amenity_id   AS amenityId,
                        a.amenity_name AS amenityName,
                        a.amenity_amount AS amenityAmount,
-                       ca.pro_rate    AS proRate
-                FROM amenitiesV1 a
-                LEFT OUTER JOIN customer_amenity ca
-                     ON a.amenity_id = ca.amenity_id
+                       a.is_pro_rate    AS proRate
+                FROM amenitiesv1 a
                 WHERE a.hostel_id = :hostelId and a.parent_id =:parentId AND a.is_active = true AND a.is_deleted = false
             """, nativeQuery = true)
     List<AmenityInfoProjection> findAmenityInfoByHostelId(@Param("hostelId") String hostelId, @Param("parentId") String parentId);
@@ -33,10 +31,8 @@ public interface AmentityRepository extends JpaRepository<AmenitiesV1, String> {
                 SELECT a.amenity_id   AS amenityId,
                        a.amenity_name AS amenityName,
                        a.amenity_amount AS amenityAmount,
-                       ca.pro_rate    AS proRate
-                FROM amenitiesV1 a
-                LEFT OUTER JOIN customer_amenity ca
-                     ON a.amenity_id = ca.amenity_id
+                       a.is_pro_rate    AS proRate
+                FROM amenitiesv1 a
                 WHERE a.hostel_id = :hostelId and a.parent_id =:parentId and a.amenity_id =:amenityId AND a.is_active = true AND a.is_deleted = false
             """, nativeQuery = true)
     AmenityInfoProjection findAmenityInfoByHostelIdByAmenityId(@Param("hostelId") String hostelId, @Param("parentId") String parentId, @Param("amenityId") String amenityId);

@@ -95,7 +95,10 @@ public class BankingService {
             }
         }
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
-            return  new ResponseEntity<>(Utils.CASH_ACCOUNT_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
+            boolean existsCashAccount = bankingV1Repository.existsCashAccountForHostel(hostelId, BankAccountType.CASH.name()) == 1;
+            if (existsCashAccount){
+                return  new ResponseEntity<>(Utils.CASH_ACCOUNT_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
+            }
         }
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
             accountType = BankAccountType.UPI.name();
