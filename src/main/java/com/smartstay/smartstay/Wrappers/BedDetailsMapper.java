@@ -73,7 +73,7 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
         String currentTenantMobile = null;
         String currentTenantCustomerId = null;
 
-        if (previousTenantBed != null) {
+        if (previousTenantBed != null && previousTenantBed.bookingStatus() != null && !previousTenantBed.bookingStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
             currentTenantFirstName = previousTenantBed.firstName();
             currentTenantLastName = previousTenantBed.lastName();
             currentTenantInitials.append(previousTenantBed.firstName().toUpperCase().charAt(0));
@@ -130,6 +130,40 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                         initials.toString(),
                         beds.mobile(),
                         beds.customerId());
+            }
+            else if (beds.bookingStatus() != null && beds.bookingStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+                return new BedDetails(beds.bedName(),
+                        beds.bedId(),
+                        beds.hostelId(),
+                        beds.isBooked(),
+                        isOnNotice,
+                        isOccupied,
+                        beds.roomRent(),
+                        beds.roomId(),
+                        freeFrom,
+                        beds.currentRent(),
+                        oldTenantLeaving,
+                        null,
+                        null,
+                        null,
+                        null,
+                       null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        beds.floorId(),
+                        beds.floorName(),
+                        beds.roomName(),
+                        beds.countryCode(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null);
             }
             return new BedDetails(beds.bedName(),
                     beds.bedId(),
