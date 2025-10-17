@@ -90,7 +90,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 Utils.dateToString(invoices.getCreatedAt()),
                 invoices.getCreatedBy(),
                 invoices.getHostelId(),
-                Utils.dateToString(invoices.getInvoiceGeneratedAt()),
+                Utils.dateToString(invoices.getInvoiceStartDate()),
                 Utils.dateToString(invoices.getInvoiceDueDate()),
                 invoiceType,
                 paymentStatus,

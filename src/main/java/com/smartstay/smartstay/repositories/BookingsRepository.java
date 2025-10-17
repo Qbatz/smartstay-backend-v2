@@ -75,4 +75,9 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """, nativeQuery = true)
     List<BookedCustomerInfoElectricity> getBookingInfoForElectricity(@Param("roomId")Integer roomId, @Param("startDate")Date startDate, @Param("endDate") Date endDate);
 
+    @Query(value = """
+            SELECT * FROM bookingsv1 booking WHERE booking.customer_id=:customerId AND booking.joining_date <= DATE(:endDate) AND (booking.leaving_date IS NULL OR leaving_date >= DATE(:startDate));
+            """, nativeQuery = true)
+    BookingsV1 findByCustomerIdAndJoiningDate(String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
 }

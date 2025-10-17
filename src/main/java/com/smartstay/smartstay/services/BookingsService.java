@@ -576,4 +576,13 @@ public class BookingsService {
     public List<BookedCustomerInfoElectricity> getAllCheckInCustomers(Integer roomId, Date startDate, Date endDate) {
         return bookingsRepository.getBookingInfoForElectricity(roomId, startDate, endDate);
     }
+
+    /**
+     * this is used for manual invoice generation
+     *
+     * @return
+     */
+    public BookingsV1 getBookingByCustomerIdAndDate(String customerId, Date startDate, Date endDate) {
+        return bookingsRepository.findByCustomerIdAndJoiningDate(customerId, startDate, endDate);
+    }
 }

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -16,7 +17,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     @Query(value = """
             select invc.invoice_id as invoiceId, invc.base_price as basePrice, invc.total_amount as totalAmount, invc.gst, invc.cgst, invc.sgst,
             invc.created_at as createdAt, invc.created_by as createdBy, invc.customer_id as customerId, 
-            invc.hostel_id as hostelId, invc.invoice_generated_date as invoiceGeneratedAt, 
+            invc.hostel_id as hostelId, invc.invoice_generated_date as invoiceGeneratedAt, invc.invoice_start_date as invoiceStartDate,
             invc.invoice_due_date as invoiceDueDate, invc.invoice_type as invoiceType, 
             invc.payment_status as paymentStatus, invc.updated_at as updatedAt, 
             invc.invoice_number as invoiceNumber, customers.first_name as firstName, customers.last_name as lastName, 
@@ -61,5 +62,12 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     InvoicesV1 findByCustomerIdAndHostelIdAndInvoiceType(String customerId, String hostelId, String invoiceType);
     List<InvoicesV1> findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCase(String hostelId, String customerId, String paymentStatus);
+
+    @Query(value = """
+            SELECT * FROM invoicesv1 invc WHERE invc.invoice_start_date >= DATE(:startDate) and invc.invoice_end_date <=DATE(:endDate) and invc.customer_id=:customerId and invc.invoice_type='RENT';
+            """, nativeQuery = true)
+    InvoicesV1 findInvoiceByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+    InvoicesV1 findByInvoiceNumberAndHostelId(String invoiceNumber, String hostelId);
 
 }

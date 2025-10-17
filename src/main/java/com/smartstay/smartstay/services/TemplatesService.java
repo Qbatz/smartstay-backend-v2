@@ -208,6 +208,10 @@ public class TemplatesService {
         return new ResponseEntity<>(new BillTemplateMapper(bankingRepository).toResponse(templates), HttpStatus.OK);
     }
 
+    public BillTemplates getTemplateByHostelId(String hostelId) {
+        return templateRepository.getByHostelId(hostelId);
+    }
+
     public ResponseEntity<?> updateTemplate(String hostelId,
                                             String mobile,
                                             String email,
