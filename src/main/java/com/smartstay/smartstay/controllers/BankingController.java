@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.banking.AddBank;
+import com.smartstay.smartstay.payloads.banking.SelfTransfer;
 import com.smartstay.smartstay.payloads.banking.UpdateBank;
 import com.smartstay.smartstay.payloads.banking.UpdateBankBalance;
 import com.smartstay.smartstay.services.BankingService;
@@ -46,6 +47,16 @@ public class BankingController {
     @PutMapping("/add-balance/{hostelId}")
     public ResponseEntity<?> addBankBalance(@PathVariable(value = "hostelId") String hostelId, @RequestBody(required = false) UpdateBankBalance payloads) {
         return bankingService.updateBankBalance(hostelId, payloads);
+    }
+
+    @PutMapping("/add-money/{hostelId}")
+    public ResponseEntity<?> addMoney(@PathVariable(value = "hostelId") String hostelId, @RequestBody(required = false) UpdateBankBalance payloads) {
+        return bankingService.addMoney(hostelId, payloads);
+    }
+
+    @PutMapping("/self-transfer/{hostelId}")
+    public ResponseEntity<?> selfTransfer(@PathVariable(value = "hostelId") String hostelId, @RequestBody(required = false) SelfTransfer payloads) {
+        return bankingService.selfTransfer(hostelId, payloads);
     }
 
 }

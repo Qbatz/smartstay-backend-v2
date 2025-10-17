@@ -77,6 +77,9 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
     @Query("SELECT b FROM BankingV1 b WHERE b.hostelId = :hostelId AND b.bankId = :bankId AND b.isDeleted = false AND b.isActive = true")
     BankingV1 findBankingRecordByHostelIdAndBankId(@Param("hostelId") String hostelId, @Param("bankId") String bankId);
 
+    @Query("SELECT b FROM BankingV1 b WHERE b.hostelId = :hostelId AND b.bankId = :bankId AND b.isDeleted = false AND b.isActive = true and b.accountType in (:accountType)")
+    BankingV1 findBankingRecordByAccountType(@Param("hostelId") String hostelId, @Param("bankId") String bankId, @Param("accountType") List<String> accountType);
+
     @Query(value = """
             SELECT * FROM bankingv1 banking where is_active=true and transaction_type in ('BOTH', 'CREDIT') and 
             bank_id in (:bankIds)
