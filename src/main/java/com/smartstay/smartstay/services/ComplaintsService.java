@@ -130,7 +130,7 @@ public class ComplaintsService {
         }
         List<String> currentStatus = Arrays.asList(
                 CustomerStatus.CHECK_IN.name(),
-                CustomerStatus.ON_NOTICE.name()
+                CustomerStatus.NOTICE.name()
         );
 
 
@@ -318,7 +318,7 @@ public class ComplaintsService {
 
         List<String> currentStatus = Arrays.asList(
                 CustomerStatus.CHECK_IN.name(),
-                CustomerStatus.ON_NOTICE.name()
+                CustomerStatus.NOTICE.name()
         );
 
         List<Map<String, Object>> rawComplaints = complaintRepository. getAllComplaintsRaw(
@@ -362,7 +362,7 @@ public class ComplaintsService {
         }
         List<String> currentStatus = Arrays.asList(
                 CustomerStatus.CHECK_IN.name(),
-                CustomerStatus.ON_NOTICE.name()
+                CustomerStatus.NOTICE.name()
         );
         Map<String,Object> row = complaintRepository.getComplaintsWithType(complaintId, user.getParentId(),currentStatus);
         if (row == null) {

@@ -23,14 +23,13 @@ public class TransactionV1 {
     private Date createdAt;
     private String status;
     private String invoiceId;
+    private String hostelId;
     private String isInvoice;
+    private String customerId;
+    private Date paymentDate;
     //card/gpay or cash or bank
     private String bankId;
     private String referenceNumber;
     private Date paidAt;
     private String updatedBy;
-
-    @ManyToOne()
-    @JoinColumn(name = "customer_id")
-    private Customers customers;
 }

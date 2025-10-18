@@ -7,6 +7,8 @@ import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
+import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
+import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
@@ -50,15 +52,16 @@ public class TransactionService {
     public List<TransactionV1> addBookingAmount(Customers customer, double amount) {
         if (authentication.isAuthenticated()) {
             TransactionV1 transactionV1 = new TransactionV1();
-            transactionV1.setCustomers(customer);
+            transactionV1.setCustomerId(customer.getCustomerId());
             transactionV1.setPaidAmount(amount);
+            transactionV1.setHostelId(customer.getHostelId());
             transactionV1.setType(TransactionType.BOOKING.name());
             transactionV1.setCreatedAt(new Date());
             transactionV1.setStatus(PaymentStatus.PENDING.name());
             transactionV1.setCreatedBy(authentication.getName());
             transactionRespository.save(transactionV1);
 
-            return transactionRespository.findByCustomers(customer);
+            return transactionRespository.findByCustomerId(customer.getCustomerId());
         }
         else {
             return null;
@@ -68,10 +71,11 @@ public class TransactionService {
     public void addAdvanceAmount(Customers customer, double amount) {
         if (authentication.isAuthenticated()) {
             TransactionV1 transactionV1 = new TransactionV1();
-            transactionV1.setCustomers(customer);
+            transactionV1.setCustomerId(customer.getCustomerId());
             transactionV1.setPaidAmount(amount);
             transactionV1.setType(TransactionType.ADVANCE.name());
             transactionV1.setCreatedAt(new Date());
+            transactionV1.setHostelId(customer.getHostelId());
             transactionV1.setStatus(PaymentStatus.PENDING.name());
             transactionV1.setCreatedBy(authentication.getName());
 
@@ -150,11 +154,16 @@ public class TransactionService {
             transactionV1.setPaidAt(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
         }
 
-
+        transactionV1.setHostelId(hostelId);
         transactionV1.setBankId(payment.bankId());
         transactionV1.setReferenceNumber(payment.referenceId());
         transactionV1.setUpdatedBy(authentication.getName());
         transactionV1.setInvoiceId(invoiceId);
+        transactionV1.setCustomerId(invoicesV1.getCustomerId());
+        transactionV1.setCreatedAt(new Date());
+        transactionV1.setCreatedBy(authentication.getName());
+        transactionV1.setPaymentDate(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
+
 
         transactionRespository.save(transactionV1);
 
@@ -180,7 +189,7 @@ public class TransactionService {
         return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
     }
 
-    private Double findPaidAmountForInvoice(String invoiceId) {
+    public Double findPaidAmountForInvoice(String invoiceId) {
         List<TransactionV1> listTransaction = transactionRespository.findByInvoiceId(invoiceId);
         double paidAmount = 0.0;
         if (!listTransaction.isEmpty()) {
@@ -189,5 +198,20 @@ public class TransactionService {
                     .sum();
         }
         return paidAmount;
+    }
+
+    public List<PartialPaidInvoiceInfo> getTransactionInfo(List<String> partialPaymentInvoices) {
+        return transactionRespository.findByInvoiceIdIn(partialPaymentInvoices)
+                .stream()
+                .map(item -> new PartialPaidInvoiceInfo(item.getInvoiceId(), item.getPaidAmount()))
+                .toList();
+    }
+
+    public Double getAdvancePaidAmount(String invoiceNumber) {
+        return transactionRespository.getTotalPaidAmountByInvoiceId(invoiceNumber);
+    }
+
+    public List<Receipts> getAllReceiptsByHostelId(String hostelId) {
+        return transactionRespository.findByHostelId(hostelId);
     }
 }

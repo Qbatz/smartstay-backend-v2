@@ -1,9 +1,11 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.services.InvoiceV1Service;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,12 +32,17 @@ public class InvoiceController {
 
     @GetMapping("/receipts/{hostelId}")
     public ResponseEntity<?> getAllReceipt(@PathVariable("hostelId") String hostelId) {
-        return invoiceV1Service.getAllReceipts(hostelId);
+        return invoiceV1Service.getAllReceiptsByHostelId(hostelId);
     }
 
-    @GetMapping("/manual/{hostelId}/{customerId}")
-    public ResponseEntity<?> generateManualInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @RequestParam("startDate") String startDate, @RequestParam("endDate") String endDate, @RequestParam("ebAmount") Double ebAmount) {
-        return invoiceV1Service.generateManualInvoice(hostelId, customerId, startDate, endDate, ebAmount);
+    @PostMapping("/manual/{customerId}")
+    public ResponseEntity<?> generateManualInvoice(@PathVariable("customerId") String customerId, @RequestBody @Valid ManualInvoice manualInvoice) {
+        return invoiceV1Service.generateManualInvoice(customerId, manualInvoice);
+    }
+
+    @GetMapping("/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> getInvoiceInfo(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.getInvoiceDetailsByInvoiceId(hostelId, invoiceId);
     }
 
 }

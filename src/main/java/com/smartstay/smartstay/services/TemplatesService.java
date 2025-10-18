@@ -7,6 +7,7 @@ import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.BillConfigTypes;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillTemplate;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillingRule;
@@ -89,7 +90,7 @@ public class TemplatesService {
 
         BillTemplateType templateType = new BillTemplateType();
         templateType.setInvoiceType(BillConfigTypes.ADVANCE.name());
-        templateType.setInvoicePrefix(findPrefixRent.toString());
+        templateType.setInvoicePrefix(findPrefix.toString());
         templateType.setInvoiceSuffix("001");
         templateType.setGstPercentage(0.0);
         templateType.setCgst(0.0);
@@ -104,7 +105,7 @@ public class TemplatesService {
 
         BillTemplateType templateType1 = new BillTemplateType();
         templateType1.setInvoiceType(BillConfigTypes.RENTAL.name());
-        templateType1.setInvoicePrefix(findPrefix.toString());
+        templateType1.setInvoicePrefix(findPrefixRent.toString());
         templateType1.setInvoiceSuffix("001");
         templateType1.setGstPercentage(0.0);
         templateType1.setCgst(0.0);
@@ -205,6 +206,10 @@ public class TemplatesService {
             return new ResponseEntity<>(Utils.TEMPLATE_NOT_AVAILABLE, HttpStatus.NO_CONTENT);
         }
         return new ResponseEntity<>(new BillTemplateMapper(bankingRepository).toResponse(templates), HttpStatus.OK);
+    }
+
+    public BillTemplates getTemplateByHostelId(String hostelId) {
+        return templateRepository.getByHostelId(hostelId);
     }
 
     public ResponseEntity<?> updateTemplate(String hostelId,
@@ -356,14 +361,18 @@ public class TemplatesService {
 
 
     public com.smartstay.smartstay.dto.bills.BillTemplates getBillTemplate(String hostelId, String type) {
+        if (type.equalsIgnoreCase(InvoiceType.RENT.name())) {
+            type = BillConfigTypes.RENTAL.name();
+        }
 
         BillTemplates tmp = templateRepository.getByHostelId(hostelId);
         if (tmp == null) {
             return null;
         }
+        String finalType = type;
         List<BillTemplateType> templateType = tmp.getTemplateTypes()
                 .stream()
-                .filter(item -> item.getInvoiceType().equalsIgnoreCase(type))
+                .filter(item -> item.getInvoiceType().equalsIgnoreCase(finalType))
                 .toList();
         if (!templateType.isEmpty()) {
             com.smartstay.smartstay.dto.bills.BillTemplates templates = new com.smartstay.smartstay.dto.bills.BillTemplates(

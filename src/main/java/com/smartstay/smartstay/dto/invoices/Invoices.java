@@ -25,5 +25,7 @@ public interface Invoices {
     Double getAdvanceAmount();
     String getDeductions();
     Double getPaidAmount();
+    Date getInvoiceStartDate();
+    String getProfilePic();
 
 }
