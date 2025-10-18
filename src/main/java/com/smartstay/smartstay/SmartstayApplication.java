@@ -1,10 +1,7 @@
 package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.ennum.BookingStatus;
-import com.smartstay.smartstay.ennum.EBReadingType;
-import com.smartstay.smartstay.ennum.InvoiceMode;
-import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.services.TemplatesService;
@@ -23,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 @SpringBootApplication
 public class SmartstayApplication {
@@ -112,7 +110,6 @@ public class SmartstayApplication {
 //				rolesRepository.save(writeOnlyRole);
 		};
 	}
-
 
 
 	@Bean
@@ -272,22 +269,6 @@ public class SmartstayApplication {
 //			modulesRepository.save(modules24);
 		};
 	}
-	@Bean
-	CommandLineRunner addPaymentStatus(PaymentStatusRepository paymentStatusRepository) {
-		return args -> {
-//			PaymentStatus paymentStatus = new PaymentStatus();
-//			paymentStatus.setStatus("Paid");
-//			paymentStatusRepository.save(paymentStatus);
-//
-//			PaymentStatus paymentStatus2 = new PaymentStatus();
-//			paymentStatus2.setStatus("Partially Paid");
-//			paymentStatusRepository.save(paymentStatus2);
-//
-//			PaymentStatus paymentStatus3 = new PaymentStatus();
-//			paymentStatus3.setStatus("Pending");
-//			paymentStatusRepository.save(paymentStatus3);
-		};
-	}
 
 	@Bean
 	CommandLineRunner addCustomersType(CustomerTypeRepository customerTypeRepository) {
@@ -312,6 +293,249 @@ public class SmartstayApplication {
 //			customersType4.setType("Walk in");
 //			customerTypeRepository.save(customersType4);
 		};
+
+
 	}
 
+//	@Bean
+//	CommandLineRunner addFirstInvoice(CustomersRepository customersRepository, HostelV1Repository hostelV1Repository, InvoicesV1Repository invoicesV1Repository, BillTemplatesRepository billTemplatesRepository, BookingsRepository bookingsRepository) {
+//		return args -> {
+//			List<Customers> listCustomers = customersRepository.findAll();
+//			AtomicReference<String> prefix = new AtomicReference<>("INV");
+//			AtomicReference<Integer> suffix = new AtomicReference<>(1);
+//			listCustomers.forEach(item -> {
+//				int billStartDate = 1;
+//				if (invoicesV1Repository.findLatestRentInvoiceByCustomerId(item.getCustomerId()) == null) {
+//					if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
+//
+//						BookingsV1 customerBooking = bookingsRepository.findByCustomerIdAndHostelId(item.getCustomerId(), item.getHostelId());
+//						HostelV1 hostelV1 = hostelV1Repository.findById(item.getHostelId()).orElse(null);
+//						if (hostelV1 != null) {
+//							if (hostelV1.getBillingRulesList() != null && !hostelV1.getBillingRulesList().isEmpty()) {
+//								billStartDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
+//							}
+//							BillTemplates billTemplates = billTemplatesRepository.getByHostelId(hostelV1.getHostelId());
+//							if (billTemplates != null) {
+//								if (billTemplates.getTemplateTypes() != null && !billTemplates.getTemplateTypes().isEmpty()) {
+//									List<BillTemplateType> tempBillTemplates = billTemplates.getTemplateTypes()
+//											.stream()
+//											.filter(a -> a.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).toList();
+//									if (!tempBillTemplates.isEmpty()) {
+//										System.out.println(tempBillTemplates.size());
+//										System.out.println(tempBillTemplates.get(0).getInvoicePrefix());
+//										prefix.set(tempBillTemplates.get(0).getInvoicePrefix());
+//										suffix.set(Integer.valueOf(tempBillTemplates.get(0).getInvoiceSuffix()));
+//									}
+//								}
+//
+//							}
+//
+//							if (customerBooking != null) {
+//								InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix.get());
+//								String tempSuffix = "0";
+//								StringBuilder prefixSuffix = new StringBuilder();
+//								if (inv == null) {
+//									if (suffix.get() < 10) {
+//										tempSuffix = "00" + suffix.get();
+//									}
+//									else if (suffix.get() < 100) {
+//										tempSuffix = "0" + suffix.get();
+//									}
+//									else {
+//										tempSuffix = "" + suffix.get();
+//									}
+//
+//									prefixSuffix.append(prefix);
+//									prefixSuffix.append("-");
+//									prefixSuffix.append(tempSuffix);
+//								}
+//								else {
+//									String[] ps = inv.getInvoiceNumber().split("-");
+//									if (ps.length > 1) {
+//										int previosSuffix = Integer.parseInt(ps[1]) + 1;
+//										prefixSuffix.append(prefix);
+//										prefixSuffix.append("-");
+//
+//										if (previosSuffix < 10) {
+//											tempSuffix = "00" + previosSuffix;
+//										}
+//										else if (previosSuffix < 100) {
+//											tempSuffix = "0" + previosSuffix;
+//										}
+//										else {
+//											tempSuffix = "" + previosSuffix;
+//										}
+//										prefixSuffix.append(tempSuffix);
+//									}
+//								}
+//								Calendar cal = Calendar.getInstance();
+//								cal.setTime(item.getJoiningDate());
+//
+//
+//								Calendar calTemp = Calendar.getInstance();
+//								calTemp.setTime(item.getJoiningDate());
+//								calTemp.set(Calendar.DAY_OF_MONTH, billStartDate);
+//
+//								Date dueDate = Utils.addDaysToDate(cal.getTime(), 5);
+//
+//								Date endDate = Utils.findLastDate(billStartDate, calTemp.getTime());
+//								int noOfDaysStayed = (int) Utils.findNumberOfDays(cal.getTime(), endDate) + 1;
+//								int noOfDaysInMonth = (int) Utils.findNumberOfDays(calTemp.getTime(), endDate) + 1;
+//								double rentPerDay = customerBooking.getRentAmount() / noOfDaysInMonth;
+//								double rentForThatMonth = rentPerDay * noOfDaysStayed;
+//								if (rentForThatMonth > customerBooking.getRentAmount()) {
+//									rentForThatMonth = customerBooking.getRentAmount();
+//								}
+//
+//								InvoicesV1 invoicesV1 = new InvoicesV1();
+//								invoicesV1.setCustomerId(item.getCustomerId());
+//								invoicesV1.setInvoiceNumber(prefixSuffix.toString());
+//								invoicesV1.setBasePrice(rentForThatMonth);
+//								invoicesV1.setTotalAmount(rentForThatMonth);
+//								invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+//								invoicesV1.setCustomerId(item.getCustomerId());
+//								invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+//								invoicesV1.setCreatedBy(customerBooking.getCreatedBy());
+//								invoicesV1.setGst(0.0);
+//								invoicesV1.setCgst(0.0);
+//								invoicesV1.setSgst(0.0);
+//								invoicesV1.setGstPercentile(0.0);
+//								invoicesV1.setInvoiceDueDate(dueDate);
+//								invoicesV1.setCustomerMobile(item.getMobile());
+//								invoicesV1.setCustomerMailId(item.getEmailId());
+//								invoicesV1.setCreatedAt(new Date());
+//								invoicesV1.setInvoiceStartDate(cal.getTime());
+//								invoicesV1.setInvoiceEndDate(endDate);
+//								invoicesV1.setInvoiceGeneratedDate(cal.getTime());
+//								invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+//								invoicesV1.setHostelId(item.getHostelId());
+//
+//								invoicesV1Repository.save(invoicesV1);
+//
+//
+//							}
+//						}
+//					}
+//
+//				}
+//
+//			});
+//		};
+//	}
+
+
+
+//	@Bean
+//	CommandLineRunner addPendingInvoice(CustomersRepository customersRepository, HostelV1Repository hostelV1Repository, InvoicesV1Repository invoicesV1Repository, BillTemplatesRepository billTemplatesRepository, BookingsRepository bookingsRepository) {
+//		return args -> {
+//			List<Customers> listCustomers = customersRepository.findAll();
+//			listCustomers.forEach(item -> {
+//				BookingsV1 customerBooking = bookingsRepository.findByCustomerIdAndHostelId(item.getCustomerId(), item.getHostelId());
+//				String prefix = "INV";
+//
+//				if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
+//					HostelV1 hostelV1 = hostelV1Repository.findById(item.getHostelId()).orElse(null);
+//					if (hostelV1 != null) {
+//						BillTemplates billTemplates = billTemplatesRepository.getByHostelId(hostelV1.getHostelId());
+//						if (billTemplates != null) {
+//							if (billTemplates.getTemplateTypes() != null && !billTemplates.getTemplateTypes().isEmpty()) {
+//								List<BillTemplateType> tempBillTemplates = billTemplates.getTemplateTypes()
+//										.stream()
+//										.filter(a -> a.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).toList();
+//								if (!tempBillTemplates.isEmpty()) {
+//									System.out.println(tempBillTemplates.size());
+//									System.out.println(tempBillTemplates.get(0).getInvoicePrefix());
+//									prefix = tempBillTemplates.get(0).getInvoicePrefix();
+//								}
+//							}
+//
+//						}
+//						int billingStartDate = 1;
+//						int billingDueDate = 10;
+//						if (hostelV1.getBillingRulesList() != null) {
+//							if (!hostelV1.getBillingRulesList().isEmpty()) {
+//								billingStartDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
+//								billingDueDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
+//							}
+//						}
+//
+//						InvoicesV1 invoicesV1 = invoicesV1Repository.findLatestRentInvoiceByCustomerId(item.getCustomerId());
+//						Calendar cal = Calendar.getInstance();
+//						cal.setTime(invoicesV1.getInvoiceStartDate());
+//						cal.set(Calendar.DAY_OF_MONTH, billingStartDate);
+//						cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+//
+//						LocalDate startDate = cal.getTime()
+//								.toInstant()
+//								.atZone(ZoneId.systemDefault())
+//								.toLocalDate();
+//
+//						LocalDate endDate = new Date()
+//								.toInstant()
+//								.atZone(ZoneId.systemDefault())
+//								.toLocalDate();
+//
+//						List<BillingCycle> listStartEndDate = BillingCycleUtil.findBillingCycles(startDate, endDate, billingStartDate);
+//
+//						String finalPrefix = prefix;
+//						listStartEndDate.forEach(days -> {
+//							InvoicesV1 findLatestPrefixSufix = invoicesV1Repository.findLatestInvoiceByPrefix(finalPrefix);
+//							StringBuilder prefixSufix = new StringBuilder();
+//							prefixSufix.append(finalPrefix);
+//							String invoiceNumberLatest = findLatestPrefixSufix.getInvoiceNumber();
+//							String[] latestPrefixSuffix = invoiceNumberLatest.split("-");
+//							if (latestPrefixSuffix.length > 1) {
+//								String sux = latestPrefixSuffix[1];
+//								prefixSufix.append("-");
+//								int su = Integer.parseInt(sux) + 1;
+//								if (su < 10) {
+//									prefixSufix.append("00");
+//								}
+//								else if (su < 100) {
+//									prefixSufix.append("0");
+//								}
+//								prefixSufix.append(su);
+//
+//
+//							}
+//
+//							Date sDate = java.sql.Date.valueOf(days.getStartDate());
+//							Date eDate = java.sql.Date.valueOf(days.getEndDate());
+//							Calendar ca = Calendar.getInstance();
+//							ca.setTime(sDate);
+//							ca.set(Calendar.DAY_OF_MONTH, ca.get(Calendar.DAY_OF_MONTH) + 5);
+//
+//
+//							InvoicesV1 newInvoice = new InvoicesV1();
+//							newInvoice.setInvoiceNumber(prefixSufix.toString());
+//							newInvoice.setTotalAmount(customerBooking.getRentAmount());
+//							newInvoice.setBasePrice(customerBooking.getRentAmount());
+//							newInvoice.setInvoiceType(InvoiceType.RENT.name());
+//							newInvoice.setCustomerId(item.getCustomerId());
+//							newInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+//							newInvoice.setCreatedBy(invoicesV1.getCreatedBy());
+//							newInvoice.setGst(0.0);
+//							newInvoice.setCgst(0.0);
+//							newInvoice.setSgst(0.0);
+//							newInvoice.setGstPercentile(0.0);
+//							newInvoice.setInvoiceDueDate(ca.getTime());
+//							newInvoice.setCustomerMobile(item.getMobile());
+//							newInvoice.setCustomerMailId(item.getEmailId());
+//							newInvoice.setCreatedAt(new Date());
+//							newInvoice.setInvoiceStartDate(sDate);
+//							newInvoice.setInvoiceEndDate(eDate);
+//							newInvoice.setInvoiceGeneratedDate(sDate);
+//							newInvoice.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+//							newInvoice.setHostelId(item.getHostelId());
+//
+//							invoicesV1Repository.save(newInvoice);
+//
+//						});
+//
+//
+//					}
+//				}
+//			});
+//		};
+//	}
 }

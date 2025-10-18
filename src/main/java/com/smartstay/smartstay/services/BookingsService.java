@@ -315,6 +315,7 @@ public class BookingsService {
             bookingsV1.setLeavingDate(null);
             bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
             bookingsV1.setRoomId(payloads.roomId());
+            bookingsV1.setRentAmount(payloads.rentalAmount());
             String rawDateStr = payloads.joiningDate().replace("-", "/");
 
             Date joiningDate = Utils.convertStringToDate(rawDateStr);
@@ -377,31 +378,34 @@ public class BookingsService {
         Double bookingAmount = 0.0;
         boolean canCheckIn = true;
         BookingsV1 bookingsV1 = bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
-        Beds bed = bedsService.isBedAvailabeForCheckIn(bookingsV1.getBedId(),bookingsV1.getExpectedJoiningDate());
-        bookingAmount = invoiceService.getBookingAmount(customerId, hostelId);
-        if (bookingAmount == null) {
-            bookingAmount = 0.0;
+        if (bookingsV1 != null) {
+            Beds bed = bedsService.isBedAvailabeForCheckIn(bookingsV1.getBedId(),bookingsV1.getExpectedJoiningDate());
+            bookingAmount = invoiceService.getBookingAmount(customerId, hostelId);
+            if (bookingAmount == null) {
+                bookingAmount = 0.0;
+            }
+
+            if (bed != null) {
+                if (bed.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+                    canCheckIn = true;
+                }
+                else if (Utils.compareWithTwoDates(new Date(), bed.getFreeFrom()) > 0) {
+                    canCheckIn = false;
+                }
+                InitializeCheckIn initializeCheckIn = new InitializeCheckIn(
+                        bed.getBedId(),
+                        bed.getBedName(),
+                        bookingAmount,
+                        Utils.dateToString(bookingsV1.getBookingDate()),
+                        bed.getRentAmount(),
+                        canCheckIn,
+                        bookingsV1.getBookingId()
+                );
+
+                return new ResponseEntity<>(initializeCheckIn, HttpStatus.OK);
+            }
         }
 
-        if (bed != null) {
-            if (bed.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
-                canCheckIn = true;
-            }
-            else if (Utils.compareWithTwoDates(new Date(), bed.getFreeFrom()) > 0) {
-                canCheckIn = false;
-            }
-            InitializeCheckIn initializeCheckIn = new InitializeCheckIn(
-                    bed.getBedId(),
-                    bed.getBedName(),
-                    bookingAmount,
-                    Utils.dateToString(bookingsV1.getBookingDate()),
-                    bed.getRentAmount(),
-                    canCheckIn,
-                    bookingsV1.getBookingId()
-            );
-
-            return new ResponseEntity<>(initializeCheckIn, HttpStatus.OK);
-        }
         return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
     }
 
@@ -571,5 +575,14 @@ public class BookingsService {
 
     public List<BookedCustomerInfoElectricity> getAllCheckInCustomers(Integer roomId, Date startDate, Date endDate) {
         return bookingsRepository.getBookingInfoForElectricity(roomId, startDate, endDate);
+    }
+
+    /**
+     * this is used for manual invoice generation
+     *
+     * @return
+     */
+    public BookingsV1 getBookingByCustomerIdAndDate(String customerId, Date startDate, Date endDate) {
+        return bookingsRepository.findByCustomerIdAndJoiningDate(customerId, startDate, endDate);
     }
 }

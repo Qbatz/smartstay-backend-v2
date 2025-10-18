@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Data
-@Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -39,4 +37,34 @@ public class BillTemplateType {
     @ManyToOne
     @JoinColumn(name = "template_id")
     BillTemplates templates;
+
+    @Override
+    public String toString() {
+        return "BillTemplateType{" +
+                "templateTypeId=" + templateTypeId +
+                ", invoiceType='" + invoiceType + '\'' +
+                ", invoicePrefix='" + invoicePrefix + '\'' +
+                ", invoiceSuffix='" + invoiceSuffix + '\'' +
+                ", gstPercentage=" + gstPercentage +
+                ", cgst=" + cgst +
+                ", sgst=" + sgst +
+                ", bankAccountId='" + bankAccountId + '\'' +
+                ", qrCode='" + qrCode + '\'' +
+                ", invoiceNotes='" + invoiceNotes + '\'' +
+                ", receiptNotes='" + receiptNotes + '\'' +
+                ", invoiceTermsAndCondition='" + invoiceTermsAndCondition + '\'' +
+                ", receiptTermsAndCondition='" + receiptTermsAndCondition + '\'' +
+                ", invoiceTemplateColor='" + invoiceTemplateColor + '\'' +
+                ", receiptTemplateColor='" + receiptTemplateColor + '\'' +
+                ", receiptLogoUrl='" + receiptLogoUrl + '\'' +
+                ", invoiceLogoUrl='" + invoiceLogoUrl + '\'' +
+                ", receiptPhoneNumber='" + receiptPhoneNumber + '\'' +
+                ", invoicePhoneNumber='" + invoicePhoneNumber + '\'' +
+                ", receiptMailId='" + receiptMailId + '\'' +
+                ", invoiceMailId='" + invoiceMailId + '\'' +
+                ", receiptSignatureUrl='" + receiptSignatureUrl + '\'' +
+                ", invoiceSignatureUrl='" + invoiceSignatureUrl + '\'' +
+                ", templates=" + templates +
+                '}';
+    }
 }

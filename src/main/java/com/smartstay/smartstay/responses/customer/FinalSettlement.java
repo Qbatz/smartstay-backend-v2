@@ -1,4 +1,10 @@
 package com.smartstay.smartstay.responses.customer;
 
-public record FinalSettlement(CustomerInformations customerInfo) {
+import java.util.List;
+
+public record FinalSettlement(CustomerInformations customerInfo,
+                              StayInfo stayInfo,
+                              List<UnpaidInvoices> unpaidInvoices,
+                              RentInfo currentMonthRentInfo,
+                              SettlementInfo settlementInfo) {
 }

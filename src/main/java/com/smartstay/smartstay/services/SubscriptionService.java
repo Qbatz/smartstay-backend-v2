@@ -133,7 +133,7 @@ public class SubscriptionService {
 
             return response.getBody();
         }
-        return "";
+        return null;
     }
 
     public Subscription getSubscriptionByHostelId(String hostelId){

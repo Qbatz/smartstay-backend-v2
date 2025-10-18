@@ -45,7 +45,7 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
             expectedJoiningDate = Utils.dateToString(beds.expectedJoinig());
         }
 
-        if (beds.bookingStatus() != null && beds.bookingStatus().equalsIgnoreCase(CustomerStatus.ON_NOTICE.name())) {
+        if (beds.bookingStatus() != null && beds.bookingStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
             freeFrom = Utils.dateToString(beds.freeFrom());
         }
 

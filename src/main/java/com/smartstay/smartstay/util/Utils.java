@@ -68,6 +68,7 @@ public class Utils {
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
     public static final String INVALID_TRANSACTION_ID = "Invalid transaction id";
     public static final String INVALID_INVOICE_ID = "Invalid invoice id";
+    public static final String INVALID_INVOICE_DATE = "Invalid invoice date";
     public static final String PAYMENT_SUCCESS = "Payment Success";
     public static final String CUSTOMER_ON_NOTICE = "Customer is already on notice";
     public static final String CUSTOMER_BOOKING_NOT_FOUND = "Booking not found for this customer";
@@ -102,8 +103,12 @@ public class Utils {
     public static final String CUSTOMER_INACTIVE_VACTED_ERROR = "Cannot change status to inactive for vacated customers";
     public static final String CUSTOMER_ALREADY_INACTIVE_ERROR = "Customer is already inactive";
     public static final String CANNOT_INACTIVE_ACTIVE_CUSTOMERS = "Customer is currently active";
+    public static final String INVOICE_ALREADY_PRESENT = "Invoice already exists for this dates";
     public static final String CUSTOMER_ALREADY_VACATED = "Customer already vacated";
     public static final String CUSTOMER_NOT_CHECKED_IN_ERROR = "Customer is not checked in";
+    public static final String CUSTOMER_NOT_CHECKED_IN_DATE = "Customer is not checked in on this date";
+    public static final String INVOICE_NUMBER_ALREADY_REGISTERED = "Invoice number already exists";
+    public static final String CUSTOMER_CHECKED_NOT_IN_NOTICE = "Customer is not on notice";
     public static final String CANNOT_ENABLE_HOSTEL_ROOM_READINGS = "Cannot enable hostel based and room based together";
     public static final String CATEGORY_NAME_CATEGORY_ID_ERROR = "Category name or Category id is required";
     public static final String CATEGORY_NAME_ALREADY_REGISTERED = "Category name is already exists";
@@ -126,6 +131,7 @@ public class Utils {
     public static final String PENDING = "PENDING";
     public static final String RESOLVED = "RESOLVED";
     public static final String NO_RECORDS_FOUND = "No records found";
+    public static final String CUSTOMER_NOT_CHECKED_IN = "Start date cannot be before joining date";
 
 
 

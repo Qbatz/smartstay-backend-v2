@@ -13,5 +13,8 @@ public record CustomerInformations(String customerId,
                                    String joiningDate,
                                    Double advanceAmount,
                                    Double rentAmount,
+                                   boolean isAdvancePaid,
+                                   Double advancePaidAmount,
+                                   Double bookingAmount,
                                    List<Deductions> listDeductions) {
 }
