@@ -13,6 +13,7 @@ import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.payloads.electricity.UpdateEBConfigs;
+import com.smartstay.smartstay.payloads.hostel.BillRules;
 import com.smartstay.smartstay.payloads.hostel.UpdateElectricityPrice;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.responses.Hostels;
@@ -78,6 +79,8 @@ public class HostelService {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private HostelConfigService hostelConfigService;
 
 
     public ResponseEntity<?> addHostel(MultipartFile mainImage, List<MultipartFile> additionalImages, AddHostelPayloads payloads) {
@@ -529,20 +532,133 @@ public class HostelService {
 
     }
 
-    public boolean checkIsValidSubscription(String hostelId) {
-        HostelV1 hostelV1 = hostelV1Repository.findByHostelId(hostelId);
-        if (hostelV1 == null) {
-            return false;
+
+    public ResponseEntity<?> viewBillingRules(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        Subscription subscription = hostelV1.getSubscription().get(hostelV1.getSubscription().size() - 1);
-        if (subscription == null) {
-            return false;
+        HostelV1 hostel = hostelV1Repository.findByHostelIdAndParentId(hostelId, users.getParentId());
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
-        if (Utils.compareWithTwoDates(new Date(), subscription.getNextBillingAt()) < 0) {
-            return false;
+
+        BillingRules billingRules = null;
+        if (hostel.getBillingRulesList() != null && !hostel.getBillingRulesList().isEmpty()) {
+            billingRules = hostel.getBillingRulesList().get(hostel.getBillingRulesList().size()-1);
+
+            com.smartstay.smartstay.responses.hostelConfig.BillingRules rules = new com.smartstay.smartstay.responses.hostelConfig.BillingRules(
+                    billingRules.getBillingStartDate(),
+                    billingRules.getBillingDueDate(),
+                    billingRules.getNoticePeriod(),
+                    Utils.dateToString(billingRules.getStartFrom()));
+
+            return new ResponseEntity<>(rules, HttpStatus.OK);
         }
-        return true;
+
+        else {
+            return new ResponseEntity<>(Utils.BILLING_RULE_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    public ResponseEntity<?> updateBillingRules(String hostelId, BillRules billRules) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelV1Repository.findByHostelIdAndParentId(hostelId, users.getParentId());
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        BillingRules latestBillingRules = hostel.getBillingRulesList().get(hostel.getBillingRulesList().size() - 1);
+        BillingRules newBillingRules = new BillingRules();
+
+        Date startDate = null;
+        Date previousEndDate = null;
+        if (Utils.checkNullOrEmpty(billRules.startDate())) {
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.DAY_OF_MONTH, billRules.startDate());
+
+            Calendar lastBillingRuleCal = Calendar.getInstance();
+            lastBillingRuleCal.set(Calendar.DAY_OF_MONTH, latestBillingRules.getBillingStartDate());
+
+            Calendar calEndDate = Calendar.getInstance();
+            calEndDate.setTime(cal.getTime());
+
+            if (Utils.compareWithTwoDates(lastBillingRuleCal.getTime(), cal.getTime()) >= 0) {
+                cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                calEndDate.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH) -1);
+            }
+
+
+
+            previousEndDate = calEndDate.getTime();
+
+            startDate = cal.getTime();
+        }
+        else {
+            Calendar lastBillingRuleCal = Calendar.getInstance();
+            lastBillingRuleCal.set(Calendar.DAY_OF_MONTH, latestBillingRules.getBillingStartDate());
+
+            Calendar calEndDate = Calendar.getInstance();
+
+            if (Utils.compareWithTwoDates(lastBillingRuleCal.getTime(), new Date()) >= 0) {
+                lastBillingRuleCal.set(Calendar.MONTH, lastBillingRuleCal.get(Calendar.MONTH) + 1);
+
+                calEndDate.setTime(lastBillingRuleCal.getTime());
+                calEndDate.set(Calendar.DAY_OF_MONTH, calEndDate.get(Calendar.DAY_OF_MONTH) -1);
+            }
+
+            calEndDate.setTime(lastBillingRuleCal.getTime());
+            calEndDate.set(Calendar.DAY_OF_MONTH, lastBillingRuleCal.get(Calendar.DAY_OF_MONTH)-1);
+            previousEndDate = calEndDate.getTime();
+            startDate = lastBillingRuleCal.getTime();
+
+        }
+        if (!Utils.checkNullOrEmpty(billRules.dueDate())) {
+            newBillingRules.setBillingDueDate(billRules.dueDate());
+        }
+        if (!Utils.checkNullOrEmpty(billRules.noticeDays())) {
+            newBillingRules.setNoticePeriod(billRules.noticeDays());
+        }
+
+        latestBillingRules.setEndTill(previousEndDate);
+
+        newBillingRules.setStartFrom(startDate);
+
+        hostelConfigService.updateExistingBillRule(latestBillingRules);
+
+        List<BillingRules> listBillingRules = hostel.getBillingRulesList();
+        listBillingRules.add(newBillingRules);
+
+        hostel.setBillingRulesList(listBillingRules);
+        hostelV1Repository.save(hostel);
+
+        String message = Utils.formMessageWithDate(startDate, "Your changes will be applied from ");
+
+        return new ResponseEntity<>(message, HttpStatus.CREATED);
+
     }
 }
 

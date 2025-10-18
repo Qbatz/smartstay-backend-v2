@@ -19,4 +19,5 @@ public interface Receipts {
     String getBankName();
     String getHolderName();
     String getProfilePic();
+    String getAccountType();
 }
