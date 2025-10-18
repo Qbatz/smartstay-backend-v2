@@ -17,11 +17,11 @@ import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.util.Utils;
-import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -52,7 +52,8 @@ public class InvoiceV1Service {
     private UserHostelService userHostelService;
     @Autowired
     private CustomersBedHistoryService customersBedHistoryService;
-
+    @Autowired
+    private BankingService bankingService;
     private TransactionService transactionService;
 
     private BookingsService bookingsService;
@@ -614,7 +615,37 @@ public class InvoiceV1Service {
 
         String hostelPhone = null;
         String hostelEmail = null;
+        String invoiceType = "Rent";
+        StringBuilder hostelFullAddress = new StringBuilder();
+        String invoiceSignatureUrl = null;
+        String hostelLogo = null;
 
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            invoiceType = "Advance";
+        }
+
+        if (hostelV1.getHouseNo() != null) {
+            hostelFullAddress.append(hostelV1.getHouseNo());
+            hostelFullAddress.append(", ");
+        }
+        if (hostelV1.getStreet() != null) {
+            hostelFullAddress.append(hostelV1.getStreet());
+            hostelFullAddress.append(", ");
+        }
+        if (hostelV1.getCity() != null) {
+            hostelFullAddress.append(hostelV1.getCity());
+            hostelFullAddress.append(", ");
+        }
+        if (hostelV1.getState() != null) {
+            hostelFullAddress.append(hostelV1.getState());
+            hostelFullAddress.append("-");
+        }
+        if (hostelV1.getPincode() != 0) {
+            hostelFullAddress.append(hostelV1.getPincode());
+        }
+
+        AccountDetails accountDetails = null;
+        ConfigInfo signatureInfo = null;
         com.smartstay.smartstay.dao.BillTemplates hostelTemplates = templatesService.getTemplateByHostelId(hostelId);
         if (hostelTemplates != null) {
             if (!hostelTemplates.isMobileCustomized()) {
@@ -639,6 +670,49 @@ public class InvoiceV1Service {
                         .map(BillTemplateType::getInvoicePhoneNumber)
                         .toString();
             }
+
+            BillTemplateType templateType = hostelTemplates
+                    .getTemplateTypes()
+                    .stream()
+                    .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                    .findAny().get();
+
+            if (!hostelTemplates.isSignatureCustomized()) {
+                invoiceSignatureUrl = hostelTemplates.getDigitalSignature();
+            } else {
+                invoiceSignatureUrl = templateType.getInvoiceSignatureUrl();
+            }
+            if (!hostelTemplates.isLogoCustomized()) {
+                hostelLogo = hostelTemplates.getHostelLogo();
+            }
+            else {
+                hostelLogo = templateType.getInvoiceLogoUrl();
+            }
+
+            if (templateType.getBankAccountId() != null) {
+                BankingV1 bankingV1 = bankingService.getBankDetails(templateType.getBankAccountId());
+                accountDetails = new AccountDetails(bankingV1.getAccountNumber(),
+                        bankingV1.getIfscCode(),
+                        bankingV1.getBankName(),
+                        bankingV1.getUpiId(),
+                        templateType.getQrCode());
+            }
+            else {
+                accountDetails = new AccountDetails(null,
+                        null,
+                        null,
+                        null,
+                        templateType.getQrCode());
+            }
+
+
+            signatureInfo = new ConfigInfo(templateType.getInvoiceTermsAndCondition(),
+                    invoiceSignatureUrl,
+                    hostelLogo,
+                    hostelFullAddress.toString(),
+                    templateType.getInvoiceTemplateColor(),
+                    templateType.getInvoiceNotes(),
+                    invoiceType);
         }
 
         if (hostelV1.getBillingRulesList() != null && !hostelV1.getBillingRulesList().isEmpty()) {
@@ -654,24 +728,28 @@ public class InvoiceV1Service {
                 fullName.append(customers.getFirstName());
             }
             if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
-                fullName.append(" ");
+                fullName.append(", ");
                 fullName.append(customers.getLastName());
             }
             if (customers.getHouseNo() != null) {
                 fullAddress.append(customers.getHouseNo());
-                fullAddress.append(" ");
+                fullAddress.append(", ");
             }
             if (customers.getStreet() != null) {
                 fullAddress.append(customers.getStreet());
-                fullAddress.append(" ");
+                fullAddress.append(", ");
             }
             if (customers.getCity() != null) {
                 fullAddress.append(customers.getCity());
-                fullAddress.append(" ");
+                fullAddress.append(", ");
             }
             if (customers.getState() != null) {
                 fullAddress.append(customers.getState());
-                fullAddress.append(" ");
+                fullAddress.append("-");
+            }
+
+            if (customers.getPincode() != 0) {
+                fullAddress.append(customers.getPincode());
             }
 
             customerInfo = new CustomerInfo(customers.getFirstName(),
@@ -679,7 +757,8 @@ public class InvoiceV1Service {
                     fullName.toString(),
                     customers.getMobile(),
                     "91",
-                    fullAddress.toString());
+                    fullAddress.toString(),
+                    Utils.dateToString(customers.getJoiningDate()));
         }
 
         StayInfo stayInfo = null;
@@ -689,7 +768,8 @@ public class InvoiceV1Service {
         if (bedDetails != null) {
             stayInfo = new StayInfo(bedDetails.getBedName(),
                     bedDetails.getFloorName(),
-                    bedDetails.getRoomName());
+                    bedDetails.getRoomName(),
+                    hostelV1.getHostelName());
         }
 
         Double subTotal = 0.0;
@@ -704,8 +784,15 @@ public class InvoiceV1Service {
         }
 
         List<InvoiceItems> listInvoiceItems = new ArrayList<>();
-        InvoiceItems items1 = new InvoiceItems(invoicesV1.getInvoiceNumber(), "Rent", invoicesV1.getBasePrice());
-        listInvoiceItems.add(items1);
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
+            InvoiceItems items1 = new InvoiceItems(invoicesV1.getInvoiceNumber(), "Rent", invoicesV1.getBasePrice());
+            listInvoiceItems.add(items1);
+        }
+        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            InvoiceItems items1 = new InvoiceItems(invoicesV1.getInvoiceNumber(), "Advance", invoicesV1.getBasePrice());
+            listInvoiceItems.add(items1);
+        }
+
         if (invoicesV1.getEbAmount() != null && invoicesV1.getEbAmount() != 0) {
             InvoiceItems items2 = new InvoiceItems(invoicesV1.getInvoiceNumber(), "Electricity", invoicesV1.getEbAmount());
             listInvoiceItems.add(items2);
@@ -723,16 +810,20 @@ public class InvoiceV1Service {
 
 
 
+
+
         InvoiceDetails details = new InvoiceDetails(invoicesV1.getInvoiceNumber(),
                 invoicesV1.getInvoiceId(),
                 Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                 Utils.dateToString(invoicesV1.getInvoiceDueDate()),
+                hostelEmail,
                 hostelPhone,
-                        hostelEmail,
                         "91",
                         customerInfo,
                         stayInfo,
-                        invoiceInfo);
+                        invoiceInfo,
+                accountDetails,
+                signatureInfo);
         return new ResponseEntity<>(details, HttpStatus.OK);
 
     }

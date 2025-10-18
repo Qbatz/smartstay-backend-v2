@@ -582,4 +582,8 @@ public class BankingService {
         transactionService.saveTransaction(toBankTransactions);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
+
+    public BankingV1 getBankDetails(String bankAccountId) {
+        return bankingV1Repository.findByBankId(bankAccountId);
+    }
 }

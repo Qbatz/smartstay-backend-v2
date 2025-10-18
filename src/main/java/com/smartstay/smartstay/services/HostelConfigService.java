@@ -29,4 +29,7 @@ public class HostelConfigService {
     }
 
 
+    public void updateExistingBillRule(BillingRules latestBillingRules) {
+        billingRuleRepository.save(latestBillingRules);
+    }
 }

@@ -20,6 +20,20 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         fullNameBuilder.append(invoices.getFirstName());
         fullNameBuilder.append(" ");
         fullNameBuilder.append(invoices.getLastName());
+
+        StringBuilder initials = new StringBuilder();
+        if (invoices.getFirstName() != null) {
+            initials.append(invoices.getFirstName().toUpperCase().charAt(0));
+        }
+        if (invoices.getLastName() != null && !invoices.getLastName().trim().equalsIgnoreCase("")) {
+            initials.append(invoices.getLastName().toUpperCase().charAt(0));
+        }
+        else {
+            if (invoices.getFirstName().length() > 1) {
+                initials.append(invoices.getFirstName().toUpperCase().charAt(1));
+            }
+        }
+
         Double paidAmount = 0.0;
         if (invoices.getPaidAmount() != null) {
             paidAmount = invoices.getPaidAmount();
@@ -79,6 +93,8 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 invoices.getLastName(),
                 fullNameBuilder.toString(),
                 invoices.getCustomerId(),
+                initials.toString(),
+                invoices.getProfilePic(),
                 Math.ceil(totalAmount),
                 Math.ceil(invoices.getTotalAmount()),
                 invoices.getInvoiceId(),

@@ -20,7 +20,8 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             invc.hostel_id as hostelId, invc.invoice_generated_date as invoiceGeneratedAt, invc.invoice_start_date as invoiceStartDate,
             invc.invoice_due_date as invoiceDueDate, invc.invoice_type as invoiceType, 
             invc.payment_status as paymentStatus, invc.updated_at as updatedAt, 
-            invc.invoice_number as invoiceNumber, customers.first_name as firstName, customers.last_name as lastName, 
+            invc.invoice_number as invoiceNumber, customers.first_name as firstName, customers.last_name as lastName,
+            customers.profile_pic as profilePic, 
             advance.advance_amount as advanceAmount, advance.deductions as deductions,
             (SELECT sum(trans.paid_amount) FROM transactionv1 trans where trans.invoice_id=invc.invoice_id) as paidAmount  
             from invoicesv1 invc inner join customers customers on customers.customer_id=invc.customer_id 

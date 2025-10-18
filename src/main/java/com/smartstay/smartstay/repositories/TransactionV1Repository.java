@@ -31,7 +31,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
                 bank.account_holder_name as holderName, bank.account_type as accountType, customers.profile_pic as profilePic FROM transactionv1 transaction 
                 LEFT OUTER JOIN invoicesv1 invc on invc.invoice_id = transaction.invoice_id LEFT OUTER JOIN 
                 customers customers on customers.customer_id=transaction.customer_id LEFT OUTER JOIN 
-                bankingv1 bank on bank.bank_id=transaction.bank_id WHERE transaction.hostel_id=:hostelId;
+                bankingv1 bank on bank.bank_id=transaction.bank_id WHERE transaction.hostel_id=:hostelId
                 """, nativeQuery = true)
         List<Receipts> findByHostelId(@Param("hostelId") String hostelId);
 

@@ -375,5 +375,9 @@ public class Utils {
         return number;
     }
 
+    public static String formMessageWithDate(Date date, String message) {
+        return message + " " + dateToString(date);
+    }
+
 
 }

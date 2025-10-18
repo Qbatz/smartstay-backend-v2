@@ -11,5 +11,7 @@ public record InvoiceDetails(String invoiceNumber,
                              String countryCode,
                              CustomerInfo customerInfo,
                              StayInfo stayInfo,
-                             InvoiceInfo invoiceInfo) {
+                             InvoiceInfo invoiceInfo,
+                             AccountDetails accountDetails,
+                             ConfigInfo configurations) {
 }

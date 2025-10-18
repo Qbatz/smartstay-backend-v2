@@ -18,6 +18,9 @@ public class BillingRules {
     private Integer billingStartDate;
     private Integer billingDueDate;
     private Integer noticePeriod;
+    private boolean isInitial;
+    private Date startFrom;
+    private Date endTill;
 
     @ManyToOne
     @JoinColumn(name = "hostel_id")

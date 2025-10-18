@@ -5,5 +5,6 @@ public record CustomerInfo(String firstName,
                            String fullName,
                            String customerMobileNo,
                            String countryCode,
-                           String fullAddress) {
+                           String fullAddress,
+                           String joiningDate) {
 }
