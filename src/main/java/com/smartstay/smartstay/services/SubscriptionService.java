@@ -13,6 +13,7 @@ import com.smartstay.smartstay.repositories.CredentialsRepository;
 import com.smartstay.smartstay.repositories.SubscriptionRepository;
 import com.smartstay.smartstay.responses.AuthTokenResponse;
 import com.smartstay.smartstay.responses.ZohoSubscription;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
+import java.util.Date;
 
 
 @Service
@@ -139,4 +141,17 @@ public class SubscriptionService {
     public Subscription getSubscriptionByHostelId(String hostelId){
         return subscriptionRepository.findTopByHostel_HostelIdOrderByCreatedAtDesc(hostelId);
     }
+
+    public boolean isSubscriptionActive(String hostelId) {
+        Subscription subscription = subscriptionRepository.findTopByHostel_HostelIdOrderByCreatedAtDesc(hostelId);
+
+        getSubscriptionDetails(subscription.getSubscriptionId());
+        return true;
+
+//        if (Utils.compareWithTwoDates(subscription.getActivatedAt(), new Date()) <= 0) {
+//
+//        }
+    }
+
+
 }

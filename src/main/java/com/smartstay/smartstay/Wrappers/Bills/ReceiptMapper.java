@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.Wrappers.Bills;
 
 import com.smartstay.smartstay.dto.transaction.Receipts;
+import com.smartstay.smartstay.ennum.BankAccountType;
+import com.smartstay.smartstay.ennum.BankTransactionType;
 import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.util.Utils;
 
@@ -39,11 +41,19 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
             }
             bankName.append(receipts.getBankName());
         }
+        if (receipts.getBankName() == null) {
+            if (receipts.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+                if (receipts.getHolderName() != null) {
+                    bankName.append("-");
+                }
+                bankName.append(receipts.getAccountType());
+            }
+        }
 
         String type = switch (receipts.getInvoiceType()) {
             case "ADVANCE" -> "Advance";
             case "BOOKING" -> "Booking";
-            case "Rent" -> "Rent";
+            case "RENT" -> "Rent";
             default -> "Others";
         };
         invoiceType.append(type);
@@ -63,7 +73,7 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
                 receipts.getTransactionId(),
                 receipts.getReferenceNumber(),
                 receipts.getInvoiceNumber(),
-                receipts.getPaymentStatus(),
+                "PAID",
                 Utils.dateToString(receipts.getPaidAt()),
                 receipts.getPaidAmount(),
                 invoiceType.toString(),

@@ -426,4 +426,8 @@ public class BedsService {
             bedsRepository.save(beds);
         }
     }
+
+    public com.smartstay.smartstay.dto.beds.BedDetails getBedDetails(Integer bedId) {
+        return bedsRepository.findByBedId(bedId);
+    }
 }

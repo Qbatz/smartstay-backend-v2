@@ -4,17 +4,18 @@ import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.dto.transaction.Receipts;
+import com.smartstay.smartstay.ennum.BillConfigTypes;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
-import com.smartstay.smartstay.responses.invoices.InvoicesList;
-import com.smartstay.smartstay.responses.invoices.ReceiptsList;
+import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.util.Utils;
 import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -46,9 +48,16 @@ public class InvoiceV1Service {
     private RolesService rolesService;
     @Autowired
     private TemplatesService templatesService;
-    private BookingsService bookingsService;
+    @Autowired
+    private UserHostelService userHostelService;
+    @Autowired
+    private CustomersBedHistoryService customersBedHistoryService;
 
+    private TransactionService transactionService;
+
+    private BookingsService bookingsService;
     private HostelService hostelService;
+    private BedsService bedService;
 
 
     @Autowired
@@ -64,6 +73,15 @@ public class InvoiceV1Service {
     @Autowired
     public void setHostelService(@Lazy HostelService hostelService) {
         this.hostelService = hostelService;
+    }
+
+    @Autowired
+    public void setBedsService(@Lazy BedsService bedsService) {
+        this.bedService = bedsService;
+    }
+    @Autowired
+    public void setTransactionService(@Lazy TransactionService transactionService) {
+        this.transactionService = transactionService;
     }
 
     public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate, int startDay) {
@@ -358,6 +376,15 @@ public class InvoiceV1Service {
         return new ResponseEntity<>(receipts, HttpStatus.OK);
     }
 
+    public ResponseEntity<?> getAllReceiptsByHostelId(String hostelId) {
+        List<Receipts> listReceipts = transactionService.getAllReceiptsByHostelId(hostelId);
+        List<ReceiptsList> receipts = listReceipts
+                .stream()
+                .map(item -> new ReceiptMapper().apply(item))
+                .toList();
+        return new ResponseEntity<>(receipts, HttpStatus.OK);
+    }
+
     /**
      * use only for getting booking amount
      *
@@ -515,10 +542,10 @@ public class InvoiceV1Service {
         double invoiceAmount = 0.0;
 
         if (noOfDaysOnThatMonth == noOfDaysStayed) {
-            invoiceAmount = filteredBooking.getRentAmount();
+            invoiceAmount = manualInvoice.rentAmount();
         }
         else {
-            double rentPerDay = filteredBooking.getRentAmount()/noOfDaysOnThatMonth;
+            double rentPerDay = manualInvoice.rentAmount()/noOfDaysOnThatMonth;
             invoiceAmount = rentPerDay*noOfDaysStayed;
         }
 
@@ -536,7 +563,7 @@ public class InvoiceV1Service {
         invoicesV1.setCgst(0.0);
         invoicesV1.setSgst(0.0);
         invoicesV1.setGstPercentile(0.0);
-        invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
         invoicesV1.setOthersDescription("");
         invoicesV1.setInvoiceMode(InvoiceMode.MANUAL.name());
         invoicesV1.setCreatedBy(authentication.getName());
@@ -559,5 +586,154 @@ public class InvoiceV1Service {
 
     public InvoicesV1 getCurrentMonthInvoice(String customerId) {
         return invoicesV1Repository.findLatestInvoiceByCustomerId(customerId);
+    }
+
+    public ResponseEntity<?> getInvoiceDetailsByInvoiceId(String hostelId, String invoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        String hostelPhone = null;
+        String hostelEmail = null;
+
+        com.smartstay.smartstay.dao.BillTemplates hostelTemplates = templatesService.getTemplateByHostelId(hostelId);
+        if (hostelTemplates != null) {
+            if (!hostelTemplates.isMobileCustomized()) {
+                hostelPhone = hostelTemplates.getMobile();
+            }
+            else {
+                hostelPhone = hostelTemplates.getTemplateTypes()
+                        .stream()
+                        .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                        .map(BillTemplateType::getInvoicePhoneNumber)
+                        .toString();
+
+            }
+
+            if (!hostelTemplates.isEmailCustomized()) {
+                hostelEmail = hostelTemplates.getEmailId();
+            }
+            else {
+                hostelEmail = hostelTemplates.getTemplateTypes()
+                        .stream()
+                        .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                        .map(BillTemplateType::getInvoicePhoneNumber)
+                        .toString();
+            }
+        }
+
+        if (hostelV1.getBillingRulesList() != null && !hostelV1.getBillingRulesList().isEmpty()) {
+
+        }
+
+        Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());
+        CustomerInfo customerInfo = null;
+        if (customers != null) {
+            StringBuilder fullName = new StringBuilder();
+            StringBuilder fullAddress = new StringBuilder();
+            if (customers.getFirstName() != null) {
+                fullName.append(customers.getFirstName());
+            }
+            if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
+                fullName.append(" ");
+                fullName.append(customers.getLastName());
+            }
+            if (customers.getHouseNo() != null) {
+                fullAddress.append(customers.getHouseNo());
+                fullAddress.append(" ");
+            }
+            if (customers.getStreet() != null) {
+                fullAddress.append(customers.getStreet());
+                fullAddress.append(" ");
+            }
+            if (customers.getCity() != null) {
+                fullAddress.append(customers.getCity());
+                fullAddress.append(" ");
+            }
+            if (customers.getState() != null) {
+                fullAddress.append(customers.getState());
+                fullAddress.append(" ");
+            }
+
+            customerInfo = new CustomerInfo(customers.getFirstName(),
+                    customers.getLastName(),
+                    fullName.toString(),
+                    customers.getMobile(),
+                    "91",
+                    fullAddress.toString());
+        }
+
+        StayInfo stayInfo = null;
+        CustomersBedHistory bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+
+        BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
+        if (bedDetails != null) {
+            stayInfo = new StayInfo(bedDetails.getBedName(),
+                    bedDetails.getFloorName(),
+                    bedDetails.getRoomName());
+        }
+
+        Double subTotal = 0.0;
+        Double paidAmount = 0.0;
+        Double balanceAmount = 0.0;
+
+        paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
+        balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
+        subTotal = invoicesV1.getTotalAmount();
+        if (invoicesV1.getEbAmount() != null) {
+            subTotal = subTotal + invoicesV1.getEbAmount();
+        }
+
+        List<InvoiceItems> listInvoiceItems = new ArrayList<>();
+        InvoiceItems items1 = new InvoiceItems(invoicesV1.getInvoiceNumber(), "Rent", invoicesV1.getBasePrice());
+        listInvoiceItems.add(items1);
+        if (invoicesV1.getEbAmount() != null && invoicesV1.getEbAmount() != 0) {
+            InvoiceItems items2 = new InvoiceItems(invoicesV1.getInvoiceNumber(), "Electricity", invoicesV1.getEbAmount());
+            listInvoiceItems.add(items2);
+        }
+
+
+
+        InvoiceInfo invoiceInfo = new InvoiceInfo(subTotal,
+                0.0,
+                0.0,
+                invoicesV1.getTotalAmount(),
+                paidAmount,
+                balanceAmount,
+                listInvoiceItems);
+
+
+
+        InvoiceDetails details = new InvoiceDetails(invoicesV1.getInvoiceNumber(),
+                invoicesV1.getInvoiceId(),
+                Utils.dateToString(invoicesV1.getInvoiceStartDate()),
+                Utils.dateToString(invoicesV1.getInvoiceDueDate()),
+                hostelPhone,
+                        hostelEmail,
+                        "91",
+                        customerInfo,
+                        stayInfo,
+                        invoiceInfo);
+        return new ResponseEntity<>(details, HttpStatus.OK);
+
     }
 }

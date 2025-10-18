@@ -293,8 +293,6 @@ public class SmartstayApplication {
 //			customersType4.setType("Walk in");
 //			customerTypeRepository.save(customersType4);
 		};
-
-
 	}
 
 //	@Bean
@@ -538,4 +536,25 @@ public class SmartstayApplication {
 //			});
 //		};
 //	}
+
+	@Bean
+	CommandLineRunner mapTransactionInvoiceMapper(TransactionV1Repository transactionV1Repository, InvoicesV1Repository invoicesV1Repository) {
+		return args -> {
+			List<TransactionV1> listTransaction = transactionV1Repository.findAll();
+			List<TransactionV1> transactionV1s = listTransaction
+					.stream()
+					.map(item -> {
+						if (item.getHostelId() == null) {
+							InvoicesV1 invoicesV1 = invoicesV1Repository.findById(item.getInvoiceId()).orElse(null);
+							if (invoicesV1 != null) {
+								item.setHostelId(invoicesV1.getHostelId());
+							}
+						}
+						return item;
+					})
+					.toList();
+
+			transactionV1Repository.saveAll(transactionV1s);
+		};
+	}
 }

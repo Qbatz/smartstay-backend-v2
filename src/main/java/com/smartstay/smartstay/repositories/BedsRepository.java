@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.repositories;
 
+import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.Beds;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
 import com.smartstay.smartstay.dto.beds.InitializeBooking;
@@ -84,4 +85,12 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
             SELECT * FROM beds where current_status != 'OCCUPIED' and (free_from IS NULL OR free_from <= DATE(:joiningDate)) and bed_id=:bedId
             """, nativeQuery = true)
     com.smartstay.smartstay.dao.Beds checkIsBedAvailable(@Param("bedId") Integer bedId, @Param("joiningDate")  Date joiningDate);
+
+    @Query(value = """
+            SELECT bed.bed_id as bedId, bed.bed_name as bedName, flrs.floor_id as floorId, 
+            flrs.floor_name as floorName, rms.room_id as roomId, rms.room_name as roomName 
+            FROM beds bed left outer JOIN rooms rms on rms.room_id=bed.room_id LEFT OUTER JOIN 
+            floors flrs on flrs.floor_id=rms.floor_id where bed.bed_id=:bedId;
+            """, nativeQuery = true)
+    BedDetails findByBedId(@Param("bedId") Integer bedId);
 }

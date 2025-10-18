@@ -23,6 +23,7 @@ public class TransactionV1 {
     private Date createdAt;
     private String status;
     private String invoiceId;
+    private String hostelId;
     private String isInvoice;
     private String customerId;
     private Date paymentDate;

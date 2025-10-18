@@ -231,7 +231,7 @@ public class Utils {
             throw new RuntimeException("Invalid date");
         }
 
-        return today.before(date2) || today.compareTo(date2) == 0;
+        return today.before(date2) || today.compareTo(date2) <= 0;
     }
 
     public static String generateRandomUUID() {
