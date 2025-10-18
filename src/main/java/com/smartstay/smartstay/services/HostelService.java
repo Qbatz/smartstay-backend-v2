@@ -596,17 +596,27 @@ public class HostelService {
 
         Date startDate = null;
         Date previousEndDate = null;
+        Integer dueDate = latestBillingRules.getBillingDueDate();
+        Integer billStartDate = latestBillingRules.getBillingStartDate();
+        Integer noticeDays = latestBillingRules.getNoticePeriod();
+
         if (Utils.checkNullOrEmpty(billRules.startDate())) {
+            billStartDate = billRules.startDate();
             Calendar cal = Calendar.getInstance();
             cal.set(Calendar.DAY_OF_MONTH, billRules.startDate());
+            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
 
             Calendar lastBillingRuleCal = Calendar.getInstance();
             lastBillingRuleCal.set(Calendar.DAY_OF_MONTH, latestBillingRules.getBillingStartDate());
+            lastBillingRuleCal.set(Calendar.MONTH, lastBillingRuleCal.get(Calendar.MONTH) + 1);
 
             Calendar calEndDate = Calendar.getInstance();
             calEndDate.setTime(cal.getTime());
 
-            if (Utils.compareWithTwoDates(lastBillingRuleCal.getTime(), cal.getTime()) >= 0) {
+            Calendar curretDate = Calendar.getInstance();
+            curretDate.set(Calendar.MONTH, curretDate.get(Calendar.MONTH) + 1);
+
+            if (Utils.compareWithTwoDates(cal.getTime(), curretDate.getTime()) >= 0) {
                 cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
                 calEndDate.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH) -1);
             }
@@ -620,10 +630,15 @@ public class HostelService {
         else {
             Calendar lastBillingRuleCal = Calendar.getInstance();
             lastBillingRuleCal.set(Calendar.DAY_OF_MONTH, latestBillingRules.getBillingStartDate());
+            lastBillingRuleCal.set(Calendar.MONTH, lastBillingRuleCal.get(Calendar.MONTH) + 1);
 
             Calendar calEndDate = Calendar.getInstance();
+            calEndDate.set(Calendar.MONTH, calEndDate.get(Calendar.MONTH) + 1);
 
-            if (Utils.compareWithTwoDates(lastBillingRuleCal.getTime(), new Date()) >= 0) {
+            Calendar curretDate = Calendar.getInstance();
+            curretDate.set(Calendar.MONTH, curretDate.get(Calendar.MONTH) + 1);
+
+            if (Utils.compareWithTwoDates(lastBillingRuleCal.getTime(), curretDate.getTime()) >= 0) {
                 lastBillingRuleCal.set(Calendar.MONTH, lastBillingRuleCal.get(Calendar.MONTH) + 1);
 
                 calEndDate.setTime(lastBillingRuleCal.getTime());
@@ -632,20 +647,27 @@ public class HostelService {
 
             calEndDate.setTime(lastBillingRuleCal.getTime());
             calEndDate.set(Calendar.DAY_OF_MONTH, lastBillingRuleCal.get(Calendar.DAY_OF_MONTH)-1);
+
             previousEndDate = calEndDate.getTime();
             startDate = lastBillingRuleCal.getTime();
 
         }
-        if (!Utils.checkNullOrEmpty(billRules.dueDate())) {
+        if (Utils.checkNullOrEmpty(billRules.dueDate())) {
+            dueDate = billRules.dueDate();
             newBillingRules.setBillingDueDate(billRules.dueDate());
         }
-        if (!Utils.checkNullOrEmpty(billRules.noticeDays())) {
+        if (Utils.checkNullOrEmpty(billRules.noticeDays())) {
             newBillingRules.setNoticePeriod(billRules.noticeDays());
+            noticeDays = billRules.noticeDays();
         }
 
         latestBillingRules.setEndTill(previousEndDate);
 
         newBillingRules.setStartFrom(startDate);
+        newBillingRules.setHostel(hostel);
+        newBillingRules.setBillingStartDate(billStartDate);
+        newBillingRules.setBillingDueDate(dueDate);
+        newBillingRules.setNoticePeriod(noticeDays);
 
         hostelConfigService.updateExistingBillRule(latestBillingRules);
 
