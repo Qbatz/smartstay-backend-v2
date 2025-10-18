@@ -35,6 +35,5 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
                 """, nativeQuery = true)
         List<Receipts> findByHostelId(@Param("hostelId") String hostelId);
 
-
-
+        boolean existsByTransactionReferenceId(String transactionReferenceId);
 }

@@ -158,6 +158,7 @@ public class TransactionService {
         transactionV1.setBankId(payment.bankId());
         transactionV1.setReferenceNumber(payment.referenceId());
         transactionV1.setUpdatedBy(authentication.getName());
+        transactionV1.setTransactionReferenceId(generateRandomNumber());
         transactionV1.setInvoiceId(invoiceId);
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setCreatedAt(new Date());
@@ -213,5 +214,13 @@ public class TransactionService {
 
     public List<Receipts> getAllReceiptsByHostelId(String hostelId) {
         return transactionRespository.findByHostelId(hostelId);
+    }
+
+    public String generateRandomNumber() {
+        String randomId = Utils.generateReference();
+        if (transactionRespository.existsByTransactionReferenceId(randomId)) {
+            return generateRandomNumber();
+        }
+        return randomId;
     }
 }
