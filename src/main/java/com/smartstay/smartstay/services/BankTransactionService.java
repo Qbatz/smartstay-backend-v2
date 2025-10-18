@@ -80,6 +80,10 @@ public class BankTransactionService {
         return bankRepository.findByBankIdAndHostelId(bankId,hostelId);
     }
 
+    public BankTransactionsV1 getLatestTransaction(String bankId,String hostelId) {
+        return bankRepository.findTopByBankIdAndHostelIdOrderByCreatedAtDesc(bankId,hostelId);
+    }
+
     public void saveTransaction(BankTransactionsV1 transaction) {
         bankRepository.save(transaction);
     }

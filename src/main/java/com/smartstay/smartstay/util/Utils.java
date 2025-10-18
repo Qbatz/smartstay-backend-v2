@@ -94,6 +94,15 @@ public class Utils {
     public static final String INVALID_BANK_ID = "Invalid bank id";
     public static final String AMOUNT_REQUIRED = "Amount required";
     public static final String NO_ACCOUNT_NO_FOUND = "No account number found";
+    public static final String NO_FROM_ACCOUNT_NO_FOUND = "No 'from account' found for this hostel.";
+    public static final String NO_TO_ACCOUNT_NO_FOUND = "No 'To account' found for this hostel.";
+    public static final String INVALID_ACCOUNT_TYPE = "Invalid account type";
+    public static final String INVALID_ACCOUNT_TYPE_FROM_ACC = "Invalid account type for From account";
+    public static final String INVALID_ACCOUNT_TYPE_FROM_TO = "Invalid account type for To account";
+    public static final String INVALID_TRANSACTION_TYPE_FROM_ACC = "This account does’t have Debit access";
+    public static final String INVALID_TRANSACTION_TYPE = "This account does’t have Debit and Credit access";
+    public static final String INSUFFICIENT_BALANCE = "Insufficient balance";
+    public static final String INVALID_TRANSACTION_TYPE_TO_ACC = "This account does’t have Credit access";
     public static final String TEMPLATE_NOT_AVAILABLE = "Template not available for this hostel";
     public static final String BILLING_RULE_NOT_AVAILABLE = "Billing Rule not found";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
@@ -118,6 +127,7 @@ public class Utils {
     public static final String SUB_CATEGORY_NAME_REQUIRED = "Sub category name required";
     public static final String SUB_CATEGORY_ID_REQUIRED = "Sub category id required";
     public static final String NO_BOOKING_INFORMATION_FOUND = "No booking information found";
+    public static final String YOU_CANNOT_TRANSFER = "You cannot transfer funds to the same UPI account.";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
