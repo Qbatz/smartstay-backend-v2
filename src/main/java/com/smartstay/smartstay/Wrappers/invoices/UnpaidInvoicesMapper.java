@@ -2,6 +2,7 @@ package com.smartstay.smartstay.Wrappers.invoices;
 
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
+import com.smartstay.smartstay.ennum.InvoiceItems;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
 
@@ -38,9 +39,12 @@ public class UnpaidInvoicesMapper implements Function<InvoicesV1, UnpaidInvoices
             invoicePendingAmount = invoicesV1.getTotalAmount();
         }
 
-        if (invoicesV1.getEbAmount() != null) {
-            ebAmount = invoicesV1.getEbAmount();
-        }
+        ebAmount = invoicesV1
+                .getInvoiceItems()
+                .stream()
+                .filter(item ->  item.getInvoiceItem().equalsIgnoreCase(InvoiceItems.EB.name()))
+                .mapToDouble(com.smartstay.smartstay.dao.InvoiceItems::getAmount)
+                .sum();
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
             invoiceType = "Rent";

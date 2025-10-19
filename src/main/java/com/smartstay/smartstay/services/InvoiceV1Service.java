@@ -5,6 +5,7 @@ import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
+import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
@@ -559,7 +560,7 @@ public class InvoiceV1Service {
         invoicesV1.setInvoiceType(InvoiceType.RENT.name());
         invoicesV1.setCustomerMailId(customers.getEmailId());
         invoicesV1.setCustomerMobile(customers.getMobile());
-        invoicesV1.setEbAmount(ebAmount);
+//        invoicesV1.setEbAmount(ebAmount);
         invoicesV1.setTotalAmount(invoiceAmount + ebAmount);
         invoicesV1.setGst(0.0);
         invoicesV1.setCgst(0.0);
@@ -573,6 +574,20 @@ public class InvoiceV1Service {
         invoicesV1.setInvoiceStartDate(invoiceStartDate);
         invoicesV1.setInvoiceDueDate(invoiceDueDate);
         invoicesV1.setInvoiceEndDate(invoiceEndDate);
+
+        List<InvoiceItems> listInvoicesItems = new ArrayList<>();
+        InvoiceItems invoiceItems = new InvoiceItems();
+        invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+        invoiceItems.setAmount(ebAmount);
+        listInvoicesItems.add(invoiceItems);
+
+        InvoiceItems invoiceItems1 = new InvoiceItems();
+        invoiceItems1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+        invoiceItems1.setAmount(invoiceAmount);
+        listInvoicesItems.add(invoiceItems1);
+
+        invoicesV1.setInvoiceItems(listInvoicesItems);
+
 
         invoicesV1Repository.save(invoicesV1);
 
@@ -780,22 +795,30 @@ public class InvoiceV1Service {
         paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
         balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
         subTotal = invoicesV1.getTotalAmount();
-        if (invoicesV1.getEbAmount() != null) {
-            subTotal = subTotal + invoicesV1.getEbAmount();
-        }
 
-        List<InvoiceItems> listInvoiceItems = new ArrayList<>();
+        double ebAmount = invoicesV1
+                .getInvoiceItems()
+                .stream()
+                .filter(item -> item.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name()))
+                .mapToDouble(InvoiceItems::getAmount)
+                .sum();
+
+        subTotal = subTotal + ebAmount;
+
+
+
+        List<com.smartstay.smartstay.responses.invoices.InvoiceItems> listInvoiceItems = new ArrayList<>();
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
-            InvoiceItems items1 = new InvoiceItems(invoicesV1.getInvoiceNumber(), "Rent", invoicesV1.getBasePrice());
+            com.smartstay.smartstay.responses.invoices.InvoiceItems items1 = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), "Rent", invoicesV1.getBasePrice());
             listInvoiceItems.add(items1);
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
-            InvoiceItems items1 = new InvoiceItems(invoicesV1.getInvoiceNumber(), "Advance", invoicesV1.getBasePrice());
+            com.smartstay.smartstay.responses.invoices.InvoiceItems items1 = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), "Advance", invoicesV1.getBasePrice());
             listInvoiceItems.add(items1);
         }
 
-        if (invoicesV1.getEbAmount() != null && invoicesV1.getEbAmount() != 0) {
-            InvoiceItems items2 = new InvoiceItems(invoicesV1.getInvoiceNumber(), "Electricity", invoicesV1.getEbAmount());
+        if (ebAmount != 0) {
+            com.smartstay.smartstay.responses.invoices.InvoiceItems items2 = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), "Electricity", ebAmount);
             listInvoiceItems.add(items2);
         }
         List<PaymentHistoryProjection> paymentHistoryList = transactionService.getPaymentHistoryByInvoiceId(invoiceId);

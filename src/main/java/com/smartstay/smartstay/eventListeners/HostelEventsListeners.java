@@ -54,6 +54,7 @@ public class HostelEventsListeners {
         billingRules.setBillingStartDate(1);
         billingRules.setBillingDueDate(10);
         billingRules.setNoticePeriod(30);
+        billingRules.setInitial(true);
         billingRules.setHostel(hostelV1);
         List<BillingRules> listBillings = new ArrayList<>();
         listBillings.add(billingRules);

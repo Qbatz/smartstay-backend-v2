@@ -591,8 +591,19 @@ public class HostelService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        BillingRules latestBillingRules = hostel.getBillingRulesList().get(hostel.getBillingRulesList().size() - 1);
-        BillingRules newBillingRules = new BillingRules();
+        BillingRules latestBillingRules = null;
+        if (hostel.getBillingRulesList().size() == 1) {
+            latestBillingRules =  hostel.getBillingRulesList().get(0);
+        }
+        else {
+            latestBillingRules = hostelConfigService.getLatestBillRuleByHostelIdAndStartDate(hostelId, new Date());
+        }
+
+        BillingRules newBillingRules = hostelConfigService.getNewBillRuleByHostelIdAndStartDate(hostelId, new Date());
+        if (newBillingRules == null) {
+            newBillingRules = new BillingRules();
+        }
+
 
         Date startDate = null;
         Date previousEndDate = null;

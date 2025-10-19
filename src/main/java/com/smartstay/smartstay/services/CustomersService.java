@@ -1268,4 +1268,8 @@ public class CustomersService {
 
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
     }
+
+    public ResponseEntity<?> generateFinalSettlement(String customerId) {
+        return null;
+    }
 }
