@@ -2,6 +2,7 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.TransactionV1;
+import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -34,6 +35,21 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
                 bankingv1 bank on bank.bank_id=transaction.bank_id WHERE transaction.hostel_id=:hostelId
                 """, nativeQuery = true)
         List<Receipts> findByHostelId(@Param("hostelId") String hostelId);
+
+
+        @Query(value = """
+    SELECT 
+        reference_number AS referenceNumber,
+        paid_amount AS amount,
+        DATE_FORMAT(paid_at, '%d/%m/%Y') AS paidDate
+    FROM 
+        transactionv1
+    WHERE 
+        invoice_id = :invoiceId
+    ORDER BY 
+        paid_at DESC
+""", nativeQuery = true)
+        List<PaymentHistoryProjection> getPaymentHistoryByInvoiceId(@Param("invoiceId") String invoiceId);
 
 
 
