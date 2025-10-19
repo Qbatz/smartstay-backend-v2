@@ -82,6 +82,7 @@ public class ElectricityService {
                 return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
             }
         }
+
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
         if (electricityConfig == null) {
             return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.UNPROCESSABLE_ENTITY);
@@ -107,7 +108,6 @@ public class ElectricityService {
             billEndDate = Utils.findLastDate(electricityConfig.getBillDate(), date);
 
         }
-
 
         if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
             if (!Utils.checkNullOrEmpty(readings.roomId())) {

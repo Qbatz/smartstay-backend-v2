@@ -47,42 +47,34 @@ public class HostelsController {
     public ResponseEntity<?> deletedHostelFromUser(@RequestBody RemoveUserFromHostel removeUserPayload) {
         return hostelService.deleteHostelFromUser(removeUserPayload);
     }
-
     @DeleteMapping("/{hostelId}")
     public ResponseEntity<?> deleteHostel(@PathVariable("hostelId") String hostelId) {
         return hostelService.deleteHostel(hostelId);
     }
-
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getHostelDetails(@PathVariable("hostelId") String hostelId) {
         return hostelService.getHostelDetails(hostelId);
     }
-
     @GetMapping("/free-beds/{hostelId}")
     public ResponseEntity<?> getFreeBeds(@PathVariable("hostelId") String hostelId) {
         return hostelService.findFreeBeds(hostelId);
     }
-
     @PutMapping("/electricity/{hostelId}")
     public ResponseEntity<?> updateEBUnitPrice(@PathVariable("hostelId") String hostelId, @Valid @RequestBody UpdateElectricityPrice electricityPrice) {
         return hostelService.updateEbPrice(hostelId, electricityPrice);
     }
-
     @GetMapping("/electricity/{hostelId}")
     public ResponseEntity<?> getEBSettings(@PathVariable("hostelId") String hostelId) {
         return hostelService.getEBSettings(hostelId);
     }
-
     @PutMapping("/electricity/config/{hostelId}")
     public ResponseEntity<?> updateElectricityConfiguration(@PathVariable("hostelId") String hostelId, UpdateEBConfigs ebConfigs) {
         return hostelService.updateEbConfig(hostelId, ebConfigs);
     }
-
     @GetMapping("/config/billing/{hostelId}")
     public ResponseEntity<?> viewBillingRules(@PathVariable("hostelId") String hostelId) {
         return hostelService.viewBillingRules(hostelId);
     }
-
     @PutMapping("/config/billing/{hostelId}")
     public ResponseEntity<?> updateBillingRules(@PathVariable("hostelId") String hostelId, @RequestBody @Valid BillRules billRules) {
         return hostelService.updateBillingRules(hostelId, billRules);

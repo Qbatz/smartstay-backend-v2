@@ -536,4 +536,11 @@ public class SmartstayApplication {
 //			});
 //		};
 //	}
+
+	@Bean
+	CommandLineRunner mapInvoicesItems(InvoicesV1Repository invoicesV1Repository) {
+		return args -> {
+
+		};
+	}
 }
