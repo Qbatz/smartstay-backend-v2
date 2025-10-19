@@ -91,4 +91,8 @@ public class CustomersController {
     public ResponseEntity<?> getFinalSettlementInfo(@PathVariable("customerId") String customerId) {
         return customersService.getInformationForFinalSettlement(customerId);
     }
+    @PostMapping("/settlement/{customerId}")
+    public ResponseEntity<?> generateFinalSettlement(@PathVariable("customerId") String customerId) {
+        return customersService.generateFinalSettlement(customerId);
+    }
  }

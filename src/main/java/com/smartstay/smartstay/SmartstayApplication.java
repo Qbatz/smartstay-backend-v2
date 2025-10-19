@@ -1,6 +1,7 @@
 package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.repositories.*;
@@ -534,6 +535,41 @@ public class SmartstayApplication {
 //					}
 //				}
 //			});
+//		};
+//	}
+
+//	@Bean
+//	CommandLineRunner mapInvoicesItems(InvoicesV1Repository invoicesV1Repository) {
+//		return args -> {
+//			List<InvoicesV1> listInvoices = invoicesV1Repository.findAll();
+//			List<InvoicesV1> newInvoicesItems = listInvoices
+//					.stream()
+//					.map(item -> {
+//						List<InvoiceItems> listInvoicesItem = new ArrayList<>();
+//						if (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
+//							if (item.getEbAmount() != null && item.getEbAmount() != 0) {
+//								InvoiceItems invItem = new InvoiceItems();
+//								invItem.setInvoice(item);
+//								invItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+//								invItem.setAmount(item.getEbAmount());
+//
+//								listInvoicesItem.add(invItem);
+//							}
+//							if (item.getBasePrice() != null && item.getBasePrice() != 0) {
+//								InvoiceItems invItem = new InvoiceItems();
+//								invItem.setInvoice(item);
+//								invItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+//								invItem.setAmount(item.getBasePrice());
+//								listInvoicesItem.add(invItem);
+//							}
+//							item.setInvoiceItems(listInvoicesItem);
+//						}
+//
+//						return item;
+//					})
+//					.toList();
+//
+//			invoicesV1Repository.saveAll(newInvoicesItems);
 //		};
 //	}
 }

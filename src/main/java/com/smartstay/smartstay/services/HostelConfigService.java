@@ -6,6 +6,7 @@ import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.Optional;
 
 @Service
@@ -31,5 +32,13 @@ public class HostelConfigService {
 
     public void updateExistingBillRule(BillingRules latestBillingRules) {
         billingRuleRepository.save(latestBillingRules);
+    }
+
+    public BillingRules getLatestBillRuleByHostelIdAndStartDate(String hostelId, Date date) {
+        return billingRuleRepository.findByHostelIdAndStartDate(hostelId, date);
+    }
+
+    public BillingRules getNewBillRuleByHostelIdAndStartDate(String hostelId, Date date) {
+        return billingRuleRepository.findByHostelIdAndDate(hostelId, date);
     }
 }
