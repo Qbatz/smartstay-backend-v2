@@ -34,6 +34,8 @@ public class HostelV1 {
     private String createdBy;
     private Date createdAt;
     private Date updatedAt;
+    private boolean isActive;
+    private boolean isDeleted;
 
     @OneToMany(mappedBy = "hostel", cascade = CascadeType.ALL)
     private List<Subscription> subscription;
