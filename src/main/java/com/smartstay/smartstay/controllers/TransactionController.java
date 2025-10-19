@@ -29,4 +29,9 @@ public class TransactionController {
     public ResponseEntity<?> recordPayment(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @Valid  @RequestBody AddPayment addPayment) {
         return transactionService.recordPayment(hostelId, invoiceId, addPayment);
     }
+
+    @GetMapping("/{hostelId}/{transactionId}")
+    public ResponseEntity<?> getReceiptDetails(@PathVariable("hostelId") String hostelId, @PathVariable("transactionId") String transactionId) {
+        return transactionService.getReceiptDetailsByTransactionId(hostelId, transactionId);
+    }
 }
