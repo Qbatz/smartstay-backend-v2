@@ -560,7 +560,7 @@ public class InvoiceV1Service {
         invoicesV1.setInvoiceType(InvoiceType.RENT.name());
         invoicesV1.setCustomerMailId(customers.getEmailId());
         invoicesV1.setCustomerMobile(customers.getMobile());
-        invoicesV1.setEbAmount(ebAmount);
+//        invoicesV1.setEbAmount(ebAmount);
         invoicesV1.setTotalAmount(invoiceAmount + ebAmount);
         invoicesV1.setGst(0.0);
         invoicesV1.setCgst(0.0);
@@ -583,7 +583,7 @@ public class InvoiceV1Service {
 
         InvoiceItems invoiceItems1 = new InvoiceItems();
         invoiceItems1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
-        invoiceItems1.setAmount(ebAmount);
+        invoiceItems1.setAmount(invoiceAmount);
         listInvoicesItems.add(invoiceItems1);
 
         invoicesV1.setInvoiceItems(listInvoicesItems);
@@ -795,9 +795,17 @@ public class InvoiceV1Service {
         paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
         balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
         subTotal = invoicesV1.getTotalAmount();
-        if (invoicesV1.getEbAmount() != null) {
-            subTotal = subTotal + invoicesV1.getEbAmount();
-        }
+
+        double ebAmount = invoicesV1
+                .getInvoiceItems()
+                .stream()
+                .filter(item -> item.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name()))
+                .mapToDouble(InvoiceItems::getAmount)
+                .sum();
+
+        subTotal = subTotal + ebAmount;
+
+
 
         List<com.smartstay.smartstay.responses.invoices.InvoiceItems> listInvoiceItems = new ArrayList<>();
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
@@ -809,8 +817,8 @@ public class InvoiceV1Service {
             listInvoiceItems.add(items1);
         }
 
-        if (invoicesV1.getEbAmount() != null && invoicesV1.getEbAmount() != 0) {
-            com.smartstay.smartstay.responses.invoices.InvoiceItems items2 = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), "Electricity", invoicesV1.getEbAmount());
+        if (ebAmount != 0) {
+            com.smartstay.smartstay.responses.invoices.InvoiceItems items2 = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), "Electricity", ebAmount);
             listInvoiceItems.add(items2);
         }
         List<PaymentHistoryProjection> paymentHistoryList = transactionService.getPaymentHistoryByInvoiceId(invoiceId);
