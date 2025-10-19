@@ -18,8 +18,11 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
         StringBuilder invoiceMode = new StringBuilder();
         StringBuilder bankName = new StringBuilder();
 
-        initials.append(receipts.getFirstName().toUpperCase().charAt(0));
-        fullName.append(receipts.getFirstName());
+        if (receipts.getFirstName() != null && !receipts.getFirstName().equalsIgnoreCase("")){
+            initials.append( receipts.getFirstName().toUpperCase().charAt(0));
+            fullName.append(receipts.getFirstName());
+        }
+
         String lastName = receipts.getLastName();
         if (receipts.getLastName() != null && !receipts.getLastName().equalsIgnoreCase("")) {
             initials.append(receipts.getLastName().toUpperCase().charAt(0));
@@ -27,7 +30,7 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
             fullName.append(receipts.getLastName());
         }
         else {
-            if (receipts.getFirstName().length() > 1) {
+            if (receipts.getFirstName() !=null && receipts.getFirstName().length() > 1) {
                 initials.append(receipts.getFirstName().toUpperCase().charAt(1));
             }
 
