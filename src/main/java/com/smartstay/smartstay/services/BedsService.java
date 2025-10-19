@@ -72,6 +72,10 @@ public class BedsService {
                 onNotice = bookingService.checkIsBedOccupied(item.getBedId());
             } else if (item.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
                 onNotice = true;
+            }else {
+                if (item.getFreeFrom() != null && Utils.compareWithTwoDates(item.getFreeFrom(), new Date()) > 0){
+                    onNotice = true;
+                }
             }
             return new BedsMapper(onNotice).apply(item);
         }).toList();
@@ -92,11 +96,7 @@ public class BedsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 //        Beds bed = bedsRepository.findByBedIdAndParentId(id,user.getParentId());
-        System.out.println("bed----->"+id+"   "+user.getParentId());
         List<com.smartstay.smartstay.dto.beds.Beds> listBeds = bedsRepository.getBedInfo(id, user.getParentId());
-
-        System.out.println("listBeds----->"+listBeds.size());
-        System.out.println("listBeds---rr-->"+listBeds.toString());
         if (listBeds != null && !listBeds.isEmpty()) {
             if (!userHostelService.checkHostelAccess(userId, listBeds.get(0).hostelId())) {
                 return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
