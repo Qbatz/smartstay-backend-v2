@@ -25,6 +25,7 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,10 @@ public class HostelService {
 
     @Autowired
     private SubscriptionService subscriptionService;
+
+    @Autowired
+    @Lazy
+    private CustomersService customersService;
 
     @Autowired
     private FloorsService floorsService;
@@ -124,6 +129,8 @@ public class HostelService {
         hostelV1.setPincode(payloads.pincode());
         hostelV1.setStreet(payloads.street());
         hostelV1.setState(payloads.state());
+        hostelV1.setActive(true);
+        hostelV1.setDeleted(false);
 
 
 
@@ -268,7 +275,7 @@ public class HostelService {
             });
             noOfFloors = floorsService.getFloorCounts(item.getHostelId());
             noOfRooms = roomsService.getRoomCount(item.getHostelId());
-            return new HostelsMapper(noOfFloors, noOfRooms, noOfBeds[0], noOfOccupiedBeds.get(), Integer.parseInt(String.valueOf(noOfAvailableBeds[0]))).apply(Objects.requireNonNull(hostelV1Repository.findById(item.getHostelId()).orElse(null)));
+            return new HostelsMapper(noOfFloors, noOfRooms, noOfBeds[0], noOfOccupiedBeds.get(), Integer.parseInt(String.valueOf(noOfAvailableBeds[0]))).apply(Objects.requireNonNull(hostelV1Repository.findByHostelIdAndIsDeletedFalse(item.getHostelId())));
         }).toList();
 
         return new ResponseEntity<>(listOfHostels, HttpStatus.OK);
@@ -301,14 +308,20 @@ public class HostelService {
         }
 
         HostelV1 hostelV1 = hostelV1Repository.findById(hostelId).orElse(null);
-        assert hostelV1 != null;
-        hostelV1Repository.delete(hostelV1);
+        if (hostelV1 != null) {
+            return new ResponseEntity<>("Deleted", HttpStatus.OK);
+        }
+
+        boolean customerExist = customersService.customerExist(hostelId);
+        if (customerExist) {
+            return new ResponseEntity<>("Cannot delete hostel. Customers are associated with this hostel.", HttpStatus.BAD_REQUEST);
+        }
+        hostelV1.setDeleted(true);
+        hostelV1.setUpdatedAt(new Date());
+        hostelV1Repository.save(hostelV1);
 
         userHostelService.deleteAllHostels(hostelId);
 
-        if (hostelV1 != null) {
-            return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
-        }
         return new ResponseEntity<>("No hostels found", HttpStatus.BAD_REQUEST);
     }
     public ResponseEntity<?> getHostelDetails(String hostelId) {
