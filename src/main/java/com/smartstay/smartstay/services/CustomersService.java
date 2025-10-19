@@ -15,6 +15,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.customer.*;
+import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.*;
@@ -949,6 +950,8 @@ public class CustomersService {
                     null);
         }
 
+        List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
+
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getFirstName(),
                 customers.getLastName(),
@@ -960,7 +963,8 @@ public class CustomersService {
                 customers.getProfilePic(),
                 address,
                 hostelInformation,
-                kycInfo);
+                kycInfo,
+                invoiceResponseList);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }

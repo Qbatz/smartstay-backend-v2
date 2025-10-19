@@ -71,4 +71,8 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     InvoicesV1 findByInvoiceNumberAndHostelId(String invoiceNumber, String hostelId);
 
+    List<InvoicesV1> findByCustomerId(String customerId);
+
+
+
 }

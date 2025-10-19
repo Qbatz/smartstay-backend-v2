@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
+import com.smartstay.smartstay.Wrappers.invoices.InvoiceMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
@@ -15,6 +16,7 @@ import com.smartstay.smartstay.ennum.BillConfigTypes;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
+import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.*;
@@ -853,6 +855,15 @@ public class InvoiceV1Service {
                 paymentHistoryList,
                 signatureInfo);
         return new ResponseEntity<>(details, HttpStatus.OK);
+
+    }
+
+    public List<InvoiceResponse> getInvoiceResponseList(String customerId){
+        List<InvoicesV1> invoices = invoicesV1Repository.findByCustomerId(customerId);
+
+        return invoices.stream()
+                .map(InvoiceMapper::toResponse)
+                .toList();
 
     }
 }
