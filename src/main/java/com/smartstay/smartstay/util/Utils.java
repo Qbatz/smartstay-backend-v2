@@ -14,6 +14,9 @@ import java.util.regex.Pattern;
 
 public class Utils {
 
+    private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final Random RANDOM = new Random();
     public static final String ENVIRONMENT_LOCAL = "LOCAL";
     public static final String ENVIRONMENT_DEV = "DEV";
     public static final String ENVIRONMENT_QA = "QA";
@@ -377,6 +380,29 @@ public class Utils {
 
     public static String formMessageWithDate(Date date, String message) {
         return message + " " + dateToString(date);
+    }
+
+    public static String generateReference() {
+        StringBuilder ref = new StringBuilder();
+
+        // 4 letters
+        for (int i = 0; i < 4; i++) {
+            ref.append(ALPHABETS.charAt(RANDOM.nextInt(ALPHABETS.length())));
+        }
+        ref.append("-");
+
+        // 4 digits
+        for (int i = 0; i < 4; i++) {
+            ref.append(RANDOM.nextInt(10));
+        }
+        ref.append("-");
+
+        // 4 alphanumeric
+        for (int i = 0; i < 4; i++) {
+            ref.append(ALPHANUMERIC.charAt(RANDOM.nextInt(ALPHANUMERIC.length())));
+        }
+
+        return ref.toString();
     }
 
 
