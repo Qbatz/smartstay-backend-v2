@@ -154,7 +154,27 @@ public class InvoiceV1Service {
             invoicesV1.setInvoiceEndDate(endDate);
             invoicesV1.setInvoiceGeneratedDate(java.sql.Date.valueOf(joiningDate1));
             invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+            invoicesV1.setCancelled(false);
             invoicesV1.setHostelId(hostelId);
+
+            List<InvoiceItems> listInvoiceItems = new ArrayList<>();
+
+            InvoiceItems invoiceItems = new InvoiceItems();
+            invoiceItems.setInvoice(invoicesV1);
+            if (type.equalsIgnoreCase(InvoiceType.RENT.name())) {
+                invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+            }
+            else if(type.equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.BOOKING.name());
+            }
+            else if(type.equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+                invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.ADVANCE.name());
+            }
+
+            invoiceItems.setAmount(amount);
+            listInvoiceItems.add(invoiceItems);
+
+            invoicesV1.setInvoiceItems(listInvoiceItems);
 
 
             invoicesV1Repository.save(invoicesV1);
@@ -234,16 +254,20 @@ public class InvoiceV1Service {
             invoicesV1.setCreatedAt(new Date());
             invoicesV1.setInvoiceGeneratedDate(new Date());
             invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+            invoicesV1.setCancelled(false);
             invoicesV1.setHostelId(hostelId);
+
+            InvoiceItems invoiceItems = new InvoiceItems();
+            invoiceItems.setAmount(amount);
+            invoiceItems.setInvoiceItem(InvoiceType.BOOKING.name());
+            invoiceItems.setInvoice(invoicesV1);
+            List<InvoiceItems> listInvoiceItems = new ArrayList<>();
+            listInvoiceItems.add(invoiceItems);
+
+            invoicesV1.setInvoiceItems(listInvoiceItems);
 
 
             InvoicesV1 invV1 = invoicesV1Repository.save(invoicesV1);
-            String status = null;
-            if (type.equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
-                status = "Active";
-            } else if (type.equalsIgnoreCase(InvoiceType.RENT.name())) {
-                status = "Active";
-            }
 
             return invV1.getInvoiceId();
         }
@@ -314,6 +338,7 @@ public class InvoiceV1Service {
             invoicesV1.setGstPercentile(gstPercentile);
             invoicesV1.setCreatedAt(new Date());
             invoicesV1.setInvoiceGeneratedDate(new Date());
+            invoicesV1.setCancelled(false);
             invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
             invoicesV1.setHostelId(hostelId);
 
@@ -492,11 +517,18 @@ public class InvoiceV1Service {
             day = hostelV1.getElectricityConfig().getBillDate();
         }
 
+        Date invoiceDate = Utils.stringToDate(manualInvoice.invoiceDate(), Utils.USER_INPUT_DATE_FORMAT);
+
         Date dateStartDate = null;
         Date dateEndDate = null;
         Calendar cal = Calendar.getInstance();
-        cal.setTime(Utils.stringToDate(manualInvoice.invoiceDate(), Utils.USER_INPUT_DATE_FORMAT));
+        cal.setTime(invoiceDate);
         cal.set(Calendar.DAY_OF_MONTH, day);
+
+        boolean isCurrentCycle = false;
+        if (Utils.compareWithTwoDates(invoiceDate, cal.getTime()) >= 0) {
+            isCurrentCycle = true;
+        }
 
         dateStartDate = cal.getTime();
         dateEndDate = Utils.findLastDate(day, cal.getTime());
@@ -574,6 +606,7 @@ public class InvoiceV1Service {
         invoicesV1.setInvoiceStartDate(invoiceStartDate);
         invoicesV1.setInvoiceDueDate(invoiceDueDate);
         invoicesV1.setInvoiceEndDate(invoiceEndDate);
+        invoicesV1.setCancelled(false);
 
         List<InvoiceItems> listInvoicesItems = new ArrayList<>();
         InvoiceItems invoiceItems = new InvoiceItems();
@@ -598,7 +631,7 @@ public class InvoiceV1Service {
     }
 
     public List<InvoicesV1> listAllUnpaidInvoices(String customerId, String hostelId) {
-        return invoicesV1Repository.findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCase(hostelId, customerId, PaymentStatus.PAID.name());
+        return invoicesV1Repository.findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCaseAndIsCancelledFalse(hostelId, customerId, PaymentStatus.PAID.name());
     }
 
     public InvoicesV1 getCurrentMonthInvoice(String customerId) {
@@ -852,5 +885,12 @@ public class InvoiceV1Service {
                 signatureInfo);
         return new ResponseEntity<>(details, HttpStatus.OK);
 
+    }
+
+    public void cancelActiveInvoice(List<InvoicesV1> unpaidUpdated) {
+        invoicesV1Repository.saveAll(unpaidUpdated);
+    }
+
+    public void createSettlementInvoice(String customerId, double totalAmountToBePaid) {
     }
 }

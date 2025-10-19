@@ -26,6 +26,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             (SELECT sum(trans.paid_amount) FROM transactionv1 trans where trans.invoice_id=invc.invoice_id) as paidAmount  
             from invoicesv1 invc inner join customers customers on customers.customer_id=invc.customer_id 
             left outer join advance advance on advance.customer_id=invc.customer_id where invc.hostel_id=:hostelId AND invc.invoice_type not in('BOOKING') 
+            and invc.is_cancelled=false
             order by invc.invoice_start_date desc
             """, nativeQuery = true)
     List<Invoices> findByHostelId(@Param("hostelId") String hostelId);
@@ -40,7 +41,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             inner join transactionv1 transaction on transaction.invoice_id=invc.invoice_id 
             inner join customers cus on cus.customer_id=invc.customer_id 
             inner join bankingv1 bank on bank.bank_id=transaction.bank_id 
-            where invc.hostel_id=:hostelId and invc.payment_status in ('PARTIAL_PAYMENT', 'PAID')
+            where invc.hostel_id=:hostelId and invc.payment_status in ('PARTIAL_PAYMENT', 'PAID') and invc.is_cancelled=false
             """, nativeQuery = true)
     List<Receipts> findReceipts(@Param("hostelId") String hostelId);
 
@@ -62,7 +63,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     InvoicesV1 findLatestRentInvoiceByCustomerId(@Param("customerId") String customerId);
 
     InvoicesV1 findByCustomerIdAndHostelIdAndInvoiceType(String customerId, String hostelId, String invoiceType);
-    List<InvoicesV1> findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCase(String hostelId, String customerId, String paymentStatus);
+    List<InvoicesV1> findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCaseAndIsCancelledFalse(String hostelId, String customerId, String paymentStatus);
 
     @Query(value = """
             SELECT * FROM invoicesv1 invc WHERE invc.invoice_start_date >= DATE(:startDate) and invc.invoice_end_date <=DATE(:endDate) and invc.customer_id=:customerId and invc.invoice_type='RENT';

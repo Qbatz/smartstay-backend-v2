@@ -36,6 +36,7 @@ public class InvoicesV1 {
     String othersDescription;
     //Mode will be manual and automatic
     String invoiceMode;
+    boolean isCancelled;
     String createdBy;
     String updatedBy;
     Date invoiceGeneratedDate;
