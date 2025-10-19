@@ -5,6 +5,7 @@ import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
@@ -222,5 +223,9 @@ public class TransactionService {
             return generateRandomNumber();
         }
         return randomId;
+    }
+
+    public List<PaymentHistoryProjection> getPaymentHistoryByInvoiceId(String invoiceId) {
+        return transactionRespository.getPaymentHistoryByInvoiceId(invoiceId);
     }
 }

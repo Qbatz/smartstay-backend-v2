@@ -4,6 +4,7 @@ import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
@@ -559,6 +560,7 @@ public class InvoiceV1Service {
         invoicesV1.setInvoiceType(InvoiceType.RENT.name());
         invoicesV1.setCustomerMailId(customers.getEmailId());
         invoicesV1.setCustomerMobile(customers.getMobile());
+        invoicesV1.setEbAmount(ebAmount);
         invoicesV1.setTotalAmount(invoiceAmount + ebAmount);
         invoicesV1.setGst(0.0);
         invoicesV1.setCgst(0.0);
@@ -811,6 +813,7 @@ public class InvoiceV1Service {
             com.smartstay.smartstay.responses.invoices.InvoiceItems items2 = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), "Electricity", invoicesV1.getEbAmount());
             listInvoiceItems.add(items2);
         }
+        List<PaymentHistoryProjection> paymentHistoryList = transactionService.getPaymentHistoryByInvoiceId(invoiceId);
 
 
 
@@ -837,6 +840,7 @@ public class InvoiceV1Service {
                         stayInfo,
                         invoiceInfo,
                 accountDetails,
+                paymentHistoryList,
                 signatureInfo);
         return new ResponseEntity<>(details, HttpStatus.OK);
 

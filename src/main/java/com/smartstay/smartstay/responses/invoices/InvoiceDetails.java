@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.responses.invoices;
 
+import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
+
 import java.util.List;
 
 public record InvoiceDetails(String invoiceNumber,
@@ -13,5 +15,6 @@ public record InvoiceDetails(String invoiceNumber,
                              StayInfo stayInfo,
                              InvoiceInfo invoiceInfo,
                              AccountDetails accountDetails,
+                             List<PaymentHistoryProjection> paymentHistory,
                              ConfigInfo configurations) {
 }
