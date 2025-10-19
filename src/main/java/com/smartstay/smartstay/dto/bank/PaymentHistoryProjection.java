@@ -6,4 +6,5 @@ public interface PaymentHistoryProjection {
     String getReferenceNumber();
     Double getAmount();
     String getPaidDate();
+    String getTransactionReferenceId();
 }

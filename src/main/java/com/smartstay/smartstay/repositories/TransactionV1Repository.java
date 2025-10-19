@@ -36,12 +36,15 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
                 """, nativeQuery = true)
         List<Receipts> findByHostelId(@Param("hostelId") String hostelId);
 
+        boolean existsByTransactionReferenceId(String transactionReferenceId);
 
-        @Query(value = """
+
+    @Query(value = """
     SELECT 
         reference_number AS referenceNumber,
         paid_amount AS amount,
-        DATE_FORMAT(paid_at, '%d/%m/%Y') AS paidDate
+        DATE_FORMAT(paid_at, '%d/%m/%Y') AS paidDate,
+        transaction_reference_id as transactionReferenceId
     FROM 
         transactionv1
     WHERE 
@@ -49,8 +52,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     ORDER BY 
         paid_at DESC
 """, nativeQuery = true)
-        List<PaymentHistoryProjection> getPaymentHistoryByInvoiceId(@Param("invoiceId") String invoiceId);
-
+    List<PaymentHistoryProjection> getPaymentHistoryByInvoiceId(@Param("invoiceId") String invoiceId);
 
 
 }
