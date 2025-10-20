@@ -825,6 +825,28 @@ public class InvoiceV1Service {
                     hostelV1.getHostelName());
         }
 
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+            List<String> invoicesList = invoicesV1.getCancelledInvoices();
+            List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
+            FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(
+                    invoicesV1.getInvoiceNumber(),
+                    invoicesV1.getInvoiceId(),
+                    Utils.dateToString(invoicesV1.getInvoiceStartDate()),
+                    Utils.dateToString(invoicesV1.getInvoiceDueDate()),
+                    hostelEmail,
+                    hostelPhone,
+                    "91",
+                    InvoiceType.SETTLEMENT.name(),
+                    customerInfo,
+                    stayInfo,
+                    accountDetails,
+                    signatureInfo,
+                    invoiceSummaries
+            );
+            return new ResponseEntity<>(finalSettlementResponse, HttpStatus.OK);
+
+        }
+
         Double subTotal = 0.0;
         Double paidAmount = 0.0;
         Double balanceAmount = 0.0;
