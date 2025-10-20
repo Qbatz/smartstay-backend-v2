@@ -41,4 +41,8 @@ public class HostelConfigService {
     public BillingRules getNewBillRuleByHostelIdAndStartDate(String hostelId, Date date) {
         return billingRuleRepository.findByHostelIdAndDate(hostelId, date);
     }
+
+    public BillingRules getCurrentMonthTemplate(String hostelId) {
+        return billingRuleRepository.findLatestBillingRule(hostelId, new Date());
+    }
 }

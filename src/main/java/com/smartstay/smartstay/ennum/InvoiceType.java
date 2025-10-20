@@ -4,5 +4,6 @@ public enum InvoiceType {
     BOOKING,
     ADVANCE,
     RENT,
-    OTHERS
+    OTHERS,
+    SETTLEMENT
 }
