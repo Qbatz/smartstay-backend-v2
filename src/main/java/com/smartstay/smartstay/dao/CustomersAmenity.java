@@ -14,20 +14,16 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CustomerAmenity {
+public class CustomersAmenity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    String amenityMapperId;
+    String id;
     String amenityId;
     String customerId;
-    boolean proRate;
-    boolean isActive;
     Date createdAt;
     Date updatedAt;
     String updatedBy;
-    Date assignedStartDate;
-    Date assignedEndDate;
-    Date proRatestartDate;
-    Date proRateendDate;
+    Date startDate;
+    Date endDate;
 }
