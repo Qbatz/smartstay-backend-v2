@@ -2,7 +2,8 @@ package com.smartstay.smartstay.controllers;
 
 
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
-import com.smartstay.smartstay.payloads.amenity.UpdateStatus;
+import com.smartstay.smartstay.payloads.amenity.AssignRequest;
+import com.smartstay.smartstay.payloads.amenity.UnAssignRequest;
 import com.smartstay.smartstay.services.AmenitiesService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -44,8 +45,13 @@ public class AmentityController {
     }
 
     @PutMapping("/assign-amenity/{amenityId}/{hostelId}")
-    public ResponseEntity<?> updateStatus(@RequestBody UpdateStatus request, @PathVariable("amenityId") String amenityId, @PathVariable("hostelId") String hostelId) {
-        return amenitiesService.updateStatus(request, amenityId, hostelId);
+    public ResponseEntity<?> assign(@RequestBody AssignRequest request, @PathVariable("amenityId") String amenityId, @PathVariable("hostelId") String hostelId) {
+        return amenitiesService.assign(request, amenityId, hostelId);
+    }
+
+    @PutMapping("/unAssign-amenity/{amenityId}/{hostelId}")
+    public ResponseEntity<?> unAssign(@RequestBody UnAssignRequest request, @PathVariable("amenityId") String amenityId, @PathVariable("hostelId") String hostelId) {
+        return amenitiesService.unAssign(request, amenityId, hostelId);
     }
 
     @DeleteMapping("/{amenityId}/{hostelId}")

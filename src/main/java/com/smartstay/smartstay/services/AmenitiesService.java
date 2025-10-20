@@ -3,11 +3,12 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.amenity.AmenityMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.AmenitiesV1;
-import com.smartstay.smartstay.dao.CustomerAmenity;
+import com.smartstay.smartstay.dao.CustomersAmenity;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
-import com.smartstay.smartstay.payloads.amenity.UpdateStatus;
+import com.smartstay.smartstay.payloads.amenity.AssignRequest;
+import com.smartstay.smartstay.payloads.amenity.UnAssignRequest;
 import com.smartstay.smartstay.repositories.AmentityRepository;
 import com.smartstay.smartstay.repositories.CustomerAmenityRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
@@ -123,6 +124,7 @@ public class AmenitiesService {
         amenitiesV1.setCreatedAt(new java.util.Date());
         amenitiesV1.setIsActive(true);
         amenitiesV1.setIsDeleted(false);
+        amenitiesV1.setIsProRate(false);
         amenitiesV1.setHostelId(hostelId);
         amenitiesV1.setAmenityName(request.amenityName());
         amenitiesV1.setAmenityAmount(request.amount());
@@ -169,16 +171,14 @@ public class AmenitiesService {
         amenitiesV1.setUpdatedAt(new java.util.Date());
         if (request.proRate() != null) {
             amenitiesV1.setIsProRate(request.proRate());
-            List<CustomerAmenity> customerAmenities = customerAmenityRepository.findLatestByAmenityId(amenityId);
+            List<CustomersAmenity> customerAmenities = customerAmenityRepository.findLatestByAmenityId(amenityId);
             if (request.proRate()){
-                for (CustomerAmenity customerAmenity : customerAmenities) {
-                    customerAmenity.setProRatestartDate(new Date());
+                for (CustomersAmenity customerAmenity : customerAmenities) {
                     customerAmenity.setUpdatedAt(new Date());
                     customerAmenityRepository.save(customerAmenity);
                 }
             } else {
-                for (CustomerAmenity customerAmenity : customerAmenities) {
-                    customerAmenity.setProRateendDate(new Date());
+                for (CustomersAmenity customerAmenity : customerAmenities) {
                     customerAmenity.setUpdatedAt(new Date());
                     customerAmenityRepository.save(customerAmenity);
                 }
@@ -223,7 +223,7 @@ public class AmenitiesService {
 
     }
 
-    public ResponseEntity<?> updateStatus(UpdateStatus request, String amenityId, String hostelId) {
+    public ResponseEntity<?> assign(AssignRequest request, String amenityId, String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
@@ -254,26 +254,59 @@ public class AmenitiesService {
 
         if (request.assignedCustomers() != null) {
             for (String customerId : request.assignedCustomers()) {
-                CustomerAmenity customerAmenity = new CustomerAmenity();
+                CustomersAmenity customerAmenity = new CustomersAmenity();
                 customerAmenity.setAmenityId(amenityId);
                 customerAmenity.setCustomerId(customerId);
-                customerAmenity.setActive(true);
                 customerAmenity.setCreatedAt(new Date());
-                customerAmenity.setAssignedEndDate(null);
-                customerAmenity.setAssignedStartDate(new Date());
+                customerAmenity.setEndDate(null);
+                customerAmenity.setStartDate(new Date());
                 customerAmenity.setUpdatedBy(user.getUserId());
                 customerAmenityRepository.save(customerAmenity);
             }
         }
 
 
+        return new ResponseEntity<>(
+                Utils.UPDATED,
+                HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<?> unAssign(UnAssignRequest request, String amenityId, String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+        if (user == null) {
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
+        }
+
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
+        if (rolesV1 == null) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
+        if (!hostelV1) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        AmenitiesV1 amenitiesV1 = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId, hostelId, user.getParentId());
+        if (amenitiesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.NOT_FOUND);
+        }
+
         if (request.unassignedCustomers() != null) {
             for (String customerId : request.unassignedCustomers()) {
-                CustomerAmenity exists = customerAmenityRepository.findTopByAmenityIdAndCustomerIdAndAssignedEndDateIsNullOrderByCreatedAtDesc(amenityId, customerId);
+                CustomersAmenity exists = customerAmenityRepository.findTopByAmenityIdAndCustomerIdAndEndDateIsNullOrderByCreatedAtDesc(amenityId, customerId);
                 if (exists != null) {
-                    exists.setAssignedEndDate(new Date());
+                    exists.setEndDate(new Date());
                     exists.setUpdatedAt(new Date());
-                    exists.setActive(false);
                     customerAmenityRepository.save(exists);
                 }
             }
