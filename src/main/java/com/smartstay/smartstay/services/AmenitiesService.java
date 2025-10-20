@@ -55,7 +55,7 @@ public class AmenitiesService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
+        boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
         if (!hostelV1) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
@@ -82,7 +82,7 @@ public class AmenitiesService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
+        boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
         if (!hostelV1) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
@@ -268,11 +268,6 @@ public class AmenitiesService {
         Users user = usersService.findUserByUserId(userId);
         if (user == null) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
-        }
-
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_WRITE)) {
