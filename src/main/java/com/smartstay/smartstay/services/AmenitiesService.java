@@ -54,6 +54,10 @@ public class AmenitiesService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
+        if (!hostelV1) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
         List<AmenityInfoProjection> amenitiesV1List = amentityRepository.findAmenityInfoByHostelId(hostelId, user.getParentId());
         if (amenitiesV1List != null) {
             List<AmenityResponse> amenityResponses = amenitiesV1List.stream()
@@ -78,6 +82,10 @@ public class AmenitiesService {
         }
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
+        if (!hostelV1) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
         AmenityInfoProjection amenitiesV1 = amentityRepository.findAmenityInfoByHostelIdByAmenityId(hostelId, user.getParentId(), amenitiesId);
         if (amenitiesV1 != null) {
@@ -143,12 +151,21 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
+        if (!hostelV1) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
         AmenitiesV1 amenitiesV1 = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId, hostelId, user.getParentId());
         if (amenitiesV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.NOT_FOUND);
         }
-        amenitiesV1.setAmenityName(request.amenityName());
-        amenitiesV1.setAmenityAmount(request.amount());
+        if (request.amenityName()!=null){
+            amenitiesV1.setAmenityName(request.amenityName());
+        }
+        if (request.amount()!=null){
+            amenitiesV1.setAmenityAmount(request.amount());
+        }
         amenitiesV1.setUpdatedAt(new java.util.Date());
         if (request.proRate() != null) {
             amenitiesV1.setIsProRate(request.proRate());
@@ -190,6 +207,11 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.AMENITY_ALREADY_DELETED, HttpStatus.BAD_REQUEST);
         }
 
+        boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
+        if (!hostelV1) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
         AmenitiesV1 existingAmenity = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId, hostelId, users.getParentId());
         if (existingAmenity != null) {
             existingAmenity.setIsDeleted(true);
@@ -218,6 +240,11 @@ public class AmenitiesService {
 
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
+        if (!hostelV1) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
         AmenitiesV1 amenitiesV1 = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId, hostelId, user.getParentId());
