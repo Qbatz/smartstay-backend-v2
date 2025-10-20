@@ -131,6 +131,7 @@ public class Utils {
     public static final String SUB_CATEGORY_ID_REQUIRED = "Sub category id required";
     public static final String NO_BOOKING_INFORMATION_FOUND = "No booking information found";
     public static final String YOU_CANNOT_TRANSFER = "You cannot transfer funds to the same UPI account.";
+    public static final String FINAL_SETTLEMENT_GENERATED = "Final settlement is already generated";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
@@ -304,7 +305,7 @@ public class Utils {
         LocalDate start = date1.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate end   = date2.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
-        return ChronoUnit.DAYS.between(start, end);
+        return ChronoUnit.DAYS.between(start, end) + 1;
     }
 
     public static long findNoOfDaysLeftInCurrentMonth(Date date) {

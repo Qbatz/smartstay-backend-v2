@@ -4,5 +4,7 @@ public enum InvoiceItems {
     EB,
     RENT,
     MAINTENANCE,
+    BOOKING,
+    ADVANCE
 
 }

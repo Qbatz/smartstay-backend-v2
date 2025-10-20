@@ -201,8 +201,6 @@ public class HostelService {
     public void updateHostelFromEvents(HostelV1 hostelV1) {
         hostelV1Repository.save(hostelV1);
     }
-
-
     public String hostelIdGenerator() {
         UUID uuid = UUID.randomUUID();
         String uuidString = uuid.toString();
@@ -384,6 +382,21 @@ public class HostelService {
         calendar.set(Calendar.DAY_OF_MONTH, 1);
 
         Date findEndDate = Utils.findLastDate(1, calendar.getTime());
+        return new BillingDates(calendar.getTime(), findEndDate);
+    }
+
+    public BillingDates getCurrentBillStartAndEndDates(String hostelId) {
+        BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
+        int billStartDate = 1;
+        if (billingRules != null) {
+            billStartDate = billingRules.getBillingStartDate();
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
+
+        Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
+
         return new BillingDates(calendar.getTime(), findEndDate);
     }
 

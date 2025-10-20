@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("v2/customers")
 @SecurityScheme(
@@ -92,7 +94,7 @@ public class CustomersController {
         return customersService.getInformationForFinalSettlement(customerId);
     }
     @PostMapping("/settlement/{customerId}")
-    public ResponseEntity<?> generateFinalSettlement(@PathVariable("customerId") String customerId) {
-        return customersService.generateFinalSettlement(customerId);
+    public ResponseEntity<?> generateFinalSettlement(@PathVariable("customerId") String customerId, @RequestBody List<Settlement> deductions) {
+        return customersService.generateFinalSettlement(customerId, deductions);
     }
  }
