@@ -8,6 +8,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.customer.CustomerData;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.ennum.*;
@@ -74,6 +75,8 @@ public class CustomersService {
 
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private CustomersBedHistoryService bedHistory;
 
     public ResponseEntity<?> createCustomer(MultipartFile file, AddCustomer payloads) {
 
@@ -235,6 +238,9 @@ public class CustomersService {
             }
             else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
                 currentStatus = "Cancelled";
+            }
+            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+                currentStatus = "Settlement Generated";
             }
 
             if (!filterOption.containsKey(currentStatus)) {
@@ -1480,5 +1486,9 @@ public class CustomersService {
 
     public boolean customerExist(String hostelId) {
         return customersRepository.existsByHostelIdAndCurrentStatusIn(hostelId, List.of(CustomerStatus.NOTICE.name(),CustomerStatus.CHECK_IN.name(),CustomerStatus.BOOKED.name()));
+    }
+
+    public List<CustomerBedsList> getCustomersFromBedHistory(String hostelId, Date billStartDate, Date billEndDate) {
+        return bedHistory.getAllCustomerFromBedsHistory(hostelId, billStartDate, billEndDate);
     }
 }

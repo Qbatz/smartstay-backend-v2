@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.repositories;
 
+import com.smartstay.smartstay.dto.electricity.CurrentReadings;
 import com.smartstay.smartstay.dto.electricity.ElectricityReadingForRoom;
 import com.smartstay.smartstay.dto.electricity.ElectricityReadings;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -55,6 +56,11 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
             SELECT er.id, er.consumption, er.current_reading as currentReading, er.current_unit_price as unitPrice, er.entry_date as entryDate, er.hostel_id as hostelId, er.room_id as roomId, er.bill_start_date as startDate FROM electricity_readings er WHERE er.room_id=:roomId
             """, nativeQuery = true)
     List<ElectricityReadingForRoom> getRoomReading(@Param("roomId") Integer roomId);
+
+    @Query(value = """
+            SELECT er.entry_date as entryDate, (SELECT sum(current_reading) from electricity_readings reading where reading.entry_date=er.entry_date) as currentReading FROM electricity_readings er where er.hostel_id=:hostelId ORDER BY er.entry_date DESC LIMIT 1;
+            """, nativeQuery = true)
+    CurrentReadings getCurrentReadings(@Param("hostelId") String hostelId);
 
 
 }

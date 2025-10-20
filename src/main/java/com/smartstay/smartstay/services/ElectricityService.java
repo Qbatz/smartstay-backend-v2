@@ -3,11 +3,9 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.Electricity.*;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.ElectricityReadings;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
-import com.smartstay.smartstay.dto.electricity.ElectricityCustomersList;
-import com.smartstay.smartstay.dto.electricity.ElectricityHistoryBySingleCustomer;
-import com.smartstay.smartstay.dto.electricity.ElectricityReadingForRoom;
-import com.smartstay.smartstay.dto.electricity.ElectricityReadings;
+import com.smartstay.smartstay.dto.electricity.*;
 import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
@@ -16,6 +14,7 @@ import com.smartstay.smartstay.events.AddEbEvents;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
 import com.smartstay.smartstay.repositories.ElectricityReadingRepository;
 import com.smartstay.smartstay.responses.electricity.*;
+import com.smartstay.smartstay.responses.electricity.RoomElectricityCustomersList;
 import com.smartstay.smartstay.responses.rooms.RoomInfoForEB;
 import com.smartstay.smartstay.rooms.EBReadingRoomsInfo;
 import com.smartstay.smartstay.util.Utils;
@@ -93,7 +92,7 @@ public class ElectricityService {
         if (date == null) {
             date = new Date();
         }
-        com.smartstay.smartstay.dao.ElectricityReadings electricityReadings = findLastEntryByRoomId(readings.roomId(), hostelId);
+
 
         Date billStartDate = new Date();
         Date billEndDate = new Date();
@@ -114,55 +113,302 @@ public class ElectricityService {
                 return new ResponseEntity<>(Utils.INVALID_ROOM_ID, HttpStatus.BAD_REQUEST);
             }
 
+            com.smartstay.smartstay.dao.ElectricityReadings electricityReadings = findLastEntryByRoomId(readings.roomId(), hostelId);
+
+            if (electricityReadings != null) {
+                if (Utils.compareWithTwoDates(Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), electricityReadings.getEntryDate()) <=0) {
+                    return new ResponseEntity<>(Utils.ALREADY_READING_TAKEN_THIS_DATE, HttpStatus.BAD_REQUEST);
+                }
+            }
+
             if (electricityReadings == null) {
                 previousReading = 0.0;
             }
             else {
                 previousReading = electricityReadings.getCurrentReading();
             }
+
+            if (readings.reading() < previousReading) {
+                return new ResponseEntity<>(Utils.PREVIOUD_CURRENT_READING_NOT_MATCHING, HttpStatus.BAD_REQUEST);
+            }
+
+            com.smartstay.smartstay.dao.ElectricityReadings newReadings = new com.smartstay.smartstay.dao.ElectricityReadings();
+            newReadings.setPreviousReading(previousReading);
+            newReadings.setCurrentReading(readings.reading());
+            newReadings.setHostelId(hostelId);
+            newReadings.setRoomId(readings.roomId());
+            newReadings.setCurrentUnitPrice(electricityConfig.getCharge());
+            newReadings.setEntryDate(date);
+            newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
+            newReadings.setFloorId(readings.floorId());
+            newReadings.setConsumption(readings.reading() - previousReading);
+            newReadings.setMissedEntry(false);
+            newReadings.setCreatedAt(new Date());
+            newReadings.setUpdatedAt(new Date());
+            newReadings.setCreatedBy(users.getUserId());
+            newReadings.setUpdatedBy(users.getUserId());
+            newReadings.setBillStartDate(billStartDate);
+            newReadings.setBillEndDate(billEndDate);
+
+            com.smartstay.smartstay.dao.ElectricityReadings newReading = electricityReadingRepository.save(newReadings);
+            eventPublisher.publishEvent(new AddEbEvents(this, hostelId, readings.roomId(), readings.reading(), electricityConfig.getCharge(), date, users.getUserId(), electricityReadings, newReading.getId()));
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
         else {
-            if (electricityReadings == null) {
-                previousReading = 0.0;
-            }
-            else {
-                previousReading = electricityReadings.getCurrentReading();
+            return addMeterReadingForHostelBased(hostelId, readings, electricityConfig);
+        }
+
+
+    }
+
+    public ResponseEntity<?> addMeterReadingForHostelBased(String hostelId, AddReading readings, ElectricityConfig electricityConfig) {
+
+        Date date = null;
+        if (readings.readingDate() != null) {
+            date = Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (Utils.compareWithTwoDates(new Date(), date) < 0) {
+                return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
             }
         }
 
-        if (electricityReadings != null) {
-            if (Utils.compareWithTwoDates(Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), electricityReadings.getEntryDate()) <=0) {
+        Double previousReading = 0.0;
+        if (date == null) {
+            date = new Date();
+        }
+
+
+        Date billStartDate = new Date();
+        Date billEndDate = new Date();
+
+        boolean isProRate = true;
+        double totalBillAmount = 0.0;
+
+        if (electricityConfig != null && electricityConfig.getBillDate() != null) {
+            Calendar cal = Calendar.getInstance();
+
+            cal.setTime(date);
+            cal.set(Calendar.DAY_OF_MONTH, electricityConfig.getBillDate());
+
+            billStartDate = cal.getTime();
+            billEndDate = Utils.findLastDate(electricityConfig.getBillDate(), date);
+            isProRate = electricityConfig.isProRate();
+        }
+
+//        com.smartstay.smartstay.dao.ElectricityReadings electricityReadings = findLatestEntryByHostelId(hostelId);
+        CurrentReadings currentReadings = electricityReadingRepository.getCurrentReadings(hostelId);
+        if (currentReadings != null) {
+            if (Utils.compareWithTwoDates(Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), currentReadings.getEntryDate()) <=0) {
                 return new ResponseEntity<>(Utils.ALREADY_READING_TAKEN_THIS_DATE, HttpStatus.BAD_REQUEST);
             }
         }
 
+        if (currentReadings == null) {
+            previousReading = 0.0;
+        }
+        else {
+            previousReading = currentReadings.getCurrentReadings();
+        }
 
         if (readings.reading() < previousReading) {
             return new ResponseEntity<>(Utils.PREVIOUD_CURRENT_READING_NOT_MATCHING, HttpStatus.BAD_REQUEST);
         }
 
-        com.smartstay.smartstay.dao.ElectricityReadings newReadings = new com.smartstay.smartstay.dao.ElectricityReadings();
-        newReadings.setPreviousReading(previousReading);
-        newReadings.setCurrentReading(readings.reading());
-        newReadings.setHostelId(hostelId);
-        newReadings.setRoomId(readings.roomId());
-        newReadings.setCurrentUnitPrice(electricityConfig.getCharge());
-        newReadings.setEntryDate(date);
-        newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
-        newReadings.setFloorId(readings.floorId());
-        newReadings.setConsumption(readings.reading() - previousReading);
-        newReadings.setMissedEntry(false);
-        newReadings.setCreatedAt(new Date());
-        newReadings.setUpdatedAt(new Date());
-        newReadings.setCreatedBy(users.getUserId());
-        newReadings.setUpdatedBy(users.getUserId());
-        newReadings.setBillStartDate(billStartDate);
-        newReadings.setBillEndDate(billEndDate);
+        List<CustomerBedsList> listBeds =  customerService.getCustomersFromBedHistory(hostelId, billStartDate, billEndDate);
+        double currentConsumption = previousReading - readings.reading();
 
-        com.smartstay.smartstay.dao.ElectricityReadings newReading = electricityReadingRepository.save(newReadings);
-        eventPublisher.publishEvent(new AddEbEvents(this, hostelId, readings.roomId(), readings.reading(), electricityConfig.getCharge(), date, users.getUserId(), electricityReadings, newReading.getId()));
+        if (!isProRate) {
+            double unitPerPerson = currentConsumption/listBeds.size();
+
+            HashMap<Integer, Integer> personCountPerRoom = new HashMap<>();
+            listBeds.forEach(item -> {
+                if (personCountPerRoom.containsKey(item.roomId())) {
+                    personCountPerRoom.put(item.roomId(), personCountPerRoom.get(item.roomId()) + 1);
+                }
+                else {
+                    personCountPerRoom.put(item.roomId(), 1);
+                }
+            });
+
+            List<ElectricityReadings> listNewElectricityReading = new ArrayList<>();
+            for (Integer key: personCountPerRoom.keySet()) {
+                com.smartstay.smartstay.dao.ElectricityReadings newReadings = new com.smartstay.smartstay.dao.ElectricityReadings();
+                newReadings.setPreviousReading(previousReading);
+                newReadings.setCurrentReading(readings.reading());
+                newReadings.setHostelId(hostelId);
+                newReadings.setRoomId(key);
+                newReadings.setCurrentUnitPrice(electricityConfig.getCharge());
+                newReadings.setEntryDate(date);
+                newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
+                newReadings.setFloorId(readings.floorId());
+                newReadings.setConsumption((unitPerPerson * personCountPerRoom.get(key)) - previousReading);
+                newReadings.setMissedEntry(false);
+                newReadings.setCreatedAt(new Date());
+                newReadings.setUpdatedAt(new Date());
+                newReadings.setCreatedBy(authentication.getName());
+                newReadings.setUpdatedBy(authentication.getName());
+                newReadings.setBillStartDate(billStartDate);
+                newReadings.setBillEndDate(billEndDate);
+
+                listNewElectricityReading.add(newReadings);
+
+                com.smartstay.smartstay.dao.ElectricityReadings newReadingsAfterAdding = electricityReadingRepository.save(newReadings);
+
+//                listBeds
+//                        .stream()
+//                        .map(item -> {
+//
+//                        })
+
+            }
+
+
+
+            listBeds.forEach(item -> {
+
+            });
+
+        }
+        else {
+            Date readingDate = null;
+            Date startDate = null;
+
+            if (readings.readingDate() != null) {
+                readingDate = Utils.stringToDate(readings.readingDate(), Utils.USER_INPUT_DATE_FORMAT);
+            }
+            else {
+                readingDate = new Date();
+            }
+            if (currentReadings != null) {
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(currentReadings.getEntryDate());
+                cal.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH) + 1);
+
+                startDate = cal.getTime();
+            }
+            else {
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(readingDate);
+                cal.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH));
+                cal.set(Calendar.MONTH, cal.get(Calendar.MONTH)-1);
+
+                startDate = cal.getTime();
+            }
+            Date finalStartDate = startDate;
+            Date finalReadingDate = readingDate;
+            int totalDays = listBeds.stream()
+                    .mapToInt(item -> {
+                        assert currentReadings != null;
+                        if (Utils.compareWithTwoDates(item.startDate(), finalStartDate) <= 0) {
+                            if (item.endDate() == null) {
+                                return Math.toIntExact(Utils.findNumberOfDays(finalStartDate, finalReadingDate));
+                            }
+                            else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) <= 0) {
+                                return Math.toIntExact(Utils.findNumberOfDays(finalStartDate, item.endDate()));
+                            }
+                            else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) > 0) {
+                                return Math.toIntExact(Utils.findNumberOfDays(finalStartDate, finalReadingDate));
+                            }
+                            return Math.toIntExact(Utils.findNumberOfDays(finalStartDate, finalReadingDate));
+                        }
+                        else if (Utils.compareWithTwoDates(item.startDate(), finalStartDate) > 0) {
+                            if (item.endDate() == null) {
+                                return Math.toIntExact(Utils.findNumberOfDays(item.startDate(), finalReadingDate));
+                            }
+                            else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) <= 0) {
+                                return Math.toIntExact(Utils.findNumberOfDays(item.startDate(), item.endDate()));
+                            }
+                            else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) > 0) {
+                                return Math.toIntExact(Utils.findNumberOfDays(item.startDate(), finalReadingDate));
+                            }
+                            return Math.toIntExact(Utils.findNumberOfDays(item.startDate(), finalReadingDate));
+                        }
+                        return 0;
+                    })
+                    .sum();
+
+            double consumption = 0.0;
+            if (currentReadings == null) {
+                consumption = readings.reading();
+            }
+            else {
+                consumption = currentReadings.getCurrentReadings() - readings.reading();
+            }
+
+            double unitsPerDay = consumption / totalDays;
+            List<CustomerIdRoomIdUnits> listCustomerIdRoomId = new ArrayList<>();
+            listBeds.forEach(item -> {
+                int noOfDays = 1;
+                if (Utils.compareWithTwoDates(item.startDate(), finalStartDate) <= 0) {
+                    if (item.endDate() == null) {
+                        noOfDays = Math.toIntExact(Utils.findNumberOfDays(finalStartDate, finalReadingDate));
+                    }
+                    else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) <= 0) {
+                        noOfDays = Math.toIntExact(Utils.findNumberOfDays(finalStartDate, item.endDate()));
+                    }
+                    else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) > 0) {
+                        noOfDays = Math.toIntExact(Utils.findNumberOfDays(finalStartDate, finalReadingDate));
+                    }
+
+                }
+                else if (Utils.compareWithTwoDates(item.startDate(), finalStartDate) > 0) {
+                    if (item.endDate() == null) {
+                        noOfDays = Math.toIntExact(Utils.findNumberOfDays(item.startDate(), finalReadingDate));
+                    }
+                    else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) <= 0) {
+                        noOfDays = Math.toIntExact(Utils.findNumberOfDays(item.startDate(), item.endDate()));
+                    }
+                    else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) > 0) {
+                        noOfDays = Math.toIntExact(Utils.findNumberOfDays(item.startDate(), finalReadingDate));
+                    }
+                }
+
+                CustomerIdRoomIdUnits customerIdRoomIdUnits = new CustomerIdRoomIdUnits(item.customerId(),
+                        item.roomId(),
+                        noOfDays * unitsPerDay);
+                listCustomerIdRoomId.add(customerIdRoomIdUnits);
+
+            });
+
+            List<ElectricityReadings> listNewElectricityReading = new ArrayList<>();
+            HashMap<Integer, Double> totalUnits= new HashMap<>();
+            listCustomerIdRoomId.forEach(item -> {
+                if (totalUnits.containsKey(item.roomId())) {
+                    totalUnits.put(item.roomId(), totalUnits.get(item.roomId()) + item.units());
+                }
+                else {
+                    totalUnits.put(item.roomId(), item.units());
+                }
+            });
+
+
+            for (Integer key : totalUnits.keySet()) {
+                com.smartstay.smartstay.dao.ElectricityReadings newReadings = new com.smartstay.smartstay.dao.ElectricityReadings();
+                newReadings.setPreviousReading(previousReading);
+                newReadings.setCurrentReading(readings.reading());
+                newReadings.setHostelId(hostelId);
+                newReadings.setRoomId(key);
+                newReadings.setCurrentUnitPrice(electricityConfig.getCharge());
+                newReadings.setEntryDate(date);
+                newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
+                newReadings.setFloorId(readings.floorId());
+                newReadings.setConsumption(totalUnits.get(key) - previousReading);
+                newReadings.setMissedEntry(false);
+                newReadings.setCreatedAt(new Date());
+                newReadings.setUpdatedAt(new Date());
+                newReadings.setCreatedBy(authentication.getName());
+                newReadings.setUpdatedBy(authentication.getName());
+                newReadings.setBillStartDate(billStartDate);
+                newReadings.setBillEndDate(billEndDate);
+
+                listNewElectricityReading.add(newReadings);
+            }
+
+
+
+        }
+
+
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
-
     }
 
     public com.smartstay.smartstay.dao.ElectricityReadings findLastEntryByRoomId(Integer roomId, String hostelId) {
@@ -207,7 +453,7 @@ public class ElectricityService {
                 startDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + electricityConfig.getBillDate();
                 endDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.DAY_OF_MONTH);
             }
-            List<ElectricityReadings> listElectricity = electricityReadingRepository.getElectricity(hostelId, startDate, endDate);
+            List<com.smartstay.smartstay.dto.electricity.ElectricityReadings> listElectricity = electricityReadingRepository.getElectricity(hostelId, startDate, endDate);
             List<Integer> listRoomsInMeterReadings = new ArrayList<>();
 
 
