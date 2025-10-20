@@ -1004,8 +1004,8 @@ public class CustomersService {
             c.setTime(joiningDate);
 
 
-            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(cal.getTime(), lastDate) + 1;
-            long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), lastDate) + 1;
+            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(cal.getTime(), lastDate);
+            long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), lastDate);
             double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
             double finalRent  = calculateRentPerDay * noOfDaysLeftInCurrentMonth;
                 if (finalRent > payloads.rentalAmount()) {
@@ -1034,6 +1034,9 @@ public class CustomersService {
         Customers customers = customersRepository.findById(customerId).orElse(null);
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
@@ -1098,7 +1101,7 @@ public class CustomersService {
             }
         }
 
-        BillingDates billDate = hostelService.getBillStartDate(customers.getHostelId());
+        BillingDates billDate = hostelService.getCurrentBillStartAndEndDates(customers.getHostelId());
 
         if (customers.getAdvance() != null) {
             totalDeductions = customers.getAdvance()
@@ -1130,9 +1133,9 @@ public class CustomersService {
         Calendar calEndDate = Calendar.getInstance();
         calEndDate.setTime(billDate.currentBillEndDate());
 
-        Long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(calStartDate.getTime(), calEndDate.getTime()) + 1;
+        Long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(calStartDate.getTime(), calEndDate.getTime());
 
-        noOfDaySatayed = Utils.findNumberOfDays(calStartDate.getTime(), new Date()) + 1;
+        noOfDaySatayed = Utils.findNumberOfDays(calStartDate.getTime(), new Date());
 
         //taken from unpaid invoices. So current month invoice is empty for paid
         if (!currentMonthInvoice.isEmpty()) {
@@ -1254,7 +1257,9 @@ public class CustomersService {
         RentInfo rentInfo = new RentInfo(currentMonthPayableRent,
                 currentRentPaid,
                 (int) noOfDaySatayed,
-                currentMonthRent);
+                currentMonthRent,
+                Utils.dateToString(calStartDate.getTime()),
+                Utils.dateToString(calEndDate.getTime()));
 
         if (totalAmountToBePaid < 0) {
             isRefundable = true;
@@ -1283,6 +1288,9 @@ public class CustomersService {
         Customers customers = customersRepository.findById(customerId).orElse(null);
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
@@ -1329,7 +1337,7 @@ public class CustomersService {
             bookingAmount = bookingDetails.getBookingAmount();
         }
 
-        BillingDates billDate = hostelService.getBillStartDate(customers.getHostelId());
+        BillingDates billDate = hostelService.getCurrentBillStartAndEndDates(customers.getHostelId());
 
         if (customers.getAdvance() != null) {
             totalDeductions = customers.getAdvance()
@@ -1357,9 +1365,9 @@ public class CustomersService {
         Calendar calEndDate = Calendar.getInstance();
         calEndDate.setTime(billDate.currentBillEndDate());
 
-        long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(calStartDate.getTime(), calEndDate.getTime()) + 1;
+        long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(calStartDate.getTime(), calEndDate.getTime());
 
-        noOfDaySatayed = Utils.findNumberOfDays(calStartDate.getTime(), new Date()) + 1;
+        noOfDaySatayed = Utils.findNumberOfDays(calStartDate.getTime(), new Date());
 
         //taken from unpaid invoices. So current month invoice is empty for paid
         if (!currentMonthInvoice.isEmpty()) {
@@ -1454,21 +1462,20 @@ public class CustomersService {
                     .stream()
                     .mapToDouble(Settlement::amount)
                     .sum();
-            totalAmountToBePaid = totalAmountToBePaid + finalDeductions;
+            totalAmountToBePaid = totalAmountToBePaid - finalDeductions;
         }
 
         List<InvoicesV1> unpaidUpdated = listUnpaidRentalInvoices
                 .stream()
-                .map(item -> {
-                    item.setCancelled(true);
-                    return item;
-                })
+                .peek(item -> item.setCancelled(true))
                 .toList();
 
         invoiceService.cancelActiveInvoice(unpaidUpdated);
-        invoiceService.createSettlementInvoice(customerId, totalAmountToBePaid);
+        invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated);
 
-        return null;
+        customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
+        customersRepository.save(customers);
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
     public boolean customerExist(String hostelId) {

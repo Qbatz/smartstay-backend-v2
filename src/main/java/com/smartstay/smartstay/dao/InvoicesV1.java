@@ -21,10 +21,9 @@ public class InvoicesV1 {
     String invoiceNumber;
     String customerMobile;
     String customerMailId;
-    //Advance or monthly rent or Booking amount
+    //Advance or monthly rent or Booking amount or settlement
     String invoiceType;
     Double basePrice;
-//    Double ebAmount;
     //this includes GST
     Double totalAmount;
     Double gst;
@@ -37,6 +36,7 @@ public class InvoicesV1 {
     //Mode will be manual and automatic
     String invoiceMode;
     boolean isCancelled;
+    List<String> cancelledInvoices;
     String createdBy;
     String updatedBy;
     Date invoiceGeneratedDate;

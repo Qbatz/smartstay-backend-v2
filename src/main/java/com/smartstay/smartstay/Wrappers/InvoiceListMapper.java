@@ -68,6 +68,9 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         else if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHERS.name())) {
             invoiceType = "Others";
         }
+        else if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+            invoiceType = "Settlement";
+        }
 
         ObjectMapper mapper = new ObjectMapper();
         List<Deductions> listDeductions = null;
