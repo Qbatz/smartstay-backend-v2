@@ -240,8 +240,8 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.NOT_FOUND);
         }
 
-        if (request.assignedCustomers() != null) {
-            for (String customerId : request.assignedCustomers()) {
+        if (request.customers() != null) {
+            for (String customerId : request.customers()) {
                 CustomersAmenity customerAmenity = new CustomersAmenity();
                 customerAmenity.setAmenityId(amenityId);
                 customerAmenity.setCustomerId(customerId);
@@ -284,8 +284,8 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.NOT_FOUND);
         }
 
-        if (request.unassignedCustomers() != null) {
-            for (String customerId : request.unassignedCustomers()) {
+        if (request.customers() != null) {
+            for (String customerId : request.customers()) {
                 CustomersAmenity exists = customerAmenityRepository.findTopByAmenityIdAndCustomerIdAndEndDateIsNullOrderByCreatedAtDesc(amenityId, customerId);
                 if (exists != null) {
                     exists.setEndDate(new Date());
