@@ -1,9 +1,6 @@
 package com.smartstay.smartstay.repositories;
 
-import com.smartstay.smartstay.dto.beds.BedDetails;
-import com.smartstay.smartstay.dto.beds.Beds;
-import com.smartstay.smartstay.dto.beds.FreeBeds;
-import com.smartstay.smartstay.dto.beds.InitializeBooking;
+import com.smartstay.smartstay.dto.beds.*;
 import com.smartstay.smartstay.responses.beds.BedsStatusCount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -93,4 +90,12 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
             floors flrs on flrs.floor_id=rms.floor_id where bed.bed_id=:bedId;
             """, nativeQuery = true)
     BedDetails findByBedId(@Param("bedId") Integer bedId);
+
+
+    @Query("SELECT b.roomId AS roomId, r.floorId AS floorId " +
+            "FROM Beds b JOIN Rooms r ON b.roomId = r.roomId " +
+            "WHERE b.bedId = :bedId AND b.hostelId = :hostelId")
+    BedRoomFloor findRoomAndFloorByBedIdAndHostelId(@Param("bedId") Integer bedId,
+                                                    @Param("hostelId") String hostelId);
+
 }

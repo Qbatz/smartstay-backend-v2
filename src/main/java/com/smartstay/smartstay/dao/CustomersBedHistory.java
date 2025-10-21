@@ -26,6 +26,7 @@ public class CustomersBedHistory {
     private Date createdAt;
     //this is from CustomerBedType enum
     private String type;
+    private double rentAmount;
 
     @ManyToOne
     @JoinColumn(name = "booking_id")
