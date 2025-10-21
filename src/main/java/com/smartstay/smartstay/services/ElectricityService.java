@@ -321,9 +321,11 @@ public class ElectricityService {
         else {
             Date readingDate = null;
             Date startDate = null;
+            Date endDate = null;
 
             if (readings.readingDate() != null) {
                 readingDate = Utils.stringToDate(readings.readingDate(), Utils.USER_INPUT_DATE_FORMAT);
+                endDate = readingDate;
             }
             else {
                 readingDate = new Date();
@@ -339,13 +341,21 @@ public class ElectricityService {
             else {
                 Calendar cal = Calendar.getInstance();
                 cal.setTime(readingDate);
-                cal.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH));
-                cal.set(Calendar.MONTH, cal.get(Calendar.MONTH)-1);
+                assert electricityConfig != null;
+                cal.set(Calendar.DAY_OF_MONTH, electricityConfig.getBillDate());
 
                 startDate = cal.getTime();
+
+
+                Calendar calEndDate = Calendar.getInstance();
+                calEndDate.setTime(readingDate);
+
+                endDate = calEndDate.getTime();
+
             }
             Date finalStartDate = startDate;
-            Date finalReadingDate = readingDate;
+            Date finalReadingDate = endDate;
+
             int totalDays = listBeds.stream()
                     .mapToInt(item -> {
                         assert currentReadings != null;
@@ -382,10 +392,11 @@ public class ElectricityService {
                 consumption = readings.reading();
             }
             else {
-                consumption = currentReadings.getCurrentReading() - readings.reading();
+                consumption =  readings.reading() - currentReadings.getCurrentReading();
             }
 
             double unitsPerDay = consumption / totalDays;
+
             List<CustomerIdRoomIdUnits> listCustomerIdRoomId = new ArrayList<>();
             listBeds.forEach(item -> {
                 int noOfDays = 1;
@@ -454,8 +465,11 @@ public class ElectricityService {
                 listNewElectricityReading.add(newReadings);
             }
 
-            electricityReadingRepository.saveAll(listNewElectricityReading);
+            List<com.smartstay.smartstay.dao.ElectricityReadings> listAddedReadingsAfterSavings = electricityReadingRepository.saveAll(listNewElectricityReading);
 
+            listAddedReadingsAfterSavings.forEach(item -> {
+                
+            });
 
         }
 

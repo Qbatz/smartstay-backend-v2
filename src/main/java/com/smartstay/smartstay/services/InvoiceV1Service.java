@@ -287,6 +287,7 @@ public class InvoiceV1Service {
      * @param customerMailId
      */
     public void addReceipt(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId) {
+
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
             BillTemplates templates = templateService.getBillTemplate(hostelId, InvoiceType.BOOKING.name());
@@ -574,8 +575,8 @@ public class InvoiceV1Service {
             invoiceEndDate = dateEndDate;
         }
 
-        long noOfDaysOnThatMonth = Utils.findNumberOfDays(dateStartDate, dateEndDate) + 1;
-        long noOfDaysStayed = Utils.findNumberOfDays(invoiceStartDate, invoiceEndDate) + 1;
+        long noOfDaysOnThatMonth = Utils.findNumberOfDays(dateStartDate, dateEndDate);
+        long noOfDaysStayed = Utils.findNumberOfDays(invoiceStartDate, invoiceEndDate);
         double invoiceAmount = 0.0;
 
         if (noOfDaysOnThatMonth == noOfDaysStayed) {
