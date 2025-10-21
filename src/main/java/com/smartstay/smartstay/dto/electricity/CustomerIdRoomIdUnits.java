@@ -1,4 +1,11 @@
 package com.smartstay.smartstay.dto.electricity;
 
-public record CustomerIdRoomIdUnits(String customerId, Integer roomId, Double units) {
+import java.util.Date;
+
+public record CustomerIdRoomIdUnits(String customerId,
+                                    Integer roomId,
+                                    Integer bedId,
+                                    Double units,
+                                    Date startDate,
+                                    Date endDate) {
 }

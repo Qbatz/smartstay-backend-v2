@@ -399,34 +399,51 @@ public class ElectricityService {
 
             List<CustomerIdRoomIdUnits> listCustomerIdRoomId = new ArrayList<>();
             listBeds.forEach(item -> {
+                Date bedStartDate = null;
+                Date bedEndDate = null;
                 int noOfDays = 1;
                 if (Utils.compareWithTwoDates(item.startDate(), finalStartDate) <= 0) {
                     if (item.endDate() == null) {
                         noOfDays = Math.toIntExact(Utils.findNumberOfDays(finalStartDate, finalReadingDate));
+                        bedStartDate = finalStartDate;
+                        bedEndDate = finalReadingDate;
                     }
                     else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) <= 0) {
                         noOfDays = Math.toIntExact(Utils.findNumberOfDays(finalStartDate, item.endDate()));
+                        bedStartDate = finalStartDate;
+                        bedEndDate = item.endDate();
                     }
                     else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) > 0) {
                         noOfDays = Math.toIntExact(Utils.findNumberOfDays(finalStartDate, finalReadingDate));
+                        bedStartDate = finalStartDate;
+                        bedEndDate = finalReadingDate;
                     }
 
                 }
                 else if (Utils.compareWithTwoDates(item.startDate(), finalStartDate) > 0) {
                     if (item.endDate() == null) {
                         noOfDays = Math.toIntExact(Utils.findNumberOfDays(item.startDate(), finalReadingDate));
+                        bedStartDate = item.startDate();
+                        bedEndDate = finalReadingDate;
                     }
                     else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) <= 0) {
                         noOfDays = Math.toIntExact(Utils.findNumberOfDays(item.startDate(), item.endDate()));
+                        bedStartDate = item.startDate();
+                        bedEndDate = item.endDate();
                     }
                     else if (Utils.compareWithTwoDates(item.endDate(), finalReadingDate) > 0) {
                         noOfDays = Math.toIntExact(Utils.findNumberOfDays(item.startDate(), finalReadingDate));
+                        bedStartDate = item.startDate();
+                        bedEndDate = finalReadingDate;
                     }
                 }
 
                 CustomerIdRoomIdUnits customerIdRoomIdUnits = new CustomerIdRoomIdUnits(item.customerId(),
                         item.roomId(),
-                        noOfDays * unitsPerDay);
+                        item.bedId(),
+                        noOfDays * unitsPerDay,
+                        bedStartDate,
+                        bedEndDate);
                 listCustomerIdRoomId.add(customerIdRoomIdUnits);
 
             });
@@ -445,15 +462,22 @@ public class ElectricityService {
 
             for (Integer key : totalUnits.keySet()) {
                 com.smartstay.smartstay.dao.ElectricityReadings newReadings = new com.smartstay.smartstay.dao.ElectricityReadings();
-                newReadings.setPreviousReading(previousReading);
-                newReadings.setCurrentReading(readings.reading());
+                com.smartstay.smartstay.dao.ElectricityReadings roomPreviousReadings = electricityReadingRepository.getRoomCurrentReading(key);
+                if (roomPreviousReadings != null) {
+                    newReadings.setPreviousReading(roomPreviousReadings.getCurrentReading());
+                    newReadings.setCurrentReading(roomPreviousReadings.getCurrentReading() + totalUnits.get(key));
+                }
+                else {
+                    newReadings.setPreviousReading(0.0);
+                    newReadings.setCurrentReading( totalUnits.get(key));
+                }
                 newReadings.setHostelId(hostelId);
                 newReadings.setRoomId(key);
                 newReadings.setCurrentUnitPrice(electricityConfig.getCharge());
                 newReadings.setEntryDate(date);
                 newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
                 newReadings.setFloorId(readings.floorId());
-                newReadings.setConsumption(totalUnits.get(key) - previousReading);
+                newReadings.setConsumption(totalUnits.get(key));
                 newReadings.setMissedEntry(false);
                 newReadings.setCreatedAt(new Date());
                 newReadings.setUpdatedAt(new Date());
@@ -468,7 +492,29 @@ public class ElectricityService {
             List<com.smartstay.smartstay.dao.ElectricityReadings> listAddedReadingsAfterSavings = electricityReadingRepository.saveAll(listNewElectricityReading);
 
             listAddedReadingsAfterSavings.forEach(item -> {
-                
+
+             List<CustomersEbHistory> listEbHistory = listCustomerIdRoomId
+                        .stream()
+                        .filter(i -> i.roomId() == item.getRoomId())
+                        .map(i -> {
+                            CustomersEbHistory ebHistory = new CustomersEbHistory();
+                            ebHistory.setReadingId(item.getId());
+                            ebHistory.setCustomerId(i.customerId());
+                            ebHistory.setRoomId(item.getRoomId());
+                            ebHistory.setFloorId(item.getFloorId());
+                            ebHistory.setBedId(i.bedId());
+                            ebHistory.setUnits(i.units());
+                            ebHistory.setAmount((i.units() * electricityConfig.getCharge()));
+                            ebHistory.setStartDate(i.startDate());
+                            ebHistory.setEndDate(i.endDate());
+                            ebHistory.setCreatedAt(new Date());
+                            ebHistory.setCreatedBy(ebHistory.getCreatedBy());
+
+                            return ebHistory;
+                        })
+                        .toList();
+
+                ebHistoryService.saveCustomerEb(listEbHistory);
             });
 
         }
@@ -506,8 +552,6 @@ public class ElectricityService {
         }
 
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
-        //this is for room reading
-        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
 
             String startDate = "";
             String endDate = "";
@@ -541,29 +585,18 @@ public class ElectricityService {
 
             }
 
+            boolean isHostelBased = false;
+            if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+                isHostelBased = true;
+            }
+            else {
+                isHostelBased = true;
+            }
 
-            ElectricityList list = new ElectricityList(false, listUsages);
+
+            ElectricityList list = new ElectricityList(isHostelBased, listUsages);
 
             return new ResponseEntity<>(list, HttpStatus.OK);
-        }
-        else {
-
-            com.smartstay.smartstay.dao.ElectricityReadings latestEntry = findLatestEntryByHostelId(hostelId);
-            List<RoomInfoForEB> listRoomInfo =  roomsService.findAllRoomsByHostelId(hostelId);
-            ElectricityList list = null;
-                if (listRoomInfo != null) {
-                    List<ElectricityUsage> listUsage = listRoomInfo.stream()
-                            .map(item -> new ElectricityHostelBasedMapper(listRoomInfo.size(),
-                                    hostelId,
-                                    latestEntry).apply(item))
-                            .toList();
-
-                    list = new ElectricityList(true, listUsage);
-                    return new ResponseEntity<>(list, HttpStatus.OK);
-                }
-            list = new ElectricityList(true, null);
-            return new ResponseEntity<>(list, HttpStatus.OK);
-        }
 
 
     }
@@ -594,7 +627,6 @@ public class ElectricityService {
 
 
         List<CustomersList> listCustomers = new ArrayList<>();
-        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
             List<Integer> roomIds = electricityReadingRepository.getRoomIds(hostelId);
             List<ElectricityCustomersList> electricityCustomersLists = ebHistoryService.getCustomerListFromRooms(roomIds);
             listCustomers.addAll(electricityCustomersLists.stream()
@@ -602,11 +634,7 @@ public class ElectricityService {
                         return new CustomersListMapper().apply(item);
                     })
                     .toList());
-        }
-        else {
-//            listCustomerForEBReadings
 
-        }
 
         return new ResponseEntity<>(listCustomers, HttpStatus.OK);
     }
@@ -658,7 +686,7 @@ public class ElectricityService {
             calendar.set(Calendar.DAY_OF_MONTH, 1);
             calendar.set(Calendar.MONTH, 1);
 
-            listCustomers = ebHistoryService.getCustomerEbListForRoom(roomId, calendar.getTime(), new Date());
+            listCustomers = ebHistoryService.getCustomerEbListForRoom(roomId);
         }
 
 
@@ -699,13 +727,12 @@ public class ElectricityService {
             startDay = hostelV1.getElectricityConfig().getBillDate();
         }
 
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.DAY_OF_MONTH, startDay);
-        cal.set(Calendar.MONTH, 1);
+        Date startDate = customers.getJoiningDate();
+        Date endDate = new Date();
 
 
 
-        List<ElectricityHistoryBySingleCustomer> listEbHistory =  ebHistoryService.getAllReadingByCustomerId(customerId, cal.getTime(), new Date());
+        List<ElectricityHistoryBySingleCustomer> listEbHistory =  ebHistoryService.getAllReadingByCustomerId(customerId, startDate, endDate);
 
         StringBuilder fullName = new StringBuilder();
         StringBuilder initials = new StringBuilder();

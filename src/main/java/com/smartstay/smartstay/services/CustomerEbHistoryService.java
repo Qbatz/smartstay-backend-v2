@@ -27,8 +27,8 @@ public class CustomerEbHistoryService {
         customerEbRepository.saveAll(listCustomers);
     }
 
-    public List<RoomElectricityCustomersList> getCustomerEbListForRoom(Integer roomId, Date startDate, Date endDate) {
-        return customerEbRepository.getAllCustomersByRoomId(roomId, startDate, endDate)
+    public List<RoomElectricityCustomersList> getCustomerEbListForRoom(Integer roomId) {
+        return customerEbRepository.getAllCustomersByRoomId(roomId)
                 .stream()
                 .map(item -> new RoomElectricityMapper().apply(item))
                 .toList();
