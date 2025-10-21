@@ -53,7 +53,7 @@ public class Utils {
     public static final String INVALID_JOINING_DATE = "Invalid Joining Date";
     public static final String ELECTRICITY_CONFIG_NOT_SET_UP = "Electricity configuration is not setup";
     public static final String ALREADY_READING_TAKEN_THIS_DATE = "Already Reading taken for this date";
-    public static final String PREVIOUD_CURRENT_READING_NOT_MATCHING = "Previous reading and current readings are not matching";
+    public static final String PREVIOUS_CURRENT_READING_NOT_MATCHING = "Previous reading and current readings are not matching";
     public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
     public static final String USER_ASSIGNED = "User Assigned Successfully";

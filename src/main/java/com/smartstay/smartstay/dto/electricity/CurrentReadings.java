@@ -3,6 +3,6 @@ package com.smartstay.smartstay.dto.electricity;
 import java.util.Date;
 
 public interface CurrentReadings {
-    Double getCurrentReadings();
+    Double getCurrentReading();
     Date getEntryDate();
 }

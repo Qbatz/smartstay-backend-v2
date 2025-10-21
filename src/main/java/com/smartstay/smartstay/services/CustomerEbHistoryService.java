@@ -41,4 +41,8 @@ public class CustomerEbHistoryService {
     public List<ElectricityHistoryBySingleCustomer> getAllReadingByCustomerId(String customerId, Date startDate, Date endDate) {
         return customerEbRepository.getSingleCustomerEbHistory(customerId, startDate, endDate);
     }
+
+    public void saveCustomerEb(List<CustomersEbHistory> customerEbHistory) {
+        customerEbRepository.saveAll(customerEbHistory);
+    }
 }

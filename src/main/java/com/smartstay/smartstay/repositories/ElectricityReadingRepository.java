@@ -3,11 +3,13 @@ package com.smartstay.smartstay.repositories;
 import com.smartstay.smartstay.dto.electricity.CurrentReadings;
 import com.smartstay.smartstay.dto.electricity.ElectricityReadingForRoom;
 import com.smartstay.smartstay.dto.electricity.ElectricityReadings;
+import com.smartstay.smartstay.dto.electricity.ElectricityRoomIdFromPreviousEntry;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -58,9 +60,19 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
     List<ElectricityReadingForRoom> getRoomReading(@Param("roomId") Integer roomId);
 
     @Query(value = """
-            SELECT er.entry_date as entryDate, (SELECT sum(current_reading) from electricity_readings reading where reading.entry_date=er.entry_date) as currentReading FROM electricity_readings er where er.hostel_id=:hostelId ORDER BY er.entry_date DESC LIMIT 1;
+            SELECT er.entry_date as entryDate, (SELECT sum(current_reading) from electricity_readings reading where reading.entry_date=er.entry_date) as currentReading FROM electricity_readings er where er.hostel_id=:hostelId ORDER BY er.entry_date DESC LIMIT 1
             """, nativeQuery = true)
     CurrentReadings getCurrentReadings(@Param("hostelId") String hostelId);
+
+    @Query(value = """
+            SELECT * FROM electricity_readings er where er.room_id=:roomId ORDER BY er.entry_date DESC limit 1;
+            """, nativeQuery = true)
+    com.smartstay.smartstay.dao.ElectricityReadings getRoomCurrentReading(@Param("roomId") Integer roomId);
+
+    @Query(value = """
+            SELECT room_id as roomId FROM electricity_readings where hostel_id = :hostelId and entry_date=DATE(:entryDate)
+            """, nativeQuery = true)
+    List<ElectricityRoomIdFromPreviousEntry> getRoomIdsFromPreviousEntry(@Param("hostelId") String hostelId, @Param("entryDate") Date entryDate);
 
 
 }
