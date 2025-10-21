@@ -585,4 +585,8 @@ public class BookingsService {
     public BookingsV1 getBookingByCustomerIdAndDate(String customerId, Date startDate, Date endDate) {
         return bookingsRepository.findByCustomerIdAndJoiningDate(customerId, startDate, endDate);
     }
+
+    public void saveBooking(BookingsV1 bookingsV1) {
+        bookingsRepository.save(bookingsV1);
+    }
 }

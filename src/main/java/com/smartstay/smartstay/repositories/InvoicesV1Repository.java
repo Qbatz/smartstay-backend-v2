@@ -3,6 +3,7 @@ package com.smartstay.smartstay.repositories;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.dto.transaction.Receipts;
+import com.smartstay.smartstay.responses.invoices.InvoiceSummary;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -74,6 +75,22 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     List<InvoicesV1> findByCustomerId(String customerId);
 
-
+    @Query(
+            value = """
+        SELECT 
+            i.invoice_number AS invoiceNumber,
+            i.total_amount AS totalAmount,
+            DATE_FORMAT(i.invoice_start_date, '%d/%m/%Y') AS invoiceStartDate,
+            i.invoice_type AS invoiceType
+        FROM invoicesv1 i
+        WHERE i.hostel_id = :hostelId
+        AND i.invoice_id IN (:invoiceId)
+        """,
+            nativeQuery = true
+    )
+    List<InvoiceSummary> findInvoiceSummariesByHostelId(
+            @Param("hostelId") String hostelId,
+            @Param("invoiceId") List<String> invoiceId
+    );
 
 }

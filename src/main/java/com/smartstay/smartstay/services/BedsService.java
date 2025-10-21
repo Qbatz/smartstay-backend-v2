@@ -6,9 +6,12 @@ import com.smartstay.smartstay.Wrappers.FreeBedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
+import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
 import com.smartstay.smartstay.ennum.BedStatus;
+import com.smartstay.smartstay.ennum.CustomersBedType;
 import com.smartstay.smartstay.payloads.beds.AddBed;
+import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.beds.BedDetails;
@@ -194,11 +197,7 @@ public class BedsService {
         beds.setCurrentStatus(BedStatus.VACANT.name());
         beds.setFreeFrom(null);
         beds.setRentAmount(addBed.amount());
-        System.out.println("beds = " + addBed.toString());
-
-       Beds bedsV1 = bedsRepository.save(beds);
-
-        System.out.println("bedsV1 = " + bedsV1.toString());
+        Beds bedsV1 = bedsRepository.save(beds);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -433,5 +432,71 @@ public class BedsService {
 
     public com.smartstay.smartstay.dto.beds.BedDetails getBedDetails(Integer bedId) {
         return bedsRepository.findByBedId(bedId);
+    }
+
+    public ResponseEntity<?> changeBed(String hostelId,String customerId,int bedId, ChangeBed changeBed) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        Beds bed = bedsRepository.checkBedAvailability(bedId);
+        if (bed !=null){
+              bed.setCurrentStatus(BedStatus.OCCUPIED.name());
+              bed.setStatus(BedStatus.OCCUPIED.name());
+              bed.setUpdatedAt(new Date());
+        }else {
+            return new ResponseEntity<>("Bed is not available", HttpStatus.BAD_REQUEST);
+        }
+
+        BookingsV1 bookingsV1 = bookingService.findBookingsByCustomerIdAndHostelId(customerId, hostelId);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>("Customer not found", HttpStatus.BAD_REQUEST);
+        }
+        BedRoomFloor bedRoomFloor = bedsRepository.findRoomAndFloorByBedIdAndHostelId(
+                bedId, hostelId
+        );
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(bookingsV1.getBedId(), user.getParentId());
+        if (existingBed == null) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
+        }
+        bookingsV1.setBedId(bedId);
+        bookingsV1.setRoomId(bedRoomFloor.getRoomId());
+        bookingsV1.setFloorId(bedRoomFloor.getFloorId());
+
+        existingBed.setFreeFrom(null);
+        existingBed.setCurrentStatus(BedStatus.VACANT.name());
+        existingBed.setStatus(BedStatus.VACANT.name());
+        existingBed.setUpdatedAt(new Date());
+
+        CustomersBedHistory cbh = new CustomersBedHistory();
+        cbh.setRoomId(bookingsV1.getRoomId());
+        cbh.setBedId(bookingsV1.getBedId());
+        cbh.setFloorId(bookingsV1.getFloorId());
+        cbh.setHostelId(bookingsV1.getHostelId());
+        cbh.setStartDate(Utils.stringToDate(changeBed.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        cbh.setCustomerId(bookingsV1.getCustomerId());
+        cbh.setChangedBy(authentication.getName());
+        cbh.setType(CustomersBedType.CHECK_IN.name());
+        cbh.setRentAmount(changeBed.rentAmount());
+        cbh.setActive(true);
+        cbh.setCreatedAt(new Date());
+        cbh.setBooking(bookingsV1);
+
+        List<CustomersBedHistory> listBedHistory = bookingsV1.getCustomerBedHistory();
+        listBedHistory.add(cbh);
+        bookingsV1.setCustomerBedHistory(listBedHistory);
+        bookingService.saveBooking(bookingsV1);
+        bedsRepository.save(existingBed);
+        bedsRepository.save(bed);
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
     }
 }
