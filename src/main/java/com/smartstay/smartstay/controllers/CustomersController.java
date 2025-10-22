@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.beds.AssignBed;
+import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -26,7 +27,6 @@ import java.util.List;
 @SecurityRequirement(name = "Authorization")
 @CrossOrigin("*")
 public class CustomersController {
-
     @Autowired
     private CustomersService customersService;
 
@@ -96,5 +96,9 @@ public class CustomersController {
     @PostMapping("/settlement/{customerId}")
     public ResponseEntity<?> generateFinalSettlement(@PathVariable("customerId") String customerId, @RequestBody List<Settlement> deductions) {
         return customersService.generateFinalSettlement(customerId, deductions);
+    }
+    @PostMapping("/change-bed/{hostelId}/{customerId}")
+    public ResponseEntity<?> changeBed(@PathVariable("customerId") String customerId,@PathVariable("hostelId") String hostelId,@Valid @RequestBody ChangeBed request) {
+        return customersService.changeBed(hostelId, customerId, request);
     }
  }

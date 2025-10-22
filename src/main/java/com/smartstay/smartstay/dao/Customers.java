@@ -39,10 +39,13 @@ public class Customers {
     private Date lastUpdatedAt;
     private String updatedBy;
 
-    @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
     private Advance advance;
 
-    @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
     private KycDetails kycDetails;
+
+    @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
+    CustomerWallet wallet;
 
 }

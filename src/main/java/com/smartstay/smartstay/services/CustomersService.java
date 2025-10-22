@@ -5,15 +5,18 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.customer.CustomerData;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
+import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
@@ -74,6 +77,8 @@ public class CustomersService {
 
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private CustomersBedHistoryService bedHistory;
 
     public ResponseEntity<?> createCustomer(MultipartFile file, AddCustomer payloads) {
 
@@ -235,6 +240,9 @@ public class CustomersService {
             }
             else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
                 currentStatus = "Cancelled";
+            }
+            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+                currentStatus = "Settlement Generated";
             }
 
             if (!filterOption.containsKey(currentStatus)) {
@@ -1480,5 +1488,75 @@ public class CustomersService {
 
     public boolean customerExist(String hostelId) {
         return customersRepository.existsByHostelIdAndCurrentStatusIn(hostelId, List.of(CustomerStatus.NOTICE.name(),CustomerStatus.CHECK_IN.name(),CustomerStatus.BOOKED.name()));
+    }
+
+    public List<CustomerBedsList> getCustomersFromBedHistory(String hostelId, Date billStartDate, Date billEndDate) {
+        return bedHistory.getAllCustomerFromBedsHistory(hostelId, billStartDate, billEndDate);
+    }
+
+    public ResponseEntity<?> changeBed(String hostelId, String customerId, ChangeBed request) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!bedsService.checkIsBedExsits(request.bedId(), user.getParentId(), hostelId)) {
+            return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
+        }
+        if (!bedsService.isBedAvailableForReassign(request.bedId(), request.joiningDate())) {
+            return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);
+        }
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        BookingsV1 bookingsV1 = bookingsService.findBookingsByCustomerIdAndHostelId(customerId, hostelId);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.NO_BOOKING_INFORMATION_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (bookingsV1.getBedId() == request.bedId()) {
+            return new ResponseEntity<>(Utils.CHANGE_BED_SAME_BED_ERROR, HttpStatus.BAD_REQUEST);
+        }
+
+        Date joiningDate = Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+        double balanceAmount = invoiceService.calculateAndCreateInvoiceForReassign(customers, request.joiningDate(), request.rentAmount());
+
+        bedsService.unassignBed(bookingsV1.getBedId(), request.joiningDate());
+        bedsService.reassignBed(customerId, request.bedId());
+
+        BedRoomFloor bedRoomFloor = bedsService.findRoomAndFloorByBedIdAndHostelId(
+                request.bedId(), hostelId
+        );
+
+        bookingsService.reassignBed(bedRoomFloor, bookingsV1, request);
+
+
+        CustomerWallet wallet = customers.getWallet();
+        if (wallet != null &&  wallet.getAmount() != null) {
+            wallet.setAmount(wallet.getAmount() - balanceAmount);
+            wallet.setTransactionDate(joiningDate);
+        }
+        else {
+            if (wallet == null) {
+                wallet = new CustomerWallet();
+            }
+            wallet.setAmount(balanceAmount);
+            wallet.setTransactionDate(joiningDate);
+        }
+        wallet.setCustomers(customers);
+
+        customers.setWallet(wallet);
+
+        customersRepository.save(customers);
+
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }

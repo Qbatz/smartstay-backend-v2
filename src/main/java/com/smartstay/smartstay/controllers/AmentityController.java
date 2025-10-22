@@ -24,12 +24,12 @@ public class AmentityController {
     private AmenitiesService amenitiesService;
 
 
-    @GetMapping("/all-amenities/{hostelId}")
+    @GetMapping("/{hostelId}")
     public ResponseEntity<?> getAllAmenities(@PathVariable("hostelId") String hostelId) {
         return amenitiesService.getAllAmenities(hostelId);
     }
 
-    @GetMapping("/amenity/{hostelId}/{amenityId}")
+    @GetMapping("/{hostelId}/{amenityId}")
     public ResponseEntity<?> getAmenitiesById(@PathVariable("hostelId") String hostelId, @PathVariable("amenityId") String amenityId) {
         return amenitiesService.getAmenitiesById(hostelId, amenityId);
     }
@@ -39,17 +39,17 @@ public class AmentityController {
         return amenitiesService.addAmenity(request, hostelId);
     }
 
-    @PutMapping("/{amenityId}/{hostelId}")
+    @PutMapping("/{hostelId}/{amenityId}")
     public ResponseEntity<?> updateAmenity(@RequestBody AmenityRequest request, @PathVariable("amenityId") String amenityId, @PathVariable("hostelId") String hostelId) {
         return amenitiesService.updateAmenity(request, amenityId, hostelId);
     }
 
-    @PutMapping("/assign-amenity/{amenityId}/{hostelId}")
+    @PutMapping("/assign/{hostelId}/{amenityId}")
     public ResponseEntity<?> assign(@RequestBody AssignRequest request, @PathVariable("amenityId") String amenityId, @PathVariable("hostelId") String hostelId) {
         return amenitiesService.assign(request, amenityId, hostelId);
     }
 
-    @PutMapping("/unAssign-amenity/{amenityId}/{hostelId}")
+    @PutMapping("/unAssign/{hostelId}/{amenityId}")
     public ResponseEntity<?> unAssign(@RequestBody UnAssignRequest request, @PathVariable("amenityId") String amenityId, @PathVariable("hostelId") String hostelId) {
         return amenitiesService.unAssign(request, amenityId, hostelId);
     }

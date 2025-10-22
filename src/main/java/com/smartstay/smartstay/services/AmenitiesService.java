@@ -9,6 +9,7 @@ import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
 import com.smartstay.smartstay.payloads.amenity.AssignRequest;
 import com.smartstay.smartstay.payloads.amenity.UnAssignRequest;
+import com.smartstay.smartstay.payloads.amenity.AssignAmenity;
 import com.smartstay.smartstay.repositories.AmentityRepository;
 import com.smartstay.smartstay.repositories.CustomerAmenityRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
@@ -25,9 +26,6 @@ import java.util.List;
 
 @Service
 public class AmenitiesService {
-
-    @Autowired
-    RolesRepository rolesRepository;
     @Autowired
     AmentityRepository amentityRepository;
     @Autowired
@@ -43,19 +41,21 @@ public class AmenitiesService {
 
     public ResponseEntity<?> getAllAmenities(String hostelId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        Users users = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
+        boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
         if (!hostelV1) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
@@ -76,15 +76,13 @@ public class AmenitiesService {
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        Users users = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
+        boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
         if (!hostelV1) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
@@ -101,16 +99,14 @@ public class AmenitiesService {
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        Users users = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
+        boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
         if (!hostelV1) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
@@ -120,7 +116,7 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.AMENITY_ALREADY_EXIST, HttpStatus.FORBIDDEN);
         }
         AmenitiesV1 amenitiesV1 = new AmenitiesV1();
-        amenitiesV1.setCreatedBy(users.getUserId());
+        amenitiesV1.setCreatedBy(user.getUserId());
         amenitiesV1.setCreatedAt(new java.util.Date());
         amenitiesV1.setIsActive(true);
         amenitiesV1.setIsDeleted(false);
@@ -143,12 +139,9 @@ public class AmenitiesService {
         if (user == null) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
-
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
-
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
@@ -233,11 +226,6 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
 
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
@@ -252,8 +240,8 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.NOT_FOUND);
         }
 
-        if (request.assignedCustomers() != null) {
-            for (String customerId : request.assignedCustomers()) {
+        if (request.customers() != null) {
+            for (String customerId : request.customers()) {
                 CustomersAmenity customerAmenity = new CustomersAmenity();
                 customerAmenity.setAmenityId(amenityId);
                 customerAmenity.setCustomerId(customerId);
@@ -282,11 +270,6 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
 
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
@@ -301,8 +284,8 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.NOT_FOUND);
         }
 
-        if (request.unassignedCustomers() != null) {
-            for (String customerId : request.unassignedCustomers()) {
+        if (request.customers() != null) {
+            for (String customerId : request.customers()) {
                 CustomersAmenity exists = customerAmenityRepository.findTopByAmenityIdAndCustomerIdAndEndDateIsNullOrderByCreatedAtDesc(amenityId, customerId);
                 if (exists != null) {
                     exists.setEndDate(new Date());
