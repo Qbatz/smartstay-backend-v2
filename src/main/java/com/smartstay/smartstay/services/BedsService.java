@@ -447,7 +447,7 @@ public class BedsService {
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
         }
-        Beds bed = bedsRepository.checkBedAvailability(bedId);
+        Beds bed = isBedAvailabeForCheckIn(bedId,Utils.stringToDate(changeBed.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
         if (bed !=null){
               bed.setCurrentStatus(BedStatus.OCCUPIED.name());
               bed.setStatus(BedStatus.OCCUPIED.name());
