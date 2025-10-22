@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
+import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
@@ -13,6 +14,7 @@ import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
+import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.booking.CancelBooking;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
@@ -587,6 +589,47 @@ public class BookingsService {
     }
 
     public void saveBooking(BookingsV1 bookingsV1) {
+        bookingsRepository.save(bookingsV1);
+    }
+
+    public boolean isBedAvailableByDate(Integer bedId, String joiningDate) {
+        Date joiningDateDt = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        BookingsV1 bookingsV1 = bookingsRepository.checkBedsAvailabilityForDate(bedId);
+        if (bookingsV1 == null) {
+            return true;
+        }
+        if (bookingsV1.getLeavingDate() != null) {
+            return Utils.compareWithTwoDates(joiningDateDt, bookingsV1.getLeavingDate()) >= 0;
+        }
+        else {
+            return Utils.compareWithTwoDates(joiningDateDt, bookingsV1.getJoiningDate()) < 0;
+        }
+    }
+
+    public void reassignBed(BedRoomFloor bedRoomFloor, BookingsV1 bookingsV1, ChangeBed request) {
+        bookingsV1.setBedId(request.bedId());
+        bookingsV1.setFloorId(bedRoomFloor.getFloorId());
+        bookingsV1.setRoomId(bedRoomFloor.getRoomId());
+
+        CustomersBedHistory cbh = new CustomersBedHistory();
+        cbh.setRoomId(bookingsV1.getRoomId());
+        cbh.setBedId(bookingsV1.getBedId());
+        cbh.setFloorId(bookingsV1.getFloorId());
+        cbh.setHostelId(bookingsV1.getHostelId());
+        cbh.setStartDate(Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        cbh.setCustomerId(bookingsV1.getCustomerId());
+        cbh.setChangedBy(authentication.getName());
+        cbh.setType(CustomersBedType.CHECK_IN.name());
+        cbh.setRentAmount(request.rentAmount());
+        cbh.setActive(true);
+        cbh.setCreatedAt(new Date());
+        cbh.setBooking(bookingsV1);
+
+        List<CustomersBedHistory> listCustomerBedHistory = bookingsV1.getCustomerBedHistory();
+        listCustomerBedHistory.add(cbh);
+
+        bookingsV1.setCustomerBedHistory(listCustomerBedHistory);
+
         bookingsRepository.save(bookingsV1);
     }
 }

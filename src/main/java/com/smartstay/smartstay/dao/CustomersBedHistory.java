@@ -1,9 +1,11 @@
 package com.smartstay.smartstay.dao;
 
+import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @NoArgsConstructor

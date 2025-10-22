@@ -11,19 +11,14 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
     boolean isOccupied = false;
     boolean onNotice = false;
 
-    public BedsMapper(boolean onNotice) {
-        this.onNotice = onNotice;
-    }
-
     @Override
     public BedsResponse apply(Beds beds) {
 
         boolean isBooked = false;
 
         if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-            if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
-                isBooked = true;
-            }
+           isOccupied = true;
+           onNotice = true;
         }
         if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
             isOccupied = true;

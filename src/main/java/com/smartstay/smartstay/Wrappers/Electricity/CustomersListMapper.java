@@ -42,8 +42,8 @@ public class CustomersListMapper implements Function<ElectricityCustomersList, C
                 customersList.getRoomName(),
                 customersList.getBedId(),
                 customersList.getBedName(),
-                customersList.getConsumption(),
-                customersList.getAmount(),
+                Math.round(customersList.getConsumption() * 100.0)/100.0,
+                Math.round(customersList.getAmount() * 100.0) / 100.0,
                 Utils.dateToString(customersList.getStartDate()),
                 Utils.dateToString(customersList.getEndDate()));
     }

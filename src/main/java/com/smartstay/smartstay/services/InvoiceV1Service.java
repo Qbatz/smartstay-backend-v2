@@ -10,6 +10,7 @@ import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.BillConfigTypes;
@@ -58,6 +59,8 @@ public class InvoiceV1Service {
     private CustomersBedHistoryService customersBedHistoryService;
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private InvoiceItemService invoiceItemService;
     private TransactionService transactionService;
 
     private BookingsService bookingsService;
@@ -287,6 +290,7 @@ public class InvoiceV1Service {
      * @param customerMailId
      */
     public void addReceipt(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId) {
+
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
             BillTemplates templates = templateService.getBillTemplate(hostelId, InvoiceType.BOOKING.name());
@@ -574,8 +578,8 @@ public class InvoiceV1Service {
             invoiceEndDate = dateEndDate;
         }
 
-        long noOfDaysOnThatMonth = Utils.findNumberOfDays(dateStartDate, dateEndDate) + 1;
-        long noOfDaysStayed = Utils.findNumberOfDays(invoiceStartDate, invoiceEndDate) + 1;
+        long noOfDaysOnThatMonth = Utils.findNumberOfDays(dateStartDate, dateEndDate);
+        long noOfDaysStayed = Utils.findNumberOfDays(invoiceStartDate, invoiceEndDate);
         double invoiceAmount = 0.0;
 
         if (noOfDaysOnThatMonth == noOfDaysStayed) {
@@ -987,5 +991,141 @@ public class InvoiceV1Service {
         }
 
         return invoiceNumber.toString();
+    }
+
+    public double calculateAndCreateInvoiceForReassign(Customers customers, String joiningDate, Double newRent) {
+
+        Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findLatestInvoiceByCustomerId(customers.getCustomerId());
+        if (invoicesV1 != null) {
+            CustomersBedHistory latestHistory = customersBedHistoryService.getLatestCustomerBed(customers.getCustomerId());
+            if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), latestHistory.getStartDate()) == 0) {
+                return 0;
+            }
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(customers.getHostelId(), dateJoiningDate);
+            if (billingDates != null) {
+                Date startDate = billingDates.currentBillStartDate();;
+
+                if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), startDate) >= 0) {
+                    long noOfDaysInOldInvoice = Utils.findNumberOfDays(invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+                    double rent = invoicesV1
+                            .getInvoiceItems()
+                            .stream()
+                            .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem()))
+                            .mapToDouble(InvoiceItems::getAmount)
+                            .sum();
+                    double rentPerDay = rent/noOfDaysInOldInvoice;
+                    Calendar lastDayCal = Calendar.getInstance();
+                    lastDayCal.setTime(dateJoiningDate);
+                    lastDayCal.set(Calendar.DAY_OF_MONTH, lastDayCal.get(Calendar.DAY_OF_MONTH) - 1);
+                    long noOfDaysStayed = Utils.findNumberOfDays(invoicesV1.getInvoiceStartDate(), lastDayCal.getTime());
+
+                    double balanceAmount = 0.0;
+                    double rentForOldInvoice = noOfDaysStayed * rentPerDay;
+                    double totalAmountForOldInvoice = invoicesV1.getTotalAmount() - (rent - rentForOldInvoice);
+
+                    if (invoicesV1 != null) {
+                        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                            balanceAmount = invoicesV1.getTotalAmount() - totalAmountForOldInvoice;
+                        }
+                    }
+
+                    invoicesV1.setTotalAmount(totalAmountForOldInvoice);
+
+                    InvoiceItems modifiedRentItems = invoicesV1
+                            .getInvoiceItems()
+                            .stream()
+                            .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem()))
+                            .findFirst()
+                            .map(item -> {
+                                item.setAmount(rentForOldInvoice);
+                                return item;
+                            })
+                            .orElse(null);
+
+                    if (modifiedRentItems != null) {
+                        invoiceItemService.updateInvoiceItems(modifiedRentItems);
+                    }
+
+                    invoicesV1Repository.save(invoicesV1);
+
+
+                    return createNewInvoice(invoicesV1, joiningDate, newRent, billingDates, balanceAmount);
+
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    public Double createNewInvoice(InvoicesV1 oldInvoice, String joiningDate, Double rent, BillingDates billingDates, double balanceAmount) {
+        double newBalanceAmount = 0.0;
+        Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+
+        double rentPerDay = rent / noOfDaysInCurrentMonth;
+        long noOfDaysStaying = Utils.findNumberOfDays(dateJoiningDate, billingDates.currentBillEndDate());
+
+        double rentForNewInvoice = Math.round((noOfDaysStaying * rentPerDay * 100.0) * 100.0);
+
+        String invoiceNumber = null;
+        BillTemplates templates = templateService.getBillTemplate(oldInvoice.getHostelId(), InvoiceType.RENT.name());
+        if (templates != null) {
+            InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix());
+            if (inv == null) {
+                StringBuilder invoice = new StringBuilder();
+                invoice.append(templates.prefix());
+                invoice.append("-");
+                invoice.append(templates.suffix());
+                invoiceNumber = invoice.toString();
+            }
+            else {
+                invoiceNumber = Utils.formPrefixSuffix(inv.getInvoiceNumber());
+            }
+        }
+
+
+        InvoicesV1 invoicesV1 = new InvoicesV1();
+        invoicesV1.setBasePrice(rentForNewInvoice);
+        invoicesV1.setTotalAmount(rentForNewInvoice);
+        invoicesV1.setInvoiceStartDate(dateJoiningDate);
+        invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
+        invoicesV1.setCreatedBy(authentication.getName());
+        invoicesV1.setCreatedAt(new Date());
+
+        invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+        invoicesV1.setCustomerId(oldInvoice.getCustomerId());
+        invoicesV1.setInvoiceNumber(invoiceNumber);
+        if (balanceAmount > 0) {
+            if (rentForNewInvoice > balanceAmount) {
+                invoicesV1.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+            }
+            else {
+                invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+                newBalanceAmount = rentForNewInvoice - balanceAmount;
+            }
+        }
+        else {
+            invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+        }
+
+        invoicesV1.setCreatedBy(authentication.getName());
+        invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(new Date(), 0));
+        invoicesV1.setCustomerMobile(invoicesV1.getCustomerMobile());
+        invoicesV1.setCustomerMailId(invoicesV1.getCustomerMailId());
+        invoicesV1.setGst(0.0);
+        invoicesV1.setCgst(0.0);
+        invoicesV1.setSgst(0.0);
+        invoicesV1.setGstPercentile(0.0);
+        invoicesV1.setCreatedAt(new Date());
+        invoicesV1.setInvoiceGeneratedDate(new Date());
+        invoicesV1.setCancelled(false);
+        invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+        invoicesV1.setHostelId(oldInvoice.getHostelId());
+
+        invoicesV1Repository.save(invoicesV1);
+
+        return newBalanceAmount;
     }
 }

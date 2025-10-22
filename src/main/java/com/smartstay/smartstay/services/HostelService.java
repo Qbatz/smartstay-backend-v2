@@ -400,6 +400,22 @@ public class HostelService {
         return new BillingDates(calendar.getTime(), findEndDate);
     }
 
+    public BillingDates getBillStartDate(String hostelId, Date date) {
+        BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
+        int billStartDate = 1;
+        if (billingRules != null) {
+            billStartDate = billingRules.getBillingStartDate();
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
+
+        Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
+
+        return new BillingDates(calendar.getTime(), findEndDate);
+    }
+
 
     public ResponseEntity<?> findFreeBeds(String hostelId) {
         return bedsService.findFreeBeds(hostelId);
@@ -718,6 +734,10 @@ public class HostelService {
 
         return new ResponseEntity<>(message, HttpStatus.CREATED);
 
+    }
+
+    public BillingDates getBillingRuleOnDate(String hostelId, Date dateJoiningDate) {
+        return hostelConfigService.getBillingRuleByDateAndHostelId(hostelId, dateJoiningDate);
     }
 }
 
