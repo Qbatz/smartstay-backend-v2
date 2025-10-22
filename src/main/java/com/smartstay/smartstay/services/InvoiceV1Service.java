@@ -917,7 +917,7 @@ public class InvoiceV1Service {
         List<InvoicesV1> invoices = invoicesV1Repository.findByCustomerId(customerId);
 
         return invoices.stream()
-                .map(InvoiceMapper::toResponse)
+                .map(invoice -> InvoiceMapper.toResponse(invoice, invoicesV1Repository))
                 .toList();
 
     }
