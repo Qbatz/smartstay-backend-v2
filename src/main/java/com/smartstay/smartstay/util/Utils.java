@@ -132,6 +132,8 @@ public class Utils {
     public static final String NO_BOOKING_INFORMATION_FOUND = "No booking information found";
     public static final String YOU_CANNOT_TRANSFER = "You cannot transfer funds to the same UPI account.";
     public static final String FINAL_SETTLEMENT_GENERATED = "Final settlement is already generated";
+    public static final String CHANGE_BED_SAME_BED_ERROR = "Customer is currently staying on the same bed";
+    public static final String CHANGE_BED_SAME_DAY_ERROR = "Cannot change the bed on the same day customer is joined";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
@@ -406,5 +408,43 @@ public class Utils {
         return ref.toString();
     }
 
+    public static String formPrefixSuffix(String invoiceNumber) {
+        StringBuilder prefixSuffix = new StringBuilder();
+        String[] invoicePrefixSuffix = invoiceNumber.split("-");
+        if (invoicePrefixSuffix.length > 0) {
+            prefixSuffix.append(invoicePrefixSuffix[0]);
+            if (invoicePrefixSuffix.length > 1) {
+               if (invoicePrefixSuffix.length > 2) {
+                   for (int i=0; i<invoicePrefixSuffix.length-2; i++) {
+                       prefixSuffix.append("-");
+                       prefixSuffix.append(invoicePrefixSuffix[i]);
+                   }
+               }
+               prefixSuffix.append("-");
+               int lastNumber = Integer.parseInt(invoicePrefixSuffix[invoicePrefixSuffix.length - 1]) + 1;
+               if (lastNumber < 10) {
+                   prefixSuffix.append("00");
+                   prefixSuffix.append(lastNumber);
+               }
+               else if (lastNumber < 100) {
+                    prefixSuffix.append("0");
+                    prefixSuffix.append(lastNumber);
+                }
+                else {
+                   prefixSuffix.append(lastNumber);
+               }
+            }
+        }
+
+        return prefixSuffix.toString();
+    }
+
+    public static Date formDateFromDay(int day, Date currentDate) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentDate);
+        calendar.set(Calendar.DAY_OF_MONTH, day);
+
+        return calendar.getTime();
+    }
 
 }

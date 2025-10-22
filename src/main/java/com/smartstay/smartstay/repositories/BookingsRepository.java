@@ -80,4 +80,10 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """, nativeQuery = true)
     BookingsV1 findByCustomerIdAndJoiningDate(String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
+    @Query(value = """
+            SELECT * FROM bookingsv1 booking where booking.bed_id=:bedId 
+            ORDER BY booking.joining_date DESC LIMIT 1
+            """, nativeQuery = true)
+    BookingsV1 checkBedsAvailabilityForDate(@Param("bedId") Integer bedId);
+
 }

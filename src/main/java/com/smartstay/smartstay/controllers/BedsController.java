@@ -18,11 +18,8 @@ import org.springframework.web.bind.annotation.*;
 @SecurityRequirement(name = "Authorization")
 @CrossOrigin("*")
 public class BedsController {
-
-
     @Autowired
     private BedsService bedsService;
-
 
     @GetMapping("/all-beds/{roomId}")
     public ResponseEntity<?> getAllBeds(@PathVariable("roomId") int roomId) {
@@ -37,11 +34,6 @@ public class BedsController {
     @PostMapping("")
     public ResponseEntity<?> addBed(@Valid @RequestBody AddBed bedDto) {
         return bedsService.addBed(bedDto);
-    }
-
-    @PostMapping("/change-bed/{bedId}/{customerId}/{hostelId}")
-    public ResponseEntity<?> changeBed(@PathVariable("bedId") int bedId,@PathVariable("customerId") String customerId,@PathVariable("hostelId") String hostelId,@Valid @RequestBody ChangeBed request) {
-        return bedsService.changeBed(hostelId,customerId, bedId, request);
     }
 
     @PutMapping("/{bedId}")

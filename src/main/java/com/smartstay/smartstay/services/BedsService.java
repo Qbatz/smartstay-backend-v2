@@ -8,7 +8,9 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
+import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.ennum.BedStatus;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomersBedType;
 import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
@@ -24,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -70,17 +73,7 @@ public class BedsService {
         List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId, user.getParentId());
 
         List<BedsResponse> bedsResponses = listBeds.stream().map(item -> {
-            boolean onNotice = false;
-            if (item.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name()) && item.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
-                onNotice = bookingService.checkIsBedOccupied(item.getBedId());
-            } else if (item.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-                onNotice = true;
-            }else {
-                if (item.getFreeFrom() != null && Utils.compareWithTwoDates(item.getFreeFrom(), new Date()) > 0){
-                    onNotice = true;
-                }
-            }
-            return new BedsMapper(onNotice).apply(item);
+            return new BedsMapper().apply(item);
         }).toList();
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
@@ -323,6 +316,12 @@ public class BedsService {
         return bedsRepository.findByBedIdAndRoomIdAndHostelId(bedId, roomId, hostelId) != null;
     }
 
+    public boolean checkIsBedExsits(Integer bedId, String parentId, String hostelId) {
+        return bedsRepository.findByBedIdAndParentIdAndHostelId(bedId, parentId, hostelId) != null;
+    }
+
+
+
     public int updateBedToNotice(int bedId, String relievingDate) {
         Beds bed = bedsRepository.findById(bedId).orElse(null);
         if (bed == null) {
@@ -330,7 +329,7 @@ public class BedsService {
         }
 
         bed.setUpdatedAt(new Date());
-        bed.setStatus(BedStatus.NOTICE.name());
+        bed.setCurrentStatus(BedStatus.NOTICE.name());
         bed.setFreeFrom(Utils.stringToDate(relievingDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
 
         bedsRepository.save(bed);
@@ -434,69 +433,61 @@ public class BedsService {
         return bedsRepository.findByBedId(bedId);
     }
 
-    public ResponseEntity<?> changeBed(String hostelId,String customerId,int bedId, ChangeBed changeBed) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+    public boolean isBedAvailableForReassign(Integer bedId, String joiningDate) {
+        Beds beds = bedsRepository.findById(bedId).orElse(null);
+        if (beds == null) {
+            return false;
         }
-        String userId = authentication.getName();
-        Users user = usersService.findUserByUserId(userId);
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) && !beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+           return false;
         }
-
-        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+            return bookingService.isBedAvailableByDate(bedId, joiningDate);
         }
-        Beds bed = bedsRepository.checkBedAvailability(bedId);
-        if (bed !=null){
-              bed.setCurrentStatus(BedStatus.OCCUPIED.name());
-              bed.setStatus(BedStatus.OCCUPIED.name());
-              bed.setUpdatedAt(new Date());
-        }else {
-            return new ResponseEntity<>("Bed is not available", HttpStatus.BAD_REQUEST);
+        if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
+            return bookingService.isBedAvailableByDate(bedId, joiningDate);
         }
 
-        BookingsV1 bookingsV1 = bookingService.findBookingsByCustomerIdAndHostelId(customerId, hostelId);
-        if (bookingsV1 == null) {
-            return new ResponseEntity<>("Customer not found", HttpStatus.BAD_REQUEST);
+        return true;
+    }
+
+    public void unassignBed(Integer bedId, String leavingDate) {
+        Date dateLeavingDate = Utils.stringToDate(leavingDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+        bedsRepository.findById(bedId).ifPresent(currentBed -> {
+            if (currentBed.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name()) && currentBed.isBooked()) {
+                currentBed.setCurrentStatus(BedStatus.VACANT.name());
+            }
+            else {
+                currentBed.setCurrentStatus(BedStatus.VACANT.name());
+            }
+            currentBed.setFreeFrom(dateLeavingDate);
+            bedsRepository.save(currentBed);
+        });
+    }
+
+    public void reassignBed(String customerId, Integer bedId) {
+        Beds beds = bedsRepository.findById(bedId).orElse(null);
+        if (beds != null) {
+            BookingsV1 bookingsV1 = bookingService.getBookingInfoByCustomerId(customerId);
+            if (bookingsV1 != null) {
+                if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
+                    beds.setCurrentStatus(BedStatus.NOTICE.name());
+                    beds.setFreeFrom(bookingsV1.getLeavingDate());
+                }
+                else {
+                    beds.setCurrentStatus(BedStatus.OCCUPIED.name());
+                    beds.setFreeFrom(null);
+                }
+
+                bedsRepository.save(beds);
+            }
+
+
         }
-        BedRoomFloor bedRoomFloor = bedsRepository.findRoomAndFloorByBedIdAndHostelId(
-                bedId, hostelId
-        );
-        Beds existingBed = bedsRepository.findByBedIdAndParentId(bookingsV1.getBedId(), user.getParentId());
-        if (existingBed == null) {
-            return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
-        }
-        bookingsV1.setBedId(bedId);
-        bookingsV1.setRoomId(bedRoomFloor.getRoomId());
-        bookingsV1.setFloorId(bedRoomFloor.getFloorId());
+    }
 
-        existingBed.setFreeFrom(null);
-        existingBed.setCurrentStatus(BedStatus.VACANT.name());
-        existingBed.setStatus(BedStatus.VACANT.name());
-        existingBed.setUpdatedAt(new Date());
-
-        CustomersBedHistory cbh = new CustomersBedHistory();
-        cbh.setRoomId(bookingsV1.getRoomId());
-        cbh.setBedId(bookingsV1.getBedId());
-        cbh.setFloorId(bookingsV1.getFloorId());
-        cbh.setHostelId(bookingsV1.getHostelId());
-        cbh.setStartDate(Utils.stringToDate(changeBed.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
-        cbh.setCustomerId(bookingsV1.getCustomerId());
-        cbh.setChangedBy(authentication.getName());
-        cbh.setType(CustomersBedType.CHECK_IN.name());
-        cbh.setRentAmount(changeBed.rentAmount());
-        cbh.setActive(true);
-        cbh.setCreatedAt(new Date());
-        cbh.setBooking(bookingsV1);
-
-        List<CustomersBedHistory> listBedHistory = bookingsV1.getCustomerBedHistory();
-        listBedHistory.add(cbh);
-        bookingsV1.setCustomerBedHistory(listBedHistory);
-        bookingService.saveBooking(bookingsV1);
-        bedsRepository.save(existingBed);
-        bedsRepository.save(bed);
-        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
-
+    public BedRoomFloor findRoomAndFloorByBedIdAndHostelId(Integer bedId, String hostelId) {
+        return bedsRepository.findRoomAndFloorByBedIdAndHostelId(bedId, hostelId);
     }
 }

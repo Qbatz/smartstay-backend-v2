@@ -26,4 +26,8 @@ public class CustomersBedHistoryService {
                 .map(item -> new BedHistoryCustomerListMapper().apply(item))
                 .toList();
     }
+
+    public CustomersBedHistory getLatestCustomerBed(String customerId) {
+        return customerBedHistoryRepository.findTopByCustomerIdOrderByCreatedAtDesc(customerId).orElse(null);
+    }
 }

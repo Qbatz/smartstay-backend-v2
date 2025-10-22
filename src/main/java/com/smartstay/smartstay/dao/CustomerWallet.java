@@ -16,13 +16,9 @@ public class CustomerWallet {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long walletId;
     private Double amount;
-    private boolean isCredit;
-    private Double balanceAmount;
-    private String source;
-    private String description;
     private Date transactionDate;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "customer_id")
     private Customers customers;
 }

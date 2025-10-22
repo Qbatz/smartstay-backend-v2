@@ -45,7 +45,7 @@ public class Customers {
     @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
     private KycDetails kycDetails;
 
-    @OneToMany(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CustomerWallet> listWallets;
+    @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
+    CustomerWallet wallet;
 
 }

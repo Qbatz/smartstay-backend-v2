@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBedHistory, Long> {
@@ -21,4 +22,6 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
             SELECT * FROM customers_bed_history cbh WHERE cbh.hostel_id=:hostelId AND cbh.start_date<=DATE(:endDate) AND (cbh.end_date IS NULL OR end_date >=DATE(:startDate))
             """, nativeQuery = true)
     List<CustomersBedHistory> findByHostelIdAndStartAndEndDate(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+    Optional<CustomersBedHistory> findTopByCustomerIdOrderByCreatedAtDesc(String customerId);
 }
