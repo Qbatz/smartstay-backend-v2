@@ -66,6 +66,8 @@ public class BookingsService {
 
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private CustomersBedHistoryService customersBedHistoryService;
 
     @Autowired
     public void setBedsService(@Lazy BedsService bedsService) {
@@ -538,7 +540,7 @@ public class BookingsService {
      * @param customerId
      * @return
      */
-    public ResponseEntity<?> initializeCheckout(String customerId) {
+    public ResponseEntity<?> checkoutCustomer(String customerId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -566,7 +568,33 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
-        return null;
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_VACATED, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+        if (!customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoicesV1 = invoiceService.getFinalSettlementStatus(customers.getCustomerId());
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoiceService.isFinalSettlementPaid(invoicesV1)) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_PAID, HttpStatus.BAD_REQUEST);
+        }
+
+        Beds bed = bedsService.makeABedVacant(bookingsV1.getBedId());
+        if (bed == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+
+        customersService.markCustomerCheckedOut(customers);
+        customersBedHistoryService.checkoutCustomer(customerId);
+
+        return new ResponseEntity<>(HttpStatus.OK);
 
     }
 

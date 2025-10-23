@@ -101,4 +101,6 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             @Param("invoiceId") List<String> invoiceId
     );
 
+    List<InvoicesV1> findByCustomerIdAndInvoiceType(String customerId, String type);
+
 }

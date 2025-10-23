@@ -1562,4 +1562,10 @@ public class CustomersService {
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
+
+    public void markCustomerCheckedOut(Customers customers) {
+        customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
+        customers.setCurrentStatus(CustomerStatus.VACATED.name());
+        customersRepository.save(customers);
+    }
 }

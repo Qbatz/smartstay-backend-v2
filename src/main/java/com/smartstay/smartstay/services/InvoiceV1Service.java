@@ -1142,4 +1142,29 @@ public class InvoiceV1Service {
 
         return newBalanceAmount;
     }
+
+    public InvoicesV1 getFinalSettlementStatus(String customerId) {
+        List<InvoicesV1> listFinalSettlement = invoicesV1Repository.findByCustomerIdAndInvoiceType(customerId, InvoiceType.SETTLEMENT.name());
+        if (listFinalSettlement == null || listFinalSettlement.isEmpty()) {
+            return null;
+        }
+
+        return listFinalSettlement
+                .stream()
+                .findAny().get();
+    }
+
+    public boolean isFinalSettlementPaid(InvoicesV1 invoicesV1) {
+        Double finalSettlementPaidAmount = transactionService.getFinalSettlementPaidAmount(invoicesV1.getInvoiceId());
+        if (finalSettlementPaidAmount >= invoicesV1.getTotalAmount()) {
+            return true;
+        }
+        return false;
+    }
+
+    public Double getPayableAmount(InvoicesV1 invoicesV1) {
+        Double finalSettlementPaidAmount = transactionService.getFinalSettlementPaidAmount(invoicesV1.getInvoiceId());
+
+        return finalSettlementPaidAmount - invoicesV1.getTotalAmount();
+    }
 }

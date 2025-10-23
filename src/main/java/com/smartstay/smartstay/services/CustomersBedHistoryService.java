@@ -39,4 +39,14 @@ public class CustomersBedHistoryService {
                 .map(i -> new BedHistoryMapper().apply(i))
                 .toList();
     }
+
+    public CustomersBedHistory getCustomerBookedBed(String customerId) {
+        return customerBedHistoryRepository.findByCustomerIdAndTypeBooking(customerId);
+    }
+
+    public void checkoutCustomer(String customerId) {
+        CustomersBedHistory bedHistory = customerBedHistoryRepository.findByCustomerIdAndTypeBooking(customerId);
+        bedHistory.setEndDate(new Date());
+        customerBedHistoryRepository.save(bedHistory);
+    }
 }

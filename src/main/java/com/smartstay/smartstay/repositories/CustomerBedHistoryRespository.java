@@ -34,4 +34,9 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
             LEFT OUTER JOIN rooms rms on rms.room_id=bed.room_id where cbh.customer_id=:customerId
             """, nativeQuery = true)
     List<BedHistory> findByCustomerId(@Param("customerId") String customerId);
+
+    @Query(value = """
+            SELECT * FROM customers_bed_history WHERE customer_id=:customerId AND type='BOOKED' LIMIT 1
+            """, nativeQuery = true)
+    CustomersBedHistory findByCustomerIdAndTypeBooking(@Param("customerId") String customerId);
 }

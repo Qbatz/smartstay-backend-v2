@@ -491,4 +491,14 @@ public class BedsService {
     public BedRoomFloor findRoomAndFloorByBedIdAndHostelId(Integer bedId, String hostelId) {
         return bedsRepository.findRoomAndFloorByBedIdAndHostelId(bedId, hostelId);
     }
+
+    public Beds makeABedVacant(int bedId) {
+        Beds bed = bedsRepository.findById(bedId).orElse(null);
+        if (bed == null) {
+            return null;
+        }
+        bed.setCurrentStatus(BedStatus.VACANT.name());
+        bed.setFreeFrom(new Date());
+        return bedsRepository.save(bed);
+    }
 }
