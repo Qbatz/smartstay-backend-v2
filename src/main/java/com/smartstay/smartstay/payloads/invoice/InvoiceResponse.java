@@ -8,7 +8,9 @@ public record InvoiceResponse(
         String invoiceType,
         String paymentStatus,
         Double totalAmount,
-
+        Double dueAmount,
+        Double paidAmount,
+        String dueDate,
         String invoiceGeneratedDate,
         List<ItemResponse> items
 ) {

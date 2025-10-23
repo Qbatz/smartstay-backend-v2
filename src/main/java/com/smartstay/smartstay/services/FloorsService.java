@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dao.Floors;
 import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.floor.AddFloors;
 import com.smartstay.smartstay.payloads.floor.UpdateFloor;
 import com.smartstay.smartstay.repositories.FloorRepository;
@@ -54,13 +55,13 @@ public class FloorsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<Floors> listFloor = floorRepository.findAllByHostelIdAndParentId(hostelId,user.getParentId());
+        List<Floors> listFloor = floorRepository.findAllByHostelIdAndParentIdAndIsDeletedFalse(hostelId,user.getParentId());
         List<FloorsResponse> floorsResponses = listFloor.stream().map(item -> new FloorsMapper().apply(item)).toList();
         return new ResponseEntity<>(floorsResponses, HttpStatus.OK);
     }
 
     public List<Floors> getFloorByHostelID(String hostelId, String parentID){
-        return floorRepository.findAllByHostelIdAndParentId(hostelId,parentID);
+        return floorRepository.findAllByHostelIdAndParentIdAndIsDeletedFalse(hostelId,parentID);
     }
 
     public ResponseEntity<?> getFloorById(Integer id) {
@@ -175,7 +176,13 @@ public class FloorsService {
         }
         Floors existingFloor = floorRepository.findByFloorIdAndParentId(floorId,users.getParentId());
         if (existingFloor != null) {
-            floorRepository.delete(existingFloor);
+            boolean customerExist = floorRepository.existsActiveBookingForFloor(existingFloor.getHostelId(),floorId ,
+                    List.of(CustomerStatus.NOTICE.name(),CustomerStatus.CHECK_IN.name(), CustomerStatus.BOOKED.name()));
+            if (customerExist) {
+                return new ResponseEntity<>("Cannot delete floor — active bookings exist.", HttpStatus.BAD_REQUEST);
+            }
+            existingFloor.setIsDeleted(true);
+            floorRepository.save(existingFloor);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>("No Floor found", HttpStatus.BAD_REQUEST);

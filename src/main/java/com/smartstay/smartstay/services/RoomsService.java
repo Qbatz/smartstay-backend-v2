@@ -4,6 +4,7 @@ import com.smartstay.smartstay.Wrappers.RoomsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.room.RoomInfo;
+import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.rooms.AddRoom;
 import com.smartstay.smartstay.payloads.rooms.UpdateRoom;
 import com.smartstay.smartstay.repositories.FloorRepository;
@@ -56,7 +57,7 @@ public class RoomsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<Rooms> listRooms = roomRepository.findAllByFloorIdAndParentId(floorId,users.getParentId());
+        List<Rooms> listRooms = roomRepository.findAllByFloorIdAndParentIdAndIsDeletedFalse(floorId,users.getParentId());
         List<RoomsResponse> roomsResponses = listRooms.stream().map(item -> new RoomsMapper().apply(item)).toList();
         return new ResponseEntity<>(roomsResponses, HttpStatus.OK);
     }
@@ -180,7 +181,14 @@ public class RoomsService {
         }
         Rooms existingRoom = roomRepository.findByRoomIdAndParentId(roomId,users.getParentId());
         if (existingRoom != null) {
-            roomRepository.delete(existingRoom);
+            boolean customerExist = floorRepository.existsActiveBookingForRoom(existingRoom.getHostelId(),roomId ,
+                    List.of(CustomerStatus.NOTICE.name(),CustomerStatus.CHECK_IN.name(), CustomerStatus.BOOKED.name()));
+            if (customerExist) {
+                return new ResponseEntity<>("Cannot delete room — active bookings exist.", HttpStatus.BAD_REQUEST);
+            }
+            existingRoom.setUpdatedAt(new Date());
+            existingRoom.setIsDeleted(true);
+            roomRepository.save(existingRoom);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);

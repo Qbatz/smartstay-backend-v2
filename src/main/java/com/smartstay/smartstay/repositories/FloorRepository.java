@@ -13,7 +13,8 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
 
     List<Floors> findAllByHostelId(String hostelId);
 
-    List<Floors> findAllByHostelIdAndParentId(String hostelId,String parentId);
+    List<Floors> findAllByHostelIdAndParentIdAndIsDeletedFalse(String hostelId, String parentId);
+
 
     Floors findByFloorId(int floorId);
 
@@ -37,5 +38,30 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
 
     @Query(value = "select count(fl.floor_id) as count from floors fl where fl.hostel_id=:hostelId and fl.is_active=true and fl.is_deleted=false", nativeQuery = true)
     FloorsCount findFloorCountsBasedOnHostelId(@Param("hostelId") String hostelId);
+
+    @Query("""
+       SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END
+       FROM BookingsV1 b
+       WHERE b.hostelId = :hostelId
+       AND b.floorId = :floorId
+       AND b.currentStatus IN (:statuses)
+       """)
+    boolean existsActiveBookingForFloor(@Param("hostelId") String hostelId,
+                                        @Param("floorId") Integer floorId,
+                                        @Param("statuses") List<String> statuses);
+
+
+    @Query("""
+       SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END
+       FROM BookingsV1 b
+       WHERE b.hostelId = :hostelId
+       AND b.roomId = :roomId
+       AND b.currentStatus IN (:statuses)
+       """)
+    boolean existsActiveBookingForRoom(@Param("hostelId") String hostelId,
+                                       @Param("roomId") Integer roomId,
+                                       @Param("statuses") List<String> statuses);
+
+
 
 }

@@ -75,6 +75,14 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     List<InvoicesV1> findByCustomerId(String customerId);
 
+    @Query(value = """
+    SELECT COALESCE(SUM(t.paid_amount), 0)
+    FROM transactionv1 t
+    WHERE t.invoice_id = :invoiceId
+    """, nativeQuery = true)
+    Double findTotalPaidAmountByInvoiceId(@Param("invoiceId") String invoiceId);
+
+
     @Query(
             value = """
         SELECT 
