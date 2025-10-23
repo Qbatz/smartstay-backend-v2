@@ -14,6 +14,7 @@ public class InvoiceItems {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long invoiceItemId;
     private String invoiceItem;
+    private String otherItem;
     private Double amount;
 
     @ManyToOne
