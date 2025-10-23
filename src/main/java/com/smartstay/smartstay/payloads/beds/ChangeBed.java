@@ -8,8 +8,9 @@ public record ChangeBed(
         @NotNull(message = "Bed id is required")
         @Positive(message = "Bed id is required")
         Integer bedId,
-        double rentAmount,
+        Double rentAmount,
         @NotNull(message = "Joining Date is required")
-        @NotEmpty(message = "Joining Date is required") String joiningDate
+        @NotEmpty(message = "Joining Date is required") String joiningDate,
+        String reason
 ) {
 }

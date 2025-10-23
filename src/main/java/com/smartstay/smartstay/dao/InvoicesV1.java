@@ -26,6 +26,7 @@ public class InvoicesV1 {
     Double basePrice;
     //this includes GST
     Double totalAmount;
+    Double paidAmount;
     Double gst;
     Double cgst;
     Double sgst;

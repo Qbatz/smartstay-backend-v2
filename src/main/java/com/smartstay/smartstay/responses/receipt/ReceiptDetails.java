@@ -6,10 +6,12 @@ import com.smartstay.smartstay.responses.invoices.StayInfo;
 
 public record ReceiptDetails(
         String invoiceNumber,
+        String invoiceDate,
         String invoiceId,
         String emailId,
         String mobile,
         String countryCode,
+        ReceiptInfo receiptInfo,
         CustomerInfo customerInfo,
         StayInfo stayInfo,
         AccountDetails accountDetails,

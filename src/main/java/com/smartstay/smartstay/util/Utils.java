@@ -132,6 +132,8 @@ public class Utils {
     public static final String NO_BOOKING_INFORMATION_FOUND = "No booking information found";
     public static final String YOU_CANNOT_TRANSFER = "You cannot transfer funds to the same UPI account.";
     public static final String FINAL_SETTLEMENT_GENERATED = "Final settlement is already generated";
+    public static final String FINAL_SETTLEMENT_NOT_GENERATED = "Final settlement is pending";
+    public static final String FINAL_SETTLEMENT_NOT_PAID = "Final Settlement is not fully paid";
     public static final String CHANGE_BED_SAME_BED_ERROR = "Customer is currently staying on the same bed";
     public static final String CHANGE_BED_SAME_DAY_ERROR = "Cannot change the bed on the same day customer is joined";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";

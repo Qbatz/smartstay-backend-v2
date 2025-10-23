@@ -503,27 +503,39 @@ public class InvoiceV1Service {
             com.smartstay.smartstay.dao.BillTemplates templates = templatesService.getTemplateByHostelId(customers.getHostelId());
             if (templates != null && templates.getTemplateTypes() != null) {
                 if (!templates.getTemplateTypes().isEmpty()) {
-                    prefix = templates.getTemplateTypes().get(templates.getTemplateTypes().size()-1).getInvoicePrefix();
+                    BillTemplateType rentTemplateType = templates.getTemplateTypes()
+                            .stream()
+                            .filter(i -> i.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                            .findFirst()
+                            .get();
+                    prefix = rentTemplateType.getInvoicePrefix();
                 }
                 prefixSuffix.append(prefix);
             }
             InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix);
-            String[] prefArr = inv.getInvoiceNumber().split("-");
-            if (prefArr.length > 1) {
-                int suffix = Integer.parseInt(prefArr[1]) + 1;
-                prefixSuffix.append("-");
-                if (suffix < 10) {
-                    prefixSuffix.append("00");
-                    prefixSuffix.append(suffix);
-                }
-                else if (suffix < 100) {
-                    prefixSuffix.append("0");
-                    prefixSuffix.append(suffix);
-                }
-                else {
-                    prefixSuffix.append(suffix);
+            if (inv != null) {
+                String[] prefArr = inv.getInvoiceNumber().split("-");
+                if (prefArr.length > 1) {
+                    int suffix = Integer.parseInt(prefArr[1]) + 1;
+                    prefixSuffix.append("-");
+                    if (suffix < 10) {
+                        prefixSuffix.append("00");
+                        prefixSuffix.append(suffix);
+                    }
+                    else if (suffix < 100) {
+                        prefixSuffix.append("0");
+                        prefixSuffix.append(suffix);
+                    }
+                    else {
+                        prefixSuffix.append(suffix);
+                    }
                 }
             }
+            else {
+                //this is going to be the first invoice
+                prefixSuffix.append("001");
+            }
+
         }
 
 
@@ -1087,7 +1099,7 @@ public class InvoiceV1Service {
         double rentPerDay = rent / noOfDaysInCurrentMonth;
         long noOfDaysStaying = Utils.findNumberOfDays(dateJoiningDate, billingDates.currentBillEndDate());
 
-        double rentForNewInvoice = Math.round((noOfDaysStaying * rentPerDay * 100.0) * 100.0);
+        double rentForNewInvoice = Math.round((noOfDaysStaying * rentPerDay / 100.0) * 100.0);
 
         String invoiceNumber = null;
         BillTemplates templates = templateService.getBillTemplate(oldInvoice.getHostelId(), InvoiceType.RENT.name());
@@ -1105,7 +1117,6 @@ public class InvoiceV1Service {
             }
         }
 
-
         InvoicesV1 invoicesV1 = new InvoicesV1();
         invoicesV1.setBasePrice(rentForNewInvoice);
         invoicesV1.setTotalAmount(rentForNewInvoice);
@@ -1114,12 +1125,13 @@ public class InvoiceV1Service {
         invoicesV1.setCreatedBy(authentication.getName());
         invoicesV1.setCreatedAt(new Date());
 
-        invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+        invoicesV1.setInvoiceType(InvoiceType.REASSIGN_RENT.name());
         invoicesV1.setCustomerId(oldInvoice.getCustomerId());
         invoicesV1.setInvoiceNumber(invoiceNumber);
         if (balanceAmount > 0) {
             if (rentForNewInvoice > balanceAmount) {
                 invoicesV1.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+                newBalanceAmount = rentForNewInvoice - balanceAmount;
             }
             else {
                 invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
@@ -1129,9 +1141,11 @@ public class InvoiceV1Service {
         else {
             invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
         }
-
+        if (newBalanceAmount > 0) {
+            invoicesV1.setPaidAmount(newBalanceAmount);
+        }
         invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(new Date(), 0));
+        invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(new Date(), 2));
         invoicesV1.setCustomerMobile(invoicesV1.getCustomerMobile());
         invoicesV1.setCustomerMailId(invoicesV1.getCustomerMailId());
         invoicesV1.setGst(0.0);
@@ -1147,5 +1161,30 @@ public class InvoiceV1Service {
         invoicesV1Repository.save(invoicesV1);
 
         return newBalanceAmount;
+    }
+
+    public InvoicesV1 getFinalSettlementStatus(String customerId) {
+        List<InvoicesV1> listFinalSettlement = invoicesV1Repository.findByCustomerIdAndInvoiceType(customerId, InvoiceType.SETTLEMENT.name());
+        if (listFinalSettlement == null || listFinalSettlement.isEmpty()) {
+            return null;
+        }
+
+        return listFinalSettlement
+                .stream()
+                .findAny().get();
+    }
+
+    public boolean isFinalSettlementPaid(InvoicesV1 invoicesV1) {
+        Double finalSettlementPaidAmount = transactionService.getFinalSettlementPaidAmount(invoicesV1.getInvoiceId());
+        if (finalSettlementPaidAmount >= invoicesV1.getTotalAmount()) {
+            return true;
+        }
+        return false;
+    }
+
+    public Double getPayableAmount(InvoicesV1 invoicesV1) {
+        Double finalSettlementPaidAmount = transactionService.getFinalSettlementPaidAmount(invoicesV1.getInvoiceId());
+
+        return finalSettlementPaidAmount - invoicesV1.getTotalAmount();
     }
 }
