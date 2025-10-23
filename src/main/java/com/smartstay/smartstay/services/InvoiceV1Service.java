@@ -18,6 +18,7 @@ import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
+import com.smartstay.smartstay.payloads.invoice.ItemResponse;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.*;
@@ -31,10 +32,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class InvoiceV1Service {
@@ -473,11 +471,23 @@ public class InvoiceV1Service {
         if (!Utils.checkNullOrEmpty(manualInvoice.invoiceDate())) {
             return new ResponseEntity<>(Utils.INVALID_INVOICE_DATE, HttpStatus.BAD_REQUEST);
         }
+
+
+        List<ItemResponse> items = manualInvoice.items() != null ? manualInvoice.items() : Collections.emptyList();
+        Optional<ItemResponse> ebItem = items.stream()
+                .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.EB.name().equalsIgnoreCase(item.invoiceItem()))
+                .findFirst();
+
+        Double ebAmount = ebItem.map(ItemResponse::amount).orElse(0.0);
+
+        Optional<ItemResponse> rentItem = items.stream()
+                .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.invoiceItem())
+                        || "ROOM RENT".equalsIgnoreCase(item.invoiceItem()))
+                .findFirst();
+
+        Double rentAmount = rentItem.map(ItemResponse::amount).orElse(0.0);
+
         String invoiceNumber = null;
-        double ebAmount = 0.0;
-        if (Utils.checkNullOrEmpty(manualInvoice.ebAmount())) {
-            ebAmount = manualInvoice.ebAmount();
-        }
         StringBuilder prefixSuffix = new StringBuilder();
         if (Utils.checkNullOrEmpty(manualInvoice.invoiceNumber())) {
             if (invoicesV1Repository.findByInvoiceNumberAndHostelId(manualInvoice.invoiceNumber(), customers.getHostelId()) != null) {
@@ -583,14 +593,37 @@ public class InvoiceV1Service {
         double invoiceAmount = 0.0;
 
         if (noOfDaysOnThatMonth == noOfDaysStayed) {
-            invoiceAmount = manualInvoice.rentAmount();
+            invoiceAmount = rentAmount;
         }
         else {
-            double rentPerDay = manualInvoice.rentAmount()/noOfDaysOnThatMonth;
+            double rentPerDay = rentAmount/noOfDaysOnThatMonth;
             invoiceAmount = rentPerDay*noOfDaysStayed;
         }
 
+        double totalAmount = 0.0;
         InvoicesV1 invoicesV1 = new InvoicesV1();
+        List<InvoiceItems> listInvoicesItems = new ArrayList<>();
+        for (ItemResponse item : manualInvoice.items()) {
+            InvoiceItems invoiceItem = new InvoiceItems();
+            String itemName = item.invoiceItem().trim().toUpperCase();
+            if (itemName.equals("EB")) {
+                invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+            } else if (itemName.equals("RENT") || itemName.equals("ROOM RENT")) {
+                invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+            }else if (itemName.equals("AMENITY")) {
+                invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
+            }else {
+                invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
+                invoiceItem.setOtherItem(item.invoiceItem());
+                if (item.amount() != null) {
+                    totalAmount += item.amount();
+                }
+            }
+            invoiceItem.setAmount(item.amount());
+            invoiceItem.setInvoice(invoicesV1);
+            listInvoicesItems.add(invoiceItem);
+        }
+        totalAmount = totalAmount + invoiceAmount + ebAmount;
         invoicesV1.setInvoiceNumber(prefixSuffix.toString());
         invoicesV1.setBasePrice(invoiceAmount);
         invoicesV1.setCustomerId(customerId);
@@ -599,7 +632,7 @@ public class InvoiceV1Service {
         invoicesV1.setCustomerMailId(customers.getEmailId());
         invoicesV1.setCustomerMobile(customers.getMobile());
 //        invoicesV1.setEbAmount(ebAmount);
-        invoicesV1.setTotalAmount(invoiceAmount + ebAmount);
+        invoicesV1.setTotalAmount(totalAmount);
         invoicesV1.setGst(0.0);
         invoicesV1.setCgst(0.0);
         invoicesV1.setSgst(0.0);
@@ -613,19 +646,6 @@ public class InvoiceV1Service {
         invoicesV1.setInvoiceDueDate(invoiceDueDate);
         invoicesV1.setInvoiceEndDate(invoiceEndDate);
         invoicesV1.setCancelled(false);
-
-        List<InvoiceItems> listInvoicesItems = new ArrayList<>();
-        InvoiceItems invoiceItems = new InvoiceItems();
-        invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
-        invoiceItems.setAmount(ebAmount);
-        invoiceItems.setInvoice(invoicesV1);
-        listInvoicesItems.add(invoiceItems);
-
-        InvoiceItems invoiceItems1 = new InvoiceItems();
-        invoiceItems1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
-        invoiceItems1.setAmount(invoiceAmount);
-        invoiceItems1.setInvoice(invoicesV1);
-        listInvoicesItems.add(invoiceItems1);
 
         invoicesV1.setInvoiceItems(listInvoicesItems);
 
