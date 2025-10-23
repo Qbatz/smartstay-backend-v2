@@ -890,31 +890,25 @@ public class InvoiceV1Service {
         paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
         balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
         subTotal = invoicesV1.getTotalAmount();
-
-        double ebAmount = invoicesV1
-                .getInvoiceItems()
-                .stream()
-                .filter(item -> item.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name()))
-                .mapToDouble(InvoiceItems::getAmount)
-                .sum();
-
-        subTotal = subTotal + ebAmount;
-
-
-
         List<com.smartstay.smartstay.responses.invoices.InvoiceItems> listInvoiceItems = new ArrayList<>();
-        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
-            com.smartstay.smartstay.responses.invoices.InvoiceItems items1 = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), "Rent", invoicesV1.getBasePrice());
-            listInvoiceItems.add(items1);
-        }
-        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
-            com.smartstay.smartstay.responses.invoices.InvoiceItems items1 = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), "Advance", invoicesV1.getBasePrice());
-            listInvoiceItems.add(items1);
-        }
 
-        if (ebAmount != 0) {
-            com.smartstay.smartstay.responses.invoices.InvoiceItems items2 = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), "Electricity", ebAmount);
-            listInvoiceItems.add(items2);
+        for (InvoiceItems item : invoicesV1.getInvoiceItems()) {
+            String description;
+            switch (item.getInvoiceItem()) {
+                case "RENT" -> description = "Rent";
+                case "ADVANCE" -> description = "Advance";
+                case "EB" -> description = "Electricity Bill";
+                case "AMENITY" -> description = "Amenity";
+                case "OTHERS" -> description = item.getOtherItem() != null ? item.getOtherItem() : "Others";
+                default -> description = Utils.capitalize(item.getInvoiceItem());
+            }
+            com.smartstay.smartstay.responses.invoices.InvoiceItems responseItem = new com.smartstay.smartstay.responses.invoices.InvoiceItems(
+                    invoicesV1.getInvoiceNumber(),
+                    description,
+                    item.getAmount()
+            );
+
+            listInvoiceItems.add(responseItem);
         }
         List<PaymentHistoryProjection> paymentHistoryList = transactionService.getPaymentHistoryByInvoiceId(invoiceId);
 

@@ -5,6 +5,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.invoice.ItemResponse;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
+import com.smartstay.smartstay.util.Utils;
 
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -18,8 +19,8 @@ public class InvoiceMapper {
         return new InvoiceResponse(
                 invoice.getInvoiceId(),
                 invoice.getInvoiceNumber(),
-                capitalize(invoice.getInvoiceType()),
-                capitalize(PaymentStatus.valueOf(invoice.getPaymentStatus()).getDisplayName()),
+                Utils.capitalize(invoice.getInvoiceType()),
+                Utils.capitalize(PaymentStatus.valueOf(invoice.getPaymentStatus()).getDisplayName()),
                 invoice.getTotalAmount(),
                 invoice.getTotalAmount() - paidAmount,
                 paidAmount,
@@ -31,20 +32,20 @@ public class InvoiceMapper {
                         : null,
                 invoice.getInvoiceItems() != null
                         ? invoice.getInvoiceItems().stream()
-                        .map(item -> new ItemResponse(
-                                item.getInvoiceItem() != null && item.getInvoiceItem().equalsIgnoreCase("EB")
-                                        ? "EB"
-                                        : capitalize(item.getInvoiceItem()),
-                                item.getAmount()))
+                        .map(item -> {
+                            String displayName;
+
+                            if (item.getOtherItem() != null && !item.getOtherItem().trim().isEmpty()) {
+                                displayName = Utils.capitalize(item.getOtherItem().trim());
+                            } else {
+                                displayName = Utils.capitalize(item.getInvoiceItem());
+                            }
+
+                            return new ItemResponse(displayName, item.getAmount());
+                        })
                         .toList()
                         : List.of()
         );
-    }
-
-
-    private static String capitalize(String value) {
-        if (value == null || value.isEmpty()) return value;
-        return value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase();
     }
 }
 
