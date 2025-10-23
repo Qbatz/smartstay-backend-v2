@@ -255,6 +255,7 @@ public class BookingsService {
             customersBedHistory.setHostelId(hostelId);
             customersBedHistory.setCustomerId(payload.customerId());
             customersBedHistory.setChangedBy(authentication.getName());
+            customersBedHistory.setReason("Booking");
             customersBedHistory.setActive(true);
             customersBedHistory.setCreatedAt(new Date());
 
@@ -295,6 +296,7 @@ public class BookingsService {
             cbh.setCustomerId(bookingsV1.getCustomerId());
             cbh.setChangedBy(authentication.getName());
             cbh.setType(CustomersBedType.CHECK_IN.name());
+            cbh.setReason("Initial check in");
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
             cbh.setBooking(bookingsV1);
@@ -332,6 +334,7 @@ public class BookingsService {
             cbh.setStartDate(bookingsV1.getJoiningDate());
             cbh.setCustomerId(bookingsV1.getCustomerId());
             cbh.setChangedBy(authentication.getName());
+            cbh.setReason("Initial check in");
             cbh.setType(CustomersBedType.CHECK_IN.name());
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
@@ -607,11 +610,17 @@ public class BookingsService {
     }
 
     public void reassignBed(BedRoomFloor bedRoomFloor, BookingsV1 bookingsV1, ChangeBed request) {
+        CustomersBedHistory cbh = new CustomersBedHistory();
+        Double rent = bookingsV1.getRentAmount();
+
+        if (request.rentAmount() != null ) {
+            bookingsV1.setRentAmount(request.rentAmount());
+            rent = request.rentAmount();
+        }
         bookingsV1.setBedId(request.bedId());
         bookingsV1.setFloorId(bedRoomFloor.getFloorId());
         bookingsV1.setRoomId(bedRoomFloor.getRoomId());
 
-        CustomersBedHistory cbh = new CustomersBedHistory();
         cbh.setRoomId(bookingsV1.getRoomId());
         cbh.setBedId(bookingsV1.getBedId());
         cbh.setFloorId(bookingsV1.getFloorId());
@@ -619,8 +628,9 @@ public class BookingsService {
         cbh.setStartDate(Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
         cbh.setCustomerId(bookingsV1.getCustomerId());
         cbh.setChangedBy(authentication.getName());
-        cbh.setType(CustomersBedType.CHECK_IN.name());
-        cbh.setRentAmount(request.rentAmount());
+        cbh.setType(CustomersBedType.REASSIGNED.name());
+        cbh.setReason(request.reason());
+        cbh.setRentAmount(rent);
         cbh.setActive(true);
         cbh.setCreatedAt(new Date());
         cbh.setBooking(bookingsV1);

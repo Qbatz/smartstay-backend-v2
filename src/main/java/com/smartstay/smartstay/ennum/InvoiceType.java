@@ -5,5 +5,6 @@ public enum InvoiceType {
     ADVANCE,
     RENT,
     OTHERS,
-    SETTLEMENT
+    SETTLEMENT,
+    REASSIGN_RENT
 }

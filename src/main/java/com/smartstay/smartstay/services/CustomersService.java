@@ -960,6 +960,7 @@ public class CustomersService {
         }
 
         List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
+        List<BedHistory> listBeds = bedHistory.getCustomersBedHistory(customers.getCustomerId());
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getFirstName(),
@@ -973,7 +974,8 @@ public class CustomersService {
                 address,
                 hostelInformation,
                 kycInfo,
-                invoiceResponseList);
+                invoiceResponseList,
+                listBeds);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -1509,9 +1511,6 @@ public class CustomersService {
         if (!bedsService.checkIsBedExsits(request.bedId(), user.getParentId(), hostelId)) {
             return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
         }
-        if (!bedsService.isBedAvailableForReassign(request.bedId(), request.joiningDate())) {
-            return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);
-        }
         Customers customers = customersRepository.findById(customerId).orElse(null);
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
@@ -1523,7 +1522,11 @@ public class CustomersService {
         if (bookingsV1.getBedId() == request.bedId()) {
             return new ResponseEntity<>(Utils.CHANGE_BED_SAME_BED_ERROR, HttpStatus.BAD_REQUEST);
         }
+        if (!bedsService.isBedAvailableForReassign(request.bedId(), request.joiningDate())) {
+            return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);
+        }
 
+        //check is it after or equal current billing cycle
         Date joiningDate = Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
         double balanceAmount = invoiceService.calculateAndCreateInvoiceForReassign(customers, request.joiningDate(), request.rentAmount());

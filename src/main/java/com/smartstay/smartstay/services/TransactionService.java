@@ -306,7 +306,19 @@ public class TransactionService {
             hostelFullAddress.append(hostelV1.getPincode());
         }
 
-        AccountDetails accountDetails = null;
+        BankingV1 bankingV1 = bankingService.getBankDetails(transactionV1.getBankId());
+        String bankName = null;
+        if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+            bankName = "Cash";
+        }
+        else {
+            bankName = bankingV1.getBankName();
+        }
+        StringBuilder account = new StringBuilder();
+        account.append(bankingV1.getAccountHolderName());
+        account.append("-");
+        account.append(bankName);
+        AccountDetails accountDetails = new AccountDetails(bankingV1.getAccountNumber(), bankingV1.getIfscCode(), account.toString(), bankingV1.getUpiId(), null);;
         ReceiptConfigInfo receiptConfigInfo = null;
         com.smartstay.smartstay.dao.BillTemplates hostelTemplates = templatesService.getTemplateByHostelId(hostelId);
         if (hostelTemplates != null) {
@@ -335,14 +347,6 @@ public class TransactionService {
             } else {
                 hostelLogo = templateType.getReceiptLogoUrl();
             }
-
-            if (templateType.getBankAccountId() != null) {
-                BankingV1 bankingV1 = bankingService.getBankDetails(templateType.getBankAccountId());
-                accountDetails = new AccountDetails(bankingV1.getAccountNumber(), bankingV1.getIfscCode(), bankingV1.getBankName(), bankingV1.getUpiId(), templateType.getQrCode());
-            } else {
-                accountDetails = new AccountDetails(null, null, null, null, templateType.getQrCode());
-            }
-
 
             receiptConfigInfo = new ReceiptConfigInfo(templateType.getReceiptTermsAndCondition(), receiptSignatureUrl, hostelLogo, hostelFullAddress.toString(), templateType.getReceiptTemplateColor(), templateType.getReceiptNotes(), invoiceType);
         }
@@ -385,8 +389,9 @@ public class TransactionService {
 
         StayInfo stayInfo = new StayInfo(null, null, null, null);
         CustomersBedHistory bedHistory = null;
-        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
-           bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+        if (!invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            assert customers != null;
+            bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
             BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
             if (bedDetails != null) {
                 stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(), hostelV1.getHostelName());
