@@ -17,6 +17,7 @@ public interface ExpenseList {
     String getVendorId();
     String getReferenceNumber();
     String getHolderName();
+    String getAccountType();
     String getBankName();
     String getCategoryName();
     String getSubCategoryName();

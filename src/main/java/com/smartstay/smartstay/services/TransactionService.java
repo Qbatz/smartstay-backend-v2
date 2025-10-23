@@ -17,6 +17,7 @@ import com.smartstay.smartstay.responses.invoices.CustomerInfo;
 import com.smartstay.smartstay.responses.invoices.StayInfo;
 import com.smartstay.smartstay.responses.receipt.ReceiptConfigInfo;
 import com.smartstay.smartstay.responses.receipt.ReceiptDetails;
+import com.smartstay.smartstay.responses.receipt.ReceiptInfo;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -285,20 +286,23 @@ public class TransactionService {
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
             invoiceType = "Advance";
         }
+        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            invoiceType = "Booking";
+        }
 
-        if (hostelV1.getHouseNo() != null) {
+        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getHouseNo());
             hostelFullAddress.append(", ");
         }
-        if (hostelV1.getStreet() != null) {
+        if (hostelV1.getStreet() != null && !hostelV1.getStreet().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getStreet());
             hostelFullAddress.append(", ");
         }
-        if (hostelV1.getCity() != null) {
+        if (hostelV1.getCity() != null && !hostelV1.getCity().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getCity());
             hostelFullAddress.append(", ");
         }
-        if (hostelV1.getState() != null) {
+        if (hostelV1.getState() != null && !hostelV1.getState().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getState());
             hostelFullAddress.append("-");
         }
@@ -306,7 +310,19 @@ public class TransactionService {
             hostelFullAddress.append(hostelV1.getPincode());
         }
 
-        AccountDetails accountDetails = null;
+        BankingV1 bankingV1 = bankingService.getBankDetails(transactionV1.getBankId());
+        String bankName = null;
+        if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+            bankName = "Cash";
+        }
+        else {
+            bankName = bankingV1.getBankName();
+        }
+        StringBuilder account = new StringBuilder();
+        account.append(bankingV1.getAccountHolderName());
+        account.append("-");
+        account.append(bankName);
+        AccountDetails accountDetails = new AccountDetails(bankingV1.getAccountNumber(), bankingV1.getIfscCode(), account.toString(), bankingV1.getUpiId(), null);;
         ReceiptConfigInfo receiptConfigInfo = null;
         com.smartstay.smartstay.dao.BillTemplates hostelTemplates = templatesService.getTemplateByHostelId(hostelId);
         if (hostelTemplates != null) {
@@ -335,14 +351,6 @@ public class TransactionService {
             } else {
                 hostelLogo = templateType.getReceiptLogoUrl();
             }
-
-            if (templateType.getBankAccountId() != null) {
-                BankingV1 bankingV1 = bankingService.getBankDetails(templateType.getBankAccountId());
-                accountDetails = new AccountDetails(bankingV1.getAccountNumber(), bankingV1.getIfscCode(), bankingV1.getBankName(), bankingV1.getUpiId(), templateType.getQrCode());
-            } else {
-                accountDetails = new AccountDetails(null, null, null, null, templateType.getQrCode());
-            }
-
 
             receiptConfigInfo = new ReceiptConfigInfo(templateType.getReceiptTermsAndCondition(), receiptSignatureUrl, hostelLogo, hostelFullAddress.toString(), templateType.getReceiptTemplateColor(), templateType.getReceiptNotes(), invoiceType);
         }
@@ -383,16 +391,63 @@ public class TransactionService {
             customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(), customers.getMobile(), "91", fullAddress.toString(), Utils.dateToString(customers.getJoiningDate()));
         }
 
-        StayInfo stayInfo = null;
-        CustomersBedHistory bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+        StayInfo stayInfo = new StayInfo(null, null, null, null);
+        CustomersBedHistory bedHistory = null;
+        if (!invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            assert customers != null;
+            bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+            BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
+            if (bedDetails != null) {
+                stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(), hostelV1.getHostelName());
+            }
+        }
+        else {
+            assert customers != null;
+            bedHistory = customersBedHistoryService.getCustomerBookedBed(customers.getCustomerId());
+            BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
+            if (bedDetails != null) {
+                stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(), hostelV1.getHostelName());
+            }
+        }
+        StringBuilder receiverfullName = new StringBuilder();
+        Users createdBy = usersService.findUserByUserId(transactionV1.getCreatedBy());
 
-        BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
-        if (bedDetails != null) {
-            stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(), hostelV1.getHostelName());
+        if (createdBy.getFirstName() != null) {
+            receiverfullName.append(createdBy.getFirstName());
+        }
+        if (createdBy.getLastName() != null && !createdBy.getLastName().trim().equalsIgnoreCase("")) {
+            if (createdBy.getFirstName() != null) {
+                receiverfullName.append(" ");
+            }
+            receiverfullName.append(createdBy.getLastName());
         }
 
-        ReceiptDetails details = new ReceiptDetails(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), hostelEmail, hostelPhone, "91", customerInfo, stayInfo, accountDetails, receiptConfigInfo);
+
+        ReceiptInfo receiptInfo = new ReceiptInfo(transactionV1.getTransactionReferenceId(),
+                transactionV1.getTransactionId(),
+                Utils.dateToString(transactionV1.getPaymentDate()),
+                transactionV1.getPaidAmount(),
+                invoiceType,receiverfullName.toString());
+
+
+
+
+        ReceiptDetails details = new ReceiptDetails(invoicesV1.getInvoiceNumber(),
+                Utils.dateToString(invoicesV1.getInvoiceStartDate()),
+                invoicesV1.getInvoiceId(),
+                hostelEmail,
+                hostelPhone, "91", receiptInfo,
+                customerInfo, stayInfo, accountDetails, receiptConfigInfo);
         return new ResponseEntity<>(details, HttpStatus.OK);
 
+    }
+
+    public Double getFinalSettlementPaidAmount(String invoiceId) {
+        List<TransactionV1> listTransactions = transactionRespository.findByInvoiceId(invoiceId);
+
+        return listTransactions
+                .stream()
+                .mapToDouble(TransactionV1::getPaidAmount)
+                .sum();
     }
 }

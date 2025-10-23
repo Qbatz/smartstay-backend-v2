@@ -1,9 +1,11 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Electricity.BedHistoryCustomerListMapper;
+import com.smartstay.smartstay.Wrappers.customers.BedHistoryMapper;
 import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.repositories.CustomerBedHistoryRespository;
+import com.smartstay.smartstay.responses.customer.BedHistory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,5 +31,22 @@ public class CustomersBedHistoryService {
 
     public CustomersBedHistory getLatestCustomerBed(String customerId) {
         return customerBedHistoryRepository.findTopByCustomerIdOrderByCreatedAtDesc(customerId).orElse(null);
+    }
+
+    public List<BedHistory> getCustomersBedHistory(String customerId) {
+        return customerBedHistoryRepository.findByCustomerId(customerId)
+                .stream()
+                .map(i -> new BedHistoryMapper().apply(i))
+                .toList();
+    }
+
+    public CustomersBedHistory getCustomerBookedBed(String customerId) {
+        return customerBedHistoryRepository.findByCustomerIdAndTypeBooking(customerId);
+    }
+
+    public void checkoutCustomer(String customerId) {
+        CustomersBedHistory bedHistory = customerBedHistoryRepository.findByCustomerIdAndTypeBooking(customerId);
+        bedHistory.setEndDate(new Date());
+        customerBedHistoryRepository.save(bedHistory);
     }
 }

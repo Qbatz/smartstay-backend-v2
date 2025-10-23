@@ -66,6 +66,8 @@ public class BookingsService {
 
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private CustomersBedHistoryService customersBedHistoryService;
 
     @Autowired
     public void setBedsService(@Lazy BedsService bedsService) {
@@ -255,6 +257,7 @@ public class BookingsService {
             customersBedHistory.setHostelId(hostelId);
             customersBedHistory.setCustomerId(payload.customerId());
             customersBedHistory.setChangedBy(authentication.getName());
+            customersBedHistory.setReason("Booking");
             customersBedHistory.setActive(true);
             customersBedHistory.setCreatedAt(new Date());
 
@@ -295,6 +298,7 @@ public class BookingsService {
             cbh.setCustomerId(bookingsV1.getCustomerId());
             cbh.setChangedBy(authentication.getName());
             cbh.setType(CustomersBedType.CHECK_IN.name());
+            cbh.setReason("Initial check in");
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
             cbh.setBooking(bookingsV1);
@@ -332,6 +336,7 @@ public class BookingsService {
             cbh.setStartDate(bookingsV1.getJoiningDate());
             cbh.setCustomerId(bookingsV1.getCustomerId());
             cbh.setChangedBy(authentication.getName());
+            cbh.setReason("Initial check in");
             cbh.setType(CustomersBedType.CHECK_IN.name());
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
@@ -535,7 +540,7 @@ public class BookingsService {
      * @param customerId
      * @return
      */
-    public ResponseEntity<?> initializeCheckout(String customerId) {
+    public ResponseEntity<?> checkoutCustomer(String customerId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -563,7 +568,33 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
-        return null;
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_VACATED, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+        if (!customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoicesV1 = invoiceService.getFinalSettlementStatus(customers.getCustomerId());
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoiceService.isFinalSettlementPaid(invoicesV1)) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_PAID, HttpStatus.BAD_REQUEST);
+        }
+
+        Beds bed = bedsService.makeABedVacant(bookingsV1.getBedId());
+        if (bed == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+
+        customersService.markCustomerCheckedOut(customers);
+        customersBedHistoryService.checkoutCustomer(customerId);
+
+        return new ResponseEntity<>(HttpStatus.OK);
 
     }
 
@@ -607,11 +638,17 @@ public class BookingsService {
     }
 
     public void reassignBed(BedRoomFloor bedRoomFloor, BookingsV1 bookingsV1, ChangeBed request) {
+        CustomersBedHistory cbh = new CustomersBedHistory();
+        Double rent = bookingsV1.getRentAmount();
+
+        if (request.rentAmount() != null ) {
+            bookingsV1.setRentAmount(request.rentAmount());
+            rent = request.rentAmount();
+        }
         bookingsV1.setBedId(request.bedId());
         bookingsV1.setFloorId(bedRoomFloor.getFloorId());
         bookingsV1.setRoomId(bedRoomFloor.getRoomId());
 
-        CustomersBedHistory cbh = new CustomersBedHistory();
         cbh.setRoomId(bookingsV1.getRoomId());
         cbh.setBedId(bookingsV1.getBedId());
         cbh.setFloorId(bookingsV1.getFloorId());
@@ -619,8 +656,9 @@ public class BookingsService {
         cbh.setStartDate(Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
         cbh.setCustomerId(bookingsV1.getCustomerId());
         cbh.setChangedBy(authentication.getName());
-        cbh.setType(CustomersBedType.CHECK_IN.name());
-        cbh.setRentAmount(request.rentAmount());
+        cbh.setType(CustomersBedType.REASSIGNED.name());
+        cbh.setReason(request.reason());
+        cbh.setRentAmount(rent);
         cbh.setActive(true);
         cbh.setCreatedAt(new Date());
         cbh.setBooking(bookingsV1);

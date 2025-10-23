@@ -15,7 +15,7 @@ java {
 }
 
 bootWar {
-	archiveBaseName = 'smartstay-dev'
+	archiveBaseName = 'ROOT'
 }
 
 bootJar {
