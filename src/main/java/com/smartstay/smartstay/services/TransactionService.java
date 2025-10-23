@@ -286,19 +286,19 @@ public class TransactionService {
             invoiceType = "Advance";
         }
 
-        if (hostelV1.getHouseNo() != null) {
+        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getHouseNo());
             hostelFullAddress.append(", ");
         }
-        if (hostelV1.getStreet() != null) {
+        if (hostelV1.getStreet() != null && !hostelV1.getStreet().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getStreet());
             hostelFullAddress.append(", ");
         }
-        if (hostelV1.getCity() != null) {
+        if (hostelV1.getCity() != null && !hostelV1.getCity().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getCity());
             hostelFullAddress.append(", ");
         }
-        if (hostelV1.getState() != null) {
+        if (hostelV1.getState() != null && !hostelV1.getState().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getState());
             hostelFullAddress.append("-");
         }
@@ -383,13 +383,18 @@ public class TransactionService {
             customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(), customers.getMobile(), "91", fullAddress.toString(), Utils.dateToString(customers.getJoiningDate()));
         }
 
-        StayInfo stayInfo = null;
-        CustomersBedHistory bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
-
-        BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
-        if (bedDetails != null) {
-            stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(), hostelV1.getHostelName());
+        StayInfo stayInfo = new StayInfo(null, null, null, null);
+        CustomersBedHistory bedHistory = null;
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+           bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+            BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
+            if (bedDetails != null) {
+                stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(), hostelV1.getHostelName());
+            }
         }
+
+
+
 
         ReceiptDetails details = new ReceiptDetails(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), hostelEmail, hostelPhone, "91", customerInfo, stayInfo, accountDetails, receiptConfigInfo);
         return new ResponseEntity<>(details, HttpStatus.OK);

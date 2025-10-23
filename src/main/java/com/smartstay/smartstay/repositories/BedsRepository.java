@@ -67,7 +67,7 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
             b.rent_amount as rentAmount, b.bed_name as bedName, flr.floor_name as floorName, 
             rms.room_name as roomName, b.current_status as currentStatus FROM beds b 
             inner join rooms rms on rms.room_id=b.room_id inner join floors flr on flr.floor_id= rms.floor_id 
-            where b.status in ('NOTICE', 'VACANT') and (b.free_from IS NULL OR DATE(b.free_from) <= DATE(:joiningDate)) 
+            where b.current_status in ('NOTICE', 'VACANT') and (b.free_from IS NULL OR DATE(b.free_from) <= DATE(:joiningDate)) 
             and b.hostel_id=:hostelId and b.is_active=true
             """, nativeQuery = true)
     List<InitializeBooking> getFreeBeds(@Param("hostelId") String hostelId, @Param("joiningDate") Date joiningDate);

@@ -451,8 +451,7 @@ public class BedsService {
         return true;
     }
 
-    public void unassignBed(Integer bedId, String leavingDate) {
-        Date dateLeavingDate = Utils.stringToDate(leavingDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+    public void unassignBed(Integer bedId) {
 
         bedsRepository.findById(bedId).ifPresent(currentBed -> {
             if (currentBed.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name()) && currentBed.isBooked()) {
@@ -461,7 +460,9 @@ public class BedsService {
             else {
                 currentBed.setCurrentStatus(BedStatus.VACANT.name());
             }
-            currentBed.setFreeFrom(dateLeavingDate);
+            if (currentBed.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+                currentBed.setFreeFrom(null);
+            }
             bedsRepository.save(currentBed);
         });
     }

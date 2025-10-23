@@ -1528,7 +1528,7 @@ public class CustomersService {
 
         double balanceAmount = invoiceService.calculateAndCreateInvoiceForReassign(customers, request.joiningDate(), request.rentAmount());
 
-        bedsService.unassignBed(bookingsV1.getBedId(), request.joiningDate());
+        bedsService.unassignBed(bookingsV1.getBedId());
         bedsService.reassignBed(customerId, request.bedId());
 
         BedRoomFloor bedRoomFloor = bedsService.findRoomAndFloorByBedIdAndHostelId(
