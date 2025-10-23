@@ -306,8 +306,8 @@ public class HostelService {
         }
 
         HostelV1 hostelV1 = hostelV1Repository.findById(hostelId).orElse(null);
-        if (hostelV1 != null) {
-            return new ResponseEntity<>("Deleted", HttpStatus.OK);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>("No hostels found", HttpStatus.BAD_REQUEST);
         }
 
         boolean customerExist = customersService.customerExist(hostelId);
@@ -319,8 +319,7 @@ public class HostelService {
         hostelV1Repository.save(hostelV1);
 
         userHostelService.deleteAllHostels(hostelId);
-
-        return new ResponseEntity<>("No hostels found", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>("Hostel Deleted", HttpStatus.OK);
     }
     public ResponseEntity<?> getHostelDetails(String hostelId) {
         if (!authentication.isAuthenticated()) {
