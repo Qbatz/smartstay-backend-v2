@@ -1,10 +1,9 @@
 package com.smartstay.smartstay.services;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -22,13 +21,11 @@ import java.util.function.Function;
 @Service
 public class JWTService {
 
-    @Value("JWT_SECRET")
-    private String SECRET;
-
+    @Value("${JWT_SECRET}")
     private String secretKey;
 
     public JWTService() {
-        secretKey = generateSecretKey();
+//        secretKey = generateSecretKey();
     }
 
     public String generateSecretKey() {
@@ -67,9 +64,21 @@ public class JWTService {
     }
 
     public Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getKey())
-                .build().parseClaimsJws(token).getBody();
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getKey())
+                    .build().parseClaimsJws(token).getBody();
+        }
+        catch (ExpiredJwtException e) {
+            throw new SignatureException("Token expired. Please login again.");
+        } catch (MalformedJwtException e) {
+            throw new SignatureException("Invalid token format. Please login again.");
+        } catch (io.jsonwebtoken.security.SignatureException e) {
+            throw new SignatureException("Signature mismatch. Please login again.");
+        } catch (Exception e) {
+            throw new SignatureException("Invalid token. Please login again.");
+        }
+
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {

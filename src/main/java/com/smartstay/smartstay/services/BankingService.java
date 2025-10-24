@@ -9,10 +9,7 @@ import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.transaction.TransactionDto;
-import com.smartstay.smartstay.ennum.BankAccountType;
-import com.smartstay.smartstay.ennum.BankPurpose;
-import com.smartstay.smartstay.ennum.BankSource;
-import com.smartstay.smartstay.ennum.CardType;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.banking.AddBank;
 import com.smartstay.smartstay.payloads.banking.SelfTransfer;
 import com.smartstay.smartstay.payloads.banking.UpdateBank;
@@ -27,10 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -468,9 +462,10 @@ public class BankingService {
             return new ResponseEntity<>(Utils.INVALID_ACCOUNT_TYPE, HttpStatus.BAD_REQUEST);
         }
 
-        if (!bankingV1.getTransactionType().equalsIgnoreCase(BankPurpose.BOTH.name())){
+        if (bankingV1.getTransactionType().equalsIgnoreCase(BankPurpose.DEBIT.name())){
             return new ResponseEntity<>(Utils.INVALID_TRANSACTION_TYPE, HttpStatus.BAD_REQUEST);
         }
+
 
         BankTransactionsV1 bankTransactionsV1 = transactionService.getLatestTransaction(balance.bankId(), hostelId);
         BankTransactionsV1 bankTransactionsV11 = new BankTransactionsV1();
@@ -488,6 +483,18 @@ public class BankingService {
         bankTransactionsV11.setCreatedAt(new Date());
         bankTransactionsV11.setCreatedBy(authentication.getName());
         transactionService.saveTransaction(bankTransactionsV11);
+
+
+        Double oldBalance = 0.0;
+        if (bankingV1.getBalance() != null) {
+            oldBalance = bankingV1.getBalance();
+        }
+        bankingV1.setBalance(oldBalance + balance.balance());
+        bankingV1.setUpdatedAt(new Date());
+        bankingV1.setUpdatedBy(authentication.getName());
+        bankingV1Repository.save(bankingV1);
+
+
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
@@ -585,5 +592,73 @@ public class BankingService {
 
     public BankingV1 getBankDetails(String bankAccountId) {
         return bankingV1Repository.findByBankId(bankAccountId);
+    }
+
+    public void updateBankBalance(double paidAmount, String transactionType, String bankId, String transactionDate) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        if (transactionType.equalsIgnoreCase(BankTransactionType.CREDIT.name())) {
+            if (bankingV1.getBalance() == null) {
+                bankingV1.setBalance(paidAmount);
+            }
+            else {
+                bankingV1.setBalance(paidAmount + bankingV1.getBalance());
+            }
+        }
+        Calendar cal = Calendar.getInstance();
+        Date dt = null;
+        if (transactionDate != null) {
+            dt = Utils.stringToDate(transactionDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        else {
+            dt = new Date();
+        }
+        cal.setTime(dt);
+        if (cal.get(Calendar.MINUTE) == 0 && cal.get(Calendar.HOUR) == 0) {
+            Calendar cal2 = Calendar.getInstance();
+            cal.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
+            cal.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
+            cal.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
+        }
+
+        bankingV1.setUpdatedBy(authentication.getName());
+        bankingV1.setUpdatedAt(cal.getTime());
+
+        bankingV1Repository.save(bankingV1);
+    }
+
+    public boolean updateBalanceForExpense(double amount, String transactionType, String bankId, String transactionDate) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        if (bankingV1 == null) {
+            return false;
+        }
+        if (bankingV1.getBalance() == null) {
+            return false;
+        }
+        if (bankingV1.getBalance() == 0) {
+            return false;
+        }
+        if (bankingV1.getBalance() < amount) {
+            return false;
+        }
+         if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+                bankingV1.setBalance(bankingV1.getBalance() - amount);
+        }
+
+        Calendar cal = Calendar.getInstance();
+        Date dt = Utils.stringToDate(transactionDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        cal.setTime(dt);
+        if (cal.get(Calendar.MINUTE) == 0 && cal.get(Calendar.HOUR) == 0) {
+            Calendar cal2 = Calendar.getInstance();
+            cal.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
+            cal.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
+            cal.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
+        }
+
+        bankingV1.setUpdatedBy(authentication.getName());
+        bankingV1.setUpdatedAt(new Date());
+
+        bankingV1Repository.save(bankingV1);
+
+        return true;
     }
 }

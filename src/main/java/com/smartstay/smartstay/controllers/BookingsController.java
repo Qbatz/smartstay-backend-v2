@@ -46,7 +46,7 @@ public class BookingsController {
         return bookingService.initiateCancel(customerId);
     }
 
-    @GetMapping("/checkout/customerId")
+    @PostMapping("/checkout/{customerId}")
     public ResponseEntity<?> initializeCheckout(@PathVariable("customerId") String customerId) {
         return bookingService.checkoutCustomer(customerId);
     }

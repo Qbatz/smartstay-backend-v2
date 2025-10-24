@@ -15,7 +15,7 @@ public class AssetsV1 {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer assetId;
+    private Long assetId;
 
     private String assetName;
     private String productName;
@@ -24,9 +24,7 @@ public class AssetsV1 {
     private String serialNumber;
     private Date purchaseDate;
     private Double price;
-    @ManyToOne
-    @JoinColumn(name = "bank_id", referencedColumnName = "bankId")
-    private BankingV1 modeOfPayment;
+    private String bankId;
 
     private Date createdAt;
     private String createdBy;
@@ -39,4 +37,5 @@ public class AssetsV1 {
     private Integer roomId;
     private Integer bedId;
     private String parentId;
+
 }

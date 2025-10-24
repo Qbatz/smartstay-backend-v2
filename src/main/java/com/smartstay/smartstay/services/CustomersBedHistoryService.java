@@ -45,8 +45,11 @@ public class CustomersBedHistoryService {
     }
 
     public void checkoutCustomer(String customerId) {
-        CustomersBedHistory bedHistory = customerBedHistoryRepository.findByCustomerIdAndTypeBooking(customerId);
-        bedHistory.setEndDate(new Date());
-        customerBedHistoryRepository.save(bedHistory);
+        CustomersBedHistory bedHistory = customerBedHistoryRepository.findTopByCustomerIdOrderByCreatedAtDesc(customerId).orElse(null);
+        if (bedHistory != null) {
+            bedHistory.setEndDate(new Date());
+            customerBedHistoryRepository.save(bedHistory);
+        }
+
     }
 }

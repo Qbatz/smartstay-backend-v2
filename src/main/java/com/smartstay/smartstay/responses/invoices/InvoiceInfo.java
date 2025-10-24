@@ -8,5 +8,7 @@ public record InvoiceInfo(Double subTotal,
                           Double totalAmount,
                           Double paidAmount,
                           Double balanceAmount,
+                          String invoicePeriod,
+                          String invoiceMonth,
                           List<InvoiceItems> invoiceItems) {
 }

@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface AssetsRepository extends JpaRepository<AssetsV1, Integer> {
+public interface AssetsRepository extends JpaRepository<AssetsV1, Long> {
 
     List<AssetsV1> findAllByHostelId(String hostelId);
     boolean existsByAssetNameAndIsDeletedFalseAndHostelId(String assetName,String hostelId);

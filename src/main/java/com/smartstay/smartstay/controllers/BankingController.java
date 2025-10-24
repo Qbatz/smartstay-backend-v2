@@ -44,12 +44,12 @@ public class BankingController {
     }
 
 
-    @PutMapping("/add-balance/{hostelId}")
-    public ResponseEntity<?> addBankBalance(@PathVariable(value = "hostelId") String hostelId, @RequestBody(required = false) UpdateBankBalance payloads) {
-        return bankingService.updateBankBalance(hostelId, payloads);
-    }
+//    @PutMapping("/balance/{hostelId}")
+//    public ResponseEntity<?> addBankBalance(@PathVariable(value = "hostelId") String hostelId, @RequestBody(required = false) UpdateBankBalance payloads) {
+//        return bankingService.updateBankBalance(hostelId, payloads);
+//    }
 
-    @PutMapping("/add-money/{hostelId}")
+    @PutMapping("/money/{hostelId}")
     public ResponseEntity<?> addMoney(@PathVariable(value = "hostelId") String hostelId, @RequestBody(required = false) UpdateBankBalance payloads) {
         return bankingService.addMoney(hostelId, payloads);
     }

@@ -2,6 +2,7 @@ package com.smartstay.smartstay.config;
 
 import com.smartstay.smartstay.services.JWTService;
 import com.smartstay.smartstay.services.MyUserDetailService;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,28 +30,34 @@ public class JWTFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
-        String token = null;
-        String userName = null;
+        try {
+            String authHeader = request.getHeader("Authorization");
+            String token = null;
+            String userName = null;
 
-        if (authHeader != null && authHeader.startsWith("Bearer")) {
-            token = authHeader.substring(7);
-            userName = jwtService.extractUserName(token);
+            if (authHeader != null && authHeader.startsWith("Bearer")) {
+                token = authHeader.substring(7);
+                userName = jwtService.extractUserName(token);
 
-        }
+            }
 
-        if (userName != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails details = context.getBean(MyUserDetailService.class).loadUserByUsername(userName);
+            if (userName != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails details = context.getBean(MyUserDetailService.class).loadUserByUsername(userName);
 
-            if (jwtService.validateToken(token, details)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
+                if (jwtService.validateToken(token, details)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
 
 //                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                authToken.setDetails(jwtService.extractAllClaims(token));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    authToken.setDetails(jwtService.extractAllClaims(token));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
+
+            filterChain.doFilter(request, response);
+        }
+        catch (SignatureException se) {
+            throw new SignatureException("Please login again");
         }
 
-        filterChain.doFilter(request, response);
     }
 }

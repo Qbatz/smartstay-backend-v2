@@ -13,7 +13,7 @@ import static com.smartstay.smartstay.util.Utils.OUTPUT_DATE_FORMAT;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AssetAssignmentResponse {
-    private Integer assetId;
+    private Long assetId;
     private String assetName;
     private String brandName;
     private String productName;

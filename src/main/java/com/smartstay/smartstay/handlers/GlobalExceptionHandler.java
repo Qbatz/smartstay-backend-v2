@@ -37,6 +37,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SignatureException.class)
     public ResponseEntity<?> handleSignatureMismatchException(SignatureException se) {
-        return new ResponseEntity<>("Something went wrong", HttpStatus.UNAUTHORIZED);
+        return new ResponseEntity<>("Something went wrong. Please login again", HttpStatus.UNAUTHORIZED);
     }
+
 }

@@ -4,6 +4,7 @@ public record RentInfo(Double currentPayableRent,
                        Double currentRentPaid,
                        Integer stayDays,
                        Double currentMonthRent,
+                       Double rentPerDay,
                        String currentInvoiceStartDate,
                        String currentInvoiceEndDate) {
 }
