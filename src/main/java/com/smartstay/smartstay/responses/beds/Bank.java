@@ -14,6 +14,7 @@ public record Bank(String bankingId,
                    String accountType,
                    boolean isDefault,
                    String description,
-                   String cardType) {
+                   String cardType,
+                   Double accountBalance) {
 
 }

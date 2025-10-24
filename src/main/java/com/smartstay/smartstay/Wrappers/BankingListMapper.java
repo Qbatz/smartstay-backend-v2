@@ -32,6 +32,7 @@ public class BankingListMapper implements Function<BankingV1, Bank>{
                 bankingV1.getAccountType(),
                 bankingV1.isDefaultAccount(),
                 bankingV1.getDescription(),
-                cardType);
+                cardType,
+                 bankingV1.getBalance());
     }
 }

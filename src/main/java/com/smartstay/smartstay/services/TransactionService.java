@@ -188,6 +188,7 @@ public class TransactionService {
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
 
+        bankingService.updateBankBalance(paidAmount, BankTransactionType.CREDIT.name(), payment.bankId());
 
         transactionRespository.save(transactionV1);
 

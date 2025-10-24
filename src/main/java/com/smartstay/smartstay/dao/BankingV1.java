@@ -34,6 +34,7 @@ public class BankingV1 {
     String description;
     String userId;
     String hostelId;
+    Double balance;
     boolean isActive;
     boolean isDeleted;
     boolean isDefaultAccount;

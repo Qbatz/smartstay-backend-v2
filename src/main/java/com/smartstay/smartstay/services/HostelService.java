@@ -639,6 +639,10 @@ public class HostelService {
         }
         else {
             latestBillingRules = hostelConfigService.getLatestBillRuleByHostelIdAndStartDate(hostelId, new Date());
+            if (latestBillingRules == null) {
+                latestBillingRules = hostelConfigService.getNewBillRuleByHostelIdAndStartDate(hostelId, new Date());
+            }
+
         }
 
         BillingRules newBillingRules = hostelConfigService.getNewBillRuleByHostelIdAndStartDate(hostelId, new Date());
