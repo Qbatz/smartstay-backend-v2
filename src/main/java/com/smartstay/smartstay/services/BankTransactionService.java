@@ -3,12 +3,14 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.transactions.TransactionsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
+import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.ennum.BankSource;
 import com.smartstay.smartstay.ennum.BankTransactionType;
 import com.smartstay.smartstay.repositories.BankTransactionRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
@@ -26,6 +28,13 @@ public class BankTransactionService {
 
     @Autowired
     private BankTransactionRepository bankRepository;
+
+    private BankingService bankingService;
+
+    @Autowired
+    public void setBankingService(@Lazy BankingService bankingService) {
+        this.bankingService = bankingService;
+    }
 
 
     public int addTransaction(TransactionDto transactionDto) {
@@ -116,22 +125,21 @@ public class BankTransactionService {
 
     public boolean addExpenseTransaction(TransactionDto transactionDto) {
         if (authentication.isAuthenticated()) {
-            BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
+
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
 
-            if (v1 == null) {
+            if (!bankingService.updateBalanceForExpense(transactionDto.amount(), BankTransactionType.DEBIT.name(), transactionDto.bankId(), transactionDto.transactionDate())) {
                 return false;
             }
-            else {
-                if (v1.getAccountBalance() < transactionDto.amount()) {
-                    return false;
-                }
-                 if (transactionDto.type().equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
-                    transactionsV1.setAccountBalance(v1.getAccountBalance() - transactionDto.amount());
-                }
-            }
+
             Calendar calendar = Calendar.getInstance();
-            Date dt = Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            Date dt = null;
+            if (transactionDto.transactionDate() != null) {
+                dt = Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            }
+            else {
+                dt = new Date();
+            }
             calendar.setTime(dt);
             if (calendar.get(Calendar.MINUTE) == 0 && calendar.get(Calendar.HOUR) == 0) {
                 Calendar cal2 = Calendar.getInstance();

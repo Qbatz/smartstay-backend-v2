@@ -337,7 +337,7 @@ public class CustomersService {
                 bookingsService.addBooking(hostelId, payloads);
 
                 AddPayment addPayment = new AddPayment(payloads.bankId(), payloads.bookingDate(), payloads.referenceNumber(), payloads.bookingAmount());
-                transactionService.recordPayment(hostelId, invoiceId, addPayment);
+                transactionService.recordPaymentForBooking(hostelId, invoiceId, addPayment);
                 return bedsService.assignCustomer(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
             } else {
                 return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
@@ -485,7 +485,6 @@ public class CustomersService {
         if (booking == null) {
             return new ResponseEntity<>(Utils.INVALID_BOOKING_ID, HttpStatus.BAD_REQUEST);
         }
-
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
@@ -587,7 +586,7 @@ public class CustomersService {
 
             Calendar cal = Calendar.getInstance();
             cal.set(Calendar.DAY_OF_MONTH, day);
-            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
 
             Date currentCycleStartDate = cal.getTime();
             Date joiningDate = Utils.stringToDate(checkinRequest.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -595,9 +594,8 @@ public class CustomersService {
             if (Utils.compareWithTwoDates(joiningDate, currentCycleStartDate) < 0) {
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
             }
+
             calculateRentAndCreateRentalInvoice(customers, request);
-
-
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
         } else {
@@ -1006,7 +1004,7 @@ public class CustomersService {
             Calendar cal = Calendar.getInstance();
             cal.setTime(joiningDate);
             cal.set(Calendar.DAY_OF_MONTH, lastRulingBillDate);
-            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
 
             Date lastDate = Utils.findLastDate(lastRulingBillDate, cal.getTime());
 

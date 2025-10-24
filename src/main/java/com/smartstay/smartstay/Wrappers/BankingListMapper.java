@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.ennum.CardType;
 import com.smartstay.smartstay.responses.beds.Bank;
 
+import java.math.BigDecimal;
 import java.util.function.Function;
 
 public class BankingListMapper implements Function<BankingV1, Bank>{
@@ -11,12 +12,16 @@ public class BankingListMapper implements Function<BankingV1, Bank>{
     @Override
     public Bank apply(BankingV1 bankingV1) {
 
+        BigDecimal balance = null;
         String cardType = null;
         if (bankingV1.getDebitCardNumber() != null) {
             cardType = CardType.DEBIT.name();
         }
         if (bankingV1.getCreditCardNumber() != null) {
             cardType = CardType.CREDIT.name();
+        }
+        if (bankingV1.getBalance() != null ) {
+            balance = BigDecimal.valueOf(bankingV1.getBalance());
         }
          return new Bank(bankingV1.getBankId(),
                 bankingV1.getBankName(),
@@ -33,6 +38,6 @@ public class BankingListMapper implements Function<BankingV1, Bank>{
                 bankingV1.isDefaultAccount(),
                 bankingV1.getDescription(),
                 cardType,
-                 bankingV1.getBalance());
+                 balance);
     }
 }

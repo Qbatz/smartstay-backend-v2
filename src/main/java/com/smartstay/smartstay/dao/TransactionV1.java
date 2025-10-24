@@ -18,6 +18,7 @@ public class TransactionV1 {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String transactionId;
     private String type;
+//    private String transactionType;
     private Double paidAmount;
     private String createdBy;
     private Date createdAt;

@@ -78,6 +78,7 @@ public class TransactionService {
             transactionV1.setCustomerId(customer.getCustomerId());
             transactionV1.setPaidAmount(amount);
             transactionV1.setHostelId(customer.getHostelId());
+//            transactionV1
             transactionV1.setType(TransactionType.BOOKING.name());
             transactionV1.setCreatedAt(new Date());
             transactionV1.setStatus(PaymentStatus.PENDING.name());
@@ -106,6 +107,88 @@ public class TransactionService {
         }
     }
 
+    public ResponseEntity<?> recordPaymentForBooking(String hostelId, String invoiceId, AddPayment payment) {
+//        String typeOfPayment = null;
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!Utils.checkNullOrEmpty(invoiceId)) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BILLS, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!Utils.checkNullOrEmpty(payment.bankId())) {
+            return new ResponseEntity<>(Utils.REQUIRED_TRANSACTION_MODE, HttpStatus.BAD_REQUEST);
+        }
+        if (!Utils.checkNullOrEmpty(payment.amount())) {
+            return new ResponseEntity<>(Utils.AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (!bankingService.checkBankExist(payment.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+
+        TransactionV1 transactionV1 = new TransactionV1();
+        InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(invoiceId);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+        if (Utils.checkNullOrEmpty(payment.paymentDate())) {
+            transactionV1.setPaidAt(new Date());
+        }
+        else {
+            transactionV1.setPaidAt(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
+        }
+        transactionV1.setStatus(PaymentStatus.PAID.name());
+        transactionV1.setPaidAmount(payment.amount());
+        transactionV1.setHostelId(hostelId);
+        transactionV1.setBankId(payment.bankId());
+        transactionV1.setReferenceNumber(payment.referenceId());
+        transactionV1.setUpdatedBy(authentication.getName());
+        transactionV1.setTransactionReferenceId(generateRandomNumber());
+        transactionV1.setInvoiceId(invoiceId);
+        transactionV1.setCustomerId(invoicesV1.getCustomerId());
+        transactionV1.setCreatedAt(new Date());
+        transactionV1.setCreatedBy(authentication.getName());
+        transactionV1.setPaymentDate(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
+
+        bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(), payment.paymentDate());
+
+        transactionRespository.save(transactionV1);
+
+        PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(), payment.amount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(), "Active");
+        int response = paymentSummaryService.addPayment(summary);
+
+        if (response == 1) {
+            invoiceService.recordPayment(invoiceId, PaymentStatus.PAID.name());
+
+            TransactionDto transaction = new TransactionDto(payment.bankId(),
+                    payment.referenceId(),
+                    payment.amount(),
+                    BankTransactionType.CREDIT.name(),
+                    BankSource.INVOICE.name(),
+                    hostelId,
+                    payment.paymentDate());
+
+            bankTransactionService.addTransaction(transaction);
+
+            return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+    }
 
     public ResponseEntity<?> recordPayment(String hostelId, String invoiceId, AddPayment payment) {
         String typeOfPayment = null;
@@ -188,7 +271,7 @@ public class TransactionService {
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
 
-        bankingService.updateBankBalance(paidAmount, BankTransactionType.CREDIT.name(), payment.bankId());
+        bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(), payment.paymentDate());
 
         transactionRespository.save(transactionV1);
 

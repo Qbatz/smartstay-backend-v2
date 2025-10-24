@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.responses.beds;
 
+import java.math.BigDecimal;
+
 public record Bank(String bankingId,
                    String bankName,
                    String accountNumber,
@@ -15,6 +17,6 @@ public record Bank(String bankingId,
                    boolean isDefault,
                    String description,
                    String cardType,
-                   Double accountBalance) {
+                   BigDecimal accountBalance) {
 
 }

@@ -29,8 +29,7 @@ public class AssetController {
     @Autowired
     private AssetsService assetsService;
 
-
-    @GetMapping("/all-assets/{hostelId}")
+    @GetMapping("/{hostelId}")
     public ResponseEntity<?> getAllAssets(@PathVariable("hostelId") String hostelId) {
         return assetsService.getAllAssets(hostelId);
     }
@@ -40,17 +39,17 @@ public class AssetController {
         return assetsService.addAsset(request,hostelId);
     }
 
-    @GetMapping("/{assetId}")
+    @GetMapping("/{hostelId}/{assetId}")
     public ResponseEntity<?> getAssetId(@PathVariable("assetId") int assetId) {
         return assetsService.getAssetById(assetId);
     }
 
-    @PutMapping("/{assetId}/{hostelId}")
+    @PutMapping("/{hostelId}/{assetId}")
     public ResponseEntity<?> updateAsset(@RequestBody UpdateAsset updateAsset, @PathVariable("assetId") int assetId,@PathVariable("hostelId") String hostelId) {
         return assetsService.updateAsset(updateAsset, assetId,hostelId);
     }
 
-    @PutMapping("/assign-asset/{assetId}")
+    @PutMapping("/assign/{assetId}")
     public ResponseEntity<?> assignAsset(@PathVariable("assetId") int assetId, @Valid @RequestBody AssignAsset request) {
         return assetsService.assignAsset(assetId, request);
     }
