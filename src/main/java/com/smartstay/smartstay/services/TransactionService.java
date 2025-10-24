@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.PaymentStatus;
@@ -25,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -139,6 +141,21 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
 
+        Date paymentDate = null;
+        if (payment.paymentDate() == null) {
+            paymentDate = new Date();
+        }
+        else {
+            paymentDate = Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT);
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(paymentDate);
+
+        Calendar cal = Calendar.getInstance();
+        calendar.set(Calendar.HOUR, cal.get(Calendar.HOUR));
+        calendar.set(Calendar.MINUTE, cal.get(Calendar.MINUTE));
+        calendar.set(Calendar.SECOND, cal.get(Calendar.SECOND));
 
         TransactionV1 transactionV1 = new TransactionV1();
         InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(invoiceId);
@@ -162,7 +179,7 @@ public class TransactionService {
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setCreatedAt(new Date());
         transactionV1.setCreatedBy(authentication.getName());
-        transactionV1.setPaymentDate(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
+        transactionV1.setPaymentDate(calendar.getTime());
 
         bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(), payment.paymentDate());
 
@@ -260,6 +277,22 @@ public class TransactionService {
             transactionV1.setPaidAt(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
         }
 
+        Date paymentDate = null;
+        if (payment.paymentDate() == null) {
+            paymentDate = new Date();
+        }
+        else {
+            paymentDate = Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT);
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(paymentDate);
+
+        Calendar cal = Calendar.getInstance();
+        calendar.set(Calendar.HOUR, cal.get(Calendar.HOUR));
+        calendar.set(Calendar.MINUTE, cal.get(Calendar.MINUTE));
+        calendar.set(Calendar.SECOND, cal.get(Calendar.SECOND));
+
         transactionV1.setHostelId(hostelId);
         transactionV1.setBankId(payment.bankId());
         transactionV1.setReferenceNumber(payment.referenceId());
@@ -269,7 +302,7 @@ public class TransactionService {
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setCreatedAt(new Date());
         transactionV1.setCreatedBy(authentication.getName());
-        transactionV1.setPaymentDate(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
+        transactionV1.setPaymentDate(calendar.getTime());
 
         bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(), payment.paymentDate());
 
@@ -394,6 +427,17 @@ public class TransactionService {
             hostelFullAddress.append(hostelV1.getPincode());
         }
 
+        String invoiceMonth = null;
+        if (invoicesV1.getInvoiceStartDate() != null) {
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(invoicesV1.getHostelId(), invoicesV1.getInvoiceStartDate());
+            if (billingDates != null) {
+                if (billingDates.currentBillStartDate() != null) {
+                    invoiceMonth = Utils.dateToMonth(billingDates.currentBillStartDate());
+                }
+            }
+        }
+
+
         BankingV1 bankingV1 = bankingService.getBankDetails(transactionV1.getBankId());
         String bankName = null;
         if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
@@ -510,8 +554,11 @@ public class TransactionService {
         ReceiptInfo receiptInfo = new ReceiptInfo(transactionV1.getTransactionReferenceId(),
                 transactionV1.getTransactionId(),
                 Utils.dateToString(transactionV1.getPaymentDate()),
+                Utils.dateToTime(transactionV1.getPaymentDate()),
                 transactionV1.getPaidAmount(),
-                invoiceType,receiverfullName.toString());
+                transactionV1.getReferenceNumber(),
+                invoiceType,receiverfullName.toString(),
+                invoiceMonth);
 
 
 

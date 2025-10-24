@@ -584,6 +584,7 @@ public class CustomersService {
 
             bedsService.addUserToBed(booking.getBedId(), date);
 
+
             Calendar cal = Calendar.getInstance();
             cal.set(Calendar.DAY_OF_MONTH, day);
             cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
@@ -1138,12 +1139,26 @@ public class CustomersService {
         Calendar calStartDate = Calendar.getInstance();
         calStartDate.setTime(billDate.currentBillStartDate());
 
+        Date billStartDate = null;
+        Calendar calBillStartDate = Calendar.getInstance();
+        if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) < 0) {
+            calBillStartDate.setTime(billDate.currentBillStartDate());
+        }
+        else {
+            calBillStartDate.setTime(bookingDetails.getJoiningDate());
+        }
+
+        billStartDate = calBillStartDate.getTime();
+
+
+
+
         Calendar calEndDate = Calendar.getInstance();
         calEndDate.setTime(billDate.currentBillEndDate());
 
         Long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(calStartDate.getTime(), calEndDate.getTime());
 
-        noOfDaySatayed = Utils.findNumberOfDays(calStartDate.getTime(), new Date());
+        noOfDaySatayed = Utils.findNumberOfDays(billStartDate, new Date());
 
         //taken from unpaid invoices. So current month invoice is empty for paid
         if (!currentMonthInvoice.isEmpty()) {
@@ -1168,7 +1183,18 @@ public class CustomersService {
             }
         }
 
-        double rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
+
+        double rentPerDay = 0;
+        if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billStartDate) < 0) {
+            rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
+        }
+        else {
+            long noOfDaysLeft = Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), new Date());
+
+            rentPerDay = currentMonthRent / noOfDaysLeft;
+            noOfDaySatayed = noOfDaysLeft;
+        }
+
         currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay)*100.0/100.0;
 
         List<InvoicesV1> advanceInvoice = listUnpaidInvoices
@@ -1262,10 +1288,15 @@ public class CustomersService {
                 bookingAmount,
                 customers.getAdvance().getDeductions());
 
+        if (Double.isInfinite(rentPerDay)) {
+            rentPerDay = 0;
+        }
+
         RentInfo rentInfo = new RentInfo(currentMonthPayableRent,
                 currentRentPaid,
                 (int) noOfDaySatayed,
                 currentMonthRent,
+                rentPerDay,
                 Utils.dateToString(calStartDate.getTime()),
                 Utils.dateToString(calEndDate.getTime()));
 
@@ -1373,9 +1404,18 @@ public class CustomersService {
         Calendar calEndDate = Calendar.getInstance();
         calEndDate.setTime(billDate.currentBillEndDate());
 
+        Date dateStartDate = calStartDate.getTime();
+
+        if (Utils.findNumberOfDays(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) >= 0) {
+            dateStartDate =bookingDetails.getJoiningDate();
+        }
+        else {
+            dateStartDate = billDate.currentBillStartDate();
+        }
+
         long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(calStartDate.getTime(), calEndDate.getTime());
 
-        noOfDaySatayed = Utils.findNumberOfDays(calStartDate.getTime(), new Date());
+        noOfDaySatayed = Utils.findNumberOfDays(dateStartDate, new Date());
 
         //taken from unpaid invoices. So current month invoice is empty for paid
         if (!currentMonthInvoice.isEmpty()) {
@@ -1401,6 +1441,9 @@ public class CustomersService {
         }
 
         double rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
+        if (Utils.findNumberOfDays(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) >= 0) {
+            rentPerDay = bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth;
+        }
         currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay)*100.0/100.0;
 
         List<InvoicesV1> advanceInvoice = listUnpaidInvoices
@@ -1478,11 +1521,11 @@ public class CustomersService {
                 .peek(item -> item.setCancelled(true))
                 .toList();
 
-        invoiceService.cancelActiveInvoice(unpaidUpdated);
+//        invoiceService.cancelActiveInvoice(unpaidUpdated);
         invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated);
 
-        customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
-        customersRepository.save(customers);
+//        customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
+//        customersRepository.save(customers);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 

@@ -740,8 +740,8 @@ public class HostelService {
 
     }
 
-    public BillingDates getBillingRuleOnDate(String hostelId, Date dateJoiningDate) {
-        return hostelConfigService.getBillingRuleByDateAndHostelId(hostelId, dateJoiningDate);
+    public BillingDates getBillingRuleOnDate(String hostelId, Date date) {
+        return hostelConfigService.getBillingRuleByDateAndHostelId(hostelId, date);
     }
 }
 

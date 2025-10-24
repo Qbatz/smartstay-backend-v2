@@ -76,16 +76,10 @@ public class AssetsService {
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        Users users = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-
-        boolean hostelV1 = userHostelService.checkHostelAccess(users.getUserId(), hostelId);
+        boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
         if (!hostelV1) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
@@ -124,8 +118,8 @@ public class AssetsService {
             asset.setPurchaseDate(Utils.stringToDate(formattedDate, Utils.USER_INPUT_DATE_FORMAT));
         }
         asset.setPrice(request.price());
-        asset.setModeOfPayment(bankingRepository.findByBankId(request.bankingId()));
-        asset.setCreatedBy(users.getUserId());
+        asset.setBankId(request.bankingId());
+        asset.setCreatedBy(user.getUserId());
         asset.setCreatedAt(new java.util.Date());
         asset.setIsActive(true);
         asset.setIsDeleted(false);
@@ -194,7 +188,7 @@ public class AssetsService {
             if (!bankingExist) {
                 return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
             }
-            asset.setModeOfPayment(bankingRepository.findByBankId(request.modeOfPayment()));
+            asset.setBankId(request.modeOfPayment());
         }
         if (request.createdBy() != null) asset.setCreatedBy(request.createdBy());
         if (request.isActive() != null) asset.setIsActive(request.isActive());

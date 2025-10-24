@@ -220,6 +220,7 @@ public class BookingsService {
         cbh.setActive(true);
         cbh.setCreatedAt(new Date());
         cbh.setBooking(bookingv1);
+        cbh.setRentAmount(request.rentalAmount());
 
         List<CustomersBedHistory> listBedHistory = new ArrayList<>();
         listBedHistory.add(cbh);
@@ -298,6 +299,7 @@ public class BookingsService {
             cbh.setCustomerId(bookingsV1.getCustomerId());
             cbh.setChangedBy(authentication.getName());
             cbh.setType(CustomersBedType.CHECK_IN.name());
+            cbh.setRentAmount(payloads.rentalAmount());
             cbh.setReason("Initial check in");
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
@@ -335,6 +337,7 @@ public class BookingsService {
             cbh.setHostelId(bookingsV1.getHostelId());
             cbh.setStartDate(bookingsV1.getJoiningDate());
             cbh.setCustomerId(bookingsV1.getCustomerId());
+            cbh.setRentAmount(payloads.rentalAmount());
             cbh.setChangedBy(authentication.getName());
             cbh.setReason("Initial check in");
             cbh.setType(CustomersBedType.CHECK_IN.name());

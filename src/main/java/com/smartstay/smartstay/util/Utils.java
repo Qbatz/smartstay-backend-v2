@@ -25,6 +25,10 @@ public class Utils {
     public static final String USER_INPUT_DATE_FORMAT = "dd-MM-yyyy";
 
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
+    public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss aa";
+    public static final String OUTPUT_MONTH_FORMAT = "MMM YYYY";
+    public static final String OUTPUT_DATE_MONTH_FORMAT = "dd MMM";
+
     public static final String DATE_FORMAT_YY = "yyyy/MM/dd";
     public static final String DATE_FORMAT_ZOHO = "yyyy-MM-dd";
 
@@ -239,6 +243,27 @@ public class Utils {
         return new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(date);
     }
 
+    public static String dateToDateMonth(Date date) {
+        if (date == null) {
+            return "";
+        }
+        return new SimpleDateFormat(OUTPUT_DATE_MONTH_FORMAT).format(date);
+    }
+
+    public static String dateToMonth(Date date) {
+        if (date == null) {
+            return "";
+        }
+        return new SimpleDateFormat(OUTPUT_MONTH_FORMAT).format(date);
+    }
+
+    public static String dateToTime(Date date) {
+        if (date == null) {
+            return "";
+        }
+        return new SimpleDateFormat(OUTPUT_TIME_FORMAT).format(date);
+    }
+
 
     public static boolean compareWithTodayDate(Date date2) {
         String dateString = new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(new Date());
@@ -375,6 +400,7 @@ public class Utils {
         return Date.from(cycleEnd.atStartOfDay(ZoneId.systemDefault()).toInstant());
 
     }
+
 
     public static int generateExpenseNumber() {
         Random random = new Random();

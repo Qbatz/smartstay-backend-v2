@@ -587,10 +587,8 @@ public class ElectricityService {
 
             boolean isHostelBased = false;
             if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.HOSTEL_READING.name())) {
-                isHostelBased = false;
+                isHostelBased = true;
             }
-
-
 
             ElectricityList list = new ElectricityList(isHostelBased, listUsages);
 
