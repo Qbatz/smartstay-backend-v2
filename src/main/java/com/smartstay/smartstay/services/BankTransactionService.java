@@ -4,9 +4,11 @@ import com.smartstay.smartstay.Wrappers.transactions.TransactionsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dao.BankingV1;
+import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.ennum.BankSource;
 import com.smartstay.smartstay.ennum.BankTransactionType;
+import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.repositories.BankTransactionRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -163,5 +165,49 @@ public class BankTransactionService {
             return true;
         }
         return false;
+    }
+
+    public boolean refundInvoice(InvoicesV1 invoicesV1, double refundableAmount, RefundInvoice refundInvoice) {
+        BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
+
+        String transactionDate = refundInvoice.refundDate();
+        if (!Utils.checkNullOrEmpty(refundInvoice.refundDate())) {
+            transactionDate = Utils.dateToString(new Date());
+        }
+
+        if (!bankingService.updateBalanceForExpense(refundableAmount, BankTransactionType.DEBIT.name(), refundInvoice.bankId(), transactionDate)) {
+            return false;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        Date dt = null;
+        if (refundInvoice.refundDate() != null) {
+            dt = Utils.stringToDate(refundInvoice.refundDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        else {
+            dt = new Date();
+        }
+        calendar.setTime(dt);
+        if (calendar.get(Calendar.MINUTE) == 0 && calendar.get(Calendar.HOUR) == 0) {
+            Calendar cal2 = Calendar.getInstance();
+            calendar.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
+            calendar.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
+            calendar.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
+        }
+
+        transactionsV1.setTransactionDate(calendar.getTime());
+        transactionsV1.setBankId(refundInvoice.bankId());
+        transactionsV1.setReferenceNumber(refundInvoice.referenceNumber());
+        transactionsV1.setAmount(refundableAmount);
+        transactionsV1.setType(BankTransactionType.DEBIT.name());
+        transactionsV1.setSource(BankSource.INVOICE.name());
+        transactionsV1.setHostelId(invoicesV1.getHostelId());
+        transactionsV1.setCreatedAt(new Date());
+        transactionsV1.setCreatedBy(authentication.getName());
+
+        bankRepository.save(transactionsV1);
+
+        return true;
+
     }
 }

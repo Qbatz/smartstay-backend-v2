@@ -14,13 +14,12 @@ import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.dto.transaction.Receipts;
-import com.smartstay.smartstay.ennum.BillConfigTypes;
-import com.smartstay.smartstay.ennum.InvoiceMode;
-import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.invoice.ItemResponse;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
+import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.util.Utils;
@@ -58,7 +57,11 @@ public class InvoiceV1Service {
     @Autowired
     private BankingService bankingService;
     @Autowired
+    private BankTransactionService bankTransactionService;
+    @Autowired
     private InvoiceItemService invoiceItemService;
+    @Autowired
+    private CreditDebitNoteService creditDebitNoteService;
     private TransactionService transactionService;
 
     private BookingsService bookingsService;
@@ -1253,12 +1256,93 @@ public class InvoiceV1Service {
             }
         }
         else {
-            refundableAmount = invoicesV1.getPaidAmount();
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+            if (billingDates != null && billingDates.currentBillStartDate() != null) {
+                if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), billingDates.currentBillStartDate()) < 0) {
+                    return new ResponseEntity<>(Utils.CANNOT_REFUND_FOR_OLD_INVOICES, HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            if (invoicesV1.getPaidAmount() != null && invoicesV1.getPaidAmount() > 0) {
+                refundableAmount = invoicesV1.getPaidAmount();
+            }
+            else {
+                return new ResponseEntity<>(Utils.CANNOT_REFUND_FOR_UNPAID_INVOICES, HttpStatus.BAD_REQUEST);
+            }
+
         }
 
         List<RefundableBanks> listBanks = bankingService.initializeRefund(refundableAmount, invoicesV1.getHostelId());
         InitializeRefund refundInitializations = new InitializeRefund(refundableAmount,
                 listBanks);
         return new ResponseEntity<>(refundInitializations, HttpStatus.OK);
+    }
+
+
+    public ResponseEntity<?> refundForInvoice(String hostelId, String invoiceId, RefundInvoice refundInvoice) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(invoiceId)) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+            return new ResponseEntity<>(Utils.REFUND_COMPLETED, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.CANCELLED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REFUND_CANCELLED_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (!bankingService.checkBankExist(refundInvoice.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        double refundableAmount = 0.0;
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+            if (invoicesV1.getTotalAmount() != null && invoicesV1.getTotalAmount() < 0) {
+                refundableAmount = -(invoicesV1.getTotalAmount());
+            }
+            else {
+                return new ResponseEntity<>(Utils.CANNOT_INITIATE_REFUND, HttpStatus.BAD_REQUEST);
+            }
+        }
+        else {
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+            if (billingDates != null && billingDates.currentBillStartDate() != null) {
+                if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), billingDates.currentBillStartDate()) < 0) {
+                    return new ResponseEntity<>(Utils.CANNOT_REFUND_FOR_OLD_INVOICES, HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            if (invoicesV1.getPaidAmount() != null && invoicesV1.getPaidAmount() > 0) {
+                refundableAmount = invoicesV1.getPaidAmount();
+            }
+            else {
+                return new ResponseEntity<>(Utils.CANNOT_REFUND_FOR_UNPAID_INVOICES, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        if (bankTransactionService.refundInvoice(invoicesV1, refundableAmount, refundInvoice)) {
+            creditDebitNoteService.refunInvoice(invoiceId, invoicesV1, refundableAmount, refundInvoice);
+        }
+        else {
+            return new ResponseEntity<>(Utils.INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(Utils.REFUND_PROCESSED_SUCCESSFULLY, HttpStatus.OK);
     }
 }
