@@ -847,6 +847,29 @@ public class CustomersService {
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_ON_NOTICE, HttpStatus.BAD_REQUEST);
         }
+        BookingsV1 booking = bookingsService.getBookingsByCustomerId(checkoutNotice.customerId());
+        if (booking == null) {
+            return new ResponseEntity<>(Utils.INVALID_BOOKING_ID, HttpStatus.BAD_REQUEST);
+        }
+        Date joiningDate = booking.getJoiningDate();
+        Date requestDate = Utils.stringToDate(checkoutNotice.requestDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        Date checkoutDate = Utils.stringToDate(checkoutNotice.checkoutDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        if (Utils.compareWithTwoDates(requestDate, joiningDate) <= 0) {
+            return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_JOINING_DATE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (Utils.compareWithTwoDates(checkoutDate, joiningDate) <= 0) {
+            return new ResponseEntity<>(Utils.CHECKOUT_DATE_MUST_AFTER_JOINING_DATE, HttpStatus.BAD_REQUEST);
+        }
+
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        if (Utils.compareWithTwoDates(requestDate, billingDates.currentBillStartDate()) < 0) {
+            return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
+        }
+
+        if (Utils.compareWithTwoDates(checkoutDate, requestDate) <= 0) {
+            return new ResponseEntity<>(Utils.CHECKOUT_DATE_MUST_AFTER_REQUEST_DATE, HttpStatus.BAD_REQUEST);
+        }
 
         customers.setCurrentStatus(CustomerStatus.NOTICE.name());
 
