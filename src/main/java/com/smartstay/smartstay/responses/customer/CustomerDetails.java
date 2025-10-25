@@ -16,6 +16,7 @@ public record CustomerDetails(String customerId,
                               CustomerAddress address,
                               HostelInformation hostelInfo,
                               KycInformations kycInfo,
+                              AdvanceInfo advanceInfo,
                               List<InvoiceResponse> invoiceResponseList,
                               List<BedHistory> bedHistory) {
 }

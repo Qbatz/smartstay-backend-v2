@@ -12,8 +12,8 @@ import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
-import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
@@ -26,7 +26,6 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -861,6 +860,52 @@ public class CustomersService {
     }
 
 
+    public static AdvanceInfo toAdvanceInfoResponse(Advance advance, InvoiceResponse invoicesV1) {
+        if (advance == null) return null;
+        double maintenanceAmount = 0.0;
+        double otherDeductionsAmount = 0.0;
+
+        if (advance.getDeductions() != null && !advance.getDeductions().isEmpty()) {
+            for (Deductions d : advance.getDeductions()) {
+                if (d.getType() == null || d.getAmount() == null) continue;
+
+                String type = d.getType().trim().toLowerCase();
+                if (type.equals("maintenance")) {
+                    maintenanceAmount += d.getAmount();
+                } else {
+                    otherDeductionsAmount += d.getAmount();
+                }
+            }
+        }
+
+        double dueAmount = (advance.getAdvanceAmount() != 0)
+                ? advance.getAdvanceAmount() - invoicesV1.paidAmount()
+                : 0.0;
+
+        return new AdvanceInfo(
+                advance.getInvoiceDate() != null ? Utils.dateToString(advance.getInvoiceDate()) : null,
+                invoicesV1.dueDate(),
+                dueAmount,
+                advance.getAdvanceAmount(),
+                invoicesV1.paymentStatus(),
+                maintenanceAmount,
+                otherDeductionsAmount,
+                invoicesV1.paidAmount()
+        );
+    }
+
+    public Customers getCustomerInformation(String customerId) {
+        return customersRepository.findById(customerId).orElse(null);
+    }
+
+    public Customers markCustomerInactive(Customers customers) {
+        customers.setCurrentStatus(CustomerStatus.CANCELLED_BOOKING.name());
+        customers.setLastUpdatedAt(new Date());
+        customers.setUpdatedBy(authentication.getName());
+
+        return customersRepository.save(customers);
+    }
+
     public ResponseEntity<?> getCustomerDetails(String customerId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -958,7 +1003,14 @@ public class CustomersService {
                     null);
         }
 
+
         List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
+        InvoiceResponse advanceInvoice = invoiceResponseList.stream()
+                .filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType()))
+                .limit(1)
+                .findFirst()
+                .orElse(null);
+        AdvanceInfo advanceInfo = toAdvanceInfoResponse(advance, advanceInvoice);
         List<BedHistory> listBeds = bedHistory.getCustomersBedHistory(customers.getCustomerId());
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
@@ -973,23 +1025,13 @@ public class CustomersService {
                 address,
                 hostelInformation,
                 kycInfo,
+                advanceInfo,
                 invoiceResponseList,
                 listBeds);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
 
-    public Customers getCustomerInformation(String customerId) {
-        return customersRepository.findById(customerId).orElse(null);
-    }
-
-    public Customers markCustomerInactive(Customers customers) {
-        customers.setCurrentStatus(CustomerStatus.CANCELLED_BOOKING.name());
-        customers.setLastUpdatedAt(new Date());
-        customers.setUpdatedBy(authentication.getName());
-
-        return customersRepository.save(customers);
-    }
 
     public void calculateRentAndCreateRentalInvoice(Customers customers,  CheckInRequest payloads) {
         HostelV1 hostelV1 = hostelService.getHostelInfo(payloads.hostelId());
