@@ -86,4 +86,16 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """, nativeQuery = true)
     BookingsV1 checkBedsAvailabilityForDate(@Param("bedId") Integer bedId);
 
+    @Query(value = """
+    SELECT * FROM bookingsv1 b
+    WHERE b.bed_id = :bedId
+      AND b.customer_id <> :customerId
+      AND DATE(b.expected_joining_date) = DATE(DATE_ADD(:expectedJoiningDate, INTERVAL 1 DAY))
+    """, nativeQuery = true)
+    List<BookingsV1> findNextDayBookingForSameBed(
+            @Param("bedId") int bedId,
+            @Param("customerId") String customerId,
+            @Param("expectedJoiningDate") Date expectedJoiningDate
+    );
+
 }
