@@ -85,6 +85,7 @@ public class Utils {
     public static final String NO_ROOM_FOUND_HOSTEL = "No room found for specified hostel";
     public static final String N0_BED_FOUND_ROOM = "No bed found for the specified room.";
     public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable";
+    public static final String RECHECK_DATE_SHOULD_BE_GREATER_THAN_JOINING_DATE = "Recheck date should be greater than joining date";
     public static final String BED_UNAVAILABLE_DATE = "Bed is unavailable for selected date";
     public static final String CHECK_IN_FUTURE_DATE_ERROR = "Check in cannot be accept for future dates";
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";

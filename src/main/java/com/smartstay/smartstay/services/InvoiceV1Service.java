@@ -1261,4 +1261,8 @@ public class InvoiceV1Service {
                 listBanks);
         return new ResponseEntity<>(refundInitializations, HttpStatus.OK);
     }
+
+    public void saveInvoice(InvoicesV1 invoicesV1) {
+        invoicesV1Repository.save(invoicesV1);
+    }
 }

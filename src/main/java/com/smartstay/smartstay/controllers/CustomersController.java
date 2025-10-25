@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.beds.AssignBed;
+import com.smartstay.smartstay.payloads.beds.CancelCheckout;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.services.CustomersService;
@@ -100,5 +101,10 @@ public class CustomersController {
     @PostMapping("/change-bed/{hostelId}/{customerId}")
     public ResponseEntity<?> changeBed(@PathVariable("customerId") String customerId,@PathVariable("hostelId") String hostelId,@Valid @RequestBody ChangeBed request) {
         return customersService.changeBed(hostelId, customerId, request);
+    }
+
+    @PostMapping("/cancel-checkout/{hostelId}/{customerId}")
+    public ResponseEntity<?> cancelCheckOut(@PathVariable("customerId") String customerId,@PathVariable("hostelId") String hostelId,@Valid @RequestBody CancelCheckout request) {
+        return customersService.cancelCheckOut(hostelId, customerId, request);
     }
  }

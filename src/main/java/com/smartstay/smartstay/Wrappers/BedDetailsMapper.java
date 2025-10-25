@@ -65,6 +65,10 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                 initials.append(beds.firstName().toUpperCase().charAt(1));
         }
 
+        if (beds.bookingStatus() != null && beds.bookingStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
+            isOccupied = true;
+        }
+
         String currentTenantFirstName = null;
         String currentTenantLastName = null;
         StringBuilder currentTenantFullName = new StringBuilder();
