@@ -154,6 +154,9 @@ public class Utils {
     public static final String RESOLVED = "RESOLVED";
     public static final String NO_RECORDS_FOUND = "No records found";
     public static final String CUSTOMER_NOT_CHECKED_IN = "Start date cannot be before joining date";
+    public static final String REFUND_COMPLETED = "Refund already completed";
+    public static final String CANNOT_REFUND_CANCELLED_INVOICE = "Cannot refund for cancelled invoices";
+    public static final String CANNOT_INITIATE_REFUND = "Cannot initiate refund";
 
 
     //Date validation messages

@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.Banking.BookingBankMapper;
 import com.smartstay.smartstay.Wrappers.Banking.CashReturnMapper;
 import com.smartstay.smartstay.Wrappers.BankingListMapper;
+import com.smartstay.smartstay.Wrappers.invoices.RefundableBanksMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dao.BankingV1;
@@ -18,6 +19,7 @@ import com.smartstay.smartstay.repositories.BankingRepository;
 import com.smartstay.smartstay.responses.banking.BankList;
 import com.smartstay.smartstay.responses.beds.Bank;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
+import com.smartstay.smartstay.responses.invoices.RefundableBanks;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -660,5 +662,13 @@ public class BankingService {
         bankingV1Repository.save(bankingV1);
 
         return true;
+    }
+
+    public List<RefundableBanks> initializeRefund(double refundableAmount, String hostelId) {
+        return bankingV1Repository.findByHostelId(hostelId)
+                .stream()
+                .filter(item -> item.getBalance() >= refundableAmount)
+                .map(item -> new RefundableBanksMapper().apply(item))
+                .toList();
     }
 }
