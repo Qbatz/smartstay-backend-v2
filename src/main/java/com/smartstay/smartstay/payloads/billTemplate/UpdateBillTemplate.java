@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.payloads.billTemplate;
 
+import org.springframework.web.multipart.MultipartFile;
+
 public record UpdateBillTemplate(
         Integer templateTypeId,
         String prefix,
@@ -15,6 +17,7 @@ public record UpdateBillTemplate(
         String invoicePhoneNumber,
         String receiptPhoneNumber,
         String invoiceMailId,
-        String receiptMailId
+        String receiptMailId,
+        MultipartFile signature
 ) {
 }

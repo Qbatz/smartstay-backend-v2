@@ -718,20 +718,23 @@ public class InvoiceV1Service {
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
             invoiceType = "Advance";
         }
+        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            invoiceType = "Booking";
+        }
 
-        if (hostelV1.getHouseNo() != null) {
+        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getHouseNo());
             hostelFullAddress.append(", ");
         }
-        if (hostelV1.getStreet() != null) {
+        if (hostelV1.getStreet() != null && !hostelV1.getStreet().trim().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getStreet());
             hostelFullAddress.append(", ");
         }
-        if (hostelV1.getCity() != null) {
+        if (hostelV1.getCity() != null && !hostelV1.getCity().trim().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getCity());
             hostelFullAddress.append(", ");
         }
-        if (hostelV1.getState() != null) {
+        if (hostelV1.getState() != null && !hostelV1.getState().trim().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getState());
             hostelFullAddress.append("-");
         }
@@ -997,40 +1000,58 @@ public class InvoiceV1Service {
     }
 
     public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices) {
-        List<String> listUnpaidInvoicesId = unpaidInvoices
-                .stream()
-                .map(InvoicesV1::getInvoiceId)
-                .toList();
-        InvoicesV1 settlementInvoice = new InvoicesV1();
-        settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
-        settlementInvoice.setCustomerId(customers.getCustomerId());
-        settlementInvoice.setHostelId(hostelId);
-        settlementInvoice.setInvoiceNumber(generateInvoiceNumber(hostelId, "RENT"));
-        settlementInvoice.setCustomerMobile(customers.getMobile());
-        settlementInvoice.setCustomerMobile(customers.getMobile());
-        settlementInvoice.setInvoiceType(InvoiceType.SETTLEMENT.name());
-        settlementInvoice.setBasePrice(totalAmountToBePaid);
-        settlementInvoice.setTotalAmount(totalAmountToBePaid);
-        settlementInvoice.setGst(0.0);
-        settlementInvoice.setCgst(0.0);
-        settlementInvoice.setSgst(0.0);
-        settlementInvoice.setGst(0.0);
-        settlementInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
-        settlementInvoice.setOthersDescription(null);
-        settlementInvoice.setInvoiceMode(InvoiceMode.MANUAL.name());
-        settlementInvoice.setCancelled(false);
-        settlementInvoice.setCreatedBy(authentication.getName());
-        settlementInvoice.setUpdatedBy(authentication.getName());
-        settlementInvoice.setInvoiceGeneratedDate(new Date());
-        settlementInvoice.setInvoiceStartDate(new Date());
-        settlementInvoice.setInvoiceDueDate(new Date());
-        settlementInvoice.setInvoiceEndDate(new Date());
-        settlementInvoice.setCreatedAt(new Date());
-        settlementInvoice.setUpdatedAt(new Date());
+        List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customers.getCustomerId(), InvoiceType.SETTLEMENT.name());
+        if (!invoicesV1.isEmpty()) {
+            InvoicesV1 settlementInvoice = invoicesV1.get(0);
 
-        invoicesV1Repository.save(settlementInvoice);
+            List<String> listUnpaidInvoicesId = unpaidInvoices
+                    .stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList();
+            settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
+            settlementInvoice.setBasePrice(totalAmountToBePaid);
+            settlementInvoice.setTotalAmount(totalAmountToBePaid);
+            settlementInvoice.setInvoiceStartDate(new Date());
+            settlementInvoice.setInvoiceDueDate(new Date());
+            settlementInvoice.setInvoiceEndDate(new Date());
+            settlementInvoice.setUpdatedAt(new Date());
+            invoicesV1Repository.save(settlementInvoice);
 
+        }
+        else {
+            List<String> listUnpaidInvoicesId = unpaidInvoices
+                    .stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList();
+            InvoicesV1 settlementInvoice = new InvoicesV1();
+            settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
+            settlementInvoice.setCustomerId(customers.getCustomerId());
+            settlementInvoice.setHostelId(hostelId);
+            settlementInvoice.setInvoiceNumber(generateInvoiceNumber(hostelId, "RENT"));
+            settlementInvoice.setCustomerMobile(customers.getMobile());
+            settlementInvoice.setCustomerMobile(customers.getMobile());
+            settlementInvoice.setInvoiceType(InvoiceType.SETTLEMENT.name());
+            settlementInvoice.setBasePrice(totalAmountToBePaid);
+            settlementInvoice.setTotalAmount(totalAmountToBePaid);
+            settlementInvoice.setGst(0.0);
+            settlementInvoice.setCgst(0.0);
+            settlementInvoice.setSgst(0.0);
+            settlementInvoice.setGst(0.0);
+            settlementInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+            settlementInvoice.setOthersDescription(null);
+            settlementInvoice.setInvoiceMode(InvoiceMode.MANUAL.name());
+            settlementInvoice.setCancelled(false);
+            settlementInvoice.setCreatedBy(authentication.getName());
+            settlementInvoice.setUpdatedBy(authentication.getName());
+            settlementInvoice.setInvoiceGeneratedDate(new Date());
+            settlementInvoice.setInvoiceStartDate(new Date());
+            settlementInvoice.setInvoiceDueDate(new Date());
+            settlementInvoice.setInvoiceEndDate(new Date());
+            settlementInvoice.setCreatedAt(new Date());
+            settlementInvoice.setUpdatedAt(new Date());
 
+            invoicesV1Repository.save(settlementInvoice);
+        }
     }
 
     public String generateInvoiceNumber(String hostelId, String type) {
@@ -1343,6 +1364,9 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);
         }
 
+        invoicesV1.setPaymentStatus(PaymentStatus.REFUNDED.name());
+        invoicesV1.setInvoiceEndDate(new Date());
+        invoicesV1Repository.save(invoicesV1);
         return new ResponseEntity<>(Utils.REFUND_PROCESSED_SUCCESSFULLY, HttpStatus.OK);
     }
 }
