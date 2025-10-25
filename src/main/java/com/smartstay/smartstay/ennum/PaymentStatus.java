@@ -5,7 +5,9 @@ public enum PaymentStatus {
     PENDING("Pending"),
     PARTIAL_PAYMENT("Partial Payment"),
     ADVANCE_IN_HAND("Advance in hand"),
-    CANCELLED("Cancelled");
+    CANCELLED("Cancelled"),
+    REFUNDED("Refunded");
+
 
     private final String displayName;
 

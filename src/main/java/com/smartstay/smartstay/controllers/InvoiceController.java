@@ -45,4 +45,9 @@ public class InvoiceController {
         return invoiceV1Service.getInvoiceDetailsByInvoiceId(hostelId, invoiceId);
     }
 
+    @GetMapping("/refund/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> initializeRefunding(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.initializeRefund(hostelId, invoiceId);
+    }
+
 }

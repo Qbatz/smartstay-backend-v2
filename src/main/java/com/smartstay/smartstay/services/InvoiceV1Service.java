@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
+import com.smartstay.smartstay.Wrappers.invoices.InitializeRefund;
 import com.smartstay.smartstay.Wrappers.invoices.InvoiceMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
@@ -27,7 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -1216,5 +1216,49 @@ public class InvoiceV1Service {
         Double finalSettlementPaidAmount = transactionService.getFinalSettlementPaidAmount(invoicesV1.getInvoiceId());
 
         return finalSettlementPaidAmount - invoicesV1.getTotalAmount();
+    }
+
+    public ResponseEntity<?> initializeRefund(String hostelId, String invoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.BAD_REQUEST);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.BAD_REQUEST);
+        }
+        if(!userHostelService.checkHostelAccess(user.getUserId(),hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null){
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+            return new ResponseEntity<>(Utils.REFUND_COMPLETED, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.CANCELLED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REFUND_CANCELLED_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+
+        double refundableAmount = 0.0;
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+            if (invoicesV1.getTotalAmount() != null && invoicesV1.getTotalAmount() < 0) {
+                refundableAmount = -(invoicesV1.getTotalAmount());
+            }
+            else {
+                return new ResponseEntity<>(Utils.CANNOT_INITIATE_REFUND, HttpStatus.BAD_REQUEST);
+            }
+        }
+        else {
+            refundableAmount = invoicesV1.getPaidAmount();
+        }
+
+        List<RefundableBanks> listBanks = bankingService.initializeRefund(refundableAmount, invoicesV1.getHostelId());
+        InitializeRefund refundInitializations = new InitializeRefund(refundableAmount,
+                listBanks);
+        return new ResponseEntity<>(refundInitializations, HttpStatus.OK);
     }
 }

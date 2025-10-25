@@ -1184,16 +1184,17 @@ public class CustomersService {
         }
 
 
-        double rentPerDay = 0;
-        if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billStartDate) < 0) {
-            rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
-        }
-        else {
-            long noOfDaysLeft = Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), new Date());
-
-            rentPerDay = currentMonthRent / noOfDaysLeft;
-            noOfDaySatayed = noOfDaysLeft;
-        }
+        double rentPerDay = ((bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth)* 100.0)/100.0;
+//        if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billStartDate) < 0) {
+//            rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
+//        }
+//        else {
+//
+//            noOfDaySatayed =  Utils.findNumberOfDays(bookingDetails.getJoiningDate(), new Date());
+////            long noOfDaysLeft = Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), new Date());
+//
+//            rentPerDay = currentMonthRent / noOfDaySatayed;
+//        }
 
         currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay)*100.0/100.0;
 
@@ -1406,7 +1407,7 @@ public class CustomersService {
 
         Date dateStartDate = calStartDate.getTime();
 
-        if (Utils.findNumberOfDays(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) >= 0) {
+        if (Utils.findNumberOfDays(billDate.currentBillStartDate(), bookingDetails.getJoiningDate()) >= 0) {
             dateStartDate =bookingDetails.getJoiningDate();
         }
         else {
@@ -1441,7 +1442,7 @@ public class CustomersService {
         }
 
         double rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
-        if (Utils.findNumberOfDays(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) >= 0) {
+        if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) >= 0) {
             rentPerDay = bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth;
         }
         currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay)*100.0/100.0;
@@ -1521,11 +1522,13 @@ public class CustomersService {
                 .peek(item -> item.setCancelled(true))
                 .toList();
 
-//        invoiceService.cancelActiveInvoice(unpaidUpdated);
+        totalAmountToBePaid = (totalAmountToBePaid * 100.0) / 100.0;
+
+        invoiceService.cancelActiveInvoice(unpaidUpdated);
         invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated);
 
-//        customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
-//        customersRepository.save(customers);
+        customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
+        customersRepository.save(customers);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
