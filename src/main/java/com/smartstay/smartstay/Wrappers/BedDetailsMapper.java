@@ -198,8 +198,46 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                     null,
                     null);
         }
+         if (beds.bookingStatus() != null && beds.bookingStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+            return new BedDetails(
+                    beds.bedName(),
+                    beds.bedId(),
+                    beds.hostelId(),
+                    beds.isBooked(),
+                    isOnNotice,
+                    isOccupied,
+                    beds.roomRent(),
+                    beds.roomId(),
+                    freeFrom,
+                    beds.currentRent(),
+                    oldTenantLeaving,
+                    beds.bookingId(),
+                    expectedJoiningDate,
+                    jd,
+                    currentTenantFirstName,
+                    currentTenantLastName,
+                    currentTenantProfilePic,
+                    currentTenantFullName.toString(),
+                    currentTenantInitials.toString(),
+                    currentTenantMobile,
+                    currentTenantCustomerId,
+                    beds.floorId(),
+                    beds.floorName(),
+                    beds.roomName(),
+                    beds.countryCode(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
 
-        return new BedDetails(beds.bedName(),
+        }
+
+        return new BedDetails(
+                beds.bedName(),
                 beds.bedId(),
                 beds.hostelId(),
                 beds.isBooked(),
@@ -230,6 +268,7 @@ public class BedDetailsMapper implements Function<Beds, BedDetails> {
                 beds.profilePic(),
                 initials.toString(),
                 beds.mobile(),
-                beds.customerId());
+                beds.customerId()
+        );
     }
 }
