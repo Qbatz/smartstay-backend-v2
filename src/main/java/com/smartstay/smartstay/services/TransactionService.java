@@ -406,6 +406,9 @@ public class TransactionService {
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
             invoiceType = "Booking";
         }
+        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+            invoiceType = "Settlement";
+        }
 
         if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().equalsIgnoreCase("")) {
             hostelFullAddress.append(hostelV1.getHouseNo());
@@ -457,17 +460,58 @@ public class TransactionService {
             if (!hostelTemplates.isMobileCustomized()) {
                 hostelPhone = hostelTemplates.getMobile();
             } else {
-                hostelPhone = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).map(BillTemplateType::getReceiptPhoneNumber).toString();
+                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) ||invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                    hostelPhone = hostelTemplates.getTemplateTypes()
+                            .stream()
+                            .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
+                            .map(BillTemplateType::getReceiptPhoneNumber).toString();
+                }
+                else {
+                    hostelPhone = hostelTemplates.getTemplateTypes()
+                            .stream()
+                            .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                            .map(BillTemplateType::getReceiptPhoneNumber).toString();
+                }
+
 
             }
 
             if (!hostelTemplates.isEmailCustomized()) {
                 hostelEmail = hostelTemplates.getEmailId();
             } else {
-                hostelEmail = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).map(BillTemplateType::getReceiptMailId).toString();
+                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) ||invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                    hostelEmail = hostelTemplates.getTemplateTypes()
+                            .stream()
+                            .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
+                            .map(BillTemplateType::getReceiptMailId)
+                            .toString();
+                }
+                else {
+                    hostelEmail = hostelTemplates.getTemplateTypes()
+                            .stream()
+                            .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                            .map(BillTemplateType::getReceiptMailId)
+                            .toString();
+                }
+
             }
 
-            BillTemplateType templateType = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).findAny().get();
+            BillTemplateType templateType = null;
+            if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) ||invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                templateType = hostelTemplates
+                        .getTemplateTypes()
+                        .stream()
+                        .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
+                        .findAny().get();
+            }
+            else {
+                templateType = hostelTemplates
+                        .getTemplateTypes()
+                        .stream()
+                        .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                        .findAny().get();
+            }
+
 
             if (!hostelTemplates.isSignatureCustomized()) {
                 receiptSignatureUrl = hostelTemplates.getDigitalSignature();
@@ -495,19 +539,19 @@ public class TransactionService {
                 fullName.append(", ");
                 fullName.append(customers.getLastName());
             }
-            if (customers.getHouseNo() != null) {
+            if (customers.getHouseNo() != null && !customers.getHouseNo().trim().equalsIgnoreCase("")) {
                 fullAddress.append(customers.getHouseNo());
                 fullAddress.append(", ");
             }
-            if (customers.getStreet() != null) {
+            if (customers.getStreet() != null && !customers.getStreet().trim().equalsIgnoreCase("")) {
                 fullAddress.append(customers.getStreet());
                 fullAddress.append(", ");
             }
-            if (customers.getCity() != null) {
+            if (customers.getCity() != null && !customers.getCity().trim().equalsIgnoreCase("")) {
                 fullAddress.append(customers.getCity());
                 fullAddress.append(", ");
             }
-            if (customers.getState() != null) {
+            if (customers.getState() != null && !customers.getState().trim().equalsIgnoreCase("")) {
                 fullAddress.append(customers.getState());
                 fullAddress.append("-");
             }
@@ -556,19 +600,31 @@ public class TransactionService {
                 Utils.dateToString(transactionV1.getPaymentDate()),
                 Utils.dateToTime(transactionV1.getPaymentDate()),
                 transactionV1.getPaidAmount(),
+                invoiceType,
                 transactionV1.getReferenceNumber(),
-                invoiceType,receiverfullName.toString(),
+                receiverfullName.toString(),
                 invoiceMonth);
 
+
+        double dueAmount = 0.0;
+        if (invoicesV1.getPaidAmount() != null) {
+            dueAmount = invoicesV1.getTotalAmount() - invoicesV1.getPaidAmount();
+        }
 
 
 
         ReceiptDetails details = new ReceiptDetails(invoicesV1.getInvoiceNumber(),
                 Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                 invoicesV1.getInvoiceId(),
+                invoicesV1.getTotalAmount(),
+                invoicesV1.getPaidAmount(),
+                dueAmount,
                 hostelEmail,
                 hostelPhone, "91", receiptInfo,
-                customerInfo, stayInfo, accountDetails, receiptConfigInfo);
+                customerInfo,
+                stayInfo,
+                accountDetails,
+                receiptConfigInfo);
         return new ResponseEntity<>(details, HttpStatus.OK);
 
     }

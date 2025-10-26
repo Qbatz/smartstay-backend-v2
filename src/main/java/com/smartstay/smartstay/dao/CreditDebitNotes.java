@@ -21,6 +21,7 @@ public class CreditDebitNotes {
     //credit or debit
     private String type;
     private Double amount;
+    private String source;
     private String invoiceId;
     private String bookingId;
     private String reason;

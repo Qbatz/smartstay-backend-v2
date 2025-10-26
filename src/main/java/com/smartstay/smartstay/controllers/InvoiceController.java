@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
+import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.services.InvoiceV1Service;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -48,6 +49,11 @@ public class InvoiceController {
     @GetMapping("/refund/{hostelId}/{invoiceId}")
     public ResponseEntity<?> initializeRefunding(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return invoiceV1Service.initializeRefund(hostelId, invoiceId);
+    }
+
+    @PostMapping("/refund/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> refunInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody @Valid RefundInvoice refundInvoice) {
+        return invoiceV1Service.refundForInvoice(hostelId, invoiceId, refundInvoice);
     }
 
 }

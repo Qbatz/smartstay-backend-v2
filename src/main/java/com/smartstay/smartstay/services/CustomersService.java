@@ -1400,9 +1400,9 @@ public class CustomersService {
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
-        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
-            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
-        }
+//        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+//            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
+//        }
         if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
