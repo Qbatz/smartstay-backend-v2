@@ -774,12 +774,12 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
         if (updateInfo != null) {
-            if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
-                if (customersRepository.findCustomersByMobile(customers.getCustomerId(), updateInfo.mobile()) > 0) {
-                    return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
-                }
-                customers.setMobile(updateInfo.mobile());
-            }
+//            if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
+//                if (customersRepository.findCustomersByMobile(customers.getCustomerId(), updateInfo.mobile()) > 0) {
+//                    return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+//                }
+//                customers.setMobile(updateInfo.mobile());
+//            }
 
             String profileImage = null;
             if (file != null) {

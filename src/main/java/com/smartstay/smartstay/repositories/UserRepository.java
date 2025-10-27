@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<Users, String> {
 
 
-    Users findUserByEmailId(String emailId);
+    Users findByEmailIdAndIsDeletedFalse(String emailId);
 
     Users findUserByUserId(String userId);
     Users findUserByUserIdAndParentId(String userId,String parentId);
