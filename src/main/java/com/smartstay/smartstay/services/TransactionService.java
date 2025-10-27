@@ -30,6 +30,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class TransactionService {
@@ -464,13 +465,17 @@ public class TransactionService {
                     hostelPhone = hostelTemplates.getTemplateTypes()
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
-                            .map(BillTemplateType::getReceiptPhoneNumber).toString();
+                            .map(BillTemplateType::getReceiptPhoneNumber)
+                            .toList()
+                            .getFirst();
                 }
                 else {
                     hostelPhone = hostelTemplates.getTemplateTypes()
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                            .map(BillTemplateType::getReceiptPhoneNumber).toString();
+                            .map(BillTemplateType::getReceiptPhoneNumber)
+                            .toList()
+                            .getFirst();
                 }
 
 
@@ -484,14 +489,16 @@ public class TransactionService {
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
                             .map(BillTemplateType::getReceiptMailId)
-                            .toString();
+                            .toList()
+                            .getFirst();
                 }
                 else {
                     hostelEmail = hostelTemplates.getTemplateTypes()
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
                             .map(BillTemplateType::getReceiptMailId)
-                            .toString();
+                            .toList()
+                            .getFirst();
                 }
 
             }
@@ -502,14 +509,16 @@ public class TransactionService {
                         .getTemplateTypes()
                         .stream()
                         .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
-                        .findAny().get();
+                        .toList()
+                        .getFirst();
             }
             else {
                 templateType = hostelTemplates
                         .getTemplateTypes()
                         .stream()
                         .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                        .findAny().get();
+                        .toList()
+                        .getFirst();
             }
 
 
@@ -524,7 +533,13 @@ public class TransactionService {
                 hostelLogo = templateType.getReceiptLogoUrl();
             }
 
-            receiptConfigInfo = new ReceiptConfigInfo(templateType.getReceiptTermsAndCondition(), receiptSignatureUrl, hostelLogo, hostelFullAddress.toString(), templateType.getReceiptTemplateColor(), templateType.getReceiptNotes(), invoiceType);
+            receiptConfigInfo = new ReceiptConfigInfo(templateType.getReceiptTermsAndCondition(),
+                    receiptSignatureUrl,
+                    hostelLogo,
+                    hostelFullAddress.toString(),
+                    templateType.getReceiptTemplateColor(),
+                    templateType.getReceiptNotes(),
+                    invoiceType);
         }
 
         Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());

@@ -766,14 +766,16 @@ public class InvoiceV1Service {
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
                             .map(BillTemplateType::getInvoicePhoneNumber)
-                            .toString();
+                            .toList()
+                            .getFirst();
                 }
                 else {
                     hostelPhone = hostelTemplates.getTemplateTypes()
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
                             .map(BillTemplateType::getInvoicePhoneNumber)
-                            .toString();
+                            .toList()
+                            .getFirst();
                 }
 
             }
@@ -786,15 +788,17 @@ public class InvoiceV1Service {
                     hostelEmail = hostelTemplates.getTemplateTypes()
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
-                            .map(BillTemplateType::getInvoicePhoneNumber)
-                            .toString();
+                            .map(BillTemplateType::getInvoiceMailId)
+                            .toList()
+                            .getFirst();
                 }
                 else {
                     hostelEmail = hostelTemplates.getTemplateTypes()
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                            .map(BillTemplateType::getInvoicePhoneNumber)
-                            .toString();
+                            .map(BillTemplateType::getInvoiceMailId)
+                            .toList()
+                            .getFirst();
                 }
             }
 
@@ -805,14 +809,16 @@ public class InvoiceV1Service {
                         .getTemplateTypes()
                         .stream()
                         .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
-                        .findAny().get();
+                        .toList()
+                        .getFirst();
             }
             else {
                 templateType = hostelTemplates
                         .getTemplateTypes()
                         .stream()
                         .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                        .findAny().get();
+                        .toList()
+                        .getFirst();
             }
 
             if (!hostelTemplates.isSignatureCustomized()) {

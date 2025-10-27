@@ -362,28 +362,6 @@ public class HostelService {
         return hostelV1Repository.findByHostelId(hostelId);
     }
 
-    public BillingDates getBillStartDate(String hostelId) {
-        HostelV1 hostelV1 = hostelV1Repository.findByHostelId(hostelId);
-        if (hostelV1 != null) {
-            int billStartDate = 1;
-            if (hostelV1.getBillingRulesList() != null && !hostelV1.getBillingRulesList().isEmpty()) {
-                billStartDate = hostelV1.getBillingRulesList().get(hostelV1.getBillingRulesList().size() - 1).getBillingStartDate();
-            }
-            Calendar calendar = Calendar.getInstance();
-            calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
-
-            Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
-
-            return new BillingDates(calendar.getTime(), findEndDate);
-        }
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.DAY_OF_MONTH, 1);
-
-        Date findEndDate = Utils.findLastDate(1, calendar.getTime());
-        return new BillingDates(calendar.getTime(), findEndDate);
-    }
-
     public BillingDates getCurrentBillStartAndEndDates(String hostelId) {
         BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
         int billStartDate = 1;
@@ -676,9 +654,6 @@ public class HostelService {
                 cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
                 calEndDate.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH) -1);
             }
-
-
-
             previousEndDate = calEndDate.getTime();
 
             startDate = cal.getTime();

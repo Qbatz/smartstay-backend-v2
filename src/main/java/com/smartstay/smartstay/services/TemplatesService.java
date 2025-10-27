@@ -278,7 +278,8 @@ public class TemplatesService {
                     templates.isLogoCustomized(),
                     templates.isSignatureCustomized(),
                     templates.isMobileCustomized(),
-                    templates.isEmailCustomized()
+                    templates.isEmailCustomized(),
+                    templates
             );
         }
 
@@ -415,7 +416,8 @@ public class TemplatesService {
                                           MultipartFile receiptLogo, MultipartFile receiptSignature,
                                           MultipartFile qrCode,
                                           Boolean isLogoCustomized, Boolean isSignatureCustomized,
-                                          Boolean isMobileCustomized, Boolean isEmailCustomized) {
+                                          Boolean isMobileCustomized, Boolean isEmailCustomized,
+                                          BillTemplates billTemplates) {
 
         if (isNotBlank(payloads.gstPercentile())) {
             try {
@@ -432,7 +434,7 @@ public class TemplatesService {
         if (isNotBlank(payloads.invoiceTermsAndCondition())) templateType.setInvoiceTermsAndCondition(payloads.invoiceTermsAndCondition());
         if (isNotBlank(payloads.receiptTermsAndCondition())) templateType.setReceiptTermsAndCondition(payloads.receiptTermsAndCondition());
 
-        if (Boolean.TRUE.equals(isLogoCustomized)) {
+        if (Boolean.TRUE.equals(isLogoCustomized) || billTemplates.isLogoCustomized()) {
 
             if (invoiceLogo != null){
                 String invoiceImage = uploadIfPresent(invoiceLogo);
@@ -447,7 +449,7 @@ public class TemplatesService {
             templateType.setReceiptLogoUrl(null);
         }
 
-        if (Boolean.TRUE.equals(isSignatureCustomized)) {
+        if (Boolean.TRUE.equals(isSignatureCustomized) || billTemplates.isSignatureCustomized()) {
 
             if (invSignature != null) {
                 String invSignatureImage = uploadIfPresent(invSignature);
@@ -462,7 +464,7 @@ public class TemplatesService {
             templateType.setReceiptSignatureUrl(null);
         }
 
-        if (Boolean.TRUE.equals(isMobileCustomized)) {
+        if (Boolean.TRUE.equals(isMobileCustomized) || billTemplates.isMobileCustomized()) {
 
             if (isNotBlank(payloads.invoicePhoneNumber())){
                 templateType.setInvoicePhoneNumber(payloads.invoicePhoneNumber());
@@ -477,7 +479,7 @@ public class TemplatesService {
             templateType.setReceiptPhoneNumber(null);
         }
 
-        if (Boolean.TRUE.equals(isEmailCustomized)) {
+        if (Boolean.TRUE.equals(isEmailCustomized) || billTemplates.isEmailCustomized()) {
 
             if (isNotBlank(payloads.invoiceMailId())){
                 templateType.setInvoiceMailId(payloads.invoiceMailId());

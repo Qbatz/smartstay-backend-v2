@@ -77,7 +77,7 @@ public class SubscriptionService {
 
         MultiValueMap<String, String> formParams = new LinkedMultiValueMap<>();
         formParams.add("client_id", credentials.getClientId());
-        formParams.add("client_secret", credentials.getSecretValue());
+        formParams.add("client_id", credentials.getSecretValue());
         formParams.add("refresh_token", credentials.getRefreshToken());
         formParams.add("redirect_uri", "https://finance.s3remotica.com/");
         formParams.add("grant_type", "refresh_token");
@@ -108,7 +108,7 @@ public class SubscriptionService {
         throw new RuntimeException("Unable to fetch client details");
     }
 
-    public String getSubscriptionDetails(String subscriptionId) {
+    public ResponseEntity<?> getSubscriptionDetails(String subscriptionId) {
 
         Credentials credentials = credentialsRepo.findById("zoho").orElse(null);
 
@@ -133,7 +133,7 @@ public class SubscriptionService {
                     String.class
             );
 
-            return response.getBody();
+            return new ResponseEntity<>(response.getBody(), HttpStatus.OK);
         }
         return null;
     }
@@ -145,7 +145,7 @@ public class SubscriptionService {
     public boolean isSubscriptionActive(String hostelId) {
         Subscription subscription = subscriptionRepository.findTopByHostel_HostelIdOrderByCreatedAtDesc(hostelId);
 
-        getSubscriptionDetails(subscription.getSubscriptionId());
+//        getSubscriptionDetails(subscription.getSubscriptionId());
         return true;
 
 //        if (Utils.compareWithTwoDates(subscription.getActivatedAt(), new Date()) <= 0) {

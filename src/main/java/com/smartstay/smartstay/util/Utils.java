@@ -140,6 +140,7 @@ public class Utils {
     public static final String FINAL_SETTLEMENT_NOT_PAID = "Final Settlement is not fully paid";
     public static final String CHANGE_BED_SAME_BED_ERROR = "Customer is currently staying on the same bed";
     public static final String CHANGE_BED_SAME_DAY_ERROR = "Cannot change the bed on the same day customer is joined";
+    public static final String CUSTOMER_VERIFIED_KYC = "Customer is already verified";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
