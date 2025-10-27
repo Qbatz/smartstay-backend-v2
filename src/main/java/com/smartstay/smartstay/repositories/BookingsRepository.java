@@ -71,7 +71,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             FROM bookingsv1 booking inner join beds bed on bed.bed_id=booking.bed_id inner join rooms rms on rms.room_id=booking.room_id 
             INNER join floors flrs on flrs.floor_id=booking.floor_id WHERE booking.room_id=:roomId and 
             booking.current_status in ('CHECKIN', 'NOTICE') and booking.joining_date <=DATE(:endDate) 
-            and booking.leaving_date is NULL or booking.leaving_date >= DATE(:startDate)
+            and (booking.leaving_date is NULL or booking.leaving_date >= DATE(:startDate))
             """, nativeQuery = true)
     List<BookedCustomerInfoElectricity> getBookingInfoForElectricity(@Param("roomId")Integer roomId, @Param("startDate")Date startDate, @Param("endDate") Date endDate);
 

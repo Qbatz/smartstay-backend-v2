@@ -16,6 +16,7 @@ import java.util.function.Function;
 public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
     @Override
     public InvoicesList apply(Invoices invoices) {
+        boolean isRefundable = false;
         StringBuilder fullNameBuilder = new StringBuilder();
         fullNameBuilder.append(invoices.getFirstName());
         fullNameBuilder.append(" ");
@@ -53,6 +54,12 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
             else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.ADVANCE_IN_HAND.name())) {
                 paymentStatus = "Over pay";
             }
+            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+                paymentStatus = "Refunded";
+            }
+            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
+                paymentStatus = "Pending Refund";
+            }
         }
 
 
@@ -70,6 +77,14 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         }
         else if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             invoiceType = "Settlement";
+            if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
+                if (invoices.getTotalAmount() - paidAmount < 0) {
+                    isRefundable = true;
+                }
+            }
+        }
+        else if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
+            invoiceType = "Reassign-Rent";
         }
 
         ObjectMapper mapper = new ObjectMapper();
@@ -98,6 +113,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 invoices.getCustomerId(),
                 initials.toString(),
                 invoices.getProfilePic(),
+                isRefundable,
                 Math.ceil(totalAmount),
                 Math.ceil(invoices.getTotalAmount()),
                 invoices.getInvoiceId(),

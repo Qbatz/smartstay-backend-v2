@@ -622,19 +622,22 @@ public class InvoiceV1Service {
             InvoiceItems invoiceItem = new InvoiceItems();
             String itemName = item.invoiceItem().trim().toUpperCase();
             if (itemName.equals("EB")) {
+                invoiceItem.setAmount(item.amount());
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
             } else if (itemName.equals("RENT") || itemName.equals("ROOM RENT")) {
+                invoiceItem.setAmount(invoiceAmount);
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
             }else if (itemName.equals("AMENITY")) {
+                invoiceItem.setAmount(item.amount());
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
             }else {
+                invoiceItem.setAmount(item.amount());
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
                 invoiceItem.setOtherItem(item.invoiceItem());
                 if (item.amount() != null) {
                     totalAmount += item.amount();
                 }
             }
-            invoiceItem.setAmount(item.amount());
             invoiceItem.setInvoice(invoicesV1);
             listInvoicesItems.add(invoiceItem);
         }
@@ -1043,7 +1046,7 @@ public class InvoiceV1Service {
             settlementInvoice.setCgst(0.0);
             settlementInvoice.setSgst(0.0);
             settlementInvoice.setGst(0.0);
-            settlementInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+            settlementInvoice.setPaymentStatus(PaymentStatus.PENDING_REFUND.name());
             settlementInvoice.setOthersDescription(null);
             settlementInvoice.setInvoiceMode(InvoiceMode.MANUAL.name());
             settlementInvoice.setCancelled(false);
@@ -1299,8 +1302,24 @@ public class InvoiceV1Service {
 
         }
 
+        CustomersBedHistory bedHistory = customersBedHistoryService.getLatestCustomerBed(invoicesV1.getCustomerId());
+        String bedName = null;
+        String floorName = null;
+        String roomName = null;
+        if (bedHistory != null) {
+            com.smartstay.smartstay.dto.beds.BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
+            if (bedDetails != null) {
+                bedName = bedDetails.getBedName();
+                floorName = bedDetails.getFloorName();
+                roomName = bedDetails.getRoomName();
+            }
+        }
         List<RefundableBanks> listBanks = bankingService.initializeRefund(refundableAmount, invoicesV1.getHostelId());
-        InitializeRefund refundInitializations = new InitializeRefund(refundableAmount,
+        InitializeRefund refundInitializations = new InitializeRefund(
+                roomName,
+                floorName,
+                bedName,
+                refundableAmount,
                 listBanks);
         return new ResponseEntity<>(refundInitializations, HttpStatus.OK);
     }

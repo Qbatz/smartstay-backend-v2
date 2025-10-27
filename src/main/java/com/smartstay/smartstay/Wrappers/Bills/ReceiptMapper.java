@@ -3,6 +3,7 @@ package com.smartstay.smartstay.Wrappers.Bills;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.BankAccountType;
 import com.smartstay.smartstay.ennum.BankTransactionType;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.util.Utils;
 
@@ -57,6 +58,7 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
             case "ADVANCE" -> "Advance";
             case "BOOKING" -> "Booking";
             case "RENT" -> "Rent";
+            case "REASSIGN_RENT" -> "Reassigned Rent";
             default -> "Others";
         };
         invoiceType.append(type);
