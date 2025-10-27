@@ -48,4 +48,7 @@ public class Customers {
     @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
     CustomerWallet wallet;
 
+    @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Reasons reasons;
+
 }

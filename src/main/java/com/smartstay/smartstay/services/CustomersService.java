@@ -16,6 +16,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
+import com.smartstay.smartstay.payloads.beds.CancelCheckout;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
@@ -29,6 +30,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -43,6 +46,9 @@ public class CustomersService {
 
     @Autowired
     private BookingsService bookingsService;
+
+    @Autowired
+    private ReasonService reasonService;
 
     @Autowired
     private RolesService rolesService;
@@ -847,6 +853,29 @@ public class CustomersService {
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_ON_NOTICE, HttpStatus.BAD_REQUEST);
         }
+        BookingsV1 booking = bookingsService.getBookingsByCustomerId(checkoutNotice.customerId());
+        if (booking == null) {
+            return new ResponseEntity<>(Utils.INVALID_BOOKING_ID, HttpStatus.BAD_REQUEST);
+        }
+        Date joiningDate = booking.getJoiningDate();
+        Date requestDate = Utils.stringToDate(checkoutNotice.requestDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        Date checkoutDate = Utils.stringToDate(checkoutNotice.checkoutDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        if (Utils.compareWithTwoDates(requestDate, joiningDate) <= 0) {
+            return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_JOINING_DATE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (Utils.compareWithTwoDates(checkoutDate, joiningDate) <= 0) {
+            return new ResponseEntity<>(Utils.CHECKOUT_DATE_MUST_AFTER_JOINING_DATE, HttpStatus.BAD_REQUEST);
+        }
+
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        if (Utils.compareWithTwoDates(requestDate, billingDates.currentBillStartDate()) < 0) {
+            return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
+        }
+
+        if (Utils.compareWithTwoDates(checkoutDate, requestDate) <= 0) {
+            return new ResponseEntity<>(Utils.CHECKOUT_DATE_MUST_AFTER_REQUEST_DATE, HttpStatus.BAD_REQUEST);
+        }
 
         customers.setCurrentStatus(CustomerStatus.NOTICE.name());
 
@@ -1643,6 +1672,70 @@ public class CustomersService {
 
         customers.setWallet(wallet);
 
+        customersRepository.save(customers);
+
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> cancelCheckOut(String hostelId, String customerId, CancelCheckout request) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        BookingsV1 bookingsV1 = bookingsService.findBookingsByCustomerIdAndHostelId(customerId, hostelId);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.NO_BOOKING_INFORMATION_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (bookingsV1.getBedId() == request.bedId()) {
+            return new ResponseEntity<>(Utils.CHANGE_BED_SAME_BED_ERROR, HttpStatus.BAD_REQUEST);
+        }
+
+        Date reCheckInDate = Utils.stringToDate(request.reCheckInDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        if (bookingsService.isBedBookedNextDay(bookingsV1.getBedId(),customerId, reCheckInDate)) {
+            return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (Utils.compareWithTwoDates(reCheckInDate, bookingsV1.getJoiningDate()) < 0) {
+            return new ResponseEntity<>(Utils.RECHECK_DATE_SHOULD_BE_GREATER_THAN_JOINING_DATE, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoicesV1 = invoiceService.getFinalSettlementStatus(customers.getCustomerId());
+        if (invoicesV1 !=null){
+            invoicesV1.setPaymentStatus(PaymentStatus.CANCELLED.name());
+            invoicesV1.setUpdatedAt(new Date());
+            invoicesV1.setUpdatedBy(user.getUserId());
+            invoiceService.saveInvoice(invoicesV1);
+        }
+
+
+
+        Reasons reasons = new Reasons();
+        reasons.setReasonText(request.reason());
+        reasons.setCreatedAt(new Date());
+        reasons.setCreatedBy(user.getUserId());
+        reasonService.SaveReason(reasons);
+
+
+        bookingsV1.setLeavingDate(null);
+        bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
+        bookingsV1.setUpdatedAt(new Date());
+        bookingsService.saveBooking(bookingsV1);
+
+        customers.setReasons(reasons);
+        customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
+        customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
         customersRepository.save(customers);
 
 

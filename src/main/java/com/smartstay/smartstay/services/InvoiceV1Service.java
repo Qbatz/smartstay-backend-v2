@@ -1375,4 +1375,9 @@ public class InvoiceV1Service {
         invoicesV1Repository.save(invoicesV1);
         return new ResponseEntity<>(Utils.REFUND_PROCESSED_SUCCESSFULLY, HttpStatus.OK);
     }
+
+
+    public void saveInvoice(InvoicesV1 invoicesV1) {
+        invoicesV1Repository.save(invoicesV1);
+    }
 }
