@@ -626,6 +626,16 @@ public class BookingsService {
         bookingsRepository.save(bookingsV1);
     }
 
+    public boolean isBedBookedNextDay(int bedId, String customerId, Date expectedJoiningDate) {
+        List<BookingsV1> conflicts = bookingsRepository.findNextDayBookingForSameBed(
+                bedId,
+                customerId,
+                expectedJoiningDate
+        );
+        System.out.println("conflicts = " + conflicts.size());
+        return !conflicts.isEmpty();
+    }
+
     public boolean isBedAvailableByDate(Integer bedId, String joiningDate) {
         Date joiningDateDt = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         BookingsV1 bookingsV1 = bookingsRepository.checkBedsAvailabilityForDate(bedId);

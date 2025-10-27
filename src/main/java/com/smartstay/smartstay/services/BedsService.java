@@ -276,7 +276,7 @@ public class BedsService {
 
     public boolean isBedAvailable(int bedId, String parentId, Date joiningDate) {
         Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
-        if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+        if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name()) || beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
             if (bookingsV1.getLeavingDate() != null) {
                 return Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), joiningDate) <= 0;

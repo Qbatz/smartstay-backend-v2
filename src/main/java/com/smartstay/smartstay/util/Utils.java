@@ -85,6 +85,7 @@ public class Utils {
     public static final String NO_ROOM_FOUND_HOSTEL = "No room found for specified hostel";
     public static final String N0_BED_FOUND_ROOM = "No bed found for the specified room.";
     public static final String BED_CURRENTLY_UNAVAILABLE = "Bed is unavailable";
+    public static final String RECHECK_DATE_SHOULD_BE_GREATER_THAN_JOINING_DATE = "Recheck date should be greater than joining date";
     public static final String BED_UNAVAILABLE_DATE = "Bed is unavailable for selected date";
     public static final String CHECK_IN_FUTURE_DATE_ERROR = "Check in cannot be accept for future dates";
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
@@ -160,6 +161,17 @@ public class Utils {
     public static final String CANNOT_REFUND_FOR_UNPAID_INVOICES = "Cannot refund for unpaid invoices";
     public static final String CANNOT_INITIATE_REFUND = "Cannot initiate refund";
     public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund process successfully";
+
+
+    //Date validation messages
+    public static final String REQUEST_DATE_MUST_AFTER_JOINING_DATE = "Request date must be after joining date.";
+    public static final String CHECKOUT_DATE_MUST_AFTER_REQUEST_DATE = "Checkout date must be after request date.";
+
+    public static final String REQUEST_DATE_MUST_AFTER_BILLING_START_DATE = "Request date must be after current billing cycle start date: ";
+    public static final String CHECKOUT_DATE_MUST_AFTER_JOINING_DATE = "Checkout date must be after joining date.";
+
+
+
 
 
 
