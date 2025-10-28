@@ -1254,6 +1254,8 @@ public class CustomersService {
             }
         }
 
+        List<CustomersBedHistory> listBedHistory = bedHistory.getCustomersBedHistory(customerId, billStartDate, billDate.currentBillEndDate());
+
 
         double rentPerDay = ((bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth)* 100.0)/100.0;
 //        if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billStartDate) < 0) {
