@@ -232,6 +232,10 @@ public class HostelService {
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
+    public List<HostelV1> getAllHostelsForRecuringInvoice() {
+        return hostelV1Repository.findAll();
+    }
+
 
     public ResponseEntity<?> fetchAllHostels() {
         if (!authentication.isAuthenticated()) {
