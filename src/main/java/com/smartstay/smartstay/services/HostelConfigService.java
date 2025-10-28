@@ -54,18 +54,23 @@ public class HostelConfigService {
         BillingDates billDates = null;
 
         int billStartDate = 1;
+        int billingRuleDate = 5;
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
+            billingRuleDate = billingRules.getBillingDueDate();
         }
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(dateJoiningDate);
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
+        Calendar calendarDueDate = Calendar.getInstance();
+        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
+
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
         if (billingRules != null) {
-            billDates = new BillingDates(calendar.getTime(),findEndDate);
+            billDates = new BillingDates(calendar.getTime(),findEndDate, calendarDueDate.getTime());
         }
         return billDates;
     }

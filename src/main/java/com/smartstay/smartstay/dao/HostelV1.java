@@ -37,8 +37,8 @@ public class HostelV1 {
     private boolean isActive;
     private boolean isDeleted;
 
-    @OneToMany(mappedBy = "hostel", cascade = CascadeType.ALL)
-    private List<Subscription> subscription;
+    @OneToOne(mappedBy = "hostel", cascade = CascadeType.ALL, orphanRemoval = true)
+    private HostelPlan hostelPlan;
 
     @OneToMany(mappedBy = "hostel", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HostelImages> additionalImages;

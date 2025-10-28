@@ -56,4 +56,10 @@ public class CustomersBedHistoryService {
         }
 
     }
+
+    public void updateBedEndDate(CustomersBedHistory currentBed) {
+        if (currentBed != null) {
+            customerBedHistoryRepository.save(currentBed);
+        }
+    }
 }

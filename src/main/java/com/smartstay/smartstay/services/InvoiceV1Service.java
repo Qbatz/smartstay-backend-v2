@@ -389,11 +389,16 @@ public class InvoiceV1Service {
         return new ResponseEntity<>(invoicesResponse, HttpStatus.OK);
     }
 
-    public int recordPayment(String invoiceId, String status) {
+    public int recordPayment(String invoiceId, String status, double amount) {
         InvoicesV1 invoice = invoicesV1Repository.findById(invoiceId).orElse(null);
         if (invoice != null) {
+            double paidAmount = 0.0;
+            if (invoice.getPaidAmount() != null) {
+                paidAmount = invoice.getPaidAmount();
+            }
             invoice.setPaymentStatus(status);
             invoice.setUpdatedAt(new Date());
+            invoice.setPaidAmount(paidAmount + amount);
             invoice.setUpdatedBy(authentication.getName());
             invoicesV1Repository.save(invoice);
             return 1;

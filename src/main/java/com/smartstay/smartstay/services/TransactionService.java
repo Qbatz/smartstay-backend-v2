@@ -190,7 +190,7 @@ public class TransactionService {
         int response = paymentSummaryService.addPayment(summary);
 
         if (response == 1) {
-            invoiceService.recordPayment(invoiceId, PaymentStatus.PAID.name());
+            invoiceService.recordPayment(invoiceId, PaymentStatus.PAID.name(), payment.amount());
 
             TransactionDto transaction = new TransactionDto(payment.bankId(),
                     payment.referenceId(),
@@ -283,16 +283,8 @@ public class TransactionService {
             paymentDate = new Date();
         }
         else {
-            paymentDate = Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT);
+            paymentDate = Utils.stringToDate(payment.paymentDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(paymentDate);
-
-        Calendar cal = Calendar.getInstance();
-        calendar.set(Calendar.HOUR, cal.get(Calendar.HOUR));
-        calendar.set(Calendar.MINUTE, cal.get(Calendar.MINUTE));
-        calendar.set(Calendar.SECOND, cal.get(Calendar.SECOND));
 
         transactionV1.setHostelId(hostelId);
         transactionV1.setBankId(payment.bankId());
@@ -303,7 +295,7 @@ public class TransactionService {
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setCreatedAt(new Date());
         transactionV1.setCreatedBy(authentication.getName());
-        transactionV1.setPaymentDate(calendar.getTime());
+        transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
 
         bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(), payment.paymentDate());
 
@@ -313,7 +305,7 @@ public class TransactionService {
         int response = paymentSummaryService.addPayment(summary);
 
         if (response == 1) {
-            invoiceService.recordPayment(invoiceId, typeOfPayment);
+            invoiceService.recordPayment(invoiceId, typeOfPayment, payment.amount());
 
             TransactionDto transaction = new TransactionDto(payment.bankId(),
                     payment.referenceId(),
@@ -335,8 +327,14 @@ public class TransactionService {
         List<TransactionV1> listTransaction = transactionRespository.findByInvoiceId(invoiceId);
         double paidAmount = 0.0;
         if (!listTransaction.isEmpty()) {
+
             paidAmount = listTransaction.stream()
-                    .mapToDouble(TransactionV1::getPaidAmount)
+                    .mapToDouble(i -> {
+                        if (i.getPaidAmount() == null) {
+                            return 0.0;
+                        }
+                        return i.getPaidAmount();
+                    })
                     .sum();
         }
         return paidAmount;

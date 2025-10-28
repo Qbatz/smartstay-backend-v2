@@ -2,9 +2,7 @@ package com.smartstay.smartstay.util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.Date;
@@ -453,6 +451,44 @@ public class Utils {
         }
 
         return ref.toString();
+    }
+
+    public static String generatePlanCode() {
+        StringBuilder ref = new StringBuilder();
+
+        // 4 letters
+        for (int i = 0; i < 2; i++) {
+            ref.append(ALPHABETS.charAt(RANDOM.nextInt(ALPHABETS.length())));
+        }
+
+        // 4 digits
+        for (int i = 0; i < 2; i++) {
+            ref.append(RANDOM.nextInt(10));
+        }
+        ref.append("-");
+
+        // 4 alphanumeric
+        for (int i = 0; i < 3; i++) {
+            ref.append(ALPHANUMERIC.charAt(RANDOM.nextInt(ALPHANUMERIC.length())));
+        }
+
+        return ref.toString();
+    }
+
+    public static Double roundOfMax(double number) {
+        return Math.ceil(number);
+    }
+
+    public static Date convertToTimeStamp(Date date) {
+        LocalDate localDate = date
+                .toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        LocalTime currentTime = LocalTime.now();
+
+        // Combine both
+        LocalDateTime dateTime = LocalDateTime.of(localDate, currentTime);
+        return Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     public static String formPrefixSuffix(String invoiceNumber) {

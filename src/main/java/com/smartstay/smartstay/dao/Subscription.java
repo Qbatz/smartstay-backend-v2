@@ -18,7 +18,7 @@ public class Subscription {
     private String subscriptionId;
     private String planName;
     private String planCode;
-    private String subscriptionNumber;
+//    private String subscriptionNumber;
     private String status;
     private int total;
     private int subTotal;
