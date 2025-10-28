@@ -137,7 +137,7 @@ public class UsersService {
 
 
     public ResponseEntity<Object> login(Login login) {
-        Users users = userRepository.findUserByEmailId(login.emailId());
+        Users users = userRepository.findByEmailIdAndIsDeletedFalse(login.emailId());
         if (users != null) {
             Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
 
@@ -249,7 +249,7 @@ public class UsersService {
     }
 
     public ResponseEntity<Object> requestPasswordReset(String email) {
-        Users user = userRepository.findUserByEmailId(email);
+        Users user = userRepository.findByEmailIdAndIsDeletedFalse(email);
         if (user == null) {
             return new ResponseEntity<>(Utils.INVALID_EMAIL, HttpStatus.NOT_FOUND);
         }

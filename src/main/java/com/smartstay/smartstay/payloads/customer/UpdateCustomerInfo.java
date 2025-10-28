@@ -4,7 +4,6 @@ public record UpdateCustomerInfo(
         String firstName,
         String lastName,
         String mailId,
-        String mobile,
         String houseNo,
         String street,
         String landmark,
