@@ -24,7 +24,7 @@ public class HostelEventsListeners {
     @Autowired
     private TemplatesService hostelTemplates;
     @Autowired
-    private PlanHistoryService planHistoryService;
+    private SubscriptionService planHistoryService;
     @Autowired
     private UserHostelService userHostelService;
     @Autowired

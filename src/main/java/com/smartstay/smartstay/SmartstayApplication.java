@@ -576,9 +576,9 @@ public class SmartstayApplication {
 //		};
 //	}
 
-//	@Bean
-//	CommandLineRunner addPlans(PlansRepository plansRepository) {
-//		return args -> {
+	@Bean
+	CommandLineRunner addPlans(PlansRepository plansRepository) {
+		return args -> {
 //			String planCode1 = Utils.generatePlanCode();
 //			List<Plans> listPlans = new ArrayList<>();
 //			Plans planTrial = new Plans();
@@ -730,7 +730,8 @@ public class SmartstayApplication {
 //
 //
 //			plansRepository.saveAll(listPlans);
-//
-//		};
-//	}
+
+		};
+	}
+
 }

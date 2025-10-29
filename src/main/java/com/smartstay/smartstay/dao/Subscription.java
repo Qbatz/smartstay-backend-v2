@@ -1,40 +1,33 @@
 package com.smartstay.smartstay.dao;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
 @Entity
-@Getter
-@Setter
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class Subscription {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-    private String subscriptionId;
-    private String planName;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long subscriptionId;
+    private String subscriptionNumber;
+    private String hostelId;
     private String planCode;
-//    private String subscriptionNumber;
-    private String status;
-    private int total;
-    private int subTotal;
-    private int gst;
-    private int planAmount;
-    private int discount;
-    private int discountAmount;
-    private String currentStatus;
-    private Date createdAt;
+    private String planName;
+    private Date planStartsAt;
+    private Date planEndsAt;
     private Date activatedAt;
-    private Date trialStartsAt;
-    private Date trialEndsAt;
-    private int trialRemainingDays;
-    private Date nextBillingAt;
+    private Double paidAmount;
+    private Double planAmount;
+    private Date createdAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "hostel_id")
-    private HostelV1 hostel;
+
 }

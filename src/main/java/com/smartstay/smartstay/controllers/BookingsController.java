@@ -30,22 +30,18 @@ public class BookingsController {
     public ResponseEntity<?> getAllBookingsBasedOnHostel(@PathVariable("hostelId") String hostelId) {
         return bookingService.getAllCheckInCustomers(hostelId);
     }
-
     @GetMapping("/initialize-check-in/{hostelId}/{customerId}")
     public ResponseEntity<?> initializeCheckIn(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
         return bookingService.initializeCheckIn(hostelId, customerId);
     }
-
     @PutMapping("/cancel/{customerId}")
     public ResponseEntity<?> cancelBooking(@PathVariable("customerId") String customerId, @RequestBody @Valid  CancelBooking cancelBooking) {
         return bookingService.cancelBooking(customerId, cancelBooking);
     }
-
     @GetMapping("/initialize/cancel/{customerId}")
     public ResponseEntity<?> initiateCancel(@PathVariable("customerId") String customerId) {
         return bookingService.initiateCancel(customerId);
     }
-
     @PostMapping("/checkout/{customerId}")
     public ResponseEntity<?> initializeCheckout(@PathVariable("customerId") String customerId) {
         return bookingService.checkoutCustomer(customerId);

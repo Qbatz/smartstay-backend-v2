@@ -210,6 +210,7 @@ public class Utils {
     public static int MODULE_ID_USER = 22;
     public static int MODULE_ID_ROLES = 23;
     public static int MODULE_ID_AGREEMENT = 24;
+    public static int MODULE_ID_SUBSCRIPTION = 25;
     public static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
     public static int generateOtp() {
         return (int)(Math.random() * 900000) + 100000;

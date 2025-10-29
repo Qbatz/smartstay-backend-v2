@@ -1404,4 +1404,9 @@ public class InvoiceV1Service {
     public void saveInvoice(InvoicesV1 invoicesV1) {
         invoicesV1Repository.save(invoicesV1);
     }
+
+    public InvoicesV1 getCurrentMonthRentInvoice(String customerId) {
+        return invoicesV1Repository.findLatestRentInvoiceByCustomerId(customerId);
+    }
+
 }

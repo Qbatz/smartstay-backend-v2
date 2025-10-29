@@ -248,19 +248,23 @@ public class TransactionService {
         double paidAmount = findPaidAmountForInvoice(invoiceId);
 
         TransactionV1 transactionV1 = new TransactionV1();
+        Double gstAmount = invoicesV1.getGst();
+        if (gstAmount == null) {
+            gstAmount = 0.0;
+        }
 
-        if (Objects.equals(invoicesV1.getTotalAmount(), payment.amount())) {
+        if (Objects.equals((invoicesV1.getTotalAmount() + gstAmount), payment.amount())) {
             typeOfPayment = PaymentStatus.PAID.name();
             transactionV1.setStatus(PaymentStatus.PAID.name());
             transactionV1.setPaidAmount(payment.amount());
         }
-        else if (invoicesV1.getTotalAmount() > payment.amount()) {
+        else if ((invoicesV1.getTotalAmount() + gstAmount) > payment.amount()) {
             if (paidAmount + payment.amount() == invoicesV1.getTotalAmount()) {
                 transactionV1.setStatus(PaymentStatus.PAID.name());
                 typeOfPayment = PaymentStatus.PAID.name();
                 transactionV1.setPaidAmount(payment.amount());
             }
-            else if (paidAmount + payment.amount() > invoicesV1.getTotalAmount()) {
+            else if (paidAmount + payment.amount() > (invoicesV1.getTotalAmount() + gstAmount )) {
                 transactionV1.setPaidAmount(paidAmount + payment.amount());
                 transactionV1.setStatus(PaymentStatus.ADVANCE_IN_HAND.name());
                 typeOfPayment = PaymentStatus.PAID.name();

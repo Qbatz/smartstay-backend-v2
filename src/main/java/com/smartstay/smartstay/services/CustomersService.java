@@ -1242,8 +1242,8 @@ public class CustomersService {
                 isCurrentRentPaid = true;
             }
         } else {
-            //current month invoice is paid
-            InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthInvoice(customerId);
+            //current month invoice is paid Rent
+            InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthRentInvoice(customerId);
             if (invoicesV1 != null) {
                 currentMonthRent = invoicesV1.getTotalAmount();
                 currentRentPaid = invoicesV1.getTotalAmount();
@@ -1254,7 +1254,7 @@ public class CustomersService {
         List<CustomersBedHistory> listBedHistory = bedHistory.getCustomersBedHistory(customerId, billStartDate, billDate.currentBillEndDate());
 
 
-        double rentPerDay = ((bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth) * 100.0) / 100.0;
+        double rentPerDay = Math.ceil(bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth);
 //        if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billStartDate) < 0) {
 //            rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
 //        }
@@ -1493,20 +1493,21 @@ public class CustomersService {
                 isCurrentRentPaid = true;
             }
         } else {
-            //current month invoice is paid
-            InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthInvoice(customerId);
+            //current month invoice is paid rent
+            InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthRentInvoice(customerId);
             if (invoicesV1 != null) {
                 currentMonthRent = invoicesV1.getTotalAmount();
-                currentRentPaid = invoicesV1.getTotalAmount();
+                currentRentPaid = invoicesV1.getPaidAmount();
                 isCurrentRentPaid = true;
             }
         }
 
-        double rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
+
+        double rentPerDay = Math.ceil(bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth);
         if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) >= 0) {
-            rentPerDay = bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth;
+            rentPerDay = Math.ceil(bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth);
         }
-        currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay) * 100.0 / 100.0;
+        currentMonthPayableRent = Utils.roundOfMax(noOfDaySatayed * rentPerDay);
 
         List<InvoicesV1> advanceInvoice = listUnpaidInvoices
                 .stream()
@@ -1683,9 +1684,9 @@ public class CustomersService {
         if (bookingsV1 == null) {
             return new ResponseEntity<>(Utils.NO_BOOKING_INFORMATION_FOUND, HttpStatus.BAD_REQUEST);
         }
-        if (bookingsV1.getBedId() == request.bedId()) {
-            return new ResponseEntity<>(Utils.CHANGE_BED_SAME_BED_ERROR, HttpStatus.BAD_REQUEST);
-        }
+//        if (bookingsV1.getBedId() == request.bedId()) {
+//            return new ResponseEntity<>(Utils.CHANGE_BED_SAME_BED_ERROR, HttpStatus.BAD_REQUEST);
+//        }
 
         Date reCheckInDate = Utils.stringToDate(request.reCheckInDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         if (bookingsService.isBedBookedNextDay(bookingsV1.getBedId(), customerId, reCheckInDate)) {
@@ -1730,5 +1731,62 @@ public class CustomersService {
         customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
         customers.setCurrentStatus(CustomerStatus.VACATED.name());
         customersRepository.save(customers);
+    }
+
+    public ResponseEntity<?> getCheckoutCustomers(String hostelId, String name) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_CHECKOUT, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(authentication.getName(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        List<com.smartstay.smartstay.responses.customer.CustomerData> listCustomers =  customersRepository.getCheckedOutCustomerData(hostelId, name)
+                .stream()
+                .map(item -> {
+                    StringBuilder initials = new StringBuilder();
+                    String[] nameArray = item.getFirstName().split(" ");
+                    initials.append(nameArray[0].toUpperCase().charAt(0));
+                    if (nameArray.length > 1) {
+                        initials.append(nameArray[nameArray.length - 1].toUpperCase().charAt(0));
+                    } else {
+                        initials.append(nameArray[0].toUpperCase().charAt(1));
+                    }
+                    String currentStatus = null;
+                    if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+                        currentStatus = "Checkedout";
+                    }
+
+                    return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
+                            item.getCity(),
+                            item.getState(),
+                            item.getCountry(),
+                            item.getMobile(),
+                            currentStatus,
+                            item.getEmailId(),
+                            item.getProfilePic(),
+                            item.getBedId(),
+                            item.getFloorId(),
+                            item.getRoomId(),
+                            item.getCustomerId(),
+                            initials.toString(),
+                            Utils.dateToString(item.getExpectedJoiningDate()),
+                            Utils.dateToString(item.getActualJoiningDate()),
+                            item.getCountryCode(),
+                            Utils.dateToString(item.getCreatedAt()),
+                            item.getBedName(),
+                            item.getRoomName(),
+                            item.getFloorName());
+                })
+                .toList();
+
+        return new ResponseEntity<>(listCustomers, HttpStatus.OK);
     }
 }
