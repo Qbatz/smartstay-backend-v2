@@ -11,6 +11,7 @@ import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
+import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
 import com.smartstay.smartstay.responses.invoices.AccountDetails;
@@ -56,9 +57,10 @@ public class TransactionService {
     @Autowired
     private BankingService bankingService;
     @Autowired
+    private CreditDebitNoteService creditDebitNoteService;
+    @Autowired
     @Lazy
     private CustomersService customersService;
-
     @Autowired
     private CustomersBedHistoryService customersBedHistoryService;
 
@@ -654,4 +656,116 @@ public class TransactionService {
                 .mapToDouble(TransactionV1::getPaidAmount)
                 .sum();
     }
+
+
+    public ResponseEntity<?> refundForInvoice(String hostelId, String invoiceId, RefundInvoice refundInvoice) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(invoiceId)) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(invoiceId);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+            return new ResponseEntity<>(Utils.REFUND_COMPLETED, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.CANCELLED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REFUND_CANCELLED_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (!bankingService.checkBankExist(refundInvoice.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        String paymentStatus = null;
+        Double refundedAmount = creditDebitNoteService.getRefundedAmount(invoiceId);
+
+        double refundableAmount = 0.0;
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+            if (invoicesV1.getTotalAmount() != null && invoicesV1.getTotalAmount() < 0) {
+                refundableAmount = -(invoicesV1.getTotalAmount());
+            }
+            else {
+                return new ResponseEntity<>(Utils.CANNOT_INITIATE_REFUND, HttpStatus.BAD_REQUEST);
+            }
+        }
+        else {
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+            if (billingDates != null && billingDates.currentBillStartDate() != null) {
+                if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), billingDates.currentBillStartDate()) < 0) {
+                    return new ResponseEntity<>(Utils.CANNOT_REFUND_FOR_OLD_INVOICES, HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            if (invoicesV1.getPaidAmount() != null && invoicesV1.getPaidAmount() > 0) {
+                refundableAmount = invoicesV1.getPaidAmount();
+            }
+            else {
+                return new ResponseEntity<>(Utils.CANNOT_REFUND_FOR_UNPAID_INVOICES, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        if (bankTransactionService.refundInvoice(invoicesV1, refundInvoice)) {
+            creditDebitNoteService.refunInvoice(invoiceId, invoicesV1, refundInvoice);
+        }
+        else {
+            return new ResponseEntity<>(Utils.INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);
+        }
+
+        if ((refundedAmount + refundInvoice.refundAmount()) == refundableAmount) {
+            invoicesV1.setPaymentStatus(PaymentStatus.REFUNDED.name());
+            paymentStatus = PaymentStatus.REFUNDED.name();
+        }
+        else {
+            if ((refundedAmount + refundInvoice.refundAmount()) < refundableAmount ) {
+                invoicesV1.setPaymentStatus(PaymentStatus.PARTIAL_REFUND.name());
+                paymentStatus = PaymentStatus.PARTIAL_REFUND.name();
+            }
+            else {
+                invoicesV1.setPaymentStatus(PaymentStatus.REFUNDED.name());
+                paymentStatus = PaymentStatus.REFUNDED.name();
+            }
+        }
+
+
+        invoicesV1.setInvoiceEndDate(new Date());
+        invoicesV1.setPaidAmount(refundedAmount + refundInvoice.refundAmount());
+        invoiceService.saveInvoice(invoicesV1);
+
+        Date transactionDate = Utils.stringToDate(refundInvoice.refundDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+        TransactionV1 transactionV1 = new TransactionV1();
+        transactionV1.setType(TransactionType.REFUND.name());
+        transactionV1.setPaidAmount(refundInvoice.refundAmount());
+        transactionV1.setCreatedBy(authentication.getName());
+        transactionV1.setCreatedAt(new Date());
+        transactionV1.setStatus(paymentStatus);
+        transactionV1.setInvoiceId(invoiceId);
+        transactionV1.setHostelId(hostelId);
+//        transactionV1.setIsInvoice(false);
+        transactionV1.setCustomerId(invoicesV1.getCustomerId());
+        transactionV1.setPaymentDate(Utils.convertToTimeStamp(transactionDate));
+        transactionV1.setTransactionReferenceId(generateRandomNumber());
+        transactionV1.setBankId(refundInvoice.bankId());
+        transactionV1.setReferenceNumber(refundInvoice.referenceNumber());
+        transactionV1.setPaidAt(Utils.convertToTimeStamp(transactionDate));
+        transactionV1.setUpdatedBy(authentication.getName());
+        transactionRespository.save(transactionV1);
+
+        return new ResponseEntity<>(Utils.REFUND_PROCESSED_SUCCESSFULLY, HttpStatus.OK);
+    }
+
 }

@@ -159,7 +159,7 @@ public class Utils {
     public static final String CANNOT_REFUND_FOR_OLD_INVOICES = "Cannot refund for old invoices";
     public static final String CANNOT_REFUND_FOR_UNPAID_INVOICES = "Cannot refund for unpaid invoices";
     public static final String CANNOT_INITIATE_REFUND = "Cannot initiate refund";
-    public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund process successfully";
+    public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund processed successfully";
 
 
     //Date validation messages

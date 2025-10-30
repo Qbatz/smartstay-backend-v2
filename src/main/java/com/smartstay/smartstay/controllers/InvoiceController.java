@@ -40,7 +40,6 @@ public class InvoiceController {
     public ResponseEntity<?> generateManualInvoice(@PathVariable("customerId") String customerId, @RequestBody @Valid ManualInvoice manualInvoice) {
         return invoiceV1Service.generateManualInvoice(customerId, manualInvoice);
     }
-
     @GetMapping("/{hostelId}/{invoiceId}")
     public ResponseEntity<?> getInvoiceInfo(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return invoiceV1Service.getInvoiceDetailsByInvoiceId(hostelId, invoiceId);
@@ -50,10 +49,4 @@ public class InvoiceController {
     public ResponseEntity<?> initializeRefunding(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return invoiceV1Service.initializeRefund(hostelId, invoiceId);
     }
-
-    @PostMapping("/refund/{hostelId}/{invoiceId}")
-    public ResponseEntity<?> refunInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody @Valid RefundInvoice refundInvoice) {
-        return invoiceV1Service.refundForInvoice(hostelId, invoiceId, refundInvoice);
-    }
-
 }

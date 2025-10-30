@@ -28,5 +28,6 @@ public record InvoicesList(String firstName,
                            String paymentStatus,
                            String updatedAt,
                            String invoiceNumber,
+                           boolean isCancelled,
                            List<Deductions> listDeductions) {
 }

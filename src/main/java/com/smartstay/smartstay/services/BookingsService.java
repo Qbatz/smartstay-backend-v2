@@ -597,6 +597,10 @@ public class BookingsService {
 
         customersService.markCustomerCheckedOut(customers);
         customersBedHistoryService.checkoutCustomer(customerId);
+        bookingsV1.setCheckoutDate(new Date());
+        bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
+        bookingsRepository.save(bookingsV1);
+
 
         return new ResponseEntity<>(HttpStatus.OK);
 

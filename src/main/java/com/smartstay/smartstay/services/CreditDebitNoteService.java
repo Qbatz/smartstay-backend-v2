@@ -45,7 +45,7 @@ public class CreditDebitNoteService {
 
     }
 
-    public void refunInvoice(String invoiceId, InvoicesV1 invoicesV1, double refundableAmount, RefundInvoice refundInvoice) {
+    public void refunInvoice(String invoiceId, InvoicesV1 invoicesV1, RefundInvoice refundInvoice) {
         if (!authentication.isAuthenticated()) {
             return;
         }
@@ -66,7 +66,7 @@ public class CreditDebitNoteService {
         cdn.setCustomerId(invoicesV1.getCustomerId());
         cdn.setType(CreditDebitNotesType.DEBIT.name());
         cdn.setSource(source);
-        cdn.setAmount(refundableAmount);
+        cdn.setAmount(refundInvoice.refundAmount());
         cdn.setInvoiceId(invoicesV1.getInvoiceId());
         cdn.setBookingId(refundInvoice.bankId());
         cdn.setReferenceNumber(refundInvoice.referenceNumber());
@@ -76,5 +76,17 @@ public class CreditDebitNoteService {
 
 
         creditDebitRepository.save(cdn);
+    }
+
+    public Double getRefundedAmount(String invoiceId) {
+        return creditDebitRepository.findByInvoiceId(invoiceId)
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getAmount() == null) {
+                        return 0.0;
+                    }
+                    return i.getAmount();
+                })
+                .sum();
     }
 }

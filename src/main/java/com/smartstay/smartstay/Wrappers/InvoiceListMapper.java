@@ -17,6 +17,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
     @Override
     public InvoicesList apply(Invoices invoices) {
         boolean isRefundable = false;
+        boolean isCancelled = false;
         StringBuilder fullNameBuilder = new StringBuilder();
         fullNameBuilder.append(invoices.getFirstName());
         fullNameBuilder.append(" ");
@@ -35,10 +36,12 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
             }
         }
 
+        Double dueAmount = 0.0;
         Double paidAmount = 0.0;
         if (invoices.getPaidAmount() != null) {
             paidAmount = invoices.getPaidAmount();
         }
+
         String invoiceType = null;
         String paymentStatus = null;
         if (invoices.getPaymentStatus() != null) {
@@ -59,6 +62,9 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
             }
             else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
                 paymentStatus = "Pending Refund";
+            }
+            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
+                paymentStatus = "Partially Refunded";
             }
         }
 
@@ -82,6 +88,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                     isRefundable = true;
                 }
             }
+
         }
         else if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
             invoiceType = "Reassign-Rent";
@@ -106,6 +113,18 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
             gstAmount = Math.round(invoices.getGst());
         }
 
+        if (invoices.getCancelled() != null && invoices.getCancelled()) {
+            paymentStatus = "Cancelled";
+            isCancelled = true;
+        }
+
+        if (invoices.getTotalAmount() < 0) {
+            dueAmount = invoices.getTotalAmount() + paidAmount;
+        }
+        else {
+            dueAmount = invoices.getTotalAmount() - paidAmount;
+        }
+
 
         return new InvoicesList(invoices.getFirstName(),
                 invoices.getLastName(),
@@ -118,7 +137,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 Math.ceil(invoices.getTotalAmount()),
                 invoices.getInvoiceId(),
                 Math.round(paidAmount),
-                Math.round(totalAmount-paidAmount),
+                Utils.roundOfMax(dueAmount),
                 invoices.getCgst(),
                 invoices.getSgst(),
                 gstAmount,
@@ -131,6 +150,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 paymentStatus,
                 Utils.dateToString(invoices.getUpdatedAt()),
                 invoices.getInvoiceNumber(),
+                isCancelled,
                 listDeductions);
     }
 }

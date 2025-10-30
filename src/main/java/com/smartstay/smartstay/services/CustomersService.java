@@ -1246,7 +1246,12 @@ public class CustomersService {
             InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthRentInvoice(customerId);
             if (invoicesV1 != null) {
                 currentMonthRent = invoicesV1.getTotalAmount();
-                currentRentPaid = invoicesV1.getTotalAmount();
+                if (invoicesV1.getPaidAmount() == null) {
+                    currentRentPaid = 0;
+                }
+                else {
+                    currentRentPaid = invoicesV1.getPaidAmount();
+                }
                 isCurrentRentPaid = true;
             }
         }
@@ -1324,7 +1329,7 @@ public class CustomersService {
             totalAmountToBePaid = totalAmountToBePaid + currentMonthPayableRent;
         }
 
-        totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
+        totalAmountToBePaid = Utils.roundOfMax( totalAmountToBePaid + totalDeductions);
 
 //        totalAmountToBePaid = unpaidInvoiceAmount - partialPaidAmount;
 //        if (!isAdvancePaid) {
@@ -1358,8 +1363,8 @@ public class CustomersService {
             rentPerDay = 0;
         }
 
-        RentInfo rentInfo = new RentInfo(currentMonthPayableRent,
-                currentRentPaid,
+        RentInfo rentInfo = new RentInfo(Utils.roundOfMax(currentMonthPayableRent),
+                Utils.roundOfMax(currentRentPaid),
                 (int) noOfDaySatayed,
                 currentMonthRent,
                 rentPerDay,
@@ -1497,7 +1502,13 @@ public class CustomersService {
             InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthRentInvoice(customerId);
             if (invoicesV1 != null) {
                 currentMonthRent = invoicesV1.getTotalAmount();
-                currentRentPaid = invoicesV1.getPaidAmount();
+                if (invoicesV1.getPaidAmount() == null) {
+                    currentRentPaid = 0.0;
+                }
+                else {
+                    currentRentPaid = invoicesV1.getPaidAmount();
+                }
+
                 isCurrentRentPaid = true;
             }
         }
@@ -1513,9 +1524,11 @@ public class CustomersService {
                 .stream()
                 .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
                 .toList();
+        InvoicesV1 invAdvanceInvoice = null;
 
         if (!advanceInvoice.isEmpty()) {
             InvoicesV1 advInv = advanceInvoice.get(0);
+            invAdvanceInvoice = advanceInvoice.get(0);
             if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
                 isAdvancePaid = false;
             } else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
@@ -1526,7 +1539,7 @@ public class CustomersService {
                 advancePaidAmount = advInv.getTotalAmount();
             }
         } else {
-            InvoicesV1 invAdvanceInvoice = invoiceService.getAdvanceInvoiceDetails(customerId, customers.getHostelId());
+            advanceInvoice.add(invoiceService.getAdvanceInvoiceDetails(customerId, customers.getHostelId()));
             Double paidAmount = transactionService.getAdvancePaidAmount(invAdvanceInvoice.getInvoiceId());
             if (paidAmount > 0 && invAdvanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
                 isAdvancePaid = true;
@@ -1565,7 +1578,7 @@ public class CustomersService {
             totalAmountToBePaid = totalAmountToBePaid + currentMonthPayableRent;
         }
 
-        totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
+        totalAmountToBePaid = totalAmountToBePaid - totalDeductions;
 
         if (deductions != null && !deductions.isEmpty()) {
             double finalDeductions = deductions
@@ -1580,10 +1593,11 @@ public class CustomersService {
                 .peek(item -> item.setCancelled(true))
                 .toList();
 
-        totalAmountToBePaid = (totalAmountToBePaid * 100.0) / 100.0;
+        totalAmountToBePaid = Utils.roundOfMax(totalAmountToBePaid);
 
         invoiceService.cancelActiveInvoice(unpaidUpdated);
-        invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated);
+        invoiceService.cancelAdvanceInvoice(invAdvanceInvoice);
+        invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, invAdvanceInvoice.getInvoiceId());
 
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
@@ -1748,7 +1762,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        List<com.smartstay.smartstay.responses.customer.CustomerData> listCustomers =  customersRepository.getCheckedOutCustomerData(hostelId, name)
+        List<CheckoutCustomers> listCustomers =  customersRepository.getCheckedOutCustomerData(hostelId, name)
                 .stream()
                 .map(item -> {
                     StringBuilder initials = new StringBuilder();
@@ -1761,10 +1775,10 @@ public class CustomersService {
                     }
                     String currentStatus = null;
                     if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
-                        currentStatus = "Checkedout";
+                        currentStatus = "Vacated";
                     }
 
-                    return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
+                    return new CheckoutCustomers(item.getFirstName(),
                             item.getCity(),
                             item.getState(),
                             item.getCountry(),
@@ -1783,7 +1797,8 @@ public class CustomersService {
                             Utils.dateToString(item.getCreatedAt()),
                             item.getBedName(),
                             item.getRoomName(),
-                            item.getFloorName());
+                            item.getFloorName(),
+                            Utils.dateToString(item.getCheckoutDate()));
                 })
                 .toList();
 

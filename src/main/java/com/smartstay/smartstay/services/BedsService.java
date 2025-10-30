@@ -93,6 +93,7 @@ public class BedsService {
         }
 //        Beds bed = bedsRepository.findByBedIdAndParentId(id,user.getParentId());
         List<com.smartstay.smartstay.dto.beds.Beds> listBeds = bedsRepository.getBedInfo(id, user.getParentId());
+
         if (listBeds != null && !listBeds.isEmpty()) {
             if (!userHostelService.checkHostelAccess(userId, listBeds.get(0).hostelId())) {
                 return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);

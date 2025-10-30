@@ -7,6 +7,7 @@ public enum PaymentStatus {
     ADVANCE_IN_HAND("Advance in hand"),
     CANCELLED("Cancelled"),
     PENDING_REFUND("Refund"),
+    PARTIAL_REFUND("Partial Refund"),
     REFUNDED("Refunded");
 
 

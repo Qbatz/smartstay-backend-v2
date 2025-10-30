@@ -13,7 +13,10 @@ public class BookingsV1 {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String bookingId;
     private Date joiningDate;
+    //this is requested leaving date
     private Date leavingDate;
+    //actual checkout date
+    private Date checkoutDate;
     private Date cancelDate;
     private Date expectedJoiningDate;
     private Date noticeDate;

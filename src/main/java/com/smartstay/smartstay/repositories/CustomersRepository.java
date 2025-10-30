@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.Customers;
+import com.smartstay.smartstay.dto.customer.CheckoutCustomers;
 import com.smartstay.smartstay.dto.customer.CustomerData;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -60,7 +61,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             cus.profile_pic AS profilePic, cus.joining_date as actualJoiningDate, cus.exp_joining_date as joiningDate, 
             ct.country_code as countryCode, booking.floor_id as floorId, booking.room_id as roomId, booking.bed_id as bedId, flr.floor_name as floorName,
             rms.room_name as roomName, bed.bed_name as bedName, booking.expected_joining_date as expectedJoiningDate,
-            cus.created_at as createdAt FROM customers cus inner join countries as ct on ct.country_id = cus.country
+            cus.created_at as createdAt, booking.checkout_date as checkoutDate FROM customers cus inner join countries as ct on ct.country_id = cus.country
             left outer join bookingsv1 booking on booking.customer_id=cus.customer_id left outer join floors flr on flr.floor_id=booking.floor_id
             left outer join rooms rms on rms.room_id=booking.room_id left outer join beds bed on bed.bed_id=booking.bed_id
             WHERE cus.hostel_id = :hostelId
@@ -69,7 +70,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
               AND cus.current_status in ('VACATED') 
                order by cus.created_at desc
             """, nativeQuery = true)
-    List<CustomerData> getCheckedOutCustomerData(
+    List<CheckoutCustomers> getCheckedOutCustomerData(
             @Param("hostelId") String hostelId,
             @Param("name") String name
     );

@@ -27,5 +27,6 @@ public interface Invoices {
     Double getPaidAmount();
     Date getInvoiceStartDate();
     String getProfilePic();
+    Boolean getCancelled();
 
 }
