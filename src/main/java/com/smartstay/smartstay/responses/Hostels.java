@@ -1,7 +1,5 @@
 package com.smartstay.smartstay.responses;
 
-
-import com.smartstay.smartstay.dao.Subscription;
 import com.smartstay.smartstay.responses.hostel.HostelImages;
 
 import java.util.List;

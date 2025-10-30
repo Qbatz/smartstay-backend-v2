@@ -167,7 +167,7 @@ public class BankTransactionService {
         return false;
     }
 
-    public boolean refundInvoice(InvoicesV1 invoicesV1, double refundableAmount, RefundInvoice refundInvoice) {
+    public boolean refundInvoice(InvoicesV1 invoicesV1, RefundInvoice refundInvoice) {
         BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
 
         String transactionDate = refundInvoice.refundDate();
@@ -175,7 +175,7 @@ public class BankTransactionService {
             transactionDate = Utils.dateToString(new Date());
         }
 
-        if (!bankingService.updateBalanceForExpense(refundableAmount, BankTransactionType.DEBIT.name(), refundInvoice.bankId(), transactionDate)) {
+        if (!bankingService.updateBalanceForExpense(refundInvoice.refundAmount(), BankTransactionType.DEBIT.name(), refundInvoice.bankId(), transactionDate)) {
             return false;
         }
 
@@ -198,7 +198,7 @@ public class BankTransactionService {
         transactionsV1.setTransactionDate(calendar.getTime());
         transactionsV1.setBankId(refundInvoice.bankId());
         transactionsV1.setReferenceNumber(refundInvoice.referenceNumber());
-        transactionsV1.setAmount(refundableAmount);
+        transactionsV1.setAmount(refundInvoice.refundAmount());
         transactionsV1.setType(BankTransactionType.DEBIT.name());
         transactionsV1.setSource(BankSource.INVOICE.name());
         transactionsV1.setHostelId(invoicesV1.getHostelId());

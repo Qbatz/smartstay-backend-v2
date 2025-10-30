@@ -22,6 +22,10 @@ public class CustomersBedHistoryService {
         return customerBedHistoryRepository.findByCustomerIdAndDate(customerId, startDate, endDate);
     }
 
+    public List<CustomersBedHistory> getCustomersBedHistory(String customerId, Date startDate, Date endDate) {
+        return customerBedHistoryRepository.listBedsByCustomerIdAndDate(customerId, startDate, endDate);
+    }
+
     public List<CustomerBedsList> getAllCustomerFromBedsHistory(String hostelId, Date billStartDate, Date billEndDate) {
         return customerBedHistoryRepository.findByHostelIdAndStartAndEndDate(hostelId, billStartDate, billEndDate)
                 .stream()
@@ -51,5 +55,11 @@ public class CustomersBedHistoryService {
             customerBedHistoryRepository.save(bedHistory);
         }
 
+    }
+
+    public void updateBedEndDate(CustomersBedHistory currentBed) {
+        if (currentBed != null) {
+            customerBedHistoryRepository.save(currentBed);
+        }
     }
 }

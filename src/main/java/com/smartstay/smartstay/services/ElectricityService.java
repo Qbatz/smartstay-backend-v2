@@ -87,7 +87,6 @@ public class ElectricityService {
             return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
-
         Double previousReading = 0.0;
         if (date == null) {
             date = new Date();

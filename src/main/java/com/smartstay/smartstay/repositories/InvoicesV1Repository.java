@@ -24,10 +24,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             invc.invoice_number as invoiceNumber, customers.first_name as firstName, customers.last_name as lastName,
             customers.profile_pic as profilePic, 
             advance.advance_amount as advanceAmount, advance.deductions as deductions,
+            invc.is_cancelled as cancelled,
             (SELECT sum(trans.paid_amount) FROM transactionv1 trans where trans.invoice_id=invc.invoice_id) as paidAmount  
             from invoicesv1 invc inner join customers customers on customers.customer_id=invc.customer_id 
             left outer join advance advance on advance.customer_id=invc.customer_id where invc.hostel_id=:hostelId AND invc.invoice_type not in('BOOKING') 
-            and invc.is_cancelled=false
             order by invc.invoice_start_date desc
             """, nativeQuery = true)
     List<Invoices> findByHostelId(@Param("hostelId") String hostelId);

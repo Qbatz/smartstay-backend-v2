@@ -4,6 +4,10 @@ import com.smartstay.smartstay.responses.invoices.RefundableBanks;
 
 import java.util.List;
 
-public record InitializeRefund(Double refundableAmount,
+public record InitializeRefund(
+        String roomName,
+        String floorName,
+        String bedName,
+        Double refundableAmount,
                                List<RefundableBanks> listBanks) {
 }

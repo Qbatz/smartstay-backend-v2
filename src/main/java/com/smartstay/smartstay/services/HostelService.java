@@ -47,9 +47,6 @@ public class HostelService {
     private HostelV1Repository hostelV1Repository;
 
     @Autowired
-    private SubscriptionService subscriptionService;
-
-    @Autowired
     @Lazy
     private CustomersService customersService;
 
@@ -175,27 +172,19 @@ public class HostelService {
             hostelV1.setAdditionalImages(listHostelImages);
         }
 
-        Subscription subscription = subscriptionService.addSubscription(request, 1);
-
-        if (subscription != null) {
-            subscription.setHostel(hostelV1);
-            hostelV1.setSubscription(List.of(subscription));
-            hostelV1Repository.save(hostelV1);
+        hostelV1Repository.save(hostelV1);
 //            mapUserHostel(userId, hostelV1.getHostelId(), users.getParentId());
 
-            int result = userHostelService.addHostelToExistingUsers(users.getParentId(), hostelV1.getHostelId());
+        int result = userHostelService.addHostelToExistingUsers(users.getParentId(), hostelV1.getHostelId());
 
-            if (result == 100) {
-                List<Users> listUsers = usersService.findAllByParentId(users.getParentId());
-                if (listUsers != null) {
-                    userHostelService.addHostelToExistingUsers(users.getParentId(), listUsers, hostelV1.getHostelId());
-                }
+        if (result == 100) {
+            List<Users> listUsers = usersService.findAllByParentId(users.getParentId());
+            if (listUsers != null) {
+                userHostelService.addHostelToExistingUsers(users.getParentId(), listUsers, hostelV1.getHostelId());
             }
-            eventPublisher.publishEvent(new HostelEvents(this, hostelID, authentication.getName(), users.getParentId()));
-            return new ResponseEntity<>("Created successfully", HttpStatus.CREATED);
-        } else {
-            return new ResponseEntity<>("Failed to subscribe in zoho", HttpStatus.BAD_REQUEST);
         }
+        eventPublisher.publishEvent(new HostelEvents(this, hostelID, authentication.getName(), users.getParentId()));
+        return new ResponseEntity<>("Created successfully", HttpStatus.CREATED);
     }
 
     public void updateHostelFromEvents(HostelV1 hostelV1) {
@@ -241,6 +230,10 @@ public class HostelService {
         List<Hostels> list = listHotels.stream().map(hostelV1 -> new HostelsMapper(0, 0, 0,0, 0).apply(hostelV1)).toList();
 
         return new ResponseEntity<>(list, HttpStatus.OK);
+    }
+
+    public List<HostelV1> getAllHostelsForRecuringInvoice() {
+        return hostelV1Repository.findAll();
     }
 
 
@@ -338,16 +331,28 @@ public class HostelService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No hostel found");
         }
 
-        Subscription subscription = subscriptionService.getSubscriptionByHostelId(hostelId);
         List<Floors> floors = floorsService.getFloorByHostelID(hostelId, user.getParentId());
 
         List<FloorDetails> floorDetails = floors.stream().map(floor -> new FloorDetails(floor.getFloorId(), floor.getFloorName())).toList();
 
-        String nextBillingDate = Utils.dateToString(subscription.getNextBillingAt());
-        boolean isSubscriptionActive = Utils.compareWithTodayDate(subscription.getNextBillingAt());
-        int remainingDays = Utils.calculateRemainingDays(subscription.getNextBillingAt());
+//        String nextBillingDate = Utils.dateToString(subscription.getNextBillingAt());
+//        boolean isSubscriptionActive = Utils.compareWithTodayDate(subscription.getNextBillingAt());
+//        int remainingDays = Utils.calculateRemainingDays(subscription.getNextBillingAt());
 
-        HostelDetails details = new HostelDetails(hostel.getHostelId(), hostel.getMainImage(), hostel.getCity(), String.valueOf(hostel.getCountry()), hostel.getEmailId(), hostel.getHostelName(), hostel.getHouseNo(), hostel.getLandmark(), hostel.getMobile(), hostel.getPincode(), hostel.getState(), hostel.getStreet(), Utils.dateToString(hostel.getUpdatedAt()), isSubscriptionActive, nextBillingDate, remainingDays, floorDetails.size(), floorDetails);
+        HostelDetails details = new HostelDetails(hostel.getHostelId(),
+                hostel.getMainImage(),
+                hostel.getCity(),
+                String.valueOf(hostel.getCountry()),
+                hostel.getEmailId(),
+                hostel.getHostelName(),
+                hostel.getHouseNo(),
+                hostel.getLandmark(),
+                hostel.getMobile(),
+                hostel.getPincode(),
+                hostel.getState(),
+                hostel.getStreet(),
+                Utils.dateToString(hostel.getUpdatedAt()),
+                true, null, 28, floorDetails.size(), floorDetails);
 
         return ResponseEntity.ok(details);
     }
@@ -362,49 +367,38 @@ public class HostelService {
         return hostelV1Repository.findByHostelId(hostelId);
     }
 
-    public BillingDates getBillStartDate(String hostelId) {
-        HostelV1 hostelV1 = hostelV1Repository.findByHostelId(hostelId);
-        if (hostelV1 != null) {
-            int billStartDate = 1;
-            if (hostelV1.getBillingRulesList() != null && !hostelV1.getBillingRulesList().isEmpty()) {
-                billStartDate = hostelV1.getBillingRulesList().get(hostelV1.getBillingRulesList().size() - 1).getBillingStartDate();
-            }
-            Calendar calendar = Calendar.getInstance();
-            calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
-
-            Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
-
-            return new BillingDates(calendar.getTime(), findEndDate);
-        }
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.DAY_OF_MONTH, 1);
-
-        Date findEndDate = Utils.findLastDate(1, calendar.getTime());
-        return new BillingDates(calendar.getTime(), findEndDate);
-    }
-
     public BillingDates getCurrentBillStartAndEndDates(String hostelId) {
         BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
         int billStartDate = 1;
+        int billingRuleDate = 5;
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
+            billingRuleDate = billingRules.getBillingDueDate();
         }
 
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
+        Calendar calendarDueDate = Calendar.getInstance();
+        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
+
+
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate);
+        return new BillingDates(calendar.getTime(), findEndDate, calendarDueDate.getTime());
     }
 
     public BillingDates getBillStartDate(String hostelId, Date date) {
         BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
         int billStartDate = 1;
+        int billingRuleDate = 5;
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
+            billingRuleDate = billingRules.getBillingDueDate();
         }
+
+        Calendar calendarDueDate = Calendar.getInstance();
+        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
@@ -412,7 +406,7 @@ public class HostelService {
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate);
+        return new BillingDates(calendar.getTime(), findEndDate, calendarDueDate.getTime());
     }
 
 
@@ -676,9 +670,6 @@ public class HostelService {
                 cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
                 calEndDate.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH) -1);
             }
-
-
-
             previousEndDate = calEndDate.getTime();
 
             startDate = cal.getTime();

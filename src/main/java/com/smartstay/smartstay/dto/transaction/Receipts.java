@@ -20,4 +20,5 @@ public interface Receipts {
     String getHolderName();
     String getProfilePic();
     String getAccountType();
+    String getTransactionType();
 }

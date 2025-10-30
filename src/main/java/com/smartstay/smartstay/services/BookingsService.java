@@ -30,6 +30,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -596,6 +597,10 @@ public class BookingsService {
 
         customersService.markCustomerCheckedOut(customers);
         customersBedHistoryService.checkoutCustomer(customerId);
+        bookingsV1.setCheckoutDate(new Date());
+        bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
+        bookingsRepository.save(bookingsV1);
+
 
         return new ResponseEntity<>(HttpStatus.OK);
 
@@ -651,6 +656,17 @@ public class BookingsService {
     }
 
     public void reassignBed(BedRoomFloor bedRoomFloor, BookingsV1 bookingsV1, ChangeBed request) {
+
+        Date endDate = Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        Calendar previousEndDate = Calendar.getInstance();
+        previousEndDate.setTime(endDate);
+        previousEndDate.set(Calendar.DAY_OF_MONTH, previousEndDate.get(Calendar.DAY_OF_MONTH) -1);
+
+
+        CustomersBedHistory currentBed = customersBedHistoryService.getLatestCustomerBed(bookingsV1.getCustomerId());
+        currentBed.setEndDate(previousEndDate.getTime());
+        customersBedHistoryService.updateBedEndDate(currentBed);
+
         CustomersBedHistory cbh = new CustomersBedHistory();
         Double rent = bookingsV1.getRentAmount();
 

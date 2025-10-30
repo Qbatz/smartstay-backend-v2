@@ -14,6 +14,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 @SpringBootApplication
+@EnableScheduling
 public class SmartstayApplication {
 
 	@Autowired
@@ -41,7 +44,7 @@ public class SmartstayApplication {
 //				superAdminRole.setIsEditable(false);
 //
 //				List<RolesPermission> permissions1 = new ArrayList<>();
-//				for (int i = 1; i <= 24; i++) {
+//				for (int i = 1; i <= 25; i++) {
 //					RolesPermission perm = new RolesPermission();
 //					perm.setModuleId(i);
 //					perm.setCanRead(true);
@@ -60,7 +63,7 @@ public class SmartstayApplication {
 //				adminRole.setIsEditable(false);
 //
 //				List<RolesPermission> permissions2 = new ArrayList<>();
-//				for (int i = 1; i <= 24; i++) {
+//				for (int i = 1; i <= 25; i++) {
 //					RolesPermission perm = new RolesPermission();
 //					perm.setModuleId(i);
 //					perm.setCanRead(true);
@@ -79,7 +82,7 @@ public class SmartstayApplication {
 //				readOnlyRole.setIsEditable(false);
 //
 //				List<RolesPermission> permissions3 = new ArrayList<>();
-//				for (int i = 1; i <= 24; i++) {
+//				for (int i = 1; i <= 25; i++) {
 //					RolesPermission perm = new RolesPermission();
 //					perm.setModuleId(i);
 //					perm.setCanRead(true);
@@ -97,7 +100,7 @@ public class SmartstayApplication {
 //				writeOnlyRole.setIsEditable(false);
 //
 //				List<RolesPermission> permissions4 = new ArrayList<>();
-//				for (int i = 1; i <= 24; i++) {
+//				for (int i = 1; i <= 25; i++) {
 //					RolesPermission perm = new RolesPermission();
 //					perm.setModuleId(i);
 //					perm.setCanRead(true);
@@ -268,6 +271,10 @@ public class SmartstayApplication {
 //			Modules modules24 = new Modules();
 //			modules24.setModuleName("Agreement");
 //			modulesRepository.save(modules24);
+//
+//			Modules modules25 = new Modules();
+//			modules25.setModuleName("Subscription");
+//			modulesRepository.save(modules25);
 		};
 	}
 
@@ -296,247 +303,6 @@ public class SmartstayApplication {
 		};
 	}
 
-//	@Bean
-//	CommandLineRunner addFirstInvoice(CustomersRepository customersRepository, HostelV1Repository hostelV1Repository, InvoicesV1Repository invoicesV1Repository, BillTemplatesRepository billTemplatesRepository, BookingsRepository bookingsRepository) {
-//		return args -> {
-//			List<Customers> listCustomers = customersRepository.findAll();
-//			AtomicReference<String> prefix = new AtomicReference<>("INV");
-//			AtomicReference<Integer> suffix = new AtomicReference<>(1);
-//			listCustomers.forEach(item -> {
-//				int billStartDate = 1;
-//				if (invoicesV1Repository.findLatestRentInvoiceByCustomerId(item.getCustomerId()) == null) {
-//					if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
-//
-//						BookingsV1 customerBooking = bookingsRepository.findByCustomerIdAndHostelId(item.getCustomerId(), item.getHostelId());
-//						HostelV1 hostelV1 = hostelV1Repository.findById(item.getHostelId()).orElse(null);
-//						if (hostelV1 != null) {
-//							if (hostelV1.getBillingRulesList() != null && !hostelV1.getBillingRulesList().isEmpty()) {
-//								billStartDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
-//							}
-//							BillTemplates billTemplates = billTemplatesRepository.getByHostelId(hostelV1.getHostelId());
-//							if (billTemplates != null) {
-//								if (billTemplates.getTemplateTypes() != null && !billTemplates.getTemplateTypes().isEmpty()) {
-//									List<BillTemplateType> tempBillTemplates = billTemplates.getTemplateTypes()
-//											.stream()
-//											.filter(a -> a.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).toList();
-//									if (!tempBillTemplates.isEmpty()) {
-//										System.out.println(tempBillTemplates.size());
-//										System.out.println(tempBillTemplates.get(0).getInvoicePrefix());
-//										prefix.set(tempBillTemplates.get(0).getInvoicePrefix());
-//										suffix.set(Integer.valueOf(tempBillTemplates.get(0).getInvoiceSuffix()));
-//									}
-//								}
-//
-//							}
-//
-//							if (customerBooking != null) {
-//								InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix.get());
-//								String tempSuffix = "0";
-//								StringBuilder prefixSuffix = new StringBuilder();
-//								if (inv == null) {
-//									if (suffix.get() < 10) {
-//										tempSuffix = "00" + suffix.get();
-//									}
-//									else if (suffix.get() < 100) {
-//										tempSuffix = "0" + suffix.get();
-//									}
-//									else {
-//										tempSuffix = "" + suffix.get();
-//									}
-//
-//									prefixSuffix.append(prefix);
-//									prefixSuffix.append("-");
-//									prefixSuffix.append(tempSuffix);
-//								}
-//								else {
-//									String[] ps = inv.getInvoiceNumber().split("-");
-//									if (ps.length > 1) {
-//										int previosSuffix = Integer.parseInt(ps[1]) + 1;
-//										prefixSuffix.append(prefix);
-//										prefixSuffix.append("-");
-//
-//										if (previosSuffix < 10) {
-//											tempSuffix = "00" + previosSuffix;
-//										}
-//										else if (previosSuffix < 100) {
-//											tempSuffix = "0" + previosSuffix;
-//										}
-//										else {
-//											tempSuffix = "" + previosSuffix;
-//										}
-//										prefixSuffix.append(tempSuffix);
-//									}
-//								}
-//								Calendar cal = Calendar.getInstance();
-//								cal.setTime(item.getJoiningDate());
-//
-//
-//								Calendar calTemp = Calendar.getInstance();
-//								calTemp.setTime(item.getJoiningDate());
-//								calTemp.set(Calendar.DAY_OF_MONTH, billStartDate);
-//
-//								Date dueDate = Utils.addDaysToDate(cal.getTime(), 5);
-//
-//								Date endDate = Utils.findLastDate(billStartDate, calTemp.getTime());
-//								int noOfDaysStayed = (int) Utils.findNumberOfDays(cal.getTime(), endDate) + 1;
-//								int noOfDaysInMonth = (int) Utils.findNumberOfDays(calTemp.getTime(), endDate) + 1;
-//								double rentPerDay = customerBooking.getRentAmount() / noOfDaysInMonth;
-//								double rentForThatMonth = rentPerDay * noOfDaysStayed;
-//								if (rentForThatMonth > customerBooking.getRentAmount()) {
-//									rentForThatMonth = customerBooking.getRentAmount();
-//								}
-//
-//								InvoicesV1 invoicesV1 = new InvoicesV1();
-//								invoicesV1.setCustomerId(item.getCustomerId());
-//								invoicesV1.setInvoiceNumber(prefixSuffix.toString());
-//								invoicesV1.setBasePrice(rentForThatMonth);
-//								invoicesV1.setTotalAmount(rentForThatMonth);
-//								invoicesV1.setInvoiceType(InvoiceType.RENT.name());
-//								invoicesV1.setCustomerId(item.getCustomerId());
-//								invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
-//								invoicesV1.setCreatedBy(customerBooking.getCreatedBy());
-//								invoicesV1.setGst(0.0);
-//								invoicesV1.setCgst(0.0);
-//								invoicesV1.setSgst(0.0);
-//								invoicesV1.setGstPercentile(0.0);
-//								invoicesV1.setInvoiceDueDate(dueDate);
-//								invoicesV1.setCustomerMobile(item.getMobile());
-//								invoicesV1.setCustomerMailId(item.getEmailId());
-//								invoicesV1.setCreatedAt(new Date());
-//								invoicesV1.setInvoiceStartDate(cal.getTime());
-//								invoicesV1.setInvoiceEndDate(endDate);
-//								invoicesV1.setInvoiceGeneratedDate(cal.getTime());
-//								invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
-//								invoicesV1.setHostelId(item.getHostelId());
-//
-//								invoicesV1Repository.save(invoicesV1);
-//
-//
-//							}
-//						}
-//					}
-//
-//				}
-//
-//			});
-//		};
-//	}
-
-
-
-//	@Bean
-//	CommandLineRunner addPendingInvoice(CustomersRepository customersRepository, HostelV1Repository hostelV1Repository, InvoicesV1Repository invoicesV1Repository, BillTemplatesRepository billTemplatesRepository, BookingsRepository bookingsRepository) {
-//		return args -> {
-//			List<Customers> listCustomers = customersRepository.findAll();
-//			listCustomers.forEach(item -> {
-//				BookingsV1 customerBooking = bookingsRepository.findByCustomerIdAndHostelId(item.getCustomerId(), item.getHostelId());
-//				String prefix = "INV";
-//
-//				if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
-//					HostelV1 hostelV1 = hostelV1Repository.findById(item.getHostelId()).orElse(null);
-//					if (hostelV1 != null) {
-//						BillTemplates billTemplates = billTemplatesRepository.getByHostelId(hostelV1.getHostelId());
-//						if (billTemplates != null) {
-//							if (billTemplates.getTemplateTypes() != null && !billTemplates.getTemplateTypes().isEmpty()) {
-//								List<BillTemplateType> tempBillTemplates = billTemplates.getTemplateTypes()
-//										.stream()
-//										.filter(a -> a.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).toList();
-//								if (!tempBillTemplates.isEmpty()) {
-//									System.out.println(tempBillTemplates.size());
-//									System.out.println(tempBillTemplates.get(0).getInvoicePrefix());
-//									prefix = tempBillTemplates.get(0).getInvoicePrefix();
-//								}
-//							}
-//
-//						}
-//						int billingStartDate = 1;
-//						int billingDueDate = 10;
-//						if (hostelV1.getBillingRulesList() != null) {
-//							if (!hostelV1.getBillingRulesList().isEmpty()) {
-//								billingStartDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
-//								billingDueDate = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
-//							}
-//						}
-//
-//						InvoicesV1 invoicesV1 = invoicesV1Repository.findLatestRentInvoiceByCustomerId(item.getCustomerId());
-//						Calendar cal = Calendar.getInstance();
-//						cal.setTime(invoicesV1.getInvoiceStartDate());
-//						cal.set(Calendar.DAY_OF_MONTH, billingStartDate);
-//						cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
-//
-//						LocalDate startDate = cal.getTime()
-//								.toInstant()
-//								.atZone(ZoneId.systemDefault())
-//								.toLocalDate();
-//
-//						LocalDate endDate = new Date()
-//								.toInstant()
-//								.atZone(ZoneId.systemDefault())
-//								.toLocalDate();
-//
-//						List<BillingCycle> listStartEndDate = BillingCycleUtil.findBillingCycles(startDate, endDate, billingStartDate);
-//
-//						String finalPrefix = prefix;
-//						listStartEndDate.forEach(days -> {
-//							InvoicesV1 findLatestPrefixSufix = invoicesV1Repository.findLatestInvoiceByPrefix(finalPrefix);
-//							StringBuilder prefixSufix = new StringBuilder();
-//							prefixSufix.append(finalPrefix);
-//							String invoiceNumberLatest = findLatestPrefixSufix.getInvoiceNumber();
-//							String[] latestPrefixSuffix = invoiceNumberLatest.split("-");
-//							if (latestPrefixSuffix.length > 1) {
-//								String sux = latestPrefixSuffix[1];
-//								prefixSufix.append("-");
-//								int su = Integer.parseInt(sux) + 1;
-//								if (su < 10) {
-//									prefixSufix.append("00");
-//								}
-//								else if (su < 100) {
-//									prefixSufix.append("0");
-//								}
-//								prefixSufix.append(su);
-//
-//
-//							}
-//
-//							Date sDate = java.sql.Date.valueOf(days.getStartDate());
-//							Date eDate = java.sql.Date.valueOf(days.getEndDate());
-//							Calendar ca = Calendar.getInstance();
-//							ca.setTime(sDate);
-//							ca.set(Calendar.DAY_OF_MONTH, ca.get(Calendar.DAY_OF_MONTH) + 5);
-//
-//
-//							InvoicesV1 newInvoice = new InvoicesV1();
-//							newInvoice.setInvoiceNumber(prefixSufix.toString());
-//							newInvoice.setTotalAmount(customerBooking.getRentAmount());
-//							newInvoice.setBasePrice(customerBooking.getRentAmount());
-//							newInvoice.setInvoiceType(InvoiceType.RENT.name());
-//							newInvoice.setCustomerId(item.getCustomerId());
-//							newInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
-//							newInvoice.setCreatedBy(invoicesV1.getCreatedBy());
-//							newInvoice.setGst(0.0);
-//							newInvoice.setCgst(0.0);
-//							newInvoice.setSgst(0.0);
-//							newInvoice.setGstPercentile(0.0);
-//							newInvoice.setInvoiceDueDate(ca.getTime());
-//							newInvoice.setCustomerMobile(item.getMobile());
-//							newInvoice.setCustomerMailId(item.getEmailId());
-//							newInvoice.setCreatedAt(new Date());
-//							newInvoice.setInvoiceStartDate(sDate);
-//							newInvoice.setInvoiceEndDate(eDate);
-//							newInvoice.setInvoiceGeneratedDate(sDate);
-//							newInvoice.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
-//							newInvoice.setHostelId(item.getHostelId());
-//
-//							invoicesV1Repository.save(newInvoice);
-//
-//						});
-//
-//
-//					}
-//				}
-//			});
-//		};
-//	}
 
 //	@Bean
 //	CommandLineRunner mapInvoicesItems(InvoicesV1Repository invoicesV1Repository) {
@@ -572,4 +338,163 @@ public class SmartstayApplication {
 //			invoicesV1Repository.saveAll(newInvoicesItems);
 //		};
 //	}
+
+	@Bean
+	CommandLineRunner addPlans(PlansRepository plansRepository) {
+		return args -> {
+//			String planCode1 = Utils.generatePlanCode();
+//			List<Plans> listPlans = new ArrayList<>();
+//			Plans planTrial = new Plans();
+//			planTrial.setPlanName("Trial");
+//			planTrial.setDuration(28l);
+//			planTrial.setPrice(0.0);
+//			planTrial.setDiscounts(0.0);
+//			planTrial.setPlanType(PlanType.TRIAL.name());
+//			planTrial.setPlanCode(planCode1);
+//			planTrial.setShouldShow(false);
+//			planTrial.setActive(true);
+//			planTrial.setCanCustomize(false);
+//			planTrial.setCreatedAt(new Date());
+//			planTrial.setUpdatedAt(new Date());
+//
+//			List<PlanFeatures> listFeatures = new ArrayList<>();
+//			PlanFeatures planFeatures = new PlanFeatures();
+//			planFeatures.setActive(true);
+//			planFeatures.setPrice(0.0);
+//			planFeatures.setFeatureName("Tenant Management");
+//			planFeatures.setPlan(planTrial);
+//
+//			PlanFeatures planFeatures2 = new PlanFeatures();
+//			planFeatures2.setActive(true);
+//			planFeatures2.setPrice(0.0);
+//			planFeatures2.setFeatureName("PG Management");
+//			planFeatures2.setPlan(planTrial);
+//
+//			PlanFeatures planFeatures3 = new PlanFeatures();
+//			planFeatures3.setActive(true);
+//			planFeatures3.setPrice(0.0);
+//			planFeatures3.setFeatureName("Account Management");
+//			planFeatures3.setPlan(planTrial);
+//
+//			PlanFeatures planFeatures4 = new PlanFeatures();
+//			planFeatures4.setActive(true);
+//			planFeatures4.setPrice(0.0);
+//			planFeatures4.setFeatureName("Expense Management");
+//			planFeatures4.setPlan(planTrial);
+//
+//
+//
+//			listFeatures.add(planFeatures);
+//			listFeatures.add(planFeatures2);
+//			listFeatures.add(planFeatures3);
+//			listFeatures.add(planFeatures4);
+//
+//			planTrial.setFeaturesList(listFeatures);
+//			listPlans.add(planTrial);
+//
+//			String planCode3 = Utils.generatePlanCode();
+//			Plans planBasic = new Plans();
+//			planBasic.setPlanName("Basic");
+//			planBasic.setDuration(28l);
+//			planBasic.setPrice(0.0);
+//			planBasic.setDiscounts(0.0);
+//			planBasic.setPlanType(PlanType.BASIC.name());
+//			planBasic.setPlanCode(planCode3);
+//			planBasic.setShouldShow(true);
+//			planBasic.setActive(true);
+//			planBasic.setCanCustomize(false);
+//			planBasic.setCreatedAt(new Date());
+//			planBasic.setUpdatedAt(new Date());
+//
+//			List<PlanFeatures> listFeatures21 = new ArrayList<>();
+//			PlanFeatures planFeatures21 = new PlanFeatures();
+//			planFeatures21.setActive(true);
+//			planFeatures21.setPrice(0.0);
+//			planFeatures21.setFeatureName("Tenant Management");
+//			planFeatures21.setPlan(planBasic);
+//
+//			PlanFeatures planFeatures22 = new PlanFeatures();
+//			planFeatures22.setActive(true);
+//			planFeatures22.setPrice(0.0);
+//			planFeatures22.setFeatureName("PG Management");
+//			planFeatures22.setPlan(planBasic);
+//
+//			PlanFeatures planFeatures23 = new PlanFeatures();
+//			planFeatures23.setActive(true);
+//			planFeatures23.setPrice(0.0);
+//			planFeatures23.setFeatureName("Account Management");
+//			planFeatures23.setPlan(planBasic);
+//
+//			PlanFeatures planFeatures24 = new PlanFeatures();
+//			planFeatures24.setActive(true);
+//			planFeatures24.setPrice(0.0);
+//			planFeatures24.setFeatureName("Expense Management");
+//			planFeatures24.setPlan(planBasic);
+//
+//
+//
+//			listFeatures.add(planFeatures21);
+//			listFeatures.add(planFeatures22);
+//			listFeatures.add(planFeatures23);
+//			listFeatures.add(planFeatures24);
+//
+//			planBasic.setFeaturesList(listFeatures21);
+//			listPlans.add(planBasic);
+//
+//
+//			String planCode2 = Utils.generatePlanCode();
+//			Plans planAdvance = new Plans();
+//			planAdvance.setPlanName("Advance");
+//			planAdvance.setDuration(28l);
+//			planAdvance.setPrice(0.0);
+//			planAdvance.setDiscounts(0.0);
+//			planAdvance.setPlanType(PlanType.ADVANCED.name());
+//			planAdvance.setPlanCode(planCode2);
+//			planAdvance.setShouldShow(true);
+//			planAdvance.setActive(true);
+//			planAdvance.setCanCustomize(false);
+//			planAdvance.setCreatedAt(new Date());
+//			planAdvance.setUpdatedAt(new Date());
+//
+//			List<PlanFeatures> listFeatures31 = new ArrayList<>();
+//			PlanFeatures planFeatures31 = new PlanFeatures();
+//			planFeatures31.setActive(true);
+//			planFeatures31.setPrice(0.0);
+//			planFeatures31.setFeatureName("Tenant Management");
+//			planFeatures31.setPlan(planAdvance);
+//
+//			PlanFeatures planFeatures32 = new PlanFeatures();
+//			planFeatures32.setActive(true);
+//			planFeatures32.setPrice(0.0);
+//			planFeatures32.setFeatureName("PG Management");
+//			planFeatures32.setPlan(planBasic);
+//
+//			PlanFeatures planFeatures33 = new PlanFeatures();
+//			planFeatures33.setActive(true);
+//			planFeatures33.setPrice(0.0);
+//			planFeatures33.setFeatureName("Account Management");
+//			planFeatures33.setPlan(planBasic);
+//
+//			PlanFeatures planFeatures34 = new PlanFeatures();
+//			planFeatures34.setActive(true);
+//			planFeatures34.setPrice(0.0);
+//			planFeatures34.setFeatureName("Expense Management");
+//			planFeatures34.setPlan(planBasic);
+//
+//
+//
+//			listFeatures.add(planFeatures31);
+//			listFeatures.add(planFeatures32);
+//			listFeatures.add(planFeatures33);
+//			listFeatures.add(planFeatures34);
+//
+//			planBasic.setFeaturesList(listFeatures31);
+//			listPlans.add(planAdvance);
+//
+//
+//			plansRepository.saveAll(listPlans);
+
+		};
+	}
+
 }

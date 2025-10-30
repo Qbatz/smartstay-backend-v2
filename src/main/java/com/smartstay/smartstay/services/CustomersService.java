@@ -227,26 +227,19 @@ public class CustomersService {
             String currentStatus = null;
             if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
                 currentStatus = "Booked";
-            }
-            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
                 currentStatus = "Vacated";
-            }
-            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
                 currentStatus = "Notice Period";
-            }
-            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
                 currentStatus = "Checked In";
-            }
-            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
                 currentStatus = "Inactive";
-            }
-            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ACTIVE.name())) {
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ACTIVE.name())) {
                 currentStatus = "Active";
-            }
-            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
                 currentStatus = "Cancelled";
-            }
-            else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
                 currentStatus = "Settlement Generated";
             }
 
@@ -282,8 +275,9 @@ public class CustomersService {
 
     /**
      * For Booking flow.
-     *
+     * <p>
      * Do not use anywhere else
+     *
      * @param payloads
      * @param hostelId
      * @return
@@ -347,21 +341,16 @@ public class CustomersService {
             } else {
                 return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
             }
-        }
-        else {
+        } else {
             return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
         }
-
-
 
 
     }
 
     /**
-     *
-     *  for check in the customers
-     *  for customers who are not booked
-     *
+     * for check in the customers
+     * for customers who are not booked
      */
 
     public ResponseEntity<?> addCheckIn(String customerId, CheckInRequest payloads) {
@@ -422,8 +411,7 @@ public class CustomersService {
             if (advance == null) {
                 advance = new Advance();
                 listDeductions = new ArrayList<>();
-            }
-            else {
+            } else {
                 listDeductions = advance.getDeductions();
             }
             listDeductions.addAll(payloads.deductions()
@@ -470,10 +458,9 @@ public class CustomersService {
             calculateRentAndCreateRentalInvoice(customers, payloads);
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
-        }else {
+        } else {
             return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);
         }
-
 
 
     }
@@ -536,8 +523,7 @@ public class CustomersService {
             if (advance == null) {
                 advance = new Advance();
                 listDeductions = new ArrayList<>();
-            }
-            else {
+            } else {
                 listDeductions = advance.getDeductions();
             }
             listDeductions.addAll(checkinRequest.deductions()
@@ -627,11 +613,11 @@ public class CustomersService {
             String mobileStatus = "";
             String emailStatus = "";
 
-            if (customerInfo.emailId() !=null && !customerInfo.emailId().isEmpty() && customersRepository.existsByEmailIdAndHostelIdAndStatusesNotIn(customerInfo.emailId(),hostelId, List.of("VACATED"))) {
+            if (customerInfo.emailId() != null && !customerInfo.emailId().isEmpty() && customersRepository.existsByEmailIdAndHostelIdAndStatusesNotIn(customerInfo.emailId(), hostelId, List.of("VACATED"))) {
                 emailStatus = Utils.EMAIL_ID_EXISTS;
             }
 
-            if (customerInfo.mobileNumber() !=null && !customerInfo.mobileNumber().isEmpty() && customersRepository.existsByMobileAndHostelIdAndStatusesNotIn(customerInfo.mobileNumber(),hostelId, List.of("VACATED"))) {
+            if (customerInfo.mobileNumber() != null && !customerInfo.mobileNumber().isEmpty() && customersRepository.existsByMobileAndHostelIdAndStatusesNotIn(customerInfo.mobileNumber(), hostelId, List.of("VACATED"))) {
                 mobileStatus = Utils.MOBILE_NO_EXISTS;
             }
 
@@ -819,8 +805,7 @@ public class CustomersService {
 
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
-        }
-        else {
+        } else {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
     }
@@ -959,8 +944,7 @@ public class CustomersService {
         initials.append(customers.getFirstName().toUpperCase().charAt(0));
         if (customers.getLastName() != null && !customers.getLastName().equalsIgnoreCase("")) {
             initials.append(customers.getLastName().toUpperCase().charAt(0));
-        }
-        else {
+        } else {
             initials.append(customers.getFirstName().toUpperCase().charAt(1));
         }
         String fullName = customers.getFirstName() + " " + customers.getLastName();
@@ -1024,8 +1008,7 @@ public class CustomersService {
                     null,
                     null,
                     null);
-        }
-        else {
+        } else {
             kycInfo = new KycInformations(kycDetails.getCurrentStatus(),
                     null,
                     null,
@@ -1062,39 +1045,54 @@ public class CustomersService {
     }
 
 
-    public void calculateRentAndCreateRentalInvoice(Customers customers,  CheckInRequest payloads) {
+    public void calculateRentAndCreateRentalInvoice(Customers customers, CheckInRequest payloads) {
         HostelV1 hostelV1 = hostelService.getHostelInfo(payloads.hostelId());
         if (hostelV1 != null) {
 
-            int lastRulingBillDate = 1;
-            if (!hostelV1.getBillingRulesList().isEmpty()) {
-                lastRulingBillDate  = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
-            }
+//            int lastRulingBillDate = 1;
+//            if (!hostelV1.getBillingRulesList().isEmpty()) {
+//                lastRulingBillDate  = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
+//            }
+
 
             Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(joiningDate);
-            cal.set(Calendar.DAY_OF_MONTH, lastRulingBillDate);
-            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(payloads.hostelId(), joiningDate);
 
-            Date lastDate = Utils.findLastDate(lastRulingBillDate, cal.getTime());
+
+//            Calendar cal = Calendar.getInstance();
+//            cal.setTime(joiningDate);
+//            cal.set(Calendar.DAY_OF_MONTH, lastRulingBillDate);
+//            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
+
+            Date lastDate = null;
+            Date startDate = null;
+            if (billingDates != null) {
+                lastDate = billingDates.currentBillEndDate();
+                startDate = billingDates.currentBillStartDate();
+            } else {
+                Calendar calendar = Calendar.getInstance();
+                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                startDate = calendar.getTime();
+                lastDate = Utils.findLastDate(1, new Date());
+            }
+
 
             Calendar c = Calendar.getInstance();
             c.setTime(joiningDate);
 
 
-            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(cal.getTime(), lastDate);
+            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(startDate, lastDate);
             long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), lastDate);
             double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
-            double finalRent  = calculateRentPerDay * noOfDaysLeftInCurrentMonth;
-                if (finalRent > payloads.rentalAmount()) {
-                    finalRent = payloads.rentalAmount();
-                }
-                int day = 1;
-                if (hostelV1.getElectricityConfig() != null) {
-                    day = hostelV1.getElectricityConfig().getBillDate();
-                }
+            double finalRent = Utils.roundOfMax(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+            if (finalRent > payloads.rentalAmount()) {
+                finalRent = payloads.rentalAmount();
+            }
+            int day = 1;
+            if (hostelV1.getElectricityConfig() != null) {
+                day = hostelV1.getElectricityConfig().getBillDate();
+            }
 
             invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), day);
 
@@ -1130,17 +1128,13 @@ public class CustomersService {
         }
         if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.VACATED.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_VACATED, HttpStatus.BAD_REQUEST);
-        }
-        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
-        }
-        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
-        }
-        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.TERMINATED.name())) {
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.TERMINATED.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
-        }
-        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_CHECKED_NOT_IN_NOTICE, HttpStatus.BAD_REQUEST);
         }
 
@@ -1174,8 +1168,7 @@ public class CustomersService {
             fullName.append(" ");
             fullName.append(customers.getLastName());
             initials.append(customers.getLastName().toUpperCase().charAt(0));
-        }
-        else {
+        } else {
             if (customers.getFirstName().length() > 1) {
                 initials.append(customers.getFirstName().toUpperCase().charAt(1));
             }
@@ -1214,14 +1207,11 @@ public class CustomersService {
         Calendar calBillStartDate = Calendar.getInstance();
         if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) < 0) {
             calBillStartDate.setTime(billDate.currentBillStartDate());
-        }
-        else {
+        } else {
             calBillStartDate.setTime(bookingDetails.getJoiningDate());
         }
 
         billStartDate = calBillStartDate.getTime();
-
-
 
 
         Calendar calEndDate = Calendar.getInstance();
@@ -1241,21 +1231,35 @@ public class CustomersService {
 
             currentRentPaid = transactionService.getTransactionInfo(currentMonthInfo)
                     .stream()
-                    .mapToDouble(PartialPaidInvoiceInfo::paidAmount)
+                    .mapToDouble(i -> {
+                        if (i.paidAmount() == null) {
+                            return 0.0;
+                        }
+                        return i.paidAmount();
+                    })
                     .sum();
-        }
-        else {
-            //current month invoice is paid
-            InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthInvoice(customerId);
+            if (currentRentPaid > 0) {
+                isCurrentRentPaid = true;
+            }
+        } else {
+            //current month invoice is paid Rent
+            InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthRentInvoice(customerId);
             if (invoicesV1 != null) {
                 currentMonthRent = invoicesV1.getTotalAmount();
-                currentRentPaid = invoicesV1.getTotalAmount();
+                if (invoicesV1.getPaidAmount() == null) {
+                    currentRentPaid = 0;
+                }
+                else {
+                    currentRentPaid = invoicesV1.getPaidAmount();
+                }
                 isCurrentRentPaid = true;
             }
         }
 
+        List<CustomersBedHistory> listBedHistory = bedHistory.getCustomersBedHistory(customerId, billStartDate, billDate.currentBillEndDate());
 
-        double rentPerDay = ((bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth)* 100.0)/100.0;
+
+        double rentPerDay = Math.ceil(bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth);
 //        if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billStartDate) < 0) {
 //            rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
 //        }
@@ -1267,7 +1271,7 @@ public class CustomersService {
 //            rentPerDay = currentMonthRent / noOfDaySatayed;
 //        }
 
-        currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay)*100.0/100.0;
+        currentMonthPayableRent = Utils.roundOfMax(noOfDaySatayed * rentPerDay);
 
         List<InvoicesV1> advanceInvoice = listUnpaidInvoices
                 .stream()
@@ -1278,17 +1282,14 @@ public class CustomersService {
             InvoicesV1 advInv = advanceInvoice.get(0);
             if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
                 isAdvancePaid = false;
-            }
-            else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            } else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                 isAdvancePaid = false;
                 advancePaidAmount = transactionService.getAdvancePaidAmount(advInv.getInvoiceId());
-            }
-            else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+            } else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
                 isAdvancePaid = true;
                 advancePaidAmount = advInv.getTotalAmount();
             }
-        }
-        else {
+        } else {
             InvoicesV1 invAdvanceInvoice = invoiceService.getAdvanceInvoiceDetails(customerId, customers.getHostelId());
             Double paidAmount = transactionService.getAdvancePaidAmount(invAdvanceInvoice.getInvoiceId());
             if (paidAmount > 0 && invAdvanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
@@ -1320,16 +1321,15 @@ public class CustomersService {
 
         double invoiceBalance = unpaidInvoiceAmount - partialPaidAmount;
 
-        totalAmountToBePaid =  invoiceBalance - advancePaidAmount;
+        totalAmountToBePaid = invoiceBalance - advancePaidAmount;
 
         if (isCurrentRentPaid) {
             totalAmountToBePaid = totalAmountToBePaid + (currentMonthPayableRent - currentRentPaid);
-        }
-        else {
+        } else {
             totalAmountToBePaid = totalAmountToBePaid + currentMonthPayableRent;
         }
 
-        totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
+        totalAmountToBePaid = Utils.roundOfMax( totalAmountToBePaid + totalDeductions);
 
 //        totalAmountToBePaid = unpaidInvoiceAmount - partialPaidAmount;
 //        if (!isAdvancePaid) {
@@ -1338,7 +1338,6 @@ public class CustomersService {
 //        else {
 //            totalAmountToBePaid = totalAmountToBePaid - (advancePaidAmount - totalDeductions);
 //        }
-
 
 
         List<UnpaidInvoices> unpaidInvoices = listUnpaidRentalInvoices
@@ -1364,8 +1363,8 @@ public class CustomersService {
             rentPerDay = 0;
         }
 
-        RentInfo rentInfo = new RentInfo(currentMonthPayableRent,
-                currentRentPaid,
+        RentInfo rentInfo = new RentInfo(Utils.roundOfMax(currentMonthPayableRent),
+                Utils.roundOfMax(currentRentPaid),
                 (int) noOfDaySatayed,
                 currentMonthRent,
                 rentPerDay,
@@ -1380,7 +1379,6 @@ public class CustomersService {
                 totalDeductions,
                 unpaidInvoiceAmount,
                 isRefundable);
-
 
 
         FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, unpaidInvoices, rentInfo, settlementInfo);
@@ -1415,17 +1413,13 @@ public class CustomersService {
         }
         if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.VACATED.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_VACATED, HttpStatus.BAD_REQUEST);
-        }
-        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
-        }
-        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
-        }
-        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.TERMINATED.name())) {
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.TERMINATED.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
-        }
-        else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_CHECKED_NOT_IN_NOTICE, HttpStatus.BAD_REQUEST);
         }
 
@@ -1479,9 +1473,8 @@ public class CustomersService {
         Date dateStartDate = calStartDate.getTime();
 
         if (Utils.findNumberOfDays(billDate.currentBillStartDate(), bookingDetails.getJoiningDate()) >= 0) {
-            dateStartDate =bookingDetails.getJoiningDate();
-        }
-        else {
+            dateStartDate = bookingDetails.getJoiningDate();
+        } else {
             dateStartDate = billDate.currentBillStartDate();
         }
 
@@ -1501,44 +1494,52 @@ public class CustomersService {
                     .stream()
                     .mapToDouble(PartialPaidInvoiceInfo::paidAmount)
                     .sum();
-        }
-        else {
-            //current month invoice is paid
-            InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthInvoice(customerId);
+            if (currentRentPaid > 0) {
+                isCurrentRentPaid = true;
+            }
+        } else {
+            //current month invoice is paid rent
+            InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthRentInvoice(customerId);
             if (invoicesV1 != null) {
                 currentMonthRent = invoicesV1.getTotalAmount();
-                currentRentPaid = invoicesV1.getTotalAmount();
+                if (invoicesV1.getPaidAmount() == null) {
+                    currentRentPaid = 0.0;
+                }
+                else {
+                    currentRentPaid = invoicesV1.getPaidAmount();
+                }
+
                 isCurrentRentPaid = true;
             }
         }
 
-        double rentPerDay = currentMonthRent / findNoOfDaysInCurrentMonth;
+
+        double rentPerDay = Math.ceil(bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth);
         if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) >= 0) {
-            rentPerDay = bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth;
+            rentPerDay = Math.ceil(bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth);
         }
-        currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay)*100.0/100.0;
+        currentMonthPayableRent = Utils.roundOfMax(noOfDaySatayed * rentPerDay);
 
         List<InvoicesV1> advanceInvoice = listUnpaidInvoices
                 .stream()
                 .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
                 .toList();
+        InvoicesV1 invAdvanceInvoice = null;
 
         if (!advanceInvoice.isEmpty()) {
             InvoicesV1 advInv = advanceInvoice.get(0);
+            invAdvanceInvoice = advanceInvoice.get(0);
             if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
                 isAdvancePaid = false;
-            }
-            else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            } else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                 isAdvancePaid = false;
                 advancePaidAmount = transactionService.getAdvancePaidAmount(advInv.getInvoiceId());
-            }
-            else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+            } else if (advInv.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
                 isAdvancePaid = true;
                 advancePaidAmount = advInv.getTotalAmount();
             }
-        }
-        else {
-            InvoicesV1 invAdvanceInvoice = invoiceService.getAdvanceInvoiceDetails(customerId, customers.getHostelId());
+        } else {
+            advanceInvoice.add(invoiceService.getAdvanceInvoiceDetails(customerId, customers.getHostelId()));
             Double paidAmount = transactionService.getAdvancePaidAmount(invAdvanceInvoice.getInvoiceId());
             if (paidAmount > 0 && invAdvanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
                 isAdvancePaid = true;
@@ -1569,16 +1570,15 @@ public class CustomersService {
 
         double invoiceBalance = unpaidInvoiceAmount - partialPaidAmount;
 
-        totalAmountToBePaid =  invoiceBalance - advancePaidAmount;
+        totalAmountToBePaid = invoiceBalance - advancePaidAmount;
 
         if (isCurrentRentPaid) {
             totalAmountToBePaid = totalAmountToBePaid + (currentMonthPayableRent - currentRentPaid);
-        }
-        else {
+        } else {
             totalAmountToBePaid = totalAmountToBePaid + currentMonthPayableRent;
         }
 
-        totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
+        totalAmountToBePaid = totalAmountToBePaid - totalDeductions;
 
         if (deductions != null && !deductions.isEmpty()) {
             double finalDeductions = deductions
@@ -1593,10 +1593,11 @@ public class CustomersService {
                 .peek(item -> item.setCancelled(true))
                 .toList();
 
-        totalAmountToBePaid = (totalAmountToBePaid * 100.0) / 100.0;
+        totalAmountToBePaid = Utils.roundOfMax(totalAmountToBePaid);
 
         invoiceService.cancelActiveInvoice(unpaidUpdated);
-        invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated);
+        invoiceService.cancelAdvanceInvoice(invAdvanceInvoice);
+        invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, invAdvanceInvoice.getInvoiceId());
 
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
@@ -1604,7 +1605,7 @@ public class CustomersService {
     }
 
     public boolean customerExist(String hostelId) {
-        return customersRepository.existsByHostelIdAndCurrentStatusIn(hostelId, List.of(CustomerStatus.NOTICE.name(),CustomerStatus.CHECK_IN.name(),CustomerStatus.BOOKED.name()));
+        return customersRepository.existsByHostelIdAndCurrentStatusIn(hostelId, List.of(CustomerStatus.NOTICE.name(), CustomerStatus.CHECK_IN.name(), CustomerStatus.BOOKED.name()));
     }
 
     public List<CustomerBedsList> getCustomersFromBedHistory(String hostelId, Date billStartDate, Date billEndDate) {
@@ -1657,11 +1658,10 @@ public class CustomersService {
 
 
         CustomerWallet wallet = customers.getWallet();
-        if (wallet != null &&  wallet.getAmount() != null) {
+        if (wallet != null && wallet.getAmount() != null) {
             wallet.setAmount(wallet.getAmount() - balanceAmount);
             wallet.setTransactionDate(joiningDate);
-        }
-        else {
+        } else {
             if (wallet == null) {
                 wallet = new CustomerWallet();
             }
@@ -1698,12 +1698,12 @@ public class CustomersService {
         if (bookingsV1 == null) {
             return new ResponseEntity<>(Utils.NO_BOOKING_INFORMATION_FOUND, HttpStatus.BAD_REQUEST);
         }
-        if (bookingsV1.getBedId() == request.bedId()) {
-            return new ResponseEntity<>(Utils.CHANGE_BED_SAME_BED_ERROR, HttpStatus.BAD_REQUEST);
-        }
+//        if (bookingsV1.getBedId() == request.bedId()) {
+//            return new ResponseEntity<>(Utils.CHANGE_BED_SAME_BED_ERROR, HttpStatus.BAD_REQUEST);
+//        }
 
         Date reCheckInDate = Utils.stringToDate(request.reCheckInDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        if (bookingsService.isBedBookedNextDay(bookingsV1.getBedId(),customerId, reCheckInDate)) {
+        if (bookingsService.isBedBookedNextDay(bookingsV1.getBedId(), customerId, reCheckInDate)) {
             return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
         }
 
@@ -1712,13 +1712,12 @@ public class CustomersService {
         }
 
         InvoicesV1 invoicesV1 = invoiceService.getFinalSettlementStatus(customers.getCustomerId());
-        if (invoicesV1 !=null){
+        if (invoicesV1 != null) {
             invoicesV1.setPaymentStatus(PaymentStatus.CANCELLED.name());
             invoicesV1.setUpdatedAt(new Date());
             invoicesV1.setUpdatedBy(user.getUserId());
             invoiceService.saveInvoice(invoicesV1);
         }
-
 
 
         Reasons reasons = new Reasons();
@@ -1746,5 +1745,63 @@ public class CustomersService {
         customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
         customers.setCurrentStatus(CustomerStatus.VACATED.name());
         customersRepository.save(customers);
+    }
+
+    public ResponseEntity<?> getCheckoutCustomers(String hostelId, String name) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_CHECKOUT, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(authentication.getName(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        List<CheckoutCustomers> listCustomers =  customersRepository.getCheckedOutCustomerData(hostelId, name)
+                .stream()
+                .map(item -> {
+                    StringBuilder initials = new StringBuilder();
+                    String[] nameArray = item.getFirstName().split(" ");
+                    initials.append(nameArray[0].toUpperCase().charAt(0));
+                    if (nameArray.length > 1) {
+                        initials.append(nameArray[nameArray.length - 1].toUpperCase().charAt(0));
+                    } else {
+                        initials.append(nameArray[0].toUpperCase().charAt(1));
+                    }
+                    String currentStatus = null;
+                    if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+                        currentStatus = "Vacated";
+                    }
+
+                    return new CheckoutCustomers(item.getFirstName(),
+                            item.getCity(),
+                            item.getState(),
+                            item.getCountry(),
+                            item.getMobile(),
+                            currentStatus,
+                            item.getEmailId(),
+                            item.getProfilePic(),
+                            item.getBedId(),
+                            item.getFloorId(),
+                            item.getRoomId(),
+                            item.getCustomerId(),
+                            initials.toString(),
+                            Utils.dateToString(item.getExpectedJoiningDate()),
+                            Utils.dateToString(item.getActualJoiningDate()),
+                            item.getCountryCode(),
+                            Utils.dateToString(item.getCreatedAt()),
+                            item.getBedName(),
+                            item.getRoomName(),
+                            item.getFloorName(),
+                            Utils.dateToString(item.getCheckoutDate()));
+                })
+                .toList();
+
+        return new ResponseEntity<>(listCustomers, HttpStatus.OK);
     }
 }

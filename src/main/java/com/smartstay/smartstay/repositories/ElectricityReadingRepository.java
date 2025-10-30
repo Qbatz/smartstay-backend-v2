@@ -25,7 +25,7 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
             from electricity_readings e2 where e2.room_id=er.room_id and e2.bill_start_date >= DATE(:startDate) 
             and e2.bill_end_date <= DATE(:endDate)) as consumption, 
             (SELECT count(booking_id) FROM bookingsv1 WHERE room_id=er.room_id and current_status in ('NOTICE', 'CHECKIN') and joining_date <= DATE(:endDate) 
-            and leaving_date is null or leaving_date >= DATE(:endDate))  as noOfTenants 
+            and (leaving_date is null or leaving_date >= DATE(:endDate)))  as noOfTenants 
             FROM electricity_readings er LEFT OUTER JOIN rooms rms on rms.room_id=er.room_id 
             left outer join floors flrs on flrs.floor_id=rms.floor_id where er.hostel_id=:hostelId 
             and er.bill_start_date >= DATE(:startDate) and er.bill_end_date <= DATE(:endDate) 

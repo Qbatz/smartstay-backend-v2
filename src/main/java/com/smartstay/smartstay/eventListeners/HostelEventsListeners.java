@@ -5,6 +5,7 @@ import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.HostelEvents;
 import com.smartstay.smartstay.payloads.templates.BillTemplates;
 import com.smartstay.smartstay.services.*;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
@@ -22,10 +23,12 @@ public class HostelEventsListeners {
 
     @Autowired
     private TemplatesService hostelTemplates;
-
+    @Autowired
+    private SubscriptionService planHistoryService;
     @Autowired
     private UserHostelService userHostelService;
-
+    @Autowired
+    private PlansService plansService;
     @Autowired
     private UsersService usersService;
     @Autowired
@@ -63,6 +66,25 @@ public class HostelEventsListeners {
 
         BillTemplates templates = new BillTemplates(hostelV1.getHostelId(),hostelV1.getMobile(), hostelV1.getEmailId(), hostelV1.getHostelName(), events.getUserId());
         hostelTemplates.initialTemplateSetup(templates);
+
+        Plans trialPlans = plansService.getTrialPlan();
+
+        if (trialPlans != null) {
+            Date endingDate = Utils.addDaysToDate(new Date(), trialPlans.getDuration().intValue());
+            HostelPlan hostelPlan = new HostelPlan();
+            hostelPlan.setCurrentPlanCode(trialPlans.getPlanCode());
+            hostelPlan.setCurrentPlanName(trialPlans.getPlanName());
+            hostelPlan.setCurrentPlanStartsAt(new Date());
+            hostelPlan.setCurrentPlanEndsAt(endingDate);
+            hostelPlan.setCurrentPlanPrice(trialPlans.getPrice());
+            hostelPlan.setTrial(true);
+            hostelPlan.setTrialEndingAt(new Date());
+            hostelPlan.setHostel(hostelV1);
+
+            hostelV1.setHostelPlan(hostelPlan);
+        }
+
+        planHistoryService.addHostel(hostelV1.getHostelId(), new Date());
 
         hostelService.updateHostelFromEvents(hostelV1);
 

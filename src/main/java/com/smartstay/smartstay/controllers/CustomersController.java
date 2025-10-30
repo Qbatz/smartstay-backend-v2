@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -102,9 +103,12 @@ public class CustomersController {
     public ResponseEntity<?> changeBed(@PathVariable("customerId") String customerId,@PathVariable("hostelId") String hostelId,@Valid @RequestBody ChangeBed request) {
         return customersService.changeBed(hostelId, customerId, request);
     }
-
     @PostMapping("/cancel-checkout/{hostelId}/{customerId}")
     public ResponseEntity<?> cancelCheckOut(@PathVariable("customerId") String customerId,@PathVariable("hostelId") String hostelId,@Valid @RequestBody CancelCheckout request) {
         return customersService.cancelCheckOut(hostelId, customerId, request);
+    }
+    @GetMapping("/checkout/{hostelId}")
+    public ResponseEntity<?> checkoutCustomers(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required = false) String name) {
+        return customersService.getCheckoutCustomers(hostelId, name);
     }
  }

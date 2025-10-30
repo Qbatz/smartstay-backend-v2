@@ -2,9 +2,7 @@ package com.smartstay.smartstay.util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.Date;
@@ -141,6 +139,7 @@ public class Utils {
     public static final String FINAL_SETTLEMENT_NOT_PAID = "Final Settlement is not fully paid";
     public static final String CHANGE_BED_SAME_BED_ERROR = "Customer is currently staying on the same bed";
     public static final String CHANGE_BED_SAME_DAY_ERROR = "Cannot change the bed on the same day customer is joined";
+    public static final String CUSTOMER_VERIFIED_KYC = "Customer is already verified";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
@@ -160,7 +159,7 @@ public class Utils {
     public static final String CANNOT_REFUND_FOR_OLD_INVOICES = "Cannot refund for old invoices";
     public static final String CANNOT_REFUND_FOR_UNPAID_INVOICES = "Cannot refund for unpaid invoices";
     public static final String CANNOT_INITIATE_REFUND = "Cannot initiate refund";
-    public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund process successfully";
+    public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund processed successfully";
 
 
     //Date validation messages
@@ -211,6 +210,7 @@ public class Utils {
     public static int MODULE_ID_USER = 22;
     public static int MODULE_ID_ROLES = 23;
     public static int MODULE_ID_AGREEMENT = 24;
+    public static int MODULE_ID_SUBSCRIPTION = 25;
     public static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
     public static int generateOtp() {
         return (int)(Math.random() * 900000) + 100000;
@@ -452,6 +452,44 @@ public class Utils {
         }
 
         return ref.toString();
+    }
+
+    public static String generatePlanCode() {
+        StringBuilder ref = new StringBuilder();
+
+        // 4 letters
+        for (int i = 0; i < 2; i++) {
+            ref.append(ALPHABETS.charAt(RANDOM.nextInt(ALPHABETS.length())));
+        }
+
+        // 4 digits
+        for (int i = 0; i < 2; i++) {
+            ref.append(RANDOM.nextInt(10));
+        }
+        ref.append("-");
+
+        // 4 alphanumeric
+        for (int i = 0; i < 3; i++) {
+            ref.append(ALPHANUMERIC.charAt(RANDOM.nextInt(ALPHANUMERIC.length())));
+        }
+
+        return ref.toString();
+    }
+
+    public static Double roundOfMax(double number) {
+        return Math.ceil(number);
+    }
+
+    public static Date convertToTimeStamp(Date date) {
+        LocalDate localDate = date
+                .toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        LocalTime currentTime = LocalTime.now();
+
+        // Combine both
+        LocalDateTime dateTime = LocalDateTime.of(localDate, currentTime);
+        return Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     public static String formPrefixSuffix(String invoiceNumber) {

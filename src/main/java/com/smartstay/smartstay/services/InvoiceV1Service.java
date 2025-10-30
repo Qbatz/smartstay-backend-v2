@@ -389,11 +389,16 @@ public class InvoiceV1Service {
         return new ResponseEntity<>(invoicesResponse, HttpStatus.OK);
     }
 
-    public int recordPayment(String invoiceId, String status) {
+    public int recordPayment(String invoiceId, String status, double amount) {
         InvoicesV1 invoice = invoicesV1Repository.findById(invoiceId).orElse(null);
         if (invoice != null) {
+            double paidAmount = 0.0;
+            if (invoice.getPaidAmount() != null) {
+                paidAmount = invoice.getPaidAmount();
+            }
             invoice.setPaymentStatus(status);
             invoice.setUpdatedAt(new Date());
+            invoice.setPaidAmount(paidAmount + amount);
             invoice.setUpdatedBy(authentication.getName());
             invoicesV1Repository.save(invoice);
             return 1;
@@ -622,19 +627,22 @@ public class InvoiceV1Service {
             InvoiceItems invoiceItem = new InvoiceItems();
             String itemName = item.invoiceItem().trim().toUpperCase();
             if (itemName.equals("EB")) {
+                invoiceItem.setAmount(item.amount());
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
             } else if (itemName.equals("RENT") || itemName.equals("ROOM RENT")) {
+                invoiceItem.setAmount(invoiceAmount);
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
             }else if (itemName.equals("AMENITY")) {
+                invoiceItem.setAmount(item.amount());
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
             }else {
+                invoiceItem.setAmount(item.amount());
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
                 invoiceItem.setOtherItem(item.invoiceItem());
                 if (item.amount() != null) {
                     totalAmount += item.amount();
                 }
             }
-            invoiceItem.setAmount(item.amount());
             invoiceItem.setInvoice(invoicesV1);
             listInvoicesItems.add(invoiceItem);
         }
@@ -766,14 +774,16 @@ public class InvoiceV1Service {
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
                             .map(BillTemplateType::getInvoicePhoneNumber)
-                            .toString();
+                            .toList()
+                            .getFirst();
                 }
                 else {
                     hostelPhone = hostelTemplates.getTemplateTypes()
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
                             .map(BillTemplateType::getInvoicePhoneNumber)
-                            .toString();
+                            .toList()
+                            .getFirst();
                 }
 
             }
@@ -786,15 +796,17 @@ public class InvoiceV1Service {
                     hostelEmail = hostelTemplates.getTemplateTypes()
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
-                            .map(BillTemplateType::getInvoicePhoneNumber)
-                            .toString();
+                            .map(BillTemplateType::getInvoiceMailId)
+                            .toList()
+                            .getFirst();
                 }
                 else {
                     hostelEmail = hostelTemplates.getTemplateTypes()
                             .stream()
                             .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                            .map(BillTemplateType::getInvoicePhoneNumber)
-                            .toString();
+                            .map(BillTemplateType::getInvoiceMailId)
+                            .toList()
+                            .getFirst();
                 }
             }
 
@@ -805,14 +817,16 @@ public class InvoiceV1Service {
                         .getTemplateTypes()
                         .stream()
                         .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
-                        .findAny().get();
+                        .toList()
+                        .getFirst();
             }
             else {
                 templateType = hostelTemplates
                         .getTemplateTypes()
                         .stream()
                         .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                        .findAny().get();
+                        .toList()
+                        .getFirst();
             }
 
             if (!hostelTemplates.isSignatureCustomized()) {
@@ -999,15 +1013,17 @@ public class InvoiceV1Service {
         invoicesV1Repository.saveAll(unpaidUpdated);
     }
 
-    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices) {
+    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, String advanceInvoiceId) {
         List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customers.getCustomerId(), InvoiceType.SETTLEMENT.name());
         if (!invoicesV1.isEmpty()) {
             InvoicesV1 settlementInvoice = invoicesV1.get(0);
 
-            List<String> listUnpaidInvoicesId = unpaidInvoices
+            List<String> listUnpaidInvoicesId = new ArrayList<>(unpaidInvoices
                     .stream()
                     .map(InvoicesV1::getInvoiceId)
-                    .toList();
+                    .toList());
+            listUnpaidInvoicesId.add(advanceInvoiceId);
+
             settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
             settlementInvoice.setBasePrice(totalAmountToBePaid);
             settlementInvoice.setTotalAmount(totalAmountToBePaid);
@@ -1037,7 +1053,13 @@ public class InvoiceV1Service {
             settlementInvoice.setCgst(0.0);
             settlementInvoice.setSgst(0.0);
             settlementInvoice.setGst(0.0);
-            settlementInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+            if (totalAmountToBePaid > 0) {
+                settlementInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+            }
+            else {
+                settlementInvoice.setPaymentStatus(PaymentStatus.PENDING_REFUND.name());
+            }
+
             settlementInvoice.setOthersDescription(null);
             settlementInvoice.setInvoiceMode(InvoiceMode.MANUAL.name());
             settlementInvoice.setCancelled(false);
@@ -1293,85 +1315,40 @@ public class InvoiceV1Service {
 
         }
 
-        List<RefundableBanks> listBanks = bankingService.initializeRefund(refundableAmount, invoicesV1.getHostelId());
-        InitializeRefund refundInitializations = new InitializeRefund(refundableAmount,
+        CustomersBedHistory bedHistory = customersBedHistoryService.getLatestCustomerBed(invoicesV1.getCustomerId());
+        String bedName = null;
+        String floorName = null;
+        String roomName = null;
+        if (bedHistory != null) {
+            com.smartstay.smartstay.dto.beds.BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
+            if (bedDetails != null) {
+                bedName = bedDetails.getBedName();
+                floorName = bedDetails.getFloorName();
+                roomName = bedDetails.getRoomName();
+            }
+        }
+        List<RefundableBanks> listBanks = bankingService.initializeRefund(invoicesV1.getHostelId());
+        InitializeRefund refundInitializations = new InitializeRefund(
+                roomName,
+                floorName,
+                bedName,
+                refundableAmount,
                 listBanks);
         return new ResponseEntity<>(refundInitializations, HttpStatus.OK);
     }
 
-
-    public ResponseEntity<?> refundForInvoice(String hostelId, String invoiceId, RefundInvoice refundInvoice) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        Users users = usersService.findUserByUserId(authentication.getName());
-        if (users == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!Utils.checkNullOrEmpty(invoiceId)) {
-            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
-        }
-        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-        }
-        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.BAD_REQUEST);
-        }
-
-        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
-        if (invoicesV1 == null) {
-            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
-        }
-        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
-            return new ResponseEntity<>(Utils.REFUND_COMPLETED, HttpStatus.BAD_REQUEST);
-        }
-        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.CANCELLED.name())) {
-            return new ResponseEntity<>(Utils.CANNOT_REFUND_CANCELLED_INVOICE, HttpStatus.BAD_REQUEST);
-        }
-        if (!bankingService.checkBankExist(refundInvoice.bankId())) {
-            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
-        }
-
-        double refundableAmount = 0.0;
-        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
-            if (invoicesV1.getTotalAmount() != null && invoicesV1.getTotalAmount() < 0) {
-                refundableAmount = -(invoicesV1.getTotalAmount());
-            }
-            else {
-                return new ResponseEntity<>(Utils.CANNOT_INITIATE_REFUND, HttpStatus.BAD_REQUEST);
-            }
-        }
-        else {
-            BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
-            if (billingDates != null && billingDates.currentBillStartDate() != null) {
-                if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), billingDates.currentBillStartDate()) < 0) {
-                    return new ResponseEntity<>(Utils.CANNOT_REFUND_FOR_OLD_INVOICES, HttpStatus.BAD_REQUEST);
-                }
-            }
-
-            if (invoicesV1.getPaidAmount() != null && invoicesV1.getPaidAmount() > 0) {
-                refundableAmount = invoicesV1.getPaidAmount();
-            }
-            else {
-                return new ResponseEntity<>(Utils.CANNOT_REFUND_FOR_UNPAID_INVOICES, HttpStatus.BAD_REQUEST);
-            }
-        }
-
-        if (bankTransactionService.refundInvoice(invoicesV1, refundableAmount, refundInvoice)) {
-            creditDebitNoteService.refunInvoice(invoiceId, invoicesV1, refundableAmount, refundInvoice);
-        }
-        else {
-            return new ResponseEntity<>(Utils.INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);
-        }
-
-        invoicesV1.setPaymentStatus(PaymentStatus.REFUNDED.name());
-        invoicesV1.setInvoiceEndDate(new Date());
-        invoicesV1Repository.save(invoicesV1);
-        return new ResponseEntity<>(Utils.REFUND_PROCESSED_SUCCESSFULLY, HttpStatus.OK);
-    }
-
-
     public void saveInvoice(InvoicesV1 invoicesV1) {
         invoicesV1Repository.save(invoicesV1);
+    }
+
+    public InvoicesV1 getCurrentMonthRentInvoice(String customerId) {
+        return invoicesV1Repository.findLatestRentInvoiceByCustomerId(customerId);
+    }
+
+    public void cancelAdvanceInvoice(InvoicesV1 invAdvanceInvoice) {
+        if (!invAdvanceInvoice.isCancelled()) {
+            invAdvanceInvoice.setCancelled(true);
+        }
+        invoicesV1Repository.save(invAdvanceInvoice);
     }
 }

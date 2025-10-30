@@ -16,11 +16,16 @@ public class InvoiceMapper {
 
     public static InvoiceResponse toResponse(InvoicesV1 invoice, InvoicesV1Repository invoicesV1Repository) {
         Double paidAmount = invoicesV1Repository.findTotalPaidAmountByInvoiceId(invoice.getInvoiceId());
+        String paymentStatus = null;
+        if (invoice.getPaymentStatus() != null) {
+            paymentStatus = Utils.capitalize(PaymentStatus.valueOf(invoice.getPaymentStatus()).getDisplayName());
+        }
+
         return new InvoiceResponse(
                 invoice.getInvoiceId(),
                 invoice.getInvoiceNumber(),
                 Utils.capitalize(invoice.getInvoiceType()),
-                Utils.capitalize(PaymentStatus.valueOf(invoice.getPaymentStatus()).getDisplayName()),
+                paymentStatus,
                 invoice.getTotalAmount(),
                 invoice.getTotalAmount() - paidAmount,
                 paidAmount,

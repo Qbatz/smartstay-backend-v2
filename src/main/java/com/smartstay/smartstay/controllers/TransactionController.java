@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.services.TransactionService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -34,4 +35,10 @@ public class TransactionController {
     public ResponseEntity<?> getReceiptDetails(@PathVariable("hostelId") String hostelId, @PathVariable("transactionId") String transactionId) {
         return transactionService.getReceiptDetailsByTransactionId(hostelId, transactionId);
     }
+
+    @PostMapping("/refund/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> refunInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody @Valid RefundInvoice refundInvoice) {
+        return transactionService.refundForInvoice(hostelId, invoiceId, refundInvoice);
+    }
+
 }

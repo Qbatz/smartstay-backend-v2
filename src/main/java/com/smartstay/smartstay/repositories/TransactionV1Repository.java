@@ -26,6 +26,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
         @Query(value = """
                 SELECT invc.invoice_id as invoiceId, invc.invoice_number as invoiceNumber, 
                 invc.invoice_mode as invoiceMode, invc.invoice_type as invoiceType, transaction.status as paymentStatus, 
+                transaction.type as transactionType,
                 transaction.paid_amount as paidAmount, transaction.payment_date as paidAt, 
                 transaction.transaction_id as transactionId, customers.first_name as firstName, customers.last_name as lastName, 
                 transaction.reference_number as referenceNumber, transaction.bank_id as bankId, bank.bank_name as bankName, 
