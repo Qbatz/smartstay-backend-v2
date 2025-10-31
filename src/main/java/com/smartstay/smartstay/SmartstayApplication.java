@@ -29,9 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 @EnableScheduling
 public class SmartstayApplication {
 
-	@Autowired
-	TemplatesService templatesService;
-
 	public static void main(String[] args) {
 		SpringApplication.run(SmartstayApplication.class, args);
 	}
@@ -483,10 +480,10 @@ public class SmartstayApplication {
 //
 //
 //
-//			listFeatures.add(planFeatures31);
-//			listFeatures.add(planFeatures32);
-//			listFeatures.add(planFeatures33);
-//			listFeatures.add(planFeatures34);
+//			listFeatures31.add(planFeatures31);
+//			listFeatures31.add(planFeatures32);
+//			listFeatures31.add(planFeatures33);
+//			listFeatures31.add(planFeatures34);
 //
 //			planBasic.setFeaturesList(listFeatures31);
 //			listPlans.add(planAdvance);

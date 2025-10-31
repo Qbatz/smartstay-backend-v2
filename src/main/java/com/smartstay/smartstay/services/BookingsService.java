@@ -129,6 +129,10 @@ public class BookingsService {
         return bookingsRepository.findLatestBooking(bedId);
     }
 
+    public BookingsV1 checkOccupiedByBedId(Integer bedId) {
+        return bookingsRepository.findOccupiedDetails(bedId);
+    }
+
 //    public BookingsV1 saveBooking(BookingsV1 bookingsV1) {
 //
 //        return bookingsRepository.save(bookingsV1);
@@ -698,5 +702,9 @@ public class BookingsService {
         bookingsV1.setCustomerBedHistory(listCustomerBedHistory);
 
         bookingsRepository.save(bookingsV1);
+    }
+
+    public BookingsV1 getBookingInfoByBedId(Integer bedId) {
+        return bookingsRepository.findBookedDetails(bedId);
     }
 }

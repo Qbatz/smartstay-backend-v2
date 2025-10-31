@@ -17,6 +17,7 @@ import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.expenses.ExpenseList;
 import com.smartstay.smartstay.responses.expenses.InitializeExpenses;
 import com.smartstay.smartstay.util.Utils;
+import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -102,9 +103,13 @@ public class ExpenseService {
             }
         }
 
+        Integer count = 1;
+        if (!Utils.checkNullOrEmpty(expense.count())) {
+            count = expense.count();
+        }
         double unitPrice = 0.0;
         if (expense.totalAmount() != null) {
-            unitPrice = expense.totalAmount() / expense.count();
+            unitPrice = expense.totalAmount() / count;
         }
 
         ExpensesV1 expensesV1 = new ExpensesV1();
@@ -114,7 +119,7 @@ public class ExpenseService {
         expensesV1.setHostelId(hostelId);
         expensesV1.setBankId(expense.bankId());
         expensesV1.setUnitPrice(unitPrice);
-        expensesV1.setUnitCount(expense.count());
+        expensesV1.setUnitCount(count);
         expensesV1.setTotalPrice(expense.totalAmount());
         expensesV1.setExpenseNumber(generateExpenseNumber(hostelId));
 

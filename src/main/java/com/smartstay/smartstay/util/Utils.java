@@ -138,6 +138,7 @@ public class Utils {
     public static final String FINAL_SETTLEMENT_NOT_GENERATED = "Final settlement is pending";
     public static final String FINAL_SETTLEMENT_NOT_PAID = "Final Settlement is not fully paid";
     public static final String CHANGE_BED_SAME_BED_ERROR = "Customer is currently staying on the same bed";
+    public static final String CANNOT_MAKE_PAYMENT_CANCELLED_INVOICES = "Cannot make the payments for cancelled invoices";
     public static final String CHANGE_BED_SAME_DAY_ERROR = "Cannot change the bed on the same day customer is joined";
     public static final String CUSTOMER_VERIFIED_KYC = "Customer is already verified";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
@@ -478,6 +479,10 @@ public class Utils {
 
     public static Double roundOfMax(double number) {
         return Math.ceil(number);
+    }
+
+    public static Double roundOfDouble(double number) {
+        return Math.round(number * 100.0)/100.0;
     }
 
     public static Date convertToTimeStamp(Date date) {

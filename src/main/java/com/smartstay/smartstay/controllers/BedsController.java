@@ -28,7 +28,7 @@ public class BedsController {
 
     @GetMapping("/{bedId}")
     public ResponseEntity<?> getBedById(@PathVariable("bedId") int bedId) {
-        return bedsService.getBedById(bedId);
+        return bedsService.getBedByIdNew(bedId);
     }
 
     @PostMapping("")

@@ -36,12 +36,10 @@ public class CustomersController {
     public ResponseEntity<?> createCustomer(@PathVariable("customerId") String customerId, @Valid @RequestBody CheckInRequest payloads) {
         return customersService.addCheckIn(customerId, payloads);
     }
-
     @PostMapping("/save/{hostelId}")
     public ResponseEntity<?> addCustomer(@PathVariable("hostelId") String hostelId, @Valid @RequestPart(value = "payloads") AddCustomerPartialInfo customerInfo, @RequestPart(value = "profilePic", required = false) MultipartFile file) {
         return customersService.addCustomerPartialInfo(hostelId, customerInfo, file);
     }
-
     @PutMapping("/update/{customerId}")
     public ResponseEntity<?> updateCustomerInfo(@PathVariable("customerId") String customerId, @RequestPart(value = "payloads", required = false) UpdateCustomerInfo updateInfo, @RequestPart(value = "profilePic", required = false) MultipartFile file) {
         return customersService.updateCustomerInfo(customerId, updateInfo, file);
