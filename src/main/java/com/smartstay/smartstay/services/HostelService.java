@@ -654,11 +654,15 @@ public class HostelService {
             billStartDate = billRules.startDate();
             Calendar cal = Calendar.getInstance();
             cal.set(Calendar.DAY_OF_MONTH, billRules.startDate());
-            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
 
             Calendar lastBillingRuleCal = Calendar.getInstance();
             lastBillingRuleCal.set(Calendar.DAY_OF_MONTH, latestBillingRules.getBillingStartDate());
-            lastBillingRuleCal.set(Calendar.MONTH, lastBillingRuleCal.get(Calendar.MONTH) + 1);
+
+            if (Utils.compareWithTwoDates(cal.getTime(), new Date()) >= 0) {
+                cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                lastBillingRuleCal.set(Calendar.MONTH, lastBillingRuleCal.get(Calendar.MONTH) + 1);
+            }
+
 
             Calendar calEndDate = Calendar.getInstance();
             calEndDate.setTime(cal.getTime());

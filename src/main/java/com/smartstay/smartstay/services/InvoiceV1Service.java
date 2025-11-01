@@ -683,7 +683,10 @@ public class InvoiceV1Service {
     }
 
     public List<InvoicesV1> listAllUnpaidInvoices(String customerId, String hostelId) {
-        return invoicesV1Repository.findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCaseAndIsCancelledFalse(hostelId, customerId, PaymentStatus.PAID.name());
+        return invoicesV1Repository.findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCaseAndIsCancelledFalse(hostelId, customerId, PaymentStatus.PAID.name())
+                .stream()
+                .filter(i -> !i.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name()))
+                .toList();
     }
 
     public InvoicesV1 getCurrentMonthInvoice(String customerId) {

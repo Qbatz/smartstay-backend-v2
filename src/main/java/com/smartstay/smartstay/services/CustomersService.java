@@ -1541,10 +1541,12 @@ public class CustomersService {
             invAdvanceInvoice = invoiceService.getAdvanceInvoiceDetails(customerId, customers.getHostelId());
 //            advanceInvoice = new ArrayList<>();
 //            advanceInvoice.add(invoiceService.getAdvanceInvoiceDetails(customerId, customers.getHostelId()));
-            Double paidAmount = transactionService.getAdvancePaidAmount(invAdvanceInvoice.getInvoiceId());
-            if (paidAmount > 0 && invAdvanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-                isAdvancePaid = true;
-                advancePaidAmount = paidAmount;
+            if (invAdvanceInvoice != null) {
+                Double paidAmount = transactionService.getAdvancePaidAmount(invAdvanceInvoice.getInvoiceId());
+                if (paidAmount > 0 && invAdvanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                    isAdvancePaid = true;
+                    advancePaidAmount = paidAmount;
+                }
             }
         }
 
@@ -1598,10 +1600,13 @@ public class CustomersService {
         totalAmountToBePaid = Utils.roundOfMax(totalAmountToBePaid);
 
         invoiceService.cancelActiveInvoice(unpaidUpdated);
-        invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, invAdvanceInvoice.getInvoiceId());
+        if (invAdvanceInvoice != null) {
+            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, invAdvanceInvoice.getInvoiceId());
 
-        customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
-        customersRepository.save(customers);
+            customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
+            customersRepository.save(customers);
+        }
+
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
