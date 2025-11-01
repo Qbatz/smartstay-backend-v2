@@ -7,6 +7,7 @@ import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
+import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
@@ -706,5 +707,9 @@ public class BookingsService {
 
     public BookingsV1 getBookingInfoByBedId(Integer bedId) {
         return bookingsRepository.findBookedDetails(bedId);
+    }
+
+    public List<BedBookingStatus> getBookingDetailsByBedIds(List<Integer> listBedId) {
+        return bookingsRepository.findByBedBookingStatus(listBedId);
     }
 }

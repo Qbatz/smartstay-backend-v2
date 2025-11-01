@@ -23,7 +23,7 @@ public class BedsController {
 
     @GetMapping("/all-beds/{roomId}")
     public ResponseEntity<?> getAllBeds(@PathVariable("roomId") int roomId) {
-        return bedsService.getAllBeds(roomId);
+        return bedsService.getAllBedsNew(roomId);
     }
 
     @GetMapping("/{bedId}")

@@ -22,12 +22,8 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
     com.smartstay.smartstay.dao.Beds findByBedIdAndRoomIdAndHostelId(int bedId, int RoomId, String hostelId);
 
     List<com.smartstay.smartstay.dao.Beds> findByHostelId(String hostelId);
-
-
     @Query("SELECT COUNT(b) FROM Beds b WHERE b.bedName = :bedName AND b.roomId = :roomId AND b.hostelId = :hostelId AND b.parentId = :parentId AND b.isDeleted = false")
     int countByBedNameAndRoomAndHostelAndParent(@Param("bedName") String bedName, @Param("roomId") Integer roomId, @Param("hostelId") String hostelId, @Param("parentId") String parentId);
-
-
     @Query("SELECT COUNT(b) FROM Beds b WHERE b.bedName = :bedName AND b.bedId != :bedId AND b.roomId = :roomId AND b.isDeleted = false")
     int countByBedNameAndBedId(@Param("bedName") String bedName, @Param("roomId") Integer bedId, @Param("roomId") Integer roomId);
 
@@ -114,11 +110,16 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
             """, nativeQuery = true)
     BedDetails findByBedId(@Param("bedId") Integer bedId);
 
-
     @Query("SELECT b.roomId AS roomId, r.floorId AS floorId " +
             "FROM Beds b JOIN Rooms r ON b.roomId = r.roomId " +
             "WHERE b.bedId = :bedId AND b.hostelId = :hostelId")
     BedRoomFloor findRoomAndFloorByBedIdAndHostelId(@Param("bedId") Integer bedId,
                                                     @Param("hostelId") String hostelId);
+    @Query(value = """
+            SELECT bed.bed_id as bedId, flrs.floor_name as floorName, rms.room_name as roomName, 
+            flrs.floor_id as floorId, rms.room_id as roomId FROM beds bed LEFT OUTER JOIN rooms rms on rms.room_id=bed.room_id 
+            LEFT OUTER JOIN floors flrs on flrs.floor_id=rms.floor_id where bed.bed_id in (:listBedIds)
+            """, nativeQuery = true)
+    List<FloorNameRoomName> getBedNameRoomName(@Param("listBedIds") List<Integer> listBedIds);
 
 }

@@ -2,6 +2,7 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dto.Bookings;
+import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
@@ -106,5 +107,10 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             @Param("customerId") String customerId,
             @Param("expectedJoiningDate") Date expectedJoiningDate
     );
+    @Query(value = """
+            SELECT bed_id as bedId, current_status as currentStatus, joining_date as joiningDate, 
+            leaving_date as leavingDate FROM bookingsv1 where current_status in ('BOOKED', 'NOTICE', 'CHECKIN') and bed_id in (:listBedIds)
+            """, nativeQuery = true)
+    List<BedBookingStatus> findByBedBookingStatus(List<Integer> listBedIds);
 
 }

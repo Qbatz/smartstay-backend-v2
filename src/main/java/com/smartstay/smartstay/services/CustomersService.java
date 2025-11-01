@@ -840,7 +840,7 @@ public class CustomersService {
         }
 
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
-        if (Utils.compareWithTwoDates(requestDate, billingDates.currentBillStartDate()) < 0) {
+        if (Utils.compareWithTwoDates(checkoutDate, billingDates.currentBillStartDate()) < 0) {
             return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
         }
 

@@ -560,10 +560,11 @@ public class InvoiceV1Service {
         Calendar cal = Calendar.getInstance();
         cal.setTime(invoiceDate);
         cal.set(Calendar.DAY_OF_MONTH, day);
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), new Date());
 
-        boolean isCurrentCycle = false;
-        if (Utils.compareWithTwoDates(invoiceDate, cal.getTime()) >= 0) {
-            isCurrentCycle = true;
+        boolean isCurrentCycle = true;
+        if (Utils.compareWithTwoDates(invoiceDate, billingDates.currentBillStartDate()) < 0) {
+            isCurrentCycle = false;
         }
 
         dateStartDate = cal.getTime();
@@ -660,7 +661,12 @@ public class InvoiceV1Service {
         invoicesV1.setCgst(0.0);
         invoicesV1.setSgst(0.0);
         invoicesV1.setGstPercentile(0.0);
-        invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+        if (isCurrentCycle) {
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        }
+        else {
+            invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+        }
         invoicesV1.setPaidAmount(totalAmount);
         invoicesV1.setOthersDescription("");
         invoicesV1.setInvoiceMode(InvoiceMode.MANUAL.name());

@@ -393,7 +393,7 @@ public class SmartstayApplication {
 //			Plans planBasic = new Plans();
 //			planBasic.setPlanName("Basic");
 //			planBasic.setDuration(28l);
-//			planBasic.setPrice(0.0);
+//			planBasic.setPrice(10.0);
 //			planBasic.setDiscounts(0.0);
 //			planBasic.setPlanType(PlanType.BASIC.name());
 //			planBasic.setPlanCode(planCode3);
@@ -443,7 +443,7 @@ public class SmartstayApplication {
 //			Plans planAdvance = new Plans();
 //			planAdvance.setPlanName("Advance");
 //			planAdvance.setDuration(28l);
-//			planAdvance.setPrice(0.0);
+//			planAdvance.setPrice(20.0);
 //			planAdvance.setDiscounts(0.0);
 //			planAdvance.setPlanType(PlanType.ADVANCED.name());
 //			planAdvance.setPlanCode(planCode2);

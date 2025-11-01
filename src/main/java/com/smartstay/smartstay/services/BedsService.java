@@ -7,14 +7,13 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.beds.BedInformations;
+import com.smartstay.smartstay.dto.beds.FloorNameRoomName;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
-import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
+import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.BookingStatus;
-import com.smartstay.smartstay.ennum.CustomersBedType;
 import com.smartstay.smartstay.payloads.beds.AddBed;
-import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.beds.BedDetails;
@@ -29,7 +28,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -38,10 +36,8 @@ public class BedsService {
 
     @Autowired
     RolesRepository rolesRepository;
-
     @Autowired
     BedsRepository bedsRepository;
-
     @Autowired
     RoomRepository roomRepository;
     @Autowired
@@ -54,6 +50,8 @@ public class BedsService {
     private BookingsService bookingService;
     @Autowired
     private UserHostelService userHostelService;
+    @Autowired
+    private RoomsService roomsService;
     private CustomersService customersService;
     @Autowired
     private BankingService bankingService;
@@ -77,10 +75,38 @@ public class BedsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId, user.getParentId());
+        List<Integer> listBedId = listBeds
+                .stream()
+                .map(Beds::getBedId)
+                .toList();
+        List<FloorNameRoomName> nameMapping = bedsRepository.getBedNameRoomName(listBedId);
 
-        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> {
-            return new BedsMapper().apply(item);
-        }).toList();
+        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper(nameMapping, null).apply(item)).toList();
+        return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllBedsNew(int roomId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
+        if (rolesV1 == null) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId, user.getParentId());
+        List<Integer> listBedId = listBeds
+                .stream()
+                .map(Beds::getBedId)
+                .toList();
+        List<FloorNameRoomName> nameMapping = bedsRepository.getBedNameRoomName(listBedId);
+        List<BedBookingStatus> bedsCurrentStatus = bookingService.getBookingDetailsByBedIds(listBedId);
+
+        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper(nameMapping, bedsCurrentStatus).apply(item)).toList();
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
 
