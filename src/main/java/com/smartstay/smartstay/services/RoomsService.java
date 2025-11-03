@@ -27,13 +27,10 @@ public class RoomsService {
 
     @Autowired
     RolesRepository rolesRepository;
-
     @Autowired
     HostelV1Repository hostelV1Repository;
-
     @Autowired
     FloorRepository floorRepository;
-
     @Autowired
     RoomRepository roomRepository;
     @Autowired

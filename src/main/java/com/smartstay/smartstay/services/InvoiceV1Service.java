@@ -137,9 +137,9 @@ public class InvoiceV1Service {
             }
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Utils.USER_INPUT_DATE_FORMAT);
-            LocalDate joiningDate1 = LocalDate.parse(joiningDate.replace("/", "-"), formatter);
-            LocalDate dueDate = joiningDate1.plusDays(5);
-            Date endDate = Utils.findLastDate(startDay, Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+            Date joiningDate1 = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            Date dueDate = Utils.addDaysToDate(joiningDate1, 5);
+            Date endDate = Utils.findLastDate(startDay, joiningDate1);
 
             invoicesV1.setTotalAmount(amount);
             invoicesV1.setBasePrice(baseAmount);
@@ -152,13 +152,13 @@ public class InvoiceV1Service {
             invoicesV1.setCgst(cgst);
             invoicesV1.setSgst(sgst);
             invoicesV1.setGstPercentile(gstPercentile);
-            invoicesV1.setInvoiceDueDate(java.sql.Date.valueOf(dueDate));
+            invoicesV1.setInvoiceDueDate(dueDate);
             invoicesV1.setCustomerMobile(customerMobile);
             invoicesV1.setCustomerMailId(customerMailId);
             invoicesV1.setCreatedAt(new Date());
-            invoicesV1.setInvoiceStartDate(java.sql.Date.valueOf(joiningDate1));
-            invoicesV1.setInvoiceEndDate(endDate);
-            invoicesV1.setInvoiceGeneratedDate(java.sql.Date.valueOf(joiningDate1));
+            invoicesV1.setInvoiceStartDate(Utils.convertToTimeStamp(joiningDate1));
+            invoicesV1.setInvoiceEndDate(Utils.convertToTimeStamp(endDate));
+            invoicesV1.setInvoiceGeneratedDate(Utils.convertToTimeStamp(joiningDate1));
             invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
             invoicesV1.setCancelled(false);
             invoicesV1.setHostelId(hostelId);
@@ -560,10 +560,11 @@ public class InvoiceV1Service {
         Calendar cal = Calendar.getInstance();
         cal.setTime(invoiceDate);
         cal.set(Calendar.DAY_OF_MONTH, day);
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), new Date());
 
-        boolean isCurrentCycle = false;
-        if (Utils.compareWithTwoDates(invoiceDate, cal.getTime()) >= 0) {
-            isCurrentCycle = true;
+        boolean isCurrentCycle = true;
+        if (Utils.compareWithTwoDates(invoiceDate, billingDates.currentBillStartDate()) < 0) {
+            isCurrentCycle = false;
         }
 
         dateStartDate = cal.getTime();
@@ -660,14 +661,20 @@ public class InvoiceV1Service {
         invoicesV1.setCgst(0.0);
         invoicesV1.setSgst(0.0);
         invoicesV1.setGstPercentile(0.0);
-        invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+        if (isCurrentCycle) {
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        }
+        else {
+            invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+        }
+        invoicesV1.setPaidAmount(totalAmount);
         invoicesV1.setOthersDescription("");
         invoicesV1.setInvoiceMode(InvoiceMode.MANUAL.name());
         invoicesV1.setCreatedBy(authentication.getName());
         invoicesV1.setInvoiceGeneratedDate(new Date());
-        invoicesV1.setInvoiceStartDate(invoiceStartDate);
-        invoicesV1.setInvoiceDueDate(invoiceDueDate);
-        invoicesV1.setInvoiceEndDate(invoiceEndDate);
+        invoicesV1.setInvoiceStartDate(Utils.convertToTimeStamp(invoiceStartDate));
+        invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(invoiceDueDate));
+        invoicesV1.setInvoiceEndDate(Utils.convertToTimeStamp(invoiceEndDate));
         invoicesV1.setCancelled(false);
 
         invoicesV1.setInvoiceItems(listInvoicesItems);
@@ -682,7 +689,10 @@ public class InvoiceV1Service {
     }
 
     public List<InvoicesV1> listAllUnpaidInvoices(String customerId, String hostelId) {
-        return invoicesV1Repository.findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCaseAndIsCancelledFalse(hostelId, customerId, PaymentStatus.PAID.name());
+        return invoicesV1Repository.findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCaseAndIsCancelledFalse(hostelId, customerId, PaymentStatus.PAID.name())
+                .stream()
+                .filter(i -> !i.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name()))
+                .toList();
     }
 
     public InvoicesV1 getCurrentMonthInvoice(String customerId) {
@@ -1086,12 +1096,18 @@ public class InvoiceV1Service {
             invoiceNumber = new StringBuilder();
             invoiceNumber.append(templates.prefix());
 
-            String[] suffix = existingV1.getInvoiceNumber().split("-");
-            if (suffix.length > 1) {
-                invoiceNumber.append("-");
-                int suff = Integer.parseInt(suffix[1]) + 1;
-                invoiceNumber.append(String.format("%03d", suff));
+            if (existingV1 == null) {
+                invoiceNumber.append("INV-001");
             }
+            else {
+                String[] suffix = existingV1.getInvoiceNumber().split("-");
+                if (suffix.length > 1) {
+                    invoiceNumber.append("-");
+                    int suff = Integer.parseInt(suffix[1]) + 1;
+                    invoiceNumber.append(String.format("%03d", suff));
+                }
+            }
+
         }
         else {
             invoiceNumber.append("INV");
@@ -1351,4 +1367,5 @@ public class InvoiceV1Service {
         }
         invoicesV1Repository.save(invAdvanceInvoice);
     }
+
 }

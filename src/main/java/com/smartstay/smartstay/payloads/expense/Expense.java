@@ -13,8 +13,6 @@ public record Expense(
         @NotEmpty(message = "Purchase date is required")
         @NotNull(message = "Purchase date is required")
         String purchaseDate,
-        @NotNull(message = "Count is required")
-        @Positive(message = "Count is required")
         Integer count,
         @NotNull(message = "Total amount required")
         @Positive(message = "Total amount required")

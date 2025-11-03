@@ -94,5 +94,6 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     boolean existsByMobileAndHostelIdAndStatusesNotIn(@Param("mobile") String mobile,
                                                       @Param("hostelId") String hostelId,
                                                       @Param("statuses") List<String> statuses);
+    List<Customers> findByCustomerIdIn(List<String> customerId);
 
 }

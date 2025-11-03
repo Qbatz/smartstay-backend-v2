@@ -2,6 +2,7 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dto.Bookings;
+import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
@@ -24,6 +25,15 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
     @Query(value = "SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('NOTICE', 'VACATED', 'TERMINATED', 'CANCELLED') ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
     BookingsV1 findCheckingOutDetails(@Param("bedId") int bedId);
+
+    @Query(value = """
+            SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('CHECKIN', 'NOTICE')
+            """, nativeQuery = true)
+    BookingsV1 findOccupiedDetails(@Param("bedId") Integer bedId);
+    @Query(value = """
+            SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('BOOKED')
+            """, nativeQuery = true)
+    BookingsV1 findBookedDetails(@Param("bedId") Integer bedId);
 
     BookingsV1 findByCustomerId(@Param("customerId") String customerId);
 
@@ -97,5 +107,10 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             @Param("customerId") String customerId,
             @Param("expectedJoiningDate") Date expectedJoiningDate
     );
+    @Query(value = """
+            SELECT bed_id as bedId, current_status as currentStatus, joining_date as joiningDate, 
+            leaving_date as leavingDate FROM bookingsv1 where current_status in ('BOOKED', 'NOTICE', 'CHECKIN') and bed_id in (:listBedIds)
+            """, nativeQuery = true)
+    List<BedBookingStatus> findByBedBookingStatus(List<Integer> listBedIds);
 
 }

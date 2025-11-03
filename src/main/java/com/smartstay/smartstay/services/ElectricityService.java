@@ -181,7 +181,11 @@ public class ElectricityService {
                     return new ResponseEntity<>(Utils.ALREADY_READING_TAKEN_THIS_DATE, HttpStatus.BAD_REQUEST);
                 }
 
-                billStartDate = currentReadings.getEntryDate();
+                Calendar calBillStart = Calendar.getInstance();
+                calBillStart.setTime(currentReadings.getEntryDate());
+                calBillStart.set(Calendar.DAY_OF_MONTH, calBillStart.get(Calendar.DAY_OF_MONTH) + 1);
+
+                billStartDate = calBillStart.getTime();
 
             }
 
@@ -191,7 +195,7 @@ public class ElectricityService {
                     Calendar startDate = Calendar.getInstance();
 
                     startDate.setTime(date);
-                    startDate.set(Calendar.DAY_OF_MONTH, startDate.get(Calendar.DAY_OF_MONTH) -1);
+                    startDate.set(Calendar.DAY_OF_MONTH, startDate.get(Calendar.DAY_OF_MONTH) - 1);
                     startDate.set(Calendar.DAY_OF_MONTH, electricityConfig.getBillDate());
 
                     billStartDate = startDate.getTime();
@@ -333,7 +337,7 @@ public class ElectricityService {
 
                 Calendar cal = Calendar.getInstance();
                 cal.setTime(currentReadings.getEntryDate());
-                cal.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH) + 1);
+                cal.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH));
 
                 startDate = cal.getTime();
             }

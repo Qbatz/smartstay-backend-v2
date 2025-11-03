@@ -14,16 +14,12 @@ import java.util.List;
 public interface RoomRepository extends JpaRepository<Rooms,Integer> {
 
     List<Rooms> findAllByFloorId(int floorId);
-
     List<Rooms> findAllByFloorIdAndParentIdAndIsDeletedFalse(int floorId, String parentId);
-
-
     Rooms findByRoomId(int roomId);
     Rooms findByRoomIdAndHostelId(Integer roomI, String hostelId);
     Rooms findByRoomIdAndParentId(int roomId,String parentId);
     Rooms findByRoomIdAndParentIdAndHostelId(int roomId, String parentId, String hostelId);
     Rooms findByRoomIdAndParentIdAndHostelIdAndFloorId(int roomId, String parentId, String hostelId,int floorId);
-
     @Query(value = """
     SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM rooms rm
     INNER JOIN floors fl ON rm.floor_id = fl.floor_id
@@ -32,25 +28,17 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
     int checkRoomExistInTable(@Param("roomId") int roomId,
                               @Param("parentId") String parentId,
                               @Param("hostelId") String hostelId);
-
-
     Rooms findByRoomIdAndFloorId(int roomId,int floorId);
-
-
     @Query("SELECT COUNT(r) FROM Rooms r WHERE r.roomName = :roomName AND r.floorId = :floorId AND r.hostelId = :hostelId AND r.parentId = :parentId AND r.isDeleted = false")
     int countByRoomNameAndRoomAndHostelAndParent(@Param("roomName") String roomName,
                                                 @Param("floorId") Integer floorId,
                                                 @Param("hostelId") String hostelId,
                                                 @Param("parentId") String parentId);
-
     @Query("SELECT COUNT(r) FROM Rooms r WHERE r.roomName = :roomName AND r.roomId != :roomId AND r.floorId = :floorId AND r.isDeleted = false")
     int countByRoomNameAndRoomId(@Param("roomName") String roomName,
                                @Param("floorId") Integer floorId,@Param("roomId") Integer roomId);
-
-
     @Query("SELECT count(r) FROM Rooms r where r.hostelId=:hostelId and r.isActive=true and r.isDeleted=false")
     int getCountOfRoomsBasedOnHostel(@Param("hostelId") String hostelId);
-
     @Query(value = """
             SELECT rms.floor_id as floorId, rms.room_id as roomId, rms.room_name as roomName, flrs.floor_name as floorName, 
             flrs.hostel_id as hostelId, (SELECT count(booking_id) FROM bookingsv1 WHERE room_id=rms.room_id and current_status in ('NOTICE', 'CHECKIN'))  as noOfTenants 
@@ -67,7 +55,6 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
             WHERE rms.hostel_id=:hostelId and rms.is_active=true and rms.is_deleted=false
             """, nativeQuery = true)
     List<RoomInfoForEB> getAllRoomsForEb(@Param("hostelId") String hostelId);
-
     @Query(value = """
            SELECT rms.floor_id as floorId, rms.room_id as roomId, rms.room_name as roomName, 
            flrs.floor_name as floorName, rms.hostel_id as hostelId, 
@@ -76,11 +63,9 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
            where rms.hostel_id=:hostelId and rms.is_active=true and rms.is_deleted=false;
             """, nativeQuery = true)
     List<RoomInfoForEB> getAllRoomsByHostelForEB(@Param("hostelId") String hostelId);
-
     @Query(value = """
             SELECT rms.room_id as roomId, rms.room_name as roomName, flr.floor_id as floorId, flr.floor_name as floorName FROM rooms rms inner join floors flr on flr.floor_id=rms.floor_id where rms.room_id=:roomId
             """, nativeQuery = true)
     RoomInfo getRoomInfo(@Param("roomId") Integer roomId);
-
 
 }

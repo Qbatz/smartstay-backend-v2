@@ -1,11 +1,14 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.plans.PlanListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.Modules;
 import com.smartstay.smartstay.dao.Subscription;
 import com.smartstay.smartstay.dao.Plans;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.PlanType;
 import com.smartstay.smartstay.repositories.SubscriptionRepository;
+import com.smartstay.smartstay.responses.plans.PlansList;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -13,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class SubscriptionService {
@@ -23,9 +27,11 @@ public class SubscriptionService {
     @Autowired
     private UsersService usersService;
     @Autowired
+    private UserHostelService userHostelService;
+    @Autowired
     private RolesService rolesService;
     @Autowired
-    private SubscriptionRepository planHistoryRepository;
+    private SubscriptionRepository subscriptionRepository;
 
     public void addHostel(String hostelId, Date joiningDate) {
         if (!authentication.isAuthenticated()) {
@@ -48,11 +54,12 @@ public class SubscriptionService {
         history.setActivatedAt(new Date());
         history.setCreatedAt(new Date());
 
-        planHistoryRepository.save(history);
+        subscriptionRepository.save(history);
 
     }
 
-    public ResponseEntity<?> getAllPlans() {
+
+    public ResponseEntity<?> getCurrentPlan(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -60,7 +67,24 @@ public class SubscriptionService {
         if (users == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-//        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE))
-        return null;
+        if (!userHostelService.checkHostelAccess(users.getUserId(),hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+
+        Subscription subscription = subscriptionRepository.findByHostelId(hostelId);
+        if (subscription == null) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+
+        com.smartstay.smartstay.responses.subscriptions.Subscription subscription1 = new com.smartstay.smartstay.responses.subscriptions.Subscription(
+                subscription.getSubscriptionId(),
+                 Utils.dateToString(subscription.getPlanStartsAt()),
+                Utils.dateToString(subscription.getPlanEndsAt()),
+                subscription.getSubscriptionNumber(),
+                subscription.getPlanName(),
+                subscription.getPlanCode());
+
+        return new ResponseEntity<>(subscription1, HttpStatus.OK);
+
     }
 }

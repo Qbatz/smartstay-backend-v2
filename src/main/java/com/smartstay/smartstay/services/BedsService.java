@@ -6,14 +6,14 @@ import com.smartstay.smartstay.Wrappers.FreeBedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
+import com.smartstay.smartstay.dto.beds.BedInformations;
+import com.smartstay.smartstay.dto.beds.FloorNameRoomName;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
-import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
+import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.BookingStatus;
-import com.smartstay.smartstay.ennum.CustomersBedType;
 import com.smartstay.smartstay.payloads.beds.AddBed;
-import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.beds.BedDetails;
@@ -22,11 +22,12 @@ import com.smartstay.smartstay.responses.beds.BedsStatusCount;
 import com.smartstay.smartstay.responses.customer.InitializeBooking;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -35,10 +36,8 @@ public class BedsService {
 
     @Autowired
     RolesRepository rolesRepository;
-
     @Autowired
     BedsRepository bedsRepository;
-
     @Autowired
     RoomRepository roomRepository;
     @Autowired
@@ -47,15 +46,20 @@ public class BedsService {
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
-
     @Autowired
     private BookingsService bookingService;
-
     @Autowired
     private UserHostelService userHostelService;
-
+    @Autowired
+    private RoomsService roomsService;
+    private CustomersService customersService;
     @Autowired
     private BankingService bankingService;
+
+    @Autowired
+    public void setCustomersService(@Lazy CustomersService customersService) {
+        this.customersService = customersService;
+    }
 
     public ResponseEntity<?> getAllBeds(int roomId) {
         if (!authentication.isAuthenticated()) {
@@ -71,10 +75,38 @@ public class BedsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId, user.getParentId());
+        List<Integer> listBedId = listBeds
+                .stream()
+                .map(Beds::getBedId)
+                .toList();
+        List<FloorNameRoomName> nameMapping = bedsRepository.getBedNameRoomName(listBedId);
 
-        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> {
-            return new BedsMapper().apply(item);
-        }).toList();
+        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper(nameMapping, null).apply(item)).toList();
+        return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllBedsNew(int roomId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
+        if (rolesV1 == null) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId, user.getParentId());
+        List<Integer> listBedId = listBeds
+                .stream()
+                .map(Beds::getBedId)
+                .toList();
+        List<FloorNameRoomName> nameMapping = bedsRepository.getBedNameRoomName(listBedId);
+        List<BedBookingStatus> bedsCurrentStatus = bookingService.getBookingDetailsByBedIds(listBedId);
+
+        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper(nameMapping, bedsCurrentStatus).apply(item)).toList();
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
 
@@ -109,6 +141,216 @@ public class BedsService {
         } else {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
+
+
+    }
+
+    public ResponseEntity<?> getBedByIdNew(Integer id) {
+        if (id == null || id == 0) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
+        }
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        Beds beds = bedsRepository.findById(id).orElse(null);
+        if (beds == null) {
+            return new ResponseEntity<>(Utils.INVALID_BED_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), beds.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        BedInformations bedInformations = bedsRepository.getBedInformation(beds.getBedId());
+
+
+        boolean isOccupied = false;
+        boolean onNotice = false;
+        boolean hasBooking = false;
+        String freeFrom = null;
+        String bookingId = null;
+        Integer floorId = 0;
+        String floorName = null;
+        String roomName = null;
+        Integer roomId = 0;
+
+        if (bedInformations != null) {
+            floorId = bedInformations.floorId();
+            floorName = bedInformations.floorName();
+            roomName = bedInformations.roomName();
+            roomId = bedInformations.roomId();
+        }
+
+        String newTenantFirstName = null;
+        String newTenantLastName = null;
+        String newTenantFullName = null;
+        String newTenantInitials = null;
+        String newTenantrofilePic = null;
+        String newTenantCustomerId;
+        String newTenantMobile = null;
+        String newTenantJoiningDate = null;
+
+        String oldTenantCustomerId;
+        String oldTenantFullName = null;
+        String oldTenantFirstName = null;
+        String oldTenantLastName = null;
+        String oldTenantInitials = null;
+        String oldTenantProfilePic = null;
+        String oldTenantMobile = null;
+        String oldTenantJoiningDate = null;
+        String oldTenantLeavingDate = null;
+        Double currentRent = 0.0;
+
+        ArrayList<String> customerIds = new ArrayList<>();
+
+        if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) || beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+            isOccupied = true;
+            BookingsV1 bookingsV1 = bookingService.checkOccupiedByBedId(beds.getBedId());
+            if (bookingsV1 != null) {
+                customerIds.add(bookingsV1.getCustomerId());
+
+                currentRent = bookingsV1.getRentAmount();
+                oldTenantJoiningDate = Utils.dateToString(bookingsV1.getJoiningDate());
+                oldTenantCustomerId = bookingsV1.getCustomerId();
+                oldTenantLeavingDate = Utils.dateToString(bookingsV1.getLeavingDate());
+
+                if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
+                    onNotice = true;
+                    freeFrom = Utils.dateToString(bookingsV1.getLeavingDate());
+                }
+            } else {
+                oldTenantCustomerId = null;
+            }
+        } else {
+            oldTenantCustomerId = null;
+        }
+        if (beds.isBooked()) {
+            hasBooking = true;
+            BookingsV1 bookingsV1 = bookingService.getBookingInfoByBedId(beds.getBedId());
+            if (bookingsV1 != null) {
+                customerIds.add(bookingsV1.getCustomerId());
+                newTenantJoiningDate = Utils.dateToString(bookingsV1.getJoiningDate());
+                newTenantCustomerId = bookingsV1.getCustomerId();
+            } else {
+                newTenantCustomerId = null;
+            }
+        } else {
+            newTenantCustomerId = null;
+        }
+
+        if (!customerIds.isEmpty()) {
+            List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+            if (listCustomers != null && !listCustomers.isEmpty()) {
+                if (oldTenantCustomerId != null) {
+                    Customers currentCustomer = listCustomers
+                            .stream()
+                            .filter(i -> i.getCustomerId().equalsIgnoreCase(oldTenantCustomerId))
+                            .findFirst()
+                            .orElse(null);
+                    if (currentCustomer != null) {
+                        StringBuilder fullName = new StringBuilder();
+                        StringBuilder initials = new StringBuilder();
+                        oldTenantFirstName = currentCustomer.getFirstName();
+                        oldTenantLastName = currentCustomer.getLastName();
+                        if (currentCustomer.getFirstName() != null) {
+                            fullName.append(currentCustomer.getFirstName());
+                            initials.append(currentCustomer.getFirstName().toUpperCase().charAt(0));
+                        }
+                        if (currentCustomer.getLastName() != null && !currentCustomer.getLastName().trim().equalsIgnoreCase("")) {
+                            fullName.append(" ");
+                            fullName.append(currentCustomer.getLastName());
+                            initials.append(currentCustomer.getLastName().toUpperCase().charAt(0));
+                        }
+                        else {
+                            if (currentCustomer.getFirstName() != null && currentCustomer.getFirstName().length() > 1) {
+                                initials.append(currentCustomer.getFirstName().toUpperCase().charAt(1));
+                            }
+                        }
+
+                        oldTenantFullName = fullName.toString();
+                        oldTenantInitials = initials.toString();
+                        oldTenantProfilePic = currentCustomer.getProfilePic();
+                        oldTenantMobile = currentCustomer.getMobile();
+
+                    }
+
+                }
+                if (newTenantCustomerId != null) {
+                    Customers newCustomer = listCustomers
+                            .stream()
+                            .filter(i -> i.getCustomerId().equalsIgnoreCase(newTenantCustomerId))
+                            .findFirst()
+                            .orElse(null);
+                    if (newCustomer != null) {
+                        StringBuilder fullName = new StringBuilder();
+                        StringBuilder initials = new StringBuilder();
+                        newTenantFirstName = newCustomer.getFirstName();
+                        newTenantLastName = newCustomer.getLastName();
+                        if (newCustomer.getFirstName() != null) {
+                            fullName.append(newCustomer.getFirstName());
+                            initials.append(newCustomer.getFirstName().toUpperCase().charAt(0));
+                        }
+                        if (newCustomer.getLastName() != null && !newCustomer.getLastName().trim().equalsIgnoreCase("")) {
+                            fullName.append(" ");
+                            fullName.append(newCustomer.getLastName());
+                            initials.append(newCustomer.getLastName().toUpperCase().charAt(0));
+                        }
+                        else {
+                            if (newCustomer.getFirstName() != null && newCustomer.getFirstName().length() > 1) {
+                                initials.append(newCustomer.getFirstName().toUpperCase().charAt(1));
+                            }
+                        }
+
+                        newTenantFullName = fullName.toString();
+                        newTenantInitials = initials.toString();
+                        newTenantrofilePic = newCustomer.getProfilePic();
+                        newTenantMobile = newCustomer.getMobile();
+
+                    }
+                }
+
+            }
+        }
+
+        BedDetails bedDetails = new BedDetails(beds.getBedName(),
+                beds.getBedId(),
+                beds.getHostelId(),
+                hasBooking,
+                onNotice,
+                isOccupied,
+                beds.getRentAmount(),
+                beds.getRoomId(),
+                freeFrom,
+                currentRent,
+                oldTenantLeavingDate,
+                bookingId,
+                newTenantJoiningDate,
+                oldTenantJoiningDate,
+                oldTenantFirstName,
+                oldTenantLastName,
+                oldTenantProfilePic,
+                oldTenantFullName,
+                oldTenantInitials,
+                oldTenantMobile,
+                oldTenantCustomerId,
+                floorId,
+                floorName,
+                roomName,
+                "91",
+                newTenantFirstName,
+                newTenantLastName,
+                newTenantFullName,
+                newTenantrofilePic,
+                newTenantInitials,
+                newTenantMobile,
+                newTenantCustomerId);
+
+        return new ResponseEntity<>(bedDetails, HttpStatus.OK);
 
 
     }
