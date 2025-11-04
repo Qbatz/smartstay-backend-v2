@@ -2,10 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.amenity.AmenityMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.AmenitiesV1;
-import com.smartstay.smartstay.dao.CustomersAmenity;
-import com.smartstay.smartstay.dao.RolesV1;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
 import com.smartstay.smartstay.payloads.amenity.AssignRequest;
 import com.smartstay.smartstay.payloads.amenity.UnAssignRequest;
@@ -38,6 +35,10 @@ public class AmenitiesService {
     private RolesService rolesService;
     @Autowired
     private UserHostelService userHostelService;
+    @Autowired
+    private BookingsService bookingsService;
+    @Autowired
+    private CustomersService customersService;
 
     public ResponseEntity<?> getAllAmenities(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -61,10 +62,7 @@ public class AmenitiesService {
         }
         List<AmenityInfoProjection> amenitiesV1List = amentityRepository.findAmenityInfoByHostelId(hostelId, user.getParentId());
         if (amenitiesV1List != null) {
-            List<AmenityResponse> amenityResponses = amenitiesV1List.stream()
-                    .map(item -> new AmenityMapper(customerAmenityRepository, hostelId).apply(item))
-                    .toList();
-            return new ResponseEntity<>(amenityResponses, HttpStatus.OK);
+            return new ResponseEntity<>(amenitiesV1List, HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.NO_RECORDS_FOUND, HttpStatus.BAD_REQUEST);
     }
@@ -87,10 +85,14 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
         AmenityInfoProjection amenitiesV1 = amentityRepository.findAmenityInfoByHostelIdByAmenityId(hostelId, user.getParentId(), amenitiesId);
-        if (amenitiesV1 != null) {
-            return new ResponseEntity<>(new AmenityMapper(customerAmenityRepository, hostelId).apply(amenitiesV1), HttpStatus.OK);
-        }
-        return new ResponseEntity<>(Utils.NO_RECORDS_FOUND, HttpStatus.BAD_REQUEST);
+        List<BookingsV1> stayingCustomersList = bookingsService.getAllCheckedInCustomer(hostelId);
+        List<String> customerIds = stayingCustomersList
+                .stream()
+                .map(BookingsV1::getCustomerId)
+                .toList();
+        List<Customers> listCustomer = customersService.getCustomerDetails(customerIds);
+        List<CustomersAmenity> listCustomersAmenity = customerAmenityRepository.findLatestByAmenityId(amenitiesV1.getAmenityId());
+        return new ResponseEntity<>(new AmenityMapper(listCustomer, listCustomersAmenity).apply(amenitiesV1), HttpStatus.OK);
     }
 
     public ResponseEntity<?> addAmenity(AmenityRequest request, String hostelId) {
@@ -246,6 +248,7 @@ public class AmenitiesService {
                 customerAmenity.setAmenityId(amenityId);
                 customerAmenity.setCustomerId(customerId);
                 customerAmenity.setCreatedAt(new Date());
+                amenitiesV1.setAmenityAmount(amenitiesV1.getAmenityAmount());
                 customerAmenity.setEndDate(null);
                 customerAmenity.setStartDate(new Date());
                 customerAmenity.setUpdatedBy(user.getUserId());
@@ -302,4 +305,7 @@ public class AmenitiesService {
     }
 
 
+    public List<CustomersAmenity> getAllAmenitiesByCustomerId(String customerId) {
+        return customerAmenityRepository.findByCustomerId(customerId);
+    }
 }

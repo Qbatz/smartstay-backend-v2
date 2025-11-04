@@ -1811,7 +1811,7 @@ public class CustomersService {
         return new ResponseEntity<>(listCustomers, HttpStatus.OK);
     }
 
-    public List<Customers> getCustomerDetails(ArrayList<String> customerIds) {
+    public List<Customers> getCustomerDetails(List<String> customerIds) {
         if (!customerIds.isEmpty()) {
             return customersRepository.findByCustomerIdIn(customerIds);
         }

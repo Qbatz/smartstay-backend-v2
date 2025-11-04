@@ -125,6 +125,13 @@ public class BookingsService {
         return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
     }
 
+    public List<BookingsV1> getAllCheckedInCustomer(String hostelId) {
+        List<String> statuses = new ArrayList<>();
+        statuses.add(BookingStatus.NOTICE.name());
+        statuses.add(BookingStatus.CHECKIN.name());
+        return bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
+    }
+
     public BookingsV1 checkLatestStatusForBed(int bedId) {
 
         return bookingsRepository.findLatestBooking(bedId);
@@ -600,11 +607,11 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
-        customersService.markCustomerCheckedOut(customers);
-        customersBedHistoryService.checkoutCustomer(customerId);
-        bookingsV1.setCheckoutDate(new Date());
-        bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
-        bookingsRepository.save(bookingsV1);
+//        customersService.markCustomerCheckedOut(customers);
+//        customersBedHistoryService.checkoutCustomer(customerId);
+//        bookingsV1.setCheckoutDate(new Date());
+//        bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
+//        bookingsRepository.save(bookingsV1);
 
 
         return new ResponseEntity<>(HttpStatus.OK);

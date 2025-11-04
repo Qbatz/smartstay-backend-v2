@@ -113,4 +113,6 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """, nativeQuery = true)
     List<BedBookingStatus> findByBedBookingStatus(List<Integer> listBedIds);
 
+    List<BookingsV1> findByHostelIdAndCurrentStatusIn(String hostelId, List<String> currentStatuses);
+
 }

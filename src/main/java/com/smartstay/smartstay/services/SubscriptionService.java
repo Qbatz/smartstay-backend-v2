@@ -87,4 +87,9 @@ public class SubscriptionService {
         return new ResponseEntity<>(subscription1, HttpStatus.OK);
 
     }
+
+    public boolean isSubscriptionValidToday(String hostelId) {
+        Subscription subscription = subscriptionRepository.checkSubscriptionForToday(hostelId, new Date());
+        return subscription != null;
+    }
 }

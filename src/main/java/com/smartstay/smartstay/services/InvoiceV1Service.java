@@ -16,6 +16,7 @@ import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
+import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.invoice.ItemResponse;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
@@ -24,6 +25,8 @@ import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -62,6 +65,8 @@ public class InvoiceV1Service {
     private InvoiceItemService invoiceItemService;
     @Autowired
     private CreditDebitNoteService creditDebitNoteService;
+    @Autowired
+    private ApplicationEventPublisher applicationEventPublisher;
     private TransactionService transactionService;
 
     private BookingsService bookingsService;
@@ -1268,9 +1273,15 @@ public class InvoiceV1Service {
 
     public boolean isFinalSettlementPaid(InvoicesV1 invoicesV1) {
         Double finalSettlementPaidAmount = transactionService.getFinalSettlementPaidAmount(invoicesV1.getInvoiceId());
-        if (finalSettlementPaidAmount >= invoicesV1.getTotalAmount()) {
-            return true;
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())
+                || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())
+                ||  invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+
+            if (finalSettlementPaidAmount >= invoicesV1.getTotalAmount()) {
+                return true;
+            }
         }
+
         return false;
     }
 
@@ -1368,4 +1379,19 @@ public class InvoiceV1Service {
         invoicesV1Repository.save(invAdvanceInvoice);
     }
 
+    public ResponseEntity<?> generateRecurringManually(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        BillingDates currentBillingDate = hostelService.getBillingRuleOnDate(hostelId, new Date());
+        if (currentBillingDate != null) {
+//            if (Utils.compareWithTwoDates(currentBillingDate.currentBillStartDate(), new Date()) == 0) {
+                //having billing date today
+                applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
+//            }
+        }
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+    }
 }

@@ -74,5 +74,9 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
             """, nativeQuery = true)
     List<ElectricityRoomIdFromPreviousEntry> getRoomIdsFromPreviousEntry(@Param("hostelId") String hostelId, @Param("entryDate") Date entryDate);
 
+    @Query(value = """
+            SELECT * FROM electricity_readings WHERE hostel_id=:hostelId and bill_status='INVOICE_NOT_GENERATED' and bill_start_date>=DATE(:startDate) and bill_end_date <=DATE(:endDate);
+            """, nativeQuery = true)
+    List<com.smartstay.smartstay.dao.ElectricityReadings> listAllReadingsForGenerateInvoice(String hostelId, Date startDate, Date endDate);
 
 }

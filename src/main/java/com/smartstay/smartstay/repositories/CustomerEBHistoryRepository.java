@@ -52,4 +52,9 @@ public interface CustomerEBHistoryRepository extends JpaRepository<CustomersEbHi
             ORDER BY ebHis.start_date DESC
             """, nativeQuery = true)
     List<ElectricityHistoryBySingleCustomer> getSingleCustomerEbHistory(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+    @Query("""
+            SELECT CER FROM CustomersEbHistory CER WHERE CER.customerId=:customerId AND CER.readingId IN :readings
+            """)
+    List<CustomersEbHistory> findByCustomerIdAndReadingsId(@Param("customerId") String customerId, @Param("readings") List<Integer> readings);
 }

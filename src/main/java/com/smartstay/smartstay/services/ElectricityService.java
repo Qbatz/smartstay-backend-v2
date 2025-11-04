@@ -800,4 +800,12 @@ public class ElectricityService {
         return new ResponseEntity<>(singleCustomers, HttpStatus.OK);
 
     }
+
+    public List<ElectricityReadings> getAllElectricityReadingForRecurring(String hostelId, Date startDate, Date endDate) {
+        return electricityReadingRepository.listAllReadingsForGenerateInvoice(hostelId, startDate, endDate);
+    }
+
+    public void markAsInvoiceGenerated(List<ElectricityReadings> listReadingForMakingInvoiceGenerated) {
+        electricityReadingRepository.saveAll(listReadingForMakingInvoiceGenerated);
+    }
 }
