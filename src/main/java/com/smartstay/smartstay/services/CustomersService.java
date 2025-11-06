@@ -25,6 +25,7 @@ import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -70,6 +71,11 @@ public class CustomersService {
     private BankingService bankingService;
     @Autowired
     private CustomersBedHistoryService bedHistory;
+    private AmenitiesService amenitiesService;
+    @Autowired
+    public void setAmenitiesService(@Lazy AmenitiesService amenitiesService) {
+        this.amenitiesService = amenitiesService;
+    }
 
     public ResponseEntity<?> createCustomer(MultipartFile file, AddCustomer payloads) {
 
@@ -298,7 +304,7 @@ public class CustomersService {
         }
         Date dt = Utils.stringToDate(payloads.bookingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        if (bedsService.isBedAvailable(payloads.bedId(), user.getParentId(), joiningDate)) {
+        if (bedsService.isBedAvailableNew(payloads.bedId(), user.getParentId(), payloads.joiningDate())) {
             Customers customers = customersRepository.findById(payloads.customerId()).orElse(null);
             if (customers != null) {
                 if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name()) || customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
@@ -816,7 +822,6 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-
         Customers customers = customersRepository.findById(checkoutNotice.customerId()).orElse(null);
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
@@ -831,11 +836,11 @@ public class CustomersService {
         Date joiningDate = booking.getJoiningDate();
         Date requestDate = Utils.stringToDate(checkoutNotice.requestDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         Date checkoutDate = Utils.stringToDate(checkoutNotice.checkoutDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        if (Utils.compareWithTwoDates(requestDate, joiningDate) <= 0) {
+        if (Utils.compareWithTwoDates(requestDate, joiningDate) < 0) {
             return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_JOINING_DATE, HttpStatus.BAD_REQUEST);
         }
 
-        if (Utils.compareWithTwoDates(checkoutDate, joiningDate) <= 0) {
+        if (Utils.compareWithTwoDates(checkoutDate, joiningDate) < 0) {
             return new ResponseEntity<>(Utils.CHECKOUT_DATE_MUST_AFTER_JOINING_DATE, HttpStatus.BAD_REQUEST);
         }
 
@@ -844,7 +849,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
         }
 
-        if (Utils.compareWithTwoDates(checkoutDate, requestDate) <= 0) {
+        if (Utils.compareWithTwoDates(checkoutDate, requestDate) < 0) {
             return new ResponseEntity<>(Utils.CHECKOUT_DATE_MUST_AFTER_REQUEST_DATE, HttpStatus.BAD_REQUEST);
         }
 
@@ -1020,6 +1025,7 @@ public class CustomersService {
                 .orElse(null);
         AdvanceInfo advanceInfo = toAdvanceInfoResponse(advance, advanceInvoice);
         List<BedHistory> listBeds = bedHistory.getCustomersBedHistory(customers.getCustomerId());
+        List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customerId);
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getFirstName(),
@@ -1035,7 +1041,8 @@ public class CustomersService {
                 kycInfo,
                 advanceInfo,
                 invoiceResponseList,
-                listBeds);
+                listBeds,
+                amenities);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -1582,6 +1589,8 @@ public class CustomersService {
         }
 
         totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
+        double totalAmountForFinalSettlement = totalAmountToBePaid;
+        double totalDeductionForFinalSettlement = 0.0;
 
         if (deductions != null && !deductions.isEmpty()) {
             double finalDeductions = deductions
@@ -1589,6 +1598,7 @@ public class CustomersService {
                     .mapToDouble(Settlement::amount)
                     .sum();
             totalAmountToBePaid = totalAmountToBePaid + finalDeductions;
+            totalDeductionForFinalSettlement = finalDeductions;
         }
 
         List<InvoicesV1> unpaidUpdated = listUnpaidInvoices
@@ -1601,7 +1611,7 @@ public class CustomersService {
 
         invoiceService.cancelActiveInvoice(unpaidUpdated);
         if (invAdvanceInvoice != null) {
-            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, invAdvanceInvoice.getInvoiceId());
+            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, invAdvanceInvoice.getInvoiceId(), deductions);
 
             customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
             customersRepository.save(customers);
@@ -1816,5 +1826,14 @@ public class CustomersService {
             return customersRepository.findByCustomerIdIn(customerIds);
         }
         return null;
+    }
+
+    public Double getAdvanceAmountFromAllCustomers(String hostelId) {
+        List<Customers> listCustomers = customersRepository.findCheckedInCustomerByHostelId(hostelId);
+        return listCustomers
+                .stream()
+                .map(Customers::getAdvance)
+                .mapToDouble(Advance::getAdvanceAmount)
+                .sum();
     }
 }

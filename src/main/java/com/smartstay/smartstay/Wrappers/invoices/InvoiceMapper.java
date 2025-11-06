@@ -20,6 +20,9 @@ public class InvoiceMapper {
         if (invoice.getPaymentStatus() != null) {
             paymentStatus = Utils.capitalize(PaymentStatus.valueOf(invoice.getPaymentStatus()).getDisplayName());
         }
+        if (invoice.isCancelled()) {
+            paymentStatus = "Cancelled";
+        }
 
         return new InvoiceResponse(
                 invoice.getInvoiceId(),

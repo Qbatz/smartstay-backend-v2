@@ -336,4 +336,13 @@ public class AssetsService {
         return bed;
     }
 
+    public Double getAllAssetsValue(String hostelId) {
+        List<AssetsV1> listAsstes = assetsRepository.findAllByHostelId(hostelId);
+        double assetValue = listAsstes
+                .stream()
+                .mapToDouble(AssetsV1::getPrice)
+                .sum();
+
+        return Utils.roundOfDouble(assetValue);
+    }
 }

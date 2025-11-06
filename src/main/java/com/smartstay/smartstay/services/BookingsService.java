@@ -12,6 +12,7 @@ import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
+import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
@@ -130,6 +131,17 @@ public class BookingsService {
         statuses.add(BookingStatus.NOTICE.name());
         statuses.add(BookingStatus.CHECKIN.name());
         return bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
+    }
+
+    public int getAllCheckedInCustomersCount(String hostelId) {
+        List<String> statuses = new ArrayList<>();
+        statuses.add(BookingStatus.NOTICE.name());
+        statuses.add(BookingStatus.CHECKIN.name());
+        List<BookingsV1> checkIncount =  bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
+        if (checkIncount != null) {
+            return checkIncount.size();
+        }
+        return 0;
     }
 
     public BookingsV1 checkLatestStatusForBed(int bedId) {
@@ -607,11 +619,11 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
-//        customersService.markCustomerCheckedOut(customers);
-//        customersBedHistoryService.checkoutCustomer(customerId);
-//        bookingsV1.setCheckoutDate(new Date());
-//        bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
-//        bookingsRepository.save(bookingsV1);
+        customersService.markCustomerCheckedOut(customers);
+        customersBedHistoryService.checkoutCustomer(customerId);
+        bookingsV1.setCheckoutDate(new Date());
+        bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
+        bookingsRepository.save(bookingsV1);
 
 
         return new ResponseEntity<>(HttpStatus.OK);
@@ -718,5 +730,38 @@ public class BookingsService {
 
     public List<BedBookingStatus> getBookingDetailsByBedIds(List<Integer> listBedId) {
         return bookingsRepository.findByBedBookingStatus(listBedId);
+    }
+
+    public boolean isBedAvailableForCheckIn(int bedId, String joiningDate) {
+        BookingsV1 bookingsV1 = bookingsRepository.checkBookingsByBedIdAndStatus(bedId);
+        if (bookingsV1 == null) {
+            return true;
+        }
+
+        if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
+            return false;
+        }
+
+        Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+        if (Utils.compareWithTwoDates(dateJoiningDate, bookingsV1.getLeavingDate()) >= 0) {
+            return true;
+        }
+        else {
+            return false;
+        }
+
+    }
+
+    public List<InvoiceCustomer> findDueCustomers(List<String> lisCustomerIds) {
+        return invoiceService.findDueCustomers(lisCustomerIds);
+    }
+
+    public Integer getBookedBedCount(String hostelId) {
+        List<BookingsV1> listBookings = bookingsRepository.findBookingsByHostelId(hostelId);
+        if (listBookings == null) {
+            return  0;
+        }
+        return listBookings.size();
     }
 }

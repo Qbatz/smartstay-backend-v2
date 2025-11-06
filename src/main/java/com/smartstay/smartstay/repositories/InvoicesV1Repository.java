@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.InvoicesV1;
+import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.responses.invoices.InvoiceSummary;
@@ -48,11 +49,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     @Query(value = """
     SELECT * FROM invoicesv1
-    WHERE invoice_number LIKE CONCAT(:prefix, '%')
+    WHERE hostel_id=:hostelId AND invoice_number LIKE CONCAT(:prefix, '%')
     ORDER BY CAST(SUBSTRING(invoice_number, LENGTH(:prefix) + 2) AS UNSIGNED) DESC
     LIMIT 1
 """, nativeQuery = true)
-    InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix);
+    InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix, @Param("hostelId") String hostelId);
 
 
     @Query(value = "SELECT * FROM invoicesv1 WHERE customer_id = :customerId ORDER BY invoice_start_date DESC LIMIT 1",
@@ -102,5 +103,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     );
 
     List<InvoicesV1> findByCustomerIdAndInvoiceType(String customerId, String type);
+
+    @Query("""
+            SELECT inv.customerId, inv.invoiceId FROM InvoicesV1 inv where (inv.paidAmount IS NULL OR inv.paidAmount<inv.totalAmount)
+             and inv.invoiceDueDate<DATE(:todaysDate) and inv.customerId in (:customerIds) and inv.invoiceType='RENT'
+            """)
+    List<InvoiceCustomer> findByCustomerIdAndBedIdsForDue(List<String> customerIds, Date todaysDate);
 
 }

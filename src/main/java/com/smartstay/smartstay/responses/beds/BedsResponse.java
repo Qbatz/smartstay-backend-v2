@@ -9,5 +9,6 @@ public record BedsResponse(int id,
                            boolean isOccupied,
                            boolean onNotice,
                            boolean isBooked,
+                           boolean overDue,
                            double rentAmount) {
 }

@@ -60,6 +60,7 @@ public class AddEbEventListeners {
             currentConsumption = ebEvents.getCurrentReading() - electricityReadings.getCurrentReading();
             Calendar cal = Calendar.getInstance();
             cal.setTime(electricityReadings.getEntryDate());
+            cal.add(Calendar.DAY_OF_MONTH, 1);
 
             startDate = cal.getTime();
         }

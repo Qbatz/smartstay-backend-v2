@@ -108,11 +108,21 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             @Param("expectedJoiningDate") Date expectedJoiningDate
     );
     @Query(value = """
-            SELECT bed_id as bedId, current_status as currentStatus, joining_date as joiningDate, 
-            leaving_date as leavingDate FROM bookingsv1 where current_status in ('BOOKED', 'NOTICE', 'CHECKIN') and bed_id in (:listBedIds)
+            SELECT bed_id as bedId, current_status as currentStatus, joining_date as joiningDate,
+            leaving_date as leavingDate, customer_id as customerId FROM bookingsv1 where current_status in ('BOOKED', 'NOTICE', 'CHECKIN') and bed_id in (:listBedIds)
             """, nativeQuery = true)
     List<BedBookingStatus> findByBedBookingStatus(List<Integer> listBedIds);
 
     List<BookingsV1> findByHostelIdAndCurrentStatusIn(String hostelId, List<String> currentStatuses);
+
+    @Query("""
+            SELECT booking from BookingsV1 booking WHERE booking.bedId=:bedId and booking.currentStatus in ('CHECKIN', 'NOTICE')
+            """)
+    BookingsV1 checkBookingsByBedIdAndStatus(Integer bedId);
+
+    @Query("""
+            SELECT booking FROM BookingsV1 booking where booking.hostelId=:hostelId and booking.currentStatus='BOOKED'
+            """)
+    List<BookingsV1> findBookingsByHostelId(String hostelId);
 
 }

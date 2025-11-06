@@ -5,5 +5,6 @@ import java.util.Date;
 public record BedBookingStatus(Integer bedId,
                                String currentStatus,
                                Date joiningDate,
-                               Date leavingDate) {
+                               Date leavingDate,
+                               String customerId) {
 }

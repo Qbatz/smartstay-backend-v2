@@ -113,7 +113,7 @@ public class RecurringEventListener {
                         }
                         prefixSuffix.append(prefix);
                     }
-                    InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix);
+                    InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix, hostelV1.getHostelId());
 
                     if (inv != null) {
                         String[] prefArr = inv.getInvoiceNumber().split("-");

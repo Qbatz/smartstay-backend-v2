@@ -30,6 +30,7 @@ public class ElectricityReadings {
     private Date entryDate;
 //    no of unit consumed
     private Double consumption;
+    private boolean isFirstEntry;
     private boolean isMissedEntry;
     private Date createdAt;
     private Date updatedAt;

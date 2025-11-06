@@ -12,11 +12,13 @@ import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.events.RecurringEvents;
+import com.smartstay.smartstay.payloads.customer.Settlement;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.invoice.ItemResponse;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
@@ -126,7 +128,7 @@ public class InvoiceV1Service {
                 invoiceNumber.append(templates.prefix());
                 invoiceNumber.append("-");
                 invoiceNumber.append(templates.suffix());
-                existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix());
+                existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix(), hostelId);
             }
             InvoicesV1 invoicesV1 = new InvoicesV1();
             if (existingV1 != null) {
@@ -231,7 +233,7 @@ public class InvoiceV1Service {
                 invoiceNumber.append(templates.prefix());
                 invoiceNumber.append("-");
                 invoiceNumber.append(templates.suffix());
-                existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix());
+                existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix(), hostelId);
             }
             InvoicesV1 invoicesV1 = new InvoicesV1();
             if (existingV1 != null) {
@@ -319,7 +321,7 @@ public class InvoiceV1Service {
                 invoiceNumber.append(templates.prefix());
                 invoiceNumber.append("-");
                 invoiceNumber.append(templates.suffix());
-                existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix());
+                existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix(), hostelId);
             }
             InvoicesV1 invoicesV1 = new InvoicesV1();
             if (existingV1 != null) {
@@ -525,7 +527,7 @@ public class InvoiceV1Service {
                 }
                 prefixSuffix.append(prefix);
             }
-            InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix);
+            InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix, hostelV1.getHostelId());
             if (inv != null) {
                 String[] prefArr = inv.getInvoiceNumber().split("-");
                 if (prefArr.length > 1) {
@@ -727,6 +729,8 @@ public class InvoiceV1Service {
         if (invoicesV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
         }
+
+
 
         StringBuilder invoiceMonth = new StringBuilder();
         StringBuilder invoiceRentalPeriod = new StringBuilder();
@@ -936,7 +940,23 @@ public class InvoiceV1Service {
         }
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+            double paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
+            double balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
             List<String> invoicesList = invoicesV1.getCancelledInvoices();
+            List<com.smartstay.smartstay.responses.invoices.InvoiceItems> listInvoiceItems = new ArrayList<>();
+            listInvoiceItems.add(new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(),
+                    InvoiceType.SETTLEMENT.name(),
+                    invoicesV1.getTotalAmount()));
+
+            InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(),
+                    0.0,
+                    0.0,
+                    invoicesV1.getTotalAmount(),
+                    paidAmount,
+                    balanceAmount,
+                    invoiceRentalPeriod.toString(),
+                    invoiceMonth.toString(),
+                    listInvoiceItems);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(
                     invoicesV1.getInvoiceNumber(),
@@ -951,7 +971,8 @@ public class InvoiceV1Service {
                     stayInfo,
                     accountDetails,
                     signatureInfo,
-                    invoiceSummaries
+                    invoiceSummaries,
+                    invoiceInfo
             );
             return new ResponseEntity<>(finalSettlementResponse, HttpStatus.OK);
 
@@ -1028,7 +1049,7 @@ public class InvoiceV1Service {
         invoicesV1Repository.saveAll(unpaidUpdated);
     }
 
-    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, String advanceInvoiceId) {
+    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, String advanceInvoiceId, List<Settlement> listDeductions) {
         List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customers.getCustomerId(), InvoiceType.SETTLEMENT.name());
         if (!invoicesV1.isEmpty()) {
             InvoicesV1 settlementInvoice = invoicesV1.get(0);
@@ -1097,7 +1118,7 @@ public class InvoiceV1Service {
         InvoicesV1 existingV1 = null;
 
         if (templates != null) {
-            existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix());
+            existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix(), hostelId);
             invoiceNumber = new StringBuilder();
             invoiceNumber.append(templates.prefix());
 
@@ -1202,13 +1223,12 @@ public class InvoiceV1Service {
         String invoiceNumber = null;
         BillTemplates templates = templateService.getBillTemplate(oldInvoice.getHostelId(), InvoiceType.RENT.name());
         if (templates != null) {
-            InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix());
+            InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix(), oldInvoice.getHostelId());
             if (inv == null) {
-                StringBuilder invoice = new StringBuilder();
-                invoice.append(templates.prefix());
-                invoice.append("-");
-                invoice.append(templates.suffix());
-                invoiceNumber = invoice.toString();
+                String invoice = templates.prefix() +
+                        "-" +
+                        templates.suffix();
+                invoiceNumber = invoice;
             }
             else {
                 invoiceNumber = Utils.formPrefixSuffix(inv.getInvoiceNumber());
@@ -1275,8 +1295,17 @@ public class InvoiceV1Service {
         Double finalSettlementPaidAmount = transactionService.getFinalSettlementPaidAmount(invoicesV1.getInvoiceId());
         if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())
                 || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())
-                ||  invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                ||  invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())
+        || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())
+        || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
 
+            if (invoicesV1.getTotalAmount() < 0) {
+                double finalSettlementAmount = -1 * invoicesV1.getTotalAmount();
+                if (finalSettlementPaidAmount >= finalSettlementAmount) {
+                    return true;
+                }
+
+            }
             if (finalSettlementPaidAmount >= invoicesV1.getTotalAmount()) {
                 return true;
             }
@@ -1393,5 +1422,12 @@ public class InvoiceV1Service {
         }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+    }
+
+    public List<InvoiceCustomer> findDueCustomers(List<String> lisCustomerIds) {
+        if (authentication.isAuthenticated()) {
+            return invoicesV1Repository.findByCustomerIdAndBedIdsForDue(lisCustomerIds, new Date());
+        }
+        return null;
     }
 }

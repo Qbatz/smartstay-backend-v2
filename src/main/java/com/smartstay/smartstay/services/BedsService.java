@@ -5,12 +5,15 @@ import com.smartstay.smartstay.Wrappers.BedsMapper;
 import com.smartstay.smartstay.Wrappers.FreeBedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.beds.BedInformations;
 import com.smartstay.smartstay.dto.beds.FloorNameRoomName;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
 import com.smartstay.smartstay.dto.booking.BedBookingStatus;
+import com.smartstay.smartstay.dto.dashboard.BedsStatus;
+import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.payloads.beds.AddBed;
@@ -25,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -81,7 +85,7 @@ public class BedsService {
                 .toList();
         List<FloorNameRoomName> nameMapping = bedsRepository.getBedNameRoomName(listBedId);
 
-        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper(nameMapping, null).apply(item)).toList();
+        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper(nameMapping, null, null).apply(item)).toList();
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
 
@@ -106,7 +110,16 @@ public class BedsService {
         List<FloorNameRoomName> nameMapping = bedsRepository.getBedNameRoomName(listBedId);
         List<BedBookingStatus> bedsCurrentStatus = bookingService.getBookingDetailsByBedIds(listBedId);
 
-        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper(nameMapping, bedsCurrentStatus).apply(item)).toList();
+        List<String> lisCustomerIds = bedsCurrentStatus
+                .stream()
+                .map(BedBookingStatus::customerId)
+                .toList();
+
+        List<InvoiceCustomer> listInvoiceIdCustomerId = bookingService.findDueCustomers(lisCustomerIds);
+
+        List<BedsResponse> bedsResponses = listBeds
+                .stream()
+                .map(item -> new BedsMapper(nameMapping, bedsCurrentStatus, listInvoiceIdCustomerId).apply(item)).toList();
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
 
@@ -519,6 +532,7 @@ public class BedsService {
 
     public boolean isBedAvailable(int bedId, String parentId, Date joiningDate) {
         Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
+
         if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name()) || beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
             if (bookingsV1.getLeavingDate() != null) {
@@ -548,6 +562,25 @@ public class BedsService {
                 }
             } else {
                 return true;
+            }
+        }
+
+        return false;
+
+    }
+
+    public boolean isBedAvailableNew(int bedId, String parentId, String joiningDate) {
+        Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
+
+        if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+           return true;
+        }
+        else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+            if (bookingService.isBedAvailableForCheckIn(bedId, joiningDate)) {
+                return true;
+            }
+            else {
+                return false;
             }
         }
 
@@ -743,5 +776,21 @@ public class BedsService {
         bed.setCurrentStatus(BedStatus.VACANT.name());
         bed.setFreeFrom(new Date());
         return bedsRepository.save(bed);
+    }
+
+    public BedsStatus getBedCountsForDashboard(String hostelId) {
+        List<Beds> listBeds = bedsRepository.findByHostelId(hostelId);
+        Integer totalBeds = listBeds.size();
+        long occupiedBeds = listBeds
+                .stream()
+                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) ||  i.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name()))
+                .count();
+        Integer freeBeds = totalBeds - (int) occupiedBeds;
+        Integer bookedBedCount = bookingService.getBookedBedCount(hostelId);
+
+        return new BedsStatus(totalBeds,
+                freeBeds,
+                (int) occupiedBeds,
+                bookedBedCount);
     }
 }

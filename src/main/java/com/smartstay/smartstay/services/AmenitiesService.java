@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.amenity.AmenityMapper;
+import com.smartstay.smartstay.Wrappers.amenity.CustomerAmenityMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
@@ -12,6 +13,7 @@ import com.smartstay.smartstay.repositories.CustomerAmenityRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.responses.amenitity.AmenityInfoProjection;
 import com.smartstay.smartstay.responses.amenitity.AmenityResponse;
+import com.smartstay.smartstay.responses.customer.Amenities;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -307,5 +309,19 @@ public class AmenitiesService {
 
     public List<CustomersAmenity> getAllAmenitiesByCustomerId(String customerId) {
         return customerAmenityRepository.findByCustomerId(customerId);
+    }
+
+    public List<Amenities> getAmenitiesByCustomerId(String customerId) {
+        List<CustomersAmenity> listCustomerAmenities = customerAmenityRepository.findByCustomerId(customerId);
+        List<String> amenityIds = listCustomerAmenities
+                .stream()
+                .map(CustomersAmenity::getAmenityId)
+                .toList();
+        List<AmenitiesV1> amenities = amentityRepository.findAllById(amenityIds);
+
+        return listCustomerAmenities
+                .stream()
+                .map(i -> new CustomerAmenityMapper(amenities).apply(i))
+                .toList();
     }
 }
