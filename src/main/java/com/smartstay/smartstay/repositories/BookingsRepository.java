@@ -125,4 +125,10 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """)
     List<BookingsV1> findBookingsByHostelId(String hostelId);
 
+    @Query("""
+            SELECT booking FROM BookingsV1 booking where booking.hostelId=:hostelId and booking.currentStatus='BOOKED' AND   
+            booking.expectedJoiningDate >= DATE(:startDate) and booking.expectedJoiningDate <= DATE(:startDate)
+            """)
+    List<BookingsV1> findBookingsWithDate(String hostelId, Date startDate);
+
 }

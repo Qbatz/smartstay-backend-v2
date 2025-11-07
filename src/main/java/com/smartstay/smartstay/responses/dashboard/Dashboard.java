@@ -7,5 +7,10 @@ public record Dashboard(Integer totalRooms,
                         Integer bookedBeds,
                         Integer totalCustomers,
                         Double totalAssetsValue,
-                        Double advances) {
+                        Double advances,
+                        Double electricityAmount,
+                        Double nextMonthProjection,
+                        Double currentMonthProfit,
+                        Double otherProfit,
+                        int pendingInvoiceCount) {
 }

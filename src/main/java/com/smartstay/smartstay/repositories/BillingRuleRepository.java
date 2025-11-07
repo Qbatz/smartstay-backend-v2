@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 public interface BillingRuleRepository extends JpaRepository<BillingRules, Integer> {
@@ -37,4 +38,9 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
             SELECT * FROM billing_rules WHERE hostel_id=:hostelId AND start_from IS NULL OR start_from <= DATE(:startDate) ORDER BY start_from DESC LIMIT 1
             """, nativeQuery = true)
     BillingRules findBillingRulesOnDateAndHostelId(@Param("hostelId") String hostel, @Param("startDate") Date date);
+
+    @Query("""
+            SELECT rules FROM BillingRules rules WHERE rules.hostel.id=:hostelId AND rules.isInitial=false
+            """)
+    List<BillingRules> findAllBillingRulesByHostelIdExceptInitial(@Param("hostelId") String hostelId);
 }

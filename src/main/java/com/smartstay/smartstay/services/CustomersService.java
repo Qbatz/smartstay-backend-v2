@@ -398,6 +398,11 @@ public class CustomersService {
 
         if (bedsService.isBedAvailable(payloads.bedId(), user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
 
+
+            Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), joiningDate);
+            BillingDates currentBillDate = hostelService.getCurrentBillStartAndEndDates(hostelV1.getHostelId());
+
             Advance advance = customers.getAdvance();
             List<Deductions> listDeductions = null;
             if (advance == null) {
@@ -423,28 +428,27 @@ public class CustomersService {
             customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
             customers.setJoiningDate(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
             customers.setAdvance(advance);
+
+
+
             Customers savedCustomer = customersRepository.save(customers);
+
+
 
             bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
 
             bookingsService.addCheckin(customerId, payloads);
 
-            Calendar calendar = Calendar.getInstance();
-            int dueDate = calendar.get(Calendar.DAY_OF_MONTH) + 5;
-            int day = 1;
-            if (hostelV1.getElectricityConfig() != null) {
-                day = hostelV1.getElectricityConfig().getBillDate();
-            }
 
-            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), day);
+            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
 
-            Calendar cal = Calendar.getInstance();
-            cal.set(Calendar.DAY_OF_MONTH, day);
+//            Calendar cal = Calendar.getInstance();
+//            cal.set(Calendar.DAY_OF_MONTH, day);
 
-            Date startateOfCurrentCycle = cal.getTime();
-            Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+//            Date startateOfCurrentCycle = cal.getTime();
+
             //checking joining date is fall under todays date
-            if (Utils.compareWithTwoDates(joiningDate, startateOfCurrentCycle) < 0) {
+            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
             }
             calculateRentAndCreateRentalInvoice(customers, payloads);
@@ -503,7 +507,9 @@ public class CustomersService {
 
         String date = checkinRequest.joiningDate().replace("/", "-");
 
-        if (bedsService.checkAvailabilityForCheckIn(booking.getBedId(), Utils.stringToDate(checkinRequest.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT)) != null) {
+        Date joiningDate = Utils.stringToDate(checkinRequest.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+        if (bedsService.checkAvailabilityForCheckIn(booking.getBedId(), joiningDate) != null) {
 
             customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
 
@@ -555,27 +561,23 @@ public class CustomersService {
 
             bookingsService.checkInBookedCustomer(customerId, request);
 
-            Calendar calendar = Calendar.getInstance();
-            int dueDate = calendar.get(Calendar.DAY_OF_MONTH) + 5;
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), joiningDate);
+            BillingDates currentBillDate = hostelService.getCurrentBillStartAndEndDates(hostelV1.getHostelId());
 
-            int day = 1;
-            if (hostelV1.getElectricityConfig() != null) {
-                day = hostelV1.getElectricityConfig().getBillDate();
-            }
+//            Calendar calendar = Calendar.getInstance();
+//            int dueDate = calendar.get(Calendar.DAY_OF_MONTH) + 5;
+//
+//            int day = 1;
+//            if (hostelV1.getElectricityConfig() != null) {
+//                day = hostelV1.getElectricityConfig().getBillDate();
+//            }
 
-            invoiceService.addInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date, day);
+            invoiceService.addInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date, billingDates);
 
             bedsService.addUserToBed(booking.getBedId(), date);
 
-
-            Calendar cal = Calendar.getInstance();
-            cal.set(Calendar.DAY_OF_MONTH, day);
-            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
-
-            Date currentCycleStartDate = cal.getTime();
-            Date joiningDate = Utils.stringToDate(checkinRequest.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             //check joining date is in this current cycle.
-            if (Utils.compareWithTwoDates(joiningDate, currentCycleStartDate) < 0) {
+            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
             }
 
@@ -1062,42 +1064,32 @@ public class CustomersService {
 
             BillingDates billingDates = hostelService.getBillingRuleOnDate(payloads.hostelId(), joiningDate);
 
-
-//            Calendar cal = Calendar.getInstance();
-//            cal.setTime(joiningDate);
-//            cal.set(Calendar.DAY_OF_MONTH, lastRulingBillDate);
-//            cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
-
-            Date lastDate = null;
-            Date startDate = null;
-            if (billingDates != null) {
-                lastDate = billingDates.currentBillEndDate();
-                startDate = billingDates.currentBillStartDate();
-            } else {
-                Calendar calendar = Calendar.getInstance();
-                calendar.set(Calendar.DAY_OF_MONTH, 1);
-                startDate = calendar.getTime();
-                lastDate = Utils.findLastDate(1, new Date());
-            }
+//            Date lastDate = null;
+//            Date startDate = null;
+//            if (billingDates != null) {
+//                lastDate = billingDates.currentBillEndDate();
+//                startDate = billingDates.currentBillStartDate();
+//            } else {
+//                Calendar calendar = Calendar.getInstance();
+//                calendar.set(Calendar.DAY_OF_MONTH, 1);
+//                startDate = calendar.getTime();
+//                lastDate = Utils.findLastDate(1, new Date());
+//            }
 
 
             Calendar c = Calendar.getInstance();
             c.setTime(joiningDate);
 
 
-            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(startDate, lastDate);
-            long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), lastDate);
+            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+            long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
             double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
             double finalRent = Utils.roundOfMax(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
             if (finalRent > payloads.rentalAmount()) {
                 finalRent = payloads.rentalAmount();
             }
-            int day = 1;
-            if (hostelV1.getElectricityConfig() != null) {
-                day = hostelV1.getElectricityConfig().getBillDate();
-            }
 
-            invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), day);
+            invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
 
         }
 

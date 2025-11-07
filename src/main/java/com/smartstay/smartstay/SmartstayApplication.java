@@ -52,4 +52,21 @@ public class SmartstayApplication {
 //		};
 //	}
 
+//	@Bean
+//	public CommandLineRunner billDueDatesMapper(BillingRuleRepository billingRulesRpository) {
+//		return args -> {
+//			List<BillingRules> listNewRules = billingRulesRpository.findAll()
+//					.stream()
+//					.map(item -> {
+//						if (item.getBillDueDays() == null) {
+//							item.setBillDueDays(item.getBillingDueDate());
+//						}
+//						return item;
+//					})
+//					.toList();
+//
+//			billingRulesRpository.saveAll(listNewRules);
+//		};
+//	}
+
 }

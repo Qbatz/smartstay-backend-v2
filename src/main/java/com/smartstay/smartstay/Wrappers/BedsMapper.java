@@ -72,7 +72,7 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
 
         FloorNameRoomName floorNameRoomName = floorNameRoomNames
                 .stream()
-                .filter(item -> item.bedId() == beds.getBedId())
+                .filter(item -> Objects.equals(item.bedId(), beds.getBedId()))
                 .findFirst()
                 .orElse(null);
         if (floorNameRoomName != null) {

@@ -29,9 +29,9 @@ public class InvoiceMapper {
                 invoice.getInvoiceNumber(),
                 Utils.capitalize(invoice.getInvoiceType()),
                 paymentStatus,
-                invoice.getTotalAmount(),
-                invoice.getTotalAmount() - paidAmount,
-                paidAmount,
+                Utils.roundOfDouble(invoice.getTotalAmount()),
+                Utils.roundOfDouble(invoice.getTotalAmount() - paidAmount),
+                Utils.roundOfDouble(paidAmount),
                 invoice.getInvoiceDueDate() != null
                         ? dateFormat.format(invoice.getInvoiceDueDate())
                         : null,

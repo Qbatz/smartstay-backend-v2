@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.ElectricityReadings;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.electricity.*;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
@@ -817,5 +818,35 @@ public class ElectricityService {
 
     public void markAsInvoiceGenerated(List<ElectricityReadings> listReadingForMakingInvoiceGenerated) {
         electricityReadingRepository.saveAll(listReadingForMakingInvoiceGenerated);
+    }
+
+    public Double getPreviousMonthEbAmount(String hostelId) {
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        if (billingDates != null) {
+            Calendar calStartDate = Calendar.getInstance();
+            calStartDate.setTime(billingDates.currentBillStartDate());
+            calStartDate.add(Calendar.MONTH, -1);
+
+
+            Calendar calEndDate = Calendar.getInstance();
+            calEndDate.setTime(billingDates.currentBillEndDate());
+            calEndDate.add(Calendar.MONTH, -1);
+
+            List<ElectricityReadings> listReadings = electricityReadingRepository.findByBetweenDates(hostelId, calStartDate.getTime(), calEndDate.getTime());
+
+            return listReadings
+                    .stream()
+                    .mapToDouble(i -> {
+                        Double consumption = i.getConsumption();
+                        double currentPrice = i.getCurrentUnitPrice();
+
+                        return Math.round(consumption*currentPrice);
+                    })
+                    .sum();
+
+        }
+        else {
+            return 0.0;
+        }
     }
 }

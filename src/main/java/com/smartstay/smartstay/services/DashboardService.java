@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.dashboard.BedsStatus;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.responses.dashboard.Dashboard;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,8 @@ public class DashboardService {
     private UsersService usersService;
     @Autowired
     private AssetsService assetsService;
+    @Autowired
+    private ElectricityService electricityService;
 
     public ResponseEntity<?> getDashboardInfo(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -50,6 +53,7 @@ public class DashboardService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
         int totalRooms = 0;
         Integer totalBeds = 0;
         Integer freebeds = 0;
@@ -58,6 +62,11 @@ public class DashboardService {
         Integer bookedBeds = 0;
         Double assetsValue = 0.0;
         Double advanceAmount = 0.0;
+        Double electricityAmount = 0.0;
+        Double nextMonthProjections = 0.0;
+        Double currentMonthProfit = 0.0;
+        Double otherProfit = 0.0;
+        Integer pendingInvoiceCount = 0;
 
         BedsStatus bedsStatus = bedsService.getBedCountsForDashboard(hostelId);
         if (bedsStatus != null) {
@@ -71,6 +80,9 @@ public class DashboardService {
         totalCustomers = bookingsService.getAllCheckedInCustomersCount(hostelId);
         assetsValue = assetsService.getAllAssetsValue(hostelId);
         advanceAmount = customersService.getAdvanceAmountFromAllCustomers(hostelId);
+        electricityAmount = electricityService.getPreviousMonthEbAmount(hostelId);
+        nextMonthProjections = bookingsService.getNextMonthProjections(hostelId, billingDates);
+        pendingInvoiceCount = invoiceV1Service.getPendingInvoiceCounts(hostelId);
 
         Dashboard dashboard = new Dashboard(totalRooms,
                 totalBeds,
@@ -79,7 +91,12 @@ public class DashboardService {
                 bookedBeds,
                 totalCustomers,
                 assetsValue,
-                advanceAmount);
+                advanceAmount,
+                electricityAmount,
+                nextMonthProjections,
+                currentMonthProfit,
+                otherProfit,
+                pendingInvoiceCount);
 
 
         return new ResponseEntity<>(dashboard, HttpStatus.OK);

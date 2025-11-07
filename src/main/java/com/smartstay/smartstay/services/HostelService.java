@@ -368,43 +368,43 @@ public class HostelService {
     public BillingDates getCurrentBillStartAndEndDates(String hostelId) {
         BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
         int billStartDate = 1;
-        int billingRuleDate = 5;
+        int billingRuleDueDate = 5;
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
-            billingRuleDate = billingRules.getBillingDueDate();
+            billingRuleDueDate = billingRules.getBillDueDays();
         }
 
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
-        Calendar calendarDueDate = Calendar.getInstance();
-        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
+//        Calendar calendarDueDate = Calendar.getInstance();
+//        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate, calendarDueDate.getTime());
+        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate);
     }
 
-    public BillingDates getBillStartDate(String hostelId, Date date) {
+    public BillingDates getBillStartAndEndDateBasedOnDate(String hostelId, Date date) {
         BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
         int billStartDate = 1;
-        int billingRuleDate = 5;
+        int billingRuleDueDate = 5;
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
-            billingRuleDate = billingRules.getBillingDueDate();
+            billingRuleDueDate = billingRules.getBillDueDays();
         }
-
-        Calendar calendarDueDate = Calendar.getInstance();
-        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
+
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate, calendarDueDate.getTime());
+        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate);
     }
 
 
@@ -592,7 +592,7 @@ public class HostelService {
 
             com.smartstay.smartstay.responses.hostelConfig.BillingRules rules = new com.smartstay.smartstay.responses.hostelConfig.BillingRules(
                     billingRules.getBillingStartDate(),
-                    billingRules.getBillingDueDate(),
+                    billingRules.getBillDueDays(),
                     billingRules.getNoticePeriod(),
                     Utils.dateToString(billingRules.getStartFrom()));
 
@@ -634,7 +634,6 @@ public class HostelService {
             newBillingRules = new BillingRules();
         }
 
-
         Date startDate = null;
         Date previousEndDate = null;
 
@@ -648,7 +647,13 @@ public class HostelService {
                 }
             }
             else {
-                cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                if (Utils.compareWithTwoDates(cal.getTime(), new Date()) <= 0) {
+                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                }
+                else {
+                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
+                }
+
             }
 
             startDate = cal.getTime();
@@ -673,7 +678,12 @@ public class HostelService {
                 }
             }
             else {
-                cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                if (Utils.compareWithTwoDates(cal.getTime(), new Date()) < 0) {
+                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                }
+                else {
+                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
+                }
             }
 
             startDate = cal.getTime();
@@ -682,11 +692,15 @@ public class HostelService {
 
         }
         if (Utils.checkNullOrEmpty(billRules.dueDate())) {
-            newBillingRules.setBillingDueDate(billRules.dueDate());
+//            newBillingRules.setBillingDueDate(billRules.dueDate());
+            newBillingRules.setBillDueDays(billRules.dueDate());
         }
         else {
-            if (newBillingRules.getBillingDueDate() == null) {
-                newBillingRules.setBillingDueDate(currentBillingRules.getBillingDueDate());
+//            if (newBillingRules.getBillingDueDate() == null) {
+//                newBillingRules.setBillingDueDate(currentBillingRules.getBillingDueDate());
+//            }
+            if (newBillingRules.getBillDueDays() == null) {
+                newBillingRules.setBillDueDays(currentBillingRules.getBillDueDays());
             }
         }
         if (Utils.checkNullOrEmpty(billRules.noticeDays())) {

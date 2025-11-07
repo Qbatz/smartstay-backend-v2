@@ -100,7 +100,7 @@ public class InvoiceV1Service {
         this.transactionService = transactionService;
     }
 
-    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate, int startDay) {
+    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate, BillingDates billingDates) {
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
             BillTemplates templates = templateService.getBillTemplate(hostelId, type);
@@ -141,12 +141,17 @@ public class InvoiceV1Service {
                     int suff = Integer.parseInt(suffix[1]) + 1;
                     invoiceNumber.append(String.format("%03d", suff));
                 }
+                else {
+                    invoiceNumber.append("-00");
+                    invoiceNumber.append("1");
+
+                }
             }
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Utils.USER_INPUT_DATE_FORMAT);
             Date joiningDate1 = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-            Date dueDate = Utils.addDaysToDate(joiningDate1, 5);
-            Date endDate = Utils.findLastDate(startDay, joiningDate1);
+            Date dueDate = Utils.addDaysToDate(joiningDate1, billingDates.dueDays());
+            Date endDate = billingDates.currentBillEndDate();
 
             invoicesV1.setTotalAmount(amount);
             invoicesV1.setBasePrice(baseAmount);
@@ -487,7 +492,6 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.INVALID_INVOICE_DATE, HttpStatus.BAD_REQUEST);
         }
 
-
         List<ItemResponse> items = manualInvoice.items() != null ? manualInvoice.items() : Collections.emptyList();
         Optional<ItemResponse> ebItem = items.stream()
                 .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.EB.name().equalsIgnoreCase(item.invoiceItem()))
@@ -555,68 +559,72 @@ public class InvoiceV1Service {
 
 
 
-        int day = 1;
-        if (hostelV1.getElectricityConfig() != null) {
-            day = hostelV1.getElectricityConfig().getBillDate();
-        }
+//        int day = 1;
+//        if (hostelV1.getElectricityConfig() != null) {
+//            day = hostelV1.getElectricityConfig().getBillDate();
+//        }
 
         Date invoiceDate = Utils.stringToDate(manualInvoice.invoiceDate(), Utils.USER_INPUT_DATE_FORMAT);
 
-        Date dateStartDate = null;
-        Date dateEndDate = null;
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(invoiceDate);
-        cal.set(Calendar.DAY_OF_MONTH, day);
-        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), new Date());
+//        Date dateStartDate = null;
+//        Date dateEndDate = null;
+//        Calendar cal = Calendar.getInstance();
+//        cal.setTime(invoiceDate);
+//        cal.set(Calendar.DAY_OF_MONTH, day);
+        BillingDates currentBillingDate = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), new Date());
+        BillingDates invoiceBillingDate = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), invoiceDate);
 
         boolean isCurrentCycle = true;
-        if (Utils.compareWithTwoDates(invoiceDate, billingDates.currentBillStartDate()) < 0) {
+        if (Utils.compareWithTwoDates(invoiceDate, currentBillingDate.currentBillStartDate()) < 0) {
             isCurrentCycle = false;
         }
 
-        dateStartDate = cal.getTime();
-        dateEndDate = Utils.findLastDate(day, cal.getTime());
+//        dateStartDate = cal.getTime();
+//        Date dateEndDate = Utils.findLastDate(day, cal.getTime());
 
-        if (Utils.compareWithTwoDates(cal.getTime(), new Date()) > 0) {
+        if (Utils.compareWithTwoDates(invoiceDate, new Date()) > 0) {
             return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
         }
 
-        if (invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, dateStartDate, dateEndDate) != null) {
-            return new ResponseEntity<>(Utils.INVOICE_ALREADY_PRESENT, HttpStatus.BAD_REQUEST);
-        }
-
-        BookingsV1 filteredBooking = bookingsService.getBookingByCustomerIdAndDate(customerId, dateStartDate, dateEndDate);
+        BookingsV1 filteredBooking = bookingsService.getBookingByCustomerIdAndDate(customerId, invoiceDate, invoiceBillingDate.currentBillEndDate());
         if (filteredBooking == null) {
             return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_DATE, HttpStatus.BAD_REQUEST);
+        }
+
+        List<InvoicesV1> previousInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, invoiceBillingDate.currentBillStartDate(), invoiceBillingDate.currentBillEndDate());
+        if (previousInvoices != null) {
+            if (!previousInvoices.isEmpty()) {
+                return new ResponseEntity<>(Utils.INVOICE_ALREADY_PRESENT, HttpStatus.BAD_REQUEST);
+            }
         }
 
         Date invoiceStartDate = null;
         Date invoiceEndDate = null;
         Date invoiceDueDate = null;
 
-        if (Utils.compareWithTwoDates(filteredBooking.getJoiningDate(), dateStartDate) <=0) {
-            invoiceStartDate = dateStartDate;
-            invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, 5);
+        if (Utils.compareWithTwoDates(filteredBooking.getJoiningDate(), invoiceBillingDate.currentBillStartDate()) <=0) {
+            invoiceStartDate = invoiceBillingDate.currentBillStartDate();
+            invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, invoiceBillingDate.dueDays());
         }
         else {
             invoiceStartDate = filteredBooking.getJoiningDate();
-            invoiceDueDate = Utils.addDaysToDate(filteredBooking.getJoiningDate(), 5);
+            invoiceDueDate = Utils.addDaysToDate(filteredBooking.getJoiningDate(), invoiceBillingDate.dueDays());
         }
 
         if (filteredBooking.getLeavingDate() == null) {
-            invoiceEndDate = dateEndDate;
+            invoiceEndDate = invoiceBillingDate.currentBillEndDate();
         }
-        else if (Utils.compareWithTwoDates(filteredBooking.getLeavingDate(), dateEndDate) >= 0) {
-            invoiceEndDate = dateEndDate;
+        else if (Utils.compareWithTwoDates(filteredBooking.getLeavingDate(), invoiceBillingDate.currentBillEndDate()) >= 0) {
+            invoiceEndDate = invoiceBillingDate.currentBillEndDate();
         }
-        else if (Utils.compareWithTwoDates(filteredBooking.getLeavingDate(), dateEndDate) >= 0) {
+        else if (Utils.compareWithTwoDates(filteredBooking.getLeavingDate(), invoiceBillingDate.currentBillEndDate()) >= 0) {
             invoiceEndDate = filteredBooking.getLeavingDate();
         }
         else {
-            invoiceEndDate = dateEndDate;
+            invoiceEndDate = invoiceBillingDate.currentBillEndDate();
         }
 
-        long noOfDaysOnThatMonth = Utils.findNumberOfDays(dateStartDate, dateEndDate);
+        long noOfDaysOnThatMonth = Utils.findNumberOfDays(invoiceBillingDate.currentBillStartDate(), invoiceBillingDate.currentBillEndDate());
         long noOfDaysStayed = Utils.findNumberOfDays(invoiceStartDate, invoiceEndDate);
         double invoiceAmount = 0.0;
 
@@ -656,25 +664,26 @@ public class InvoiceV1Service {
         }
         totalAmount = totalAmount + invoiceAmount + ebAmount;
         invoicesV1.setInvoiceNumber(prefixSuffix.toString());
-        invoicesV1.setBasePrice(invoiceAmount);
+        invoicesV1.setBasePrice(Utils.roundOfDouble(invoiceAmount));
         invoicesV1.setCustomerId(customerId);
         invoicesV1.setHostelId(customers.getHostelId());
         invoicesV1.setInvoiceType(InvoiceType.RENT.name());
         invoicesV1.setCustomerMailId(customers.getEmailId());
         invoicesV1.setCustomerMobile(customers.getMobile());
 //        invoicesV1.setEbAmount(ebAmount);
-        invoicesV1.setTotalAmount(totalAmount);
+        invoicesV1.setTotalAmount(Utils.roundOfDouble(totalAmount));
         invoicesV1.setGst(0.0);
         invoicesV1.setCgst(0.0);
         invoicesV1.setSgst(0.0);
         invoicesV1.setGstPercentile(0.0);
         if (isCurrentCycle) {
             invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+            invoicesV1.setPaidAmount(0.0);
         }
         else {
             invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+            invoicesV1.setPaidAmount(Utils.roundOfDouble(totalAmount));
         }
-        invoicesV1.setPaidAmount(totalAmount);
         invoicesV1.setOthersDescription("");
         invoicesV1.setInvoiceMode(InvoiceMode.MANUAL.name());
         invoicesV1.setCreatedBy(authentication.getName());
@@ -1429,5 +1438,9 @@ public class InvoiceV1Service {
             return invoicesV1Repository.findByCustomerIdAndBedIdsForDue(lisCustomerIds, new Date());
         }
         return null;
+    }
+
+    public Integer getPendingInvoiceCounts(String hostelId) {
+        return invoicesV1Repository.findPendingInvoices(hostelId).size();
     }
 }

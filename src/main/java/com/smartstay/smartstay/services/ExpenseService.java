@@ -104,7 +104,7 @@ public class ExpenseService {
         }
 
         Integer count = 1;
-        if (!Utils.checkNullOrEmpty(expense.count())) {
+        if (Utils.checkNullOrEmpty(expense.count())) {
             count = expense.count();
         }
         double unitPrice = 0.0;

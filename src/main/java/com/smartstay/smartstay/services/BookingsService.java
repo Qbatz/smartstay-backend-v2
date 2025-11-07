@@ -12,6 +12,7 @@ import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
@@ -763,5 +764,61 @@ public class BookingsService {
             return  0;
         }
         return listBookings.size();
+    }
+
+    public Double getNextMonthProjections(String hostelId, BillingDates currentMonthBillingDate) {
+        List<String> statuses = new ArrayList<>();
+        statuses.add(BookingStatus.NOTICE.name());
+        statuses.add(BookingStatus.CHECKIN.name());
+        List<BookingsV1> checkedInUsers =  bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
+
+        Calendar nextMonthBillStartDate = Calendar.getInstance();
+        nextMonthBillStartDate.setTime(currentMonthBillingDate.currentBillStartDate());
+        nextMonthBillStartDate.add(Calendar.MONTH, 1);
+
+        Calendar nextMonthBillEndDate = Calendar.getInstance();
+        nextMonthBillEndDate.setTime(currentMonthBillingDate.currentBillEndDate());
+        nextMonthBillEndDate.add(Calendar.MONTH, 1);
+
+
+        List<BookingsV1> newJoiners = bookingsRepository.findBookingsWithDate(hostelId, nextMonthBillStartDate.getTime());
+
+        double checkInRent = checkedInUsers
+                .stream()
+                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()))
+                .mapToDouble(BookingsV1::getRentAmount)
+                .sum();
+        double noticeRentAmount = checkedInUsers
+                .stream()
+                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name()))
+                .mapToDouble(item -> {
+                    if (Utils.compareWithTwoDates(item.getLeavingDate(), nextMonthBillStartDate.getTime()) > 0) {
+                        if (Utils.compareWithTwoDates(item.getLeavingDate(), nextMonthBillEndDate.getTime()) < 0) {
+                            long totalNumberOfDays = Utils.findNumberOfDays(nextMonthBillStartDate.getTime(), nextMonthBillEndDate.getTime());
+                            long noOfDaysStaying = Utils.findNumberOfDays(nextMonthBillStartDate.getTime(), item.getLeavingDate());
+
+
+                            double rentPerDay = item.getRentAmount() / totalNumberOfDays;
+                            double rentForLeavingDate = noOfDaysStaying * rentPerDay;
+
+                            return Math.round(rentForLeavingDate);
+                        }
+                        else {
+                            return item.getRentAmount();
+                        }
+                    }
+                    else {
+                        return 0.0;
+                    }
+
+                })
+                .sum();
+        double upcomingJoiningRents = newJoiners
+                .stream()
+                .mapToDouble(BookingsV1::getRentAmount)
+                .sum();
+
+        return checkInRent + noticeRentAmount + upcomingJoiningRents;
+
     }
 }
