@@ -250,7 +250,7 @@ public class AmenitiesService {
                 customerAmenity.setAmenityId(amenityId);
                 customerAmenity.setCustomerId(customerId);
                 customerAmenity.setCreatedAt(new Date());
-                amenitiesV1.setAmenityAmount(amenitiesV1.getAmenityAmount());
+                customerAmenity.setAmenityPrice(amenitiesV1.getAmenityAmount());
                 customerAmenity.setEndDate(null);
                 customerAmenity.setStartDate(new Date());
                 customerAmenity.setUpdatedBy(user.getUserId());

@@ -24,11 +24,11 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
             rms.room_name as roomName, flrs.floor_name as floorName, (select sum(e2.consumption) 
             from electricity_readings e2 where e2.room_id=er.room_id and e2.bill_start_date >= DATE(:startDate) 
             and e2.bill_end_date <= DATE(:endDate)) as consumption, 
-            (SELECT count(booking_id) FROM bookingsv1 WHERE room_id=er.room_id and current_status in ('NOTICE', 'CHECKIN') and joining_date <= DATE(:endDate) 
-            and (leaving_date is null or leaving_date >= DATE(:endDate)))  as noOfTenants 
+            (SELECT count(booking_id) FROM bookingsv1 WHERE room_id=er.room_id and current_status in ('NOTICE', 'CHECKIN') and joining_date < DATE(:endDate) 
+            and (leaving_date is null or leaving_date >= DATE(:startDate)))  as noOfTenants 
             FROM electricity_readings er LEFT OUTER JOIN rooms rms on rms.room_id=er.room_id 
             left outer join floors flrs on flrs.floor_id=rms.floor_id where er.hostel_id=:hostelId 
-            and er.bill_start_date >= DATE(:startDate) and er.bill_end_date <= DATE(:endDate) 
+            and er.bill_start_date <= DATE(:endDate) and er.bill_end_date >= DATE(:startDate) 
             GROUP by er.room_id ORDER BY entryDate DESC
             """, nativeQuery = true)
     List<ElectricityReadings> getElectricity(@Param("hostelId") String hostelId, @Param("startDate") String startDate, @Param("endDate") String endDate);
@@ -60,7 +60,8 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
     List<ElectricityReadingForRoom> getRoomReading(@Param("roomId") Integer roomId);
 
     @Query(value = """
-            SELECT er.entry_date as entryDate, (SELECT sum(current_reading) from electricity_readings reading where reading.entry_date=er.entry_date) as currentReading FROM electricity_readings er where er.hostel_id=:hostelId ORDER BY er.entry_date DESC LIMIT 1
+            SELECT er.entry_date as entryDate, (SELECT sum(current_reading) from electricity_readings reading where reading.entry_date=er.entry_date 
+            AND reading.hostel_id=:hostelId) as currentReading FROM electricity_readings er where er.hostel_id=:hostelId ORDER BY er.entry_date DESC LIMIT 1
             """, nativeQuery = true)
     CurrentReadings getCurrentReadings(@Param("hostelId") String hostelId);
 

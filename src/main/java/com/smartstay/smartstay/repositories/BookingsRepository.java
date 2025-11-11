@@ -41,7 +41,8 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
     @Query(value = """
             SELECT bookingv1.bed_id as bedId, bookingv1.floor_id as floorId, bookingv1.room_id as roomId, 
-            bookingv1.rent_amount as rentAmount, bookingv1.leaving_date as leavingDate, 
+            bookingv1.booking_amount as bookingAmount, bookingv1.checkout_date as checkoutDate, 
+            bookingv1.rent_amount as rentAmount, bookingv1.leaving_date as leavingDate, bookingv1.notice_date as requestedCheckoutDate, 
             bookingv1.notice_date as noticeDate,  bookingv1.joining_date as joiningDate, bookingv1.booking_id as bookingId, 
             bookingv1.current_status as currentStatus, bookingv1.reason_for_leaving as reasonForLeaving, 
             bookingv1.expected_joining_date as expectedJoiningDate, usr.first_name as firstName, 

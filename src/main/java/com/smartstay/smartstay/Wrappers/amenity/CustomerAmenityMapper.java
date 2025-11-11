@@ -33,6 +33,7 @@ public class CustomerAmenityMapper implements Function<CustomersAmenity, Ameniti
                 amenityName,
                 customersAmenity.getAmenityPrice(),
                 Utils.dateToString(customersAmenity.getStartDate()),
-                Utils.dateToString(customersAmenity.getEndDate()));
+                Utils.dateToString(customersAmenity.getEndDate()),
+                customersAmenity.getAmenityPrice());
     }
 }

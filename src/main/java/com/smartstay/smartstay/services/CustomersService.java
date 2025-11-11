@@ -6,6 +6,7 @@ import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
+import com.smartstay.smartstay.dto.customer.CheckoutInfo;
 import com.smartstay.smartstay.dto.customer.CustomerData;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.customer.Deductions;
@@ -867,7 +868,7 @@ public class CustomersService {
     }
 
 
-    public static AdvanceInfo toAdvanceInfoResponse(Advance advance, InvoiceResponse invoicesV1) {
+    public static AdvanceInfo toAdvanceInfoResponse(Advance advance, InvoiceResponse invoicesV1, double bookingAmount) {
         if (advance == null) return null;
         double maintenanceAmount = 0.0;
         double otherDeductionsAmount = 0.0;
@@ -904,6 +905,7 @@ public class CustomersService {
                 dueDate,
                 dueAmount,
                 advance.getAdvanceAmount(),
+                bookingAmount,
                 paymentStatus,
                 maintenanceAmount,
                 otherDeductionsAmount,
@@ -953,9 +955,17 @@ public class CustomersService {
         String fullName = customers.getFirstName() + " " + customers.getLastName();
 
         CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
+        List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
+        InvoiceResponse advanceInvoice = invoiceResponseList.stream()
+                .filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType()))
+                .limit(1)
+                .findFirst()
+                .orElse(null);
+
         HostelInformation hostelInformation = null;
         Advance advance = customers.getAdvance();
         List<Deductions> listDeduction = null;
+        AdvanceInfo advanceInfo = null;
         List<Deductions> otherDeductionBreakup = null;
         double maintenance = 0;
         double otherDeductions = 0;
@@ -983,6 +993,8 @@ public class CustomersService {
 
         }
         if (bookingDetails != null) {
+            advanceInfo = toAdvanceInfoResponse(advance, advanceInvoice, bookingDetails.getBookingAmount());
+
             hostelInformation = new HostelInformation(bookingDetails.getRoomName(),
                     bookingDetails.getRoomId(),
                     bookingDetails.getFloorName(),
@@ -1018,14 +1030,15 @@ public class CustomersService {
                     null);
         }
 
+        CheckoutInfo checkoutInfo = null;
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            assert bookingDetails != null;
+            checkoutInfo = new CheckoutInfo(Utils.dateToString(bookingDetails.getCheckoutDate()),
+                    Utils.dateToString(bookingDetails.getRequestedCheckoutDate()),
+                    null);
+        }
 
-        List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
-        InvoiceResponse advanceInvoice = invoiceResponseList.stream()
-                .filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType()))
-                .limit(1)
-                .findFirst()
-                .orElse(null);
-        AdvanceInfo advanceInfo = toAdvanceInfoResponse(advance, advanceInvoice);
+
         List<BedHistory> listBeds = bedHistory.getCustomersBedHistory(customers.getCustomerId());
         List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customerId);
 
@@ -1038,10 +1051,12 @@ public class CustomersService {
                 "91",
                 initials.toString(),
                 customers.getProfilePic(),
+                customers.getCurrentStatus(),
                 address,
                 hostelInformation,
                 kycInfo,
                 advanceInfo,
+                checkoutInfo,
                 invoiceResponseList,
                 listBeds,
                 amenities);

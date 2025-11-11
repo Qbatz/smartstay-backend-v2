@@ -6,5 +6,7 @@ public record Amenities(String amenityId,
                         String amenityName,
                         Double amenityAmount,
                         String starDate,
-                        String endDate) {
+                        String endDate,
+                        Double amenityPrice) {
+
 }

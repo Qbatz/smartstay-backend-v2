@@ -449,6 +449,10 @@ public class InvoiceV1Service {
         return invoiceV1.getTotalAmount();
     }
 
+    public InvoicesV1 getBookingInvoice(String customerId, String hostelId) {
+        return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.BOOKING.name());
+    }
+
     /**
      * this is used only for cancel the booking
      *
@@ -1422,12 +1426,18 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        BillingDates currentBillingDate = hostelService.getBillingRuleOnDate(hostelId, new Date());
+        BillingDates currentBillingDate = hostelService.getCurrentBillStartAndEndDates(hostelId);
         if (currentBillingDate != null) {
-//            if (Utils.compareWithTwoDates(currentBillingDate.currentBillStartDate(), new Date()) == 0) {
+            if (Utils.compareWithTwoDates(currentBillingDate.currentBillStartDate(), new Date()) == 0) {
                 //having billing date today
                 applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
-//            }
+            }
+            else {
+                return new ResponseEntity<>("Not today", HttpStatus.BAD_REQUEST);
+            }
+        }
+        else {
+            return new ResponseEntity<>("billing date issue", HttpStatus.BAD_REQUEST);
         }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);

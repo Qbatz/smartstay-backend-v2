@@ -9,6 +9,8 @@ import com.smartstay.smartstay.services.TemplatesService;
 import com.smartstay.smartstay.util.BillingCycle;
 import com.smartstay.smartstay.util.BillingCycleUtil;
 import com.smartstay.smartstay.util.Utils;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -24,33 +26,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @SpringBootApplication
 @EnableScheduling
+@OpenAPIDefinition(servers = {@Server(url = "/", description = "Default")})
 public class SmartstayApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(SmartstayApplication.class, args);
 	}
-
-//	@Bean
-//	public CommandLineRunner customersAmenityAmountMapping(CustomerAmenityRepository customerAmenityRepository, AmentityRepository amenityRepository) {
-//		return args -> {
-//			List<AmenitiesV1> listAmenities = amenityRepository.findAll();
-//			List<CustomersAmenity> listCustomerAmenities = customerAmenityRepository.findAll()
-//					.stream()
-//					.map(i -> {
-//						Double amount = listAmenities
-//								.stream()
-//								.filter(item -> Objects.equals(item.getAmenityId(), i.getAmenityId()))
-//								.mapToDouble(AmenitiesV1::getAmenityAmount)
-//								.sum();
-//						i.setAmenityPrice(amount);
-//						return i;
-//					})
-//					.toList();
-//
-//			customerAmenityRepository.saveAll(listCustomerAmenities);
-//
-//		};
-//	}
 
 //	@Bean
 //	public CommandLineRunner billDueDatesMapper(BillingRuleRepository billingRulesRpository) {
