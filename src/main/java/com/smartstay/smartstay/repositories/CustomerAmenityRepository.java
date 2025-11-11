@@ -52,12 +52,6 @@ public interface CustomerAmenityRepository extends JpaRepository<CustomersAmenit
             """, nativeQuery = true)
     List<CustomerData> findCustomersWithAmenityStatus(@Param("amenityId") String amenityId, @Param("hostelId") String hostelId);
 
-
-
-
-
-
-
-
+    List<CustomersAmenity> findByCustomerId(String customerId);
 
 }

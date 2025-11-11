@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -54,23 +55,41 @@ public class HostelConfigService {
         BillingDates billDates = null;
 
         int billStartDate = 1;
-        int billingRuleDate = 5;
-        if (billingRules != null) {
-            billStartDate = billingRules.getBillingStartDate();
-            billingRuleDate = billingRules.getBillingDueDate();
-        }
+        int billingRuleDueDate = 5;
+        int billMonth;
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(dateJoiningDate);
+        billMonth = calendar.get(Calendar.MONTH);
+
+        if (billingRules != null) {
+            if (billingRules.isInitial()) {
+                List<BillingRules> listBillingRulesExceptInitial = billingRuleRepository.findAllBillingRulesByHostelIdExceptInitial(hostelId);
+                if (!listBillingRulesExceptInitial.isEmpty()) {
+                    billingRules = listBillingRulesExceptInitial.get(0);
+                }
+            }
+            billStartDate = billingRules.getBillingStartDate();
+            billingRuleDueDate = billingRules.getBillDueDays();
+        }
+
+
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
-        Calendar calendarDueDate = Calendar.getInstance();
-        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
+        if (Utils.compareWithTwoDates(dateJoiningDate, calendar.getTime()) < 0) {
+            billMonth = billMonth - 1;
+        }
+        calendar.set(Calendar.MONTH, billMonth);
+
+//        Calendar calendarDueDate = Calendar.getInstance();
+//        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
+
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
         if (billingRules != null) {
-            billDates = new BillingDates(calendar.getTime(),findEndDate, calendarDueDate.getTime());
+            billDates = new BillingDates(calendar.getTime(),findEndDate, dueDate, billingRuleDueDate);
         }
         return billDates;
     }

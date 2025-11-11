@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dao.Modules;
 import com.smartstay.smartstay.dao.Subscription;
 import com.smartstay.smartstay.dao.Plans;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
 import com.smartstay.smartstay.ennum.PlanType;
 import com.smartstay.smartstay.repositories.SubscriptionRepository;
 import com.smartstay.smartstay.responses.plans.PlansList;
@@ -86,5 +87,38 @@ public class SubscriptionService {
 
         return new ResponseEntity<>(subscription1, HttpStatus.OK);
 
+    }
+
+    public boolean isSubscriptionValidToday(String hostelId) {
+        Subscription subscription = subscriptionRepository.checkSubscriptionForToday(hostelId, new Date());
+        return subscription != null;
+    }
+
+    public SubscriptionDto getCurrentSubscriptionDetails(String hostelId) {
+        Subscription subscriptionToday = subscriptionRepository.checkSubscriptionForToday(hostelId, new Date());
+        SubscriptionDto subscriptionDto = null;
+        if (subscriptionToday != null) {
+            boolean isValid = false;
+            int planEndsIn = 0;
+
+            Date nextBillingDate = Utils.addDaysToDate(subscriptionToday.getPlanEndsAt(), 1);
+
+            if (Utils.compareWithTwoDates(subscriptionToday.getPlanStartsAt(), new Date()) <= 0) {
+                if (Utils.compareWithTwoDates(subscriptionToday.getPlanEndsAt(), new Date()) >= 0) {
+                    isValid = true;
+                }
+            }
+            if (isValid) {
+                long numberOfDays = Utils.findNumberOfDays(new Date(), subscriptionToday.getPlanEndsAt());
+                planEndsIn =  (int) numberOfDays;
+            }
+            subscriptionDto = new SubscriptionDto(subscriptionToday.getPlanStartsAt(),
+                    subscriptionToday.getPlanEndsAt(),
+                    nextBillingDate,
+                    isValid,
+                    planEndsIn);
+        }
+
+        return subscriptionDto;
     }
 }

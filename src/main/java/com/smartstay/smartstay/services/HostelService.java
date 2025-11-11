@@ -6,6 +6,7 @@ import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.events.HostelEvents;
@@ -72,10 +73,8 @@ public class HostelService {
 
     @Autowired
     private UsersService usersService;
-
-//    @Autowired
-//    private TemplatesService hostelTemplates;
-
+    @Autowired
+    private SubscriptionService subscriptionService;
     @Autowired
     private BankingService bankingService;
 
@@ -224,14 +223,6 @@ public class HostelService {
         return request;
     }
 
-    public ResponseEntity<?> getAllHostels() {
-        List<HostelV1> listHotels = hostelV1Repository.findAll();
-
-        List<Hostels> list = listHotels.stream().map(hostelV1 -> new HostelsMapper(0, 0, 0,0, 0).apply(hostelV1)).toList();
-
-        return new ResponseEntity<>(list, HttpStatus.OK);
-    }
-
     public List<HostelV1> getAllHostelsForRecuringInvoice() {
         return hostelV1Repository.findAll();
     }
@@ -266,7 +257,8 @@ public class HostelService {
             });
             noOfFloors = floorsService.getFloorCounts(item.getHostelId());
             noOfRooms = roomsService.getRoomCount(item.getHostelId());
-            return new HostelsMapper(noOfFloors, noOfRooms, noOfBeds[0], noOfOccupiedBeds.get(), Integer.parseInt(String.valueOf(noOfAvailableBeds[0]))).apply(Objects.requireNonNull(hostelV1Repository.findByHostelIdAndIsDeletedFalse(item.getHostelId())));
+            SubscriptionDto subscriptionDto = subscriptionService.getCurrentSubscriptionDetails(item.getHostelId());
+            return new HostelsMapper(noOfFloors, noOfRooms, noOfBeds[0], noOfOccupiedBeds.get(), Integer.parseInt(String.valueOf(noOfAvailableBeds[0])), subscriptionDto).apply(Objects.requireNonNull(hostelV1Repository.findByHostelIdAndIsDeletedFalse(item.getHostelId())));
         }).toList();
 
         return new ResponseEntity<>(listOfHostels, HttpStatus.OK);
@@ -335,9 +327,15 @@ public class HostelService {
 
         List<FloorDetails> floorDetails = floors.stream().map(floor -> new FloorDetails(floor.getFloorId(), floor.getFloorName())).toList();
 
-//        String nextBillingDate = Utils.dateToString(subscription.getNextBillingAt());
-//        boolean isSubscriptionActive = Utils.compareWithTodayDate(subscription.getNextBillingAt());
-//        int remainingDays = Utils.calculateRemainingDays(subscription.getNextBillingAt());
+        SubscriptionDto subscriptionDto = subscriptionService.getCurrentSubscriptionDetails(hostelId);
+        String nextBillingDate = null;
+        boolean isSubscriptionActive = false;
+        int remainingDays = 0;
+        if (subscriptionDto != null) {
+            nextBillingDate = Utils.dateToString(subscriptionDto.nextBillingDate());
+            remainingDays = subscriptionDto.endsIn();
+            isSubscriptionActive = subscriptionDto.isValid();
+        }
 
         HostelDetails details = new HostelDetails(hostel.getHostelId(),
                 hostel.getMainImage(),
@@ -352,7 +350,7 @@ public class HostelService {
                 hostel.getState(),
                 hostel.getStreet(),
                 Utils.dateToString(hostel.getUpdatedAt()),
-                true, null, 28, floorDetails.size(), floorDetails);
+                isSubscriptionActive, nextBillingDate, remainingDays, floorDetails.size(), floorDetails);
 
         return ResponseEntity.ok(details);
     }
@@ -370,43 +368,43 @@ public class HostelService {
     public BillingDates getCurrentBillStartAndEndDates(String hostelId) {
         BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
         int billStartDate = 1;
-        int billingRuleDate = 5;
+        int billingRuleDueDate = 5;
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
-            billingRuleDate = billingRules.getBillingDueDate();
+            billingRuleDueDate = billingRules.getBillDueDays();
         }
 
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
-        Calendar calendarDueDate = Calendar.getInstance();
-        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
+//        Calendar calendarDueDate = Calendar.getInstance();
+//        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate, calendarDueDate.getTime());
+        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate);
     }
 
-    public BillingDates getBillStartDate(String hostelId, Date date) {
+    public BillingDates getBillStartAndEndDateBasedOnDate(String hostelId, Date date) {
         BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
         int billStartDate = 1;
-        int billingRuleDate = 5;
+        int billingRuleDueDate = 5;
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
-            billingRuleDate = billingRules.getBillingDueDate();
+            billingRuleDueDate = billingRules.getBillDueDays();
         }
-
-        Calendar calendarDueDate = Calendar.getInstance();
-        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
+
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate, calendarDueDate.getTime());
+        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate);
     }
 
 
@@ -594,7 +592,7 @@ public class HostelService {
 
             com.smartstay.smartstay.responses.hostelConfig.BillingRules rules = new com.smartstay.smartstay.responses.hostelConfig.BillingRules(
                     billingRules.getBillingStartDate(),
-                    billingRules.getBillingDueDate(),
+                    billingRules.getBillDueDays(),
                     billingRules.getNoticePeriod(),
                     Utils.dateToString(billingRules.getStartFrom()));
 
@@ -636,7 +634,6 @@ public class HostelService {
             newBillingRules = new BillingRules();
         }
 
-
         Date startDate = null;
         Date previousEndDate = null;
 
@@ -650,7 +647,13 @@ public class HostelService {
                 }
             }
             else {
-                cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                if (Utils.compareWithTwoDates(cal.getTime(), new Date()) <= 0) {
+                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                }
+                else {
+                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
+                }
+
             }
 
             startDate = cal.getTime();
@@ -675,7 +678,12 @@ public class HostelService {
                 }
             }
             else {
-                cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                if (Utils.compareWithTwoDates(cal.getTime(), new Date()) < 0) {
+                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                }
+                else {
+                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
+                }
             }
 
             startDate = cal.getTime();
@@ -684,11 +692,15 @@ public class HostelService {
 
         }
         if (Utils.checkNullOrEmpty(billRules.dueDate())) {
-            newBillingRules.setBillingDueDate(billRules.dueDate());
+//            newBillingRules.setBillingDueDate(billRules.dueDate());
+            newBillingRules.setBillDueDays(billRules.dueDate());
         }
         else {
-            if (newBillingRules.getBillingDueDate() == null) {
-                newBillingRules.setBillingDueDate(currentBillingRules.getBillingDueDate());
+//            if (newBillingRules.getBillingDueDate() == null) {
+//                newBillingRules.setBillingDueDate(currentBillingRules.getBillingDueDate());
+//            }
+            if (newBillingRules.getBillDueDays() == null) {
+                newBillingRules.setBillDueDays(currentBillingRules.getBillDueDays());
             }
         }
         if (Utils.checkNullOrEmpty(billRules.noticeDays())) {

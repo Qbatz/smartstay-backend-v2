@@ -3,6 +3,7 @@ package com.smartstay.smartstay.Wrappers;
 import com.smartstay.smartstay.dao.Beds;
 import com.smartstay.smartstay.dto.beds.FloorNameRoomName;
 import com.smartstay.smartstay.dto.booking.BedBookingStatus;
+import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.responses.beds.BedsResponse;
@@ -18,15 +19,18 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
 
     List<FloorNameRoomName> floorNameRoomNames = null;
     List<BedBookingStatus> listBedBooking = null;
+    List<InvoiceCustomer> listInvoiceIdCustomerId = null;
 
-    public BedsMapper(List<FloorNameRoomName> floorNameRoomNames, List<BedBookingStatus> listBookings) {
+    public BedsMapper(List<FloorNameRoomName> floorNameRoomNames, List<BedBookingStatus> listBookings, List<InvoiceCustomer> listInvoiceIdCustomerId) {
         this.floorNameRoomNames = floorNameRoomNames;
         this.listBedBooking = listBookings;
+        this.listInvoiceIdCustomerId = listInvoiceIdCustomerId;
     }
 
     @Override
     public BedsResponse apply(Beds beds) {
 
+        boolean isOverDue = false;
         boolean isBooked = false;
         String roomName = null;
         String floorName = null;
@@ -51,11 +55,14 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
             }
         }
 
+        isOverDue = listBedBooking
+                .stream()
+                .filter(i -> Objects.equals(i.bedId(), beds.getBedId()))
+                .anyMatch(i -> {
+                    boolean hasOverDue = checkIsOverDue(i.customerId());
+                    return hasOverDue;
+                });
 
-//        if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-//           isOccupied = true;
-//           onNotice = true;
-//        }
         if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
             isOccupied = true;
         }
@@ -65,7 +72,7 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
 
         FloorNameRoomName floorNameRoomName = floorNameRoomNames
                 .stream()
-                .filter(item -> item.bedId() == beds.getBedId())
+                .filter(item -> Objects.equals(item.bedId(), beds.getBedId()))
                 .findFirst()
                 .orElse(null);
         if (floorNameRoomName != null) {
@@ -84,6 +91,16 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
                 isOccupied,
                 onNotice,
                 isBooked,
+                isOverDue,
                 beds.getRentAmount());
+    }
+
+    private boolean checkIsOverDue(String customerId) {
+        long filteredCustomers = listInvoiceIdCustomerId
+                .stream()
+                .filter(i -> i.customerId().equalsIgnoreCase(customerId))
+                .count();
+
+        return filteredCustomers > 0;
     }
 }

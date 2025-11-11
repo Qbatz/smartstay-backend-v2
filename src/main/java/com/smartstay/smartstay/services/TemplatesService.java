@@ -320,7 +320,7 @@ public class TemplatesService {
             billingRule.setBillingStartDate(payloads.billingStartDate());
         }
         if (payloads.billingDueDate() != null) {
-            billingRule.setBillingDueDate(payloads.billingDueDate());
+            billingRule.setBillDueDays(payloads.billingDueDate());
         }
         if (payloads.noticePeriod() != null) {
             billingRule.setNoticePeriod(payloads.noticePeriod());

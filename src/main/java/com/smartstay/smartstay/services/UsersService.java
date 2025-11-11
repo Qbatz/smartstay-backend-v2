@@ -193,7 +193,13 @@ public class UsersService {
                 initials.append(usersDetails.lastName().toUpperCase().charAt(0));
             }
             else {
-                initials.append(usersDetails.firstName().toUpperCase().charAt(0));
+                if (usersDetails.firstName().length() > 1) {
+                    initials.append(usersDetails.firstName().toUpperCase().charAt(1));
+                }
+                else {
+                    initials.append(usersDetails.firstName().toUpperCase().charAt(0));
+                }
+
             }
             if (usersDetails.roleId() == 1 || usersDetails.roleId() == 2) {
                 details1 = new LoginUsersDetails(usersDetails.userId(),

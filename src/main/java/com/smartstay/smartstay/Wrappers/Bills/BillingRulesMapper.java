@@ -12,7 +12,7 @@ public class BillingRulesMapper {
         BillingRulesDto dto = new BillingRulesDto();
         dto.setId(billingRules.getId());
         dto.setBillingStartDate(billingRules.getBillingStartDate());
-        dto.setBillingDueDate(billingRules.getBillingDueDate());
+        dto.setBillingDueDate(billingRules.getBillDueDays());
         dto.setNoticePeriod(billingRules.getNoticePeriod());
         return dto;
     }
@@ -24,7 +24,7 @@ public class BillingRulesMapper {
         BillingRules billingRules = new BillingRules();
         billingRules.setId(dto.getId());
         billingRules.setBillingStartDate(dto.getBillingStartDate());
-        billingRules.setBillingDueDate(dto.getBillingDueDate());
+        billingRules.setBillDueDays(dto.getBillingDueDate());
         billingRules.setNoticePeriod(dto.getNoticePeriod());
         return billingRules;
     }

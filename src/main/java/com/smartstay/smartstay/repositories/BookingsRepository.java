@@ -41,7 +41,8 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
     @Query(value = """
             SELECT bookingv1.bed_id as bedId, bookingv1.floor_id as floorId, bookingv1.room_id as roomId, 
-            bookingv1.rent_amount as rentAmount, bookingv1.leaving_date as leavingDate, 
+            bookingv1.booking_amount as bookingAmount, bookingv1.checkout_date as checkoutDate, 
+            bookingv1.rent_amount as rentAmount, bookingv1.leaving_date as leavingDate, bookingv1.notice_date as requestedCheckoutDate, 
             bookingv1.notice_date as noticeDate,  bookingv1.joining_date as joiningDate, bookingv1.booking_id as bookingId, 
             bookingv1.current_status as currentStatus, bookingv1.reason_for_leaving as reasonForLeaving, 
             bookingv1.expected_joining_date as expectedJoiningDate, usr.first_name as firstName, 
@@ -108,9 +109,27 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             @Param("expectedJoiningDate") Date expectedJoiningDate
     );
     @Query(value = """
-            SELECT bed_id as bedId, current_status as currentStatus, joining_date as joiningDate, 
-            leaving_date as leavingDate FROM bookingsv1 where current_status in ('BOOKED', 'NOTICE', 'CHECKIN') and bed_id in (:listBedIds)
+            SELECT bed_id as bedId, current_status as currentStatus, joining_date as joiningDate,
+            leaving_date as leavingDate, customer_id as customerId FROM bookingsv1 where current_status in ('BOOKED', 'NOTICE', 'CHECKIN') and bed_id in (:listBedIds)
             """, nativeQuery = true)
     List<BedBookingStatus> findByBedBookingStatus(List<Integer> listBedIds);
+
+    List<BookingsV1> findByHostelIdAndCurrentStatusIn(String hostelId, List<String> currentStatuses);
+
+    @Query("""
+            SELECT booking from BookingsV1 booking WHERE booking.bedId=:bedId and booking.currentStatus in ('CHECKIN', 'NOTICE')
+            """)
+    BookingsV1 checkBookingsByBedIdAndStatus(Integer bedId);
+
+    @Query("""
+            SELECT booking FROM BookingsV1 booking where booking.hostelId=:hostelId and booking.currentStatus='BOOKED'
+            """)
+    List<BookingsV1> findBookingsByHostelId(String hostelId);
+
+    @Query("""
+            SELECT booking FROM BookingsV1 booking where booking.hostelId=:hostelId and booking.currentStatus='BOOKED' AND   
+            booking.expectedJoiningDate >= DATE(:startDate) and booking.expectedJoiningDate <= DATE(:startDate)
+            """)
+    List<BookingsV1> findBookingsWithDate(String hostelId, Date startDate);
 
 }

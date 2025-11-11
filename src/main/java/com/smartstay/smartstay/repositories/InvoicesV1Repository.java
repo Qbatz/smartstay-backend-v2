@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.InvoicesV1;
+import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.responses.invoices.InvoiceSummary;
@@ -48,11 +49,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     @Query(value = """
     SELECT * FROM invoicesv1
-    WHERE invoice_number LIKE CONCAT(:prefix, '%')
+    WHERE hostel_id=:hostelId AND invoice_number LIKE CONCAT(:prefix, '%')
     ORDER BY CAST(SUBSTRING(invoice_number, LENGTH(:prefix) + 2) AS UNSIGNED) DESC
     LIMIT 1
 """, nativeQuery = true)
-    InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix);
+    InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix, @Param("hostelId") String hostelId);
 
 
     @Query(value = "SELECT * FROM invoicesv1 WHERE customer_id = :customerId ORDER BY invoice_start_date DESC LIMIT 1",
@@ -67,9 +68,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCaseAndIsCancelledFalse(String hostelId, String customerId, String paymentStatus);
 
     @Query(value = """
-            SELECT * FROM invoicesv1 invc WHERE invc.invoice_start_date >= DATE(:startDate) and invc.invoice_end_date <=DATE(:endDate) and invc.customer_id=:customerId and invc.invoice_type='RENT';
+            SELECT * FROM invoicesv1 invc WHERE invc.invoice_start_date <= DATE(:endDate) and invc.invoice_end_date >=DATE(:startDate) and invc.customer_id=:customerId and invc.invoice_type='RENT' and is_cancelled=false
             """, nativeQuery = true)
-    InvoicesV1 findInvoiceByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+    List<InvoicesV1> findInvoiceByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
     InvoicesV1 findByInvoiceNumberAndHostelId(String invoiceNumber, String hostelId);
 
@@ -102,5 +103,18 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     );
 
     List<InvoicesV1> findByCustomerIdAndInvoiceType(String customerId, String type);
+
+    @Query("""
+            SELECT inv.customerId, inv.invoiceId FROM InvoicesV1 inv where (inv.paidAmount IS NULL OR inv.paidAmount<inv.totalAmount)
+             and inv.invoiceDueDate<DATE(:todaysDate) and inv.customerId in (:customerIds) and inv.invoiceType='RENT'
+            """)
+    List<InvoiceCustomer> findByCustomerIdAndBedIdsForDue(List<String> customerIds, Date todaysDate);
+
+    @Query("""
+            SELECT inv FROM InvoicesV1 inv where inv.hostelId=:hostelId AND inv.invoiceType='RENT' AND inv.paymentStatus in 
+            ('PARTIAL_PAYMENT', 'PENDING')
+            """)
+    List<InvoicesV1> findPendingInvoices(String hostelId);
+
 
 }

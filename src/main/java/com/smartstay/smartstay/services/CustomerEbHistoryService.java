@@ -45,4 +45,8 @@ public class CustomerEbHistoryService {
     public void saveCustomerEb(List<CustomersEbHistory> customerEbHistory) {
         customerEbRepository.saveAll(customerEbHistory);
     }
+
+    public List<CustomersEbHistory> getAllByCustomerIdAndReadingId(String customerId, List<Integer> ebReadingsId) {
+        return customerEbRepository.findByCustomerIdAndReadingsId(customerId, ebReadingsId);
+    }
 }

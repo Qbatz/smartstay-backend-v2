@@ -482,7 +482,7 @@ public class Utils {
     }
 
     public static Double roundOfDouble(double number) {
-        return Math.round(number * 100.0)/100.0;
+        return (double) Math.round(number);
     }
 
     public static Date convertToTimeStamp(Date date) {

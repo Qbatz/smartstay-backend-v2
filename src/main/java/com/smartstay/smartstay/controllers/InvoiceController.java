@@ -49,4 +49,9 @@ public class InvoiceController {
     public ResponseEntity<?> initializeRefunding(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return invoiceV1Service.initializeRefund(hostelId, invoiceId);
     }
+
+    @PostMapping("/recurring/{hostelId}")
+    public ResponseEntity<?> generateRecurringInvoiceManually(@PathVariable("hostelId") String hostelId) {
+        return invoiceV1Service.generateRecurringManually(hostelId);
+    }
 }

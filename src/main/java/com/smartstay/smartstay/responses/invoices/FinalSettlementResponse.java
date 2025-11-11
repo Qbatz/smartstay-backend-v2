@@ -15,6 +15,7 @@ public record FinalSettlementResponse(String invoiceNumber,
                                       AccountDetails accountDetails,
                                       ConfigInfo configurations,
 
-                                      List<InvoiceSummary> invoiceSummaries
+                                      List<InvoiceSummary> invoiceSummaries,
+                                      InvoiceInfo invoiceInfo
 ) {
 }

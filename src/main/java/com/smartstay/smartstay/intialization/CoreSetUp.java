@@ -1,13 +1,15 @@
 package com.smartstay.smartstay.intialization;
 
-import com.smartstay.smartstay.dao.RolesPermission;
-import com.smartstay.smartstay.dao.RolesV1;
+import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.PlanType;
 import com.smartstay.smartstay.repositories.*;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Component
@@ -340,7 +342,7 @@ public class CoreSetUp {
 //			Plans planBasic = new Plans();
 //			planBasic.setPlanName("Basic");
 //			planBasic.setDuration(28l);
-//			planBasic.setPrice(10.0);
+//			planBasic.setPrice(599.0);
 //			planBasic.setDiscounts(0.0);
 //			planBasic.setPlanType(PlanType.BASIC.name());
 //			planBasic.setPlanCode(planCode3);
@@ -390,7 +392,7 @@ public class CoreSetUp {
 //			Plans planAdvance = new Plans();
 //			planAdvance.setPlanName("Advance");
 //			planAdvance.setDuration(28l);
-//			planAdvance.setPrice(20.0);
+//			planAdvance.setPrice(999.0);
 //			planAdvance.setDiscounts(0.0);
 //			planAdvance.setPlanType(PlanType.ADVANCED.name());
 //			planAdvance.setPlanCode(planCode2);

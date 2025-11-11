@@ -9,6 +9,8 @@ import com.smartstay.smartstay.services.TemplatesService;
 import com.smartstay.smartstay.util.BillingCycle;
 import com.smartstay.smartstay.util.BillingCycleUtil;
 import com.smartstay.smartstay.util.Utils;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -19,18 +21,33 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 @SpringBootApplication
 @EnableScheduling
+@OpenAPIDefinition(servers = {@Server(url = "/", description = "Default")})
 public class SmartstayApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(SmartstayApplication.class, args);
 	}
+
+//	@Bean
+//	public CommandLineRunner billDueDatesMapper(BillingRuleRepository billingRulesRpository) {
+//		return args -> {
+//			List<BillingRules> listNewRules = billingRulesRpository.findAll()
+//					.stream()
+//					.map(item -> {
+//						if (item.getBillDueDays() == null) {
+//							item.setBillDueDays(item.getBillingDueDate());
+//						}
+//						return item;
+//					})
+//					.toList();
+//
+//			billingRulesRpository.saveAll(listNewRules);
+//		};
+//	}
 
 }

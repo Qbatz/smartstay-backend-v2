@@ -96,4 +96,9 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
                                                       @Param("statuses") List<String> statuses);
     List<Customers> findByCustomerIdIn(List<String> customerId);
 
+    @Query("""
+            SELECT cus FROM Customers cus where cus.hostelId=:hostelId AND currentStatus in ('NOTICE', 'CHECK_IN')
+            """)
+    List<Customers> findCheckedInCustomerByHostelId(String hostelId);
+
 }

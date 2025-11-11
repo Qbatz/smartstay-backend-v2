@@ -17,6 +17,7 @@ public class BillingRules {
     private Integer id;
     private Integer billingStartDate;
     private Integer billingDueDate;
+    private Integer billDueDays;
     private Integer noticePeriod;
     private boolean isInitial;
     private Date startFrom;

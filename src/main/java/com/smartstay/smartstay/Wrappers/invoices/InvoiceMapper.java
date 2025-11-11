@@ -20,15 +20,18 @@ public class InvoiceMapper {
         if (invoice.getPaymentStatus() != null) {
             paymentStatus = Utils.capitalize(PaymentStatus.valueOf(invoice.getPaymentStatus()).getDisplayName());
         }
+        if (invoice.isCancelled()) {
+            paymentStatus = "Cancelled";
+        }
 
         return new InvoiceResponse(
                 invoice.getInvoiceId(),
                 invoice.getInvoiceNumber(),
                 Utils.capitalize(invoice.getInvoiceType()),
                 paymentStatus,
-                invoice.getTotalAmount(),
-                invoice.getTotalAmount() - paidAmount,
-                paidAmount,
+                Utils.roundOfDouble(invoice.getTotalAmount()),
+                Utils.roundOfDouble(invoice.getTotalAmount() - paidAmount),
+                Utils.roundOfDouble(paidAmount),
                 invoice.getInvoiceDueDate() != null
                         ? dateFormat.format(invoice.getInvoiceDueDate())
                         : null,

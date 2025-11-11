@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.repositories.CustomerBedHistoryRespository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +30,7 @@ public class CustomersBedHistoryService {
     public List<CustomerBedsList> getAllCustomerFromBedsHistory(String hostelId, Date billStartDate, Date billEndDate) {
         return customerBedHistoryRepository.findByHostelIdAndStartAndEndDate(hostelId, billStartDate, billEndDate)
                 .stream()
+                .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), billEndDate) < 0)
                 .map(item -> new BedHistoryCustomerListMapper().apply(item))
                 .toList();
     }
