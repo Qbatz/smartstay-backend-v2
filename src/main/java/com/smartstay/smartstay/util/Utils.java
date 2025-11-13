@@ -161,6 +161,8 @@ public class Utils {
     public static final String CANNOT_REFUND_FOR_UNPAID_INVOICES = "Cannot refund for unpaid invoices";
     public static final String CANNOT_INITIATE_REFUND = "Cannot initiate refund";
     public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund processed successfully";
+    public static final String CANNOT_CREATE_INVOICE_CHECKOUT_CUSTOMERS = "Cannot create manual invoice for checkout customers";
+    public static final String CANNOT_CREATE_INVOICE_SETTLEMET_CREATED_CUSTOMERS = "Settlement is created";
 
 
     //Date validation messages

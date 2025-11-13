@@ -769,6 +769,7 @@ public class ElectricityService {
                 cal.setTime(readingDate);
                 assert electricityConfig != null;
                 cal.set(Calendar.DAY_OF_MONTH, electricityConfig.getBillDate());
+                cal.add(Calendar.DAY_OF_MONTH, 1);
 
                 startDate = cal.getTime();
 
@@ -968,7 +969,7 @@ public class ElectricityService {
 
                     List<CustomersEbHistory> listEbHistory = listCustomerIdRoomId
                             .stream()
-                            .filter(i -> i.roomId() == item.getRoomId())
+                            .filter(i -> Objects.equals(i.roomId(), item.getRoomId()))
                             .map(i -> {
                                 CustomersEbHistory ebHistory = new CustomersEbHistory();
                                 ebHistory.setReadingId(item.getId());

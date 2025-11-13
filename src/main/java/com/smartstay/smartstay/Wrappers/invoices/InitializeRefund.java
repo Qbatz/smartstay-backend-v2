@@ -9,5 +9,7 @@ public record InitializeRefund(
         String floorName,
         String bedName,
         Double refundableAmount,
-                               List<RefundableBanks> listBanks) {
+        Double refundedAmount,
+        Double pendingRefund,
+        List<RefundableBanks> listBanks) {
 }

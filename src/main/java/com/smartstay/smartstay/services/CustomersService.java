@@ -1618,7 +1618,7 @@ public class CustomersService {
 
         invoiceService.cancelActiveInvoice(unpaidUpdated);
         if (invAdvanceInvoice != null) {
-            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, invAdvanceInvoice.getInvoiceId(), deductions);
+            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, invAdvanceInvoice.getInvoiceId());
 
             customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
             customersRepository.save(customers);
