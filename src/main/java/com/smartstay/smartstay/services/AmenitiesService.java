@@ -4,6 +4,7 @@ import com.smartstay.smartstay.Wrappers.amenity.AmenityMapper;
 import com.smartstay.smartstay.Wrappers.amenity.CustomerAmenityMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
 import com.smartstay.smartstay.payloads.amenity.AssignRequest;
 import com.smartstay.smartstay.payloads.amenity.UnAssignRequest;
@@ -41,6 +42,8 @@ public class AmenitiesService {
     private BookingsService bookingsService;
     @Autowired
     private CustomersService customersService;
+    @Autowired
+    private HostelService hostelService;
 
     public ResponseEntity<?> getAllAmenities(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -290,10 +293,21 @@ public class AmenitiesService {
         }
 
         if (request.customers() != null) {
+            Date amenityEndDate = null;
+            if (amenitiesV1.getIsProRate()) {
+                amenityEndDate = new Date();
+            }
+            else {
+                BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+                if (billingDates != null) {
+                    amenityEndDate = billingDates.currentBillEndDate();
+                }
+            }
+
             for (String customerId : request.customers()) {
                 CustomersAmenity exists = customerAmenityRepository.findTopByAmenityIdAndCustomerIdAndEndDateIsNullOrderByCreatedAtDesc(amenityId, customerId);
                 if (exists != null) {
-                    exists.setEndDate(new Date());
+                    exists.setEndDate(amenityEndDate);
                     exists.setUpdatedAt(new Date());
                     customerAmenityRepository.save(exists);
                 }

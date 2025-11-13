@@ -88,7 +88,6 @@ public class CustomersController {
     public ResponseEntity<?> getCustomerDetails(@PathVariable("customerId") String customerId) {
         return customersService.getCustomerDetails(customerId);
     }
-
     @GetMapping("/settlement/{customerId}")
     public ResponseEntity<?> getFinalSettlementInfo(@PathVariable("customerId") String customerId) {
         return customersService.getInformationForFinalSettlement(customerId);
