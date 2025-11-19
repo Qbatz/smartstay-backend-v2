@@ -8,6 +8,7 @@ import com.smartstay.smartstay.dto.invoices.Invoices;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
+import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.List;
@@ -45,27 +46,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         String invoiceType = null;
         String paymentStatus = null;
         if (invoices.getPaymentStatus() != null) {
-            if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-                paymentStatus = "Paid";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
-                paymentStatus = "Pending";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                paymentStatus = "Partial Payment";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.ADVANCE_IN_HAND.name())) {
-                paymentStatus = "Over pay";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
-                paymentStatus = "Refunded";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
-                paymentStatus = "Pending Refund";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
-                paymentStatus = "Partially Refunded";
-            }
+           paymentStatus = InvoiceUtils.getInvoicePaymentStatusByStatus(invoices.getPaymentStatus());
         }
 
 

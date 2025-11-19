@@ -5,11 +5,10 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
-import com.smartstay.smartstay.dto.customer.CheckoutInfo;
+import com.smartstay.smartstay.dto.customer.*;
 import com.smartstay.smartstay.dto.customer.CustomerData;
-import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
-import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
@@ -24,6 +23,8 @@ import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.*;
+import com.smartstay.smartstay.responses.customer.BedHistory;
+import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -963,10 +964,12 @@ public class CustomersService {
                 .orElse(null);
 
         HostelInformation hostelInformation = null;
+        BookingInfo bookingInfo = null;
         Advance advance = customers.getAdvance();
         List<Deductions> listDeduction = null;
         AdvanceInfo advanceInfo = null;
         List<Deductions> otherDeductionBreakup = null;
+        String bookingId = null;
         double maintenance = 0;
         double otherDeductions = 0;
         double advanceAmount = 0;
@@ -993,6 +996,7 @@ public class CustomersService {
 
         }
         if (bookingDetails != null) {
+            bookingId = bookingDetails.getBookingId();
             advanceInfo = toAdvanceInfoResponse(advance, advanceInvoice, bookingDetails.getBookingAmount());
 
             hostelInformation = new HostelInformation(bookingDetails.getRoomName(),
@@ -1008,6 +1012,34 @@ public class CustomersService {
                     maintenance,
                     bookingDetails.getRentAmount(),
                     otherDeductionBreakup);
+
+            if (bookingDetails.getIsBooked() != null && bookingDetails.getIsBooked()) {
+                BookingsV1 bookingV1 = bookingsService.getBookingsByCustomerId(customerId);
+                if (bookingV1 != null) {
+                    CustomersBedHistory cbh = bookingV1.getCustomerBedHistory()
+                            .stream()
+                            .filter(i -> i.getType().equalsIgnoreCase(CustomersBedType.BOOKED.name()))
+                            .findAny().get();
+
+                    BedDetails bedDetails = bedsService.getBedDetails(cbh.getBedId());
+                    String bookedBedName = null;
+                    String bookedFloorName = null;
+                    String bookedRoomName = null;
+
+                    if (bedDetails != null) {
+                        bookedBedName = bedDetails.getBedName();
+                        bookedFloorName = bedDetails.getFloorName();
+                        bookedRoomName = bedDetails.getRoomName();
+                    }
+
+                    bookingInfo = new BookingInfo(Utils.dateToString(bookingV1.getBookingDate()),
+                            bookingV1.getBookingAmount(),
+                            bookedBedName,
+                            bookedFloorName,
+                            bookedRoomName);
+                }
+            }
+
         }
 
         CustomerAddress address = new CustomerAddress(customers.getStreet(),
@@ -1033,8 +1065,20 @@ public class CustomersService {
         CheckoutInfo checkoutInfo = null;
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
             assert bookingDetails != null;
+            long noticeDays = Utils.findNumberOfDays(bookingDetails.getNoticeDate(), bookingDetails.getCheckoutDate());
             checkoutInfo = new CheckoutInfo(Utils.dateToString(bookingDetails.getCheckoutDate()),
                     Utils.dateToString(bookingDetails.getRequestedCheckoutDate()),
+                    Utils.dateToString(bookingDetails.getNoticeDate()),
+                    noticeDays,
+                    null);
+        }
+        else if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
+            assert bookingDetails != null;
+            long noticeDays = Utils.findNumberOfDays(bookingDetails.getNoticeDate(), bookingDetails.getRequestedCheckoutDate());
+            checkoutInfo = new CheckoutInfo(null,
+                    Utils.dateToString(bookingDetails.getRequestedCheckoutDate()),
+                    Utils.dateToString(bookingDetails.getNoticeDate()),
+                    noticeDays,
                     null);
         }
 
@@ -1051,12 +1095,14 @@ public class CustomersService {
                 "91",
                 initials.toString(),
                 customers.getProfilePic(),
+                bookingId,
                 customers.getCurrentStatus(),
                 address,
                 hostelInformation,
                 kycInfo,
                 advanceInfo,
                 checkoutInfo,
+                bookingInfo,
                 invoiceResponseList,
                 listBeds,
                 amenities);
@@ -1842,5 +1888,10 @@ public class CustomersService {
                 .map(Customers::getAdvance)
                 .mapToDouble(Advance::getAdvanceAmount)
                 .sum();
+    }
+
+    public void updateCustomersJoiningDate(Customers customers, Date joinigDate) {
+        customers.setJoiningDate(joinigDate);
+        customersRepository.save(customers);
     }
 }

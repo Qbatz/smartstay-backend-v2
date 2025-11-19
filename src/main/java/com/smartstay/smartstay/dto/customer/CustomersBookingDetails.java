@@ -22,4 +22,5 @@ public interface CustomersBookingDetails {
     String getRoomName();
     String getFloorName();
     String getBedName();
+    Boolean getIsBooked();
 }

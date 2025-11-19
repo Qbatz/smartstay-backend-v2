@@ -45,4 +45,20 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
             SELECT * FROM customers_bed_history WHERE customer_id=:customerId AND type='BOOKED' LIMIT 1
             """, nativeQuery = true)
     CustomersBedHistory findByCustomerIdAndTypeBooking(@Param("customerId") String customerId);
+
+    @Query("""
+            SELECT cbh FROM CustomersBedHistory cbh where cbh.type='BOOKED'
+            """)
+    List<CustomersBedHistory> findByAllBookings();
+
+    @Query(value = """
+            SELECT * FROM customers_bed_history WHERE customer_id=:customerId and type='CHECK_IN' LIMIT 1
+            """, nativeQuery = true)
+    CustomersBedHistory findByCustomerIdAndTypeRent(@Param("customerId") String customerId);
+
+    @Query(value = """
+            SELECT * FROM customers_bed_history WHERE customer_id=:customerId and type in ('CHECK_IN', 'REASSIGNED')
+            """, nativeQuery = true)
+    List<CustomersBedHistory> findAllBedsAfterJoining(@Param("customerId") String customerId);
 }
+

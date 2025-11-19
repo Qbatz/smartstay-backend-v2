@@ -20,7 +20,6 @@ public class HostelEventsListeners {
 
     @Autowired
     private HostelService hostelService;
-
     @Autowired
     private TemplatesService hostelTemplates;
     @Autowired

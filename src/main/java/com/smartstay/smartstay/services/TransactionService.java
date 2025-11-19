@@ -590,10 +590,13 @@ public class TransactionService {
         if (!invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
             assert customers != null;
             bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
-            BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
-            if (bedDetails != null) {
-                stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(), hostelV1.getHostelName());
+            if (bedHistory != null) {
+                BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
+                if (bedDetails != null) {
+                    stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(), hostelV1.getHostelName());
+                }
             }
+
         }
         else {
             assert customers != null;
@@ -771,4 +774,7 @@ public class TransactionService {
         return new ResponseEntity<>(Utils.REFUND_PROCESSED_SUCCESSFULLY, HttpStatus.OK);
     }
 
+    public List<TransactionV1> getTransactionsByInvoiceId(String invoiceId) {
+        return transactionRespository.findByInvoiceId(invoiceId);
+    }
 }

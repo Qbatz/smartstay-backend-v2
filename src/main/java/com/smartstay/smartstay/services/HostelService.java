@@ -105,8 +105,6 @@ public class HostelService {
             emailId = usersService.findUserByUserId(userId).getEmailId();
         }
 
-        ZohoSubscriptionRequest request = formSubscription(payloads, emailId);
-
         String hostelID = hostelIdGenerator();
         HostelV1 hostelV1 = new HostelV1();
         hostelV1.setHostelId(hostelID);

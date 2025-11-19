@@ -669,7 +669,7 @@ public class BankingService {
     public List<RefundableBanks> initializeRefund(String hostelId) {
         return bankingV1Repository.findByHostelId(hostelId)
                 .stream()
-                .filter(item -> item.getBalance() >= 0)
+                .filter(item -> item.getBalance() != null && item.getBalance() >= 0)
                 .map(item -> new RefundableBanksMapper().apply(item))
                 .toList();
     }
