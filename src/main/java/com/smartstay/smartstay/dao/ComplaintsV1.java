@@ -1,14 +1,12 @@
 package com.smartstay.smartstay.dao;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Data
@@ -19,8 +17,6 @@ public class  ComplaintsV1 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer complaintId;
-
-
     private String customerId;
     private Integer complaintTypeId;
     private Integer floorId;
@@ -38,4 +34,7 @@ public class  ComplaintsV1 {
     private Date assignedDate;
     private Boolean isActive;
     private Boolean isDeleted;
+
+    @OneToMany(mappedBy = "complaints", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ComplaintImages> additionalImages;
 }
