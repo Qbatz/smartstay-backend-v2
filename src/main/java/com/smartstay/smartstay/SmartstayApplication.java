@@ -18,6 +18,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.yaml.snakeyaml.comments.CommentLine;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -49,5 +50,102 @@ public class SmartstayApplication {
 //			billingRulesRpository.saveAll(listNewRules);
 //		};
 //	}
+
+//	@Bean
+//	public CommandLineRunner markBookedCustomers(BookingsRepository bookingsRepository, CustomerBedHistoryRespository customerBedHistoryRespository) {
+//		return args -> {
+//			List<CustomersBedHistory> listBeds = customerBedHistoryRespository.findByAllBookings();
+//
+//			List<BookingsV1> bookingId = listBeds
+//					.stream()
+//					.map(i -> {
+//						BookingsV1 v1 = i.getBooking();
+//						v1.setIsBooked(true);
+//
+//						return v1;
+//					})
+//					.toList();
+//
+//			bookingsRepository.saveAll(bookingId);
+//		};
+//	}
+
+//	@Bean
+//	public CommandLineRunner addCustomerRentsInRentHistory(BookingsRepository bookingsRepository) {
+//		return args -> {
+//			List<BookingsV1> listAllBookings = bookingsRepository.findAll()
+//					.stream()
+//					.map(i-> {
+//                        if (i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()) || i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
+//							if (i.getRentHistory() == null) {
+//								List<RentHistory> rentHistories = new ArrayList<>();
+//								RentHistory rentHistory = new RentHistory();
+//								rentHistory.setRent(i.getRentAmount());
+//								rentHistory.setBooking(i);
+//								rentHistory.setCustomerId(i.getCustomerId());
+//								rentHistory.setReason("Initial rent");
+//								rentHistory.setCreatedAt(i.getJoiningDate());
+//								rentHistory.setStartsFrom(i.getJoiningDate());
+//								rentHistory.setCreatedBy(i.getCreatedBy());
+//								rentHistories.add(rentHistory);
+//
+//								i.setRentHistory(rentHistories);
+//							}
+//							else if (i.getRentHistory().isEmpty()) {
+//								List<RentHistory> rentHistories = new ArrayList<>();
+//								RentHistory rentHistory = new RentHistory();
+//								rentHistory.setRent(i.getRentAmount());
+//								rentHistory.setBooking(i);
+//								rentHistory.setCustomerId(i.getCustomerId());
+//								rentHistory.setReason("Initial rent");
+//								rentHistory.setCreatedAt(i.getJoiningDate());
+//								rentHistory.setStartsFrom(i.getJoiningDate());
+//								rentHistory.setCreatedBy(i.getCreatedBy());
+//								rentHistories.add(rentHistory);
+//
+//								i.setRentHistory(rentHistories);
+//							}
+//						}
+//						return i;
+//                    })
+//					.toList();
+//
+//			bookingsRepository.saveAll(listAllBookings);
+//		};
+//	}
+
+//	@Bean
+//	public CommandLineRunner mapSubscrions(SubscriptionRepository subscriptionRepository, HostelV1Repository hostelV1Repository, PlansRepository plansRepository) {
+//		return args -> {
+//			List<Subscription> listAllSubscriptions = subscriptionRepository.findAll();
+//			Plans trialPlans = plansRepository.findPlanByPlanType(PlanType.TRIAL.name());
+//			List<String> hostelIds = listAllSubscriptions.stream()
+//					.map(Subscription::getHostelId)
+//					.toList();
+//
+//			List<Subscription> listNewSubscriptions = hostelV1Repository.findAllHostelsNoIncludeIds(hostelIds)
+//					.stream()
+//					.map(i -> {
+//							Date endingDate =  Utils.addDaysToDate(i.getCreatedAt(), trialPlans.getDuration().intValue());
+//
+//							Subscription history = new Subscription();
+//							history.setHostelId(i.getHostelId());
+//							history.setPlanAmount(trialPlans.getPrice());
+//							history.setPaidAmount(0.0);
+//							history.setPlanCode(trialPlans.getPlanCode());
+//							history.setPlanName(trialPlans.getPlanName());
+//							history.setPlanStartsAt(i.getCreatedAt());
+//							history.setPlanEndsAt(endingDate);
+//							history.setActivatedAt(i.getCreatedAt());
+//							history.setCreatedAt(i.getCreatedAt());
+//						return history;
+//					})
+//					.toList();
+//
+//			subscriptionRepository.saveAll(listNewSubscriptions);
+//
+//		};
+//	}
+
 
 }

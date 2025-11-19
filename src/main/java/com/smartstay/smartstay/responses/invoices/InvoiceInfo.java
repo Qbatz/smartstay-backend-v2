@@ -10,5 +10,6 @@ public record InvoiceInfo(Double subTotal,
                           Double balanceAmount,
                           String invoicePeriod,
                           String invoiceMonth,
+                          String paymentStatus,
                           List<InvoiceItems> invoiceItems) {
 }

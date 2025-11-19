@@ -54,4 +54,12 @@ public interface CustomerAmenityRepository extends JpaRepository<CustomersAmenit
 
     List<CustomersAmenity> findByCustomerId(String customerId);
 
+    @Query("""
+            SELECT ca FROM CustomersAmenity ca WHERE ca.customerId=:customerId AND ca.amenityId in (:amenityIds) AND 
+            ca.endDate IS NULL
+            """)
+    List<CustomersAmenity> checkAmenitiesAlreadyAssigned(String customerId, List<String> amenityIds);
+
+
+
 }

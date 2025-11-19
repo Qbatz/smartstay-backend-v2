@@ -2,6 +2,7 @@ package com.smartstay.smartstay.controllers;
 
 
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
+import com.smartstay.smartstay.payloads.amenity.AssignCustomer;
 import com.smartstay.smartstay.payloads.amenity.AssignRequest;
 import com.smartstay.smartstay.payloads.amenity.UnAssignRequest;
 import com.smartstay.smartstay.services.AmenitiesService;
@@ -47,6 +48,11 @@ public class AmentityController {
     @PutMapping("/assign/{hostelId}/{amenityId}")
     public ResponseEntity<?> assign(@RequestBody AssignRequest request, @PathVariable("amenityId") String amenityId, @PathVariable("hostelId") String hostelId) {
         return amenitiesService.assign(request, amenityId, hostelId);
+    }
+
+    @PutMapping("/assign/customer/{hostelId}")
+    public ResponseEntity<?> assignToCustomer(@PathVariable("hostelId") String hostelId, @RequestBody @Valid AssignCustomer assignCustomer) {
+        return amenitiesService.assignToCustomer(hostelId, assignCustomer);
     }
 
     @PutMapping("/unAssign/{hostelId}/{amenityId}")

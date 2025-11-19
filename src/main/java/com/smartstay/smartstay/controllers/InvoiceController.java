@@ -30,12 +30,10 @@ public class InvoiceController {
     public ResponseEntity<?> getAllTransactions(@PathVariable("hostelId") String hostelId) {
         return invoiceV1Service.getTransactions(hostelId);
     }
-
     @GetMapping("/receipts/{hostelId}")
     public ResponseEntity<?> getAllReceipt(@PathVariable("hostelId") String hostelId) {
         return invoiceV1Service.getAllReceiptsByHostelId(hostelId);
     }
-
     @PostMapping("/manual/{customerId}")
     public ResponseEntity<?> generateManualInvoice(@PathVariable("customerId") String customerId, @RequestBody @Valid ManualInvoice manualInvoice) {
         return invoiceV1Service.generateManualInvoice(customerId, manualInvoice);

@@ -24,7 +24,9 @@ import com.smartstay.smartstay.payloads.invoice.ItemResponse;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
+import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.invoices.*;
+import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEvent;
@@ -751,6 +753,10 @@ public class InvoiceV1Service {
         }
 
 
+        String paymentStatus = null;
+        if (invoicesV1.getPaymentStatus() != null) {
+            paymentStatus = InvoiceUtils.getInvoicePaymentStatusByStatus(invoicesV1.getPaymentStatus());
+        }
 
         StringBuilder invoiceMonth = new StringBuilder();
         StringBuilder invoiceRentalPeriod = new StringBuilder();
@@ -976,6 +982,7 @@ public class InvoiceV1Service {
                     balanceAmount,
                     invoiceRentalPeriod.toString(),
                     invoiceMonth.toString(),
+                    paymentStatus,
                     listInvoiceItems);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(
@@ -1037,6 +1044,7 @@ public class InvoiceV1Service {
                 balanceAmount,
                 invoiceRentalPeriod.toString(),
                 invoiceMonth.toString(),
+                paymentStatus,
                 listInvoiceItems);
 
         InvoiceDetails details = new InvoiceDetails(invoicesV1.getInvoiceNumber(),
@@ -1487,9 +1495,11 @@ public class InvoiceV1Service {
 
         BillingDates currentBillingDate = hostelService.getCurrentBillStartAndEndDates(hostelId);
         if (currentBillingDate != null) {
+            int compared = Utils.compareWithTwoDates(currentBillingDate.currentBillStartDate(), new Date());
             if (Utils.compareWithTwoDates(currentBillingDate.currentBillStartDate(), new Date()) == 0) {
                 //having billing date today
                 applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
+                System.out.println("entering");
             }
             else {
                 return new ResponseEntity<>("Not today", HttpStatus.BAD_REQUEST);
@@ -1511,5 +1521,253 @@ public class InvoiceV1Service {
 
     public Integer getPendingInvoiceCounts(String hostelId) {
         return invoicesV1Repository.findPendingInvoices(hostelId).size();
+    }
+
+    public void updateJoiningDateOnAdvanceInvoice(String customerId, Date joiningDate) {
+        List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customerId, InvoiceType.ADVANCE.name());
+        if (invoicesV1 != null && !invoicesV1.isEmpty()) {
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(invoicesV1.get(0).getHostelId(), joiningDate);
+            InvoicesV1 inv1 = invoicesV1.get(0);
+            inv1.setInvoiceStartDate(joiningDate);
+            Date dueDate = Utils.addDaysToDate(joiningDate, billingDates.dueDays());
+            inv1.setInvoiceDueDate(dueDate);
+
+            invoicesV1Repository.save(inv1);
+        }
+    }
+
+    public void findOldInvoiceAndUpdate(String customerId, Date oldJoiningDate, Date newJoiningDate, String hostelId, Double rent) {
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, oldJoiningDate);
+
+        List<InvoicesV1> oldInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+        if (oldInvoices != null && !oldInvoices.isEmpty()) {
+            InvoicesV1 invoicesV1 = oldInvoices.get(0);
+            List<TransactionV1> transactions = transactionService.getTransactionsByInvoiceId(invoicesV1.getInvoiceId());
+            if (Utils.compareWithTwoDates(newJoiningDate, billingDates.currentBillStartDate()) < 0) {
+                double rentAmount = invoicesV1.getInvoiceItems()
+                                .stream()
+                                        .filter(i -> i.getInvoiceItem().equalsIgnoreCase(InvoiceType.RENT.name()))
+                                                .mapToDouble(InvoiceItems::getAmount)
+                                                        .sum();
+                long noOfDaysStayed = Utils.findNumberOfDays(invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+                if (noOfDaysStayed < 0) {
+                    noOfDaysStayed = -1 * noOfDaysStayed;
+                }
+                double rentPerDay = rentAmount / noOfDaysStayed;
+
+                long noDaysStayingBasedOnNewJoiningDate = Utils.findNumberOfDays(billingDates.currentBillStartDate(), invoicesV1.getInvoiceEndDate());
+                if (noDaysStayingBasedOnNewJoiningDate < 0) {
+                    noDaysStayingBasedOnNewJoiningDate = -1*noDaysStayingBasedOnNewJoiningDate;
+                }
+                double newRent = Math.round(noDaysStayingBasedOnNewJoiningDate * rentPerDay);
+                double oldBasePrice = invoicesV1.getBasePrice() - rentAmount;
+
+                double paidAmount = 0.0;
+                if (!transactions.isEmpty()) {
+                    paidAmount = transactions.stream()
+                            .mapToDouble(TransactionV1::getPaidAmount)
+                            .sum();
+                }
+
+                invoicesV1.setInvoiceStartDate(billingDates.currentBillStartDate());
+                invoicesV1.setBasePrice(oldBasePrice + newRent);
+                invoicesV1.setTotalAmount(oldBasePrice+newRent);
+                if (paidAmount > 0) {
+                    if ((oldBasePrice+newRent) > paidAmount) {
+                        invoicesV1.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+                    }
+                }
+                List<InvoiceItems> invoiceItems = invoicesV1.getInvoiceItems()
+                        .stream()
+                        .map(i -> {
+                            if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
+                                i.setAmount(newRent);
+                            }
+                            return i;
+                        } )
+                        .toList();
+//                invoicesV1.setInvoiceItems(invoiceItems);
+
+                invoicesV1Repository.save(invoicesV1);
+
+//                String invoiceNumber = null;
+//                BillTemplates templates = templateService.getBillTemplate(hostelId, InvoiceType.RENT.name());
+//                if (templates != null) {
+//                    InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix(), hostelId);
+//                    if (inv == null) {
+//                        String invoice = templates.prefix() +
+//                                "-" +
+//                                templates.suffix();
+//                        invoiceNumber = invoice;
+//                    }
+//                    else {
+//                        invoiceNumber = Utils.formPrefixSuffix(inv.getInvoiceNumber());
+//                    }
+//                }
+
+
+//                BillingDates newJoiningDateBillingDates = hostelService.getBillingRuleOnDate(hostelId, newJoiningDate);
+//                long noOfDaysAsPerNewJoiningDate = Utils.findNumberOfDays(newJoiningDate, newJoiningDateBillingDates.currentBillEndDate());
+//                double rentPerDayAsPerNewDate = rent / noOfDaysAsPerNewJoiningDate;
+//                long noOfDaysStayedAsPerNewDate = Utils.findNumberOfDays(newJoiningDate, newJoiningDateBillingDates.currentBillEndDate());
+//                double newRentAsPerNewDate = Math.round(noOfDaysStayedAsPerNewDate * rentPerDayAsPerNewDate);
+//
+//                Date invoiceStateDate = newJoiningDateBillingDates.currentBillStartDate();
+//                if (Utils.compareWithTwoDates(newJoiningDateBillingDates.currentBillStartDate(), newJoiningDate) > 0) {
+//                    invoiceStateDate = newJoiningDate;
+//                }
+//                Date dueDate = Utils.addDaysToDate(invoiceStateDate, newJoiningDateBillingDates.dueDays());
+//
+//                InvoicesV1 newJoiningDateInvoice = new InvoicesV1();
+//                newJoiningDateInvoice.setCustomerId(customerId);
+//                newJoiningDateInvoice.setHostelId(hostelId);
+//                newJoiningDateInvoice.setInvoiceNumber(invoiceNumber);
+//                newJoiningDateInvoice.setCustomerMailId(invoicesV1.getCustomerMailId());
+//                newJoiningDateInvoice.setCustomerMobile(invoicesV1.getCustomerMobile());
+//                newJoiningDateInvoice.setInvoiceType(InvoiceType.RENT.name());
+//                newJoiningDateInvoice.setBasePrice(newRentAsPerNewDate);
+//                newJoiningDateInvoice.setTotalAmount(newRentAsPerNewDate);
+//                newJoiningDateInvoice.setPaidAmount(0.0);
+//                newJoiningDateInvoice.setCgst(0.0);
+//                newJoiningDateInvoice.setSgst(0.0);
+//                newJoiningDateInvoice.setGstPercentile(0.0);
+//                newJoiningDateInvoice.setPaymentStatus(PaymentStatus.PAID.name());
+//                newJoiningDateInvoice.setInvoiceMode(InvoiceMode.MANUAL.name());
+//                newJoiningDateInvoice.setCancelled(false);
+//                newJoiningDateInvoice.setCreatedBy(authentication.getName());
+//                newJoiningDateInvoice.setInvoiceGeneratedDate(new Date());
+//                newJoiningDateInvoice.setInvoiceStartDate(invoiceStateDate);
+//                newJoiningDateInvoice.setInvoiceDueDate(dueDate);
+//                newJoiningDateInvoice.setInvoiceEndDate(newJoiningDateBillingDates.currentBillEndDate());
+//                newJoiningDateInvoice.setCreatedAt(invoiceStateDate);
+//
+//                List<InvoiceItems> listInvoicesItems = new ArrayList<>();
+//                InvoiceItems items = new InvoiceItems();
+//                items.setAmount(newRentAsPerNewDate);
+//                items.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+//                items.setInvoice(newJoiningDateInvoice);
+//
+//                newJoiningDateInvoice.setInvoiceItems(listInvoicesItems);
+//
+//                invoicesV1Repository.save(newJoiningDateInvoice);
+
+            }
+            else {
+                double rentAmount = invoicesV1.getInvoiceItems()
+                        .stream()
+                        .filter(i -> i.getInvoiceItem().equalsIgnoreCase(InvoiceType.RENT.name()))
+                        .mapToDouble(InvoiceItems::getAmount)
+                        .sum();
+                long noOfDaysStayed = Utils.findNumberOfDays(invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+                if (noOfDaysStayed < 0) {
+                    noOfDaysStayed = -1 * noOfDaysStayed;
+                }
+                double rentPerDay = rentAmount / noOfDaysStayed;
+
+                long noDaysStayingBasedOnNewJoiningDate = Utils.findNumberOfDays(newJoiningDate, invoicesV1.getInvoiceEndDate());
+                if (noDaysStayingBasedOnNewJoiningDate < 0) {
+                    noDaysStayingBasedOnNewJoiningDate = -1*noDaysStayingBasedOnNewJoiningDate;
+                }
+
+                double newRent = Math.round(noDaysStayingBasedOnNewJoiningDate * rentPerDay);
+                Date dueDate = Utils.addDaysToDate(newJoiningDate, billingDates.dueDays());
+
+                Double totalAmount = invoicesV1.getTotalAmount();
+                double oldRent = invoicesV1.getInvoiceItems()
+                                .stream()
+                                        .filter(i -> i.getInvoiceItem().equalsIgnoreCase(InvoiceType.RENT.name()))
+                                                .mapToDouble(InvoiceItems::getAmount)
+                                                        .sum();
+                double totalWithoutOldRent = totalAmount - oldRent;
+                double totalWithNewRent = totalWithoutOldRent + newRent;
+
+                invoicesV1.setInvoiceStartDate(newJoiningDate);
+                invoicesV1.setInvoiceDueDate(dueDate);
+                invoicesV1.setBasePrice(newRent);
+                invoicesV1.setTotalAmount(totalWithNewRent);
+
+                List<InvoiceItems> invoiceItems = invoicesV1.getInvoiceItems()
+                        .stream()
+                        .map(i -> {
+                            if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
+                                i.setAmount(newRent);
+                            }
+                            return i;
+                        } )
+                        .toList();
+                invoicesV1.setInvoiceItems(invoiceItems);
+
+                invoicesV1Repository.save(invoicesV1);
+
+
+            }
+        }
+    }
+
+    public boolean updateJoiningDate(String customerId, Date joinigDate, String hostelId, Date oldJoiningDate, Double rent) {
+        BillingDates joiningDateBillingRules = hostelService.getBillingRuleOnDate(hostelId, joinigDate);
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(joiningDateBillingRules.currentBillStartDate());
+        calendar.add(Calendar.MONTH, 1);
+
+        BillingDates currentMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, oldJoiningDate);
+
+
+        BillingDates nextMonthBillDates = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+
+        if (Utils.compareWithTwoDates(currentMonthBillingDates.currentBillStartDate(), oldJoiningDate) > 0) {
+            List<InvoicesV1> oldInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, nextMonthBillDates.currentBillStartDate(), nextMonthBillDates.currentBillEndDate());
+            if (!oldInvoices.isEmpty()) {
+                return false;
+            }
+        }
+
+
+        updateJoiningDateOnAdvanceInvoice(customerId, joinigDate);
+        findOldInvoiceAndUpdate(customerId, oldJoiningDate, joinigDate, hostelId, rent);
+
+        return true;
+
+    }
+
+    public List<InvoicesV1> findRentInvoiceByCustomerId(String customerId) {
+        List<InvoicesV1> listNotPaidInvoices = invoicesV1Repository.findByCustomerIdAndInvoiceType(customerId, InvoiceType.RENT.name())
+                .stream()
+                .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()))
+                .toList();
+        return invoicesV1Repository.findByCustomerIdAndInvoiceType(customerId, InvoiceType.RENT.name());
+    }
+
+    /**
+     * this is to change the old rental amounts
+     *
+     * @param customerId
+     * @return
+     */
+    public boolean canChangeRentalAmount(String customerId) {
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findByCustomerIdAndInvoiceType(customerId, InvoiceType.RENT.name());
+        List<InvoicesV1> recurringInvoices = listInvoices.stream()
+                .filter(i -> i.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name()))
+                .toList();
+
+        if (!recurringInvoices.isEmpty()) {
+            return false;
+        }
+
+        List<InvoicesV1> manualInvoices = listInvoices.stream()
+                .filter(i -> i.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name()))
+                .toList();
+        if (!manualInvoices.isEmpty()) {
+            return false;
+        }
+
+        List<CustomersBedHistory> listCustomersBedHistory = customersBedHistoryService.getCheckedInReassignedHistory(customerId);
+        if ( listCustomersBedHistory.size() > 1) {
+            return false;
+        }
+
+
+
+        return true;
     }
 }

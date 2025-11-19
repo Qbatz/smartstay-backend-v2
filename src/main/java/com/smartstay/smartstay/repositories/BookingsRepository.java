@@ -40,7 +40,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     BookingsV1 findByCustomerIdAndHostelId(@Param("customerId") String customerId, @Param("hostelId") String hostelId);
 
     @Query(value = """
-            SELECT bookingv1.bed_id as bedId, bookingv1.floor_id as floorId, bookingv1.room_id as roomId, 
+            SELECT bookingv1.bed_id as bedId, bookingv1.floor_id as floorId, bookingv1.room_id as roomId, bookingv1.is_booked as isBooked, 
             bookingv1.booking_amount as bookingAmount, bookingv1.checkout_date as checkoutDate, 
             bookingv1.rent_amount as rentAmount, bookingv1.leaving_date as leavingDate, bookingv1.notice_date as requestedCheckoutDate, 
             bookingv1.notice_date as noticeDate,  bookingv1.joining_date as joiningDate, bookingv1.booking_id as bookingId, 

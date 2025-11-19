@@ -14,18 +14,15 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CustomersAmenity {
-
+public class CustomersComments {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    String id;
-    String amenityId;
-    String customerId;
-    Double amenityPrice;
-    Date createdAt;
-    Date updatedAt;
-    String updatedBy;
-    String createdBy;
-    Date startDate;
-    Date endDate;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long commentId;
+    private String customerId;
+    //take from comment type enum
+    private String commentType;
+    private String comment;
+    private Date createdAt;
+    private String createdBy;
+    private boolean isCreatedByCustomer;
 }

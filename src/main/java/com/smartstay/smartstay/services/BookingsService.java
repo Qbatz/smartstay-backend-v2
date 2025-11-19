@@ -19,6 +19,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.booking.CancelBooking;
+import com.smartstay.smartstay.payloads.booking.UpdateBookingDetails;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.repositories.BookingsRepository;
@@ -26,6 +27,7 @@ import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.bookings.InitializeCancel;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckIn;
 import com.smartstay.smartstay.util.Utils;
+import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
@@ -72,6 +74,10 @@ public class BookingsService {
     private BankingService bankingService;
     @Autowired
     private CustomersBedHistoryService customersBedHistoryService;
+    @Autowired
+    private RentHistoryService rentHistoryService;
+
+    private HostelService hostelService;
 
     @Autowired
     public void setBedsService(@Lazy BedsService bedsService) {
@@ -81,6 +87,11 @@ public class BookingsService {
     @Autowired
     public void setCustomersService(@Lazy CustomersService customersService) {
         this.customersService = customersService;
+    }
+
+    @Autowired
+    public void setHostelService(@Lazy HostelService hostelService) {
+        this.hostelService = hostelService;
     }
 
     public void assignBedToCustomer(AssignBed assignBed) {
@@ -253,6 +264,12 @@ public class BookingsService {
 
         bookingv1.setCustomerBedHistory(listBedHistory);
 
+//        List<RentHistory> rentHistoryList = new ArrayList<>();
+//        RentHistory rentHistory = rentHistoryService.addInitialRent(bookingv1);
+//        rentHistoryList.add(rentHistory);
+//
+//        bookingv1.setRentHistory(rentHistoryList);
+
         return bookingsRepository.save(bookingv1);
 
     }
@@ -261,6 +278,7 @@ public class BookingsService {
         if (authentication.isAuthenticated()) {
             BookingsV1 bookingsV1 = new BookingsV1();
             bookingsV1.setHostelId(hostelId);
+            bookingsV1.setIsBooked(true);
             bookingsV1.setFloorId(payload.floorId());
             bookingsV1.setRoomId(payload.roomId());
             bookingsV1.setBedId(payload.bedId());
@@ -307,6 +325,7 @@ public class BookingsService {
         BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
         if (bookingsV1 != null) {
             bookingsV1.setUpdatedAt(new Date());
+            bookingsV1.setIsBooked(false);
             bookingsV1.setLeavingDate(null);
             bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
             bookingsV1.setRoomId(payloads.roomId());
@@ -335,9 +354,19 @@ public class BookingsService {
             listBedHistory.add(cbh);
 
             bookingsV1.setCustomerBedHistory(listBedHistory);
+
+//            List<RentHistory> rentHistoryList = new ArrayList<>();
+//            RentHistory rentHistory = rentHistoryService.addInitialRent(bookingsV1);
+//            rentHistoryList.add(rentHistory);
+//
+//            bookingsV1.setRentHistory(rentHistoryList);
+
             bookingsRepository.save(bookingsV1);
+
+            rentHistoryService.addInitialRent(bookingsV1);
         }else {
-            checkinCustomer(payloads, customerId);
+            BookingsV1 bookingsV11 = checkinCustomer(payloads, customerId);
+            rentHistoryService.addInitialRent(bookingsV11);
         }
     }
 
@@ -376,7 +405,14 @@ public class BookingsService {
 
             bookingsV1.setCustomerBedHistory(listBedHistory);
 
+//            List<RentHistory> listRentHistory = new ArrayList<>();
+//            RentHistory rentHistory = rentHistoryService.addInitialRent(bookingsV1);
+//            listRentHistory.add(rentHistory);
+//
+//            bookingsV1.setRentHistory(listRentHistory);
+
             bookingsRepository.save(bookingsV1);
+            rentHistoryService.addInitialRent(bookingsV1);
         }
     }
 
@@ -819,6 +855,137 @@ public class BookingsService {
                 .sum();
 
         return checkInRent + noticeRentAmount + upcomingJoiningRents;
+
+    }
+
+    public ResponseEntity<?> updateBookingInfo(String hostelId, String bookingId, UpdateBookingDetails updateInfo) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        BookingsV1 bookingsV1 = bookingsRepository.findById(bookingId).orElse(null);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_BOOKING_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customers = customersService.getCustomerInformation(bookingsV1.getCustomerId());
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_CHANGE_JOINING_DATE_VACATED_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_CHANGE_JOINING_DATE_SETTLEMENT_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_CHANGE_JOINING_DATE_CANCELLED_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
+
+        if (updateInfo == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (updateInfo.joiningDate() != null) {
+            //trying to modify the joining date.
+            Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
+                if (invoiceService.updateJoiningDate(customers.getCustomerId(), joinigDate, hostelId, customers.getJoiningDate(), bookingsV1.getRentAmount())) {
+                    rentHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
+                    customersBedHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
+                    customersService.updateCustomersJoiningDate(customers, joinigDate);
+                    bookingsV1.setJoiningDate(joinigDate);
+                    bookingsRepository.save(bookingsV1);
+
+                    return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
+                }
+                else {
+                    return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
+                }
+
+            }
+            else {
+                return new ResponseEntity<>(Utils.CANNOT_CHANGE_JOINING_DATE_CUSTOMER_NOT_CHECKEDIN, HttpStatus.BAD_REQUEST);
+            }
+
+        }
+        else if (updateInfo.newRent() != null) {
+            if (updateInfo.newRent() <= 0.5) {
+                return new ResponseEntity<>(Utils.RENT_AMOUNT_REQUIRED_TO_UPDATE_RENT, HttpStatus.BAD_REQUEST);
+            }
+            BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+            Calendar newBillingCalendar = Calendar.getInstance();
+            newBillingCalendar.setTime(billingDates.currentBillStartDate());
+            newBillingCalendar.add(Calendar.MONTH, 1);
+
+            Date startDate = null;
+            Date currentRentEndDate = null;
+            if (updateInfo.effectiveDate() != null) {
+                Date startsFrom = Utils.stringToDate(updateInfo.effectiveDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                if (Utils.compareWithTwoDates(startsFrom, billingDates.currentBillEndDate()) > 0) {
+                    BillingDates futureBillDates = hostelService.getBillingRuleOnDate(hostelId, startsFrom);
+                    startDate = futureBillDates.currentBillStartDate();
+
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.setTime(futureBillDates.currentBillStartDate());
+                    calendar.add(Calendar.MONTH, -1);
+
+                    currentRentEndDate = calendar.getTime();
+                }
+                else {
+                    currentRentEndDate = billingDates.currentBillEndDate();
+                    startDate = newBillingCalendar.getTime();
+                }
+
+                rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), startDate, currentRentEndDate);
+
+
+                RentHistory rentHistory  = new RentHistory();
+                rentHistory.setRent(updateInfo.newRent());
+                rentHistory.setStartsFrom(startDate);
+                rentHistory.setCustomerId(customers.getCustomerId());
+                rentHistory.setReason(updateInfo.reason());
+                rentHistory.setCreatedAt(new Date());
+                rentHistory.setCreatedBy(authentication.getName());
+
+                rentHistory.setBooking(bookingsV1);
+                List<RentHistory> listRentHistories = bookingsV1.getRentHistory();
+                listRentHistories.add(rentHistory);
+
+                bookingsRepository.save(bookingsV1);
+            }
+            else {
+                //this is to handle the first time
+                if (invoiceService.canChangeRentalAmount(customers.getCustomerId())) {
+                    customersBedHistoryService.updateRentAmount(updateInfo.newRent(), customers.getCustomerId());
+                    rentHistoryService.updateRentAmount(customers.getCustomerId(), updateInfo.newRent());
+                    bookingsV1.setRentAmount(updateInfo.newRent());
+                    bookingsRepository.save(bookingsV1);
+                }
+                else {
+                    return new ResponseEntity<>(Utils.CANNOT_CHANGE_RENT_FOR_OLD_DATES, HttpStatus.BAD_REQUEST);
+                }
+
+            }
+
+
+
+            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
+        }
+
+        return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
 
     }
 }

@@ -171,15 +171,17 @@ public class Utils {
 
     public static final String REQUEST_DATE_MUST_AFTER_BILLING_START_DATE = "Request date must be after current billing cycle start date: ";
     public static final String CHECKOUT_DATE_MUST_AFTER_JOINING_DATE = "Checkout date must be after joining date.";
-
-
-
-
-
+    public static final String ATLEAST_ONE_AMENITY_REQUIRED = "Atleast one amenity required";
 
     public static final String AMENITY_ALREADY_EXIST = "Amenity with the same name already exists in this hostel.";
-
-
+    public static final String AMENITY_CNNOT_ADD_BOOKED_ERROR = "Amenity cannot be added for booked customers";
+    public static final String CANNOT_CHANGE_JOINING_DATE_VACATED_CUSTOMERS = "Cannot change joining date for the vacated customers";
+    public static final String CANNOT_CHANGE_JOINING_DATE_SETTLEMENT_CUSTOMERS = "Cannot change joining date for the settlement generated customers";
+    public static final String CANNOT_CHANGE_JOINING_DATE_CANCELLED_CUSTOMERS = "Cannot change joining date for the cancelled customers";
+    public static final String CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES = "Cannot change the joining date. Already invoices are available for this customers";
+    public static final String CANNOT_CHANGE_JOINING_DATE_CUSTOMER_NOT_CHECKEDIN = "Cannot change the joining date, seems customer is not active";
+    public static final String RENT_AMOUNT_REQUIRED_TO_UPDATE_RENT = "Rent amount required";
+    public static final String CANNOT_CHANGE_RENT_FOR_OLD_DATES = "Cannot change rent for old dates";
     /**
      *  Defining module Id's here
      *

@@ -21,6 +21,7 @@ public class BookingsV1 {
     private Date expectedJoiningDate;
     private Date noticeDate;
     private Date bookingDate;
+    private Boolean isBooked;
     private Double rentAmount;
     private Double advanceAmount;
     private Double bookingAmount;
@@ -39,4 +40,7 @@ public class BookingsV1 {
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CustomersBedHistory> customerBedHistory;
+
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<RentHistory> rentHistory;
 }

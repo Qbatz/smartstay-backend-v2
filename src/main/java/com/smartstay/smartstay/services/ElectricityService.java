@@ -607,7 +607,7 @@ public class ElectricityService {
 
                 Calendar calBillStart = Calendar.getInstance();
                 calBillStart.setTime(currentReadings.getEntryDate());
-                calBillStart.set(Calendar.DAY_OF_MONTH, calBillStart.get(Calendar.DAY_OF_MONTH) + 1);
+                calBillStart.add(Calendar.DAY_OF_MONTH, 1);
 
                 billStartDate = calBillStart.getTime();
 
@@ -759,7 +759,7 @@ public class ElectricityService {
                 isFirstEntry = false;
                 Calendar cal = Calendar.getInstance();
                 cal.setTime(currentReadings.getEntryDate());
-                cal.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH));
+                cal.add(Calendar.DAY_OF_MONTH, 1);
 
                 startDate = cal.getTime();
             }
@@ -924,7 +924,8 @@ public class ElectricityService {
             }
             else {
                 List<Rooms> listRooms = roomsService.getAllRoomsByHostelId(hostelId);
-                Double currentReadingForNoOccupants = readings.reading() / listRooms.size();
+
+                Double currentReadingForNoOccupants = (readings.reading() - previousReading) / listRooms.size();
 
                 Date finalDate = date;
                 Date finalBillStartDate1 = billStartDate;
@@ -1062,11 +1063,13 @@ public class ElectricityService {
             }
 
             boolean isHostelBased = false;
+            Double lastReading = 0.0;
             if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.HOSTEL_READING.name())) {
                 isHostelBased = true;
+                lastReading = electricityReadingRepository.getLastReading(hostelId);
             }
 
-            ElectricityList list = new ElectricityList(isHostelBased, listUsages);
+            ElectricityList list = new ElectricityList(lastReading, isHostelBased, listUsages);
 
             return new ResponseEntity<>(list, HttpStatus.OK);
 

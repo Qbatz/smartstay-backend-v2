@@ -30,7 +30,7 @@ public class CustomersBedHistoryService {
     public List<CustomerBedsList> getAllCustomerFromBedsHistory(String hostelId, Date billStartDate, Date billEndDate) {
         return customerBedHistoryRepository.findByHostelIdAndStartAndEndDate(hostelId, billStartDate, billEndDate)
                 .stream()
-                .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), billEndDate) < 0)
+                .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), billEndDate) <= 0)
                 .map(item -> new BedHistoryCustomerListMapper().apply(item))
                 .toList();
     }
@@ -63,5 +63,24 @@ public class CustomersBedHistoryService {
         if (currentBed != null) {
             customerBedHistoryRepository.save(currentBed);
         }
+    }
+
+    public void updateJoiningDate(String customerId, Date joinigDate) {
+        CustomersBedHistory cbh = customerBedHistoryRepository.findByCustomerIdAndTypeRent(customerId);
+        cbh.setStartDate(joinigDate);
+
+        customerBedHistoryRepository.save(cbh);
+    }
+
+
+    public List<CustomersBedHistory> getCheckedInReassignedHistory(String customerId) {
+        return customerBedHistoryRepository.findAllBedsAfterJoining(customerId);
+    }
+
+    public void updateRentAmount(Double newRentAmount, String customerId) {
+        CustomersBedHistory cbh = customerBedHistoryRepository.findByCustomerIdAndTypeRent(customerId);
+        cbh.setRentAmount(newRentAmount);
+
+        customerBedHistoryRepository.save(cbh);
     }
 }

@@ -5,10 +5,8 @@ import com.smartstay.smartstay.Wrappers.amenity.CustomerAmenityMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
-import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
-import com.smartstay.smartstay.payloads.amenity.AssignRequest;
-import com.smartstay.smartstay.payloads.amenity.UnAssignRequest;
-import com.smartstay.smartstay.payloads.amenity.AssignAmenity;
+import com.smartstay.smartstay.ennum.CustomerStatus;
+import com.smartstay.smartstay.payloads.amenity.*;
 import com.smartstay.smartstay.repositories.AmentityRepository;
 import com.smartstay.smartstay.repositories.CustomerAmenityRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
@@ -21,8 +19,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class AmenitiesService {
@@ -337,5 +338,111 @@ public class AmenitiesService {
                 .stream()
                 .map(i -> new CustomerAmenityMapper(amenities).apply(i))
                 .toList();
+    }
+
+    public ResponseEntity<?> assignToCustomer(String hostelId, AssignCustomer assignCustomer) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_AMENITIES, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!Utils.checkNullOrEmpty(assignCustomer.customerId())) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        Customers customers = customersService.getCustomerInformation(assignCustomer.customerId());
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equals(CustomerStatus.BOOKED.name())) {
+            return new ResponseEntity<>(Utils.AMENITY_CNNOT_ADD_BOOKED_ERROR, HttpStatus.BAD_REQUEST);
+        }
+        if (assignCustomer.newAmenities() == null) {
+            return new ResponseEntity<>(Utils.ATLEAST_ONE_AMENITY_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (assignCustomer.newAmenities().isEmpty()) {
+            return new ResponseEntity<>(Utils.ATLEAST_ONE_AMENITY_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        List<AmenitiesV1> listAmenities = amentityRepository.findByHostelIdAndAmenityIdInAndIsDeletedFalse(hostelId, assignCustomer.newAmenities());
+        if (listAmenities == null) {
+            return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.BAD_REQUEST);
+        }
+        if (listAmenities.isEmpty()) {
+            return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.BAD_REQUEST);
+        }
+
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+        List<String> newAmenityIds = listAmenities.stream()
+                .map(AmenitiesV1::getAmenityId)
+                .toList();
+
+        List<CustomersAmenity> listCustomerAmenities = customerAmenityRepository.checkAmenitiesAlreadyAssigned(assignCustomer.customerId(), newAmenityIds);
+        List<String> unassignedAmenities = new ArrayList<>();
+        List<String> assignedAmenities;
+
+        if (listCustomerAmenities != null && !listCustomerAmenities.isEmpty()) {
+            assignedAmenities = listCustomerAmenities
+                    .stream()
+                    .map(CustomersAmenity::getAmenityId)
+                    .toList();
+        } else {
+            assignedAmenities = new ArrayList<>();
+        }
+
+        if (!assignedAmenities.isEmpty()) {
+            unassignedAmenities = newAmenityIds.stream()
+                    .filter(id -> !assignedAmenities.contains(id))
+                    .toList();
+        }
+        else {
+            unassignedAmenities = newAmenityIds;
+
+        }
+
+        if (!unassignedAmenities.isEmpty()) {
+            List<CustomersAmenity> listNewAmenities = unassignedAmenities
+                    .stream()
+                    .map(i -> {
+                        CustomersAmenity customersAmenity = new CustomersAmenity();
+                        List<AmenitiesV1> listNewAmenity = listAmenities.stream()
+                                        .filter(itm -> itm.getAmenityId().equals(i))
+                                        .toList();
+                        AmenitiesV1 amenityV1 = null;
+                        if (!listNewAmenity.isEmpty()) {
+                            amenityV1 = listNewAmenity.get(0);
+                        }
+                        if (amenityV1 != null) {
+                            customersAmenity.setAmenityPrice(amenityV1.getAmenityAmount());
+                            customersAmenity.setAmenityId(amenityV1.getAmenityId());
+                            customersAmenity.setCustomerId(assignCustomer.customerId());
+                            customersAmenity.setCreatedAt(new Date());
+                            customersAmenity.setCreatedBy(authentication.getName());
+                            if (amenityV1.getIsProRate()) {
+                                customersAmenity.setStartDate(new Date());
+                            }
+                            else {
+                                customersAmenity.setStartDate(billingDates.currentBillStartDate());
+                            }
+
+
+                        }
+
+                        return customersAmenity;
+                    })
+                    .toList();
+
+            customerAmenityRepository.saveAll(listNewAmenities);
+        }
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 }
