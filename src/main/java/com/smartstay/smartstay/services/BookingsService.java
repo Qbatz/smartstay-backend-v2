@@ -896,7 +896,7 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
-        if (updateInfo.joiningDate() != null) {
+        if (updateInfo.joiningDate() != null && !updateInfo.joiningDate().equalsIgnoreCase("")) {
             //trying to modify the joining date.
             Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
@@ -931,7 +931,7 @@ public class BookingsService {
 
             Date startDate = null;
             Date currentRentEndDate = null;
-            if (updateInfo.effectiveDate() != null) {
+            if (updateInfo.effectiveDate() != null && !updateInfo.effectiveDate().trim().equalsIgnoreCase("")) {
                 Date startsFrom = Utils.stringToDate(updateInfo.effectiveDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
                 if (Utils.compareWithTwoDates(startsFrom, billingDates.currentBillEndDate()) > 0) {
                     BillingDates futureBillDates = hostelService.getBillingRuleOnDate(hostelId, startsFrom);

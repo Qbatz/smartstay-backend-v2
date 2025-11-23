@@ -12,8 +12,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.ZonedDateTime;
 
 @RestController
 @RequestMapping("v2/users")
@@ -53,6 +56,12 @@ public class UsersController {
     @GetMapping("/request-otp/{emailId}")
     public ResponseEntity<Object> requestOtp(@PathVariable("emailId") String emailId) {
         return userService.requestPasswordReset(emailId);
+    }
+
+    @GetMapping("/time/zone")
+    public ResponseEntity<?> getTimezone() {
+        ZonedDateTime now = ZonedDateTime.now();
+        return new ResponseEntity<>(now, HttpStatus.OK);
     }
 
 

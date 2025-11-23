@@ -30,7 +30,7 @@ public class InvoiceScheduler {
     private ApplicationEventPublisher applicationEventPublisher;
 
 
-    @Scheduled(cron = "0 0 2 * * *", zone = "Asia/Kolkata")
+    @Scheduled(cron = "0 0 2 * * *")
     public void generateInvoice() {
         List<HostelV1> listHostels = hostelService.getAllHostelsForRecuringInvoice();
         List<String> listOfHostelsHavingBillDateToday = new ArrayList<>();

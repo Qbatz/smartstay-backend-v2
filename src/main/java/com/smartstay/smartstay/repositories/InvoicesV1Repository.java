@@ -8,6 +8,7 @@ import com.smartstay.smartstay.responses.invoices.InvoiceSummary;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
 import java.util.Date;
@@ -63,6 +64,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             nativeQuery = true)
     InvoicesV1 findLatestRentInvoiceByCustomerId(@Param("customerId") String customerId);
 
+    @Query(value = """
+            SELECT * FROM invoicesv1 WHERE customer_id = :customerId and invoice_type in ('RENT', 'REASSIGN_RENT') ORDER BY invoice_start_date
+            """, nativeQuery = true)
+    List<InvoicesV1> findAllRentInvoicesByCustomerId(@Param("customerId") String customerId);
+
     InvoicesV1 findByCustomerIdAndHostelIdAndInvoiceType(String customerId, String hostelId, String invoiceType);
     List<InvoicesV1> findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCaseAndIsCancelledFalse(String hostelId, String customerId, String paymentStatus);
 
@@ -115,5 +121,21 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """)
     List<InvoicesV1> findPendingInvoices(String hostelId);
 
+    @Query(value = """
+            SELECT * FROM invoicesv1 invc WHERE invc.customer_id=:customerId and DATE(invc.invoice_start_date) >= DATE(:startDate) ORDER BY invc.invoice_start_date DESC LIMIT 1;
+            """, nativeQuery = true)
+    InvoicesV1 findCurrentRunningInvoice(@Param("customerId") String customerId, @Param("startDate") Date startDate);
+
+    @Query(value = """
+            SELECT * FROM `invoicesv1` WHERE customer_id=:customerId AND hostel_id=:hostelId AND DATE(invoice_start_date) < DATE(:startDate) 
+            AND payment_status in ('PENDING', 'PARTIAL_PAYMENT') AND (invoice_type='RENT' OR invoice_type='REASSIGN_RENT')
+            """, nativeQuery = true)
+    List<InvoicesV1> findOldRentalPendingInvoicesExcludeCurrentMonth(@Param("customerId") String customerId, @Param("hostelId") String hostelId, @Param("startDate") Date startDate);
+
+    @Query(value = """
+            SELECT * FROM `invoicesv1` WHERE customer_id=:customerId AND hostel_id=:hostelId AND DATE(invoice_start_date) >= DATE(:startDate) 
+             AND  (invoice_type='RENT' OR invoice_type='REASSIGN_RENT')
+            """, nativeQuery = true)
+    List<InvoicesV1> findAllCurrentMonthInvoices(@Param("customerId") String customerId, @Param("hostelId") String hostelId, @Param("startDate") Date startDate);
 
 }

@@ -13,8 +13,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     Subscription findByHostelId(String hostelId);
 
     @Query(value = """
-            SELECT * FROM subscription WHERE hostel_id=:hostelId and plan_starts_at <= DATE(:todaysDate) 
-            and plan_ends_at >=DATE(:todaysDate) LIMIT 1
+            SELECT * FROM subscription WHERE hostel_id=:hostelId and DATE(plan_starts_at) <= DATE(:todaysDate) 
+            and DATE(plan_ends_at) >=DATE(:todaysDate) LIMIT 1
             """, nativeQuery = true)
     Subscription checkSubscriptionForToday(@Param("hostelId") String hostelId, @Param("todaysDate") Date todaysDate);
 }

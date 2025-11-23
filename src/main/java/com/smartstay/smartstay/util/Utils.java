@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.util;
 
+import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.*;
@@ -243,6 +244,11 @@ public class Utils {
         } catch (ParseException e) {
             throw new RuntimeException("Invalid date format. Expected format is dd-MM-yyyy.");
         }
+    }
+
+    public static Double roundOffDecimal(double origionalNumber) {
+        DecimalFormat df = new DecimalFormat("#.##");
+        return Double.parseDouble(df.format(origionalNumber));
     }
 
 
