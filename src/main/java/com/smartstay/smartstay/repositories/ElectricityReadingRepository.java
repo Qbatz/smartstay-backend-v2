@@ -55,7 +55,10 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
     List<Integer> getRoomIds(@Param("hostelId") String hostelId);
 
     @Query(value = """
-            SELECT er.id, er.consumption, er.current_reading as currentReading, er.current_unit_price as unitPrice, er.entry_date as entryDate, er.hostel_id as hostelId, er.room_id as roomId, er.bill_start_date as startDate FROM electricity_readings er WHERE er.room_id=:roomId
+            SELECT er.id, er.consumption, er.current_reading as currentReading, 
+            er.current_unit_price as unitPrice, er.entry_date as entryDate, 
+            er.hostel_id as hostelId, er.room_id as roomId, er.bill_start_date as startDate 
+            FROM electricity_readings er WHERE er.room_id=:roomId
             """, nativeQuery = true)
     List<ElectricityReadingForRoom> getRoomReading(@Param("roomId") Integer roomId);
 

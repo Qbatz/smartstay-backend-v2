@@ -53,4 +53,10 @@ public class BookingsController {
         return bookingService.updateBookingInfo(hostelId, bookingId, updateInfo);
     }
 
+    @PutMapping("/{hostelId}/{bookingId}")
+    public ResponseEntity<?> updateBookingInformationsNew(@PathVariable("hostelId") String hostelId, @PathVariable("bookingId") String bookingId, UpdateBookingDetails updateInfo) {
+        return bookingService.updateBookingInfo(hostelId, bookingId, updateInfo);
+    }
+
+
 }

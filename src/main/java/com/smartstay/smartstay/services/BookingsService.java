@@ -900,7 +900,7 @@ public class BookingsService {
             //trying to modify the joining date.
             Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
-                if (invoiceService.updateJoiningDate(customers.getCustomerId(), joinigDate, hostelId, customers.getJoiningDate(), bookingsV1.getRentAmount())) {
+                if (invoiceService.updateJoiningDate(customers, joinigDate, hostelId, customers.getJoiningDate(), bookingsV1.getRentAmount())) {
                     rentHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
                     customersBedHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
                     customersService.updateCustomersJoiningDate(customers, joinigDate);
@@ -966,8 +966,9 @@ public class BookingsService {
                 bookingsRepository.save(bookingsV1);
             }
             else {
+                BillingDates billingDateTimeOfJoining = hostelService.getBillingRuleOnDate(hostelId, bookingsV1.getJoiningDate());
                 //this is to handle the first time
-                if (invoiceService.canChangeRentalAmount(customers.getCustomerId())) {
+                if (invoiceService.canChangeRentalAmount(customers, updateInfo.newRent(), bookingsV1.getJoiningDate(), billingDateTimeOfJoining)) {
                     customersBedHistoryService.updateRentAmount(updateInfo.newRent(), customers.getCustomerId());
                     rentHistoryService.updateRentAmount(customers.getCustomerId(), updateInfo.newRent());
                     bookingsV1.setRentAmount(updateInfo.newRent());

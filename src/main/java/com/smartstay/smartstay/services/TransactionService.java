@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.transactions.TransactionForCustomerDetailsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
@@ -27,10 +28,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -776,5 +774,16 @@ public class TransactionService {
 
     public List<TransactionV1> getTransactionsByInvoiceId(String invoiceId) {
         return transactionRespository.findByInvoiceId(invoiceId);
+    }
+
+    public List<com.smartstay.smartstay.dto.customer.TransactionDto> getTranactionInfoByCustomerId(String customerId) {
+        if (authentication.isAuthenticated()) {
+            List<TransactionV1> listTransactions = transactionRespository.findByCustomerId(customerId);
+
+            return listTransactions.stream()
+                    .map(i -> new TransactionForCustomerDetailsMapper().apply(i))
+                    .toList();
+        }
+        return new ArrayList<>();
     }
 }

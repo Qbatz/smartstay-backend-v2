@@ -83,4 +83,8 @@ public class CustomersBedHistoryService {
 
         customerBedHistoryRepository.save(cbh);
     }
+
+    public List<CustomersBedHistory> getByCustomerIdAndStartAndEndDate(String customerId, Date startDate, Date endDate) {
+        return customerBedHistoryRepository.findByCustomerIdAndStartAndEndDate(customerId, startDate, endDate);
+    }
 }

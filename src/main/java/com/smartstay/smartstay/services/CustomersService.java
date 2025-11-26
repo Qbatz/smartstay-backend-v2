@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.customers.FinalSettlementMapper;
+import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
 import com.smartstay.smartstay.Wrappers.invoices.UnpaidInvoicesMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
@@ -10,6 +11,7 @@ import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.customer.*;
 import com.smartstay.smartstay.dto.customer.CustomerData;
+import com.smartstay.smartstay.dto.customer.TransactionDto;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
@@ -1087,6 +1089,11 @@ public class CustomersService {
 
         List<BedHistory> listBeds = bedHistory.getCustomersBedHistory(customers.getCustomerId());
         List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customerId);
+        List<TransactionDto> listTransactions = transactionService.getTranactionInfoByCustomerId(customerId);
+        List<com.smartstay.smartstay.responses.customer.TransactionDto> listTransactionResponse = listTransactions
+                .stream()
+                .map(i -> new TransctionsForCustomerDetails().apply(i))
+                .toList();
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getFirstName(),
@@ -1107,6 +1114,7 @@ public class CustomersService {
                 bookingInfo,
                 invoiceResponseList,
                 listBeds,
+                listTransactionResponse,
                 amenities);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
@@ -1493,7 +1501,7 @@ public class CustomersService {
         CustomersBedHistory cbh = bedHistory.getLatestCustomerBed(customerId);
 
         if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-           return calculateFinalSettlemtForBedChange(customers, bookingDetails, billDate, cbh);
+           return calculateFinalSettlemtForBedChange(customers, bookingDetails, billDate);
         }
 
 
@@ -1734,19 +1742,37 @@ public class CustomersService {
             rentPerDay = 0;
         }
 
+        String bedName = null;
+        String floorName = null;
+        String roomName = null;
+        if (cbh != null) {
+            BedDetails bedDetails = bedsService.getBedDetails(cbh.getBedId());
+            if (bedDetails != null) {
+                bedName = bedDetails.getBedName();
+                floorName = bedDetails.getFloorName();
+                roomName = bedDetails.getRoomName();
+            }
+
+        }
         List<RentBreakUp> rentBreakUpList = new ArrayList<>();
         if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) <= 0) {
             RentBreakUp rentBreakUp = new RentBreakUp(Utils.dateToString(billDate.currentBillStartDate()),
                     Utils.dateToString(new Date()),
                     Utils.findNumberOfDays(billDate.currentBillStartDate(), new Date()),
-                    (double) Math.round(currentMonthPayableRent));
+                    (double) Math.round(currentMonthPayableRent),
+                    bedName,
+                    roomName,
+                    floorName);
             rentBreakUpList.add(rentBreakUp);
         }
         else {
             RentBreakUp rentBreakUp = new RentBreakUp(Utils.dateToString(bookingDetails.getJoiningDate()),
                     Utils.dateToString(new Date()),
                     Utils.findNumberOfDays(bookingDetails.getJoiningDate(), new Date()),
-                    (double) Math.round(currentMonthPayableRent));
+                    (double) Math.round(currentMonthPayableRent),
+                    bedName,
+                    roomName,
+                    floorName);
             rentBreakUpList.add(rentBreakUp);
         }
 
@@ -1776,7 +1802,7 @@ public class CustomersService {
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
     }
 
-    private ResponseEntity<?> calculateFinalSettlemtForBedChange(Customers customers, BookingsV1 bookingDetails, BillingDates billDate, CustomersBedHistory cbh) {
+    private ResponseEntity<?> calculateFinalSettlemtForBedChange(Customers customers, BookingsV1 bookingDetails, BillingDates billDate) {
         double bookingAmount = 0.0;
         if (bookingDetails.getBookingAmount() != null) {
             bookingAmount = bookingDetails.getBookingAmount();
@@ -1931,15 +1957,44 @@ public class CustomersService {
                 bookingAmount,
                 customers.getAdvance().getDeductions());
 
+        List<CustomersBedHistory> listCustomerBedHistories = bedHistory.getByCustomerIdAndStartAndEndDate(customers.getCustomerId(), billDate.currentBillStartDate(), billDate.currentBillEndDate());
+        List<Integer> bedIds = listCustomerBedHistories
+                .stream()
+                .map(CustomersBedHistory::getBedId)
+                .toList();
+        List<BedDetails> listBedDetails = bedsService.getBedDetails(bedIds);
 
         List<RentBreakUp> breakUpList = new ArrayList<>(currentMonthInvoicesBeforeBedChange
                 .stream()
-                .map(i -> new FinalSettlementMapper().apply(i))
+                .map(i -> new FinalSettlementMapper(listCustomerBedHistories, listBedDetails).apply(i))
                 .toList());
+        CustomersBedHistory runningBed = listCustomerBedHistories
+                .stream()
+                .filter(i -> Utils.compareWithTwoDates(i.getStartDate(), findLatestInvoice.getInvoiceStartDate()) <= 0 && i.getEndDate() == null)
+                .findFirst()
+                .orElse(null);
+        String bedName = null;
+        String floorName = null;
+        String roomName = null;
+        if (runningBed != null) {
+            BedDetails details = listBedDetails
+                    .stream()
+                    .filter(i -> i.getBedId().equals(runningBed.getBedId()))
+                    .findFirst()
+                    .orElse(null);
+            if (details != null) {
+                bedName = details.getBedName();
+                roomName = details.getRoomName();
+                floorName = details.getFloorName();
+            }
+        }
         RentBreakUp rentBreakUpForNewInvoice = new RentBreakUp(Utils.dateToString(findLatestInvoice.getInvoiceStartDate()),
                 Utils.dateToString(new Date()),
                 findNoOfDaysStayedInNewBedAsOfToday,
-                payableRentAsOfToday);
+                payableRentAsOfToday,
+                bedName,
+                roomName,
+                floorName);
 
         if (breakUpList != null) {
             breakUpList.add(rentBreakUpForNewInvoice);
