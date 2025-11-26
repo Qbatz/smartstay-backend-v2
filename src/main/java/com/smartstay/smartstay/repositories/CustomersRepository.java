@@ -101,4 +101,9 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             """)
     List<Customers> findCheckedInCustomerByHostelId(String hostelId);
 
+    @Query("""
+            SELECT cus FROM Customers cus WHERE cus.customerId in (:customerIds)
+            """)
+    List<Customers> findAllCustomersNotIn(@Param("customerIds") List<String> customerIds);
+
 }

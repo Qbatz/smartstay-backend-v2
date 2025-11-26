@@ -11,5 +11,6 @@ public record InvoiceInfo(Double subTotal,
                           String invoicePeriod,
                           String invoiceMonth,
                           String paymentStatus,
+                          boolean isCancelled,
                           List<InvoiceItems> invoiceItems) {
 }

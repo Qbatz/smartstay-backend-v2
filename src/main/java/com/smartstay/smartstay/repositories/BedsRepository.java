@@ -122,4 +122,12 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
             """, nativeQuery = true)
     List<FloorNameRoomName> getBedNameRoomName(@Param("listBedIds") List<Integer> listBedIds);
 
+    @Query(value = """
+            SELECT bed.bed_id as bedId, bed.bed_name as bedName, flrs.floor_id as floorId, 
+            flrs.floor_name as floorName, rms.room_id as roomId, rms.room_name as roomName 
+            FROM beds bed left outer JOIN rooms rms on rms.room_id=bed.room_id LEFT OUTER JOIN 
+            floors flrs on flrs.floor_id=rms.floor_id where bed.bed_id IN (:bedIds)
+            """, nativeQuery = true)
+    List<BedDetails> findByBedIds(@Param("bedIds") List<Integer> bedIds);
+
 }

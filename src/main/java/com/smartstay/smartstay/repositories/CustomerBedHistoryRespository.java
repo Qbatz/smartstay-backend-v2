@@ -15,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBedHistory, Long> {
     @Query(value = """
-            SELECT * FROM customers_bed_history WHERE customer_id=:customerId and start_date <= DATE(:startDate) and (end_date IS NULL OR end_date >= (:endDate))
+            SELECT * FROM customers_bed_history WHERE customer_id=:customerId and start_date <= DATE(:endDate) and (end_date IS NULL OR end_date >= (:startDate))
             ORDER BY start_date DESC LIMIT 1
             """, nativeQuery = true)
     CustomersBedHistory findByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
@@ -60,5 +60,11 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
             SELECT * FROM customers_bed_history WHERE customer_id=:customerId and type in ('CHECK_IN', 'REASSIGNED')
             """, nativeQuery = true)
     List<CustomersBedHistory> findAllBedsAfterJoining(@Param("customerId") String customerId);
+
+    @Query(value = """
+            SELECT * FROM customers_bed_history cbh WHERE cbh.customer_id=:customerId AND 
+            DATE(cbh.start_date) <=DATE(:endDate) AND (cbh.end_date IS NULL OR DATE(cbh.end_date) >= DATE(:startDate))
+            """, nativeQuery = true)
+    List<CustomersBedHistory> findByCustomerIdAndStartAndEndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 }
 

@@ -4,8 +4,8 @@ import java.util.Date;
 
 public interface ElectricityReadingForRoom {
     Integer getId();
-    Integer getConsumption();
-    Integer getCurrentReading();
+    Double getConsumption();
+    Double getCurrentReading();
     Double getUnitPrice();
     Date getEntryDate();
     String getHostelId();

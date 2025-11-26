@@ -793,4 +793,8 @@ public class BedsService {
                 (int) occupiedBeds,
                 bookedBedCount);
     }
+
+    public List<com.smartstay.smartstay.dto.beds.BedDetails> getBedDetails(List<Integer> bedIds) {
+        return bedsRepository.findByBedIds(bedIds);
+    }
 }

@@ -5,6 +5,8 @@ import com.smartstay.smartstay.repositories.InvoiceItemsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class InvoiceItemService {
 
@@ -13,5 +15,9 @@ public class InvoiceItemService {
 
     public InvoiceItems updateInvoiceItems(InvoiceItems invoiceItems) {
         return invoiceItemsRepository.save(invoiceItems);
+    }
+
+    public void updateInvoiceItems(List<InvoiceItems> invoiceItems) {
+        invoiceItemsRepository.saveAll(invoiceItems);
     }
 }

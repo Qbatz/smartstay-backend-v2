@@ -90,7 +90,7 @@ public class CustomersController {
     }
     @GetMapping("/settlement/{customerId}")
     public ResponseEntity<?> getFinalSettlementInfo(@PathVariable("customerId") String customerId) {
-        return customersService.getInformationForFinalSettlement(customerId);
+        return customersService.getInformationForFinalSettlementNew(customerId);
     }
     @PostMapping("/settlement/{customerId}")
     public ResponseEntity<?> generateFinalSettlement(@PathVariable("customerId") String customerId, @RequestBody List<Settlement> deductions) {

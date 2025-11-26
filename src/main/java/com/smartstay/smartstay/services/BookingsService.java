@@ -19,6 +19,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.booking.CancelBooking;
+import com.smartstay.smartstay.payloads.booking.UpdateAdvance;
 import com.smartstay.smartstay.payloads.booking.UpdateBookingDetails;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
@@ -896,11 +897,11 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
-        if (updateInfo.joiningDate() != null) {
+        if (updateInfo.joiningDate() != null && !updateInfo.joiningDate().equalsIgnoreCase("")) {
             //trying to modify the joining date.
             Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
-                if (invoiceService.updateJoiningDate(customers.getCustomerId(), joinigDate, hostelId, customers.getJoiningDate(), bookingsV1.getRentAmount())) {
+                if (invoiceService.updateJoiningDate(customers, joinigDate, hostelId, customers.getJoiningDate(), bookingsV1.getRentAmount())) {
                     rentHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
                     customersBedHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
                     customersService.updateCustomersJoiningDate(customers, joinigDate);
@@ -931,7 +932,7 @@ public class BookingsService {
 
             Date startDate = null;
             Date currentRentEndDate = null;
-            if (updateInfo.effectiveDate() != null) {
+            if (updateInfo.effectiveDate() != null && !updateInfo.effectiveDate().trim().equalsIgnoreCase("")) {
                 Date startsFrom = Utils.stringToDate(updateInfo.effectiveDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
                 if (Utils.compareWithTwoDates(startsFrom, billingDates.currentBillEndDate()) > 0) {
                     BillingDates futureBillDates = hostelService.getBillingRuleOnDate(hostelId, startsFrom);
@@ -966,8 +967,9 @@ public class BookingsService {
                 bookingsRepository.save(bookingsV1);
             }
             else {
+                BillingDates billingDateTimeOfJoining = hostelService.getBillingRuleOnDate(hostelId, bookingsV1.getJoiningDate());
                 //this is to handle the first time
-                if (invoiceService.canChangeRentalAmount(customers.getCustomerId())) {
+                if (invoiceService.canChangeRentalAmount(customers, updateInfo.newRent(), bookingsV1.getJoiningDate(), billingDateTimeOfJoining)) {
                     customersBedHistoryService.updateRentAmount(updateInfo.newRent(), customers.getCustomerId());
                     rentHistoryService.updateRentAmount(customers.getCustomerId(), updateInfo.newRent());
                     bookingsV1.setRentAmount(updateInfo.newRent());
@@ -986,6 +988,72 @@ public class BookingsService {
         }
 
         return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+
+    }
+
+    public ResponseEntity<?> updateAdvanceAmount(String hostelId, String bookingId, UpdateAdvance updateAdvance) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        BookingsV1 bookingsV1 = bookingsRepository.findById(bookingId).orElse(null);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_BOOKING_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customers = customersService.getCustomerInformation(bookingsV1.getCustomerId());
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_CHANGE_ADVANCE_VACATED_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_CHANGE_ADVANCE_CANCELLED_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
+
+        if (updateAdvance == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (updateAdvance.advanceAmount() == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (updateAdvance.advanceAmount().equals(0.0)) {
+            return new ResponseEntity<>(Utils.ADVANCE_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), hostelId);
+        if (advanceInvoice.isCancelled()) {
+            return new ResponseEntity<>(Utils.CANNOT_REFUND_CANCELLED_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_CHANGE_ADVANCE_PAID_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+
+        invoiceService.updateAdvaceAmount(advanceInvoice, updateAdvance.advanceAmount());
+
+        Advance advance = customers.getAdvance();
+        if (advance == null) {
+            advance = new Advance();
+        }
+        advance.setAdvanceAmount(updateAdvance.advanceAmount());
+        bookingsV1.setAdvanceAmount(updateAdvance.advanceAmount());
+
+        customersService.updateAdvanceAmount(customers, advance);
+
+        bookingsRepository.save(bookingsV1);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
 }

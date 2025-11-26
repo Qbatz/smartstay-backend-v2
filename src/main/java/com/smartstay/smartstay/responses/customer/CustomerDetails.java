@@ -25,5 +25,6 @@ public record CustomerDetails(String customerId,
                               BookingInfo bookingInfo,
                               List<InvoiceResponse> invoiceResponseList,
                               List<BedHistory> bedHistory,
+                              List<TransactionDto> transactionList,
                               List<Amenities> amenities) {
 }
