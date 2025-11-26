@@ -1942,4 +1942,27 @@ public class InvoiceV1Service {
     public List<InvoicesV1> findAllCurrentMonthRentalInvoice(String customerId, String hostelId, Date startDate) {
         return invoicesV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, startDate);
     }
+
+    public void updateAdvaceAmount(InvoicesV1 advanceInvoice, Double newAdvance) {
+        advanceInvoice.setBasePrice(newAdvance);
+
+        advanceInvoice.getInvoiceItems()
+                .stream()
+                .filter(i -> i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.ADVANCE.name()))
+                .findFirst()
+                .map(i -> {
+                    i.setAmount(newAdvance);
+                    return i;
+                })
+                .ifPresent(i -> invoiceItemService.updateInvoiceItems(i));
+
+        advanceInvoice.setTotalAmount(newAdvance);
+
+        invoicesV1Repository.save(advanceInvoice);
+
+    }
+
+    public List<InvoicesV1> findInvoices(List<String> invoicesIds) {
+        return invoicesV1Repository.findByInvoiceIdIn(invoicesIds);
+    }
 }

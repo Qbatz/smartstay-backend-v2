@@ -8,5 +8,7 @@ public record TransactionDto(String transactionId,
                              String bankId,
                              String status,
                              String paidTo,
-                             String paymentMode) {
+                             String paymentMode,
+                             String rentalPeriod,
+                             boolean isCancelledInvoice) {
 }

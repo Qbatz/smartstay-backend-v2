@@ -1090,10 +1090,27 @@ public class CustomersService {
         List<BedHistory> listBeds = bedHistory.getCustomersBedHistory(customers.getCustomerId());
         List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customerId);
         List<TransactionDto> listTransactions = transactionService.getTranactionInfoByCustomerId(customerId);
+        List<String> invoicesIds = listTransactions
+                .stream()
+                .map(TransactionDto::invoiceId)
+                .toList();
+        Set<String> bankIds = listTransactions
+                .stream()
+                .map(TransactionDto::bankId)
+                .collect(Collectors.toSet());
+        List<InvoicesV1> listOfInvoices = invoiceService.findInvoices(invoicesIds);
+        List<BankingV1> listOFBankings = bankingService.findAllBanksById(bankIds);
+        List<String> userIds = listOFBankings.stream()
+                .map(BankingV1::getUserId)
+                .toList();
+        List<Users> listUsers = userService.findAllUsersFromUserId(userIds);
+
+
         List<com.smartstay.smartstay.responses.customer.TransactionDto> listTransactionResponse = listTransactions
                 .stream()
-                .map(i -> new TransctionsForCustomerDetails().apply(i))
+                .map(i -> new TransctionsForCustomerDetails(listOfInvoices, listOFBankings, listUsers).apply(i))
                 .toList();
+
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getFirstName(),
@@ -2681,6 +2698,11 @@ public class CustomersService {
 
     public void updateCustomersJoiningDate(Customers customers, Date joinigDate) {
         customers.setJoiningDate(joinigDate);
+        customersRepository.save(customers);
+    }
+
+    public void updateAdvanceAmount(Customers customers, Advance advance) {
+        customers.setAdvance(advance);
         customersRepository.save(customers);
     }
 }

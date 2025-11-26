@@ -133,6 +133,7 @@ public class Utils {
     public static final String INVALID_CATEGORY_ID = "Invalid category id";
     public static final String SUB_CATEGORY_NAME_REQUIRED = "Sub category name required";
     public static final String SUB_CATEGORY_ID_REQUIRED = "Sub category id required";
+    public static final String ADVANCE_AMOUNT_REQUIRED = "Advance amount required";
     public static final String NO_BOOKING_INFORMATION_FOUND = "No booking information found";
     public static final String YOU_CANNOT_TRANSFER = "You cannot transfer funds to the same UPI account.";
     public static final String FINAL_SETTLEMENT_GENERATED = "Final settlement is already generated";
@@ -183,6 +184,11 @@ public class Utils {
     public static final String CANNOT_CHANGE_JOINING_DATE_CUSTOMER_NOT_CHECKEDIN = "Cannot change the joining date, seems customer is not active";
     public static final String RENT_AMOUNT_REQUIRED_TO_UPDATE_RENT = "Rent amount required";
     public static final String CANNOT_CHANGE_RENT_FOR_OLD_DATES = "Cannot change rent for old dates";
+    public static final String CANNOT_CHANGE_ADVANCE_VACATED_CUSTOMERS = "Cannot change advance for vacated customers";
+    public static final String CANNOT_CHANGE_ADVANCE_PAID_INVOICE = "Cannot change advance for paid advances";
+    public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_CUSTOMERS = "Cannot change advance for cancelled customers";
+    public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_INVOICE = "Cannot change advance for cancelled invoices";
+
     /**
      *  Defining module Id's here
      *

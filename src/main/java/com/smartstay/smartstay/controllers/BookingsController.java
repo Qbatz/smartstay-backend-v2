@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.booking.CancelBooking;
+import com.smartstay.smartstay.payloads.booking.UpdateAdvance;
 import com.smartstay.smartstay.payloads.booking.UpdateBookingDetails;
 import com.smartstay.smartstay.services.BookingsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -56,6 +57,11 @@ public class BookingsController {
     @PutMapping("/{hostelId}/{bookingId}")
     public ResponseEntity<?> updateBookingInformationsNew(@PathVariable("hostelId") String hostelId, @PathVariable("bookingId") String bookingId, UpdateBookingDetails updateInfo) {
         return bookingService.updateBookingInfo(hostelId, bookingId, updateInfo);
+    }
+
+    @PutMapping("/advance/{hostelId}/{bookingId}")
+    public ResponseEntity<?> updateAdvance(@PathVariable("hostelId") String hostelId, @PathVariable("bookingId") String bookingId, @Valid @RequestBody UpdateAdvance updateAdvance) {
+        return bookingService.updateAdvanceAmount(hostelId, bookingId, updateAdvance);
     }
 
 

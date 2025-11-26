@@ -19,6 +19,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.booking.CancelBooking;
+import com.smartstay.smartstay.payloads.booking.UpdateAdvance;
 import com.smartstay.smartstay.payloads.booking.UpdateBookingDetails;
 import com.smartstay.smartstay.payloads.customer.BookingRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
@@ -987,6 +988,72 @@ public class BookingsService {
         }
 
         return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+
+    }
+
+    public ResponseEntity<?> updateAdvanceAmount(String hostelId, String bookingId, UpdateAdvance updateAdvance) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        BookingsV1 bookingsV1 = bookingsRepository.findById(bookingId).orElse(null);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_BOOKING_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customers = customersService.getCustomerInformation(bookingsV1.getCustomerId());
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_CHANGE_ADVANCE_VACATED_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_CHANGE_ADVANCE_CANCELLED_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
+
+        if (updateAdvance == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (updateAdvance.advanceAmount() == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (updateAdvance.advanceAmount().equals(0.0)) {
+            return new ResponseEntity<>(Utils.ADVANCE_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), hostelId);
+        if (advanceInvoice.isCancelled()) {
+            return new ResponseEntity<>(Utils.CANNOT_REFUND_CANCELLED_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_CHANGE_ADVANCE_PAID_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+
+        invoiceService.updateAdvaceAmount(advanceInvoice, updateAdvance.advanceAmount());
+
+        Advance advance = customers.getAdvance();
+        if (advance == null) {
+            advance = new Advance();
+        }
+        advance.setAdvanceAmount(updateAdvance.advanceAmount());
+        bookingsV1.setAdvanceAmount(updateAdvance.advanceAmount());
+
+        customersService.updateAdvanceAmount(customers, advance);
+
+        bookingsRepository.save(bookingsV1);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
 }

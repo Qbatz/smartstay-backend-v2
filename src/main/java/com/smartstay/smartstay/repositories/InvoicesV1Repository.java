@@ -144,4 +144,5 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """, nativeQuery = true)
     List<InvoicesV1> findAllInvoicesFromDate(@Param("customerId") String customerId, @Param("hostelId") String hostelId, @Param("startDate") Date startDate);
 
+    List<InvoicesV1> findByInvoiceIdIn(List<String> invoiceId);
 }
