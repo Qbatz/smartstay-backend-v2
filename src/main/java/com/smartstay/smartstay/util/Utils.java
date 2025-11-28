@@ -188,6 +188,7 @@ public class Utils {
     public static final String CANNOT_CHANGE_ADVANCE_PAID_INVOICE = "Cannot change advance for paid advances";
     public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_CUSTOMERS = "Cannot change advance for cancelled customers";
     public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_INVOICE = "Cannot change advance for cancelled invoices";
+    public static final String RENT_AMOUNT_REQUIRED = "Rent amount is required";
 
     /**
      *  Defining module Id's here

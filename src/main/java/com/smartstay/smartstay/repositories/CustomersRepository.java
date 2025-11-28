@@ -33,7 +33,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
                                                @Param("statuses") List<String> statuses);
 
     @Query(value = """
-            SELECT cus.first_name AS firstName, cus.city, cus.mobile, cus.state, cus.joining_date, 
+            SELECT cus.first_name AS firstName, cus.last_name as lastName, cus.city, cus.mobile, cus.state, cus.joining_date, 
             cus.created_at, cus.country, cus.current_status AS currentStatus, 
             cus.customer_id as customerId, cus.email_id AS emailId, 
             cus.profile_pic AS profilePic, cus.joining_date as actualJoiningDate, cus.exp_joining_date as joiningDate, 

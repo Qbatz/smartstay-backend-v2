@@ -1030,8 +1030,8 @@ public class ElectricityService {
 
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
 
-            String startDate = "";
-            String endDate = "";
+            String startDate;
+            String endDate;
             com.smartstay.smartstay.dao.ElectricityReadings ebReading = electricityReadingRepository.findTopByHostelIdOrderByEntryDateDesc(hostelId);
             if (ebReading != null) {
                 Calendar calendar = Calendar.getInstance();
@@ -1039,10 +1039,12 @@ public class ElectricityService {
 
                 startDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + electricityConfig.getBillDate();
                 endDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.DAY_OF_MONTH);
+            } else {
+                endDate = "";
+                startDate = "";
             }
-            List<com.smartstay.smartstay.dto.electricity.ElectricityReadings> listElectricity = electricityReadingRepository.getElectricity(hostelId, startDate, endDate);
+        List<com.smartstay.smartstay.dto.electricity.ElectricityReadings> listElectricity = electricityReadingRepository.getElectricity(hostelId, startDate, endDate);
             List<Integer> listRoomsInMeterReadings = new ArrayList<>();
-
 
             List<ElectricityUsage> listUsages = new ArrayList<>(listElectricity
                     .stream()
@@ -1055,7 +1057,7 @@ public class ElectricityService {
             List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings, hostelId, startDate, endDate);
             if (!listBedForEb.isEmpty()) {
                 List<ElectricityUsage> usages =  listBedForEb.stream()
-                        .map(item -> new ElectricityUsageMapper().apply(item))
+                        .map(item -> new ElectricityUsageMapper(startDate, endDate).apply(item))
                         .toList();
 
                 listUsages.addAll(usages);

@@ -9,8 +9,6 @@ import jakarta.validation.constraints.Pattern;
 import java.util.List;
 
 public record CheckInRequest(
-        @NotNull(message = "HostelId is required")
-        @NotEmpty(message = "HostelId is required") String hostelId,
 
         @NotNull(message = "FloorId is required") Integer floorId,
         @NotNull(message = "BedId is required") Integer bedId,

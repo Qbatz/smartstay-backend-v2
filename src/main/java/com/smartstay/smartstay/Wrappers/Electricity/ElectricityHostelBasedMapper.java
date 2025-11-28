@@ -63,6 +63,8 @@ public class ElectricityHostelBasedMapper implements Function<RoomInfoForEB, Ele
                 previousReading,
                 currentReading,
                 totalPrice,
-                roomInfoForEB.noOfTenants().intValue());
+                roomInfoForEB.noOfTenants().intValue(),
+                null,
+                null);
     }
 }

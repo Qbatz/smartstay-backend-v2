@@ -28,4 +28,23 @@ public class FilesConfig {
 
         return convFile;
     }
+
+    public static File convertMultipartToFileNew(MultipartFile file)  {
+        File convFile = null;
+        try {
+            convFile = File.createTempFile("admin_", "_" + file.getOriginalFilename());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        try (FileOutputStream fos = new FileOutputStream(convFile)) {
+            fos.write(file.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
+        return convFile;
+    }
 }
+
+

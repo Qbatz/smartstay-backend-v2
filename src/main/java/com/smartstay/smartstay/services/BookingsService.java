@@ -221,10 +221,10 @@ public class BookingsService {
      * not booked then check in
      * @return
      */
-    public BookingsV1 checkinCustomer(CheckInRequest request, String customerId) {
+    public BookingsV1 checkinCustomer(CheckInRequest request, Customers customers) {
         BookingsV1 bookingv1 = new BookingsV1();
-        bookingv1.setCustomerId(customerId);
-        bookingv1.setHostelId(request.hostelId());
+        bookingv1.setCustomerId(customers.getCustomerId());
+        bookingv1.setHostelId(customers.getHostelId());
         String date = request.joiningDate().replace("/", "-");
 
         bookingv1.setCurrentStatus(BookingStatus.CHECKIN.name());
@@ -236,7 +236,7 @@ public class BookingsService {
         bookingv1.setUpdatedBy(authentication.getName());
         bookingv1.setBedId(request.bedId());
         bookingv1.setFloorId(request.floorId());
-        bookingv1.setHostelId(request.hostelId());
+        bookingv1.setHostelId(customers.getHostelId());
         bookingv1.setRentAmount(request.rentalAmount());
         bookingv1.setCreatedAt(new Date());
         bookingv1.setCreatedBy(authentication.getName());
@@ -257,13 +257,10 @@ public class BookingsService {
         cbh.setType(CustomersBedType.CHECK_IN.name());
         cbh.setActive(true);
         cbh.setCreatedAt(new Date());
-        cbh.setBooking(bookingv1);
         cbh.setRentAmount(request.rentalAmount());
 
-        List<CustomersBedHistory> listBedHistory = new ArrayList<>();
-        listBedHistory.add(cbh);
+        customersBedHistoryService.saveCheckInHistory(cbh);
 
-        bookingv1.setCustomerBedHistory(listBedHistory);
 
 //        List<RentHistory> rentHistoryList = new ArrayList<>();
 //        RentHistory rentHistory = rentHistoryService.addInitialRent(bookingv1);
@@ -307,13 +304,7 @@ public class BookingsService {
             customersBedHistory.setActive(true);
             customersBedHistory.setCreatedAt(new Date());
 
-
-            customersBedHistory.setBooking(bookingsV1);
-
-            ArrayList<CustomersBedHistory> listCustomerBeds = new ArrayList<>();
-            listCustomerBeds.add(customersBedHistory);
-
-            bookingsV1.setCustomerBedHistory(listCustomerBeds);
+            customersBedHistoryService.saveCheckInHistory(customersBedHistory);
 
             return bookingsRepository.save(bookingsV1);
         }
@@ -321,9 +312,9 @@ public class BookingsService {
         return null;
     }
 
-    public void addCheckin(String customerId, CheckInRequest payloads) {
+    public void addCheckin(Customers customers, CheckInRequest payloads) {
         String date = payloads.joiningDate().replace("/", "-");
-        BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
+        BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customers.getCustomerId(), customers.getHostelId());
         if (bookingsV1 != null) {
             bookingsV1.setUpdatedAt(new Date());
             bookingsV1.setIsBooked(false);
@@ -349,31 +340,21 @@ public class BookingsService {
             cbh.setReason("Initial check in");
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
-            cbh.setBooking(bookingsV1);
 
-            List<CustomersBedHistory> listBedHistory = bookingsV1.getCustomerBedHistory();
-            listBedHistory.add(cbh);
-
-            bookingsV1.setCustomerBedHistory(listBedHistory);
-
-//            List<RentHistory> rentHistoryList = new ArrayList<>();
-//            RentHistory rentHistory = rentHistoryService.addInitialRent(bookingsV1);
-//            rentHistoryList.add(rentHistory);
-//
-//            bookingsV1.setRentHistory(rentHistoryList);
+            customersBedHistoryService.saveCheckInHistory(cbh);
 
             bookingsRepository.save(bookingsV1);
 
             rentHistoryService.addInitialRent(bookingsV1);
         }else {
-            BookingsV1 bookingsV11 = checkinCustomer(payloads, customerId);
+            BookingsV1 bookingsV11 = checkinCustomer(payloads, customers);
             rentHistoryService.addInitialRent(bookingsV11);
         }
     }
 
-    public void checkInBookedCustomer(String customerId, CheckInRequest payloads) {
+    public void checkInBookedCustomer(Customers customers, CheckInRequest payloads) {
         String date = payloads.joiningDate().replace("/", "-");
-        BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customerId, payloads.hostelId());
+        BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customers.getCustomerId(), customers.getHostelId());
         if (bookingsV1 != null) {
             bookingsV1.setUpdatedAt(new Date());
             bookingsV1.setLeavingDate(null);
@@ -399,13 +380,8 @@ public class BookingsService {
             cbh.setType(CustomersBedType.CHECK_IN.name());
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
-            cbh.setBooking(bookingsV1);
 
-            List<CustomersBedHistory> listBedHistory = bookingsV1.getCustomerBedHistory();
-            listBedHistory.add(cbh);
-
-            bookingsV1.setCustomerBedHistory(listBedHistory);
-
+            customersBedHistoryService.saveCheckInHistory(cbh);
 //            List<RentHistory> listRentHistory = new ArrayList<>();
 //            RentHistory rentHistory = rentHistoryService.addInitialRent(bookingsV1);
 //            listRentHistory.add(rentHistory);
@@ -752,12 +728,8 @@ public class BookingsService {
         cbh.setRentAmount(rent);
         cbh.setActive(true);
         cbh.setCreatedAt(new Date());
-        cbh.setBooking(bookingsV1);
 
-        List<CustomersBedHistory> listCustomerBedHistory = bookingsV1.getCustomerBedHistory();
-        listCustomerBedHistory.add(cbh);
-
-        bookingsV1.setCustomerBedHistory(listCustomerBedHistory);
+        customersBedHistoryService.saveCheckInHistory(cbh);
 
         bookingsRepository.save(bookingsV1);
     }
@@ -1054,6 +1026,29 @@ public class BookingsService {
         bookingsRepository.save(bookingsV1);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
+    }
+
+    /**
+     *
+     * used for update the new rent for all the customers
+     */
+    public void updateRentalAmount() {
+
+        List<RentHistory> listRentHistory = rentHistoryService.findAnyNewRent();
+
+        List<BookingsV1> bookings = listRentHistory
+                .stream()
+                .map(i -> {
+                    BookingsV1 bookingsV1 = i.getBooking();
+                    bookingsV1.setRentAmount(i.getRent());
+                    return bookingsV1;
+                })
+                .toList();
+
+
+        bookingsRepository.saveAll(bookings);
+        customersBedHistoryService.updateNewRentAmount(listRentHistory);
 
     }
 }

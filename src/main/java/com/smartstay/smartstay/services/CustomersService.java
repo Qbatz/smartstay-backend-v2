@@ -215,13 +215,22 @@ public class CustomersService {
         HashMap<String, String> filterOption = new HashMap<>();
         List<com.smartstay.smartstay.responses.customer.CustomerData> listCustomers = customerData.stream().map(item -> {
             StringBuilder initials = new StringBuilder();
-            String[] nameArray = item.getFirstName().split(" ");
-            initials.append(nameArray[0].toUpperCase().charAt(0));
-            if (nameArray.length > 1) {
-                initials.append(nameArray[nameArray.length - 1].toUpperCase().charAt(0));
-            } else {
-                initials.append(nameArray[0].toUpperCase().charAt(1));
-            }
+            StringBuilder fullName = new StringBuilder();
+           if (item.getFirstName() != null) {
+               initials.append(item.getFirstName().toUpperCase().charAt(0));
+               fullName.append(item.getFirstName());
+           }
+           if (item.getLastName() != null && !item.getLastName().equalsIgnoreCase("")) {
+               fullName.append(" ");
+               fullName.append(item.getLastName());
+               initials.append(item.getLastName().toUpperCase().charAt(0));
+
+           }
+           else {
+               if (item.getFirstName().length() > 1) {
+                   initials.append(item.getFirstName().toUpperCase().charAt(1));
+               }
+           }
             String currentStatus = null;
             if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
                 currentStatus = "Booked";
@@ -246,6 +255,8 @@ public class CustomersService {
             }
 
             return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
+                    item.getLastName(),
+                    fullName.toString(),
                     item.getCity(),
                     item.getState(),
                     item.getCountry(),
@@ -363,15 +374,20 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
         if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        if (!userHostelService.checkHostelAccess(user.getUserId(), payloads.hostelId())) {
+        if (!userHostelService.checkHostelAccess(user.getUserId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
 
-        if (!floorsService.checkFloorExistForHostel(payloads.floorId(), payloads.hostelId())) {
+        if (!floorsService.checkFloorExistForHostel(payloads.floorId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.UNAUTHORIZED);
         }
 
@@ -379,17 +395,12 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.N0_ROOM_FOUND_FLOOR, HttpStatus.UNAUTHORIZED);
         }
 
-        if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(), payloads.hostelId())) {
+        if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.UNAUTHORIZED);
         }
-        HostelV1 hostelV1 = hostelService.getHostelInfo(payloads.hostelId());
+        HostelV1 hostelV1 = hostelService.getHostelInfo(customers.getHostelId());
         if (hostelV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
-        }
-
-        Customers customers = customersRepository.findById(customerId).orElse(null);
-        if (customers == null) {
-            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
@@ -443,10 +454,10 @@ public class CustomersService {
 
             bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
 
-            bookingsService.addCheckin(customerId, payloads);
+            bookingsService.addCheckin(customers, payloads);
 
 
-            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
+            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
 
 //            Calendar cal = Calendar.getInstance();
 //            cal.set(Calendar.DAY_OF_MONTH, day);
@@ -554,7 +565,6 @@ public class CustomersService {
             bedsService.addUserToBed(booking.getBedId(), date);
 
             CheckInRequest request = new CheckInRequest(
-                    booking.getHostelId(),
                     booking.getFloorId(),
                     booking.getBedId(),
                     booking.getRoomId(),
@@ -565,7 +575,7 @@ public class CustomersService {
                     checkinRequest.deductions()
             );
 
-            bookingsService.checkInBookedCustomer(customerId, request);
+            bookingsService.checkInBookedCustomer(customers, request);
 
             BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), joiningDate);
             BillingDates currentBillDate = hostelService.getCurrentBillStartAndEndDates(hostelV1.getHostelId());
@@ -1020,10 +1030,8 @@ public class CustomersService {
             if (bookingDetails.getIsBooked() != null && bookingDetails.getIsBooked()) {
                 BookingsV1 bookingV1 = bookingsService.getBookingsByCustomerId(customerId);
                 if (bookingV1 != null) {
-                    CustomersBedHistory cbh = bookingV1.getCustomerBedHistory()
-                            .stream()
-                            .filter(i -> i.getType().equalsIgnoreCase(CustomersBedType.BOOKED.name()))
-                            .findAny().get();
+
+                    CustomersBedHistory cbh = bedHistory.getCustomerBookedBed(bookingV1.getCustomerId());
 
                     BedDetails bedDetails = bedsService.getBedDetails(cbh.getBedId());
                     String bookedBedName = null;
@@ -1139,7 +1147,7 @@ public class CustomersService {
 
 
     public void calculateRentAndCreateRentalInvoice(Customers customers, CheckInRequest payloads) {
-        HostelV1 hostelV1 = hostelService.getHostelInfo(payloads.hostelId());
+        HostelV1 hostelV1 = hostelService.getHostelInfo(customers.getHostelId());
         if (hostelV1 != null) {
 
 //            int lastRulingBillDate = 1;
@@ -1150,7 +1158,7 @@ public class CustomersService {
 
             Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
-            BillingDates billingDates = hostelService.getBillingRuleOnDate(payloads.hostelId(), joiningDate);
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(customers.getHostelId(), joiningDate);
 
 //            Date lastDate = null;
 //            Date startDate = null;
@@ -1177,7 +1185,7 @@ public class CustomersService {
                 finalRent = payloads.rentalAmount();
             }
 
-            invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), payloads.hostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
+            invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
 
         }
 
@@ -2109,6 +2117,8 @@ public class CustomersService {
         double unpaidInvoiceAmount = 0.0;
         double partialPaidAmount = 0.0;
         double totalAmountToBePaid = 0.0;
+        double totalAmountWithoutDeductions = 0.0;
+        List<Deductions> listDeductions = new ArrayList<>();
 
 
         if (bookingDetails.getBookingAmount() != null) {
@@ -2121,6 +2131,8 @@ public class CustomersService {
                     .stream()
                     .mapToDouble(Deductions::getAmount)
                     .sum();
+
+            listDeductions = customers.getAdvance().getDeductions();
         }
 
         List<InvoicesV1> listUnpaidInvoices = invoiceService.listAllUnpaidInvoices(customerId, customers.getHostelId());
@@ -2253,6 +2265,7 @@ public class CustomersService {
             totalAmountToBePaid = totalAmountToBePaid + currentMonthPayableRent;
         }
 
+        totalAmountWithoutDeductions = totalAmountToBePaid;
         totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
         double totalAmountForFinalSettlement = totalAmountToBePaid;
         double totalDeductionForFinalSettlement = 0.0;
@@ -2262,6 +2275,17 @@ public class CustomersService {
                     .stream()
                     .mapToDouble(Settlement::amount)
                     .sum();
+            List<Deductions> newDeductions = deductions
+                    .stream()
+                    .map(i -> {
+                        Deductions d = new Deductions();
+                        d.setType(i.item());
+                        d.setAmount(i.amount());
+                        return d;
+                    })
+                    .toList();
+            listDeductions.addAll(newDeductions);
+
             totalAmountToBePaid = totalAmountToBePaid + finalDeductions;
             totalDeductionForFinalSettlement = finalDeductions;
         }
@@ -2277,7 +2301,7 @@ public class CustomersService {
 
         invoiceService.cancelActiveInvoice(unpaidUpdated);
         if (invAdvanceInvoice != null) {
-            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated);
+            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions);
 
             customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
             customersRepository.save(customers);
@@ -2297,6 +2321,8 @@ public class CustomersService {
         double totalAdvacePaidAmount = 0.0;
         double currentPayableRent = 0.0;
         double totalAmountToBePaid = 0.0;
+        Double totalAmountWithoutDeductions = 0.0;
+        List<Deductions> listDeductions = new ArrayList<>();
 
         boolean isAdvancePaid = false;
 
@@ -2314,6 +2340,8 @@ public class CustomersService {
                             return 0.0;
                         })
                         .sum();
+
+                listDeductions.addAll(advance.getDeductions());
             }
         }
 
@@ -2327,6 +2355,18 @@ public class CustomersService {
                     })
                     .sum();
             deductionsAmount = deductionsAmount + ded;
+
+            List<Deductions> newDeductions = deductions
+                    .stream()
+                    .map(i -> {
+                        Deductions d = new Deductions();
+                        d.setAmount(i.amount());
+                        d.setType(d.getType());
+                        return d;
+                    })
+                    .toList();
+
+            listDeductions.addAll(newDeductions);
         }
 
         if (bookings != null) {
@@ -2432,7 +2472,10 @@ public class CustomersService {
 
         }
 
-        totalAmountToBePaid = currentPayableRent + deductionsAmount - totalAdvacePaidAmount - currentMonthPaidAmount;
+        totalAmountWithoutDeductions =  currentPayableRent - totalAdvacePaidAmount - currentMonthPaidAmount;
+        totalAmountToBePaid = currentPayableRent - totalAdvacePaidAmount - currentMonthPaidAmount;
+
+        totalAmountToBePaid = totalAmountToBePaid + deductionsAmount;
 
         System.out.println("*****");
         System.out.println(totalAmountToBePaid);
@@ -2469,7 +2512,7 @@ public class CustomersService {
 
 
         if (advaceInvoice != null) {
-            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(totalAmountToBePaid), cancellInvoices);
+            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(totalAmountToBePaid), cancellInvoices, listDeductions, totalAmountWithoutDeductions);
 
             customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
             customersRepository.save(customers);

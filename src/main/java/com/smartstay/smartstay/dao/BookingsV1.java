@@ -38,9 +38,6 @@ public class BookingsV1 {
     private int roomId;
     private int bedId;
 
-    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CustomersBedHistory> customerBedHistory;
-
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<RentHistory> rentHistory;
 }

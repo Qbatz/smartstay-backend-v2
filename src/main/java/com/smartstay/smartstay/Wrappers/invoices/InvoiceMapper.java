@@ -35,8 +35,8 @@ public class InvoiceMapper {
                 invoice.getInvoiceDueDate() != null
                         ? dateFormat.format(invoice.getInvoiceDueDate())
                         : null,
-                invoice.getInvoiceGeneratedDate() != null
-                        ? dateFormat.format(invoice.getInvoiceGeneratedDate())
+                invoice.getInvoiceStartDate()!= null
+                        ? dateFormat.format(invoice.getInvoiceStartDate())
                         : null,
                 invoice.getInvoiceItems() != null
                         ? invoice.getInvoiceItems().stream()

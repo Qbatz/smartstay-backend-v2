@@ -90,8 +90,6 @@ public class RecurringEventListener {
             double rentEbAmount = rentAmount + ebAmount;
             double rentEbAndAmenity = rentEbAmount + amenityAmount;
             System.out.println(amenityAmount);
-            System.out.println("xxxxxxxxx");
-            System.out.println("Invoice amount is " +  rentEbAndAmenity);
 
             Customers customers = listCustomers
                     .stream()
@@ -111,6 +109,7 @@ public class RecurringEventListener {
                                     .get();
                             prefix = rentTemplateType.getInvoicePrefix();
                         }
+                        prefixSuffix.append("-");
                         prefixSuffix.append(prefix);
                     }
                     InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix, hostelV1.getHostelId());

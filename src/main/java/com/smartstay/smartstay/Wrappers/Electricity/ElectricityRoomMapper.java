@@ -36,6 +36,7 @@ public class ElectricityRoomMapper implements Function<ElectricityReadingForRoom
                 startDate,
                 endDate,
                 electricityReadingForRoom.getConsumption(),
-                electricityReadingForRoom.getCurrentReading());
+                electricityReadingForRoom.getCurrentReading(),
+                endDate);
     }
 }

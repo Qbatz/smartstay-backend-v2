@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -64,5 +65,10 @@ public class BookingsController {
         return bookingService.updateAdvanceAmount(hostelId, bookingId, updateAdvance);
     }
 
+    @PostMapping("/manual/rent")
+    public ResponseEntity<?> findAndUpdateRentManually() {
+         bookingService.updateRentalAmount();
+         return new ResponseEntity<>(HttpStatus.OK);
+    }
 
 }

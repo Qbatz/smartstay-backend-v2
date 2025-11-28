@@ -437,9 +437,7 @@ public class CoreSetUp {
 //			planBasic.setFeaturesList(listFeatures31);
 //			listPlans.add(planAdvance);
 //
-//
 //			plansRepository.saveAll(listPlans);
-
         };
     }
 }

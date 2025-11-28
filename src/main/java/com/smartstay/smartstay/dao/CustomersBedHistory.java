@@ -30,8 +30,4 @@ public class CustomersBedHistory {
     private String type;
     private double rentAmount;
 
-    @ManyToOne
-    @JoinColumn(name = "booking_id")
-    private BookingsV1 booking;
-
 }

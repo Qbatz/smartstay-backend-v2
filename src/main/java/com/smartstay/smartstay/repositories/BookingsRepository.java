@@ -132,4 +132,9 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """)
     List<BookingsV1> findBookingsWithDate(String hostelId, Date startDate);
 
+    @Query(value = """
+            SELECT * FROM bookingsv1 WHERE checkout_date IS NULL and DATE(leaving_date)<=DATE(:todaysDate) AND current_status ='NOTICE'
+            """, nativeQuery = true)
+    List<BookingsV1> checkAnyCheckout(@Param("todaysDate") Date todaysDate);
+
 }
