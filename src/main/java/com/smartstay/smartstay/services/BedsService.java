@@ -17,6 +17,7 @@ import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.payloads.beds.AddBed;
+import com.smartstay.smartstay.payloads.beds.EditBedRent;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.beds.BedDetails;
@@ -67,7 +68,7 @@ public class BedsService {
 
     public ResponseEntity<?> getAllBeds(int roomId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
@@ -386,6 +387,10 @@ public class BedsService {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
 
+        if (updateBed == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
         if (updateBed.bedName() != null && !updateBed.bedName().isEmpty()) {
             int duplicateCount = bedsRepository.countByBedNameAndBedId(
                     user.getParentId(), bedId, existingBed.getRoomId()
@@ -397,6 +402,11 @@ public class BedsService {
         }
         if (updateBed.isActive() != null) {
             existingBed.setIsActive(updateBed.isActive());
+        }
+        if (updateBed.amount() != null) {
+            if (updateBed.amount() != 0) {
+                existingBed.setRentAmount(updateBed.amount());
+            }
         }
         existingBed.setUpdatedAt(new Date());
         bedsRepository.save(existingBed);
@@ -796,5 +806,40 @@ public class BedsService {
 
     public List<com.smartstay.smartstay.dto.beds.BedDetails> getBedDetails(List<Integer> bedIds) {
         return bedsRepository.findByBedIds(bedIds);
+    }
+
+    public ResponseEntity<?> updateRentAmount(Integer bedId, EditBedRent bedRent) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (bedRent == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (bedRent.newRent() == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (bedRent.newRent() == 0.0) {
+            return new ResponseEntity<>(Utils.RENT_AMOUNT_REQUIRED_TO_UPDATE_RENT, HttpStatus.BAD_REQUEST);
+        }
+        Beds beds = bedsRepository.findById(bedId).orElse(null);
+        if (beds == null) {
+            return new ResponseEntity<>(Utils.INVALID_BED_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), beds.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        beds.setRentAmount(bedRent.newRent());
+        beds.setUpdatedAt(new Date());
+        bedsRepository.save(beds);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }

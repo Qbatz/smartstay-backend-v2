@@ -16,6 +16,7 @@ import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.payloads.electricity.UpdateEBConfigs;
 import com.smartstay.smartstay.payloads.hostel.BillRules;
 import com.smartstay.smartstay.payloads.hostel.UpdateElectricityPrice;
+import com.smartstay.smartstay.payloads.hostel.UpdatePg;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.responses.Hostels;
 import com.smartstay.smartstay.responses.beds.BedsStatusCount;
@@ -646,7 +647,7 @@ public class HostelService {
             }
             else {
                 if (Utils.compareWithTwoDates(cal.getTime(), new Date()) <= 0) {
-                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
                 }
                 else {
                     cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
@@ -735,6 +736,93 @@ public class HostelService {
 
     public BillingDates getBillingRuleOnDate(String hostelId, Date date) {
         return hostelConfigService.getBillingRuleByDateAndHostelId(hostelId, date);
+    }
+
+    public ResponseEntity<?> updatePgInformations(String hostelId, UpdatePg updatePg, MultipartFile mainImage, List<MultipartFile> additionalImages) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostelV1 = hostelV1Repository.findByHostelId(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (updatePg == null && mainImage == null && additionalImages == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (mainImage != null) {
+            String mainImageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFileNew(mainImage), "Hostel-Images");
+            hostelV1.setMainImage(mainImageUrl);
+        }
+
+        List<String> listImageUrls = new ArrayList<>();
+        if (additionalImages != null && !additionalImages.isEmpty()) {
+            listImageUrls = additionalImages.stream().map(multipartFile -> uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFileNew(multipartFile), "Hostel-Images")).collect(Collectors.toList());
+        }
+
+        if (!listImageUrls.isEmpty()) {
+            List<HostelImages> listHostelImages = listImageUrls.stream().map(item -> {
+                HostelImages hostelImg = new HostelImages();
+                hostelImg.setCreatedBy(authentication.getName());
+                hostelImg.setImageUrl(item);
+                hostelImg.setHostel(hostelV1);
+                return hostelImg;
+            }).toList();
+
+            hostelV1.setAdditionalImages(listHostelImages);
+        }
+
+        if (updatePg != null) {
+            if (updatePg.city() != null) {
+                hostelV1.setCity(updatePg.city());
+            }
+
+            if (updatePg.street() != null) {
+                hostelV1.setStreet(updatePg.street());
+            }
+            else if (hostelV1.getStreet() != null) {
+                hostelV1.setStreet(null);
+            }
+
+            if (updatePg.landmark() != null) {
+                hostelV1.setLandmark(updatePg.landmark());
+            }
+            else if (hostelV1.getLandmark() != null) {
+                hostelV1.setLandmark(null);
+            }
+
+            if (updatePg.city() != null) {
+                hostelV1.setCity(updatePg.city());
+            }
+
+            if (updatePg.pincode() != null) {
+                if (updatePg.pincode() != 0) {
+                    hostelV1.setPincode(updatePg.pincode());
+                }
+            }
+
+            if (updatePg.state() != null) {
+                hostelV1.setState(updatePg.state());
+            }
+
+        }
+
+        hostelV1Repository.save(hostelV1);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
     }
 }
 

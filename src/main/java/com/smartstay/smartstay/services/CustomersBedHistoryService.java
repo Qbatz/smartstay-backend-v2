@@ -2,14 +2,18 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Electricity.BedHistoryCustomerListMapper;
 import com.smartstay.smartstay.Wrappers.customers.BedHistoryMapper;
+import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.CustomersBedHistory;
+import com.smartstay.smartstay.dao.RentHistory;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
+import com.smartstay.smartstay.ennum.CustomersBedType;
 import com.smartstay.smartstay.repositories.CustomerBedHistoryRespository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -86,5 +90,56 @@ public class CustomersBedHistoryService {
 
     public List<CustomersBedHistory> getByCustomerIdAndStartAndEndDate(String customerId, Date startDate, Date endDate) {
         return customerBedHistoryRepository.findByCustomerIdAndStartAndEndDate(customerId, startDate, endDate);
+    }
+
+    public void updateNewRentAmount(List<RentHistory> rentHistoryList) {
+        List<String> customerIds = rentHistoryList
+                .stream()
+                .map(RentHistory::getCustomerId)
+                .toList();
+
+        Calendar getEndDate = Calendar.getInstance();
+        getEndDate.add(Calendar.DAY_OF_MONTH, -1);
+
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryRepository.findCurrentBed(customerIds);
+        List<CustomersBedHistory> updateBedHistoryWithNewRent = listCustomerBedHistory
+                .stream()
+                .map(i -> {
+                    double rentAmount = rentHistoryList.stream()
+                            .filter(item -> item.getCustomerId().equalsIgnoreCase(i.getCustomerId()))
+                            .mapToDouble(RentHistory::getRent)
+                            .sum();
+                   CustomersBedHistory cbh = new CustomersBedHistory();
+                   cbh.setCustomerId(i.getCustomerId());
+                   cbh.setBedId(i.getBedId());
+                   cbh.setRoomId(i.getRoomId());
+                   cbh.setFloorId(i.getFloorId());
+                   cbh.setType(CustomersBedType.RENT_REVISION.name());
+                   cbh.setHostelId(i.getHostelId());
+                   cbh.setStartDate(new Date());
+                   cbh.setEndDate(null);
+                   cbh.setChangedBy(i.getChangedBy());
+                   cbh.setReason("Rent Revision");
+                   cbh.setActive(true);
+                   cbh.setCreatedAt(new Date());
+                   cbh.setRentAmount(rentAmount);
+                   return cbh;
+                })
+                .toList();
+
+        List<CustomersBedHistory> listUpdatedBedHistoryWithEndDate = listCustomerBedHistory
+                .stream()
+                        .map(i -> {
+                            i.setEndDate(getEndDate.getTime());
+                            return i;
+                        })
+                                .toList();
+
+        customerBedHistoryRepository.saveAll(updateBedHistoryWithNewRent);
+        customerBedHistoryRepository.saveAll(listUpdatedBedHistoryWithEndDate);
+    }
+
+    public void saveCheckInHistory(CustomersBedHistory cbh) {
+        customerBedHistoryRepository.save(cbh);
     }
 }

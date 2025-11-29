@@ -5,9 +5,11 @@ import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.RentHistory;
 import com.smartstay.smartstay.repositories.RentHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class RentHistoryService {
@@ -56,5 +58,18 @@ public class RentHistoryService {
 
         rentHistory.setRent(newRent);
         rentHistoryRepository.save(rentHistory);
+    }
+
+    public Double findRent(String customerId, Date date) {
+        RentHistory rentHistory = rentHistoryRepository.findRentByCustomerIdAndDate(customerId, date);
+        if (rentHistory != null) {
+            return rentHistory.getRent();
+        }
+        return 0.0;
+    }
+
+    public List<RentHistory> findAnyNewRent() {
+        return rentHistoryRepository.findRentApplyFromDate(new Date());
+
     }
 }

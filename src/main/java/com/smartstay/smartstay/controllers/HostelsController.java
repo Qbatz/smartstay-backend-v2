@@ -5,6 +5,7 @@ import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
 import com.smartstay.smartstay.payloads.electricity.UpdateEBConfigs;
 import com.smartstay.smartstay.payloads.hostel.BillRules;
 import com.smartstay.smartstay.payloads.hostel.UpdateElectricityPrice;
+import com.smartstay.smartstay.payloads.hostel.UpdatePg;
 import com.smartstay.smartstay.services.HostelService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -79,4 +80,10 @@ public class HostelsController {
     public ResponseEntity<?> updateBillingRules(@PathVariable("hostelId") String hostelId, @RequestBody @Valid BillRules billRules) {
         return hostelService.updateBillingRules(hostelId, billRules);
     }
+
+    @PutMapping("/{hostelId}")
+    public ResponseEntity<?> updatePGdetails(@PathVariable("hostelId") String hostelId, @RequestPart(required = false) UpdatePg payloads, @RequestPart(required = false, name = "mainImage") MultipartFile mainImage, @RequestPart(required = false, name = "additionalImages") List<MultipartFile> additionalImages) {
+        return hostelService.updatePgInformations(hostelId, payloads, mainImage, additionalImages);
+    }
+
 }

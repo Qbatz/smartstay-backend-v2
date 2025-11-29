@@ -4,6 +4,7 @@ import java.util.Date;
 
 public interface CustomerData {
     String getFirstName();
+    String getLastName();
     String getCity();
     String getState();
     String getCountry();

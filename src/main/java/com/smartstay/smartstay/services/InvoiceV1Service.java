@@ -11,6 +11,7 @@ import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
+import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.dto.invoices.Invoices;
@@ -69,6 +70,8 @@ public class InvoiceV1Service {
     private InvoiceItemService invoiceItemService;
     @Autowired
     private CreditDebitNoteService creditDebitNoteService;
+    @Autowired
+    private RentHistoryService rentHistoryService;
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
     private TransactionService transactionService;
@@ -985,7 +988,25 @@ public class InvoiceV1Service {
             List<com.smartstay.smartstay.responses.invoices.InvoiceItems> listInvoiceItems = new ArrayList<>();
             listInvoiceItems.add(new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(),
                     InvoiceType.SETTLEMENT.name(),
-                    invoicesV1.getTotalAmount()));
+                    invoicesV1.getBasePrice()));
+            List<Deductions> listDeductions = invoicesV1
+                    .getInvoiceItems()
+                    .stream()
+                    .map(i -> {
+                        Deductions d = new Deductions();
+                        d.setType(i.getInvoiceItem());
+                        d.setAmount(i.getAmount());
+
+                        return d;
+                    })
+                    .toList();
+
+            double totalDeductionAmount = invoicesV1
+                    .getInvoiceItems()
+                    .stream()
+                    .mapToDouble(InvoiceItems::getAmount)
+                    .sum();
+
 
             InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(),
                     0.0,
@@ -997,7 +1018,9 @@ public class InvoiceV1Service {
                     invoiceMonth.toString(),
                     paymentStatus,
                     invoicesV1.isCancelled(),
-                    listInvoiceItems);
+                    totalDeductionAmount,
+                    listInvoiceItems,
+                    listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(
                     invoicesV1.getInvoiceNumber(),
@@ -1060,7 +1083,9 @@ public class InvoiceV1Service {
                 invoiceMonth.toString(),
                 paymentStatus,
                 invoicesV1.isCancelled(),
-                listInvoiceItems);
+                0.0,
+                listInvoiceItems,
+                null);
 
         InvoiceDetails details = new InvoiceDetails(invoicesV1.getInvoiceNumber(),
                 invoicesV1.getInvoiceId(),
@@ -1092,7 +1117,7 @@ public class InvoiceV1Service {
         invoicesV1Repository.saveAll(unpaidUpdated);
     }
 
-    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices) {
+    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction) {
         List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customers.getCustomerId(), InvoiceType.SETTLEMENT.name());
         if (!invoicesV1.isEmpty()) {
             InvoicesV1 settlementInvoice = invoicesV1.get(0);
@@ -1103,12 +1128,40 @@ public class InvoiceV1Service {
                     .toList());
 
             settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
-            settlementInvoice.setBasePrice(totalAmountToBePaid);
+            settlementInvoice.setBasePrice(totalAmountWithoutDeduction);
             settlementInvoice.setTotalAmount(totalAmountToBePaid);
             settlementInvoice.setInvoiceStartDate(new Date());
             settlementInvoice.setInvoiceDueDate(new Date());
             settlementInvoice.setInvoiceEndDate(new Date());
             settlementInvoice.setUpdatedAt(new Date());
+
+            List<InvoiceItems> listInvoiceItems = listDeductions
+                    .stream()
+                    .map(i -> {
+                        InvoiceItems invoiceItems = new InvoiceItems();
+                        invoiceItems.setAmount(i.getAmount());
+                        if (i.getType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.MAINTENANCE.name())) {
+                            invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.MAINTENANCE.name());
+                        }
+                        else if (i.getType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
+                            invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+                        }
+                        else if (i.getType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
+                            invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
+                        }
+                        else if (i.getType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
+                            invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+                        }
+                        else {
+                            invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
+                            invoiceItems.setOtherItem(i.getType());
+                        }
+                        invoiceItems.setInvoice(settlementInvoice);
+                        return invoiceItems;
+                    })
+                    .toList();
+
+            settlementInvoice.setInvoiceItems(listInvoiceItems);
             invoicesV1Repository.save(settlementInvoice);
 
         }
@@ -1125,7 +1178,7 @@ public class InvoiceV1Service {
             settlementInvoice.setCustomerMobile(customers.getMobile());
             settlementInvoice.setCustomerMobile(customers.getMobile());
             settlementInvoice.setInvoiceType(InvoiceType.SETTLEMENT.name());
-            settlementInvoice.setBasePrice(totalAmountToBePaid);
+            settlementInvoice.setBasePrice(totalAmountWithoutDeduction);
             settlementInvoice.setTotalAmount(totalAmountToBePaid);
             settlementInvoice.setGst(0.0);
             settlementInvoice.setCgst(0.0);
@@ -1152,6 +1205,34 @@ public class InvoiceV1Service {
             settlementInvoice.setInvoiceEndDate(new Date());
             settlementInvoice.setCreatedAt(new Date());
             settlementInvoice.setUpdatedAt(new Date());
+
+            List<InvoiceItems> listInvoiceItems = listDeductions
+                    .stream()
+                    .map(i -> {
+                        InvoiceItems invoiceItems = new InvoiceItems();
+                        invoiceItems.setAmount(i.getAmount());
+                        if (i.getType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.MAINTENANCE.name())) {
+                            invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.MAINTENANCE.name());
+                        }
+                        else if (i.getType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
+                            invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+                        }
+                        else if (i.getType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
+                            invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
+                        }
+                        else if (i.getType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
+                            invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+                        }
+                        else {
+                            invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
+                            invoiceItems.setOtherItem(i.getType());
+                        }
+                        invoiceItems.setInvoice(settlementInvoice);
+                        return invoiceItems;
+                    })
+                    .toList();
+
+            settlementInvoice.setInvoiceItems(listInvoiceItems);
 
             invoicesV1Repository.save(settlementInvoice);
         }
@@ -1675,16 +1756,11 @@ public class InvoiceV1Service {
 
             }
             else {
-                double rentAmount = invoicesV1.getInvoiceItems()
-                        .stream()
-                        .filter(i -> i.getInvoiceItem().equalsIgnoreCase(InvoiceType.RENT.name()))
-                        .mapToDouble(InvoiceItems::getAmount)
-                        .sum();
-                long noOfDaysStayed = Utils.findNumberOfDays(invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
-                if (noOfDaysStayed < 0) {
-                    noOfDaysStayed = -1 * noOfDaysStayed;
-                }
-                double rentPerDay = rentAmount / noOfDaysStayed;
+
+                double rentAmount = rentHistoryService.findRent(customerId, invoicesV1.getInvoiceStartDate());
+                long noOfDaysInTheMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+
+                double rentPerDay = rentAmount / noOfDaysInTheMonth;
 
                 long noDaysStayingBasedOnNewJoiningDate = Utils.findNumberOfDays(newJoiningDate, invoicesV1.getInvoiceEndDate());
                 if (noDaysStayingBasedOnNewJoiningDate < 0) {
@@ -1750,11 +1826,11 @@ public class InvoiceV1Service {
         }
         else if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBillingDates.currentBillStartDate()) < 0) {
             List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesFromDate(customers.getCustomerId(), hostelId, oldJoiningDate);
+
             if (!listInvoices.isEmpty()) {
                 return false;
             }
         }
-
 
         updateJoiningDateOnAdvanceInvoice(customers.getCustomerId(), joinigDate);
         if (Utils.compareWithTwoDates(currentMonthBillingDates.currentBillStartDate(), oldJoiningDate) <= 0) {

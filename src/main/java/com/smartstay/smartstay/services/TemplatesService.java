@@ -429,6 +429,12 @@ public class TemplatesService {
 
             }
         }
+        else {
+            templateType.setGstPercentage(0.0);
+            templateType.setCgst(0.0);
+            templateType.setSgst(0.0);
+        }
+
 
         if (isNotBlank(payloads.bankId())) templateType.setBankAccountId(payloads.bankId());
         if (isNotBlank(payloads.invoiceTermsAndCondition())) templateType.setInvoiceTermsAndCondition(payloads.invoiceTermsAndCondition());

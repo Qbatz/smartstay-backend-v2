@@ -60,7 +60,7 @@ public class TransctionsForCustomerDetails implements Function<TransactionDto, c
                 rentMonth.append(" - ");
                 rentMonth.append(invoiceEnd);
             }
-            else if ( invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
+            else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
                 billName = "Bed change - Rent";
 
                 String invoiceStart = Utils.dateToDateMonth(invoicesV1.getInvoiceStartDate());
@@ -69,6 +69,9 @@ public class TransctionsForCustomerDetails implements Function<TransactionDto, c
                 rentMonth.append(invoiceStart);
                 rentMonth.append(" - ");
                 rentMonth.append(invoiceEnd);
+            }
+            else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                billName = "Booking";
             }
 
             if (invoicesV1.isCancelled()) {
