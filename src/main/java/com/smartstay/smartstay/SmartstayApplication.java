@@ -151,10 +151,10 @@ public class SmartstayApplication {
 //	public CommandLineRunner checkAnyCheckoutPending(BookingsRepository bookingsRepository, NotificationV1Repository notificationV1Repository) {
 //		return args -> {
 //
-//			List<NotificationsV1> notification = bookingsRepository.checkAnyCheckout(new Date())
+//			List<AdminNotifications> notification = bookingsRepository.checkAnyCheckout(new Date())
 //					.stream()
 //					.map(i -> {
-//						NotificationsV1 notificationsV1 = new NotificationsV1();
+//						AdminNotifications notificationsV1 = new AdminNotifications();
 //						notificationsV1.setNotificationType(NotificationType.CHECKOUT_MISSING.name());
 //						notificationsV1.setDeleted(false);
 //						notificationsV1.setActive(true);
@@ -173,6 +173,32 @@ public class SmartstayApplication {
 //
 //			notificationV1Repository.saveAll(notification);
 //
+//		};
+//	}
+
+//	@Bean
+//	public CommandLineRunner checkMissingJoinig(BookingsRepository bookingsRepository, NotificationV1Repository notificationV1Repository) {
+//		return args -> {
+//			List<AdminNotifications> notification = bookingsRepository.checkAnyMissingCheckIn(new Date())
+//					.stream()
+//					.map(i -> {
+//						AdminNotifications notificationsV1 = new AdminNotifications();
+//						notificationsV1.setNotificationType(NotificationType.CHECKIN_MISSING.name());
+//						notificationsV1.setDeleted(false);
+//						notificationsV1.setActive(true);
+//						notificationsV1.setDescription("You have some missing check in. Make sure to check in or update the joining dates.");
+//						notificationsV1.setCreatedAt(new Date());
+//						notificationsV1.setTitle("Missing check in");
+//						notificationsV1.setHostelId(i.getHostelId());
+//						notificationsV1.setUserId(i.getCustomerId());
+//						notificationsV1.setSourceId(i.getBookingId());
+//						notificationsV1.setUserType(UserType.ALL_EXCEPT_TENANT.name());
+//						notificationsV1.setCreatedBy(i.getCreatedBy());
+//						return notificationsV1;
+//					})
+//					.toList();
+//
+//			notificationV1Repository.saveAll(notification);
 //		};
 //	}
 

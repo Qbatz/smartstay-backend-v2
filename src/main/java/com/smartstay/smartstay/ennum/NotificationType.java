@@ -6,5 +6,7 @@ public enum NotificationType {
     CHANGE_BED,
     AMENITY_REQUEST,
     CHECKOUT_REQUEST,
-    CHECKOUT_MISSING;
+    CHECKOUT_MISSING,
+    CHECKIN_MISSING;
+
 }

@@ -2748,4 +2748,8 @@ public class CustomersService {
         customers.setAdvance(advance);
         customersRepository.save(customers);
     }
+
+    public boolean existsByHostelIdAndCustomerIdAndStatusesIn(String s, String s1, List<String> currentStatus) {
+        return customersRepository.existsByHostelIdAndCustomerIdAndStatusesIn(s, s1, currentStatus);
+    }
 }

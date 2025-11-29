@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -83,7 +82,7 @@ public class HostelsController {
 
     @PutMapping("/{hostelId}")
     public ResponseEntity<?> updatePGdetails(@PathVariable("hostelId") String hostelId, @RequestPart(required = false) UpdatePg payloads, @RequestPart(required = false, name = "mainImage") MultipartFile mainImage, @RequestPart(required = false, name = "additionalImages") List<MultipartFile> additionalImages) {
-        return hostelService.updatePgInformations(hostelId, payloads, mainImage, additionalImages);
+        return hostelService.updatePgInformation(hostelId, payloads, mainImage, additionalImages);
     }
 
 }

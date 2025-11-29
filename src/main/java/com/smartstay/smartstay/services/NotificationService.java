@@ -2,10 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Notifications.NotificationListMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.HostelV1;
-import com.smartstay.smartstay.dao.NotificationsV1;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.repositories.NotificationV1Repository;
 import com.smartstay.smartstay.responses.Notifications.Notification;
@@ -44,8 +41,8 @@ public class NotificationService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        List<NotificationsV1> listNotifications = notificationV1Repository.findByHostelId(hostelId);
-        List<NotificationsV1> unreadNotifications = listNotifications
+        List<AdminNotifications> listNotifications = notificationV1Repository.findByHostelId(hostelId);
+        List<AdminNotifications> unreadNotifications = listNotifications
                 .stream()
                 .filter(i -> !i.isRead())
                 .toList();
@@ -53,7 +50,7 @@ public class NotificationService {
         List<String> requestedUsers = listNotifications
                 .stream()
                 .filter(i -> i.getUserType().equalsIgnoreCase(UserType.TENANT.name()))
-                .map(NotificationsV1::getUserId)
+                .map(AdminNotifications::getUserId)
                 .toList();
 
         List<Customers> customers = customersService.getCustomerDetails(requestedUsers);

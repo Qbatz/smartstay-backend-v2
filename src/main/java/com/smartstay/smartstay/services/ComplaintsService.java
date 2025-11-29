@@ -33,13 +33,12 @@ public class ComplaintsService {
     RoomRepository roomRepository;
     @Autowired
     ComplaintRepository complaintRepository;
-
+    @Autowired
+    UserHostelService userHostelService;
     @Autowired
     ComplaintCommentsRepository commentsRepository;
-
     @Autowired
-    CustomersRepository customersRepository;
-
+    private CustomersService customersService;
     @Autowired
     BedsRepository bedsRepository;
 
@@ -133,8 +132,7 @@ public class ComplaintsService {
                 CustomerStatus.NOTICE.name()
         );
 
-
-        boolean customerExist = customersRepository.existsByHostelIdAndCustomerIdAndStatusesIn(request.hostelId(), request.customerId(),currentStatus);
+        boolean customerExist = customersService.existsByHostelIdAndCustomerIdAndStatusesIn(request.hostelId(), request.customerId(),currentStatus);
          if (!customerExist){
             return new ResponseEntity<>("Customer not found.", HttpStatus.BAD_REQUEST);
         }
@@ -259,19 +257,26 @@ public class ComplaintsService {
                                               String endDate
                                               ) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        Users users = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
 
+        List<ComplaintsV1> listComplaints = complaintRepository.findByHostelIdOrderByComplaintDateDesc(hostelId);
+        List<String> customerIds = listComplaints
+                .stream()
+                .map(ComplaintsV1::getCustomerId)
+                .toList();
+        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
 
         Map<String, Object> complaintsSummary = complaintRepository.getComplaintSummary(hostelId,user.getParentId());
         List<ComplaintResponse> responses = getComplaintResponse(

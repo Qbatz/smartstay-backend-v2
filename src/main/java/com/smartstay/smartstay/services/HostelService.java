@@ -738,7 +738,7 @@ public class HostelService {
         return hostelConfigService.getBillingRuleByDateAndHostelId(hostelId, date);
     }
 
-    public ResponseEntity<?> updatePgInformations(String hostelId, UpdatePg updatePg, MultipartFile mainImage, List<MultipartFile> additionalImages) {
+    public ResponseEntity<?> updatePgInformation(String hostelId, UpdatePg updatePg, MultipartFile mainImage, List<MultipartFile> additionalImages) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -812,11 +812,15 @@ public class HostelService {
                     hostelV1.setPincode(updatePg.pincode());
                 }
             }
-
             if (updatePg.state() != null) {
                 hostelV1.setState(updatePg.state());
             }
-
+            if (updatePg.hostelName() != null && !updatePg.hostelName().isEmpty()) {
+                hostelV1.setHostelName(updatePg.hostelName());
+            }
+            if (updatePg.mobile() != null && !updatePg.mobile().isEmpty()) {
+                hostelV1.setMobile(updatePg.mobile());
+            }
         }
 
         hostelV1Repository.save(hostelV1);

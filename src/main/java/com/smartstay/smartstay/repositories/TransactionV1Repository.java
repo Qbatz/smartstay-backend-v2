@@ -26,9 +26,9 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
         @Query(value = """
                 SELECT invc.invoice_id as invoiceId, invc.invoice_number as invoiceNumber, 
                 invc.invoice_mode as invoiceMode, invc.invoice_type as invoiceType, transaction.status as paymentStatus, 
-                transaction.type as transactionType,
+                transaction.type as transactionType, transaction.transaction_reference_id as transactionNo,
                 transaction.paid_amount as paidAmount, transaction.payment_date as paidAt, 
-                transaction.transaction_id as transactionId, customers.first_name as firstName, customers.last_name as lastName, 
+                transaction.transaction_id as transactionId, customers.customer_id as customerId, customers.first_name as firstName, customers.last_name as lastName, 
                 transaction.reference_number as referenceNumber, transaction.bank_id as bankId, bank.bank_name as bankName, 
                 bank.account_holder_name as holderName, bank.account_type as accountType, customers.profile_pic as profilePic FROM transactionv1 transaction 
                 LEFT OUTER JOIN invoicesv1 invc on invc.invoice_id = transaction.invoice_id LEFT OUTER JOIN 

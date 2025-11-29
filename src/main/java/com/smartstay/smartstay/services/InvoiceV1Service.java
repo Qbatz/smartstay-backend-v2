@@ -964,6 +964,7 @@ public class InvoiceV1Service {
             customerInfo = new CustomerInfo(customers.getFirstName(),
                     customers.getLastName(),
                     fullName.toString(),
+                    customers.getCustomerId(),
                     customers.getMobile(),
                     "91",
                     fullAddress.toString(),

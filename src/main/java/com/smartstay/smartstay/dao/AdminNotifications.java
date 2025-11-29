@@ -14,20 +14,17 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class NotificationsV1 {
+public class AdminNotifications {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
-    //Notification type enum
     private String notificationType;
     //requested user id
     private String userId;
     private String hostelId;
     private String description;
-    //amenity id or complience id, bed id optional
     private String sourceId;
     private String title;
-    //Tenant or admin
     private String userType;
     private Date createdAt;
     private Date updatedAt;
@@ -35,4 +32,5 @@ public class NotificationsV1 {
     private boolean isRead;
     private String createdBy;
     private boolean isDeleted;
+
 }
