@@ -3,13 +3,7 @@ package com.smartstay.smartstay.dto.complaint;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter
-@Getter
-public class ComplaintResponse {
+import java.util.List;
 
-    private String startDate;
-    private String endDate;
-    private Long complaintCount;
-
-    private ComplaintResponseDto complaintResponseDto;
+public record ComplaintResponse(String startDate, String endDate, long complaintCount, List<ComplaintResponseDto> complaintsList) {
 }

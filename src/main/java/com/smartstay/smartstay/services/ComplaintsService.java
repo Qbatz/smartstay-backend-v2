@@ -1,10 +1,12 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.ComplaintListMapper;
+import com.smartstay.smartstay.Wrappers.Notifications.NotificationListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
+import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.complaints.*;
 import com.smartstay.smartstay.repositories.*;
@@ -41,14 +43,17 @@ public class ComplaintsService {
     private CustomersService customersService;
     @Autowired
     BedsRepository bedsRepository;
-
-
+    @Autowired
+    private RoomsService roomsService;
     @Autowired
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
     @Autowired
     private RolesService rolesService;
+    @Autowired
+    private ComplaintTypeService complaintTypeService;
+
 
     public ResponseEntity<?> addComplaints(@RequestBody AddComplaints request) {
         if (!authentication.isAuthenticated()) {
@@ -276,76 +281,56 @@ public class ComplaintsService {
                 .stream()
                 .map(ComplaintsV1::getCustomerId)
                 .toList();
+        List<Integer> roomIds = listComplaints
+                .stream()
+                .filter(i -> i.getRoomId() != null)
+                .map(ComplaintsV1::getRoomId)
+                .toList();
+        List<Integer> complaintTypeIds = listComplaints.stream()
+                .map(ComplaintsV1::getComplaintTypeId)
+                .toList();
+        List<ComplaintTypeV1> listComplaintTypes = complaintTypeService.getComplaintTypesById(complaintTypeIds);
+
+        List<RoomInfo> roomInfos = roomsService.getRoom(roomIds);
+
         List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
 
-        Map<String, Object> complaintsSummary = complaintRepository.getComplaintSummary(hostelId,user.getParentId());
-        List<ComplaintResponse> responses = getComplaintResponse(
-                complaintsSummary,
-                hostelId,user.getParentId(),customerName,status,startDate,endDate
-        );
-        return new ResponseEntity<>(responses, HttpStatus.OK);
-    }
+        Date start = listComplaints.stream()
+                .map(ComplaintsV1::getCreatedAt)
+                .filter(Objects::nonNull)
+                .min(Date::compareTo)
+                .orElse(null);
+        Date end = listComplaints.stream()
+                .map(ComplaintsV1::getCreatedAt)
+                .filter(Objects::nonNull)
+                .max(Date::compareTo)
+                .orElse(null);
 
-    public List<ComplaintResponse> getComplaintResponse(
-            Map<String, Object> complaintsSummary,
-            String hostelId,
-            String parentId,
-            String customerName,
-            String status,
-            String startDate,
-            String endDate
-    ) {
-        String requestStartDate;
-        String requestEndDate;
+        String sDate = null;
+        String eDate = null;
 
-        LocalDate start;
-        LocalDate end;
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Utils.USER_INPUT_DATE_FORMAT);
-
-        if (startDate != null && !startDate.isBlank()) {
-            start = LocalDate.parse(startDate.replace("/", "-"), formatter);
-        } else {
-            start = LocalDate.of(2025, 4, 1);
+        if (start != null) {
+            sDate = Utils.dateToString(start);
         }
-        requestStartDate = start.format(formatter);
-
-        if (endDate != null && !endDate.isBlank()) {
-            end = LocalDate.parse(endDate.replace("/", "-"), formatter);
-        } else {
-            end = LocalDate.now();
+        if (end != null) {
+            eDate = Utils.dateToString(end);
         }
-        requestEndDate = end.format(formatter);
 
-        Date sqlStart = java.sql.Date.valueOf(start);
-        Date sqlEnd = java.sql.Date.valueOf(end);
-
-
-        List<String> currentStatus = Arrays.asList(
-                CustomerStatus.CHECK_IN.name(),
-                CustomerStatus.NOTICE.name()
-        );
-
-        List<Map<String, Object>> rawComplaints = complaintRepository. getAllComplaintsRaw(
-                hostelId,
-                parentId,
-                (customerName != null && !customerName.isBlank()) ? customerName : null,
-                (status != null && !status.isBlank()) ? status : null,
-                sqlStart,
-                sqlEnd,
-                currentStatus
-        );
-
-        ComplaintListMapper mapper = new ComplaintListMapper(
-                requestStartDate,
-                requestEndDate,
-                complaintsSummary,
-                commentsRepository
-        );
-
-        return rawComplaints.stream()
-                .map(mapper)
+        List<ComplaintResponseDto> listComplaintsResponse = listComplaints
+                .stream()
+                .map(i -> new ComplaintListMapper(listCustomers, roomInfos, listComplaintTypes).apply(i))
                 .toList();
+
+        ComplaintResponse complaintResponse = new ComplaintResponse(sDate, eDate, listComplaints.size(), listComplaintsResponse);
+
+
+
+//        Map<String, Object> complaintsSummary = complaintRepository.getComplaintSummary(hostelId,user.getParentId());
+//        List<ComplaintResponse> responses = getComplaintResponse(
+//                complaintsSummary,
+//                hostelId,user.getParentId(),customerName,status,startDate,endDate
+//        );
+        return new ResponseEntity<>(complaintResponse, HttpStatus.OK);
     }
 
 
@@ -393,7 +378,6 @@ public class ComplaintsService {
         dto.setComplaintTypeId((Integer) row.get("complaintTypeId"));
         dto.setComplaintTypeName((String) row.get("complaintTypeName"));
         dto.setStatus((String) row.get("status"));
-        dto.setCommentCount(((Number) row.get("commentCount")).intValue());
         // fetch comments separately
         List<Map<String, Object>> commentRows = complaintRepository.getCommentsByComplaintId(dto.getComplaintId());
         List<CommentResponse> comments = commentRows.stream()
@@ -406,7 +390,7 @@ public class ComplaintsService {
                 )
                 .toList();
 
-        dto.setComments(comments);
+//        dto.setComments(comments);
         return new ResponseEntity<>(dto, HttpStatus.OK);
     }
 

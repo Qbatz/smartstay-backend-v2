@@ -18,6 +18,7 @@ public class ComplaintResponseDto {
     private String customerName;
     private String customerProfile;
     private String hostelId;
+    private String initials;
 
     private Integer floorId;
     private String floorName;
@@ -39,9 +40,6 @@ public class ComplaintResponseDto {
     private Integer complaintTypeId;
     private String complaintTypeName;
     private String status;
-
-    private Integer commentCount;
-    private List<CommentResponse> comments = new ArrayList<>();
 
 
 }

@@ -1963,43 +1963,46 @@ public class InvoiceV1Service {
         double totalRentForCurrentMonth = Math.round(findNoOfDaysStayedInTheMonth * rentPerDay);
 
         InvoicesV1 invoicesV1 = invoicesV1Repository.findLatestRentInvoiceByCustomerId(customers.getCustomerId());
-        invoicesV1.setBasePrice(totalRentForCurrentMonth);
-        invoicesV1.setTotalAmount(totalRentForCurrentMonth);
-        invoicesV1.setInvoiceStartDate(joiningDate);
-        invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
-        invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setCreatedAt(new Date());
-        invoicesV1.setInvoiceType(InvoiceType.RENT.name());
-        invoicesV1.setCustomerId(customers.getCustomerId());
-        invoicesV1.setCustomerMobile(customers.getMobile());
-        invoicesV1.setCustomerMailId(customers.getEmailId());
-        invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
-        invoicesV1.setPaidAmount(0.0);
+        if (invoicesV1 != null) {
+            invoicesV1.setBasePrice(totalRentForCurrentMonth);
+            invoicesV1.setTotalAmount(totalRentForCurrentMonth);
+            invoicesV1.setInvoiceStartDate(joiningDate);
+            invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
+            invoicesV1.setCreatedBy(authentication.getName());
+            invoicesV1.setCreatedAt(new Date());
+            invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+            invoicesV1.setCustomerId(customers.getCustomerId());
+            invoicesV1.setCustomerMobile(customers.getMobile());
+            invoicesV1.setCustomerMailId(customers.getEmailId());
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+            invoicesV1.setPaidAmount(0.0);
 
-        invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joiningDate, billingDates.dueDays()));
-        invoicesV1.setGst(0.0);
-        invoicesV1.setCgst(0.0);
-        invoicesV1.setSgst(0.0);
-        invoicesV1.setGstPercentile(0.0);
-        invoicesV1.setCreatedAt(Utils.convertToTimeStamp(new Date()));
-        invoicesV1.setInvoiceGeneratedDate(Utils.convertToTimeStamp(joiningDate));
-        invoicesV1.setCancelled(false);
-        invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
-        invoicesV1.setHostelId(customers.getHostelId());
+            invoicesV1.setCreatedBy(authentication.getName());
+            invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joiningDate, billingDates.dueDays()));
+            invoicesV1.setGst(0.0);
+            invoicesV1.setCgst(0.0);
+            invoicesV1.setSgst(0.0);
+            invoicesV1.setGstPercentile(0.0);
+            invoicesV1.setCreatedAt(Utils.convertToTimeStamp(new Date()));
+            invoicesV1.setInvoiceGeneratedDate(Utils.convertToTimeStamp(joiningDate));
+            invoicesV1.setCancelled(false);
+            invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+            invoicesV1.setHostelId(customers.getHostelId());
 
-        invoicesV1
-                .getInvoiceItems()
-                .stream()
-                .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem()))
-                .findFirst()
-                .map(item -> {
-                    item.setAmount(totalRentForCurrentMonth);
-                    return item;
-                }).ifPresent(modifiedRentItems -> invoiceItemService.updateInvoiceItems(modifiedRentItems));
+            invoicesV1
+                    .getInvoiceItems()
+                    .stream()
+                    .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem()))
+                    .findFirst()
+                    .map(item -> {
+                        item.setAmount(totalRentForCurrentMonth);
+                        return item;
+                    }).ifPresent(modifiedRentItems -> invoiceItemService.updateInvoiceItems(modifiedRentItems));
 
 
-        invoicesV1Repository.save(invoicesV1);
+            invoicesV1Repository.save(invoicesV1);
+        }
+
 
 //        InvoiceItems invoiceItems = new InvoiceItems();
 //        invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());

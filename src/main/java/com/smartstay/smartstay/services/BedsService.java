@@ -670,6 +670,9 @@ public class BedsService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
+        List<Beds> listAllBeds = bedsRepository.findByHostelId(hostelId);
+
+
         List<com.smartstay.smartstay.dto.beds.InitializeBooking> freeBeds = bedsRepository
                 .getFreeBeds(hostelId, Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
         List<BookingBankInfo> listBanks = bankingService.getAllAccounts(hostelId);

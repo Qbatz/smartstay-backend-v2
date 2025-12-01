@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.Notifications.NotificationListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.NotificationType;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.repositories.NotificationV1Repository;
 import com.smartstay.smartstay.responses.Notifications.Notification;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -64,5 +66,21 @@ public class NotificationService {
 
         return new ResponseEntity<>(notificationResponse, HttpStatus.OK);
 
+    }
+
+    public void addAdminNotificationsForRecurringInvoice(String hostelId) {
+        AdminNotifications adminNotifications = new AdminNotifications();
+        adminNotifications.setNotificationType(NotificationType.RECURRING_INVOICE.name());
+        adminNotifications.setUserId(null);
+        adminNotifications.setHostelId(hostelId);
+        adminNotifications.setSourceId(null);
+        adminNotifications.setDescription("New rental invoice is generated successfully. ");
+        adminNotifications.setTitle("Recurring invoice has beed generated.");
+        adminNotifications.setUserType(UserType.ALL_EXCEPT_TENANT.name());
+        adminNotifications.setCreatedAt(new Date());
+        adminNotifications.setActive(true);
+        adminNotifications.setRead(false);
+
+        notificationV1Repository.save(adminNotifications);
     }
 }

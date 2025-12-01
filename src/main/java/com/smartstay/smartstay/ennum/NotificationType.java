@@ -7,6 +7,7 @@ public enum NotificationType {
     AMENITY_REQUEST,
     CHECKOUT_REQUEST,
     CHECKOUT_MISSING,
-    CHECKIN_MISSING;
+    CHECKIN_MISSING,
+    RECURRING_INVOICE;
 
 }

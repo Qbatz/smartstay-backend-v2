@@ -151,7 +151,7 @@ public class SmartstayApplication {
 //	public CommandLineRunner checkAnyCheckoutPending(BookingsRepository bookingsRepository, NotificationV1Repository notificationV1Repository) {
 //		return args -> {
 //
-//			List<AdminNotifications> notification = bookingsRepository.checkAnyCheckout(new Date())
+//			List<AdminNotifications> notification = bookingsRepository.checkAnyCheckoutMissing(new Date())
 //					.stream()
 //					.map(i -> {
 //						AdminNotifications notificationsV1 = new AdminNotifications();
@@ -202,6 +202,70 @@ public class SmartstayApplication {
 //		};
 //	}
 
+	@Bean
+	CommandLineRunner findSubscriptionEndedHostels(HostelPlanRepository hostelPlanRepository, SubscriptionRepository subscriptionRepository) {
+		return args -> {
+//			List<HostelPlan> listHostelPlan = hostelPlanRepository.findNotActiveHostels(new Date());
+//			List<Subscription> listSubscriptionWithNewDate = listHostelPlan
+//					.stream()
+//					.map(i -> {
+//						Date planStartDate = Utils.addDaysToDate(i.getCurrentPlanEndsAt(), 1);
+//						Date planEndDate = Utils.addDaysToDate(planStartDate, 30);
+//						Date nextBillingAt = Utils.addDaysToDate(planEndDate, 1);
+//
+//						Subscription subscription = new Subscription();
+//						subscription.setHostelId(i.getHostel().getHostelId());
+//						subscription.setPaidAmount(0.0);
+//						subscription.setPlanCode(i.getCurrentPlanCode());
+//						subscription.setPlanStartsAt(planStartDate);
+//						subscription.setPlanEndsAt(planEndDate);
+//						subscription.setActivatedAt(planStartDate);
+//						subscription.setPlanAmount(0.0);
+//						subscription.setDiscount(0.0);
+//						subscription.setDiscountAmount(0.0);
+//						subscription.setNextBillingAt(nextBillingAt);
+//						subscription.setCreatedAt(new Date());
+//						return subscription;
+//					})
+//					.toList();
+//
+//			subscriptionRepository.saveAll(listSubscriptionWithNewDate);
+		};
+	}
 
+	/**
+	 *
+	 *
+	 *
+	 * @param customersRepository
+	 * @param ccr
+	 * @return
+	 *
+
+	//This required production run. Do not remove it. tenant app will distrubed
+	@Bean
+	CommandLineRunner getAllCustomerPhone(CustomersRepository customersRepository, CustomerCredentialsRepository ccr) {
+		return args -> {
+			List<String> findAllCustomersPhone = customersRepository.getAllCustomersGroupByPhone();
+			List<CustomerCredentials> listCustomerCredentials = findAllCustomersPhone
+					.stream()
+					.map(i -> {
+						CustomerCredentials cc = new CustomerCredentials();
+						cc.setCustomerMobile(i);
+						cc.setCreatedAt(new Date());
+
+						return cc;
+					})
+					.toList();
+
+			ccr.saveAll(listCustomerCredentials);
+		};
+	}
+	 **
+	 *
+	 *
+	 *
+
+	**/
 
 }

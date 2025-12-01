@@ -39,6 +39,8 @@ public class RecurringEventListener {
     private TemplatesService templatesService;
     @Autowired
     private InvoicesV1Repository invoicesV1Repository;
+    @Autowired
+    private NotificationService notificationService;
 
     @Async
     @EventListener
@@ -205,6 +207,7 @@ public class RecurringEventListener {
                 .toList();
 
         electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
+        notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
 
     }
 }

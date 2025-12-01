@@ -77,6 +77,8 @@ public class CustomersService {
     private BankingService bankingService;
     @Autowired
     private CustomersBedHistoryService bedHistory;
+    @Autowired
+    private CustomerCredentialsService ccs;
     private AmenitiesService amenitiesService;
     @Autowired
     public void setAmenitiesService(@Lazy AmenitiesService amenitiesService) {
@@ -458,7 +460,6 @@ public class CustomersService {
 
 
             invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
-
 //            Calendar cal = Calendar.getInstance();
 //            cal.set(Calendar.DAY_OF_MONTH, day);
 
@@ -745,6 +746,8 @@ public class CustomersService {
         customers.setProfilePic(profileImage);
 
         customersRepository.save(customers);
+
+        ccs.addCustomerCredentials(customerInfo.mobile());
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
