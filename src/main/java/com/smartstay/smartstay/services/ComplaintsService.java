@@ -321,15 +321,8 @@ public class ComplaintsService {
                 .map(i -> new ComplaintListMapper(listCustomers, roomInfos, listComplaintTypes).apply(i))
                 .toList();
 
-        ComplaintResponse complaintResponse = new ComplaintResponse(sDate, eDate, listComplaints.size(), listComplaintsResponse);
+        ComplaintResponse complaintResponse = new ComplaintResponse(hostelId, sDate, eDate, listComplaints.size(), listComplaintsResponse);
 
-
-
-//        Map<String, Object> complaintsSummary = complaintRepository.getComplaintSummary(hostelId,user.getParentId());
-//        List<ComplaintResponse> responses = getComplaintResponse(
-//                complaintsSummary,
-//                hostelId,user.getParentId(),customerName,status,startDate,endDate
-//        );
         return new ResponseEntity<>(complaintResponse, HttpStatus.OK);
     }
 

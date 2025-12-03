@@ -10,6 +10,7 @@ import com.smartstay.smartstay.responses.Notifications.Notification;
 import com.smartstay.smartstay.responses.Notifications.NotificationList;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -22,13 +23,22 @@ public class NotificationService {
     @Autowired
     private Authentication authentication;
     @Autowired
-    private HostelService hostelService;
-    @Autowired
     private UsersService usersService;
     @Autowired
-    private CustomersService customersService;
-    @Autowired
     private NotificationV1Repository notificationV1Repository;
+
+    private HostelService hostelService;
+    private CustomersService customersService;
+
+    @Autowired
+    public void setHostelService(@Lazy HostelService hostelService) {
+        this.hostelService = hostelService;
+    }
+    @Autowired
+    public void setCustomersService(@Lazy CustomersService customersService) {
+        this.customersService = customersService;
+    }
+
     public ResponseEntity<?> getAllNotifications(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -82,5 +92,13 @@ public class NotificationService {
         adminNotifications.setRead(false);
 
         notificationV1Repository.save(adminNotifications);
+    }
+
+    public int getUnreadNotificationCount(String hostelId) {
+        List<AdminNotifications> listUnreadNotifications = notificationV1Repository.findUnReadNotifications(hostelId);
+        if (listUnreadNotifications != null) {
+            return listUnreadNotifications.size();
+        }
+        return 0;
     }
 }

@@ -142,4 +142,20 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """)
     List<BookingsV1> checkAnyMissingCheckIn(@Param("todaysDate") Date todaysDate);
 
+    @Query("""
+            SELECT b FROM BookingsV1 b
+                   WHERE b.bedId IN :bedIds
+                   AND b.bookingDate = (
+                       SELECT MAX(b2.bookingDate)
+                       FROM BookingsV1 b2
+                       WHERE b2.bedId = b.bedId
+                   )
+            """)
+    List<BookingsV1> findLatestBookingsForBeds(@Param("bedIds") List<Integer> bedIds);
+
+    @Query(value = """
+            SELECT * FROM bookingsv1 where hostel_id=:hostelId AND customer_id IN (:customerIds) AND current_status IN ('CHECKIN', 'NOTICE')
+            """, nativeQuery = true)
+    List<BookingsV1> findBookingsByListOfCustomersAndHostelId(List<String> customerIds, String hostelId);
+
 }

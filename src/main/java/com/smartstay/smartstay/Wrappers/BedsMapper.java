@@ -63,9 +63,7 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
                     return hasOverDue;
                 });
 
-        System.out.println(BedStatus.OCCUPIED.name());
         if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
-            System.out.println("occupied");
             isOccupied = true;
         }
         if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {

@@ -1,8 +1,9 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.BedDetailsMapper;
 import com.smartstay.smartstay.Wrappers.BedsMapper;
 import com.smartstay.smartstay.Wrappers.FreeBedsMapper;
+import com.smartstay.smartstay.Wrappers.beds.BedInitializationMapper;
+import com.smartstay.smartstay.Wrappers.beds.InitializeBedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.Bookings;
@@ -20,9 +21,7 @@ import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.EditBedRent;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
-import com.smartstay.smartstay.responses.beds.BedDetails;
-import com.smartstay.smartstay.responses.beds.BedsResponse;
-import com.smartstay.smartstay.responses.beds.BedsStatusCount;
+import com.smartstay.smartstay.responses.beds.*;
 import com.smartstay.smartstay.responses.customer.InitializeBooking;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +59,8 @@ public class BedsService {
     private CustomersService customersService;
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private InvoiceV1Service invoiceService;
 
     @Autowired
     public void setCustomersService(@Lazy CustomersService customersService) {
@@ -124,41 +125,6 @@ public class BedsService {
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getBedById(Integer id) {
-        if (id == null || id == 0) {
-            return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
-        }
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        String userId = authentication.getName();
-        Users user = usersService.findUserByUserId(userId);
-
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-//        Beds bed = bedsRepository.findByBedIdAndParentId(id,user.getParentId());
-        List<com.smartstay.smartstay.dto.beds.Beds> listBeds = bedsRepository.getBedInfo(id, user.getParentId());
-
-        if (listBeds != null && !listBeds.isEmpty()) {
-            if (!userHostelService.checkHostelAccess(userId, listBeds.get(0).hostelId())) {
-                return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-            }
-            BedDetails bedsResponse = null;
-            if (listBeds.size() > 1) {
-                bedsResponse = new BedDetailsMapper(listBeds.get(0).leavingDate(), listBeds.get(0).joiningDate(), listBeds.get(0), null).apply(listBeds.get(1));
-            } else if (!listBeds.isEmpty()) {
-                bedsResponse = new BedDetailsMapper(null, null, null, "Current").apply(listBeds.get(0));
-            }
-
-            return new ResponseEntity<>(bedsResponse, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-        }
-
-
-    }
-
     public ResponseEntity<?> getBedByIdNew(Integer id) {
         if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
@@ -182,152 +148,175 @@ public class BedsService {
 
         BedInformations bedInformations = bedsRepository.getBedInformation(beds.getBedId());
 
-
         boolean isOccupied = false;
         boolean onNotice = false;
         boolean hasBooking = false;
         String freeFrom = null;
-        String bookingId = null;
         Integer floorId = 0;
         String floorName = null;
         String roomName = null;
-        Integer roomId = 0;
 
         if (bedInformations != null) {
             floorId = bedInformations.floorId();
             floorName = bedInformations.floorName();
             roomName = bedInformations.roomName();
-            roomId = bedInformations.roomId();
         }
 
-        String newTenantFirstName = null;
-        String newTenantLastName = null;
-        String newTenantFullName = null;
-        String newTenantInitials = null;
-        String newTenantrofilePic = null;
-        String newTenantCustomerId;
-        String newTenantMobile = null;
-        String newTenantJoiningDate = null;
-
-        String oldTenantCustomerId;
-        String oldTenantFullName = null;
-        String oldTenantFirstName = null;
-        String oldTenantLastName = null;
-        String oldTenantInitials = null;
-        String oldTenantProfilePic = null;
-        String oldTenantMobile = null;
-        String oldTenantJoiningDate = null;
-        String oldTenantLeavingDate = null;
-        Double currentRent = 0.0;
-
-        ArrayList<String> customerIds = new ArrayList<>();
+        TenantInfo currentTenantInfo = null;
+        TenantInfo newTenantInfo = null;
 
         if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) || beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             isOccupied = true;
             BookingsV1 bookingsV1 = bookingService.checkOccupiedByBedId(beds.getBedId());
             if (bookingsV1 != null) {
-                customerIds.add(bookingsV1.getCustomerId());
+                Customers customers = customersService.getCustomerInformation(bookingsV1.getCustomerId());
+                String tenantId = null;
+                String firstName = null;
+                String lastName = null;
+                String profilePic = null;
+                StringBuilder fullName = new StringBuilder();
+                StringBuilder initials = new StringBuilder();
+                String joiningDate = null;
+                String bookingDate = null;
+                String mobile = null;
+                double advance = 0.0;
+                Double rentAmount = null;
+                Double lastInvoiceAmount = null;
+                String lastInvoiceNumber = null;
+                int totalInvoice = 0;
+                String leavingDate = null;
+                String currentStatus = BookingStatus.CHECKIN.name();
 
-                currentRent = bookingsV1.getRentAmount();
-                oldTenantJoiningDate = Utils.dateToString(bookingsV1.getJoiningDate());
-                oldTenantCustomerId = bookingsV1.getCustomerId();
-                oldTenantLeavingDate = Utils.dateToString(bookingsV1.getLeavingDate());
-
+                totalInvoice = invoiceService.findAllRentalInvoicesAmountExceptCurrentMonth(customers.getCustomerId(), customers.getHostelId());
+                InvoicesV1 latestInvoices = invoiceService.findLatestInvoice(customers.getCustomerId());
+                if (latestInvoices != null) {
+                   lastInvoiceAmount = latestInvoices.getTotalAmount();
+                   lastInvoiceNumber = latestInvoices.getInvoiceNumber();
+                }
                 if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
+                    currentStatus = BookingStatus.NOTICE.name();
                     onNotice = true;
                     freeFrom = Utils.dateToString(bookingsV1.getLeavingDate());
+                    leavingDate = Utils.dateToString(bookingsV1.getLeavingDate());
                 }
-            } else {
-                oldTenantCustomerId = null;
+
+                joiningDate = Utils.dateToString(bookingsV1.getJoiningDate());
+                bookingDate = Utils.dateToString(bookingsV1.getBookingDate());
+                rentAmount = bookingsV1.getRentAmount();
+
+                if (customers != null) {
+                    tenantId = customers.getCustomerId();
+                    firstName = customers.getFirstName();
+                    lastName = customers.getLastName();
+                    profilePic = customers.getProfilePic();
+                    mobile = customers.getMobile();
+                    if (customers.getAdvance() != null) {
+                        advance = customers.getAdvance().getAdvanceAmount();
+                    }
+
+                    if (customers.getFirstName() != null) {
+                        fullName.append(customers.getFirstName());
+                        initials.append(customers.getFirstName().toUpperCase().charAt(0));
+                    }
+                    if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
+                        fullName.append(" ");
+                        fullName.append(customers.getLastName());
+                        initials.append(customers.getLastName().toUpperCase().charAt(0));
+                    }
+                    else if (customers.getFirstName() != null) {
+                        if (customers.getFirstName().length() > 1) {
+                            initials.append(customers.getFirstName().toUpperCase().charAt(1));
+                        }
+                    }
+
+                }
+
+                currentTenantInfo = new TenantInfo(tenantId,
+                        firstName,
+                        lastName,
+                        fullName.toString(),
+                        profilePic,
+                        initials.toString(),
+                        joiningDate,
+                        bookingDate,
+                        mobile,
+                        advance,
+                        rentAmount,
+                        lastInvoiceAmount,
+                        lastInvoiceNumber,
+                        totalInvoice,
+                        leavingDate,
+                        currentStatus,
+                        Utils.COUNTRY_CODE);
             }
-        } else {
-            oldTenantCustomerId = null;
         }
         if (beds.isBooked()) {
             hasBooking = true;
             BookingsV1 bookingsV1 = bookingService.getBookingInfoByBedId(beds.getBedId());
             if (bookingsV1 != null) {
-                customerIds.add(bookingsV1.getCustomerId());
-                newTenantJoiningDate = Utils.dateToString(bookingsV1.getJoiningDate());
-                newTenantCustomerId = bookingsV1.getCustomerId();
-            } else {
-                newTenantCustomerId = null;
-            }
-        } else {
-            newTenantCustomerId = null;
-        }
+                Customers customers = customersService.getCustomerInformation(bookingsV1.getCustomerId());
+                String tenantId = null;
+                String firstName = null;
+                String lastName = null;
+                String profilePic = null;
+                StringBuilder fullName = new StringBuilder();
+                StringBuilder initials = new StringBuilder();
+                String joiningDate = null;
+                String bookingDate = null;
+                String mobile = null;
+                double advance = 0.0;
+                Double rentAmount = null;
+                Double lastInvoiceAmount = null;
+                String lastInvoiceNumber = null;
+                int totalInvoice = 0;
+                String leavingDate = null;
+                String currentStatus = BookingStatus.BOOKED.name();
 
-        if (!customerIds.isEmpty()) {
-            List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
-            if (listCustomers != null && !listCustomers.isEmpty()) {
-                if (oldTenantCustomerId != null) {
-                    Customers currentCustomer = listCustomers
-                            .stream()
-                            .filter(i -> i.getCustomerId().equalsIgnoreCase(oldTenantCustomerId))
-                            .findFirst()
-                            .orElse(null);
-                    if (currentCustomer != null) {
-                        StringBuilder fullName = new StringBuilder();
-                        StringBuilder initials = new StringBuilder();
-                        oldTenantFirstName = currentCustomer.getFirstName();
-                        oldTenantLastName = currentCustomer.getLastName();
-                        if (currentCustomer.getFirstName() != null) {
-                            fullName.append(currentCustomer.getFirstName());
-                            initials.append(currentCustomer.getFirstName().toUpperCase().charAt(0));
-                        }
-                        if (currentCustomer.getLastName() != null && !currentCustomer.getLastName().trim().equalsIgnoreCase("")) {
-                            fullName.append(" ");
-                            fullName.append(currentCustomer.getLastName());
-                            initials.append(currentCustomer.getLastName().toUpperCase().charAt(0));
-                        }
-                        else {
-                            if (currentCustomer.getFirstName() != null && currentCustomer.getFirstName().length() > 1) {
-                                initials.append(currentCustomer.getFirstName().toUpperCase().charAt(1));
-                            }
-                        }
+                joiningDate = Utils.dateToString(bookingsV1.getExpectedJoiningDate());
+                bookingDate = Utils.dateToString(bookingsV1.getBookingDate());
+                rentAmount = bookingsV1.getRentAmount();
 
-                        oldTenantFullName = fullName.toString();
-                        oldTenantInitials = initials.toString();
-                        oldTenantProfilePic = currentCustomer.getProfilePic();
-                        oldTenantMobile = currentCustomer.getMobile();
+                if (customers != null) {
+                    tenantId = customers.getCustomerId();
+                    firstName = customers.getFirstName();
+                    lastName = customers.getLastName();
+                    profilePic = customers.getProfilePic();
+                    mobile = customers.getMobile();
 
+                    if (customers.getFirstName() != null) {
+                        fullName.append(customers.getFirstName());
+                        initials.append(customers.getFirstName().toUpperCase().charAt(0));
+                    }
+                    if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
+                        fullName.append(" ");
+                        fullName.append(customers.getLastName());
+                        initials.append(customers.getLastName().toUpperCase().charAt(0));
+                    }
+                    else if (customers.getFirstName() != null) {
+                        if (customers.getFirstName().length() > 1) {
+                            initials.append(customers.getFirstName().toUpperCase().charAt(1));
+                        }
                     }
 
                 }
-                if (newTenantCustomerId != null) {
-                    Customers newCustomer = listCustomers
-                            .stream()
-                            .filter(i -> i.getCustomerId().equalsIgnoreCase(newTenantCustomerId))
-                            .findFirst()
-                            .orElse(null);
-                    if (newCustomer != null) {
-                        StringBuilder fullName = new StringBuilder();
-                        StringBuilder initials = new StringBuilder();
-                        newTenantFirstName = newCustomer.getFirstName();
-                        newTenantLastName = newCustomer.getLastName();
-                        if (newCustomer.getFirstName() != null) {
-                            fullName.append(newCustomer.getFirstName());
-                            initials.append(newCustomer.getFirstName().toUpperCase().charAt(0));
-                        }
-                        if (newCustomer.getLastName() != null && !newCustomer.getLastName().trim().equalsIgnoreCase("")) {
-                            fullName.append(" ");
-                            fullName.append(newCustomer.getLastName());
-                            initials.append(newCustomer.getLastName().toUpperCase().charAt(0));
-                        }
-                        else {
-                            if (newCustomer.getFirstName() != null && newCustomer.getFirstName().length() > 1) {
-                                initials.append(newCustomer.getFirstName().toUpperCase().charAt(1));
-                            }
-                        }
 
-                        newTenantFullName = fullName.toString();
-                        newTenantInitials = initials.toString();
-                        newTenantrofilePic = newCustomer.getProfilePic();
-                        newTenantMobile = newCustomer.getMobile();
-
-                    }
-                }
-
+                newTenantInfo = new TenantInfo(tenantId,
+                        firstName,
+                        lastName,
+                        fullName.toString(),
+                        profilePic,
+                        initials.toString(),
+                        joiningDate,
+                        bookingDate,
+                        mobile,
+                        advance,
+                        rentAmount,
+                        lastInvoiceAmount,
+                        lastInvoiceNumber,
+                        totalInvoice,
+                        leavingDate,
+                        currentStatus,
+                        Utils.COUNTRY_CODE);
             }
         }
 
@@ -340,29 +329,11 @@ public class BedsService {
                 beds.getRentAmount(),
                 beds.getRoomId(),
                 freeFrom,
-                currentRent,
-                oldTenantLeavingDate,
-                bookingId,
-                newTenantJoiningDate,
-                oldTenantJoiningDate,
-                oldTenantFirstName,
-                oldTenantLastName,
-                oldTenantProfilePic,
-                oldTenantFullName,
-                oldTenantInitials,
-                oldTenantMobile,
-                oldTenantCustomerId,
                 floorId,
                 floorName,
                 roomName,
-                "91",
-                newTenantFirstName,
-                newTenantLastName,
-                newTenantFullName,
-                newTenantrofilePic,
-                newTenantInitials,
-                newTenantMobile,
-                newTenantCustomerId);
+                currentTenantInfo,
+                newTenantInfo);
 
         return new ResponseEntity<>(bedDetails, HttpStatus.OK);
 
@@ -670,14 +641,43 @@ public class BedsService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        List<Beds> listAllBeds = bedsRepository.findByHostelId(hostelId);
 
+//        List<Beds> noticeBooked = listAllBeds
+//                .stream()
+//                .filter(i -> i.isBooked() && i.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name()))
+//                .toList();
 
+//        bedsForGettingBookingInfo.addAll(vacantBookedBeds);
+//        bedsForGettingBookingInfo.addAll(noticeNotBooked);
+//        bedsForGettingBookingInfo.addAll(noticeBooked);
+//
+//        List<Integer> bedIdsToGetBookingDetails = bedsForGettingBookingInfo
+//                .stream()
+//                .map(Beds::getBedId)
+//                .toList();
+
+//        List<BookingsV1> listLatestBookingInfo = bookingService.getBookingInfoByListOfBeds(bedIdsToGetBookingDetails);
+//        Date dtJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         List<com.smartstay.smartstay.dto.beds.InitializeBooking> freeBeds = bedsRepository
                 .getFreeBeds(hostelId, Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
         List<BookingBankInfo> listBanks = bankingService.getAllAccounts(hostelId);
 
-        InitializeBooking initializeBooking = new InitializeBooking(freeBeds, listBanks);
+        List<Integer> bookedBedIds = freeBeds
+                .stream()
+                .map(com.smartstay.smartstay.dto.beds.InitializeBooking::getBedId)
+                .toList();
+        List<BookingsV1> bookedBeds = bookingService.getBookingInfoByListOfBeds(bookedBedIds);
+
+//        List<com.smartstay.smartstay.responses.beds.FreeBeds> listFreeBeds = listAllBeds
+//                .stream()
+//                .map(i -> new InitializeBedsMapper(listBedDetails, listLatestBookingInfo, dtJoiningDate).apply(i))
+//                .toList();
+
+        List<BedInitializations> initializations = freeBeds.stream()
+                .map(i -> new BedInitializationMapper(bookedBeds).apply(i))
+                .toList();
+
+        InitializeBooking initializeBooking = new InitializeBooking(initializations, listBanks);
         return new ResponseEntity<>(initializeBooking, HttpStatus.OK);
     }
 

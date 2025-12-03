@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 
 public class Utils {
 
+    public static final String COUNTRY_CODE = "91";
     private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final Random RANDOM = new Random();
@@ -311,6 +312,11 @@ public class Utils {
         }
 
         return today.before(date2) || today.compareTo(date2) <= 0;
+    }
+
+    public static final String getDayFromDate(Date date) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd");
+        return dateFormat.format(date);
     }
 
     public static String generateRandomUUID() {

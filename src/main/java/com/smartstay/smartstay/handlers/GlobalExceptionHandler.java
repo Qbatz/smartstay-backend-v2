@@ -1,10 +1,12 @@
 package com.smartstay.smartstay.handlers;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.smartstay.smartstay.Exceptions.SmartStayException;
 import io.jsonwebtoken.security.SignatureException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -46,4 +48,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
     }
 
+    @ExceptionHandler(JsonMappingException.class)
+    public ResponseEntity<?> handleBooleanExceptions(JsonMappingException notReadable) {
+        return new ResponseEntity<>("Allowed only boolean", HttpStatus.BAD_REQUEST);
+    }
 }

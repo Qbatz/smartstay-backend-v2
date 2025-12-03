@@ -24,6 +24,7 @@ import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.invoice.ItemResponse;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
+import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.invoices.*;
@@ -72,6 +73,8 @@ public class InvoiceV1Service {
     private CreditDebitNoteService creditDebitNoteService;
     @Autowired
     private RentHistoryService rentHistoryService;
+    @Autowired
+    private BillingRuleRepository billingRuleRepository;
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
     private TransactionService transactionService;
@@ -1593,23 +1596,23 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        BillingDates currentBillingDate = hostelService.getCurrentBillStartAndEndDates(hostelId);
-        if (currentBillingDate != null) {
-            int compared = Utils.compareWithTwoDates(currentBillingDate.currentBillStartDate(), new Date());
-            if (Utils.compareWithTwoDates(currentBillingDate.currentBillStartDate(), new Date()) == 0) {
-                //having billing date today
-                applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
-                System.out.println("entering");
-            }
-            else {
-                return new ResponseEntity<>("Not today", HttpStatus.BAD_REQUEST);
-            }
-        }
-        else {
-            return new ResponseEntity<>("billing date issue", HttpStatus.BAD_REQUEST);
-        }
+        Date date = new Date();
+        String day = Utils.getDayFromDate(date);
+        List<BillingRules> listBillingRules = billingRuleRepository.findAllHostelsHavingTodaysRecurring(day, date);
 
-        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        List<HostelV1> listHostels = listBillingRules
+                .stream()
+                .map(BillingRules::getHostel)
+                .toList();
+
+        if (listHostels != null && !listHostels.isEmpty()) {
+           listHostels.forEach(item -> {
+               applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
+           });
+
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        }
+        return new ResponseEntity<>("Not today", HttpStatus.BAD_REQUEST);
     }
 
     public List<InvoiceCustomer> findDueCustomers(List<String> lisCustomerIds) {
@@ -2020,6 +2023,7 @@ public class InvoiceV1Service {
     }
 
     public List<InvoicesV1> findAllCurrentMonthRentalInvoice(String customerId, String hostelId, Date startDate) {
+
         return invoicesV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, startDate);
     }
 
@@ -2044,5 +2048,15 @@ public class InvoiceV1Service {
 
     public List<InvoicesV1> findInvoices(List<String> invoicesIds) {
         return invoicesV1Repository.findByInvoiceIdIn(invoicesIds);
+    }
+
+    public int findAllRentalInvoicesAmountExceptCurrentMonth(String customerId, String hostelId) {
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+        return invoicesV1Repository.findAllRentalInvoicesExceptCurrentMonth(customerId, hostelId, billingDates.currentBillStartDate()).size();
+    }
+
+    public InvoicesV1 findLatestInvoice(String customerId) {
+        return invoicesV1Repository.findLatestInvoiceByCustomerId(customerId);
     }
 }

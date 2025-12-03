@@ -93,4 +93,11 @@ public class HostelConfigService {
         }
         return billDates;
     }
+
+    public List<BillingRules> findAllHostelsHavingBillingToday() {
+        Date date = new Date();
+        String day = Utils.getDayFromDate(date);
+
+        return billingRuleRepository.findAllHostelsHavingTodaysRecurring(day, date);
+    }
 }

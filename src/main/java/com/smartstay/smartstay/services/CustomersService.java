@@ -79,6 +79,8 @@ public class CustomersService {
     private CustomersBedHistoryService bedHistory;
     @Autowired
     private CustomerCredentialsService ccs;
+    @Autowired
+    private CustomersConfigService customersConfigService;
     private AmenitiesService amenitiesService;
     @Autowired
     public void setAmenitiesService(@Lazy AmenitiesService amenitiesService) {
@@ -457,8 +459,7 @@ public class CustomersService {
             bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
 
             bookingsService.addCheckin(customers, payloads);
-
-
+            customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
             invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
 //            Calendar cal = Calendar.getInstance();
 //            cal.set(Calendar.DAY_OF_MONTH, day);
@@ -592,6 +593,7 @@ public class CustomersService {
             invoiceService.addInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date, billingDates);
 
             bedsService.addUserToBed(booking.getBedId(), date);
+            customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
 
             //check joining date is in this current cycle.
             if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
@@ -2055,9 +2057,6 @@ public class CustomersService {
                 0.0,
                 isRefundable);
 
-
-        System.out.println(totalRentIncludePreviousBed);
-
         FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, unpaidInvoices, rentInfo, settlementInfo);
 
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
@@ -2479,9 +2478,6 @@ public class CustomersService {
         totalAmountToBePaid = currentPayableRent - totalAdvacePaidAmount - currentMonthPaidAmount;
 
         totalAmountToBePaid = totalAmountToBePaid + deductionsAmount;
-
-        System.out.println("*****");
-        System.out.println(totalAmountToBePaid);
 
         assert listAllUnpaidInvoices != null;
         List<InvoicesV1> unpaidInvoicesForCancelling = new ArrayList<>(listAllUnpaidInvoices);

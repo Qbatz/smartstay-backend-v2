@@ -46,7 +46,7 @@ public class HostelV1 {
     @OneToMany(mappedBy = "hostel", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<BillingRules> billingRulesList;
 
-    @OneToOne(mappedBy = "hostel", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "hostel", cascade = CascadeType.ALL, orphanRemoval = true)
     private ElectricityConfig electricityConfig;
 
 }

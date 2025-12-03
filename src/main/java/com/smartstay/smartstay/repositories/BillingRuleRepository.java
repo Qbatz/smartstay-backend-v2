@@ -43,4 +43,9 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
             SELECT rules FROM BillingRules rules WHERE rules.hostel.id=:hostelId AND rules.isInitial=false
             """)
     List<BillingRules> findAllBillingRulesByHostelIdExceptInitial(@Param("hostelId") String hostelId);
+
+    @Query(value = """
+            SELECT * FROM billing_rules WHERE billing_start_date=:day AND (end_till IS NULL OR DATE(end_till) > DATE(:date)) AND DATE(start_from) <= DATE(:date);
+            """, nativeQuery = true)
+    List<BillingRules> findAllHostelsHavingTodaysRecurring(@Param("day") String day, @Param("date") Date date);
 }

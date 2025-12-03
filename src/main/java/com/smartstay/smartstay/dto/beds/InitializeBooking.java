@@ -9,4 +9,5 @@ public interface InitializeBooking {
     String getRoomName();
     Double getRentAmount();
     String getCurrentStatus();
+    Boolean getIsBooked();
 }

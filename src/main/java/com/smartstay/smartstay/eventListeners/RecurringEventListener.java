@@ -41,6 +41,8 @@ public class RecurringEventListener {
     private InvoicesV1Repository invoicesV1Repository;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private CustomersConfigService customersConfigService;
 
     @Async
     @EventListener
@@ -54,8 +56,13 @@ public class RecurringEventListener {
 
         Date calendarPreviousBillsEndDate = Utils.findLastDate(calendarPreviousBillsStartDate.get(Calendar.DAY_OF_MONTH), calendarPreviousBillsStartDate.getTime());
 
+        List<CustomersConfig> listCustomerConfig = customersConfigService.getAllActiveAndEnabledRecurringCustomers(recurringEvents.getHostelId());
 
-        List<BookingsV1> customersList = bookingsService.getAllCheckedInCustomer(recurringEvents.getHostelId());
+        List<String> tempCusIds = listCustomerConfig.stream()
+                .map(CustomersConfig::getCustomerId)
+                .toList();
+
+        List<BookingsV1> customersList = bookingsService.getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(tempCusIds, recurringEvents.getHostelId());
         List<String> customerIds = customersList
                 .stream()
                 .map(BookingsV1::getCustomerId)
@@ -67,7 +74,6 @@ public class RecurringEventListener {
                 calendarPreviousBillsEndDate);
 
         customersList
-                .stream()
                 .forEach(item -> {
             Double rentAmount = item.getRentAmount();
             List<Integer> ebReadingsId = listElectricityForAHostel
@@ -91,7 +97,6 @@ public class RecurringEventListener {
 
             double rentEbAmount = rentAmount + ebAmount;
             double rentEbAndAmenity = rentEbAmount + amenityAmount;
-            System.out.println(amenityAmount);
 
             Customers customers = listCustomers
                     .stream()
@@ -111,7 +116,6 @@ public class RecurringEventListener {
                                     .get();
                             prefix = rentTemplateType.getInvoicePrefix();
                         }
-                        prefixSuffix.append("-");
                         prefixSuffix.append(prefix);
                     }
                     InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix, hostelV1.getHostelId());
@@ -119,7 +123,7 @@ public class RecurringEventListener {
                     if (inv != null) {
                         String[] prefArr = inv.getInvoiceNumber().split("-");
                         if (prefArr.length > 1) {
-                            int suffix = Integer.parseInt(prefArr[1]) + 1;
+                            int suffix = Integer.parseInt(prefArr[prefArr.length - 1]) + 1;
                             prefixSuffix.append("-");
                             if (suffix < 10) {
                                 prefixSuffix.append("00");
@@ -136,6 +140,7 @@ public class RecurringEventListener {
                     }
                     else {
                         //this is going to be the first invoice
+                        prefixSuffix.append("-");
                         prefixSuffix.append("001");
                     }
 

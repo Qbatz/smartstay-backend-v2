@@ -7,5 +7,6 @@ public record UpdatePg(String houseNo,
                        String city,
                        String state,
                        String hostelName,
-                       String mobile) {
+                       String mobile,
+                       String emailId) {
 }

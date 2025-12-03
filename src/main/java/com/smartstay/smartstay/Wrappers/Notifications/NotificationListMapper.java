@@ -49,6 +49,10 @@ public class NotificationListMapper implements Function<AdminNotifications, Noti
             notificationType = "Missing checkout";
             typeCode = 6;
         }
+        else if (notificationsV1.getNotificationType().equalsIgnoreCase(NotificationType.RECURRING_INVOICE.name())) {
+            notificationType = "New Bill";
+            typeCode = 7;
+        }
 
         if (notificationsV1.getUserId() != null) {
             if (customers != null) {

@@ -5,5 +5,5 @@ import lombok.Setter;
 
 import java.util.List;
 
-public record ComplaintResponse(String startDate, String endDate, long complaintCount, List<ComplaintResponseDto> complaintsList) {
+public record ComplaintResponse(String hostelId, String startDate, String endDate, long complaintCount, List<ComplaintResponseDto> complaintsList) {
 }

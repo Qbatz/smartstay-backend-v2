@@ -76,13 +76,17 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
     @Query(value = """
             SELECT b.bed_id as bedId, flr.floor_id as floorId, rms.room_id as roomId, 
             b.rent_amount as rentAmount, b.bed_name as bedName, flr.floor_name as floorName, 
-            rms.room_name as roomName, b.current_status as currentStatus FROM beds b 
+            rms.room_name as roomName, b.current_status as currentStatus, b.is_booked as isBooked FROM beds b 
             inner join rooms rms on rms.room_id=b.room_id inner join floors flr on flr.floor_id= rms.floor_id 
-            where b.current_status in ('NOTICE', 'VACANT', 'CANCELLED') or (b.free_from IS NULL OR DATE(b.free_from) <= DATE(:joiningDate)) 
+            where b.current_status in ('NOTICE', 'VACANT', 'CANCELLED') AND (b.free_from IS NULL OR DATE(b.free_from) <= DATE(:joiningDate)) 
             and b.hostel_id=:hostelId and b.is_active=true
             """, nativeQuery = true)
     List<InitializeBooking> getFreeBeds(@Param("hostelId") String hostelId, @Param("joiningDate") Date joiningDate);
-//    List<com.smartstay.smartstay.dao.Beds> getAvailableBeds(@Param("hostelId") String hostelId);
+
+    @Query(value = """
+            SELECT * FROM beds WHERE current_status in ('NOTICE', 'VACANT') AND hostel_id=:hostelId
+            """, nativeQuery = true)
+    List<com.smartstay.smartstay.dao.Beds> getAvailableBeds(@Param("hostelId") String hostelId);
 
     @Query(value = """
            SELECT * FROM beds b WHERE b.bed_id=:bedId and b.current_status in ('NOTICE', 'VACANT') and b.is_active=true

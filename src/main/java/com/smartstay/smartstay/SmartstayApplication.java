@@ -268,4 +268,34 @@ public class SmartstayApplication {
 
 	**/
 
+	/***
+	 *
+	 *
+	 * @param customersConfigRepository
+	 * @param customersRepository
+	 * @return
+	@Bean
+	CommandLineRunner addCustomersToCustomerConfig(CustomersConfigRepository customersConfigRepository, CustomersRepository customersRepository) {
+		return args -> {
+			List<Customers> listAllCheckedInCustomers = customersRepository.findAllCheckedInCustomers();
+			List<CustomersConfig> listCustomerConfig = listAllCheckedInCustomers
+					.stream()
+					.map(i -> {
+						CustomersConfig customersConfig = new CustomersConfig();
+						customersConfig.setCustomerId(i.getCustomerId());
+						customersConfig.setHostelId(i.getHostelId());
+						customersConfig.setEnabled(true);
+						customersConfig.setIsActive(true);
+						customersConfig.setCreatedAt(new Date());
+						customersConfig.setCreatedBy(i.getCreatedBy());
+
+						return customersConfig;
+					})
+					.toList();
+
+			customersConfigRepository.saveAll(listCustomerConfig);
+		};
+	}
+	 */
+
 }
