@@ -83,6 +83,7 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
                 fullName.toString(),
                 receipts.getTransactionId(),
                 receipts.getReferenceNumber(),
+                receipts.getTransactionNo(),
                 receipts.getInvoiceNumber(),
                 "PAID",
                 Utils.dateToString(receipts.getPaidAt()),

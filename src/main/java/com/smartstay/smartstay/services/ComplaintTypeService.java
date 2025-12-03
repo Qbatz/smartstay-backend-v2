@@ -179,4 +179,8 @@ public class ComplaintTypeService {
         List<ComplaintTypeResponse> complaintTypeResponses = complaintTypeV1Repository.getAllComplaintsType(hostelId);
         return new ResponseEntity<>(complaintTypeResponses, HttpStatus.OK);
     }
+
+    public List<ComplaintTypeV1> getComplaintTypesById(List<Integer> complaintTypeIds) {
+        return complaintTypeV1Repository.findAllById(complaintTypeIds);
+    }
 }

@@ -18,13 +18,16 @@ public class NotificationsV1 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+    //Notification type enum
     private String notificationType;
     //requested user id
     private String userId;
     private String hostelId;
     private String description;
+    //amenity id or complience id, bed id optional
     private String sourceId;
     private String title;
+    //Tenant or admin
     private String userType;
     private Date createdAt;
     private Date updatedAt;

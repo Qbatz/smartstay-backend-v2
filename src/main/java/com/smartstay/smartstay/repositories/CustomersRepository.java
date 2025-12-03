@@ -106,4 +106,12 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             """)
     List<Customers> findAllCustomersNotIn(@Param("customerIds") List<String> customerIds);
 
+    @Query(value = """
+            SELECT DISTINCT mobile FROM customers
+            """, nativeQuery = true)
+    List<String> getAllCustomersGroupByPhone();
+
+    @Query("SELECT cus FROM Customers cus WHERE cus.currentStatus='CHECK_IN' OR cus.currentStatus='NOTICE'")
+    List<Customers> findAllCheckedInCustomers();
+
 }

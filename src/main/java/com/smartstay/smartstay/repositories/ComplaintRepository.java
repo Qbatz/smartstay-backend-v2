@@ -84,7 +84,7 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
                      c.bed_id, b.bed_name, c.complaint_date, c.description,
                      c.assignee_id, usr.first_name, usr.last_name,
                      ct.complaint_type_id, ct.complaint_type_name, c.status 
-            ORDER BY c.complaint_id DESC;
+            ORDER BY c.complaint_id DESC
             """, nativeQuery = true)
     List<Map<String, Object>> getAllComplaintsRaw(@Param("hostelId") String hostelId, @Param("parentId") String parentId,
                                                   @Param("customerName") String customerName,
@@ -173,4 +173,6 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
             @Param("hostelId") String hostelId,
             @Param("parentId") String parentId
     );
+
+    List<ComplaintsV1> findByHostelIdOrderByComplaintDateDesc(String hostelId);
 }

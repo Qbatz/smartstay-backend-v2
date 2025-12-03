@@ -580,7 +580,14 @@ public class TransactionService {
                 fullAddress.append(customers.getPincode());
             }
 
-            customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(), customers.getMobile(), "91", fullAddress.toString(), Utils.dateToString(customers.getJoiningDate()));
+            customerInfo = new CustomerInfo(customers.getFirstName(),
+                    customers.getLastName(),
+                    fullName.toString(),
+                    customers.getCustomerId(),
+                    customers.getMobile(),
+                    "91",
+                    fullAddress.toString(),
+                    Utils.dateToString(customers.getJoiningDate()));
         }
 
         StayInfo stayInfo = new StayInfo(null, null, null, null);
@@ -637,6 +644,7 @@ public class TransactionService {
 
 
         ReceiptDetails details = new ReceiptDetails(invoicesV1.getInvoiceNumber(),
+                transactionV1.getTransactionReferenceId(),
                 Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                 invoicesV1.getInvoiceId(),
                 invoicesV1.getTotalAmount(),

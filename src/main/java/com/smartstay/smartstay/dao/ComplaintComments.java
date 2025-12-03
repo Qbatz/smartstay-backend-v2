@@ -18,9 +18,6 @@ public class ComplaintComments {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer commentId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "complaint_id", nullable = false)
-    private ComplaintsV1 complaint;
     private Date createdAt;
     private Date updatedAt;
     private String createdBy;
@@ -28,4 +25,9 @@ public class ComplaintComments {
     private String userName;
     private Boolean isActive;
     private Date commentDate;
+
+
+    @ManyToOne
+    @JoinColumn(name = "complaint_id")
+    private ComplaintsV1 complaint;
 }

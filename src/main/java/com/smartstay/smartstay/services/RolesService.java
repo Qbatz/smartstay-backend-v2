@@ -67,7 +67,6 @@ public class RolesService {
     }
 
     public ResponseEntity<?> getRoleById(Integer id) {
-        System.out.println(id);
         if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }

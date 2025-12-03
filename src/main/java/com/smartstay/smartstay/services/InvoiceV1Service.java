@@ -24,6 +24,7 @@ import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.invoice.ItemResponse;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
+import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.invoices.*;
@@ -72,6 +73,8 @@ public class InvoiceV1Service {
     private CreditDebitNoteService creditDebitNoteService;
     @Autowired
     private RentHistoryService rentHistoryService;
+    @Autowired
+    private BillingRuleRepository billingRuleRepository;
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
     private TransactionService transactionService;
@@ -964,6 +967,7 @@ public class InvoiceV1Service {
             customerInfo = new CustomerInfo(customers.getFirstName(),
                     customers.getLastName(),
                     fullName.toString(),
+                    customers.getCustomerId(),
                     customers.getMobile(),
                     "91",
                     fullAddress.toString(),
@@ -1592,23 +1596,23 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        BillingDates currentBillingDate = hostelService.getCurrentBillStartAndEndDates(hostelId);
-        if (currentBillingDate != null) {
-            int compared = Utils.compareWithTwoDates(currentBillingDate.currentBillStartDate(), new Date());
-            if (Utils.compareWithTwoDates(currentBillingDate.currentBillStartDate(), new Date()) == 0) {
-                //having billing date today
-                applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
-                System.out.println("entering");
-            }
-            else {
-                return new ResponseEntity<>("Not today", HttpStatus.BAD_REQUEST);
-            }
-        }
-        else {
-            return new ResponseEntity<>("billing date issue", HttpStatus.BAD_REQUEST);
-        }
+        Date date = new Date();
+        String day = Utils.getDayFromDate(date);
+        List<BillingRules> listBillingRules = billingRuleRepository.findAllHostelsHavingTodaysRecurring(day, date);
 
-        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        List<HostelV1> listHostels = listBillingRules
+                .stream()
+                .map(BillingRules::getHostel)
+                .toList();
+
+        if (listHostels != null && !listHostels.isEmpty()) {
+           listHostels.forEach(item -> {
+               applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
+           });
+
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        }
+        return new ResponseEntity<>("Not today", HttpStatus.BAD_REQUEST);
     }
 
     public List<InvoiceCustomer> findDueCustomers(List<String> lisCustomerIds) {
@@ -1962,43 +1966,46 @@ public class InvoiceV1Service {
         double totalRentForCurrentMonth = Math.round(findNoOfDaysStayedInTheMonth * rentPerDay);
 
         InvoicesV1 invoicesV1 = invoicesV1Repository.findLatestRentInvoiceByCustomerId(customers.getCustomerId());
-        invoicesV1.setBasePrice(totalRentForCurrentMonth);
-        invoicesV1.setTotalAmount(totalRentForCurrentMonth);
-        invoicesV1.setInvoiceStartDate(joiningDate);
-        invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
-        invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setCreatedAt(new Date());
-        invoicesV1.setInvoiceType(InvoiceType.RENT.name());
-        invoicesV1.setCustomerId(customers.getCustomerId());
-        invoicesV1.setCustomerMobile(customers.getMobile());
-        invoicesV1.setCustomerMailId(customers.getEmailId());
-        invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
-        invoicesV1.setPaidAmount(0.0);
+        if (invoicesV1 != null) {
+            invoicesV1.setBasePrice(totalRentForCurrentMonth);
+            invoicesV1.setTotalAmount(totalRentForCurrentMonth);
+            invoicesV1.setInvoiceStartDate(joiningDate);
+            invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
+            invoicesV1.setCreatedBy(authentication.getName());
+            invoicesV1.setCreatedAt(new Date());
+            invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+            invoicesV1.setCustomerId(customers.getCustomerId());
+            invoicesV1.setCustomerMobile(customers.getMobile());
+            invoicesV1.setCustomerMailId(customers.getEmailId());
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+            invoicesV1.setPaidAmount(0.0);
 
-        invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joiningDate, billingDates.dueDays()));
-        invoicesV1.setGst(0.0);
-        invoicesV1.setCgst(0.0);
-        invoicesV1.setSgst(0.0);
-        invoicesV1.setGstPercentile(0.0);
-        invoicesV1.setCreatedAt(Utils.convertToTimeStamp(new Date()));
-        invoicesV1.setInvoiceGeneratedDate(Utils.convertToTimeStamp(joiningDate));
-        invoicesV1.setCancelled(false);
-        invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
-        invoicesV1.setHostelId(customers.getHostelId());
+            invoicesV1.setCreatedBy(authentication.getName());
+            invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joiningDate, billingDates.dueDays()));
+            invoicesV1.setGst(0.0);
+            invoicesV1.setCgst(0.0);
+            invoicesV1.setSgst(0.0);
+            invoicesV1.setGstPercentile(0.0);
+            invoicesV1.setCreatedAt(Utils.convertToTimeStamp(new Date()));
+            invoicesV1.setInvoiceGeneratedDate(Utils.convertToTimeStamp(joiningDate));
+            invoicesV1.setCancelled(false);
+            invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+            invoicesV1.setHostelId(customers.getHostelId());
 
-        invoicesV1
-                .getInvoiceItems()
-                .stream()
-                .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem()))
-                .findFirst()
-                .map(item -> {
-                    item.setAmount(totalRentForCurrentMonth);
-                    return item;
-                }).ifPresent(modifiedRentItems -> invoiceItemService.updateInvoiceItems(modifiedRentItems));
+            invoicesV1
+                    .getInvoiceItems()
+                    .stream()
+                    .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem()))
+                    .findFirst()
+                    .map(item -> {
+                        item.setAmount(totalRentForCurrentMonth);
+                        return item;
+                    }).ifPresent(modifiedRentItems -> invoiceItemService.updateInvoiceItems(modifiedRentItems));
 
 
-        invoicesV1Repository.save(invoicesV1);
+            invoicesV1Repository.save(invoicesV1);
+        }
+
 
 //        InvoiceItems invoiceItems = new InvoiceItems();
 //        invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
@@ -2016,6 +2023,7 @@ public class InvoiceV1Service {
     }
 
     public List<InvoicesV1> findAllCurrentMonthRentalInvoice(String customerId, String hostelId, Date startDate) {
+
         return invoicesV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, startDate);
     }
 
@@ -2040,5 +2048,15 @@ public class InvoiceV1Service {
 
     public List<InvoicesV1> findInvoices(List<String> invoicesIds) {
         return invoicesV1Repository.findByInvoiceIdIn(invoicesIds);
+    }
+
+    public int findAllRentalInvoicesAmountExceptCurrentMonth(String customerId, String hostelId) {
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+        return invoicesV1Repository.findAllRentalInvoicesExceptCurrentMonth(customerId, hostelId, billingDates.currentBillStartDate()).size();
+    }
+
+    public InvoicesV1 findLatestInvoice(String customerId) {
+        return invoicesV1Repository.findLatestInvoiceByCustomerId(customerId);
     }
 }

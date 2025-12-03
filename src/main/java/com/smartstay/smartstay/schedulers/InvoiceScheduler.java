@@ -1,9 +1,9 @@
 package com.smartstay.smartstay.schedulers;
 
+import com.smartstay.smartstay.dao.BillingRules;
 import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.events.RecurringEvents;
-import com.smartstay.smartstay.responses.hostelConfig.BillingRules;
 import com.smartstay.smartstay.services.BookingsService;
 import com.smartstay.smartstay.services.HostelConfigService;
 import com.smartstay.smartstay.services.HostelService;
@@ -32,18 +32,19 @@ public class InvoiceScheduler {
 
     @Scheduled(cron = "0 0 2 * * *")
     public void generateInvoice() {
-        List<HostelV1> listHostels = hostelService.getAllHostelsForRecuringInvoice();
-        List<String> listOfHostelsHavingBillDateToday = new ArrayList<>();
 
-        listHostels
-                .forEach(item -> {
-                    BillingDates billingRules = hostelConfigService.getBillingRuleByDateAndHostelId(item.getHostelId(), new Date());
-                    if (billingRules != null) {
-                        if (Utils.compareWithTwoDates(billingRules.currentBillStartDate(), new Date()) == 0) {
-                            applicationEventPublisher.publishEvent(new RecurringEvents(this, item.getHostelId()));
-                        }
 
-                    }
-                });
+        List<com.smartstay.smartstay.dao.BillingRules> listBillingRules = hostelConfigService.findAllHostelsHavingBillingToday();
+
+        List<HostelV1> listHostels = listBillingRules
+                .stream()
+                .map(BillingRules::getHostel)
+                .toList();
+
+        if (listHostels != null && !listHostels.isEmpty()) {
+            listHostels.forEach(item -> {
+                applicationEventPublisher.publishEvent(new RecurringEvents(this, item.getHostelId()));
+            });
+        }
     }
 }

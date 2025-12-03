@@ -151,10 +151,10 @@ public class SmartstayApplication {
 //	public CommandLineRunner checkAnyCheckoutPending(BookingsRepository bookingsRepository, NotificationV1Repository notificationV1Repository) {
 //		return args -> {
 //
-//			List<NotificationsV1> notification = bookingsRepository.checkAnyCheckout(new Date())
+//			List<AdminNotifications> notification = bookingsRepository.checkAnyCheckoutMissing(new Date())
 //					.stream()
 //					.map(i -> {
-//						NotificationsV1 notificationsV1 = new NotificationsV1();
+//						AdminNotifications notificationsV1 = new AdminNotifications();
 //						notificationsV1.setNotificationType(NotificationType.CHECKOUT_MISSING.name());
 //						notificationsV1.setDeleted(false);
 //						notificationsV1.setActive(true);
@@ -176,6 +176,126 @@ public class SmartstayApplication {
 //		};
 //	}
 
+//	@Bean
+//	public CommandLineRunner checkMissingJoinig(BookingsRepository bookingsRepository, NotificationV1Repository notificationV1Repository) {
+//		return args -> {
+//			List<AdminNotifications> notification = bookingsRepository.checkAnyMissingCheckIn(new Date())
+//					.stream()
+//					.map(i -> {
+//						AdminNotifications notificationsV1 = new AdminNotifications();
+//						notificationsV1.setNotificationType(NotificationType.CHECKIN_MISSING.name());
+//						notificationsV1.setDeleted(false);
+//						notificationsV1.setActive(true);
+//						notificationsV1.setDescription("You have some missing check in. Make sure to check in or update the joining dates.");
+//						notificationsV1.setCreatedAt(new Date());
+//						notificationsV1.setTitle("Missing check in");
+//						notificationsV1.setHostelId(i.getHostelId());
+//						notificationsV1.setUserId(i.getCustomerId());
+//						notificationsV1.setSourceId(i.getBookingId());
+//						notificationsV1.setUserType(UserType.ALL_EXCEPT_TENANT.name());
+//						notificationsV1.setCreatedBy(i.getCreatedBy());
+//						return notificationsV1;
+//					})
+//					.toList();
+//
+//			notificationV1Repository.saveAll(notification);
+//		};
+//	}
 
+	@Bean
+	CommandLineRunner findSubscriptionEndedHostels(HostelPlanRepository hostelPlanRepository, SubscriptionRepository subscriptionRepository) {
+		return args -> {
+//			List<HostelPlan> listHostelPlan = hostelPlanRepository.findNotActiveHostels(new Date());
+//			List<Subscription> listSubscriptionWithNewDate = listHostelPlan
+//					.stream()
+//					.map(i -> {
+//						Date planStartDate = Utils.addDaysToDate(i.getCurrentPlanEndsAt(), 1);
+//						Date planEndDate = Utils.addDaysToDate(planStartDate, 30);
+//						Date nextBillingAt = Utils.addDaysToDate(planEndDate, 1);
+//
+//						Subscription subscription = new Subscription();
+//						subscription.setHostelId(i.getHostel().getHostelId());
+//						subscription.setPaidAmount(0.0);
+//						subscription.setPlanCode(i.getCurrentPlanCode());
+//						subscription.setPlanStartsAt(planStartDate);
+//						subscription.setPlanEndsAt(planEndDate);
+//						subscription.setActivatedAt(planStartDate);
+//						subscription.setPlanAmount(0.0);
+//						subscription.setDiscount(0.0);
+//						subscription.setDiscountAmount(0.0);
+//						subscription.setNextBillingAt(nextBillingAt);
+//						subscription.setCreatedAt(new Date());
+//						return subscription;
+//					})
+//					.toList();
+//
+//			subscriptionRepository.saveAll(listSubscriptionWithNewDate);
+		};
+	}
+
+	/**
+	 *
+	 *
+	 *
+	 * @param customersRepository
+	 * @param ccr
+	 * @return
+	 *
+
+	//This required production run. Do not remove it. tenant app will distrubed
+	@Bean
+	CommandLineRunner getAllCustomerPhone(CustomersRepository customersRepository, CustomerCredentialsRepository ccr) {
+		return args -> {
+			List<String> findAllCustomersPhone = customersRepository.getAllCustomersGroupByPhone();
+			List<CustomerCredentials> listCustomerCredentials = findAllCustomersPhone
+					.stream()
+					.map(i -> {
+						CustomerCredentials cc = new CustomerCredentials();
+						cc.setCustomerMobile(i);
+						cc.setCreatedAt(new Date());
+
+						return cc;
+					})
+					.toList();
+
+			ccr.saveAll(listCustomerCredentials);
+		};
+	}
+	 **
+	 *
+	 *
+	 *
+
+	**/
+
+	/***
+	 *
+	 *
+	 * @param customersConfigRepository
+	 * @param customersRepository
+	 * @return
+	@Bean
+	CommandLineRunner addCustomersToCustomerConfig(CustomersConfigRepository customersConfigRepository, CustomersRepository customersRepository) {
+		return args -> {
+			List<Customers> listAllCheckedInCustomers = customersRepository.findAllCheckedInCustomers();
+			List<CustomersConfig> listCustomerConfig = listAllCheckedInCustomers
+					.stream()
+					.map(i -> {
+						CustomersConfig customersConfig = new CustomersConfig();
+						customersConfig.setCustomerId(i.getCustomerId());
+						customersConfig.setHostelId(i.getHostelId());
+						customersConfig.setEnabled(true);
+						customersConfig.setIsActive(true);
+						customersConfig.setCreatedAt(new Date());
+						customersConfig.setCreatedBy(i.getCreatedBy());
+
+						return customersConfig;
+					})
+					.toList();
+
+			customersConfigRepository.saveAll(listCustomerConfig);
+		};
+	}
+	 */
 
 }

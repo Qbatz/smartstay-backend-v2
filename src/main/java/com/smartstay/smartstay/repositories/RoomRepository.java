@@ -72,4 +72,9 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
             """, nativeQuery = true)
     RoomInfo getRoomInfo(@Param("roomId") Integer roomId);
 
+    @Query(value = """
+            SELECT rms.room_id as roomId, rms.room_name as roomName, flr.floor_id as floorId, flr.floor_name as floorName FROM rooms rms inner join floors flr on flr.floor_id=rms.floor_id where rms.room_id in (:roomId)
+            """, nativeQuery = true)
+    List<RoomInfo> getRoomInfo(@Param("roomId") List<Integer> roomId);
+
 }

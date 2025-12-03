@@ -204,6 +204,10 @@ public class RoomsService {
         return roomRepository.getRoomInfo(roomId);
     }
 
+    public List<RoomInfo> getRoom(List<Integer> roomIds) {
+        return roomRepository.getRoomInfo(roomIds);
+    }
+
 
     public int getRoomCount(String hostelId) {
         return roomRepository.getCountOfRoomsBasedOnHostel(hostelId);

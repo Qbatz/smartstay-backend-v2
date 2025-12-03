@@ -83,6 +83,8 @@ public class HostelService {
     private ApplicationEventPublisher eventPublisher;
     @Autowired
     private HostelConfigService hostelConfigService;
+    @Autowired
+    private NotificationService notificationService;
 
 
     public ResponseEntity<?> addHostel(MultipartFile mainImage, List<MultipartFile> additionalImages, AddHostelPayloads payloads) {
@@ -335,7 +337,7 @@ public class HostelService {
             remainingDays = subscriptionDto.endsIn();
             isSubscriptionActive = subscriptionDto.isValid();
         }
-
+        int notificationCount = notificationService.getUnreadNotificationCount(hostelId);
         HostelDetails details = new HostelDetails(hostel.getHostelId(),
                 hostel.getMainImage(),
                 hostel.getCity(),
@@ -349,7 +351,7 @@ public class HostelService {
                 hostel.getState(),
                 hostel.getStreet(),
                 Utils.dateToString(hostel.getUpdatedAt()),
-                isSubscriptionActive, nextBillingDate, remainingDays, floorDetails.size(), floorDetails);
+                isSubscriptionActive, nextBillingDate, remainingDays, floorDetails.size(), floorDetails,notificationCount);
 
         return ResponseEntity.ok(details);
     }
@@ -738,7 +740,7 @@ public class HostelService {
         return hostelConfigService.getBillingRuleByDateAndHostelId(hostelId, date);
     }
 
-    public ResponseEntity<?> updatePgInformations(String hostelId, UpdatePg updatePg, MultipartFile mainImage, List<MultipartFile> additionalImages) {
+    public ResponseEntity<?> updatePgInformation(String hostelId, UpdatePg updatePg, MultipartFile mainImage, List<MultipartFile> additionalImages) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -773,15 +775,19 @@ public class HostelService {
         }
 
         if (!listImageUrls.isEmpty()) {
-            List<HostelImages> listHostelImages = listImageUrls.stream().map(item -> {
-                HostelImages hostelImg = new HostelImages();
-                hostelImg.setCreatedBy(authentication.getName());
-                hostelImg.setImageUrl(item);
-                hostelImg.setHostel(hostelV1);
-                return hostelImg;
-            }).toList();
+            List<HostelImages> listImg = hostelV1.getAdditionalImages();
+            if (listImg == null) {
+                listImg = new ArrayList<>();
+            }
+            listImg.addAll(listImageUrls.stream().map(item -> {
+                        HostelImages hostelImg = new HostelImages();
+                        hostelImg.setCreatedBy(authentication.getName());
+                        hostelImg.setImageUrl(item);
+                        hostelImg.setHostel(hostelV1);
+                        return hostelImg;
+                    }).toList());
 
-            hostelV1.setAdditionalImages(listHostelImages);
+            hostelV1.setAdditionalImages(listImg);
         }
 
         if (updatePg != null) {
@@ -812,11 +818,23 @@ public class HostelService {
                     hostelV1.setPincode(updatePg.pincode());
                 }
             }
-
             if (updatePg.state() != null) {
                 hostelV1.setState(updatePg.state());
             }
+            if (updatePg.hostelName() != null && !updatePg.hostelName().isEmpty()) {
+                hostelV1.setHostelName(updatePg.hostelName());
+            }
+            if (updatePg.mobile() != null && !updatePg.mobile().isEmpty()) {
+                hostelV1.setMobile(updatePg.mobile());
+            }
 
+            if (updatePg.houseNo() != null) {
+                hostelV1.setHouseNo(updatePg.houseNo());
+            }
+
+            if (updatePg.emailId() != null) {
+                hostelV1.setEmailId(updatePg.emailId());
+            }
         }
 
         hostelV1Repository.save(hostelV1);

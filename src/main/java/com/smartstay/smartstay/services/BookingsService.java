@@ -146,6 +146,10 @@ public class BookingsService {
         return bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
     }
 
+    public List<BookingsV1> getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(List<String> customerIds, String hostelId) {
+        return bookingsRepository.findBookingsByListOfCustomersAndHostelId(customerIds, hostelId);
+    }
+
     public int getAllCheckedInCustomersCount(String hostelId) {
         List<String> statuses = new ArrayList<>();
         statuses.add(BookingStatus.NOTICE.name());
@@ -675,7 +679,6 @@ public class BookingsService {
                 customerId,
                 expectedJoiningDate
         );
-        System.out.println("conflicts = " + conflicts.size());
         return !conflicts.isEmpty();
     }
 
@@ -688,8 +691,11 @@ public class BookingsService {
         if (bookingsV1.getLeavingDate() != null) {
             return Utils.compareWithTwoDates(joiningDateDt, bookingsV1.getLeavingDate()) >= 0;
         }
-        else {
+        else if (bookingsV1.getJoiningDate() != null) {
             return Utils.compareWithTwoDates(joiningDateDt, bookingsV1.getJoiningDate()) < 0;
+        }
+        else {
+            return Utils.compareWithTwoDates(joiningDateDt, bookingsV1.getExpectedJoiningDate()) < 0;
         }
     }
 
@@ -1050,5 +1056,15 @@ public class BookingsService {
         bookingsRepository.saveAll(bookings);
         customersBedHistoryService.updateNewRentAmount(listRentHistory);
 
+    }
+
+    /**
+     * used for getting bed info for booking a beds
+     *
+     * @param bedsForGettingBookingInfo
+     * @return
+     */
+    public List<BookingsV1> getBookingInfoByListOfBeds(List<Integer> bedsForGettingBookingInfo) {
+        return bookingsRepository.findLatestBookingsForBeds(bedsForGettingBookingInfo);
     }
 }

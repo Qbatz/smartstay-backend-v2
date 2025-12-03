@@ -35,6 +35,6 @@ public class  ComplaintsV1 {
     private Boolean isActive;
     private Boolean isDeleted;
 
-    @OneToMany(mappedBy = "complaints", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ComplaintImages> additionalImages;
+    @OneToMany(mappedBy = "complaint", orphanRemoval = true, cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    List<ComplaintComments> complaintComments;
 }

@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.Wrappers.Notifications;
 
+import com.smartstay.smartstay.dao.AdminNotifications;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.NotificationsV1;
 import com.smartstay.smartstay.ennum.NotificationType;
@@ -9,7 +10,7 @@ import com.smartstay.smartstay.util.Utils;
 import java.util.List;
 import java.util.function.Function;
 
-public class NotificationListMapper implements Function<NotificationsV1, NotificationList> {
+public class NotificationListMapper implements Function<AdminNotifications, NotificationList> {
 
     List<Customers> customers = null;
 
@@ -18,7 +19,7 @@ public class NotificationListMapper implements Function<NotificationsV1, Notific
     }
 
     @Override
-    public NotificationList apply(NotificationsV1 notificationsV1) {
+    public NotificationList apply(AdminNotifications notificationsV1) {
 
         StringBuilder fullName = new StringBuilder();
 
@@ -47,6 +48,10 @@ public class NotificationListMapper implements Function<NotificationsV1, Notific
         else if (notificationsV1.getNotificationType().equalsIgnoreCase(NotificationType.CHECKOUT_MISSING.name())) {
             notificationType = "Missing checkout";
             typeCode = 6;
+        }
+        else if (notificationsV1.getNotificationType().equalsIgnoreCase(NotificationType.RECURRING_INVOICE.name())) {
+            notificationType = "New Bill";
+            typeCode = 7;
         }
 
         if (notificationsV1.getUserId() != null) {

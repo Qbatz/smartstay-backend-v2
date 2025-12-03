@@ -6,6 +6,7 @@ import com.smartstay.smartstay.responses.invoices.StayInfo;
 
 public record ReceiptDetails(
         String invoiceNumber,
+        String receiptId,
         String invoiceDate,
         String invoiceId,
         Double invoiceAmount,
