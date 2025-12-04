@@ -31,13 +31,16 @@ public class Customers {
     private String customerBedStatus;
     private Date joiningDate;
     private Date expJoiningDate;
+    private Date dateOfBirth;
     private String currentStatus;
+    private String gender;
     private String kycStatus;
     private String createdBy;
     private String hostelId;
     private Date createdAt;
     private Date lastUpdatedAt;
     private String updatedBy;
+    private String mobSerialNo;
 
     @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
     private Advance advance;

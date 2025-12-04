@@ -7,11 +7,12 @@ import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
-@Entity
-@Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Data
 public class ComplaintImages {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;

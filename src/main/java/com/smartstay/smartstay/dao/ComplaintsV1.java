@@ -17,8 +17,6 @@ public class  ComplaintsV1 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer complaintId;
-
-
     private String customerId;
     private Integer complaintTypeId;
     private Integer floorId;
