@@ -2059,4 +2059,8 @@ public class InvoiceV1Service {
     public InvoicesV1 findLatestInvoice(String customerId) {
         return invoicesV1Repository.findLatestInvoiceByCustomerId(customerId);
     }
+
+    public List<InvoicesV1> findLatestInvoicesByCustomerIds(List<String> customerIds) {
+        return invoicesV1Repository.findLatestInvoicesByCustomerIds(customerIds);
+    }
 }

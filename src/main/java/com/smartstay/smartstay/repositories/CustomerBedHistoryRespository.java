@@ -71,5 +71,15 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
             SELECT * FROM customers_bed_history WHERE end_date IS NULL AND type in ('CHECK_IN', 'REASSIGNED') AND customer_id in (:customerId)
             """, nativeQuery = true)
     List<CustomersBedHistory> findCurrentBed(@Param("customerId") List<String> customerId);
+
+    @Query(value = """
+    SELECT cbh.*  FROM customers_bed_history cbh INNER JOIN (
+        SELECT customer_id, MAX(id) AS latest_id
+        FROM customers_bed_history
+        WHERE customer_id IN (:customerIds)
+        GROUP BY customer_id
+    ) t ON cbh.id = t.latest_id
+    """, nativeQuery = true)
+    List<CustomersBedHistory> findLatestBedHistoryForCustomers(@Param("customerIds") List<String> customerIds);
 }
 

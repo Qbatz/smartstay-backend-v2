@@ -178,6 +178,7 @@ public class Utils {
 
     public static final String AMENITY_ALREADY_EXIST = "Amenity with the same name already exists in this hostel.";
     public static final String AMENITY_CNNOT_ADD_BOOKED_ERROR = "Amenity cannot be added for booked customers";
+    public static final String AMENITY_CANNOT_ADD_SETTLEMENT_GENERATED_CUSTOMERS = "Amenity cannot be added for settlement generated customers";
     public static final String CANNOT_CHANGE_JOINING_DATE_VACATED_CUSTOMERS = "Cannot change joining date for the vacated customers";
     public static final String CANNOT_CHANGE_JOINING_DATE_SETTLEMENT_CUSTOMERS = "Cannot change joining date for the settlement generated customers";
     public static final String CANNOT_CHANGE_JOINING_DATE_CANCELLED_CUSTOMERS = "Cannot change joining date for the cancelled customers";
@@ -190,6 +191,8 @@ public class Utils {
     public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_CUSTOMERS = "Cannot change advance for cancelled customers";
     public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_INVOICE = "Cannot change advance for cancelled invoices";
     public static final String RENT_AMOUNT_REQUIRED = "Rent amount is required";
+    public static final String COMPLAINT_NOT_FOUND = "Complaint not found";
+    public static final String JOINING_DATE_CANNOT_BEFORE_BOOKING = "Check-in cannot be earlier than the booking date";
 
     /**
      *  Defining module Id's here

@@ -142,4 +142,8 @@ public class CustomersBedHistoryService {
     public void saveCheckInHistory(CustomersBedHistory cbh) {
         customerBedHistoryRepository.save(cbh);
     }
+
+    public List<CustomersBedHistory> getCurrentBedHistoryByCustomerIds(List<String> customerIds) {
+        return customerBedHistoryRepository.findLatestBedHistoryForCustomers(customerIds);
+    }
 }

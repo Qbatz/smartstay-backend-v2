@@ -4,14 +4,18 @@ import com.smartstay.smartstay.Wrappers.ComplaintListMapper;
 import com.smartstay.smartstay.Wrappers.Notifications.NotificationListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
 import com.smartstay.smartstay.dto.room.RoomInfo;
+import com.smartstay.smartstay.ennum.ComplaintStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
+import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.payloads.complaints.*;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
 import com.smartstay.smartstay.util.Utils;
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,16 +48,19 @@ public class ComplaintsService {
     @Autowired
     BedsRepository bedsRepository;
     @Autowired
-    private RoomsService roomsService;
-    @Autowired
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
     @Autowired
     private RolesService rolesService;
     @Autowired
+    private BedsService bedsService;
+    @Autowired
     private ComplaintTypeService complaintTypeService;
-
+    @Autowired
+    private CustomersBedHistoryService customersBedHistoryService;
+    @Autowired
+    private CustomerNotificationService customerNotificationService;
 
     public ResponseEntity<?> addComplaints(@RequestBody AddComplaints request) {
         if (!authentication.isAuthenticated()) {
@@ -291,9 +298,23 @@ public class ComplaintsService {
                 .toList();
         List<ComplaintTypeV1> listComplaintTypes = complaintTypeService.getComplaintTypesById(complaintTypeIds);
 
-        List<RoomInfo> roomInfos = roomsService.getRoom(roomIds);
+        List<BedDetails> roomInfos = bedsService.getBedDetails(roomIds);
 
         List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+        List<CustomersBedHistory> listCustomersBedHistory = customersBedHistoryService.getCurrentBedHistoryByCustomerIds(customerIds);
+
+        List<BedDetails> listBedDetails;
+        if (listCustomersBedHistory != null) {
+            List<Integer> bedIds = listCustomersBedHistory
+                    .stream()
+                    .map(CustomersBedHistory::getBedId)
+                    .toList();
+            listBedDetails = bedsService.getBedDetails(bedIds);
+
+        } else {
+            listBedDetails = new ArrayList<>();
+        }
+
 
         Date start = listComplaints.stream()
                 .map(ComplaintsV1::getCreatedAt)
@@ -318,7 +339,7 @@ public class ComplaintsService {
 
         List<ComplaintResponseDto> listComplaintsResponse = listComplaints
                 .stream()
-                .map(i -> new ComplaintListMapper(listCustomers, roomInfos, listComplaintTypes).apply(i))
+                .map(i -> new ComplaintListMapper(listCustomers, listComplaintTypes, listBedDetails, listCustomersBedHistory).apply(i))
                 .toList();
 
         ComplaintResponse complaintResponse = new ComplaintResponse(hostelId, sDate, eDate, listComplaints.size(), listComplaintsResponse);
@@ -389,7 +410,7 @@ public class ComplaintsService {
 
     public ResponseEntity<?> assignUser(int complaintId, AssignUser request) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
         String userId = authentication.getName();
@@ -406,25 +427,43 @@ public class ComplaintsService {
 
         ComplaintsV1 complaint = complaintRepository.findByComplaintIdAndParentId(complaintId, user.getParentId());
         if (complaint == null) {
-            return new ResponseEntity<>("Complaint not found.", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Utils.COMPLAINT_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
         boolean users = usersService.existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(request.userId(), user.getParentId());
 
         if (!users) {
-            return new ResponseEntity<>("User not found.", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
         complaint.setAssigneeId(request.userId());
         complaint.setAssignedDate(new Date());
         complaint.setUpdatedAt(new Date());
+
+        List<ComplaintUpdates> listComplaintUpdates = complaint.getComplaintUpdates();
+        if (listComplaintUpdates == null) {
+            listComplaintUpdates = new ArrayList<>();
+        }
+
+        ComplaintUpdates complaintUpdates = new ComplaintUpdates();
+        complaintUpdates.setComplaint(complaint);
+        complaintUpdates.setStatus(ComplaintStatus.ASSIGNED.name());
+        complaintUpdates.setUserType(UserType.ADMIN.name());
+        complaintUpdates.setCreatedAt(new Date());
+        complaintUpdates.setUpdatedBy(authentication.getName());
+
+        listComplaintUpdates.add(complaintUpdates);
+
         complaintRepository.save(complaint);
+
+        //send a push notification
+//        customerNotificationService.addComplainUpdateStatus();
 
         return new ResponseEntity<>(Utils.USER_ASSIGNED, HttpStatus.OK);
     }
 
     public ResponseEntity<?> deleteComplaint(Integer complaintId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
         String userId = authentication.getName();
