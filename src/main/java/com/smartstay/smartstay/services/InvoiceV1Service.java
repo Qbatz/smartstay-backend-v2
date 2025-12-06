@@ -977,12 +977,14 @@ public class InvoiceV1Service {
         StayInfo stayInfo = null;
         CustomersBedHistory bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
 
-        BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
-        if (bedDetails != null) {
-            stayInfo = new StayInfo(bedDetails.getBedName(),
-                    bedDetails.getFloorName(),
-                    bedDetails.getRoomName(),
-                    hostelV1.getHostelName());
+        if (bedHistory != null) {
+            BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
+            if (bedDetails != null) {
+                stayInfo = new StayInfo(bedDetails.getBedName(),
+                        bedDetails.getFloorName(),
+                        bedDetails.getRoomName(),
+                        hostelV1.getHostelName());
+            }
         }
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {

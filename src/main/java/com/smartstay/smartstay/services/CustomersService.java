@@ -2767,4 +2767,33 @@ public class CustomersService {
     public boolean existsByHostelIdAndCustomerIdAndStatusesIn(String s, String s1, List<String> currentStatus) {
         return customersRepository.existsByHostelIdAndCustomerIdAndStatusesIn(s, s1, currentStatus);
     }
+
+    public ResponseEntity<?> deleteCustomer(String hostelId, String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
+
+        customers.setCurrentStatus(CustomerStatus.DELETED.name());
+        customersRepository.save(customers);
+
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
 }

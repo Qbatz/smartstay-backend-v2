@@ -24,7 +24,8 @@ public class CustomersBedHistoryService {
     private CustomerBedHistoryRespository customerBedHistoryRepository;
 
     public CustomersBedHistory getCustomerBedByStartDate(String customerId, Date startDate, Date endDate) {
-        return customerBedHistoryRepository.findByCustomerIdAndDate(customerId, startDate, endDate);
+        CustomersBedHistory cbh = customerBedHistoryRepository.findByCustomerIdAndDate(customerId, startDate, endDate);
+        return cbh;
     }
 
     public List<CustomersBedHistory> getCustomersBedHistory(String customerId, Date startDate, Date endDate) {

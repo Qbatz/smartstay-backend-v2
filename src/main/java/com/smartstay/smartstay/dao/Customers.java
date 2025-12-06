@@ -42,6 +42,7 @@ public class Customers {
     private String updatedBy;
     private String mobSerialNo;
 
+
     @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
     private Advance advance;
 

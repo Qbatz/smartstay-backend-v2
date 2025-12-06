@@ -15,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBedHistory, Long> {
     @Query(value = """
-            SELECT * FROM customers_bed_history WHERE customer_id=:customerId and start_date <= DATE(:endDate) and (end_date IS NULL OR end_date >= (:startDate))
+            SELECT * FROM customers_bed_history WHERE customer_id=:customerId and DATE(start_date) <= DATE(:endDate) and (end_date IS NULL OR DATE(end_date) >= DATE(:startDate))
             ORDER BY start_date DESC LIMIT 1
             """, nativeQuery = true)
     CustomersBedHistory findByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);

@@ -140,4 +140,14 @@ public class CustomersConfigService {
         }
         return listCustomers;
     }
+
+    public void disableRecurring(String customerId) {
+        CustomersConfig customerConfig = customersConfigRepository.findByCustomerId(customerId);
+        if (customerConfig != null) {
+            customerConfig.setEnabled(false);
+            customerConfig.setIsActive(false);
+
+            customersConfigRepository.save(customerConfig);
+        }
+    }
 }

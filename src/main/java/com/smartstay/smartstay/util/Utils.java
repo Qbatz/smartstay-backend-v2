@@ -193,6 +193,7 @@ public class Utils {
     public static final String RENT_AMOUNT_REQUIRED = "Rent amount is required";
     public static final String COMPLAINT_NOT_FOUND = "Complaint not found";
     public static final String JOINING_DATE_CANNOT_BEFORE_BOOKING = "Check-in cannot be earlier than the booking date";
+    public static final String CANNOT_DELETE_ACTIVE_CUSTOMERS = "Cannot delete active customers";
 
     /**
      *  Defining module Id's here
