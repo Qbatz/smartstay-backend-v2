@@ -48,4 +48,11 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
             SELECT * FROM billing_rules WHERE billing_start_date=:day AND (end_till IS NULL OR DATE(end_till) > DATE(:date)) AND DATE(start_from) <= DATE(:date);
             """, nativeQuery = true)
     List<BillingRules> findAllHostelsHavingTodaysRecurring(@Param("day") String day, @Param("date") Date date);
+
+    @Query(value = """
+            SELECT * FROM billing_rules WHERE hostel_id=:hostelId AND (start_from IS NULL AND end_till IS NULL) OR 
+            (DATE(start_from) < DATE(:todaysDate) AND end_till IS NULL) OR (DATE(start_from) > DATE(:todaysDate) 
+            AND (end_till IS NULL OR DATE(end_till) > DATE(:todaysDate))) LIMIT 1
+            """, nativeQuery = true)
+    BillingRules findNextBillingDates(@Param("hostelId") String hostelId, @Param("todaysDate") Date todaysDate);
 }

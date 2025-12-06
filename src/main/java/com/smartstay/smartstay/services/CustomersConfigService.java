@@ -4,7 +4,9 @@ import com.smartstay.smartstay.Wrappers.recurring.CustomerListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.CustomersConfig;
+import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.payloads.recurring.UpdateRecurring;
 import com.smartstay.smartstay.repositories.CustomersConfigRepository;
 import com.smartstay.smartstay.responses.recurring.CustomersList;
@@ -32,6 +34,10 @@ public class CustomersConfigService {
     private UsersService usersService;
     @Autowired
     private Authentication authentication;
+    @Autowired
+    private InvoiceV1Service invoiceService;
+    @Autowired
+    private HostelService hostelService;
     private CustomersService customersService;
 
     @Autowired
@@ -59,10 +65,13 @@ public class CustomersConfigService {
                 .stream()
                 .map(CustomersConfig::getCustomerId)
                 .toList();
+        List<InvoicesV1> latestInvoicesList = invoiceService.findLatestInvoicesByCustomerIds(customerIds);
         List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+        BillingDates billingDates = hostelService.getNextBillingDates(hostelId);
+
         if (listCustomers != null) {
             List<CustomersList> customersLists = listCustomers.stream()
-                    .map(i -> new CustomerListMapper(customersConfigs).apply(i))
+                    .map(i -> new CustomerListMapper(customersConfigs, latestInvoicesList, billingDates.currentBillStartDate()).apply(i))
                     .toList();
 
             RecurringList recurringList = new RecurringList(hostelId, customersLists);
@@ -130,5 +139,15 @@ public class CustomersConfigService {
             return new ArrayList<>();
         }
         return listCustomers;
+    }
+
+    public void disableRecurring(String customerId) {
+        CustomersConfig customerConfig = customersConfigRepository.findByCustomerId(customerId);
+        if (customerConfig != null) {
+            customerConfig.setEnabled(false);
+            customerConfig.setIsActive(false);
+
+            customersConfigRepository.save(customerConfig);
+        }
     }
 }

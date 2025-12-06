@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.responses.customer;
 
+import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.customer.BookingInfo;
 import com.smartstay.smartstay.dto.customer.CheckoutInfo;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
@@ -7,6 +8,7 @@ import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import java.util.List;
 
 public record CustomerDetails(String customerId,
+                              String hostelId,
                               String firstName,
                               String lastName,
                               String fullName,
@@ -26,5 +28,6 @@ public record CustomerDetails(String customerId,
                               List<InvoiceResponse> invoiceResponseList,
                               List<BedHistory> bedHistory,
                               List<TransactionDto> transactionList,
-                              List<Amenities> amenities) {
+                              List<Amenities> assignedAmenities,
+                              List<AmenityRequestDTO> requestedAmenities) {
 }

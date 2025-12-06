@@ -7,6 +7,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.customer.*;
@@ -81,10 +82,17 @@ public class CustomersService {
     private CustomerCredentialsService ccs;
     @Autowired
     private CustomersConfigService customersConfigService;
+
+    private AmenityRequestService amenityRequestService;
     private AmenitiesService amenitiesService;
     @Autowired
     public void setAmenitiesService(@Lazy AmenitiesService amenitiesService) {
         this.amenitiesService = amenitiesService;
+    }
+
+    @Autowired
+    public void setAmenityRequestService(@Lazy AmenityRequestService amenityRequestService) {
+        this.amenityRequestService = amenityRequestService;
     }
 
     public ResponseEntity<?> createCustomer(MultipartFile file, AddCustomer payloads) {
@@ -527,6 +535,10 @@ public class CustomersService {
         String date = checkinRequest.joiningDate().replace("/", "-");
 
         Date joiningDate = Utils.stringToDate(checkinRequest.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+        if (Utils.compareWithTwoDates(joiningDate, booking.getBookingDate()) < 0) {
+            return new ResponseEntity<>(Utils.JOINING_DATE_CANNOT_BEFORE_BOOKING, HttpStatus.BAD_REQUEST);
+        }
 
         if (bedsService.checkAvailabilityForCheckIn(booking.getBedId(), joiningDate) != null) {
 
@@ -1103,6 +1115,8 @@ public class CustomersService {
         List<BedHistory> listBeds = bedHistory.getCustomersBedHistory(customers.getCustomerId());
         List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customerId);
         List<TransactionDto> listTransactions = transactionService.getTranactionInfoByCustomerId(customerId);
+        List<AmenityRequestDTO> listRequestedAmenities = amenityRequestService.getRequestedAmenities(customerId, customers.getHostelId());
+
         List<String> invoicesIds = listTransactions
                 .stream()
                 .map(TransactionDto::invoiceId)
@@ -1126,6 +1140,7 @@ public class CustomersService {
 
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
+                customers.getHostelId(),
                 customers.getFirstName(),
                 customers.getLastName(),
                 fullName,
@@ -1145,7 +1160,8 @@ public class CustomersService {
                 invoiceResponseList,
                 listBeds,
                 listTransactionResponse,
-                amenities);
+                amenities,
+                listRequestedAmenities);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -2750,5 +2766,34 @@ public class CustomersService {
 
     public boolean existsByHostelIdAndCustomerIdAndStatusesIn(String s, String s1, List<String> currentStatus) {
         return customersRepository.existsByHostelIdAndCustomerIdAndStatusesIn(s, s1, currentStatus);
+    }
+
+    public ResponseEntity<?> deleteCustomer(String hostelId, String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
+
+        customers.setCurrentStatus(CustomerStatus.DELETED.name());
+        customersRepository.save(customers);
+
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

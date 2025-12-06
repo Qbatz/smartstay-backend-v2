@@ -108,4 +108,9 @@ public class CustomersController {
     public ResponseEntity<?> checkoutCustomers(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required = false) String name) {
         return customersService.getCheckoutCustomers(hostelId, name);
     }
+
+    @DeleteMapping("/{hostelId}/{customerId}")
+    public ResponseEntity<?> deleteCustomers(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
+        return customersService.deleteCustomer(hostelId, customerId);
+    }
  }
