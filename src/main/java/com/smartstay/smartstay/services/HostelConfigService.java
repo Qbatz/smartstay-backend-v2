@@ -109,6 +109,10 @@ public class HostelConfigService {
             Calendar cal = Calendar.getInstance();
             cal.set(Calendar.DAY_OF_MONTH, billingRules.getBillingStartDate());
 
+            if (Utils.compareWithTwoDates(cal.getTime(), new Date()) < 0) {
+                cal.add(Calendar.MONTH, 1);
+            }
+
             Date findEndDate = Utils.findLastDate(billingRules.getBillingStartDate(), cal.getTime());
             Date dueDate = Utils.addDaysToDate(cal.getTime(), billingRules.getBillDueDays());
 

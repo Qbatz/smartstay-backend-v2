@@ -26,12 +26,14 @@ public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResp
     List<ComplaintTypeV1> complaintTypes = null;
     List<BedDetails> listBedDetails = null;
     List<CustomersBedHistory> listCustomerBedHistory = null;
+    List<Users> users = null;
 
-    public ComplaintListMapper(List<Customers> customersList, List<ComplaintTypeV1> complaintTypes, List<BedDetails> bedDetails, List<CustomersBedHistory> listCustomerBedHistory) {
+    public ComplaintListMapper(List<Customers> customersList, List<ComplaintTypeV1> complaintTypes, List<BedDetails> bedDetails, List<CustomersBedHistory> listCustomerBedHistory, List<Users> listUsers) {
         this.customersList = customersList;
         this.complaintTypes = complaintTypes;
         this.listBedDetails = bedDetails;
         this.listCustomerBedHistory = listCustomerBedHistory;
+        this.users = listUsers;
 
     }
     @Override
@@ -45,6 +47,7 @@ public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResp
         String floorName = null;
         String bedName = null;
         String complaintTypeName = null;
+        StringBuilder assigneeName = new StringBuilder();
 
         if (listBedDetails != null && complaintsV1.getRoomId() != null && complaintsV1.getRoomId() != 0 ) {
             BedDetails roomInfo = listBedDetails
@@ -120,6 +123,23 @@ public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResp
             complaintTypeName = type.getComplaintTypeName();
         }
 
+        if (users != null) {
+            Users usr = users
+                    .stream()
+                    .filter(i -> i.getUserId().equalsIgnoreCase(complaintsV1.getAssigneeId()))
+                    .findFirst()
+                    .orElse(null);
+            if (usr != null) {
+                if (usr.getFirstName() != null) {
+                    assigneeName.append(usr.getFirstName());
+                }
+                if (usr.getLastName() != null && !usr.getLastName().trim().equalsIgnoreCase("")) {
+                    assigneeName.append(" ");
+                    assigneeName.append(usr.getLastName());
+                }
+            }
+        }
+
 
 
 
@@ -134,6 +154,7 @@ public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResp
         complaintResponseDto.setComplaintDate(complaintsV1.getComplaintDate());
         complaintResponseDto.setDescription(complaintsV1.getDescription());
         complaintResponseDto.setAssigneeId(complaintsV1.getAssigneeId());
+        complaintResponseDto.setAssigneeName(assigneeName.toString());
         complaintResponseDto.setAssignedDate(complaintsV1.getAssignedDate());
         complaintResponseDto.setComplaintTypeId(complaintsV1.getComplaintTypeId());
         complaintResponseDto.setComplaintTypeName(complaintTypeName);

@@ -22,10 +22,10 @@ public class FirebaseConfiguration {
         GoogleCredentials googleCredentials = null;
 
         if (!ENVIRONMENT.equalsIgnoreCase("PROD")) {
-            googleCredentials = GoogleCredentials.fromStream(new ClassPathResource("smart-stay.json").getInputStream());
+            googleCredentials = GoogleCredentials.fromStream(new ClassPathResource("ss-admin.json").getInputStream());
         }
         else {
-            googleCredentials = GoogleCredentials.fromStream(new ClassPathResource("smart-stay.json").getInputStream());
+            googleCredentials = GoogleCredentials.fromStream(new ClassPathResource("ss-admin.json").getInputStream());
         }
 
         FirebaseOptions firebaseOptions = FirebaseOptions.builder()
@@ -35,9 +35,9 @@ public class FirebaseConfiguration {
         FirebaseApp app;
 
         try {
-            app = FirebaseApp.getInstance("admin");
+            app = FirebaseApp.getInstance();
         } catch (IllegalStateException e) {
-            app = FirebaseApp.initializeApp(firebaseOptions, "admin");
+            app = FirebaseApp.initializeApp(firebaseOptions);
         }
 
 

@@ -17,4 +17,5 @@ public interface CustomersConfigRepository extends JpaRepository<CustomersConfig
             SELECT * FROM customers_config WHERE hostel_id=:hostelId AND is_active=true AND enabled=true
             """, nativeQuery = true)
     List<CustomersConfig> findActiveAndRecurringEnabledCustomersByHostelId(@Param("hostelId") String hostelId);
+    CustomersConfig findByCustomerIdAndHostelId(String customerId, String hostelId);
 }
