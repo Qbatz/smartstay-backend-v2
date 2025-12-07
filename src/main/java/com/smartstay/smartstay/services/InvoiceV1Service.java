@@ -1261,7 +1261,7 @@ public class InvoiceV1Service {
                 String[] suffix = existingV1.getInvoiceNumber().split("-");
                 if (suffix.length > 1) {
                     invoiceNumber.append("-");
-                    int suff = Integer.parseInt(suffix[1]) + 1;
+                    int suff = Integer.parseInt(suffix[suffix.length - 1]) + 1;
                     invoiceNumber.append(String.format("%03d", suff));
                 }
             }

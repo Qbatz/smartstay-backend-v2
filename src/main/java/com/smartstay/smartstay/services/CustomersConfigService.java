@@ -150,4 +150,8 @@ public class CustomersConfigService {
             customersConfigRepository.save(customerConfig);
         }
     }
+
+    public CustomersConfig findByCustomerIdAndHostelId(String customerId, String hostelId) {
+        return customersConfigRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+    }
 }

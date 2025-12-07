@@ -22,5 +22,6 @@ public class CustomerCredentials {
     private String customerPin;
     private boolean isPinVerified;
     private String defaultHostel;
+    private String fcmToken;
     private Date createdAt;
 }

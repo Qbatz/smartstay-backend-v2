@@ -162,7 +162,7 @@ public class ComplaintsService {
         complaint.setParentId(user.getParentId());
         complaint.setHostelId(request.hostelId());
         complaint.setIsActive(true);
-        complaint.setStatus("PENDING");
+        complaint.setStatus(ComplaintStatus.PENDING.name());
         complaint.setIsDeleted(false);
 
         complaintRepository.save(complaint);
@@ -288,6 +288,10 @@ public class ComplaintsService {
                 .stream()
                 .map(ComplaintsV1::getCustomerId)
                 .toList();
+        List<String> assignes = listComplaints
+                .stream()
+                .map(ComplaintsV1::getAssigneeId)
+                .toList();
         List<Integer> roomIds = listComplaints
                 .stream()
                 .filter(i -> i.getRoomId() != null)
@@ -297,8 +301,7 @@ public class ComplaintsService {
                 .map(ComplaintsV1::getComplaintTypeId)
                 .toList();
         List<ComplaintTypeV1> listComplaintTypes = complaintTypeService.getComplaintTypesById(complaintTypeIds);
-
-        List<BedDetails> roomInfos = bedsService.getBedDetails(roomIds);
+        List<Users> listUsers = usersService.findByListOfUserIds(assignes);
 
         List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
         List<CustomersBedHistory> listCustomersBedHistory = customersBedHistoryService.getCurrentBedHistoryByCustomerIds(customerIds);
@@ -339,7 +342,7 @@ public class ComplaintsService {
 
         List<ComplaintResponseDto> listComplaintsResponse = listComplaints
                 .stream()
-                .map(i -> new ComplaintListMapper(listCustomers, listComplaintTypes, listBedDetails, listCustomersBedHistory).apply(i))
+                .map(i -> new ComplaintListMapper(listCustomers, listComplaintTypes, listBedDetails, listCustomersBedHistory, listUsers).apply(i))
                 .toList();
 
         ComplaintResponse complaintResponse = new ComplaintResponse(hostelId, sDate, eDate, listComplaints.size(), listComplaintsResponse);
@@ -429,14 +432,16 @@ public class ComplaintsService {
         if (complaint == null) {
             return new ResponseEntity<>(Utils.COMPLAINT_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
+        Customers customers = customersService.getCustomerInformation(complaint.getCustomerId());
 
-        boolean users = usersService.existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(request.userId(), user.getParentId());
+        Users users = usersService.existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(request.userId(), user.getParentId());
 
-        if (!users) {
+        if (users == null) {
             return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
         complaint.setAssigneeId(request.userId());
         complaint.setAssignedDate(new Date());
+        complaint.setStatus(ComplaintStatus.ASSIGNED.name());
         complaint.setUpdatedAt(new Date());
 
         List<ComplaintUpdates> listComplaintUpdates = complaint.getComplaintUpdates();
@@ -454,9 +459,15 @@ public class ComplaintsService {
         listComplaintUpdates.add(complaintUpdates);
 
         complaintRepository.save(complaint);
+        StringBuilder userName = new StringBuilder();
+        userName.append(user.getFirstName());
+        if (user.getLastName() != null && !user.getLastName().equalsIgnoreCase("")) {
+            userName.append(" ");
+            userName.append(user.getLastName());
+        }
 
         //send a push notification
-//        customerNotificationService.addComplainUpdateStatus();
+        customerNotificationService.addComplainUpdateStatus(complaint, userName.toString(), customers.getXuid());
 
         return new ResponseEntity<>(Utils.USER_ASSIGNED, HttpStatus.OK);
     }

@@ -698,6 +698,11 @@ public class CustomersService {
                 }
             }
 
+            CustomerCredentials customerCredentials = ccs.addCustomerCredentials(customerInfo.mobileNumber());
+            if (customerCredentials != null) {
+                customers.setXuid(customerCredentials.getXuid());
+            }
+
             customersRepository.save(customers);
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -759,9 +764,12 @@ public class CustomersService {
         customers.setKycStatus(KycStatus.NOT_AVAILABLE.name());
         customers.setProfilePic(profileImage);
 
-        customersRepository.save(customers);
 
-        ccs.addCustomerCredentials(customerInfo.mobile());
+        CustomerCredentials customerCredentials = ccs.addCustomerCredentials(customerInfo.mobile());
+        if (customerCredentials != null) {
+            customers.setXuid(customerCredentials.getXuid());
+        }
+        customersRepository.save(customers);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
