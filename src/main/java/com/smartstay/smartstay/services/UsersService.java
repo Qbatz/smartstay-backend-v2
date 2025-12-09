@@ -801,4 +801,11 @@ public class UsersService {
     public List<Users> findByListOfUserIds(List<String> assignes) {
         return userRepository.findAllById(assignes);
     }
+
+    public List<String> findAdminUsers(List<String> userIds) {
+        return userRepository.findAdminUsersBasedOnHostelIdFromListUsers(userIds)
+                .stream()
+                .map(Users::getUserId)
+                .toList();
+    }
 }

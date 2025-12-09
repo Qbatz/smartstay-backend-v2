@@ -15,7 +15,9 @@ public class ComplaintUpdates {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long updateId;
+//    from complaint status enum
     String status;
+    //from user type enum
     String userType;
     String updatedBy;
     Date createdAt;

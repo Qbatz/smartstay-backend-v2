@@ -940,7 +940,7 @@ public class InvoiceV1Service {
                 fullName.append(customers.getFirstName());
             }
             if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
-                fullName.append(", ");
+                fullName.append(" ");
                 fullName.append(customers.getLastName());
             }
             if (customers.getHouseNo() != null) {
@@ -1000,6 +1000,12 @@ public class InvoiceV1Service {
                     .stream()
                     .map(i -> {
                         Deductions d = new Deductions();
+                        if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name())) {
+                            i.setInvoiceItem(i.getOtherItem());
+                        }
+                        else {
+                            i.setInvoiceItem(i.getInvoiceItem());
+                        }
                         d.setType(i.getInvoiceItem());
                         d.setAmount(i.getAmount());
 
@@ -1037,6 +1043,7 @@ public class InvoiceV1Service {
                     hostelPhone,
                     "91",
                     InvoiceType.SETTLEMENT.name(),
+                    customers.getHostelId(),
                     customerInfo,
                     stayInfo,
                     accountDetails,
@@ -1100,6 +1107,7 @@ public class InvoiceV1Service {
                 hostelEmail,
                 hostelPhone,
                         "91",
+                        customers.getHostelId(),
                         customerInfo,
                         stayInfo,
                         invoiceInfo,

@@ -85,7 +85,7 @@ public class NotificationService {
         adminNotifications.setHostelId(hostelId);
         adminNotifications.setSourceId(null);
         adminNotifications.setDescription("New rental invoice is generated successfully. ");
-        adminNotifications.setTitle("Recurring invoice has beed generated.");
+        adminNotifications.setTitle("Recurring invoice has been generated.");
         adminNotifications.setUserType(UserType.ALL_EXCEPT_TENANT.name());
         adminNotifications.setCreatedAt(new Date());
         adminNotifications.setActive(true);

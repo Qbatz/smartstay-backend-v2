@@ -120,6 +120,10 @@ public interface UserRepository extends JpaRepository<Users, String> {
 
     Users findByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(String userId,String parentId);
 
+    @Query("""
+            SELECT u FROM Users u WHERE u.userId IN (:listUsers) AND u.roleId=1 OR u.roleId=2
+            """)
+    List<Users> findAdminUsersBasedOnHostelIdFromListUsers(List<String> listUsers);
 
 
 

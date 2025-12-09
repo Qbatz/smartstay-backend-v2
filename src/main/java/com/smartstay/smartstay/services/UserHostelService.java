@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.UserHostel;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.repositories.UserHostelRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -14,16 +15,20 @@ public class UserHostelService {
 
     @Autowired
     private UserHostelRepository userHostelRepo;
+    private UsersService usersService;
+
+    @Autowired
+    public void setUsersService(@Lazy UsersService usersService) {
+        this.usersService = usersService;
+    }
 
     public void mapUserHostel(String userId, String parentId, String hostelId) {
-        List<UserHostel> listHostels = userHostelRepo.findAllByHostelId(hostelId);
         UserHostel uh = new UserHostel();
         uh.setUserId(userId);
         uh.setHostelId(hostelId);
         uh.setParentId(parentId);
-        listHostels.add(uh);
 
-        userHostelRepo.saveAll(listHostels);
+        userHostelRepo.save(uh);
     }
 
     public List<UserHostel> listAllUserHostel(String parentId, String userId) {
@@ -59,13 +64,18 @@ public class UserHostelService {
 
     public int addHostelToExistingUsers(String parentId, String hostelId) {
         List<UserHostel> listUserHostel = listAllUsers(parentId);
+        List<String> adminIds = listUserHostel
+                .stream()
+                .map(UserHostel::getUserId)
+                .toList();
+        List<String> adminUsers = usersService.findAdminUsers(adminIds);
         List<UserHostel> addHostelToExistingUsers = new ArrayList<>();
 
         if (!listUserHostel.isEmpty()) {
-            listUserHostel.forEach(item -> {
+            adminUsers.forEach(item -> {
                 UserHostel uh = new UserHostel();
                 uh.setParentId(parentId);
-                uh.setUserId(item.getUserId());
+                uh.setUserId(item);
                 uh.setHostelId(hostelId);
 
                 addHostelToExistingUsers.add(uh);

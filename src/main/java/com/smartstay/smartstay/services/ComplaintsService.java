@@ -173,7 +173,7 @@ public class ComplaintsService {
 
     public ResponseEntity<?> addComplaintComments(@RequestBody AddComplaintComment request,int complaintId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
@@ -182,14 +182,13 @@ public class ComplaintsService {
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
         ComplaintsV1 complaintExist = complaintRepository.findByComplaintIdAndParentId(complaintId, user.getParentId());
         if (complaintExist == null){
-            return new ResponseEntity<>("Complaint not found.", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
         }
 
         ComplaintComments complaintComments = new ComplaintComments();
@@ -202,13 +201,19 @@ public class ComplaintsService {
         complaintComments.setCreatedAt(new Date());
         commentsRepository.save(complaintComments);
 
+        Customers customers = customersService.getCustomerInformation(complaintExist.getCustomerId());
+        if (customers != null) {
+            customerNotificationService.sendNotifications(customers.getXuid(), complaintExist, request.message(), user.getFirstName()+" "+user.getLastName());
+        }
+
+
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
 
     public ResponseEntity<?> updateComplaints(int complaintId, UpdateComplaint request) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
         String userId = authentication.getName();
@@ -235,7 +240,7 @@ public class ComplaintsService {
 
     public ResponseEntity<?> updateComplaintStatus(int complaintId, UpdateStatus request) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
         String userId = authentication.getName();
@@ -255,9 +260,48 @@ public class ComplaintsService {
             return new ResponseEntity<>("Complaint not found.", HttpStatus.NOT_FOUND);
         }
 
+        StringBuilder fullName = new StringBuilder();
+        if (user.getFirstName() != null) {
+            fullName.append(user.getFirstName());
+        }
+        if (user.getLastName() != null && !user.getLastName().trim().equalsIgnoreCase("")) {
+            fullName.append(" ");
+            fullName.append(user.getLastName());
+        }
+
+        Customers customers = customersService.getCustomerInformation(complaint.getCustomerId());
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        List<ComplaintUpdates> listComplaintUpdates = complaint.getComplaintUpdates();
+        if (listComplaintUpdates == null) {
+            listComplaintUpdates = new ArrayList<>();
+        }
+        String status = null;
+        if (request.status().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name())) {
+            status = ComplaintStatus.ASSIGNED.name();
+        }
+        else if (request.status().equalsIgnoreCase(ComplaintStatus.PENDING.name())) {
+            status = ComplaintStatus.PENDING.name();
+        }
+        else if (request.status().equalsIgnoreCase(ComplaintStatus.RESOLVED.name())) {
+            status = ComplaintStatus.RESOLVED.name();
+        }
+
+        ComplaintUpdates cu = new ComplaintUpdates();
+        cu.setUpdatedBy(userId);
+        cu.setComplaint(complaint);
+        cu.setUserType(UserType.ADMIN.name());
+        cu.setCreatedAt(new Date());
+        cu.setStatus(status);
+        listComplaintUpdates.add(cu);
+
         complaint.setStatus(request.status());
         complaint.setUpdatedAt(new Date());
         complaintRepository.save(complaint);
+
+        customerNotificationService.addComplainUpdateStatus(complaint, fullName.toString(), customers.getXuid(), request.status());
 
         return new ResponseEntity<>(Utils.STATUS_UPDATED, HttpStatus.OK);
     }
@@ -355,7 +399,7 @@ public class ComplaintsService {
 
     public ResponseEntity<?> getComplaintById(int complaintId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
@@ -407,7 +451,8 @@ public class ComplaintsService {
                 )
                 .toList();
 
-//        dto.setComments(comments);
+
+        dto.setComments(comments);
         return new ResponseEntity<>(dto, HttpStatus.OK);
     }
 
@@ -467,7 +512,7 @@ public class ComplaintsService {
         }
 
         //send a push notification
-        customerNotificationService.addComplainUpdateStatus(complaint, userName.toString(), customers.getXuid());
+        customerNotificationService.addComplainUpdateStatus(complaint, userName.toString(), customers.getXuid(), ComplaintStatus.ASSIGNED.name());
 
         return new ResponseEntity<>(Utils.USER_ASSIGNED, HttpStatus.OK);
     }

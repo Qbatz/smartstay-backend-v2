@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
+import com.smartstay.smartstay.Exceptions.SmartStayException;
 import com.smartstay.smartstay.dao.ComplaintsV1;
 import com.smartstay.smartstay.dao.CustomerCredentials;
 import com.smartstay.smartstay.dao.CustomersConfig;
@@ -60,10 +61,33 @@ public class FCMNotificationService {
                 try {
                     tenantMessaging.send(message);
                 } catch (FirebaseMessagingException e) {
-                    throw new RuntimeException(e);
+//                    throw new SmartStayException("Unable to send messages");
                 }
             }
         }
 
+    }
+
+    public void addCommentNotification(String xuid, ComplaintsV1 complaintsV1, String comment, String name) {
+        CustomerCredentials customerCredentials = customerCredentialsService.findByXuid(xuid);
+        if (customerCredentials != null) {
+            if (customerCredentials.getFcmToken() != null) {
+                HashMap<String, String> payloads = new HashMap<>();
+                payloads.put("title", "Update on your complaint");
+                payloads.put("type", NotificationMessage.COMPLAINT_ASSIGN.name());
+                payloads.put("description", name +  " has added a comment on your complaint.");
+
+                Message message = Message.builder()
+                        .setToken(customerCredentials.getFcmToken())
+                        .putAllData(payloads)
+                        .build();
+
+                try {
+                    tenantMessaging.send(message);
+                } catch (FirebaseMessagingException e) {
+//                    throw new SmartStayException("Unable to send messages");
+                }
+            }
+        }
     }
 }
