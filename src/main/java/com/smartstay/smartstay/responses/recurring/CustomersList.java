@@ -6,5 +6,9 @@ public record CustomersList(String customerId,
                             String fullName,
                             String initials,
                             String profilePic,
-                            boolean currentStatus) {
+                            boolean currentStatus,
+                            String lastInvoiceNumber,
+                            String lastInvoiceDate,
+                            String nextInvoiceDate,
+                            Double invoiceAmount) {
 }

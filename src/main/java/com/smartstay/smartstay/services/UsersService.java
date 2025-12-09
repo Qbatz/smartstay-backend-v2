@@ -638,8 +638,8 @@ public class UsersService {
         return userRepository.findByRoleIdAndIsActiveTrueAndIsDeletedFalse(roleId);
     }
 
-    public Boolean existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(String userId,String parentId) {
-        return userRepository.existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(userId,parentId);
+    public Users existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(String userId,String parentId) {
+        return userRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(userId,parentId);
     }
 
     public ResponseEntity<?> updateAdminProfile(String adminId, EditAdmin payloads, MultipartFile profilePic) {
@@ -796,5 +796,9 @@ public class UsersService {
                 });
 
         return listUsers;
+    }
+
+    public List<Users> findByListOfUserIds(List<String> assignes) {
+        return userRepository.findAllById(assignes);
     }
 }

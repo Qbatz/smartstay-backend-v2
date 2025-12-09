@@ -38,6 +38,9 @@ public class  ComplaintsV1 {
     @OneToMany(mappedBy = "complaint", orphanRemoval = true, cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     List<ComplaintComments> complaintComments;
 
-    @OneToMany(mappedBy = "complaints", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ComplaintImages> additionalImages;
+    @OneToMany(mappedBy = "complaints", orphanRemoval = true, cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    List<ComplaintImages> additionalImages;
+
+    @OneToMany(mappedBy = "complaint", orphanRemoval = true, cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    List<ComplaintUpdates> complaintUpdates;
 }

@@ -3,6 +3,7 @@ package com.smartstay.smartstay.Wrappers.amenity;
 import com.smartstay.smartstay.dao.AmenitiesV1;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.CustomersAmenity;
+import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.repositories.CustomerAmenityRepository;
 import com.smartstay.smartstay.responses.amenitity.AmenityInfoProjection;
 import com.smartstay.smartstay.responses.amenitity.AmenityResponse;
@@ -50,22 +51,57 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                 .filter(i -> common.contains(i.getCustomerId()))
                 .map(i -> {
                     StringBuilder fullName = new StringBuilder();
+                    StringBuilder initials = new StringBuilder();
+
                     if (i.getFirstName() != null) {
+                        initials.append(i.getFirstName().toUpperCase().charAt(0));
                         fullName.append(i.getFirstName());
                     }
                     if (i.getLastName() != null && !i.getLastName().equalsIgnoreCase("")) {
                         fullName.append(" ");
                         fullName.append(i.getLastName());
+                        initials.append(i.getLastName().toUpperCase().charAt(0));
+                    }
+                    else {
+                        if (i.getFirstName() != null && i.getFirstName().length() > 1) {
+                            initials.append(i.getFirstName().toLowerCase().charAt(1));
+                        }
                     }
 
-                    return new CustomerResponse(i.getCustomerId(), fullName.toString());
+                    return new CustomerResponse(i.getCustomerId(), fullName.toString(), initials.toString(), i.getProfilePic(), false);
                 })
                 .toList();
 
         List<CustomerResponse> unassigned = listCustomers
                 .stream()
                 .filter(i -> unique.contains(i.getCustomerId()))
-                .map(i -> new CustomerResponse(i.getCustomerId(), i.getFirstName()))
+                .map(i -> {
+                    boolean canAssign = true;
+
+                    StringBuilder fullName = new StringBuilder();
+                    StringBuilder initials = new StringBuilder();
+
+                    if (i.getFirstName() != null) {
+                        initials.append(i.getFirstName().toUpperCase().charAt(0));
+                        fullName.append(i.getFirstName());
+                    }
+                    if (i.getLastName() != null && !i.getLastName().trim().equalsIgnoreCase("")) {
+                        fullName.append(" ");
+                        fullName.append(i.getLastName());
+                        initials.append(i.getLastName().toUpperCase().charAt(0));
+                    }
+                    else {
+                        if (i.getFirstName() != null && i.getFirstName().length() > 1) {
+                            initials.append(i.getFirstName().toLowerCase().charAt(1));
+                        }
+                    }
+
+
+                    if (i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+                        canAssign = false;
+                    }
+                    return new CustomerResponse(i.getCustomerId(), fullName.toString(), initials.toString(), i.getProfilePic(), canAssign);
+                })
                 .toList();
 
         return new AmenityResponse(

@@ -41,7 +41,6 @@ public class ComplaintsController {
         return complaintsService.assignUser(complaintId, request);
     }
 
-
     @PutMapping("/update-status/{complaintId}")
     public ResponseEntity<?> updateComplaintStatus(@PathVariable("complaintId") int complaintId, @Valid @RequestBody UpdateStatus request) {
         return complaintsService.updateComplaintStatus(complaintId, request);

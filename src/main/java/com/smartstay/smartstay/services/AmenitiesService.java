@@ -7,6 +7,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.amenity.*;
+import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
 import com.smartstay.smartstay.repositories.AmentityRepository;
 import com.smartstay.smartstay.repositories.CustomerAmenityRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
@@ -364,6 +365,9 @@ public class AmenitiesService {
         if (customers.getCurrentStatus().equals(CustomerStatus.BOOKED.name())) {
             return new ResponseEntity<>(Utils.AMENITY_CNNOT_ADD_BOOKED_ERROR, HttpStatus.BAD_REQUEST);
         }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.AMENITY_CANNOT_ADD_SETTLEMENT_GENERATED_CUSTOMERS, HttpStatus.BAD_REQUEST);
+        }
         if (assignCustomer.newAmenities() == null) {
             return new ResponseEntity<>(Utils.ATLEAST_ONE_AMENITY_REQUIRED, HttpStatus.BAD_REQUEST);
         }
@@ -444,5 +448,9 @@ public class AmenitiesService {
         }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+    }
+
+    public List<AmenitiesV1> findByAmenityIds(List<String> requestedAmenityIds) {
+        return amentityRepository.findAllById(requestedAmenityIds);
     }
 }

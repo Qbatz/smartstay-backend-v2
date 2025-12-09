@@ -14,14 +14,20 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CustomerCredentials {
+public class AmenityRequest {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String xuid;
-    private String customerMobile;
-    private String customerPin;
-    private boolean isPinVerified;
-    private String defaultHostel;
-    private String fcmToken;
-    private Date createdAt;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    long amenityRequestId;
+    String hostelId;
+    String customerId;
+    String amenityId;
+    Date requestedDate;
+    Date startFrom;
+    String currentStatus;
+    Boolean isActive;
+    String updatedBy;
+    String description;
+    Date createdAt;
+    Date updatedAt;
 }
+

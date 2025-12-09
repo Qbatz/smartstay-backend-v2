@@ -15,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBedHistory, Long> {
     @Query(value = """
-            SELECT * FROM customers_bed_history WHERE customer_id=:customerId and start_date <= DATE(:endDate) and (end_date IS NULL OR end_date >= (:startDate))
+            SELECT * FROM customers_bed_history WHERE customer_id=:customerId and DATE(start_date) <= DATE(:endDate) and (end_date IS NULL OR DATE(end_date) >= DATE(:startDate))
             ORDER BY start_date DESC LIMIT 1
             """, nativeQuery = true)
     CustomersBedHistory findByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
@@ -71,5 +71,15 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
             SELECT * FROM customers_bed_history WHERE end_date IS NULL AND type in ('CHECK_IN', 'REASSIGNED') AND customer_id in (:customerId)
             """, nativeQuery = true)
     List<CustomersBedHistory> findCurrentBed(@Param("customerId") List<String> customerId);
+
+    @Query(value = """
+    SELECT cbh.*  FROM customers_bed_history cbh INNER JOIN (
+        SELECT customer_id, MAX(id) AS latest_id
+        FROM customers_bed_history
+        WHERE customer_id IN (:customerIds)
+        GROUP BY customer_id
+    ) t ON cbh.id = t.latest_id
+    """, nativeQuery = true)
+    List<CustomersBedHistory> findLatestBedHistoryForCustomers(@Param("customerIds") List<String> customerIds);
 }
 

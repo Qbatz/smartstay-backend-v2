@@ -6,6 +6,7 @@ import com.smartstay.smartstay.payloads.account.CreateAccount;
 import com.smartstay.smartstay.payloads.account.Login;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
+import com.smartstay.smartstay.services.FCMNotificationService;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -25,6 +26,8 @@ public class UsersController {
 
     @Autowired
     UsersService userService;
+    @Autowired
+    FCMNotificationService fcmNotificationService;
 
     @PostMapping("")
     public ResponseEntity<AdminUserResponse> createAccount(@Valid @RequestBody CreateAccount createAccount) {
@@ -62,6 +65,11 @@ public class UsersController {
     public ResponseEntity<?> getTimezone() {
         ZonedDateTime now = ZonedDateTime.now();
         return new ResponseEntity<>(now, HttpStatus.OK);
+    }
+
+    @PostMapping("/fcm/send")
+    public ResponseEntity<?> sendMessage() {
+        return fcmNotificationService.sendTestMessage();
     }
 
 

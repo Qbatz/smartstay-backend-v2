@@ -77,12 +77,17 @@ public class BookingsService {
     private CustomersBedHistoryService customersBedHistoryService;
     @Autowired
     private RentHistoryService rentHistoryService;
-
+    private CustomersConfigService customersConfigService;
     private HostelService hostelService;
 
     @Autowired
     public void setBedsService(@Lazy BedsService bedsService) {
         this.bedsService = bedsService;
+    }
+
+    @Autowired
+    public void setCustomersConfigService(@Lazy CustomersConfigService customersConfigService) {
+        this.customersConfigService = customersConfigService;
     }
 
     @Autowired
@@ -642,7 +647,7 @@ public class BookingsService {
         bookingsV1.setCheckoutDate(new Date());
         bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
         bookingsRepository.save(bookingsV1);
-
+        customersConfigService.disableRecurring(customerId);
 
         return new ResponseEntity<>(HttpStatus.OK);
 

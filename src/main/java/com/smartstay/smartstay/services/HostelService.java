@@ -842,5 +842,9 @@ public class HostelService {
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
+
+    public BillingDates getNextBillingDates(String hostelId) {
+        return hostelConfigService.getNextMonthBillingDates(hostelId);
+    }
 }
 

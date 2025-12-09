@@ -7,23 +7,21 @@ import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Entity
 @Data
-public class ComplaintImages {
-
+@AllArgsConstructor
+@NoArgsConstructor
+public class ComplaintUpdates {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-    private String imageUrl;
-    private String createdBy;
-    private Date createdAt;
-    private Date updatedAt;
-    private Boolean isActive;
-    private Boolean isDeleted;
+    Long updateId;
+    String status;
+    String userType;
+    String updatedBy;
+    Date createdAt;
 
     @ManyToOne
     @JoinColumn(name = "complaint_id")
-    private ComplaintsV1 complaints;
+    ComplaintsV1 complaint;
+
 }

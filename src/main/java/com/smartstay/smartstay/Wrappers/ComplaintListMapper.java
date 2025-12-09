@@ -1,9 +1,7 @@
 package com.smartstay.smartstay.Wrappers;
 
-import com.smartstay.smartstay.dao.ComplaintComments;
-import com.smartstay.smartstay.dao.ComplaintTypeV1;
-import com.smartstay.smartstay.dao.ComplaintsV1;
-import com.smartstay.smartstay.dao.Customers;
+import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
 import com.smartstay.smartstay.dto.room.RoomInfo;
@@ -25,13 +23,18 @@ import java.util.stream.Collectors;
 public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResponseDto> {
 
     List<Customers> customersList = null;
-    List<RoomInfo> roomInfos = null;
     List<ComplaintTypeV1> complaintTypes = null;
+    List<BedDetails> listBedDetails = null;
+    List<CustomersBedHistory> listCustomerBedHistory = null;
+    List<Users> users = null;
 
-    public ComplaintListMapper(List<Customers> customersList, List<RoomInfo> roomInfo, List<ComplaintTypeV1> complaintTypes) {
+    public ComplaintListMapper(List<Customers> customersList, List<ComplaintTypeV1> complaintTypes, List<BedDetails> bedDetails, List<CustomersBedHistory> listCustomerBedHistory, List<Users> listUsers) {
         this.customersList = customersList;
-        this.roomInfos = roomInfo;
         this.complaintTypes = complaintTypes;
+        this.listBedDetails = bedDetails;
+        this.listCustomerBedHistory = listCustomerBedHistory;
+        this.users = listUsers;
+
     }
     @Override
     public ComplaintResponseDto apply(ComplaintsV1 complaintsV1) {
@@ -44,9 +47,10 @@ public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResp
         String floorName = null;
         String bedName = null;
         String complaintTypeName = null;
+        StringBuilder assigneeName = new StringBuilder();
 
-        if (roomInfos != null && complaintsV1.getRoomId() != null) {
-            RoomInfo roomInfo = roomInfos
+        if (listBedDetails != null && complaintsV1.getRoomId() != null && complaintsV1.getRoomId() != 0 ) {
+            BedDetails roomInfo = listBedDetails
                     .stream()
                     .filter(i -> i.getRoomId().equals(complaintsV1.getRoomId()))
                     .findFirst()
@@ -55,6 +59,29 @@ public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResp
             if (roomInfo != null) {
                 roomName = roomInfo.getRoomName();
                 floorName = roomInfo.getFloorName();
+                bedName = roomInfo.getBedName();
+            }
+        }
+        else {
+            if (complaintsV1.getRoomId() == null || complaintsV1.getRoomId() == 0) {
+                CustomersBedHistory cbh = listCustomerBedHistory.stream()
+                        .filter(i -> i.getCustomerId().equalsIgnoreCase(complaintsV1.getCustomerId()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (cbh != null) {
+                    BedDetails bedDetails = listBedDetails
+                            .stream()
+                            .filter(i -> i.getBedId().equals(cbh.getBedId()))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (bedDetails != null) {
+                        bedName = bedDetails.getBedName();
+                        floorName = bedDetails.getFloorName();
+                        roomName = bedDetails.getRoomName();
+                    }
+                }
             }
         }
 
@@ -96,6 +123,23 @@ public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResp
             complaintTypeName = type.getComplaintTypeName();
         }
 
+        if (users != null) {
+            Users usr = users
+                    .stream()
+                    .filter(i -> i.getUserId().equalsIgnoreCase(complaintsV1.getAssigneeId()))
+                    .findFirst()
+                    .orElse(null);
+            if (usr != null) {
+                if (usr.getFirstName() != null) {
+                    assigneeName.append(usr.getFirstName());
+                }
+                if (usr.getLastName() != null && !usr.getLastName().trim().equalsIgnoreCase("")) {
+                    assigneeName.append(" ");
+                    assigneeName.append(usr.getLastName());
+                }
+            }
+        }
+
 
 
 
@@ -110,12 +154,14 @@ public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResp
         complaintResponseDto.setComplaintDate(complaintsV1.getComplaintDate());
         complaintResponseDto.setDescription(complaintsV1.getDescription());
         complaintResponseDto.setAssigneeId(complaintsV1.getAssigneeId());
+        complaintResponseDto.setAssigneeName(assigneeName.toString());
         complaintResponseDto.setAssignedDate(complaintsV1.getAssignedDate());
         complaintResponseDto.setComplaintTypeId(complaintsV1.getComplaintTypeId());
         complaintResponseDto.setComplaintTypeName(complaintTypeName);
         complaintResponseDto.setStatus(complaintsV1.getStatus());
         complaintResponseDto.setRoomName(roomName);
         complaintResponseDto.setFloorName(floorName);
+        complaintResponseDto.setBedName(bedName);
 
 
 

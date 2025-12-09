@@ -24,4 +24,8 @@ public class CustomerCredentialsService {
 
         return customerCredentialsRepository.save(newCustomerCredentils);
     }
+
+    public CustomerCredentials findByXuid(String xuid) {
+        return customerCredentialsRepository.findByXuid(xuid);
+    }
 }

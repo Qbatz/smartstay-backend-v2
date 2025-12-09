@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Date;
+import java.util.List;
 
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
@@ -17,4 +18,5 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             and DATE(plan_ends_at) >=DATE(:todaysDate) LIMIT 1
             """, nativeQuery = true)
     Subscription checkSubscriptionForToday(@Param("hostelId") String hostelId, @Param("todaysDate") Date todaysDate);
+
 }

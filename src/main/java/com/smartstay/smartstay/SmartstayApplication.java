@@ -233,6 +233,7 @@ public class SmartstayApplication {
 		};
 	}
 
+
 	/**
 	 *
 	 *
@@ -297,5 +298,46 @@ public class SmartstayApplication {
 		};
 	}
 	 */
+
+	/**
+	 *
+	 *
+	 * @param customreCredentials
+	 * @param customersRepository
+	 * @return
+	 *
+
+	@Bean
+	CommandLineRunner mapXuidCustomer(CustomerCredentialsRepository customreCredentials, CustomersRepository customersRepository) {
+		return args -> {
+			List<Customers> listAllCustomers = customersRepository.findAll();
+			List<String> mobiles = listAllCustomers
+					.stream()
+					.filter(Objects::nonNull)
+					.map(Customers::getMobile)
+					.toList();
+
+			List<CustomerCredentials> listCustomerCredentials = customreCredentials.findByCustomerMobileIn(mobiles);
+			List<Customers> customers = listCustomerCredentials
+					.stream()
+					.map(i -> {
+                        Customers cus = listAllCustomers
+								.stream()
+								.filter(itm -> itm.getMobile().equalsIgnoreCase(i.getCustomerMobile()))
+								.findFirst()
+								.get();
+
+						cus.setXuid(i.getXuid());
+						return cus;
+
+					})
+					.toList();
+
+			customersRepository.saveAll(customers);
+
+		};
+	}
+
+	**/
 
 }

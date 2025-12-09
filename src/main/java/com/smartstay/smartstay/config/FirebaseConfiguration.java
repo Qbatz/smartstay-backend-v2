@@ -18,19 +18,29 @@ public class FirebaseConfiguration {
     private String ENVIRONMENT;
 
     @Bean
-    FirebaseMessaging configureFirebseMessaging() throws IOException {
+    FirebaseMessaging configureFirebase() throws IOException {
         GoogleCredentials googleCredentials = null;
+
         if (!ENVIRONMENT.equalsIgnoreCase("PROD")) {
-            googleCredentials = GoogleCredentials.fromStream(new ClassPathResource("smart-stay-tenant.json").getInputStream());
+            googleCredentials = GoogleCredentials.fromStream(new ClassPathResource("ss-admin.json").getInputStream());
         }
         else {
-            googleCredentials = GoogleCredentials.fromStream(new ClassPathResource("smart-stay-tenant.json").getInputStream());
+            googleCredentials = GoogleCredentials.fromStream(new ClassPathResource("ss-admin.json").getInputStream());
         }
 
         FirebaseOptions firebaseOptions = FirebaseOptions.builder()
                 .setCredentials(googleCredentials)
                 .build();
-        FirebaseApp firebaseApp = FirebaseApp.initializeApp(firebaseOptions);
-        return FirebaseMessaging.getInstance(firebaseApp);
+
+        FirebaseApp app;
+
+        try {
+            app = FirebaseApp.getInstance();
+        } catch (IllegalStateException e) {
+            app = FirebaseApp.initializeApp(firebaseOptions);
+        }
+
+
+        return FirebaseMessaging.getInstance(app);
     }
 }
