@@ -62,7 +62,7 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
                     yield  "Refund";
                 }
                 else {
-                    yield "Rent";
+                    yield "Settlement";
                 }
             }
             default -> "Others";

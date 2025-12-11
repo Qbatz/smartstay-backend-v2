@@ -34,7 +34,7 @@ public class HostelsController {
     HostelService hostelService;
 
     @PostMapping("")
-    public ResponseEntity<?> addHostel(@RequestPart(required = false, name = "mainImage") MultipartFile mainImage, @RequestPart(required = false, name = "additionalImages") List<MultipartFile> additionalImages, @RequestPart AddHostelPayloads payloads) {
+    public ResponseEntity<?> addHostel(@RequestPart(required = false, name = "mainImage") MultipartFile mainImage, @RequestPart(required = false, name = "additionalImages") List<MultipartFile> additionalImages, @Valid @RequestPart AddHostelPayloads payloads) {
         return hostelService.addHostel(mainImage, additionalImages, payloads);
     }
 

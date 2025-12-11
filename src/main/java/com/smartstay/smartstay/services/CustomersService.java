@@ -2396,7 +2396,7 @@ public class CustomersService {
                     .map(i -> {
                         Deductions d = new Deductions();
                         d.setAmount(i.amount());
-                        d.setType(d.getType());
+                        d.setType(i.item());
                         return d;
                     })
                     .toList();

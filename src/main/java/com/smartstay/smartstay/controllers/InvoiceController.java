@@ -52,4 +52,9 @@ public class InvoiceController {
     public ResponseEntity<?> generateRecurringInvoiceManually(@PathVariable("hostelId") String hostelId) {
         return invoiceV1Service.generateRecurringManually(hostelId);
     }
+
+    @DeleteMapping("/receipts/{hostelId}/{receiptId}")
+    public ResponseEntity<?> deleteReceipt(@PathVariable("hostelId") String hostelId, @PathVariable("receiptId") String receiptId) {
+        return invoiceV1Service.deleteReceipt(hostelId, receiptId);
+    }
 }

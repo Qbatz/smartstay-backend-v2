@@ -8,6 +8,7 @@ import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.receipts.DeleteReceipts;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.PaymentStatus;
@@ -793,5 +794,19 @@ public class TransactionService {
                     .toList();
         }
         return new ArrayList<>();
+    }
+
+    public TransactionV1 getReceiptByReceiptId(String receiptId) {
+        return transactionRespository.findByTransactionId(receiptId);
+    }
+
+    public DeleteReceipts deleteReceipts(String receiptId) {
+        TransactionV1 transactionV1 = transactionRespository.findByTransactionId(receiptId);
+
+        transactionRespository.delete(transactionV1);
+
+        return new DeleteReceipts(transactionV1.getInvoiceId(),
+                transactionV1.getPaidAmount(),
+                true);
     }
 }

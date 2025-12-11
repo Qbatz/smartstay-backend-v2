@@ -91,7 +91,7 @@ public class HostelService {
 
 //        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
 
@@ -212,7 +212,7 @@ public class HostelService {
 
     public ResponseEntity<?> fetchAllHostels() {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user", HttpStatus.OK);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.OK);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);

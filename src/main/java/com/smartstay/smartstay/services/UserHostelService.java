@@ -46,6 +46,13 @@ public class UserHostelService {
                 .toList();
     }
 
+    public List<String> listAllUsersFromHostelId(String hostelId) {
+        return userHostelRepo.findAllByHostelId(hostelId)
+                .stream()
+                .map(UserHostel::getUserId)
+                .toList();
+    }
+
 
     public List<UserHostel> findAllByHostelId(String hostelId) {
         return userHostelRepo.findAllByHostelId(hostelId);

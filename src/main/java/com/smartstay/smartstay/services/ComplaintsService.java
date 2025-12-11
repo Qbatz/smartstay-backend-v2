@@ -442,12 +442,23 @@ public class ComplaintsService {
         // fetch comments separately
         List<Map<String, Object>> commentRows = complaintRepository.getCommentsByComplaintId(dto.getComplaintId());
         List<CommentResponse> comments = commentRows.stream()
-                .map(c -> new CommentResponse(
-                        (Integer) c.get("commentId"),
-                        (Integer) c.get("complaintId"),
-                        (String) c.get("commentText"),
-                        (String) c.get("userName"),
-                        (Date) c.get("commentDate"))
+                .map(c -> {
+                    StringBuilder intials = new StringBuilder();
+                    String profilePic = null;
+                    String userName = (String)c.get("userName");
+                    String[] nameArr = userName.split(" ");
+                    if (nameArr != null && nameArr.length > 0) {
+
+                    }
+                    return new CommentResponse(
+                            (Integer) c.get("commentId"),
+                            (Integer) c.get("complaintId"),
+                            (String) c.get("commentText"),
+                            (String) c.get("userName"),
+                            (Date) c.get("commentDate"),
+                            intials.toString(),
+                            profilePic);
+                        }
                 )
                 .toList();
 
