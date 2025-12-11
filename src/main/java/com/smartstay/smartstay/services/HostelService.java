@@ -91,7 +91,7 @@ public class HostelService {
 
 //        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
 
@@ -130,25 +130,6 @@ public class HostelService {
         hostelV1.setDeleted(false);
 
 
-
-
-        //Create a CashAccount for the hostel
-//        BankingV1 bankingV1 = new BankingV1();
-//        bankingV1.setActive(true);
-//        bankingV1.setDeleted(false);
-//        bankingV1.setCreatedBy(users.getUserId());
-//        bankingV1.setCreatedAt(new Date());
-//        bankingV1.setAccountType(BankAccountType.CASH.name());
-//        bankingV1.setTransactionType(BankPurpose.BOTH.name());
-//        bankingV1.setDefaultAccount(true);
-//        BankingV1 v1 = bankingService.saveBankingData(bankingV1);
-
-
-
-//        hostelBankingMapper.addBankToHostel(hostelID, v1.getBankId());
-
-
-
         if (mainImage != null) {
             String mainImageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(mainImage), "Hostel-Images");
             hostelV1.setMainImage(mainImageUrl);
@@ -173,7 +154,7 @@ public class HostelService {
         }
 
         hostelV1Repository.save(hostelV1);
-//            mapUserHostel(userId, hostelV1.getHostelId(), users.getParentId());
+
 
         int result = userHostelService.addHostelToExistingUsers(users.getParentId(), hostelV1.getHostelId());
 
@@ -231,7 +212,7 @@ public class HostelService {
 
     public ResponseEntity<?> fetchAllHostels() {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user", HttpStatus.OK);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.OK);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);

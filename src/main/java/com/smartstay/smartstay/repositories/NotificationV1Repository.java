@@ -11,10 +11,13 @@ import java.util.List;
 
 @Repository
 public interface NotificationV1Repository extends JpaRepository<AdminNotifications, Long> {
+    @Query("""
+             SELECT an FROM AdminNotifications an WHERE an.hostelId=:hostelId ORDER BY an.createdAt DESC
+            """)
     List<AdminNotifications> findByHostelId(String hostelId);
 
     @Query("""
-            SELECT an FROM AdminNotifications an WHERE an.hostelId=:hostelId AND an.isRead=false
+            SELECT an FROM AdminNotifications an WHERE an.hostelId=:hostelId AND an.isRead=false ORDER BY an.createdAt DESC
             """)
     List<AdminNotifications> findUnReadNotifications(@Param("hostelId") String hostelId);
 }

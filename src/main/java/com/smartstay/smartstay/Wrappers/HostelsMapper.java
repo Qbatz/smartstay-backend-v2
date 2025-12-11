@@ -34,16 +34,21 @@ public class HostelsMapper implements Function<HostelV1, Hostels> {
         List<HostelImages> listImages = hostelV1.getAdditionalImages()
                 .stream()
                 .map(item -> new HostelImages(item.getImageUrl(), item.getId())).toList();
-        String[] initialsArray = hostelV1.getHostelName().split(" ");
+        String[] initialsArray = null;
         StringBuilder initials = new StringBuilder();
-        if (initialsArray.length > 1) {
-            initials.append(initialsArray[0].toUpperCase().charAt(0));
-            initials.append(initialsArray[initialsArray.length -1].toUpperCase().charAt(0));
+        if (hostelV1.getHostelName() != null) {
+            initialsArray = hostelV1.getHostelName().split(" ");
+            if (initialsArray.length > 1) {
+                initials.append(initialsArray[0].toUpperCase().charAt(0));
+                initials.append(initialsArray[initialsArray.length -1].toUpperCase().charAt(0));
+            }
+            else {
+                initials.append(initialsArray[0].toUpperCase().charAt(0));
+                initials.append(initialsArray[0].toUpperCase().charAt(1));
+            }
         }
-        else {
-            initials.append(initialsArray[0].toUpperCase().charAt(0));
-            initials.append(initialsArray[0].toUpperCase().charAt(1));
-        }
+
+
         String subscriptionEndDate = null;
         boolean isSubscriptionValid = false;
         String message = null;

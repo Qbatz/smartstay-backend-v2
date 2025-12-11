@@ -19,12 +19,12 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
     com.smartstay.smartstay.dao.ElectricityReadings findTopByRoomIdAndHostelIdOrderByEntryDateDesc(Integer roomId, String hostelId);
 
     @Query(value = """
-            SELECT MAX(er.id) as id, er.room_id as roomId, MAX(er.entry_date) as entryDate, er.bill_start_date as startDate, er.bill_end_date as endDate,
+            SELECT MAX(er.id) as id, er.room_id as roomId, MAX(er.entry_date) as entryDate, er.bill_start_date as startDate, MAX(er.bill_end_date) as endDate,
             er.current_unit_price as unitPrice, er.hostel_id as hostelId, flrs.floor_id as floorId, MAX(er.current_reading) as currentReading, 
             rms.room_name as roomName, flrs.floor_name as floorName, (select sum(e2.consumption) 
             from electricity_readings e2 where e2.room_id=er.room_id and e2.bill_start_date >= DATE(:startDate) 
             and e2.bill_end_date <= DATE(:endDate)) as consumption, 
-            (SELECT count(booking_id) FROM bookingsv1 WHERE room_id=er.room_id and current_status in ('NOTICE', 'CHECKIN') and joining_date <= DATE(:endDate) 
+            (SELECT count(booking_id) FROM bookingsv1 WHERE room_id=er.room_id and current_status in ('NOTICE', 'CHECKIN') and joining_date < DATE(:endDate) 
             and (leaving_date is null or leaving_date >= DATE(:startDate)))  as noOfTenants 
             FROM electricity_readings er LEFT OUTER JOIN rooms rms on rms.room_id=er.room_id 
             left outer join floors flrs on flrs.floor_id=rms.floor_id where er.hostel_id=:hostelId 
@@ -63,10 +63,19 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
     List<ElectricityReadingForRoom> getRoomReading(@Param("roomId") Integer roomId);
 
     @Query(value = """
-            SELECT er.entry_date as entryDate, (SELECT sum(current_reading) from electricity_readings reading where reading.entry_date=er.entry_date 
-            AND reading.hostel_id=:hostelId) as currentReading FROM electricity_readings er where er.hostel_id=:hostelId ORDER BY er.entry_date DESC LIMIT 1
+            SELECT (SELECT sum(current_reading) from electricity_readings reading where reading.entry_date=er.entry_date 
+            AND reading.hostel_id=:hostelId) as currentReading, er.entry_date as entryDate FROM electricity_readings er where er.hostel_id=:hostelId ORDER BY er.entry_date DESC LIMIT 1
             """, nativeQuery = true)
     CurrentReadings getCurrentReadings(@Param("hostelId") String hostelId);
+
+    @Query(value = """
+            SELECT (SELECT current_reading from electricity_readings e 
+            WHERE e.entry_date=MAX(er.entry_date) AND e.room_id=er.room_id) as currentReading, MAX(er.entry_date) as entryDate FROM 
+            electricity_readings er WHERE hostel_id=:hostelId GROUP BY er.room_id ORDER BY er.entry_date
+            """, nativeQuery = true)
+    List<CurrentReadings> getAllCurrentReadings(@Param("hostelId") String hostelId);
+
+
 
     @Query(value = """
             SELECT * FROM electricity_readings er where er.room_id=:roomId ORDER BY er.entry_date DESC limit 1;

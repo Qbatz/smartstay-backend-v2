@@ -333,12 +333,12 @@ public class UsersService {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = userRepository.findUserByUserId(userId);
         if (user == null) {
-            return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
         String profilePic = null;
@@ -800,5 +800,12 @@ public class UsersService {
 
     public List<Users> findByListOfUserIds(List<String> assignes) {
         return userRepository.findAllById(assignes);
+    }
+
+    public List<String> findAdminUsers(List<String> userIds) {
+        return userRepository.findAdminUsersBasedOnHostelIdFromListUsers(userIds)
+                .stream()
+                .map(Users::getUserId)
+                .toList();
     }
 }

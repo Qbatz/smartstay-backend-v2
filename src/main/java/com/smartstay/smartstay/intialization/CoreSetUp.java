@@ -292,7 +292,7 @@ public class CoreSetUp {
 //			List<Plans> listPlans = new ArrayList<>();
 //			Plans planTrial = new Plans();
 //			planTrial.setPlanName("Trial");
-//			planTrial.setDuration(28l);
+//			planTrial.setDuration(30l);
 //			planTrial.setPrice(0.0);
 //			planTrial.setDiscounts(0.0);
 //			planTrial.setPlanType(PlanType.TRIAL.name());
@@ -341,7 +341,7 @@ public class CoreSetUp {
 //			String planCode3 = Utils.generatePlanCode();
 //			Plans planBasic = new Plans();
 //			planBasic.setPlanName("Basic");
-//			planBasic.setDuration(28l);
+//			planBasic.setDuration(30l);
 //			planBasic.setPrice(599.0);
 //			planBasic.setDiscounts(0.0);
 //			planBasic.setPlanType(PlanType.BASIC.name());
@@ -391,7 +391,7 @@ public class CoreSetUp {
 //			String planCode2 = Utils.generatePlanCode();
 //			Plans planAdvance = new Plans();
 //			planAdvance.setPlanName("Advance");
-//			planAdvance.setDuration(28l);
+//			planAdvance.setDuration(30l);
 //			planAdvance.setPrice(999.0);
 //			planAdvance.setDiscounts(0.0);
 //			planAdvance.setPlanType(PlanType.ADVANCED.name());

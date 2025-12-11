@@ -1118,6 +1118,15 @@ public class CustomersService {
                     noticeDays,
                     null);
         }
+        else if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            assert bookingDetails != null;
+            long noticeDays = Utils.findNumberOfDays(bookingDetails.getNoticeDate(), bookingDetails.getRequestedCheckoutDate());
+            checkoutInfo = new CheckoutInfo(null,
+                    Utils.dateToString(bookingDetails.getRequestedCheckoutDate()),
+                    Utils.dateToString(bookingDetails.getNoticeDate()),
+                    noticeDays,
+                    null);
+        }
 
 
         List<BedHistory> listBeds = bedHistory.getCustomersBedHistory(customers.getCustomerId());
@@ -2387,7 +2396,7 @@ public class CustomersService {
                     .map(i -> {
                         Deductions d = new Deductions();
                         d.setAmount(i.amount());
-                        d.setType(d.getType());
+                        d.setType(i.item());
                         return d;
                     })
                     .toList();

@@ -27,8 +27,25 @@ public class ElectricityUsageMapper implements Function<RoomInfoForEB, Electrici
         String[] sDateArr = startDate.split("-");
         String[] eDateArr = endDate.split("-");
 
-        String sDate = String.join("/", sDateArr);
-        String eDate =  String.join("/", eDateArr);
+        StringBuilder sDate = new StringBuilder();
+        StringBuilder eDate = new StringBuilder();
+
+        for (int i = sDateArr.length; i>0; i-- ) {
+            sDate.append(sDateArr[i - 1]);
+            if ((i - 1) != 0) {
+                sDate.append("/");
+            }
+        }
+        for (int i = eDateArr.length; i>0; i-- ) {
+            eDate.append(eDateArr[i - 1]);
+            if ((i - 1) != 0) {
+                eDate.append("/");
+            }
+
+        }
+
+//        String sDate = String.join("/", sDateArr);
+//        String eDate =  String.join("/", eDateArr);
 
         return new ElectricityUsage(roomInfoForEB.hostelId(),
                 0,
@@ -43,7 +60,7 @@ public class ElectricityUsageMapper implements Function<RoomInfoForEB, Electrici
                 0.0,
                 0.0,
                 roomInfoForEB.noOfTenants().intValue(),
-                sDate,
-                eDate);
+                sDate.toString(),
+                eDate.toString());
     }
 }
