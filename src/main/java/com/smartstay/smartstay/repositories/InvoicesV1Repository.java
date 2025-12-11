@@ -152,7 +152,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findAllRentalInvoicesExceptCurrentMonth(String customerId, String hostelId, Date currentMonthStartDate);
 
     @Query(value = """
-            SELECT * FROM invoicesv1 i WHERE (i.customer_id, i.invoice_start_date) IN (SELECT customer_id, MAX(invoice_generated_date)
+            SELECT * FROM invoicesv1 i WHERE (i.customer_id, i.invoice_start_date) IN (SELECT customer_id, MAX(invoice_start_date)
                     FROM invoicesv1 WHERE customer_id IN :customerIds GROUP BY customer_id)
             """, nativeQuery = true)
     List<InvoicesV1> findLatestInvoicesByCustomerIds(@Param("customerIds") List<String> customerIds);

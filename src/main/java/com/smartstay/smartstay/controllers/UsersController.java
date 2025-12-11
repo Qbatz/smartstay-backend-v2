@@ -67,11 +67,6 @@ public class UsersController {
         return new ResponseEntity<>(now, HttpStatus.OK);
     }
 
-    @PostMapping("/fcm/send")
-    public ResponseEntity<?> sendMessage() {
-        return fcmNotificationService.sendTestMessage();
-    }
-
 
 
 }

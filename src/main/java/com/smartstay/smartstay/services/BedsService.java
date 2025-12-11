@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.BedsMapper;
 import com.smartstay.smartstay.Wrappers.FreeBedsMapper;
 import com.smartstay.smartstay.Wrappers.beds.BedInitializationMapper;
+import com.smartstay.smartstay.Wrappers.beds.CustomersTenantMapper;
 import com.smartstay.smartstay.Wrappers.beds.InitializeBedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
@@ -65,30 +66,6 @@ public class BedsService {
     @Autowired
     public void setCustomersService(@Lazy CustomersService customersService) {
         this.customersService = customersService;
-    }
-
-    public ResponseEntity<?> getAllBeds(int roomId) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        String userId = authentication.getName();
-        Users user = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
-        if (rolesV1 == null) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId, user.getParentId());
-        List<Integer> listBedId = listBeds
-                .stream()
-                .map(Beds::getBedId)
-                .toList();
-        List<FloorNameRoomName> nameMapping = bedsRepository.getBedNameRoomName(listBedId);
-
-        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper(nameMapping, null, null).apply(item)).toList();
-        return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getAllBedsNew(int roomId) {
@@ -163,7 +140,7 @@ public class BedsService {
         }
 
         TenantInfo currentTenantInfo = null;
-        TenantInfo newTenantInfo = null;
+        List<TenantInfo> newTenantInfo = new ArrayList<>();
 
         if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) || beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             isOccupied = true;
@@ -178,6 +155,7 @@ public class BedsService {
                 StringBuilder initials = new StringBuilder();
                 String joiningDate = null;
                 String bookingDate = null;
+                Double bookingAmount = 0.0;
                 String mobile = null;
                 double advance = 0.0;
                 Double rentAmount = null;
@@ -186,6 +164,8 @@ public class BedsService {
                 int totalInvoice = 0;
                 String leavingDate = null;
                 String currentStatus = BookingStatus.CHECKIN.name();
+
+                bookingAmount = bookingsV1.getBookingAmount();
 
                 totalInvoice = invoiceService.findAllRentalInvoicesAmountExceptCurrentMonth(customers.getCustomerId(), customers.getHostelId());
                 InvoicesV1 latestInvoices = invoiceService.findLatestInvoice(customers.getCustomerId());
@@ -239,6 +219,7 @@ public class BedsService {
                         initials.toString(),
                         joiningDate,
                         bookingDate,
+                        bookingAmount,
                         mobile,
                         advance,
                         rentAmount,
@@ -252,71 +233,20 @@ public class BedsService {
         }
         if (beds.isBooked()) {
             hasBooking = true;
-            BookingsV1 bookingsV1 = bookingService.getBookingInfoByBedId(beds.getBedId());
+            List<BookingsV1> bookingsV1 = bookingService.getBookingInfoByBedId(beds.getBedId());
             if (bookingsV1 != null) {
-                Customers customers = customersService.getCustomerInformation(bookingsV1.getCustomerId());
-                String tenantId = null;
-                String firstName = null;
-                String lastName = null;
-                String profilePic = null;
-                StringBuilder fullName = new StringBuilder();
-                StringBuilder initials = new StringBuilder();
-                String joiningDate = null;
-                String bookingDate = null;
-                String mobile = null;
-                double advance = 0.0;
-                Double rentAmount = null;
-                Double lastInvoiceAmount = null;
-                String lastInvoiceNumber = null;
-                int totalInvoice = 0;
-                String leavingDate = null;
-                String currentStatus = BookingStatus.BOOKED.name();
-
-                joiningDate = Utils.dateToString(bookingsV1.getExpectedJoiningDate());
-                bookingDate = Utils.dateToString(bookingsV1.getBookingDate());
-                rentAmount = bookingsV1.getRentAmount();
-
-                if (customers != null) {
-                    tenantId = customers.getCustomerId();
-                    firstName = customers.getFirstName();
-                    lastName = customers.getLastName();
-                    profilePic = customers.getProfilePic();
-                    mobile = customers.getMobile();
-
-                    if (customers.getFirstName() != null) {
-                        fullName.append(customers.getFirstName());
-                        initials.append(customers.getFirstName().toUpperCase().charAt(0));
-                    }
-                    if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
-                        fullName.append(" ");
-                        fullName.append(customers.getLastName());
-                        initials.append(customers.getLastName().toUpperCase().charAt(0));
-                    }
-                    else if (customers.getFirstName() != null) {
-                        if (customers.getFirstName().length() > 1) {
-                            initials.append(customers.getFirstName().toUpperCase().charAt(1));
-                        }
-                    }
-
+                List<String> customerIds = bookingsV1
+                        .stream()
+                        .map(BookingsV1::getCustomerId)
+                        .toList();
+                List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+                if (listCustomers != null) {
+                    newTenantInfo.addAll(listCustomers
+                            .stream()
+                            .map(i -> new CustomersTenantMapper(bookingsV1).apply(i))
+                            .toList());
                 }
 
-                newTenantInfo = new TenantInfo(tenantId,
-                        firstName,
-                        lastName,
-                        fullName.toString(),
-                        profilePic,
-                        initials.toString(),
-                        joiningDate,
-                        bookingDate,
-                        mobile,
-                        advance,
-                        rentAmount,
-                        lastInvoiceAmount,
-                        lastInvoiceNumber,
-                        totalInvoice,
-                        leavingDate,
-                        currentStatus,
-                        Utils.COUNTRY_CODE);
             }
         }
 
@@ -342,7 +272,7 @@ public class BedsService {
 
     public ResponseEntity<?> updateBedById(int bedId, UpdateBed updateBed) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
@@ -364,7 +294,7 @@ public class BedsService {
 
         if (updateBed.bedName() != null && !updateBed.bedName().isEmpty()) {
             int duplicateCount = bedsRepository.countByBedNameAndBedId(
-                    user.getParentId(), bedId, existingBed.getRoomId()
+                    updateBed.bedName(), bedId, existingBed.getRoomId()
             );
             if (duplicateCount > 0) {
                 return new ResponseEntity<>("Bed name already exists in this room", HttpStatus.CONFLICT);
@@ -387,7 +317,7 @@ public class BedsService {
 
     public ResponseEntity<?> addBed(AddBed addBed) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
@@ -557,6 +487,14 @@ public class BedsService {
            return true;
         }
         else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+            if (bookingService.isBedAvailableForCheckIn(bedId, joiningDate)) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             if (bookingService.isBedAvailableForCheckIn(bedId, joiningDate)) {
                 return true;
             }

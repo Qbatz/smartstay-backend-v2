@@ -15,6 +15,7 @@ import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.dto.invoices.Invoices;
+import com.smartstay.smartstay.dto.receipts.DeleteReceipts;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
@@ -940,7 +941,7 @@ public class InvoiceV1Service {
                 fullName.append(customers.getFirstName());
             }
             if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
-                fullName.append(", ");
+                fullName.append(" ");
                 fullName.append(customers.getLastName());
             }
             if (customers.getHouseNo() != null) {
@@ -1000,6 +1001,14 @@ public class InvoiceV1Service {
                     .stream()
                     .map(i -> {
                         Deductions d = new Deductions();
+                        if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name())) {
+                            if (i.getOtherItem() != null) {
+                                i.setInvoiceItem(i.getOtherItem());
+                            }
+                        }
+                        else {
+                            i.setInvoiceItem(i.getInvoiceItem());
+                        }
                         d.setType(i.getInvoiceItem());
                         d.setAmount(i.getAmount());
 
@@ -1037,6 +1046,7 @@ public class InvoiceV1Service {
                     hostelPhone,
                     "91",
                     InvoiceType.SETTLEMENT.name(),
+                    customers.getHostelId(),
                     customerInfo,
                     stayInfo,
                     accountDetails,
@@ -1100,6 +1110,7 @@ public class InvoiceV1Service {
                 hostelEmail,
                 hostelPhone,
                         "91",
+                        customers.getHostelId(),
                         customerInfo,
                         stayInfo,
                         invoiceInfo,
@@ -2064,5 +2075,44 @@ public class InvoiceV1Service {
 
     public List<InvoicesV1> findLatestInvoicesByCustomerIds(List<String> customerIds) {
         return invoicesV1Repository.findLatestInvoicesByCustomerIds(customerIds);
+    }
+
+    public ResponseEntity<?> deleteReceipt(String hostelId, String receiptId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        TransactionV1 transactionV1 = transactionService.getReceiptByReceiptId(receiptId);
+        if (transactionV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_RECEIPT_ID_PASSED, HttpStatus.BAD_REQUEST);
+        }
+        if (!transactionV1.getReceiptMode().equalsIgnoreCase(ReceiptMode.MANUAL.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_OTHER_MODE_RECEIPTS, HttpStatus.BAD_REQUEST);
+        }
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(transactionV1.getInvoiceId()).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND_TRANSACTION, HttpStatus.BAD_REQUEST);
+        }
+        if (!transactionV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        DeleteReceipts deleteReceipts = transactionService.deleteReceipts(receiptId);
+        if (deleteReceipts.status()) {
+            double invoiceAmount = deleteReceipts.invoiceAmount();
+        }
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
     }
 }

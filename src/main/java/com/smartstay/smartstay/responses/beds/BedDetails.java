@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.responses.beds;
 
+import java.util.List;
+
 public record BedDetails(String bedName,
                          int bedId,
                          String hostelId,
@@ -13,5 +15,5 @@ public record BedDetails(String bedName,
                          String floorName,
                          String roomName,
                          TenantInfo currentTenantInfo,
-                         TenantInfo newTenantInfo) {
+                         List<TenantInfo> newTenantInfo) {
 }

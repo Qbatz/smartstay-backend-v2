@@ -41,5 +41,6 @@ public class ComplaintResponseDto {
     private String complaintTypeName;
     private String status;
 
+    private List<CommentResponse> comments;
 
 }

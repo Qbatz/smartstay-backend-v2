@@ -87,7 +87,7 @@ public class HostelEventsListeners {
 
         hostelService.updateHostelFromEvents(hostelV1);
 
-        List<String> users = userHostelService.listAllUsersFromParentId(events.getParentId());
+        List<String> users = userHostelService.listAllUsersFromHostelId(events.getHostelId());
 
         List<Users> listUsers =  usersService.findAllUsersFromUserId(users);
 

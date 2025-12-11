@@ -26,8 +26,8 @@ public class RoomElectricityMapper implements Function<com.smartstay.smartstay.d
             initials.append(roomElectricityCustomersList.getLastName().toUpperCase().charAt(1));
         }
 
-        double consumption =  Math.round(roomElectricityCustomersList.getConsumption() * 100.0)/100.0;
-        double amount = Math.round(roomElectricityCustomersList.getAmount() * 100.0)/100.0;
+        double consumption =  Utils.roundOfDouble(roomElectricityCustomersList.getConsumption());
+        double amount = Utils.roundOfDouble(roomElectricityCustomersList.getAmount());
 
 
         return new RoomElectricityCustomersList(roomElectricityCustomersList.getCustomerId(),

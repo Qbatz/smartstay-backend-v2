@@ -745,7 +745,7 @@ public class BookingsService {
         bookingsRepository.save(bookingsV1);
     }
 
-    public BookingsV1 getBookingInfoByBedId(Integer bedId) {
+    public List<BookingsV1> getBookingInfoByBedId(Integer bedId) {
         return bookingsRepository.findBookedDetails(bedId);
     }
 
