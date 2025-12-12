@@ -141,4 +141,5 @@ public class SmartstayApplication {
 //			subscriptionRepository.saveAll(listSubscriptionWithNewDate);
 		};
 	}
+
 }

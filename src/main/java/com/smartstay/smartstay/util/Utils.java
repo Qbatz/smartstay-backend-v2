@@ -194,7 +194,7 @@ public class Utils {
     public static final String COMPLAINT_NOT_FOUND = "Complaint not found";
     public static final String JOINING_DATE_CANNOT_BEFORE_BOOKING = "Check-in cannot be earlier than the booking date";
     public static final String CANNOT_DELETE_ACTIVE_CUSTOMERS = "Cannot delete active customers";
-    public static final String INVALID_RECEIPT_ID_PASSED = "Invalid receipt id passes";
+    public static final String INVALID_RECEIPT_ID_PASSED = "Invalid receipt id passed";
     public static final String INVALID_REQUEST = "Invalid request";
     public static final String INVOICE_NOT_FOUND_TRANSACTION = "Invoice is not found for this transaction";
     public static final String CANNOT_DELETE_OTHER_MODE_RECEIPTS = "Delete can be possible only for manually generated receipts";
@@ -514,6 +514,10 @@ public class Utils {
 
     public static Double roundOfDouble(double number) {
         return (double) Math.round(number);
+    }
+
+    public static Double roundOffWithTwoDigit(double number) {
+        return Math.round(number * 100.0) / 100.0;
     }
 
     public static Date convertToTimeStamp(Date date) {

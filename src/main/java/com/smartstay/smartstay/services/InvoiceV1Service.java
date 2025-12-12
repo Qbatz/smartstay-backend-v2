@@ -2077,42 +2077,18 @@ public class InvoiceV1Service {
         return invoicesV1Repository.findLatestInvoicesByCustomerIds(customerIds);
     }
 
-    public ResponseEntity<?> deleteReceipt(String hostelId, String receiptId) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+    public InvoicesV1 deleteReceipt(InvoicesV1 invoicesV1, TransactionV1 transactionV1) {
+        double receiptAmount = transactionV1.getPaidAmount();
+        double newPaidAmount = invoicesV1.getPaidAmount() - receiptAmount;
+
+        invoicesV1.setPaidAmount(newPaidAmount);
+        if (newPaidAmount > 0 ){
+            invoicesV1.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
         }
-        Users users = usersService.findUserByUserId(authentication.getName());
-        if (users == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_DELETE)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        else {
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
         }
 
-        TransactionV1 transactionV1 = transactionService.getReceiptByReceiptId(receiptId);
-        if (transactionV1 == null) {
-            return new ResponseEntity<>(Utils.INVALID_RECEIPT_ID_PASSED, HttpStatus.BAD_REQUEST);
-        }
-        if (!transactionV1.getReceiptMode().equalsIgnoreCase(ReceiptMode.MANUAL.name())) {
-            return new ResponseEntity<>(Utils.CANNOT_DELETE_OTHER_MODE_RECEIPTS, HttpStatus.BAD_REQUEST);
-        }
-        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(transactionV1.getInvoiceId()).orElse(null);
-        if (invoicesV1 == null) {
-            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND_TRANSACTION, HttpStatus.BAD_REQUEST);
-        }
-        if (!transactionV1.getHostelId().equalsIgnoreCase(hostelId)) {
-            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
-        }
-        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-        }
-
-        DeleteReceipts deleteReceipts = transactionService.deleteReceipts(receiptId);
-        if (deleteReceipts.status()) {
-            double invoiceAmount = deleteReceipts.invoiceAmount();
-        }
-
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-
+        return invoicesV1Repository.save(invoicesV1);
     }
 }

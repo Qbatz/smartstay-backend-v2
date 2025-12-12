@@ -119,7 +119,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     @Query("""
             SELECT booking from BookingsV1 booking WHERE booking.bedId=:bedId and booking.currentStatus in ('CHECKIN', 'NOTICE')
             """)
-    BookingsV1 checkBookingsByBedIdAndStatus(Integer bedId);
+    List<BookingsV1> checkBookingsByBedIdAndStatus(Integer bedId);
 
     @Query("""
             SELECT booking FROM BookingsV1 booking where booking.hostelId=:hostelId and booking.currentStatus='BOOKED'

@@ -263,11 +263,11 @@ public class ElectricityService {
                 com.smartstay.smartstay.dao.ElectricityReadings roomPreviousReadings = electricityReadingRepository.getRoomCurrentReading(key);
                 if (roomPreviousReadings == null) {
                     newReadings.setPreviousReading(0.0);
-                    newReadings.setCurrentReading(Utils.roundOfDouble((unitPerPerson * personCountPerRoom.get(key))));
+                    newReadings.setCurrentReading(Utils.roundOffWithTwoDigit((unitPerPerson * personCountPerRoom.get(key))));
                 }
                 else {
                     newReadings.setPreviousReading(roomPreviousReadings.getCurrentReading());
-                    newReadings.setCurrentReading(Utils.roundOfDouble((unitPerPerson * personCountPerRoom.get(key)) + roomPreviousReadings.getCurrentReading()));
+                    newReadings.setCurrentReading(Utils.roundOffWithTwoDigit((unitPerPerson * personCountPerRoom.get(key)) + roomPreviousReadings.getCurrentReading()));
                 }
                 newReadings.setHostelId(hostelId);
                 newReadings.setRoomId(key);
@@ -488,11 +488,11 @@ public class ElectricityService {
                 com.smartstay.smartstay.dao.ElectricityReadings roomPreviousReadings = electricityReadingRepository.getRoomCurrentReading(key);
                 if (roomPreviousReadings != null) {
                     newReadings.setPreviousReading(roomPreviousReadings.getCurrentReading());
-                    newReadings.setCurrentReading(Utils.roundOfDouble(roomPreviousReadings.getCurrentReading() + totalUnits.get(key)));
+                    newReadings.setCurrentReading(Utils.roundOffWithTwoDigit(roomPreviousReadings.getCurrentReading() + totalUnits.get(key)));
                 }
                 else {
                     newReadings.setPreviousReading(0.0);
-                    newReadings.setCurrentReading(Utils.roundOfDouble(totalUnits.get(key)));
+                    newReadings.setCurrentReading(Utils.roundOffWithTwoDigit(totalUnits.get(key)));
                 }
                 newReadings.setHostelId(hostelId);
                 newReadings.setRoomId(key);
@@ -500,7 +500,7 @@ public class ElectricityService {
                 newReadings.setEntryDate(date);
                 newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
                 newReadings.setFloorId(readings.floorId());
-                newReadings.setConsumption(Utils.roundOfDouble(Math.round(totalUnits.get(key))));
+                newReadings.setConsumption(Utils.roundOffWithTwoDigit(totalUnits.get(key)));
                 newReadings.setMissedEntry(false);
                 newReadings.setCreatedAt(new Date());
                 newReadings.setUpdatedAt(new Date());
@@ -528,8 +528,8 @@ public class ElectricityService {
                     com.smartstay.smartstay.dao.ElectricityReadings newReadings = new com.smartstay.smartstay.dao.ElectricityReadings();
                     com.smartstay.smartstay.dao.ElectricityReadings roomPreviousReadings = electricityReadingRepository.getRoomCurrentReading(item.getRoomId());
                     if (roomPreviousReadings != null) {
-                        newReadings.setPreviousReading(roomPreviousReadings.getCurrentReading());
-                        newReadings.setCurrentReading(roomPreviousReadings.getCurrentReading() + currentReadingForNoOccupants);
+                        newReadings.setPreviousReading(Utils.roundOffWithTwoDigit(roomPreviousReadings.getCurrentReading()));
+                        newReadings.setCurrentReading(Utils.roundOffWithTwoDigit(roomPreviousReadings.getCurrentReading() + currentReadingForNoOccupants));
                     }
                     else {
                         newReadings.setPreviousReading(0.0);

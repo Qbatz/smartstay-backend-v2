@@ -233,7 +233,7 @@ public class BankingService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
@@ -629,6 +629,25 @@ public class BankingService {
 
         bankingV1Repository.save(bankingV1);
     }
+
+    public void deleteReceipt(double amount, String transactionType, String bankId) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+            if (bankingV1.getBalance() == null) {
+                bankingV1.setBalance(-1 * amount);
+            }
+            else {
+                bankingV1.setBalance(bankingV1.getBalance() - amount);
+            }
+        }
+
+
+        bankingV1.setUpdatedBy(authentication.getName());
+        bankingV1.setUpdatedAt(new Date());
+
+        bankingV1Repository.save(bankingV1);
+    }
+
 
     public boolean updateBalanceForExpense(double amount, String transactionType, String bankId, String transactionDate) {
         BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);

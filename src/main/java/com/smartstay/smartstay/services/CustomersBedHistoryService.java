@@ -35,7 +35,7 @@ public class CustomersBedHistoryService {
     public List<CustomerBedsList> getAllCustomerFromBedsHistory(String hostelId, Date billStartDate, Date billEndDate) {
         return customerBedHistoryRepository.findByHostelIdAndStartAndEndDate(hostelId, billStartDate, billEndDate)
                 .stream()
-                .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), billEndDate) < 0)
+                .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), billEndDate) <= 0)
                 .map(item -> new BedHistoryCustomerListMapper().apply(item))
                 .toList();
     }

@@ -536,7 +536,8 @@ public class BookingsService {
                     BankTransactionType.DEBIT.name(),
                     BankSource.INVOICE.name(),
                     bookingsV1.getHostelId(),
-                    Utils.dateToString(cancelDate).replace("/", "-"));
+                    Utils.dateToString(cancelDate).replace("/", "-"),
+                    "");
 
             bankTransactionService.cancelBooking(transactionDto);
         }
@@ -754,18 +755,27 @@ public class BookingsService {
     }
 
     public boolean isBedAvailableForCheckIn(int bedId, String joiningDate) {
-        BookingsV1 bookingsV1 = bookingsRepository.checkBookingsByBedIdAndStatus(bedId);
-        if (bookingsV1 == null) {
+//        BookingsV1 bookingsV1 = bookingsRepository.checkBookingsByBedIdAndStatus(bedId);
+        List<BookingsV1> listBookings = bookingsRepository.checkBookingsByBedIdAndStatus(bedId);
+        if (listBookings == null) {
             return true;
         }
 
-        if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
+        BookingsV1 currenlyCheckIn = listBookings
+                .stream()
+                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()))
+                .findAny()
+                .orElse(null);
+
+        if (currenlyCheckIn == null) {
             return false;
         }
 
+
+
         Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
-        if (Utils.compareWithTwoDates(dateJoiningDate, bookingsV1.getLeavingDate()) >= 0) {
+        if (Utils.compareWithTwoDates(dateJoiningDate, currenlyCheckIn.getLeavingDate()) >= 0) {
             return true;
         }
         else {

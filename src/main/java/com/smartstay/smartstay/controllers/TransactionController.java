@@ -41,4 +41,8 @@ public class TransactionController {
         return transactionService.refundForInvoice(hostelId, invoiceId, refundInvoice);
     }
 
+    @DeleteMapping("/receipts/{hostelId}/{receiptId}")
+    public ResponseEntity<?> deleteReceipt(@PathVariable("hostelId") String hostelId, @PathVariable("receiptId") String receiptId) {
+        return transactionService.deleteReceipt(hostelId, receiptId);
+    }
 }

@@ -32,7 +32,7 @@ public class ElectricityRoomMapper implements Function<ElectricityReadingForRoom
         endDate = Utils.dateToString(electricityReadingForRoom.getEntryDate());
 
         if (electricityReadingForRoom.getConsumption() != null) {
-            amount = Utils.roundOfDouble(electricityReadingForRoom.getConsumption() * electricityReadingForRoom.getUnitPrice());
+            amount = Utils.roundOffWithTwoDigit(electricityReadingForRoom.getConsumption() * electricityReadingForRoom.getUnitPrice());
         }
 
         return new RoomElectricityList(electricityReadingForRoom.getId(),

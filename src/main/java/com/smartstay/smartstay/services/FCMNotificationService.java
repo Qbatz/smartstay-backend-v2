@@ -74,7 +74,7 @@ public class FCMNotificationService {
             if (customerCredentials.getFcmToken() != null) {
                 HashMap<String, String> payloads = new HashMap<>();
                 payloads.put("title", "Update on your complaint");
-                payloads.put("type", NotificationMessage.COMPLAINT_ASSIGN.name());
+                payloads.put("type", NotificationMessage.COMPLAINT_COMMENTS.name());
                 payloads.put("description", name +  " has added a comment on your complaint.");
 
                 Message message = Message.builder()

@@ -19,6 +19,8 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     BankTransactionsV1 findTopByBankIdAndHostelIdOrderByCreatedAtDesc(String bankId, String hostelId);
 
+    BankTransactionsV1 findByTransactionNumber(String transactionNumber);
+
 
 
 }

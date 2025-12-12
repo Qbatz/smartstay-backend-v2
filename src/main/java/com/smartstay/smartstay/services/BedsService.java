@@ -598,6 +598,7 @@ public class BedsService {
 //        Date dtJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         List<com.smartstay.smartstay.dto.beds.InitializeBooking> freeBeds = bedsRepository
                 .getFreeBeds(hostelId, Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+
         List<BookingBankInfo> listBanks = bankingService.getAllAccounts(hostelId);
 
         List<Integer> bookedBedIds = freeBeds
