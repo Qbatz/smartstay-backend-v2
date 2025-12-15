@@ -65,10 +65,10 @@ public class BookingsController {
         return bookingService.updateAdvanceAmount(hostelId, bookingId, updateAdvance);
     }
 
-    @PostMapping("/manual/rent")
-    public ResponseEntity<?> findAndUpdateRentManually() {
-         bookingService.updateRentalAmount();
-         return new ResponseEntity<>(HttpStatus.OK);
+
+    @PostMapping("/initialize/checkout/{hostelId}/{customerId}")
+    public ResponseEntity<?> initializeCheckout(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
+        return bookingService.initializeCheckout(hostelId, customerId);
     }
 
 }

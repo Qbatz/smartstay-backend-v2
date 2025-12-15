@@ -361,21 +361,25 @@ public class BedsService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
-    public ResponseEntity<?> deleteBedById(int roomId) {
+    public ResponseEntity<?> deleteBedById(int bedId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Beds existingBed = bedsRepository.findByBedIdAndParentId(roomId, users.getParentId());
+        if (bookingService.checkIsBedOccupied(bedId)) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_OCCUPIED_BEDS, HttpStatus.BAD_REQUEST);
+
+        }
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId, users.getParentId());
         if (existingBed != null) {
             bedsRepository.delete(existingBed);
-            return new ResponseEntity<>("Deleted", HttpStatus.OK);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
-        return new ResponseEntity<>("No Bed found", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(Utils.NO_BED_FOUND_ERROR, HttpStatus.BAD_REQUEST);
 
     }
 
@@ -449,11 +453,11 @@ public class BedsService {
             if (bookingsV1.getLeavingDate() != null) {
                 return Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), joiningDate) <= 0;
             }
-        } else if (beds.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+        } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
             return false;
-        } else if (beds.getStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+        } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
             return true;
-        } else if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
+        } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
 
             if (bookingsV1 != null) {

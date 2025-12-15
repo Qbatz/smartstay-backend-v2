@@ -169,7 +169,7 @@ public class RoomsService {
 
     public ResponseEntity<?> deleteRoomById(int roomId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
@@ -181,7 +181,7 @@ public class RoomsService {
             boolean customerExist = floorRepository.existsActiveBookingForRoom(existingRoom.getHostelId(),roomId ,
                     List.of(CustomerStatus.NOTICE.name(),CustomerStatus.CHECK_IN.name(), CustomerStatus.BOOKED.name()));
             if (customerExist) {
-                return new ResponseEntity<>("Cannot delete room — active bookings exist.", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Cannot delete room — active tenants exist.", HttpStatus.BAD_REQUEST);
             }
             existingRoom.setUpdatedAt(new Date());
             existingRoom.setIsDeleted(true);

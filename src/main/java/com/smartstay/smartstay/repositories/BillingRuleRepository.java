@@ -18,7 +18,7 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
     Optional<BillingRules> findByHostel_hostelId(String hostelId);
 
     @Query(value = """
-            SELECT * FROM billing_rules WHERE start_from IS NULL OR DATE(start_from) <=DATE(:startDate) 
+            SELECT * FROM billing_rules WHERE (start_from IS NULL OR DATE(start_from) <=DATE(:startDate)) 
             AND hostel_id=:hostelId
             ORDER BY billing_start_date DESC LIMIT 1
             """, nativeQuery = true)
@@ -30,29 +30,13 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
     BillingRules findNewRuleByHostelIdAndDate(@Param("hostelId") String hostelId, @Param("startDate") Date startDate);
 
     @Query(value = """
-            SELECT * FROM billing_rules WHERE hostel_id=:hostelId AND (start_from IS NULL OR DATE(start_from) <= DATE(:startDate)) ORDER BY start_from DESC LIMIT 1
+           SELECT * FROM billing_rules WHERE hostel_id=:hostelId ORDER BY created_at DESC LIMIT 1
             """, nativeQuery = true)
-    BillingRules findLatestBillingRule(@Param("hostelId") String hostelId, @Param("startDate") Date startDate);
-
-    @Query(value = """
-            SELECT * FROM billing_rules WHERE hostel_id=:hostelId AND (start_from IS NULL OR DATE(start_from) <= DATE(:startDate)) ORDER BY start_from DESC LIMIT 1
-            """, nativeQuery = true)
-    BillingRules findBillingRulesOnDateAndHostelId(@Param("hostelId") String hostel, @Param("startDate") Date date);
-
-    @Query("""
-            SELECT rules FROM BillingRules rules WHERE rules.hostel.id=:hostelId AND rules.isInitial=false
-            """)
-    List<BillingRules> findAllBillingRulesByHostelIdExceptInitial(@Param("hostelId") String hostelId);
+    BillingRules findCurrentBillingRules(@Param("hostelId") String hostelId);
 
     @Query(value = """
             SELECT * FROM billing_rules WHERE billing_start_date=:day AND (end_till IS NULL OR DATE(end_till) > DATE(:date)) AND DATE(start_from) <= DATE(:date);
             """, nativeQuery = true)
     List<BillingRules> findAllHostelsHavingTodaysRecurring(@Param("day") String day, @Param("date") Date date);
 
-    @Query(value = """
-            SELECT * FROM billing_rules WHERE hostel_id=:hostelId AND (start_from IS NULL AND end_till IS NULL) OR 
-            (DATE(start_from) < DATE(:todaysDate) AND end_till IS NULL) OR (DATE(start_from) > DATE(:todaysDate) 
-            AND (end_till IS NULL OR DATE(end_till) > DATE(:todaysDate))) LIMIT 1
-            """, nativeQuery = true)
-    BillingRules findNextBillingDates(@Param("hostelId") String hostelId, @Param("todaysDate") Date todaysDate);
 }

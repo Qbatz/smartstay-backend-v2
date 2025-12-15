@@ -47,6 +47,20 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """, nativeQuery = true)
     List<Receipts> findReceipts(@Param("hostelId") String hostelId);
 
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE hostelId=:hostelId 
+            AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate)) 
+            AND (:startDate IS NULL OR DATE(i.invoiceEndDate) >= DATE(:startDate)) 
+            AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy)) 
+            AND (:mode IS NULL OR i.invoiceMode in (:mode)) 
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus)) 
+            AND (:userId IS NULL OR i.customerId IN (:userId))
+            """)
+    List<InvoicesV1> findAllInvoicesByHostelId(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+                                               @Param("endDate") Date endDate, @Param("types") List<String> types,
+                                               @Param("createdBy") List<String> createdBy, @Param("mode") List<String> mode,
+                                               @Param("paymentStatus") List<String> paymentStatus, @Param("userId") List<String> userId);
+
     @Query(value = """
     SELECT * FROM invoicesv1
     WHERE hostel_id=:hostelId AND invoice_number LIKE CONCAT(:prefix, '%')
@@ -54,8 +68,6 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     LIMIT 1
 """, nativeQuery = true)
     InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix, @Param("hostelId") String hostelId);
-
-
     @Query(value = "SELECT * FROM invoicesv1 WHERE customer_id = :customerId ORDER BY invoice_start_date DESC LIMIT 1",
             nativeQuery = true)
     InvoicesV1 findLatestInvoiceByCustomerId(@Param("customerId") String customerId);

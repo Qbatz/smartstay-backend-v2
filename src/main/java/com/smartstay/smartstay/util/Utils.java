@@ -198,7 +198,10 @@ public class Utils {
     public static final String INVALID_REQUEST = "Invalid request";
     public static final String INVOICE_NOT_FOUND_TRANSACTION = "Invoice is not found for this transaction";
     public static final String CANNOT_DELETE_OTHER_MODE_RECEIPTS = "Delete can be possible only for manually generated receipts";
-
+    public static final String NO_BED_FOUND_ERROR = "No bed found";
+    public static final String CANNOT_DELETE_OCCUPIED_BEDS = "Cannot delete the occupied beds";
+    public static final String DATE_VALIDATION_ERROR_CANCEL_BOOKING = "Cancel date cannot be earlier than the booking date";
+    public static final String CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR = "Cannot modify the billing rules. Tenant already exists.";
     /**
      *  Defining module Id's here
      *

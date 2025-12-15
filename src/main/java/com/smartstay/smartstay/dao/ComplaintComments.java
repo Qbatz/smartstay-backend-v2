@@ -23,6 +23,7 @@ public class ComplaintComments {
     private String createdBy;
     private String comment;
     private String userName;
+    private String userType;
     private Boolean isActive;
     private Date commentDate;
 

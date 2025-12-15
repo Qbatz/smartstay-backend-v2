@@ -201,10 +201,20 @@ public class CustomersService {
     }
 
     public List<CustomerData> searchAndGetCustomers(String hostelId, String name, String type) {
+        List<String> typeArray = new ArrayList<>();
+        if (type == null || (type != null && type.trim().equalsIgnoreCase(""))) {
+            typeArray.add(CustomerStatus.NOTICE.name());
+            typeArray.add(CustomerStatus.CHECK_IN.name());
+            typeArray.add(CustomerStatus.BOOKED.name());
+            typeArray.add(CustomerStatus.SETTLEMENT_GENERATED.name());
+        }
+        else {
+            typeArray.add(type.toUpperCase());
+        }
         return customersRepository.getCustomerData(
                 hostelId,
                 name != null && !name.isBlank() ? name : null,
-                type != null && !type.isBlank() ? type : null
+                typeArray
         );
     }
 
@@ -2813,4 +2823,9 @@ public class CustomersService {
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    public List<Customers> searchCustomerByHostelName(String keyword) {
+        return customersRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(keyword, keyword);
+    }
+
 }

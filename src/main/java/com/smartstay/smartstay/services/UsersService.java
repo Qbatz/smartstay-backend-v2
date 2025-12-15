@@ -653,12 +653,22 @@ public class UsersService {
                 if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_UPDATE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
+                if (payloads == null) {
+                    return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
+                if (payloads.mobile() != null) {
+                    int isMobileExsists = userRepository.getUsersCountByMobile(adminId, payloads.mobile());
+                    if (isMobileExsists > 0) {
+                        return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                    }
+                }
 
                 Users adminUser = userRepository.findUserByUserId(adminId);
 
                 if (adminUser == null) {
                     return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
                 }
+
 
                 Address add = adminUser.getAddress();
                 if (add == null ) {
@@ -673,7 +683,7 @@ public class UsersService {
 
                 String pic = null;
                 if (profilePic != null && !profilePic.isEmpty()) {
-                    pic = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(profilePic));
+                    pic = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFileNew(profilePic));
                 }
 
                 if (pic != null && !pic.equalsIgnoreCase("")) {
@@ -687,6 +697,11 @@ public class UsersService {
                 if (payloads.lastName() != null && !payloads.lastName().equalsIgnoreCase("")) {
                     adminUser.setLastName(payloads.lastName());
                 }
+                else {
+                    if (adminUser.getLastName() != null) {
+                        adminUser.setLastName(null);
+                    }
+                }
                 if (payloads.mobile() != null && !payloads.mobile().equalsIgnoreCase("")) {
                     adminUser.setMobileNo(payloads.mobile());
                     //high priority, check mobile exist
@@ -695,11 +710,24 @@ public class UsersService {
                 if (payloads.houseNo() != null && !payloads.houseNo().equalsIgnoreCase("")) {
                     add.setHouseNo(payloads.houseNo());
                 }
+                else {
+                    if (add.getHouseNo() != null) {
+                        add.setHouseNo(null);
+                    }
+                }
                 if (payloads.street() != null && !payloads.street().equalsIgnoreCase("")) {
                     add.setStreet(payloads.street());
                 }
+                else if (add.getStreet() != null) {
+                    add.setStreet(null);
+                }
                 if (payloads.landmark() != null && !payloads.landmark().equalsIgnoreCase("")) {
                     add.setLandMark(payloads.landmark());
+                }
+                else {
+                    if (add.getLandMark() != null) {
+                        add.setLandMark(null);
+                    }
                 }
                 if (payloads.city() != null && !payloads.city().equalsIgnoreCase("")) {
                     add.setCity(payloads.city());

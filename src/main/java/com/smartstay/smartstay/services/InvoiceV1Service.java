@@ -4,6 +4,7 @@ import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.Wrappers.invoices.InitializeRefund;
 import com.smartstay.smartstay.Wrappers.invoices.InvoiceMapper;
+import com.smartstay.smartstay.Wrappers.invoices.NewInvoiceListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
@@ -20,6 +21,8 @@ import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.events.RecurringEvents;
+import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
+import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
 import com.smartstay.smartstay.payloads.customer.Settlement;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.invoice.ItemResponse;
@@ -37,6 +40,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -408,6 +412,105 @@ public class InvoiceV1Service {
                 .toList();
 
         return new ResponseEntity<>(invoicesResponse, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllInvoices(String hostelId, String startDate, String endDate, List<String> types, List<String> createdBy, List<String> mode, String searchKey, List<String> paymentStatus) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        Date dStartDate = null;
+        Date dEndDate = null;
+        if (startDate != null) {
+            dStartDate = Utils.stringToDate(startDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        if (endDate != null) {
+            dEndDate = Utils.stringToDate(endDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        List<String> invoiceTypes = null;
+        if (types != null) {
+            invoiceTypes = types;
+        }
+        else {
+            invoiceTypes = new ArrayList<>();
+            invoiceTypes.add(InvoiceType.RENT.name());
+            invoiceTypes.add(InvoiceType.SETTLEMENT.name());
+            invoiceTypes.add(InvoiceType.ADVANCE.name());
+        }
+
+        List<String> createdByUsers = null;
+        if (createdBy != null && !createdBy.isEmpty()) {
+            createdByUsers = createdBy;
+        }
+
+        List<String> modes = null;
+        if (mode != null && !mode.isEmpty()) {
+            modes = mode;
+        }
+        List<String> pStatus = null;
+        if (paymentStatus != null && !paymentStatus.isEmpty()) {
+            pStatus = paymentStatus;
+        }
+
+        List<String> userIds = null;
+        if (searchKey != null) {
+            List<Customers> listCustomers = customersService.searchCustomerByHostelName(searchKey.trim());
+            userIds = listCustomers
+                    .stream()
+                    .map(Customers::getCustomerId)
+                    .toList();
+        }
+
+        List<UserHostel> listAdminUsers = userHostelService.findAllByHostelId(hostelId);
+        List<String> adminIds = listAdminUsers
+                .stream().map(UserHostel::getUserId)
+                .toList();
+        List<Users> adminUsers = usersService.findAllUsersFromUserId(adminIds);
+
+        List<CreatedBy> listCreatedBy = adminUsers
+                .stream()
+                .map(i -> {
+                    StringBuilder fullName = new StringBuilder();
+                    if (i.getFirstName() != null) {
+                        fullName.append(i.getFirstName());
+                    }
+                    if (i.getLastName() != null && i.getLastName().trim().equalsIgnoreCase("")) {
+                        fullName.append(" ");
+                        fullName.append(i.getLastName());
+                    }
+                    return new CreatedBy(fullName.toString(), i.getUserId());
+                })
+                .toList();
+
+        InvoiceFilterOptions invoiceFilterOptions = new InvoiceFilterOptions();
+        if (listCreatedBy != null) {
+            invoiceFilterOptions.setCreatedBy(listCreatedBy);
+        }
+
+        List<InvoicesV1> listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
+
+        List<String> customerIds = listAllInvoice
+                .stream()
+                .map(InvoicesV1::getCustomerId)
+                .toList();
+        List<Customers> lisAllCustomersForInvoices = customersService.getCustomerDetails(customerIds);
+
+        List<InvoicesList> newInvoicesList = listAllInvoice
+                .stream()
+                .map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers).apply(i))
+                .toList();
+
+        NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, invoiceFilterOptions, newInvoicesList);
+        return new ResponseEntity<>(newInvoicesListResponse, HttpStatus.OK);
     }
 
     public int recordPayment(String invoiceId, String status, double amount) {
@@ -1172,6 +1275,7 @@ public class InvoiceV1Service {
                         else {
                             invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
                             invoiceItems.setOtherItem(i.getType());
+
                         }
                         invoiceItems.setInvoice(settlementInvoice);
                         return invoiceItems;
