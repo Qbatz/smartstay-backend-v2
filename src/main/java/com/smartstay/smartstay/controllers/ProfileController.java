@@ -33,8 +33,6 @@ public class ProfileController {
         return usersService.getProfileInformation();
     }
 
-
-
     @PutMapping("")
     public ResponseEntity<?> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.updateProfileInformations(updateProfile, profilePic);
@@ -80,9 +78,9 @@ public class ProfileController {
         return usersService.updateUsersProfile(hostelId, userId, payloads);
     }
 
-    @DeleteMapping("/delete-user/{userId}")
-    public ResponseEntity<?> deleteUser(@PathVariable("userId") String userId) {
-        return usersService.deleteUser(userId);
+    @DeleteMapping("/delete-user/{hostelId}/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable("hostelId") String hostelId, @PathVariable("userId") String userId) {
+        return usersService.deleteUser(hostelId, userId);
     }
 
 

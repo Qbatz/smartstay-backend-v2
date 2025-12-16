@@ -664,7 +664,7 @@ public class ElectricityService {
                 lastReading = electricityReadingRepository.getLastReading(hostelId);
             }
 
-            ElectricityList list = new ElectricityList(lastReading, isHostelBased, listUsages);
+            ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
 
             return new ResponseEntity<>(list, HttpStatus.OK);
 

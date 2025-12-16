@@ -28,7 +28,7 @@ public class ListReadingMapper implements Function<ElectricityReadings, Electric
                 electricityReaddings.getUnitPrice(),
                 previousReading,
                 electricityReaddings.getCurrentReading(),
-                totalPrice,
+                Utils.roundOffDecimal(totalPrice),
                 electricityReaddings.getNoOfTenants(),
                 Utils.dateToString(electricityReaddings.getStartDate()),
                 Utils.dateToString(electricityReaddings.getEndDate()));

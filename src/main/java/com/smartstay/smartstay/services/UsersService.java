@@ -24,6 +24,7 @@ import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -44,7 +45,6 @@ public class UsersService {
 
     @Autowired
     UserRepository userRepository;
-
     @Autowired
     OTPService otpService;
     @Autowired
@@ -71,14 +71,19 @@ public class UsersService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
-
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
     private final RestTemplate restTemplate;
 
+    private BankingService bankingService;
+
     public UsersService() {
         this.restTemplate = new RestTemplate();
         restTemplate.setInterceptors(Collections.singletonList(new RestTemplateLoggingInterceptor()));
+    }
+    @Autowired
+    public void setBankingService(@Lazy BankingService bankingService) {
+        this.bankingService = bankingService;
     }
 
     public ResponseEntity<AdminUserResponse> createAccount(CreateAccount createAccount) {
@@ -550,7 +555,7 @@ public class UsersService {
                         fullName.append(" ");
                         fullName.append(user.getLastName());
                     }
-                    eventPublisher.publishEvent(new AddUserEvents(this, users.getUserId(), hostelId, fullName.toString(), user.getParentId()));
+                    eventPublisher.publishEvent(new AddUserEvents(this, user.getUserId(), hostelId, fullName.toString(), user.getParentId()));
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             }
@@ -579,7 +584,7 @@ public class UsersService {
         }
     }
 
-    public ResponseEntity<?> deleteUser(String userId) {
+    public ResponseEntity<?> deleteUser(String hostelId, String userId) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
             Users inputUser = userRepository.findUserByUserIdAndParentId(userId,users.getParentId());
@@ -593,9 +598,13 @@ public class UsersService {
                     return new ResponseEntity<>("Admin user cannot be deleted", HttpStatus.FORBIDDEN);
                 }
 
-                inputUser.setDeleted(true);
-                inputUser.setActive(false);
-                userRepository.save(inputUser);
+                if ( bankingService.deleteBankForUser(inputUser.getUserId(), hostelId)) {
+                    inputUser.setDeleted(true);
+                    inputUser.setActive(false);
+                    userRepository.save(inputUser);
+                }
+
+
                 return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
 
             } else {

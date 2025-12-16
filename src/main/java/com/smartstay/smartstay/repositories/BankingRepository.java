@@ -51,7 +51,7 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
 
 
     List<BankingV1> findByBankIdIn(List<String> bankIds);
-    List<BankingV1> findByHostelId(String hostelId);
+    List<BankingV1> findByHostelIdAndIsDeletedFalse(String hostelId);
 
     BankingV1 findByBankIdInAndIsDefaultAccountTrue(List<String> bankIds);
     BankingV1 findByHostelIdAndIsDefaultAccountTrue(String hostelId);
@@ -93,5 +93,6 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
     List<BankingV1> findByBankIdInAndActiveAccountDebit(@Param("hostelId")  String hostelId);
 
     List<BankingV1> findByParentId(String parentId);
+    List<BankingV1> findByUserIdAndHostelId(String userId, String hostelId);
 
 }

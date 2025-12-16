@@ -134,7 +134,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findPendingInvoices(String hostelId);
 
     @Query(value = """
-            SELECT * FROM invoicesv1 invc WHERE invc.customer_id=:customerId and DATE(invc.invoice_start_date) >= DATE(:startDate) ORDER BY invc.invoice_start_date DESC LIMIT 1;
+            SELECT * FROM invoicesv1 invc WHERE invc.customer_id=:customerId and DATE(invc.invoice_start_date) >= DATE(:startDate) AND invoice_type in ('RENT', 'REASSIGN_RENT') ORDER BY invc.invoice_start_date DESC LIMIT 1;
             """, nativeQuery = true)
     InvoicesV1 findCurrentRunningInvoice(@Param("customerId") String customerId, @Param("startDate") Date startDate);
 

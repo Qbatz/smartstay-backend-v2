@@ -1577,8 +1577,6 @@ public class CustomersService {
            return calculateFinalSettlemtForBedChange(customers, bookingDetails, billDate);
         }
 
-
-
         double bookingAmount = 0.0;
         if (bookingDetails.getBookingAmount() != null) {
             bookingAmount = bookingDetails.getBookingAmount();
@@ -2064,7 +2062,7 @@ public class CustomersService {
         RentBreakUp rentBreakUpForNewInvoice = new RentBreakUp(Utils.dateToString(findLatestInvoice.getInvoiceStartDate()),
                 Utils.dateToString(new Date()),
                 findNoOfDaysStayedInNewBedAsOfToday,
-                payableRentAsOfToday,
+                Utils.roundOfDouble(Math.round(payableRentAsOfToday)),
                 bedName,
                 roomName,
                 floorName);

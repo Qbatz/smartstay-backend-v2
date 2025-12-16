@@ -177,7 +177,7 @@ public class InvoiceV1Service {
             invoicesV1.setCgst(cgst);
             invoicesV1.setSgst(sgst);
             invoicesV1.setGstPercentile(gstPercentile);
-            invoicesV1.setInvoiceDueDate(dueDate);
+            invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(dueDate));
             invoicesV1.setCustomerMobile(customerMobile);
             invoicesV1.setCustomerMailId(customerMailId);
             invoicesV1.setCreatedAt(new Date());
@@ -1248,7 +1248,7 @@ public class InvoiceV1Service {
                     .toList());
 
             settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
-            settlementInvoice.setBasePrice(totalAmountWithoutDeduction);
+            settlementInvoice.setBasePrice(Utils.roundOfDouble(totalAmountWithoutDeduction));
             settlementInvoice.setTotalAmount(totalAmountToBePaid);
             settlementInvoice.setInvoiceStartDate(new Date());
             settlementInvoice.setInvoiceDueDate(new Date());
@@ -1297,9 +1297,8 @@ public class InvoiceV1Service {
             settlementInvoice.setHostelId(hostelId);
             settlementInvoice.setInvoiceNumber(generateInvoiceNumber(hostelId, "RENT"));
             settlementInvoice.setCustomerMobile(customers.getMobile());
-            settlementInvoice.setCustomerMobile(customers.getMobile());
             settlementInvoice.setInvoiceType(InvoiceType.SETTLEMENT.name());
-            settlementInvoice.setBasePrice(totalAmountWithoutDeduction);
+            settlementInvoice.setBasePrice(Utils.roundOfDouble(totalAmountWithoutDeduction));
             settlementInvoice.setTotalAmount(totalAmountToBePaid);
             settlementInvoice.setGst(0.0);
             settlementInvoice.setCgst(0.0);
@@ -1505,8 +1504,8 @@ public class InvoiceV1Service {
         InvoicesV1 invoicesV1 = new InvoicesV1();
         invoicesV1.setBasePrice(rentForNewInvoice);
         invoicesV1.setTotalAmount(rentForNewInvoice);
-        invoicesV1.setInvoiceStartDate(dateJoiningDate);
-        invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
+        invoicesV1.setInvoiceStartDate(Utils.convertToTimeStamp(dateJoiningDate));
+        invoicesV1.setInvoiceEndDate(Utils.convertToTimeStamp(billingDates.currentBillEndDate()));
         invoicesV1.setCreatedBy(authentication.getName());
         invoicesV1.setCreatedAt(new Date());
         invoicesV1.setInvoiceType(InvoiceType.REASSIGN_RENT.name());
@@ -1533,7 +1532,7 @@ public class InvoiceV1Service {
         }
 
         invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(dateJoiningDate, 2));
+        invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(Utils.addDaysToDate(dateJoiningDate, billingDates.dueDays())));
         invoicesV1.setCustomerMobile(invoicesV1.getCustomerMobile());
         invoicesV1.setCustomerMailId(invoicesV1.getCustomerMailId());
         invoicesV1.setGst(0.0);
