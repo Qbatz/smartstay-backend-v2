@@ -49,8 +49,8 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     @Query("""
             SELECT i FROM InvoicesV1 i WHERE hostelId=:hostelId 
-            AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate)) 
-            AND (:startDate IS NULL OR DATE(i.invoiceEndDate) >= DATE(:startDate)) 
+            AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate)) 
+            AND (:endDate IS NULL OR DATE(i.invoiceEndDate) <= DATE(:endDate)) 
             AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy)) 
             AND (:mode IS NULL OR i.invoiceMode in (:mode)) 
             AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus)) 

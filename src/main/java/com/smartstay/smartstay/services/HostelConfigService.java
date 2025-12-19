@@ -47,7 +47,6 @@ public class HostelConfigService {
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(dateJoiningDate);
-        billMonth = calendar.get(Calendar.MONTH);
 
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
@@ -55,7 +54,9 @@ public class HostelConfigService {
         }
 
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
-        calendar.set(Calendar.MONTH, billMonth);
+        if (Utils.compareWithTwoDates(dateJoiningDate, calendar.getTime()) < 0) {
+            calendar.add(Calendar.MONTH, -1);
+        }
 
         Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
 

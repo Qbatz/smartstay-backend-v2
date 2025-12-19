@@ -2822,8 +2822,8 @@ public class CustomersService {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    public List<Customers> searchCustomerByHostelName(String keyword) {
-        return customersRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(keyword, keyword);
+    public List<Customers> searchCustomerByHostelName(String hostelId, String keyword) {
+        return customersRepository.findByHostelIdAndFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(hostelId, keyword, keyword);
     }
 
 }

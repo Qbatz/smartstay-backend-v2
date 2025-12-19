@@ -445,6 +445,7 @@ public class InvoiceV1Service {
             invoiceTypes.add(InvoiceType.RENT.name());
             invoiceTypes.add(InvoiceType.SETTLEMENT.name());
             invoiceTypes.add(InvoiceType.ADVANCE.name());
+            invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
         }
 
         List<String> createdByUsers = null;
@@ -462,8 +463,8 @@ public class InvoiceV1Service {
         }
 
         List<String> userIds = null;
-        if (searchKey != null) {
-            List<Customers> listCustomers = customersService.searchCustomerByHostelName(searchKey.trim());
+        if (searchKey != null && !searchKey.trim().equalsIgnoreCase("")) {
+            List<Customers> listCustomers = customersService.searchCustomerByHostelName(hostelId, searchKey.trim());
             userIds = listCustomers
                     .stream()
                     .map(Customers::getCustomerId)
@@ -1712,9 +1713,7 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        Date date = new Date();
-        String day = Utils.getDayFromDate(date);
-        List<BillingRules> listBillingRules = billingRuleRepository.findAllHostelsHavingTodaysRecurring(day, date);
+        List<com.smartstay.smartstay.dao.BillingRules> listBillingRules = hostelService.findAllHostelsHavingBillingToday();
 
         List<HostelV1> listHostels = listBillingRules
                 .stream()
@@ -1723,7 +1722,7 @@ public class InvoiceV1Service {
 
         if (listHostels != null && !listHostels.isEmpty()) {
            listHostels.forEach(item -> {
-               applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
+               applicationEventPublisher.publishEvent(new RecurringEvents(this, item.getHostelId()));
            });
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);

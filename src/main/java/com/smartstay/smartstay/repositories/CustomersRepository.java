@@ -114,7 +114,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     @Query("SELECT cus FROM Customers cus WHERE cus.currentStatus='CHECK_IN' OR cus.currentStatus='NOTICE'")
     List<Customers> findAllCheckedInCustomers();
 
-    List<Customers> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
+    List<Customers> findByHostelIdAndFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(String hostelId,
             String firstName, String lastName
     );
 

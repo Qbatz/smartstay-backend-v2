@@ -846,6 +846,10 @@ public class TransactionService {
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
+        Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
 
         InvoicesV1 inv = invoiceService.deleteReceipt(invoicesV1, transactionV1);
         if (inv == null) {

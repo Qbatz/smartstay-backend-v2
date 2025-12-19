@@ -360,6 +360,11 @@ public class HostelService {
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
+        Calendar cal = Calendar.getInstance();
+        if (cal.get(Calendar.DAY_OF_MONTH) < billStartDate) {
+            calendar.add(Calendar.MONTH, -1);
+        }
+
 //        Calendar calendarDueDate = Calendar.getInstance();
 //        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
@@ -776,6 +781,10 @@ public class HostelService {
 
     public BillingDates getNextBillingDates(String hostelId) {
         return hostelConfigService.getNextMonthBillingDates(hostelId);
+    }
+
+    public List<BillingRules> findAllHostelsHavingBillingToday() {
+        return hostelConfigService.findAllHostelsHavingBillingToday();
     }
 }
 
