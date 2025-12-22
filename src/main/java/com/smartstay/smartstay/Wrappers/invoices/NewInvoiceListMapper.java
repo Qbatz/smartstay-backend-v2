@@ -7,6 +7,7 @@ import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
@@ -33,6 +34,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         String lastName = null;
         String profilePic = null;
         String invoiceType = null;
+        String invoiceMode = null;
         boolean isRefundable = false;
         boolean isCancelled = false;
 
@@ -116,6 +118,17 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             isCancelled = true;
         }
 
+        if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name())) {
+            invoiceMode = "Recurring";
+        }
+        else if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
+            invoiceMode = "Manual";
+        }
+        else if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.AUTOMATIC.name())) {
+            invoiceMode = "Automatic";
+        }
+
+
         return new InvoicesList(firstName,
                 lastName,
                 fullName.toString(),
@@ -137,6 +150,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                 Utils.dateToString(invoicesV1.getInvoiceDueDate()),
                 invoiceType,
+                invoiceMode,
                 paymentStatus,
                 Utils.dateToString(invoicesV1.getUpdatedAt()),
                 invoicesV1.getInvoiceNumber(),

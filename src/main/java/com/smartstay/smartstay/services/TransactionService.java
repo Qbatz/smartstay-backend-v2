@@ -181,6 +181,7 @@ public class TransactionService {
         transactionV1.setInvoiceId(invoiceId);
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setCreatedAt(new Date());
+        transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(calendar.getTime());
 

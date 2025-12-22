@@ -142,4 +142,19 @@ public class SmartstayApplication {
 		};
 	}
 
+	@Bean
+	CommandLineRunner findManulReceipts(TransactionV1Repository transactionV1Repository) {
+		return args -> {
+//			List<TransactionV1> listNullTransactions = transactionV1Repository.findByTransactionModeIsNull()
+//					.stream()
+//					.map(i -> {
+//						i.setTransactionMode(ReceiptMode.MANUAL.name());
+//						return i;
+//					})
+//					.toList();
+//
+//			transactionV1Repository.saveAll(listNullTransactions);
+		};
+	}
+
 }

@@ -40,7 +40,6 @@ public class TransactionController {
     public ResponseEntity<?> refunInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody @Valid RefundInvoice refundInvoice) {
         return transactionService.refundForInvoice(hostelId, invoiceId, refundInvoice);
     }
-
     @DeleteMapping("/receipts/{hostelId}/{receiptId}")
     public ResponseEntity<?> deleteReceipt(@PathVariable("hostelId") String hostelId, @PathVariable("receiptId") String receiptId) {
         return transactionService.deleteReceipt(hostelId, receiptId);

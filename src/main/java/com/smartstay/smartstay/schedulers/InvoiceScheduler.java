@@ -30,7 +30,7 @@ public class InvoiceScheduler {
     private ApplicationEventPublisher applicationEventPublisher;
 
 
-    @Scheduled(cron = "0 0 2 * * *")
+    @Scheduled(cron = "0 29 10 * * *")
     public void generateInvoice() {
 
 

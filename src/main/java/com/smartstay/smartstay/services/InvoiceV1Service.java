@@ -559,7 +559,7 @@ public class InvoiceV1Service {
      */
     public Double getBookingAmount(String customerId, String hostelId) {
         InvoicesV1 invoiceV1 = invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.BOOKING.name());
-        return invoiceV1.getTotalAmount();
+        return invoiceV1.getPaidAmount();
     }
 
     public InvoicesV1 getBookingInvoice(String customerId, String hostelId) {
@@ -2191,6 +2191,9 @@ public class InvoiceV1Service {
             invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
         }
 
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            bookingsService.deleteBookingReceipt(invoicesV1.getCustomerId(), receiptAmount);
+        }
         return invoicesV1Repository.save(invoicesV1);
     }
 }

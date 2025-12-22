@@ -26,7 +26,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             invc.invoice_number as invoiceNumber, customers.first_name as firstName, customers.last_name as lastName,
             customers.profile_pic as profilePic, 
             advance.advance_amount as advanceAmount, advance.deductions as deductions,
-            invc.is_cancelled as cancelled, invc.paid_amount as paidAmount  
+            invc.is_cancelled as cancelled, invc.paid_amount as paidAmount, invc.invoice_mode as invoiceMode   
             from invoicesv1 invc inner join customers customers on customers.customer_id=invc.customer_id 
             left outer join advance advance on advance.customer_id=invc.customer_id where invc.hostel_id=:hostelId AND invc.invoice_type not in('BOOKING') 
             order by invc.invoice_start_date desc
@@ -54,7 +54,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy)) 
             AND (:mode IS NULL OR i.invoiceMode in (:mode)) 
             AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus)) 
-            AND (:userId IS NULL OR i.customerId IN (:userId))
+            AND (:userId IS NULL OR i.customerId IN (:userId)) ORDER BY i.invoiceStartDate DESC
             """)
     List<InvoicesV1> findAllInvoicesByHostelId(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
                                                @Param("endDate") Date endDate, @Param("types") List<String> types,

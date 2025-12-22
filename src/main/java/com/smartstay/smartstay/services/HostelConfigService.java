@@ -72,7 +72,7 @@ public class HostelConfigService {
         Date date = new Date();
         String day = Utils.getDayFromDate(date);
 
-        return billingRuleRepository.findAllHostelsHavingTodaysRecurring(day, date);
+        return billingRuleRepository.findAllHostelsHavingTodaysRecurring(day);
     }
 
     public BillingDates getNextMonthBillingDates(String hostelId) {

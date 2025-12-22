@@ -1140,4 +1140,12 @@ public class BookingsService {
     public List<BookingsV1> checkAllByHostelId(String hostelId) {
         return bookingsRepository.findAllBookingsByHostelId(hostelId);
     }
+
+    public void deleteBookingReceipt(String customerId, double receiptAmount) {
+        BookingsV1 bookingsV1 = bookingsRepository.findByCustomerId(customerId);
+        if (bookingsV1.getBookingAmount() > 0) {
+            double newAdvance = bookingsV1.getBookingAmount() - receiptAmount;
+            bookingsV1.setBookingAmount(newAdvance);
+        }
+    }
 }

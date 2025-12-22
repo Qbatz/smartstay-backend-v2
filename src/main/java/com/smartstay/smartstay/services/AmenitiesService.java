@@ -73,7 +73,7 @@ public class AmenitiesService {
 
         AmenityList amenityList = new AmenityList(hostelId, amenitiesV1List);
         if (amenitiesV1List != null) {
-            return new ResponseEntity<>(amenityList, HttpStatus.OK);
+            return new ResponseEntity<>(amenitiesV1List, HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.NO_RECORDS_FOUND, HttpStatus.BAD_REQUEST);
     }
