@@ -2,6 +2,7 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
+import com.smartstay.smartstay.payloads.invoice.UpdateRecurringInvoice;
 import com.smartstay.smartstay.services.InvoiceV1Service;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -9,6 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -62,6 +64,11 @@ public class InvoiceController {
     @GetMapping("/{hostelId}/{invoiceId}")
     public ResponseEntity<?> getInvoiceInfo(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return invoiceV1Service.getInvoiceDetailsByInvoiceId(hostelId, invoiceId);
+    }
+
+    @PutMapping("/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> updateRecurringInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody List<UpdateRecurringInvoice> recurringInvoiceItems) {
+        return invoiceV1Service.updateRecurringInvoice(hostelId, invoiceId, recurringInvoiceItems);
     }
 
     @GetMapping("/refund/{hostelId}/{invoiceId}")

@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 
@@ -52,6 +53,8 @@ public class ElectricityService {
     private CustomerEbHistoryService ebHistoryService;
     @Autowired
     private CustomersService customerService;
+    @Autowired
+    private CustomersBedHistoryService bedHistoryService;
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
@@ -129,7 +132,7 @@ public class ElectricityService {
                 billStartDate = Utils.addDaysToDate(electricityReadings.getEntryDate(), 1);
             }
 
-            if (readings.reading() < previousReading) {
+            if (readings.reading() <= previousReading) {
                 return new ResponseEntity<>(Utils.PREVIOUS_CURRENT_READING_NOT_MATCHING, HttpStatus.BAD_REQUEST);
             }
 
@@ -656,13 +659,59 @@ public class ElectricityService {
             Double lastReading = 0.0;
             if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.HOSTEL_READING.name())) {
                 isHostelBased = true;
-                lastReading = electricityReadingRepository.getLastReading(hostelId);
+                Double lReading = electricityReadingRepository.getLastReading(hostelId);
+                if (lReading != null) {
+                    lastReading = Utils.roundOfDouble(lReading);
+                }
+                else {
+                    lastReading = 0.0;
+                }
             }
 
             ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
 
             return new ResponseEntity<>(list, HttpStatus.OK);
 
+
+    }
+
+    public ResponseEntity getEbReadingsNew(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(),hostelId)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<ElectricityReadings> latestReadings = electricityReadingRepository.getLatestReadingOfAllRooms(hostelId);
+
+        List<BedHistoryByRoomId> listBeds = null;
+        HashMap<Integer, Integer> occupantsCounts = null;
+        if (latestReadings != null) {
+            listBeds = latestReadings
+                    .stream()
+                    .map(i -> {
+                        return new BedHistoryByRoomId(i.getRoomId(), i.getBillStartDate(), i.getBillEndDate());
+                    })
+                    .toList();
+
+        }
+
+        if (listBeds != null) {
+            occupantsCounts = bedHistoryService.findByStartAndEndDateAndRoomIds(listBeds);
+        }
+
+        return null;
 
     }
 
@@ -723,7 +772,7 @@ public class ElectricityService {
         }
 
         RoomInfo roomsDetails = roomsService.getRoom(roomId);
-        List<ElectricityReadingForRoom> listElectricities = electricityReadingRepository.getRoomReading(roomId);
+        List<ElectricityReadings> listElectricities = electricityReadingRepository.getRoomReading(roomId);
 
         EBReadingRoomsInfo roomInfo = null;
 
@@ -894,6 +943,10 @@ public class ElectricityService {
                     .mapToDouble(i -> {
                         Double consumption = i.getConsumption();
                         double currentPrice = i.getCurrentUnitPrice();
+
+                        if (i.isFirstEntry()) {
+                            consumption = 0.0;
+                        }
 
                         return Math.round(consumption*currentPrice);
                     })

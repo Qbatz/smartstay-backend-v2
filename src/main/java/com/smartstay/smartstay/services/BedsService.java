@@ -139,96 +139,199 @@ public class BedsService {
             roomName = bedInformations.roomName();
         }
 
-        TenantInfo currentTenantInfo = null;
+        List<TenantInfo> currentTenantInfo = new ArrayList<>();
         List<TenantInfo> newTenantInfo = new ArrayList<>();
 
         if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) || beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             isOccupied = true;
-            BookingsV1 bookingsV1 = bookingService.checkOccupiedByBedId(beds.getBedId());
+            List<BookingsV1> bookingsV1 = bookingService.checkOccupiedByBedId(beds.getBedId());
             if (bookingsV1 != null) {
-                Customers customers = customersService.getCustomerInformation(bookingsV1.getCustomerId());
-                String tenantId = null;
-                String firstName = null;
-                String lastName = null;
-                String profilePic = null;
-                StringBuilder fullName = new StringBuilder();
-                StringBuilder initials = new StringBuilder();
-                String joiningDate = null;
-                String bookingDate = null;
-                Double bookingAmount = 0.0;
-                String mobile = null;
-                double advance = 0.0;
-                Double rentAmount = null;
-                Double lastInvoiceAmount = null;
-                String lastInvoiceNumber = null;
-                int totalInvoice = 0;
-                String leavingDate = null;
-                String currentStatus = BookingStatus.CHECKIN.name();
+                BookingsV1 currentCheckIn = bookingsV1
+                        .stream()
+                        .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()))
+                        .findFirst()
+                        .orElse(null);
+                if (currentCheckIn != null) {
+                    Customers customers = customersService.getCustomerInformation(currentCheckIn.getCustomerId());
+                    String tenantId = null;
+                    String firstName = null;
+                    String lastName = null;
+                    String profilePic = null;
+                    StringBuilder fullName = new StringBuilder();
+                    StringBuilder initials = new StringBuilder();
+                    String joiningDate = null;
+                    String bookingDate = null;
+                    Double bookingAmount = 0.0;
+                    String mobile = null;
+                    double advance = 0.0;
+                    Double rentAmount = null;
+                    Double lastInvoiceAmount = null;
+                    String lastInvoiceNumber = null;
+                    int totalInvoice = 0;
+                    String leavingDate = null;
+                    String currentStatus = BookingStatus.CHECKIN.name();
 
-                bookingAmount = bookingsV1.getBookingAmount();
+                    bookingAmount = currentCheckIn.getBookingAmount();
 
-                totalInvoice = invoiceService.findAllRentalInvoicesAmountExceptCurrentMonth(customers.getCustomerId(), customers.getHostelId());
-                InvoicesV1 latestInvoices = invoiceService.findLatestInvoice(customers.getCustomerId());
-                if (latestInvoices != null) {
-                   lastInvoiceAmount = latestInvoices.getTotalAmount();
-                   lastInvoiceNumber = latestInvoices.getInvoiceNumber();
-                }
-                if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
-                    currentStatus = BookingStatus.NOTICE.name();
-                    onNotice = true;
-                    freeFrom = Utils.dateToString(bookingsV1.getLeavingDate());
-                    leavingDate = Utils.dateToString(bookingsV1.getLeavingDate());
-                }
-
-                joiningDate = Utils.dateToString(bookingsV1.getJoiningDate());
-                bookingDate = Utils.dateToString(bookingsV1.getBookingDate());
-                rentAmount = bookingsV1.getRentAmount();
-
-                if (customers != null) {
-                    tenantId = customers.getCustomerId();
-                    firstName = customers.getFirstName();
-                    lastName = customers.getLastName();
-                    profilePic = customers.getProfilePic();
-                    mobile = customers.getMobile();
-                    if (customers.getAdvance() != null) {
-                        advance = customers.getAdvance().getAdvanceAmount();
+                    totalInvoice = invoiceService.findAllRentalInvoicesAmountExceptCurrentMonth(customers.getCustomerId(), customers.getHostelId());
+                    InvoicesV1 latestInvoices = invoiceService.findLatestInvoice(customers.getCustomerId());
+                    if (latestInvoices != null) {
+                        lastInvoiceAmount = latestInvoices.getTotalAmount();
+                        lastInvoiceNumber = latestInvoices.getInvoiceNumber();
+                    }
+                    if (currentCheckIn.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
+                        currentStatus = BookingStatus.NOTICE.name();
+                        onNotice = true;
+                        freeFrom = Utils.dateToString(currentCheckIn.getLeavingDate());
+                        leavingDate = Utils.dateToString(currentCheckIn.getLeavingDate());
                     }
 
-                    if (customers.getFirstName() != null) {
-                        fullName.append(customers.getFirstName());
-                        initials.append(customers.getFirstName().toUpperCase().charAt(0));
-                    }
-                    if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
-                        fullName.append(" ");
-                        fullName.append(customers.getLastName());
-                        initials.append(customers.getLastName().toUpperCase().charAt(0));
-                    }
-                    else if (customers.getFirstName() != null) {
-                        if (customers.getFirstName().length() > 1) {
-                            initials.append(customers.getFirstName().toUpperCase().charAt(1));
+                    joiningDate = Utils.dateToString(currentCheckIn.getJoiningDate());
+                    bookingDate = Utils.dateToString(currentCheckIn.getBookingDate());
+                    rentAmount = currentCheckIn.getRentAmount();
+
+                    if (customers != null) {
+                        tenantId = customers.getCustomerId();
+                        firstName = customers.getFirstName();
+                        lastName = customers.getLastName();
+                        profilePic = customers.getProfilePic();
+                        mobile = customers.getMobile();
+                        if (customers.getAdvance() != null) {
+                            advance = customers.getAdvance().getAdvanceAmount();
                         }
+
+                        if (customers.getFirstName() != null) {
+                            fullName.append(customers.getFirstName());
+                            initials.append(customers.getFirstName().toUpperCase().charAt(0));
+                        }
+                        if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
+                            fullName.append(" ");
+                            fullName.append(customers.getLastName());
+                            initials.append(customers.getLastName().toUpperCase().charAt(0));
+                        }
+                        else if (customers.getFirstName() != null) {
+                            if (customers.getFirstName().length() > 1) {
+                                initials.append(customers.getFirstName().toUpperCase().charAt(1));
+                            }
+                        }
+
                     }
 
+                    TenantInfo checkInTenantInfo = new TenantInfo(tenantId,
+                            firstName,
+                            lastName,
+                            fullName.toString(),
+                            profilePic,
+                            initials.toString(),
+                            joiningDate,
+                            bookingDate,
+                            bookingAmount,
+                            mobile,
+                            advance,
+                            rentAmount,
+                            lastInvoiceAmount,
+                            lastInvoiceNumber,
+                            totalInvoice,
+                            leavingDate,
+                            currentStatus,
+                            Utils.COUNTRY_CODE);
+
+                    currentTenantInfo.add(checkInTenantInfo);
                 }
 
-                currentTenantInfo = new TenantInfo(tenantId,
-                        firstName,
-                        lastName,
-                        fullName.toString(),
-                        profilePic,
-                        initials.toString(),
-                        joiningDate,
-                        bookingDate,
-                        bookingAmount,
-                        mobile,
-                        advance,
-                        rentAmount,
-                        lastInvoiceAmount,
-                        lastInvoiceNumber,
-                        totalInvoice,
-                        leavingDate,
-                        currentStatus,
-                        Utils.COUNTRY_CODE);
+                BookingsV1 noticeTenant = bookingsV1
+                        .stream()
+                        .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (noticeTenant != null) {
+                    Customers customers = customersService.getCustomerInformation(noticeTenant.getCustomerId());
+                    String tenantId = null;
+                    String firstName = null;
+                    String lastName = null;
+                    String profilePic = null;
+                    StringBuilder fullName = new StringBuilder();
+                    StringBuilder initials = new StringBuilder();
+                    String joiningDate = null;
+                    String bookingDate = null;
+                    Double bookingAmount = 0.0;
+                    String mobile = null;
+                    double advance = 0.0;
+                    Double rentAmount = null;
+                    Double lastInvoiceAmount = null;
+                    String lastInvoiceNumber = null;
+                    int totalInvoice = 0;
+                    String leavingDate = null;
+                    String currentStatus = BookingStatus.CHECKIN.name();
+
+                    bookingAmount = noticeTenant.getBookingAmount();
+
+                    totalInvoice = invoiceService.findAllRentalInvoicesAmountExceptCurrentMonth(customers.getCustomerId(), customers.getHostelId());
+                    InvoicesV1 latestInvoices = invoiceService.findLatestInvoice(customers.getCustomerId());
+                    if (latestInvoices != null) {
+                        lastInvoiceAmount = latestInvoices.getTotalAmount();
+                        lastInvoiceNumber = latestInvoices.getInvoiceNumber();
+                    }
+                    if (noticeTenant.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
+                        currentStatus = BookingStatus.NOTICE.name();
+                        onNotice = true;
+                        freeFrom = Utils.dateToString(noticeTenant.getLeavingDate());
+                        leavingDate = Utils.dateToString(noticeTenant.getLeavingDate());
+                    }
+
+                    joiningDate = Utils.dateToString(noticeTenant.getJoiningDate());
+                    bookingDate = Utils.dateToString(noticeTenant.getBookingDate());
+                    rentAmount = noticeTenant.getRentAmount();
+
+                    if (customers != null) {
+                        tenantId = customers.getCustomerId();
+                        firstName = customers.getFirstName();
+                        lastName = customers.getLastName();
+                        profilePic = customers.getProfilePic();
+                        mobile = customers.getMobile();
+                        if (customers.getAdvance() != null) {
+                            advance = customers.getAdvance().getAdvanceAmount();
+                        }
+
+                        if (customers.getFirstName() != null) {
+                            fullName.append(customers.getFirstName());
+                            initials.append(customers.getFirstName().toUpperCase().charAt(0));
+                        }
+                        if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
+                            fullName.append(" ");
+                            fullName.append(customers.getLastName());
+                            initials.append(customers.getLastName().toUpperCase().charAt(0));
+                        }
+                        else if (customers.getFirstName() != null) {
+                            if (customers.getFirstName().length() > 1) {
+                                initials.append(customers.getFirstName().toUpperCase().charAt(1));
+                            }
+                        }
+
+                    }
+
+                    TenantInfo noticeTenantInfo = new TenantInfo(tenantId,
+                            firstName,
+                            lastName,
+                            fullName.toString(),
+                            profilePic,
+                            initials.toString(),
+                            joiningDate,
+                            bookingDate,
+                            bookingAmount,
+                            mobile,
+                            advance,
+                            rentAmount,
+                            lastInvoiceAmount,
+                            lastInvoiceNumber,
+                            totalInvoice,
+                            leavingDate,
+                            currentStatus,
+                            Utils.COUNTRY_CODE);
+
+                    currentTenantInfo.add(noticeTenantInfo);
+                }
             }
         }
         if (beds.isBooked()) {

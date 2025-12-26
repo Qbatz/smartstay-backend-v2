@@ -32,7 +32,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     @Query(value = """
             SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('CHECKIN', 'NOTICE')
             """, nativeQuery = true)
-    BookingsV1 findOccupiedDetails(@Param("bedId") Integer bedId);
+    List<BookingsV1> findOccupiedDetails(@Param("bedId") Integer bedId);
     @Query(value = """
             SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('BOOKED')
             """, nativeQuery = true)

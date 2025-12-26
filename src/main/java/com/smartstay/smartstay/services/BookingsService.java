@@ -167,7 +167,7 @@ public class BookingsService {
         return bookingsRepository.findLatestBooking(bedId);
     }
 
-    public BookingsV1 checkOccupiedByBedId(Integer bedId) {
+    public List<BookingsV1> checkOccupiedByBedId(Integer bedId) {
         return bookingsRepository.findOccupiedDetails(bedId);
     }
 
@@ -403,7 +403,7 @@ public class BookingsService {
      * this function is for deleting a bed
      */
     public boolean checkIsBedOccupied(Integer bedId) {
-        BookingsV1 bookingsV1 = bookingsRepository.findOccupiedDetails(bedId);
+        List<BookingsV1> bookingsV1 = bookingsRepository.findOccupiedDetails(bedId);
         if (bookingsV1 != null) {
             return true;
         }

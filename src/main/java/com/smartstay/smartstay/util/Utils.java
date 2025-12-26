@@ -43,6 +43,7 @@ public class Utils {
 
     public static final String INVALID_AMENITY = "Invalid Amenity";
     public static final String AMENITY_ALREADY_DELETED = "Amenity already deleted";
+    public static final String CANNOT_DELETE_ASSIGNED_AMENITIES = "Amenities that are currently assigned cannot be deleted.";
 
 
     public static final String INVALID_FLOOR = "Invalid Floor";
@@ -191,6 +192,7 @@ public class Utils {
     public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_CUSTOMERS = "Cannot change advance for cancelled customers";
     public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_INVOICE = "Cannot change advance for cancelled invoices";
     public static final String RENT_AMOUNT_REQUIRED = "Rent amount is required";
+    public static final String CANNOT_EDIT_PAID_INVOICES = "Cannot edit paid invoices";
     public static final String COMPLAINT_NOT_FOUND = "Complaint not found";
     public static final String JOINING_DATE_CANNOT_BEFORE_BOOKING = "Check-in cannot be earlier than the booking date";
     public static final String CANNOT_DELETE_ACTIVE_CUSTOMERS = "Cannot delete active customers";
@@ -203,6 +205,7 @@ public class Utils {
     public static final String DATE_VALIDATION_ERROR_CANCEL_BOOKING = "Cancel date cannot be earlier than the booking date";
     public static final String CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR = "Cannot modify the billing rules. Tenant already exists.";
     public static final String CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED = "Cannot delete receipts for settlement generated customers";
+    public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
     /**
      *  Defining module Id's here
      *

@@ -701,13 +701,13 @@ public class HostelService {
         }
 
         if (mainImage != null) {
-            String mainImageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFileNew(mainImage), "Hostel-Images");
+            String mainImageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(mainImage), "Hostel-Images");
             hostelV1.setMainImage(mainImageUrl);
         }
 
         List<String> listImageUrls = new ArrayList<>();
         if (additionalImages != null && !additionalImages.isEmpty()) {
-            listImageUrls = additionalImages.stream().map(multipartFile -> uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFileNew(multipartFile), "Hostel-Images")).collect(Collectors.toList());
+            listImageUrls = additionalImages.stream().map(multipartFile -> uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(multipartFile), "Hostel-Images")).collect(Collectors.toList());
         }
 
         if (!listImageUrls.isEmpty()) {

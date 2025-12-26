@@ -17,6 +17,7 @@ public class ListReadingMapper implements Function<ElectricityReadings, Electric
         }
         double previousReading = electricityReaddings.getCurrentReading() - consumption ;
         totalPrice = consumption * electricityReaddings.getUnitPrice();
+
         return new ElectricityUsage(electricityReaddings.getHostelId(),
                 electricityReaddings.getId(),
                 consumption,

@@ -64,7 +64,7 @@ public class ProfileController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<Object> changePassword(@RequestBody Password password) {
+    public ResponseEntity<Object> changePassword(@Valid @RequestBody Password password) {
         return usersService.changePassword(password);
     }
 

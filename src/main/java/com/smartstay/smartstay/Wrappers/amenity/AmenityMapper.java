@@ -77,6 +77,10 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                             isEnding.set(true);
                             endDate.set(Utils.dateToString(customersAmenity.getEndDate()));
                         }
+                        else {
+                            isEnding.set(false);
+                            endDate.set(null);
+                        }
                     }
                     Integer bedId = bedCustomerMapper.get(i.getCustomerId());
                     if (bedId != null) {

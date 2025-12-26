@@ -24,10 +24,7 @@ import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
 import com.smartstay.smartstay.payloads.customer.Settlement;
-import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
-import com.smartstay.smartstay.payloads.invoice.ItemResponse;
-import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
-import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
+import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
@@ -2195,5 +2192,46 @@ public class InvoiceV1Service {
             bookingsService.deleteBookingReceipt(invoicesV1.getCustomerId(), receiptAmount);
         }
         return invoicesV1Repository.save(invoicesV1);
+    }
+
+    public ResponseEntity<?> updateRecurringInvoice(String hostelId, String invoiceId, List<UpdateRecurringInvoice> recurringInvoiceItems) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name())) {
+            return new ResponseEntity<>(Utils.EDIT_ALLOWED_ONLY_RECURRING_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (recurringInvoiceItems == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_EDIT_PAID_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
+        Double newInvoiceAmount = invoiceItemService.updateRecurringInvoiceItems(recurringInvoiceItems, invoicesV1);
+
+        invoicesV1.setTotalAmount(newInvoiceAmount);
+
+        invoicesV1Repository.save(invoicesV1);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+
     }
 }

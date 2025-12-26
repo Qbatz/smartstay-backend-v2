@@ -73,7 +73,7 @@ public class AmenitiesService {
 
         AmenityList amenityList = new AmenityList(hostelId, amenitiesV1List);
         if (amenitiesV1List != null) {
-            return new ResponseEntity<>(amenitiesV1List, HttpStatus.OK);
+            return new ResponseEntity<>(amenityList, HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.NO_RECORDS_FOUND, HttpStatus.BAD_REQUEST);
     }
@@ -81,7 +81,7 @@ public class AmenitiesService {
 
     public ResponseEntity<?> getAmenitiesById(String hostelId, String amenitiesId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
@@ -178,6 +178,10 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.NOT_FOUND);
         }
         if (request.amenityName()!=null){
+            List<AmenitiesV1> listAmenitiesByName = amentityRepository.findByAmenityNameAndHostelId(hostelId, amenityId, request.amenityName());
+            if (listAmenitiesByName != null && !listAmenitiesByName.isEmpty()) {
+                return new ResponseEntity<>(Utils.AMENITY_ALREADY_EXIST, HttpStatus.BAD_REQUEST);
+            }
             amenitiesV1.setAmenityName(request.amenityName());
         }
         if (request.amount()!=null){
@@ -209,7 +213,7 @@ public class AmenitiesService {
 
     public ResponseEntity<?> deleteAmenityById(String amenityId, String hostelId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
@@ -229,6 +233,11 @@ public class AmenitiesService {
 
         AmenitiesV1 existingAmenity = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId, hostelId, users.getParentId());
         if (existingAmenity != null) {
+            //check is amenity is currently assigned
+            List<CustomersAmenity> listAmenityAssignedAndActive = customerAmenityRepository.checkAmenityAssignedAndActive(amenityId, new Date());
+            if (listAmenityAssignedAndActive != null && !listAmenityAssignedAndActive.isEmpty()) {
+                return new ResponseEntity<>(Utils.CANNOT_DELETE_ASSIGNED_AMENITIES, HttpStatus.BAD_REQUEST);
+            }
             existingAmenity.setIsDeleted(true);
             existingAmenity.setUpdatedAt(new Date());
             amentityRepository.save(existingAmenity);

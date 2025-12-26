@@ -29,12 +29,10 @@ public class AmentityController {
     public ResponseEntity<?> getAllAmenities(@PathVariable("hostelId") String hostelId) {
         return amenitiesService.getAllAmenities(hostelId);
     }
-
     @GetMapping("/{hostelId}/{amenityId}")
     public ResponseEntity<?> getAmenitiesById(@PathVariable("hostelId") String hostelId, @PathVariable("amenityId") String amenityId) {
         return amenitiesService.getAmenitiesById(hostelId, amenityId);
     }
-
     @PostMapping("/{hostelId}")
     public ResponseEntity<?> addAmenity(@Valid @RequestBody AmenityRequest request, @PathVariable("hostelId") String hostelId) {
         return amenitiesService.addAmenity(request, hostelId);

@@ -692,7 +692,7 @@ public class UsersService {
 
                 String pic = null;
                 if (profilePic != null && !profilePic.isEmpty()) {
-                    pic = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFileNew(profilePic));
+                    pic = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(profilePic));
                 }
 
                 if (pic != null && !pic.equalsIgnoreCase("")) {

@@ -14,6 +14,6 @@ public record BedDetails(String bedName,
                          Integer floorId,
                          String floorName,
                          String roomName,
-                         TenantInfo currentTenantInfo,
+                         List<TenantInfo> currentTenantInfo,
                          List<TenantInfo> newTenantInfo) {
 }

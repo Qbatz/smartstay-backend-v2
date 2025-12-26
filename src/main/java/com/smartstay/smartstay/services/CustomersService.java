@@ -437,7 +437,6 @@ public class CustomersService {
 
         if (bedsService.isBedAvailable(payloads.bedId(), user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
 
-
             Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), joiningDate);
             BillingDates currentBillDate = hostelService.getCurrentBillStartAndEndDates(hostelV1.getHostelId());
