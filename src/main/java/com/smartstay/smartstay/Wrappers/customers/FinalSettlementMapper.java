@@ -57,7 +57,7 @@ public class FinalSettlementMapper implements Function<InvoicesV1, RentBreakUp> 
         return new RentBreakUp(Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                 Utils.dateToString(invoicesV1.getInvoiceEndDate()),
                 noOfDays,
-                rentAmount,
+                Utils.roundOfDouble(Math.round(rentAmount)),
                 bedName,
                 roomName,
                 floorName);

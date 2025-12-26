@@ -4,6 +4,7 @@ import com.smartstay.smartstay.Wrappers.RoomsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.room.RoomInfo;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.rooms.AddRoom;
 import com.smartstay.smartstay.payloads.rooms.UpdateRoom;
@@ -169,7 +170,7 @@ public class RoomsService {
 
     public ResponseEntity<?> deleteRoomById(int roomId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
@@ -179,9 +180,9 @@ public class RoomsService {
         Rooms existingRoom = roomRepository.findByRoomIdAndParentId(roomId,users.getParentId());
         if (existingRoom != null) {
             boolean customerExist = floorRepository.existsActiveBookingForRoom(existingRoom.getHostelId(),roomId ,
-                    List.of(CustomerStatus.NOTICE.name(),CustomerStatus.CHECK_IN.name(), CustomerStatus.BOOKED.name()));
+                    List.of(BookingStatus.NOTICE.name(),BookingStatus.CHECKIN.name(), BookingStatus.BOOKED.name()));
             if (customerExist) {
-                return new ResponseEntity<>("Cannot delete room — active bookings exist.", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Cannot delete room — active tenants exist.", HttpStatus.BAD_REQUEST);
             }
             existingRoom.setUpdatedAt(new Date());
             existingRoom.setIsDeleted(true);

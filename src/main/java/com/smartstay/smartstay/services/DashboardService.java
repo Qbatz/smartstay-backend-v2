@@ -84,7 +84,9 @@ public class DashboardService {
         nextMonthProjections = bookingsService.getNextMonthProjections(hostelId, billingDates);
         pendingInvoiceCount = invoiceV1Service.getPendingInvoiceCounts(hostelId);
 
-        Dashboard dashboard = new Dashboard(totalRooms,
+        Dashboard dashboard = new Dashboard(
+                hostelId,
+                totalRooms,
                 totalBeds,
                 freebeds,
                 occupiedBeds,

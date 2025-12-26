@@ -78,7 +78,8 @@ public class HostelService {
     private SubscriptionService subscriptionService;
     @Autowired
     private BankingService bankingService;
-
+    @Autowired
+    private BookingsService bookingsService;
     @Autowired
     private ApplicationEventPublisher eventPublisher;
     @Autowired
@@ -359,6 +360,11 @@ public class HostelService {
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
+        Calendar cal = Calendar.getInstance();
+        if (cal.get(Calendar.DAY_OF_MONTH) < billStartDate) {
+            calendar.add(Calendar.MONTH, -1);
+        }
+
 //        Calendar calendarDueDate = Calendar.getInstance();
 //        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
@@ -606,104 +612,55 @@ public class HostelService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        BillingDates billDates = getBillingRuleOnDate(hostelId, new Date());
-
-        BillingRules currentBillingRules = hostelConfigService.getLatestBillRuleByHostelIdAndStartDate(hostelId, new Date());
-        BillingRules newBillingRules = hostelConfigService.getNewBillRuleByHostelIdAndStartDate(hostelId, new Date());
-
-        //if new  billing rule is created
-        if (newBillingRules == null) {
-            newBillingRules = new BillingRules();
+        List<BookingsV1> bookingsV1 = bookingsService.checkAllByHostelId(hostelId);
+        if (bookingsV1 != null && !bookingsV1.isEmpty()) {
+            return new ResponseEntity<>(Utils.CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR, HttpStatus.BAD_REQUEST);
         }
 
-        Date startDate = null;
-        Date previousEndDate = null;
+        BillingDates billDates = getBillingRuleOnDate(hostelId, new Date());
+
+        BillingRules currentBillingRules = hostelConfigService.getCurrentBillingRule(hostel.getHostelId());
+        BillingRules newBillingRules =  new BillingRules();
+
 
         if (Utils.checkNullOrEmpty(billRules.startDate())) {
-            Calendar cal = Calendar.getInstance();
-            cal.set(Calendar.DAY_OF_MONTH, billRules.startDate());
-
-            if (!currentBillingRules.isInitial()) {
-                if (Utils.compareWithTwoDates(billDates.currentBillStartDate(), new Date()) <= 0) {
-                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
-                }
-            }
-            else {
-                if (Utils.compareWithTwoDates(cal.getTime(), new Date()) <= 0) {
-                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
-                }
-                else {
-                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
-                }
-
-            }
-
-            startDate = cal.getTime();
-
-            Calendar calendarCurrentBillingEnd = Calendar.getInstance();
-            calendarCurrentBillingEnd.setTime(startDate);
-            calendarCurrentBillingEnd.set(Calendar.DAY_OF_MONTH, calendarCurrentBillingEnd.get(Calendar.DAY_OF_MONTH) - 1);
-            previousEndDate = calendarCurrentBillingEnd.getTime();
-
-            currentBillingRules.setEndTill(previousEndDate);
-
-            newBillingRules.setStartFrom(startDate);
             newBillingRules.setBillingStartDate(billRules.startDate());
 
         }
         else {
-            Calendar cal = Calendar.getInstance();
-
-            if (!currentBillingRules.isInitial()) {
-                if (Utils.compareWithTwoDates(billDates.currentBillStartDate(), new Date()) <= 0) {
-                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
-                }
+            if (currentBillingRules != null) {
+                newBillingRules.setBillingStartDate(currentBillingRules.getBillingStartDate());
             }
             else {
-                if (Utils.compareWithTwoDates(cal.getTime(), new Date()) < 0) {
-                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
-                }
-                else {
-                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH));
-                }
+                newBillingRules.setBillingStartDate(1);
             }
-
-            startDate = cal.getTime();
-
-            newBillingRules.setBillingStartDate(currentBillingRules.getBillingStartDate());
-
         }
         if (Utils.checkNullOrEmpty(billRules.dueDate())) {
-//            newBillingRules.setBillingDueDate(billRules.dueDate());
             newBillingRules.setBillDueDays(billRules.dueDate());
         }
         else {
-//            if (newBillingRules.getBillingDueDate() == null) {
-//                newBillingRules.setBillingDueDate(currentBillingRules.getBillingDueDate());
-//            }
-            if (newBillingRules.getBillDueDays() == null) {
+            if (currentBillingRules != null) {
                 newBillingRules.setBillDueDays(currentBillingRules.getBillDueDays());
+            }
+            else {
+                newBillingRules.setBillDueDays(10);
             }
         }
         if (Utils.checkNullOrEmpty(billRules.noticeDays())) {
             newBillingRules.setNoticePeriod(billRules.noticeDays());
         }
         else {
-            if (newBillingRules.getNoticePeriod() == null) {
+            if (currentBillingRules != null) {
                 newBillingRules.setNoticePeriod(currentBillingRules.getNoticePeriod());
+            }else {
+                newBillingRules.setNoticePeriod(10);
             }
         }
 
-        Calendar calendarCurrentBillingEnd = Calendar.getInstance();
-        calendarCurrentBillingEnd.setTime(startDate);
-        calendarCurrentBillingEnd.set(Calendar.DAY_OF_MONTH, calendarCurrentBillingEnd.get(Calendar.DAY_OF_MONTH) - 1);
-        previousEndDate = calendarCurrentBillingEnd.getTime();
-        currentBillingRules.setEndTill(previousEndDate);
-
         newBillingRules.setHostel(hostel);
         newBillingRules.setInitial(false);
-
-        hostelConfigService.updateExistingBillRule(currentBillingRules);
+        newBillingRules.setCreatedAt(new Date());
+        newBillingRules.setCreatedBy(authentication.getName());
 
         List<BillingRules> listBillingRules = hostel.getBillingRulesList();
         listBillingRules.add(newBillingRules);
@@ -711,9 +668,7 @@ public class HostelService {
         hostel.setBillingRulesList(listBillingRules);
         hostelV1Repository.save(hostel);
 
-        String message = Utils.formMessageWithDate(startDate, "Your changes will be applied from ");
-
-        return new ResponseEntity<>(message, HttpStatus.CREATED);
+        return new ResponseEntity<>(HttpStatus.OK);
 
     }
 
@@ -746,13 +701,13 @@ public class HostelService {
         }
 
         if (mainImage != null) {
-            String mainImageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFileNew(mainImage), "Hostel-Images");
+            String mainImageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(mainImage), "Hostel-Images");
             hostelV1.setMainImage(mainImageUrl);
         }
 
         List<String> listImageUrls = new ArrayList<>();
         if (additionalImages != null && !additionalImages.isEmpty()) {
-            listImageUrls = additionalImages.stream().map(multipartFile -> uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFileNew(multipartFile), "Hostel-Images")).collect(Collectors.toList());
+            listImageUrls = additionalImages.stream().map(multipartFile -> uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(multipartFile), "Hostel-Images")).collect(Collectors.toList());
         }
 
         if (!listImageUrls.isEmpty()) {
@@ -826,6 +781,10 @@ public class HostelService {
 
     public BillingDates getNextBillingDates(String hostelId) {
         return hostelConfigService.getNextMonthBillingDates(hostelId);
+    }
+
+    public List<BillingRules> findAllHostelsHavingBillingToday() {
+        return hostelConfigService.findAllHostelsHavingBillingToday();
     }
 }
 

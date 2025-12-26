@@ -44,12 +44,10 @@ public class CustomersController {
     public ResponseEntity<?> updateCustomerInfo(@PathVariable("customerId") String customerId, @RequestPart(value = "payloads", required = false) UpdateCustomerInfo updateInfo, @RequestPart(value = "profilePic", required = false) MultipartFile file) {
         return customersService.updateCustomerInfo(customerId, updateInfo, file);
     }
-
     @PostMapping("/assign-bed")
     public ResponseEntity<?> assignBed(@Valid @RequestBody AssignBed assignBed) {
         return customersService.assignBed(assignBed);
     }
-
     @PostMapping("/{hostelId}")
     public ResponseEntity<?> addCustomer(@PathVariable("hostelId") String hostelId, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic, @Valid @RequestPart AddCustomer customerInfo) {
         return customersService.addCustomer(hostelId, profilePic, customerInfo);
@@ -108,7 +106,6 @@ public class CustomersController {
     public ResponseEntity<?> checkoutCustomers(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required = false) String name) {
         return customersService.getCheckoutCustomers(hostelId, name);
     }
-
     @DeleteMapping("/{hostelId}/{customerId}")
     public ResponseEntity<?> deleteCustomers(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
         return customersService.deleteCustomer(hostelId, customerId);

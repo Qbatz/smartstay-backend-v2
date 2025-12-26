@@ -87,6 +87,9 @@ public class RecurringEventListener {
                     .stream()
                     .mapToDouble(CustomersEbHistory::getAmount)
                     .sum();
+            if (ebAmount > 0) {
+                ebAmount = Utils.roundOfDouble(ebAmount);
+            }
 
             List<CustomersAmenity> listCustomersAmenity = amenitiesService.getAllAmenitiesByCustomerId(item.getCustomerId());
 

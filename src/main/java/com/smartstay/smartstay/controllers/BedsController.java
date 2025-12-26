@@ -46,7 +46,6 @@ public class BedsController {
     public ResponseEntity<?> updateRentAmount(@PathVariable("bedId") Integer bedId, @Valid @RequestBody EditBedRent bedRent) {
         return bedsService.updateRentAmount(bedId, bedRent);
     }
-
     @DeleteMapping("/{bedId}")
     public ResponseEntity<?> deleteBedById(@PathVariable("bedId") int bedId) {
         return bedsService.deleteBedById(bedId);

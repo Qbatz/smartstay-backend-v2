@@ -35,50 +35,6 @@ public class SmartstayApplication {
 	}
 
 //	@Bean
-//	public CommandLineRunner addCustomerRentsInRentHistory(BookingsRepository bookingsRepository) {
-//		return args -> {
-//			List<BookingsV1> listAllBookings = bookingsRepository.findAll()
-//					.stream()
-//					.map(i-> {
-//                        if (i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()) || i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
-//							if (i.getRentHistory() == null) {
-//								List<RentHistory> rentHistories = new ArrayList<>();
-//								RentHistory rentHistory = new RentHistory();
-//								rentHistory.setRent(i.getRentAmount());
-//								rentHistory.setBooking(i);
-//								rentHistory.setCustomerId(i.getCustomerId());
-//								rentHistory.setReason("Initial rent");
-//								rentHistory.setCreatedAt(i.getJoiningDate());
-//								rentHistory.setStartsFrom(i.getJoiningDate());
-//								rentHistory.setCreatedBy(i.getCreatedBy());
-//								rentHistories.add(rentHistory);
-//
-//								i.setRentHistory(rentHistories);
-//							}
-//							else if (i.getRentHistory().isEmpty()) {
-//								List<RentHistory> rentHistories = new ArrayList<>();
-//								RentHistory rentHistory = new RentHistory();
-//								rentHistory.setRent(i.getRentAmount());
-//								rentHistory.setBooking(i);
-//								rentHistory.setCustomerId(i.getCustomerId());
-//								rentHistory.setReason("Initial rent");
-//								rentHistory.setCreatedAt(i.getJoiningDate());
-//								rentHistory.setStartsFrom(i.getJoiningDate());
-//								rentHistory.setCreatedBy(i.getCreatedBy());
-//								rentHistories.add(rentHistory);
-//
-//								i.setRentHistory(rentHistories);
-//							}
-//						}
-//						return i;
-//                    })
-//					.toList();
-//
-//			bookingsRepository.saveAll(listAllBookings);
-//		};
-//	}
-
-//	@Bean
 //	public CommandLineRunner mapSubscrions(SubscriptionRepository subscriptionRepository, HostelV1Repository hostelV1Repository, PlansRepository plansRepository) {
 //		return args -> {
 //			List<Subscription> listAllSubscriptions = subscriptionRepository.findAll();
@@ -141,4 +97,6 @@ public class SmartstayApplication {
 //			subscriptionRepository.saveAll(listSubscriptionWithNewDate);
 		};
 	}
+
+
 }

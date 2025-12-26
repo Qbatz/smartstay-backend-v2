@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.invoices.Invoices;
+import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
@@ -23,6 +24,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         fullNameBuilder.append(invoices.getFirstName());
         fullNameBuilder.append(" ");
         fullNameBuilder.append(invoices.getLastName());
+        String invoiceMode = null;
 
         StringBuilder initials = new StringBuilder();
         if (invoices.getFirstName() != null) {
@@ -73,6 +75,17 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         }
         else if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
             invoiceType = "Reassign-Rent";
+        }
+
+
+        if (invoices.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name())) {
+            invoiceMode = "Recurring";
+        }
+        else if (invoices.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
+            invoiceMode = "Manual";
+        }
+        else if (invoices.getInvoiceMode().equalsIgnoreCase(InvoiceMode.AUTOMATIC.name())) {
+            invoiceMode = "Automatic";
         }
 
         ObjectMapper mapper = new ObjectMapper();
@@ -128,6 +141,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 Utils.dateToString(invoices.getInvoiceStartDate()),
                 Utils.dateToString(invoices.getInvoiceDueDate()),
                 invoiceType,
+                invoiceMode,
                 paymentStatus,
                 Utils.dateToString(invoices.getUpdatedAt()),
                 invoices.getInvoiceNumber(),

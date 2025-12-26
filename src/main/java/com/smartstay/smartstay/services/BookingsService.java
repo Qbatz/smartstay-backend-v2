@@ -6,6 +6,8 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
+import com.smartstay.smartstay.dto.beds.BedDetails;
+import com.smartstay.smartstay.dto.beds.BedInformations;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
@@ -14,6 +16,7 @@ import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
+import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
@@ -27,6 +30,7 @@ import com.smartstay.smartstay.repositories.BookingsRepository;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.bookings.InitializeCancel;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckIn;
+import com.smartstay.smartstay.responses.bookings.InitializeCheckout;
 import com.smartstay.smartstay.util.Utils;
 import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,26 +52,18 @@ public class BookingsService {
 
     @Autowired
     private RolesService rolesService;
-
     @Autowired
     private Authentication authentication;
-
     @Autowired
     private UsersService userService;
-
     @Autowired
     private UserHostelService userHostelService;
-
     private BedsService bedsService;
-
     @Autowired
     private InvoiceV1Service invoiceService;
-
     private CustomersService customersService;
-
     @Autowired
     private CreditDebitNoteService creditDebitNoteService;
-
     @Autowired
     private BankTransactionService bankTransactionService;
 
@@ -171,7 +167,7 @@ public class BookingsService {
         return bookingsRepository.findLatestBooking(bedId);
     }
 
-    public BookingsV1 checkOccupiedByBedId(Integer bedId) {
+    public List<BookingsV1> checkOccupiedByBedId(Integer bedId) {
         return bookingsRepository.findOccupiedDetails(bedId);
     }
 
@@ -402,17 +398,14 @@ public class BookingsService {
         }
     }
 
+    /**
+     *
+     * this function is for deleting a bed
+     */
     public boolean checkIsBedOccupied(Integer bedId) {
-        BookingsV1 bookingsV1 = bookingsRepository.findCheckingOutDetails(bedId);
-        if (bookingsV1.getLeavingDate() != null) {
-            if (Utils.compareWithTwoDates(new Date(), bookingsV1.getLeavingDate()) >= 0) {
-                return true;
-            }
-            else if (Utils.compareWithTwoDates(new Date(), bookingsV1.getLeavingDate()) < 0) {
-                if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()) || bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
-                    return true;
-                }
-            }
+        List<BookingsV1> bookingsV1 = bookingsRepository.findOccupiedDetails(bedId);
+        if (bookingsV1 != null) {
+            return true;
         }
         return false;
     }
@@ -504,9 +497,17 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
+
         Date cancelDate = null;
         if (cancelBooking.cancelDate() != null) {
             cancelDate = Utils.stringToDate(cancelBooking.cancelDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+            if (Utils.compareWithTwoDates(cancelDate, bookingsV1.getBookingDate()) < 0) {
+                return new ResponseEntity<>(Utils.DATE_VALIDATION_ERROR_CANCEL_BOOKING, HttpStatus.BAD_REQUEST);
+            }
+        }
+        else {
+            cancelDate = new Date();
         }
         bookingsV1.setCancelDate(cancelDate);
         bookingsV1.setReasonForCancellation(cancelBooking.reason());
@@ -536,7 +537,8 @@ public class BookingsService {
                     BankTransactionType.DEBIT.name(),
                     BankSource.INVOICE.name(),
                     bookingsV1.getHostelId(),
-                    Utils.dateToString(cancelDate).replace("/", "-"));
+                    Utils.dateToString(cancelDate).replace("/", "-"),
+                    "");
 
             bankTransactionService.cancelBooking(transactionDto);
         }
@@ -571,13 +573,26 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_INACTIVE_ERROR, HttpStatus.BAD_REQUEST);
         }
 
-
+        BedDetails bedInformations = bedsService.getBedDetails(bookingsV1.getBedId());
+        String bedName = null;
+        String roomName = null;
+        String floorName = null;
+        if (bedInformations != null) {
+            roomName = bedInformations.getRoomName();
+            floorName = bedInformations.getFloorName();
+            bedName = bedInformations.getBedName();
+        }
         List<DebitsBank> listBanks = bankingService.getAllBankForReturn(bookingsV1.getHostelId());
 
-        InitializeCancel initializeCancel = new InitializeCancel(bookingsV1.getBookingId(),
+        InitializeCancel initializeCancel = new InitializeCancel(
+                bookingsV1.getHostelId(),
+                bookingsV1.getBookingId(),
                 bookingsV1.getCustomerId(),
                 bookingsV1.getBookingAmount(),
                 Utils.dateToString(bookingsV1.getExpectedJoiningDate()),
+                roomName,
+                bedName,
+                floorName,
                 listBanks);
         return new ResponseEntity<>(initializeCancel, HttpStatus.OK);
     }
@@ -754,18 +769,27 @@ public class BookingsService {
     }
 
     public boolean isBedAvailableForCheckIn(int bedId, String joiningDate) {
-        BookingsV1 bookingsV1 = bookingsRepository.checkBookingsByBedIdAndStatus(bedId);
-        if (bookingsV1 == null) {
+//        BookingsV1 bookingsV1 = bookingsRepository.checkBookingsByBedIdAndStatus(bedId);
+        List<BookingsV1> listBookings = bookingsRepository.checkBookingsByBedIdAndStatus(bedId);
+        if (listBookings == null) {
             return true;
         }
 
-        if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
+        BookingsV1 currenlyCheckIn = listBookings
+                .stream()
+                .filter(i -> (i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()) || i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())))
+                .findAny()
+                .orElse(null);
+
+        if (currenlyCheckIn == null) {
             return false;
         }
 
+
+
         Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
-        if (Utils.compareWithTwoDates(dateJoiningDate, bookingsV1.getLeavingDate()) >= 0) {
+        if (Utils.compareWithTwoDates(dateJoiningDate, currenlyCheckIn.getLeavingDate()) >= 0) {
             return true;
         }
         else {
@@ -1071,5 +1095,57 @@ public class BookingsService {
      */
     public List<BookingsV1> getBookingInfoByListOfBeds(List<Integer> bedsForGettingBookingInfo) {
         return bookingsRepository.findLatestBookingsForBeds(bedsForGettingBookingInfo);
+    }
+
+    public ResponseEntity<?> initializeCheckout(String hostelId, String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        Customers customers = customersService.getCustomerInformation(customerId);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!hostelId.equalsIgnoreCase(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+        BookingsV1 bookingsV1 = bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        InvoicesV1 finalSettlementInvoice = invoiceService.getFinalSettlementStatus(customerId);
+        boolean finalSettlementStatus = invoiceService.isFinalSettlementPaid(finalSettlementInvoice);
+
+
+
+        InitializeCheckout initializeCheckout = new InitializeCheckout(finalSettlementStatus,
+                Utils.dateToString(bookingsV1.getLeavingDate()),
+                Utils.dateToString(bookingsV1.getJoiningDate()));
+
+        return new ResponseEntity<>(initializeCheckout, HttpStatus.OK);
+    }
+
+    public List<BookingsV1> checkAllByHostelId(String hostelId) {
+        return bookingsRepository.findAllBookingsByHostelId(hostelId);
+    }
+
+    public void deleteBookingReceipt(String customerId, double receiptAmount) {
+        BookingsV1 bookingsV1 = bookingsRepository.findByCustomerId(customerId);
+        if (bookingsV1.getBookingAmount() > 0) {
+            double newAdvance = bookingsV1.getBookingAmount() - receiptAmount;
+            bookingsV1.setBookingAmount(newAdvance);
+        }
     }
 }

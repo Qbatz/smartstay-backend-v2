@@ -56,5 +56,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
 """, nativeQuery = true)
     List<PaymentHistoryProjection> getPaymentHistoryByInvoiceId(@Param("invoiceId") String invoiceId);
 
+        List<TransactionV1> findByTransactionModeIsNull();
+
 
 }

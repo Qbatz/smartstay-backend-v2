@@ -201,10 +201,20 @@ public class CustomersService {
     }
 
     public List<CustomerData> searchAndGetCustomers(String hostelId, String name, String type) {
+        List<String> typeArray = new ArrayList<>();
+        if (type == null || (type != null && type.trim().equalsIgnoreCase(""))) {
+            typeArray.add(CustomerStatus.NOTICE.name());
+            typeArray.add(CustomerStatus.CHECK_IN.name());
+            typeArray.add(CustomerStatus.BOOKED.name());
+            typeArray.add(CustomerStatus.SETTLEMENT_GENERATED.name());
+        }
+        else {
+            typeArray.add(type.toUpperCase());
+        }
         return customersRepository.getCustomerData(
                 hostelId,
                 name != null && !name.isBlank() ? name : null,
-                type != null && !type.isBlank() ? type : null
+                typeArray
         );
     }
 
@@ -426,7 +436,6 @@ public class CustomersService {
         }
 
         if (bedsService.isBedAvailable(payloads.bedId(), user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
-
 
             Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), joiningDate);
@@ -1567,8 +1576,6 @@ public class CustomersService {
            return calculateFinalSettlemtForBedChange(customers, bookingDetails, billDate);
         }
 
-
-
         double bookingAmount = 0.0;
         if (bookingDetails.getBookingAmount() != null) {
             bookingAmount = bookingDetails.getBookingAmount();
@@ -2054,7 +2061,7 @@ public class CustomersService {
         RentBreakUp rentBreakUpForNewInvoice = new RentBreakUp(Utils.dateToString(findLatestInvoice.getInvoiceStartDate()),
                 Utils.dateToString(new Date()),
                 findNoOfDaysStayedInNewBedAsOfToday,
-                payableRentAsOfToday,
+                Utils.roundOfDouble(Math.round(payableRentAsOfToday)),
                 bedName,
                 roomName,
                 floorName);
@@ -2813,4 +2820,9 @@ public class CustomersService {
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    public List<Customers> searchCustomerByHostelName(String hostelId, String keyword) {
+        return customersRepository.findByHostelIdAndFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(hostelId, keyword, keyword);
+    }
+
 }

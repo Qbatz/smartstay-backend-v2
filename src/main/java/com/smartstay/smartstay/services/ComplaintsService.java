@@ -197,6 +197,7 @@ public class ComplaintsService {
         complaintComments.setComment(request.message());
         complaintComments.setIsActive(true);
         complaintComments.setCreatedBy(user.getUserId());
+        complaintComments.setUserType(UserType.ADMIN.name());
         complaintComments.setUserName(user.getFirstName()+" "+user.getLastName());
         complaintComments.setCreatedAt(new Date());
         commentsRepository.save(complaintComments);
@@ -224,13 +225,13 @@ public class ComplaintsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_WRITE)) {
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
         ComplaintsV1 complaint = complaintRepository.findByComplaintIdAndParentId(complaintId, user.getParentId());
         if (complaint == null) {
-            return new ResponseEntity<>("Complaint not found.", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Utils.COMPLAINT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
         updateComplaint(complaint, request);

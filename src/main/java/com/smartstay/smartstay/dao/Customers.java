@@ -33,6 +33,7 @@ public class Customers {
     private Date joiningDate;
     private Date expJoiningDate;
     private Date dateOfBirth;
+    //from custmoer status enum
     private String currentStatus;
     private String gender;
     private String kycStatus;

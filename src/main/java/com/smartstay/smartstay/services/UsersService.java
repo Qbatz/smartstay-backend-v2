@@ -24,6 +24,7 @@ import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -44,7 +45,6 @@ public class UsersService {
 
     @Autowired
     UserRepository userRepository;
-
     @Autowired
     OTPService otpService;
     @Autowired
@@ -71,14 +71,19 @@ public class UsersService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
-
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
     private final RestTemplate restTemplate;
 
+    private BankingService bankingService;
+
     public UsersService() {
         this.restTemplate = new RestTemplate();
         restTemplate.setInterceptors(Collections.singletonList(new RestTemplateLoggingInterceptor()));
+    }
+    @Autowired
+    public void setBankingService(@Lazy BankingService bankingService) {
+        this.bankingService = bankingService;
     }
 
     public ResponseEntity<AdminUserResponse> createAccount(CreateAccount createAccount) {
@@ -550,7 +555,7 @@ public class UsersService {
                         fullName.append(" ");
                         fullName.append(user.getLastName());
                     }
-                    eventPublisher.publishEvent(new AddUserEvents(this, users.getUserId(), hostelId, fullName.toString(), user.getParentId()));
+                    eventPublisher.publishEvent(new AddUserEvents(this, user.getUserId(), hostelId, fullName.toString(), user.getParentId()));
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             }
@@ -579,7 +584,7 @@ public class UsersService {
         }
     }
 
-    public ResponseEntity<?> deleteUser(String userId) {
+    public ResponseEntity<?> deleteUser(String hostelId, String userId) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
             Users inputUser = userRepository.findUserByUserIdAndParentId(userId,users.getParentId());
@@ -593,9 +598,13 @@ public class UsersService {
                     return new ResponseEntity<>("Admin user cannot be deleted", HttpStatus.FORBIDDEN);
                 }
 
-                inputUser.setDeleted(true);
-                inputUser.setActive(false);
-                userRepository.save(inputUser);
+                if ( bankingService.deleteBankForUser(inputUser.getUserId(), hostelId)) {
+                    inputUser.setDeleted(true);
+                    inputUser.setActive(false);
+                    userRepository.save(inputUser);
+                }
+
+
                 return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
 
             } else {
@@ -653,12 +662,22 @@ public class UsersService {
                 if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_UPDATE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
+                if (payloads == null) {
+                    return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
+                if (payloads.mobile() != null) {
+                    int isMobileExsists = userRepository.getUsersCountByMobile(adminId, payloads.mobile());
+                    if (isMobileExsists > 0) {
+                        return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                    }
+                }
 
                 Users adminUser = userRepository.findUserByUserId(adminId);
 
                 if (adminUser == null) {
                     return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
                 }
+
 
                 Address add = adminUser.getAddress();
                 if (add == null ) {
@@ -687,6 +706,11 @@ public class UsersService {
                 if (payloads.lastName() != null && !payloads.lastName().equalsIgnoreCase("")) {
                     adminUser.setLastName(payloads.lastName());
                 }
+                else {
+                    if (adminUser.getLastName() != null) {
+                        adminUser.setLastName(null);
+                    }
+                }
                 if (payloads.mobile() != null && !payloads.mobile().equalsIgnoreCase("")) {
                     adminUser.setMobileNo(payloads.mobile());
                     //high priority, check mobile exist
@@ -695,11 +719,24 @@ public class UsersService {
                 if (payloads.houseNo() != null && !payloads.houseNo().equalsIgnoreCase("")) {
                     add.setHouseNo(payloads.houseNo());
                 }
+                else {
+                    if (add.getHouseNo() != null) {
+                        add.setHouseNo(null);
+                    }
+                }
                 if (payloads.street() != null && !payloads.street().equalsIgnoreCase("")) {
                     add.setStreet(payloads.street());
                 }
+                else if (add.getStreet() != null) {
+                    add.setStreet(null);
+                }
                 if (payloads.landmark() != null && !payloads.landmark().equalsIgnoreCase("")) {
                     add.setLandMark(payloads.landmark());
+                }
+                else {
+                    if (add.getLandMark() != null) {
+                        add.setLandMark(null);
+                    }
                 }
                 if (payloads.city() != null && !payloads.city().equalsIgnoreCase("")) {
                     add.setCity(payloads.city());

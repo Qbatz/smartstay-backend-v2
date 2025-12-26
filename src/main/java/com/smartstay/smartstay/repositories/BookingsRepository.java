@@ -17,7 +17,10 @@ import java.util.List;
 @Repository
 public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
-    @Query(value = "SELECT bookings.booking_id, bookings.customer_id, bookings.joining_date, bookings.rent_amount, bookings.hostel_id, cus.first_name, cus.city, cus.state, cus.country, cus.current_status, cus.email_id, cus.profile_pic FROM bookingsv1 bookings left outer join customers cus on cus.customer_id=bookings.customer_id where bookings.hostel_id=:hostelId", nativeQuery = true)
+    @Query(value = "SELECT bookings.booking_id, bookings.customer_id, bookings.joining_date, bookings.rent_amount, " +
+            "bookings.hostel_id, cus.first_name, cus.city, cus.state, cus.country, cus.current_status, cus.email_id, " +
+            "cus.profile_pic FROM bookingsv1 bookings left outer join customers cus " +
+            "on cus.customer_id=bookings.customer_id where bookings.hostel_id=:hostelId", nativeQuery = true)
     List<Bookings> findAllByHostelId(@Param("hostelId") String hostelId);
 
     @Query(value = "SELECT * FROM bookingsv1 where bed_id=:bedId ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
@@ -29,7 +32,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     @Query(value = """
             SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('CHECKIN', 'NOTICE')
             """, nativeQuery = true)
-    BookingsV1 findOccupiedDetails(@Param("bedId") Integer bedId);
+    List<BookingsV1> findOccupiedDetails(@Param("bedId") Integer bedId);
     @Query(value = """
             SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('BOOKED')
             """, nativeQuery = true)
@@ -119,7 +122,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     @Query("""
             SELECT booking from BookingsV1 booking WHERE booking.bedId=:bedId and booking.currentStatus in ('CHECKIN', 'NOTICE')
             """)
-    BookingsV1 checkBookingsByBedIdAndStatus(Integer bedId);
+    List<BookingsV1> checkBookingsByBedIdAndStatus(Integer bedId);
 
     @Query("""
             SELECT booking FROM BookingsV1 booking where booking.hostelId=:hostelId and booking.currentStatus='BOOKED'
@@ -157,5 +160,11 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             SELECT * FROM bookingsv1 where hostel_id=:hostelId AND customer_id IN (:customerIds) AND current_status IN ('CHECKIN', 'NOTICE')
             """, nativeQuery = true)
     List<BookingsV1> findBookingsByListOfCustomersAndHostelId(List<String> customerIds, String hostelId);
+
+    @Query("""
+            SELECT booking FROM BookingsV1 booking WHERE booking.hostelId=:hostelId AND booking.currentStatus IN ('VACATED', 
+            'NOTICE', 'CHECKIN', 'TERMINATED')
+            """)
+    List<BookingsV1> findAllBookingsByHostelId(String hostelId);
 
 }

@@ -13,10 +13,11 @@ public class ListReadingMapper implements Function<ElectricityReadings, Electric
         double totalPrice = 0.0;
         double consumption = 0.0;
         if (electricityReaddings.getConsumption() != null) {
-            consumption = electricityReaddings.getConsumption();
+            consumption = Utils.roundOffWithTwoDigit(electricityReaddings.getConsumption());
         }
         double previousReading = electricityReaddings.getCurrentReading() - consumption ;
-        totalPrice = Utils.roundOfDouble(consumption * electricityReaddings.getUnitPrice());
+        totalPrice = consumption * electricityReaddings.getUnitPrice();
+
         return new ElectricityUsage(electricityReaddings.getHostelId(),
                 electricityReaddings.getId(),
                 consumption,
@@ -28,7 +29,7 @@ public class ListReadingMapper implements Function<ElectricityReadings, Electric
                 electricityReaddings.getUnitPrice(),
                 previousReading,
                 electricityReaddings.getCurrentReading(),
-                totalPrice,
+                Utils.roundOffDecimal(totalPrice),
                 electricityReaddings.getNoOfTenants(),
                 Utils.dateToString(electricityReaddings.getStartDate()),
                 Utils.dateToString(electricityReaddings.getEndDate()));
