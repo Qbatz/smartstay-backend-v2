@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.electricity.AddReading;
+import com.smartstay.smartstay.payloads.electricity.UpdateElectricity;
 import com.smartstay.smartstay.services.ElectricityService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -29,10 +30,18 @@ public class ElectricityController {
     public ResponseEntity<?> addMeterReading(@PathVariable("hostelId") String hostelId,  @Valid @RequestBody AddReading readings) {
         return electricityService.addMeterReading(hostelId, readings);
     }
+    @PostMapping("/new/{hostelId}")
+    public ResponseEntity<?> addReading(@PathVariable("hostelId") String hostelId, @Valid @RequestBody AddReading reading) {
+        return electricityService.addMeterReadingNew(hostelId, reading);
+    }
 
-    @GetMapping("/{hostelId}")
+    @GetMapping("/new/{hostelId}")
     public ResponseEntity<?> getAllReadings(@PathVariable("hostelId") String hostelId) {
         return electricityService.getEBReadings(hostelId);
+    }
+    @GetMapping("/{hostelId}")
+    public ResponseEntity<?> getAllReadingsNew(@PathVariable("hostelId") String hostelId) {
+        return electricityService.getEbReadingsNew(hostelId);
     }
 
     @GetMapping("/customers/{hostelId}")
@@ -48,6 +57,11 @@ public class ElectricityController {
     @GetMapping("/customers/{hostelId}/{customerId}")
     public ResponseEntity<?> getAllEbReadingsByCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
         return electricityService.getAllReadingByCustomer(hostelId, customerId);
+    }
+
+    @PutMapping("/{hostelId}/{readingId}")
+    public ResponseEntity<?> updateEbReading(@PathVariable("hostelId") String hostelId, @PathVariable("readingId") String readingId, UpdateElectricity updateElectricity) {
+        return electricityService.updateEBReadings(hostelId, readingId, updateElectricity);
     }
 
 }

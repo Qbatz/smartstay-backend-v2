@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.ElectricityReadings;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.electricity.*;
+import com.smartstay.smartstay.dto.electricity.HostelReadings;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.ennum.EBReadingType;
@@ -13,6 +14,7 @@ import com.smartstay.smartstay.ennum.ElectricityBillStatus;
 import com.smartstay.smartstay.ennum.KycStatus;
 import com.smartstay.smartstay.events.AddEbEvents;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
+import com.smartstay.smartstay.payloads.electricity.UpdateElectricity;
 import com.smartstay.smartstay.repositories.ElectricityReadingRepository;
 import com.smartstay.smartstay.responses.electricity.*;
 import com.smartstay.smartstay.responses.electricity.RoomElectricityCustomersList;
@@ -57,8 +59,10 @@ public class ElectricityService {
     private CustomersBedHistoryService bedHistoryService;
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private HostelReadingsService hostelReadingsService;
 
-    public ResponseEntity<?> addMeterReading(String hostelId, AddReading readings) {
+    public ResponseEntity<?> addMeterReadingNew(String hostelId, AddReading readings) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -166,6 +170,113 @@ public class ElectricityService {
         }
 
 
+    }
+
+
+    public ResponseEntity<?> addMeterReading(String hostelId, AddReading readings) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Date date = null;
+        if (readings.readingDate() != null) {
+            date = Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (Utils.compareWithTwoDates(new Date(), date) < 0) {
+                return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, date);
+
+        ElectricityConfig electricityConfig1 = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig1 == null) {
+            return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        Double previousReading = 0.0;
+        if (date == null) {
+            date = new Date();
+        }
+
+
+        Date billStartDate = new Date();
+        Date billEndDate = new Date();
+
+        if (billingDates != null ) {
+
+            billStartDate = billingDates.currentBillStartDate();
+            billEndDate = date;
+
+        }
+
+        if (electricityConfig1.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            if (!Utils.checkNullOrEmpty(readings.roomId())) {
+                return new ResponseEntity<>(Utils.INVALID_ROOM_ID, HttpStatus.BAD_REQUEST);
+            }
+
+            com.smartstay.smartstay.dao.ElectricityReadings electricityReadings = findLastEntryByRoomId(readings.roomId(), hostelId);
+            boolean isFirstEntry = false;
+            if (electricityReadings != null) {
+                if (Utils.compareWithTwoDates(Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), electricityReadings.getEntryDate()) <=0) {
+                    return new ResponseEntity<>(Utils.ALREADY_READING_TAKEN_THIS_DATE, HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            if (electricityReadings == null) {
+                isFirstEntry = true;
+                previousReading = 0.0;
+            }
+            else {
+                previousReading = electricityReadings.getCurrentReading();
+                billStartDate = Utils.addDaysToDate(electricityReadings.getEntryDate(), 1);
+            }
+
+            if (readings.reading() <= previousReading) {
+                return new ResponseEntity<>(Utils.PREVIOUS_CURRENT_READING_NOT_MATCHING, HttpStatus.BAD_REQUEST);
+            }
+
+            com.smartstay.smartstay.dao.ElectricityReadings newReadings = new com.smartstay.smartstay.dao.ElectricityReadings();
+            newReadings.setPreviousReading(previousReading);
+            newReadings.setCurrentReading(readings.reading());
+            newReadings.setHostelId(hostelId);
+            newReadings.setRoomId(readings.roomId());
+            newReadings.setCurrentUnitPrice(electricityConfig1.getCharge());
+            newReadings.setEntryDate(date);
+            newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
+            newReadings.setFloorId(readings.floorId());
+            newReadings.setConsumption(readings.reading() - previousReading);
+            newReadings.setMissedEntry(false);
+            newReadings.setFirstEntry(isFirstEntry);
+            newReadings.setCreatedAt(new Date());
+            newReadings.setUpdatedAt(new Date());
+            newReadings.setCreatedBy(users.getUserId());
+            newReadings.setUpdatedBy(users.getUserId());
+            newReadings.setBillStartDate(billStartDate);
+            newReadings.setBillEndDate(billEndDate);
+
+            electricityReadingRepository.save(newReadings);
+
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        }
+        else {
+            return hostelReadingsService.addEbReadings(hostelId, readings, billStartDate, billEndDate, electricityConfig1);
+        }
     }
 
     public ResponseEntity<?> addMeterReadingForHostelBasedNew(String hostelId, AddReading readings, ElectricityConfig electricityConfig, BillingDates billingDates) {
@@ -668,6 +779,7 @@ public class ElectricityService {
                 }
             }
 
+
             ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
 
             return new ResponseEntity<>(list, HttpStatus.OK);
@@ -675,7 +787,7 @@ public class ElectricityService {
 
     }
 
-    public ResponseEntity getEbReadingsNew(String hostelId) {
+    public ResponseEntity<?> getEbReadingsNew(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -693,25 +805,86 @@ public class ElectricityService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
         List<ElectricityReadings> latestReadings = electricityReadingRepository.getLatestReadingOfAllRooms(hostelId);
 
         List<BedHistoryByRoomId> listBeds = null;
-        HashMap<Integer, Integer> occupantsCounts = null;
+        HashMap<Integer, Integer> occupantsCounts;
+        List<RoomInfo> listRoomDetails = new ArrayList<>();
+        List<HostelReadings> listHostelReadings = null;
+        boolean isHostelBased = false;
+
         if (latestReadings != null) {
             listBeds = latestReadings
                     .stream()
-                    .map(i -> {
-                        return new BedHistoryByRoomId(i.getRoomId(), i.getBillStartDate(), i.getBillEndDate());
-                    })
+                    .map(i -> new BedHistoryByRoomId(i.getRoomId(), i.getBillStartDate(), i.getBillEndDate()))
                     .toList();
-
+            List<Integer> roomIds = latestReadings.stream()
+                    .map(ElectricityReadings::getRoomId)
+                    .toList();
+            listRoomDetails = roomsService.getRoom(roomIds);
         }
 
         if (listBeds != null) {
             occupantsCounts = bedHistoryService.findByStartAndEndDateAndRoomIds(listBeds);
+        } else {
+            occupantsCounts = null;
         }
 
-        return null;
+        Double lastReading = 0.0;
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.HOSTEL_READING.name())) {
+            isHostelBased = true;
+            Double lReading = electricityReadingRepository.getLastReading(hostelId);
+            if (lReading != null) {
+                lastReading = Utils.roundOfDouble(lReading);
+            }
+            else {
+                lastReading = 0.0;
+            }
+
+            listHostelReadings = hostelReadingsService.getLastReading(hostelId);
+
+        }
+
+        List<Integer> listRoomsInMeterReadings = latestReadings
+                .stream()
+                .map(ElectricityReadings::getRoomId)
+                .toList();
+        List<RoomInfo> listRoomInfo = roomsService.getRoom(listRoomsInMeterReadings);
+
+        List<ElectricityUsage> listUsages = new ArrayList<>(latestReadings
+                .stream()
+                .map(item -> {
+                    return new ElectricityUsgeMapper(occupantsCounts, listRoomInfo).apply(item);
+                })
+                .toList());
+
+        List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings, hostelId);
+        if (!listBedForEb.isEmpty()) {
+            List<ElectricityUsage> usages =  listBedForEb.stream()
+                    .map(item -> new ElectricityUsageMapper(null, null).apply(item))
+                    .toList();
+
+            listUsages.addAll(usages);
+
+        }
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
+
+            return new ResponseEntity<>(list, HttpStatus.OK);
+        }
+        else {
+//            ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
+            ElectricityListHostelReadings list = new ElectricityListHostelReadings(hostelId,
+                    lastReading,
+                    isHostelBased,
+                    listUsages,
+                    listHostelReadings);
+
+            return new ResponseEntity<>(list, HttpStatus.OK);
+        }
+
+
 
     }
 
@@ -956,5 +1129,97 @@ public class ElectricityService {
         else {
             return 0.0;
         }
+    }
+
+    public ResponseEntity<?> updateEBReadings(String hostelId, String readingId, UpdateElectricity updateElectricity) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (updateElectricity == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (updateElectricity.reading() == null && updateElectricity.entryDate() == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (updateElectricity.entryDate() != null) {
+            Date entryDate = Utils.stringToDate(updateElectricity.entryDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (Utils.compareWithTwoDates(entryDate, new Date()) > 0) {
+                return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig == null) {
+            return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            Integer id = Integer.parseInt(readingId);
+
+            ElectricityReadings currentReading = electricityReadingRepository.getRoomCurrentReading(id);
+            if (currentReading == null) {
+                return new ResponseEntity<>(Utils.EB_ENTRY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+            if (currentReading.getBillStatus().equalsIgnoreCase(ElectricityBillStatus.INVOICE_GENERATED.name())) {
+                return new ResponseEntity<>(Utils.EB_ENTRY_CANNOT_CHANGE_INVOICE_GENERATED, HttpStatus.BAD_REQUEST);
+            }
+            ElectricityReadings previousReading = electricityReadingRepository.getPreviousEntry(currentReading.getRoomId(), id);
+            if (previousReading != null) {
+                if (updateElectricity.reading() != null) {
+                    double consumption = 0.0;
+                    if (updateElectricity.reading() <= previousReading.getCurrentReading()) {
+                        return new ResponseEntity<>(Utils.PREVIOUS_CURRENT_READING_NOT_MATCHING, HttpStatus.BAD_REQUEST);
+                    }
+                    consumption = updateElectricity.reading() - previousReading.getCurrentReading();
+                    currentReading.setCurrentReading(updateElectricity.reading());
+                    currentReading.setConsumption(consumption);
+                }
+                if (updateElectricity.entryDate() != null) {
+                    Date entryDate = Utils.stringToDate(updateElectricity.entryDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                    if (Utils.compareWithTwoDates(entryDate, previousReading.getEntryDate()) <= 0) {
+                        return new ResponseEntity<>(Utils.ALREADY_READING_TAKEN_THIS_DATE, HttpStatus.BAD_REQUEST);
+                    }
+                    currentReading.setEntryDate(entryDate);
+                    currentReading.setBillEndDate(entryDate);
+                }
+                currentReading.setUpdatedBy(authentication.getName());
+                currentReading.setUpdatedAt(new Date());
+                electricityReadingRepository.save(currentReading);
+            }
+            else {
+                if (updateElectricity.reading() != null) {
+                    currentReading.setCurrentReading(updateElectricity.reading());
+                    currentReading.setConsumption(updateElectricity.reading());
+                }
+                if (updateElectricity.entryDate() != null) {
+                    Date entryDate = Utils.stringToDate(updateElectricity.entryDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                    BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, entryDate);
+                    if (billingDates != null) {
+                        currentReading.setBillStartDate(billingDates.currentBillStartDate());
+                    }
+                    currentReading.setEntryDate(entryDate);
+                    currentReading.setBillEndDate(entryDate);
+
+                }
+                currentReading.setUpdatedAt(new Date());
+                currentReading.setUpdatedBy(authentication.getName());
+                electricityReadingRepository.save(currentReading);
+            }
+            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+        }
+        else {
+            return hostelReadingsService.updateEbReading(hostelId, readingId, updateElectricity);
+        }
+
     }
 }

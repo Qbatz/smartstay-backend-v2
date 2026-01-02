@@ -235,4 +235,18 @@ public class RoomsService {
             return roomRepository.findByHostelIdAndParentId(hostelId, users.getParentId());
         }
     }
+
+    public List<RoomInfoForEB> getBedsNotRegisteredOnEB(List<Integer> listRoomsInMeterReadings, String hostelId) {
+        if (listRoomsInMeterReadings.isEmpty()) {
+            return roomRepository.getAllRoomsForEb(hostelId);
+        }
+
+        List<RoomInfo> listRoomInfo = roomRepository.getAllRoomsForEb(hostelId, listRoomsInMeterReadings);
+        return listRoomInfo
+                .stream()
+                .map(i -> {
+                    return new RoomInfoForEB(i.getFloorId(), i.getRoomId(), i.getRoomName(), i.getFloorName(), hostelId, 0l);
+                })
+                .toList();
+    }
 }

@@ -94,7 +94,27 @@ public class SmartstayApplication {
 //					})
 //					.toList();
 //
+//
 //			subscriptionRepository.saveAll(listSubscriptionWithNewDate);
+//
+//			List<HostelPlan> newPlans = listHostelPlan
+//					.stream()
+//					.map(i -> {
+//						Subscription currentSub = listSubscriptionWithNewDate
+//								.stream()
+//								.filter(j -> j.getHostelId().equalsIgnoreCase(i.getHostel().getHostelId()))
+//								.findFirst()
+//								.orElse(null);
+//
+//						if (currentSub != null) {
+//							i.setCurrentPlanStartsAt(currentSub.getPlanStartsAt());
+//							i.setCurrentPlanEndsAt(currentSub.getPlanEndsAt());
+//						}
+//						return i;
+//					})
+//					.toList();
+//
+//			hostelPlanRepository.saveAll(newPlans);
 		};
 	}
 

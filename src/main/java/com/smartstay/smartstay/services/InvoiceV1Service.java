@@ -2234,4 +2234,108 @@ public class InvoiceV1Service {
         return new ResponseEntity<>(HttpStatus.OK);
 
     }
+
+    public ResponseEntity<?> getInvoiceDetailsForEdit(String hostelId, String invoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        String invoiceMode = null;
+        String paymentStatus = null;
+        boolean canEdit = false;
+
+        if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name())) {
+            canEdit = true;
+            invoiceMode = "Recurring";
+        }
+        else if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
+            invoiceMode = "Manual";
+        }
+        else if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.AUTOMATIC.name())) {
+            invoiceMode = "Automatic";
+        }
+
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+            paymentStatus = "Paid";
+        }
+        else if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+            paymentStatus = "Pending";
+            canEdit = true;
+        }
+        else if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            paymentStatus = "Partial Payment";
+        }
+        else if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+            paymentStatus = "Refunded";
+        }
+        else if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
+            paymentStatus = "Pending Refund";
+        }
+        else if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
+            paymentStatus = "Partially Refunded";
+        }
+        else if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.CANCELLED.name())) {
+            paymentStatus = "Cancelled";
+        }
+
+        if (invoicesV1.isCancelled()) {
+            paymentStatus = "Cancelled";
+            canEdit = false;
+        }
+
+        List<com.smartstay.smartstay.responses.invoices.InvoiceItems> invoiceItems = invoicesV1.getInvoiceItems()
+                .stream()
+                .map(i -> {
+                    String invoiceItem = null;
+                    if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.MAINTENANCE.name())) {
+                        invoiceItem = "Maintenance";
+                    }
+                    else if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
+                        invoiceItem = "Rent";
+                    }
+                    else if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
+                        invoiceItem = "EB";
+                    }
+                    else if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name())) {
+                        invoiceItem = i.getOtherItem();
+                    }
+                    com.smartstay.smartstay.responses.invoices.InvoiceItems item = new com.smartstay.smartstay.responses.invoices.InvoiceItems(
+                            invoicesV1.getInvoiceNumber(),
+                            invoiceItem,
+                            i.getAmount()
+                    );
+                    return item;
+                })
+                .toList();
+
+
+        Details details = new Details(invoicesV1.getInvoiceNumber(),
+                Utils.dateToString(invoicesV1.getInvoiceStartDate()),
+                Utils.dateToString(invoicesV1.getInvoiceEndDate()),
+                Utils.dateToString(invoicesV1.getInvoiceDueDate()),
+                invoiceMode,
+                paymentStatus,
+                invoicesV1.getTotalAmount(),
+                canEdit,
+                invoiceItems);
+
+        return new ResponseEntity<>(details, HttpStatus.OK);
+    }
 }

@@ -467,13 +467,9 @@ public class CustomersService {
             customers.setJoiningDate(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
             customers.setAdvance(advance);
 
-
-
             Customers savedCustomer = customersRepository.save(customers);
 
-
-
-            bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
+            bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"), savedCustomer.getCustomerId());
 
             bookingsService.addCheckin(customers, payloads);
             customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
@@ -585,7 +581,7 @@ public class CustomersService {
 
             Customers savedCustomer = customersRepository.save(customers);
 
-            bedsService.addUserToBed(booking.getBedId(), date);
+            bedsService.addUserToBed(booking.getBedId(), date, savedCustomer.getCustomerId());
 
             CheckInRequest request = new CheckInRequest(
                     booking.getFloorId(),
@@ -613,7 +609,7 @@ public class CustomersService {
 
             invoiceService.addInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date, billingDates);
 
-            bedsService.addUserToBed(booking.getBedId(), date);
+            bedsService.addUserToBed(booking.getBedId(), date, savedCustomer.getCustomerId());
             customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
 
             //check joining date is in this current cycle.

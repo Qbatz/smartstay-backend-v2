@@ -167,4 +167,10 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """)
     List<BookingsV1> findAllBookingsByHostelId(String hostelId);
 
+    @Query("""
+            SELECT booking FROM BookingsV1 booking WHERE booking.bedId=:bedId AND booking.currentStatus IN ('BOOKED') 
+            AND booking.customerId !=:customerId
+            """)
+    List<BookingsV1> findAllBookingsByHostelIdExcludeCurrentCheckIn(Integer bedId, String customerId);
+
 }

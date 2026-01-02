@@ -21,6 +21,7 @@ public class ElectricityRoomMapper implements Function<ElectricityReadings, Room
         String startDate = null;
         String endDate = null;
         Double amount = 0.0;
+        Double consumption = 0.0;
 
         if (ebForRoom != null) {
             Date dateStartDate = Utils.addDaysToDate(ebForRoom.getEntryDate(), 1);
@@ -33,6 +34,7 @@ public class ElectricityRoomMapper implements Function<ElectricityReadings, Room
         endDate = Utils.dateToString(electricityReadingForRoom.getEntryDate());
 
         if (electricityReadingForRoom.getConsumption() != null) {
+            consumption = Utils.roundOffWithTwoDigit(electricityReadingForRoom.getConsumption());
             amount = Utils.roundOffWithTwoDigit(electricityReadingForRoom.getConsumption() * electricityReadingForRoom.getCurrentUnitPrice());
         }
 
@@ -41,14 +43,14 @@ public class ElectricityRoomMapper implements Function<ElectricityReadings, Room
         }
 
         return new RoomElectricityList(electricityReadingForRoom.getId(),
-                electricityReadingForRoom.getCurrentUnitPrice(),
+                Utils.roundOffWithTwoDigit(electricityReadingForRoom.getCurrentUnitPrice()),
                 electricityReadingForRoom.getHostelId(),
                 electricityReadingForRoom.getRoomId(),
                 startDate,
                 endDate,
-                electricityReadingForRoom.getConsumption(),
-                electricityReadingForRoom.getCurrentReading(),
+                consumption,
+                Utils.roundOffWithTwoDigit(electricityReadingForRoom.getCurrentReading()),
                 endDate,
-                amount);
+                Utils.roundOffWithTwoDigit(amount));
     }
 }

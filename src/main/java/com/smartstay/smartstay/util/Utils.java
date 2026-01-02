@@ -133,6 +133,7 @@ public class Utils {
     public static final String SUB_CATEGORY_NAME_ALREADY_REGISTERED = "Subcategory name is already exists";
     public static final String INSUFFICIENT_FUND_ERROR = "Insufficient funds";
     public static final String INVALID_CATEGORY_ID = "Invalid category id";
+    public static final String INVALID_COMPLAINT_ID_PASSED = "Invalid complaint id passed";
     public static final String SUB_CATEGORY_NAME_REQUIRED = "Sub category name required";
     public static final String SUB_CATEGORY_ID_REQUIRED = "Sub category id required";
     public static final String ADVANCE_AMOUNT_REQUIRED = "Advance amount required";
@@ -206,6 +207,9 @@ public class Utils {
     public static final String CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR = "Cannot modify the billing rules. Tenant already exists.";
     public static final String CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED = "Cannot delete receipts for settlement generated customers";
     public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
+    public static final String EB_ENTRY_NOT_FOUND = "EB entry not found";
+    public static final String EB_ENTRY_CANNOT_CHANGE_INVOICE_GENERATED = "Cannot modify invoice generated EB readings";
+
     /**
      *  Defining module Id's here
      *

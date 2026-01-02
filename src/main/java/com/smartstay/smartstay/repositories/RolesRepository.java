@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface RolesRepository extends JpaRepository<RolesV1, Integer> {
 
+    List<RolesV1> findByRoleName(String roleName);
 
     List<RolesV1> findAllByParentId(String parentId);
 
@@ -22,7 +23,6 @@ public interface RolesRepository extends JpaRepository<RolesV1, Integer> {
     RolesV1 findByRoleIdAndRoleNameNotIn(int roleId, List<String> roleNames);
 
     RolesV1 findByRoleIdAndParentId(int roleId,String parentId);
-    RolesV1 findByRoleName(String roleName);
 
     RolesV1 findByRoleIdAndHostelId(int roleId, String hostelId);
     boolean existsByRoleId(int roleId);

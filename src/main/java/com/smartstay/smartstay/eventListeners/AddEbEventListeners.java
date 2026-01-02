@@ -1,14 +1,12 @@
 package com.smartstay.smartstay.eventListeners;
 
+import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dao.CustomersEbHistory;
 import com.smartstay.smartstay.dao.ElectricityConfig;
 import com.smartstay.smartstay.dao.ElectricityReadings;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.events.AddEbEvents;
-import com.smartstay.smartstay.services.BookingsService;
-import com.smartstay.smartstay.services.CustomerEbHistoryService;
-import com.smartstay.smartstay.services.ElectricityService;
-import com.smartstay.smartstay.services.HostelService;
+import com.smartstay.smartstay.services.*;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -31,6 +29,8 @@ public class AddEbEventListeners {
     private BookingsService bookingService;
     @Autowired
     private CustomerEbHistoryService ebHistoryService;
+    @Autowired
+    private CustomersBedHistoryService customerBedHistory;
 
     @Async
     @EventListener
@@ -67,21 +67,20 @@ public class AddEbEventListeners {
 
         Date endDate = ebEvents.getEntryDate();
 
-        List<BookedCustomerInfoElectricity> listCustomers = bookingService.getAllCheckInCustomers(ebEvents.getRoomId(), startDate, endDate);
-
-        if (!listCustomers.isEmpty()) {
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistory.getCustomersByBedIdAndDates(ebEvents.getRoomId(), startDate, endDate);
+        if (!listCustomerBedHistory.isEmpty()) {
             Date finalStartDate = startDate;
-            long personCount = listCustomers
+            long personCount = listCustomerBedHistory
                     .stream()
-                    .filter(item -> Utils.compareWithTwoDates(item.getJoiningDate(), finalStartDate) <= 0 && (item.getLeavingDate() == null || Utils.compareWithTwoDates(endDate, item.getLeavingDate()) <= 0)).count();
+                    .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), finalStartDate) <= 0 && (item.getEndDate() == null || Utils.compareWithTwoDates(endDate, item.getEndDate()) <= 0)).count();
 
-            if (listCustomers.size() == personCount) {
+            if (listCustomerBedHistory.size() == personCount) {
 //                long noOfDaysBetweenStartAndEndDate = Utils.findNumberOfDays(startDate, endDate);
-                double finalUnitsPerPerson =  currentConsumption / listCustomers.size();
+                double finalUnitsPerPerson =  currentConsumption / listCustomerBedHistory.size();
                 double finalAmount = ebEvents.getChargePerUnits() * finalUnitsPerPerson;
 
                 Date finalStartDate1 = startDate;
-                List<CustomersEbHistory> listEbHistory = listCustomers
+                List<CustomersEbHistory> listEbHistory = listCustomerBedHistory
                         .stream()
                         .map(item -> {
                             CustomersEbHistory ebHistory = new CustomersEbHistory();
@@ -106,75 +105,75 @@ public class AddEbEventListeners {
             else {
                 Date finalStartDate2 = startDate;
                 AtomicLong totalNoOfPerson = new AtomicLong();
-                listCustomers
+                listCustomerBedHistory
                         .forEach(item -> {
-                            if (Utils.compareWithTwoDates(item.getJoiningDate(), finalStartDate2) <= 0 && item.getLeavingDate() == null) {
+                            if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) <= 0 && item.getEndDate() == null) {
                                 totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(finalStartDate2, endDate));
                             }
-                            else if (Utils.compareWithTwoDates(item.getJoiningDate(), finalStartDate2) <= 0 && item.getLeavingDate() != null) {
-                                if (Utils.compareWithTwoDates(item.getLeavingDate(), endDate) <=0) {
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) <= 0 && item.getEndDate() != null) {
+                                if (Utils.compareWithTwoDates(item.getEndDate(), endDate) <=0) {
                                     //leaving date is before than end date
-                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(finalStartDate2, item.getLeavingDate()));
+                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(finalStartDate2, item.getEndDate()));
                                 }
-                                else if (Utils.compareWithTwoDates(endDate, item.getLeavingDate()) <= 0) {
+                                else if (Utils.compareWithTwoDates(endDate, item.getEndDate()) <= 0) {
                                     //leaving date is later than end date
                                     totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(finalStartDate2, endDate));
                                 }
                             }
-                            else if (Utils.compareWithTwoDates(item.getJoiningDate(), finalStartDate2) > 0 && item.getLeavingDate() == null) {
-                                totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getJoiningDate(), endDate));
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) > 0 && item.getEndDate() == null) {
+                                totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getStartDate(), endDate));
                             }
-                            else if (Utils.compareWithTwoDates(item.getJoiningDate(), finalStartDate2) > 0 && item.getLeavingDate() != null) {
-                                if (Utils.compareWithTwoDates(item.getLeavingDate(), endDate) <=0) {
-                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getJoiningDate(), item.getLeavingDate()));
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) > 0 && item.getEndDate() != null) {
+                                if (Utils.compareWithTwoDates(item.getEndDate(), endDate) <=0) {
+                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getStartDate(), item.getEndDate()));
                                 }
-                                else if (Utils.compareWithTwoDates(endDate, item.getLeavingDate()) <= 0) {
-                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getJoiningDate(), endDate));
+                                else if (Utils.compareWithTwoDates(endDate, item.getEndDate()) <= 0) {
+                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getStartDate(), endDate));
                                 }
                             }
                         });
                 double totalUnitsPerPerson = currentConsumption / totalNoOfPerson.get(); //per day
 
 
-                List<CustomersEbHistory> listEbHistory = listCustomers
+                List<CustomersEbHistory> listEbHistory = listCustomerBedHistory
                         .stream()
                         .map(item -> {
                             double noOfDaysStayed = 0;
                             Date stateDate = new Date();
                             Date eDate = new Date();
-                            if (Utils.compareWithTwoDates(item.getJoiningDate(), finalStartDate2) <= 0 && item.getLeavingDate() == null) {
+                            if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) <= 0 && item.getEndDate() == null) {
                                 noOfDaysStayed =  Utils.findNumberOfDays(finalStartDate2, endDate);
                                 stateDate = finalStartDate2;
                                 eDate = endDate;
                             }
-                            else if (Utils.compareWithTwoDates(item.getJoiningDate(), finalStartDate2) <= 0 && item.getLeavingDate() != null) {
-                                if (Utils.compareWithTwoDates(item.getLeavingDate(), endDate) <=0) {
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) <= 0 && item.getEndDate() != null) {
+                                if (Utils.compareWithTwoDates(item.getEndDate(), endDate) <=0) {
                                     //leaving date is before than end date
-                                    noOfDaysStayed = Utils.findNumberOfDays(finalStartDate2, item.getLeavingDate());
+                                    noOfDaysStayed = Utils.findNumberOfDays(finalStartDate2, item.getEndDate());
                                     stateDate = finalStartDate2;
-                                    eDate = item.getLeavingDate();
+                                    eDate = item.getEndDate();
                                 }
-                                else if (Utils.compareWithTwoDates(endDate, item.getLeavingDate()) <= 0) {
+                                else if (Utils.compareWithTwoDates(endDate, item.getEndDate()) <= 0) {
                                     //leaving date is later than end date
                                     noOfDaysStayed = Utils.findNumberOfDays(finalStartDate2, endDate);
                                     stateDate = finalStartDate2;
                                     eDate = endDate;
                                 }
                             }
-                            else if (Utils.compareWithTwoDates(item.getJoiningDate(), finalStartDate2) > 0 && item.getLeavingDate() == null) {
-                                noOfDaysStayed = Utils.findNumberOfDays(item.getJoiningDate(), endDate);
-                                stateDate = item.getJoiningDate();
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) > 0 && item.getEndDate() == null) {
+                                noOfDaysStayed = Utils.findNumberOfDays(item.getStartDate(), endDate);
+                                stateDate = item.getStartDate();
                                 eDate = endDate;
                             }
-                            else if (Utils.compareWithTwoDates(item.getJoiningDate(), finalStartDate2) > 0 && item.getLeavingDate() != null) {
-                                if (Utils.compareWithTwoDates(item.getLeavingDate(), endDate) <=0) {
-                                    noOfDaysStayed =  Utils.findNumberOfDays(item.getJoiningDate(), item.getLeavingDate());
-                                    stateDate = item.getJoiningDate();
-                                    eDate = item.getLeavingDate();
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) > 0 && item.getEndDate() != null) {
+                                if (Utils.compareWithTwoDates(item.getEndDate(), endDate) <=0) {
+                                    noOfDaysStayed =  Utils.findNumberOfDays(item.getStartDate(), item.getEndDate());
+                                    stateDate = item.getStartDate();
+                                    eDate = item.getEndDate();
                                 }
-                                else if (Utils.compareWithTwoDates(endDate, item.getLeavingDate()) <= 0) {
-                                    noOfDaysStayed = Utils.findNumberOfDays(item.getJoiningDate(), endDate);
-                                    stateDate = item.getJoiningDate();
+                                else if (Utils.compareWithTwoDates(endDate, item.getEndDate()) <= 0) {
+                                    noOfDaysStayed = Utils.findNumberOfDays(item.getStartDate(), endDate);
+                                    stateDate = item.getStartDate();
                                     eDate = endDate;
                                 }
                             }

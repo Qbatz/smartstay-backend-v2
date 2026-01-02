@@ -487,7 +487,7 @@ public class BedsService {
     }
 
     //assign bed
-    public ResponseEntity<?> addUserToBed(int bedId, String joiningDate) {
+    public ResponseEntity<?> addUserToBed(int bedId, String joiningDate, String customerId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -504,7 +504,10 @@ public class BedsService {
                 existingBed.setStatus(BedStatus.BOOKED.name());
                 existingBed.setBooked(true);
             } else {
-                existingBed.setBooked(false);
+                boolean isOtherBooingExist = bookingService.checkOtherBookings(existingBed.getBedId(), customerId);
+                if (isOtherBooingExist) {
+                    existingBed.setBooked(true);
+                }
                 existingBed.setStatus(BedStatus.OCCUPIED.name());
                 existingBed.setCurrentStatus(BedStatus.OCCUPIED.name());
                 existingBed.setFreeFrom(null);
