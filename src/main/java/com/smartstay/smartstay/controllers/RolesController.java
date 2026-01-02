@@ -22,7 +22,6 @@ public class RolesController {
     @Autowired
     private RolesService rolesService;
 
-
     @GetMapping("/hostel/{hostelId}")
     public ResponseEntity<?> getAllRoles(@PathVariable("hostelId") String hostelId) {
         return rolesService.getAllRoles(hostelId);

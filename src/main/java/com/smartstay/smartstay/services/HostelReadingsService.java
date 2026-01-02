@@ -154,4 +154,23 @@ public class HostelReadingsService {
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
+
+    public ResponseEntity<?> deleteLatestEntry(String hostelId, String readingId) {
+        Long id = Long.parseLong(readingId);
+
+        HostelReadings hr = hostelEBReadingsRepository.findById(id).orElse(null);
+        if (hr == null) {
+            return new ResponseEntity<>(Utils.INVALID_READING_ID, HttpStatus.BAD_REQUEST);
+        }
+        HostelReadings latesteReadings = hostelEBReadingsRepository.lastReading(hostelId);
+        if (!hr.getId().equals(latesteReadings.getId())) {
+            return new ResponseEntity<>(Utils.DELETE_AVAILABLE_ONLY_FOR_LAST_ENTRY, HttpStatus.BAD_REQUEST);
+        }
+        if (hr.getBillStatus().equalsIgnoreCase(ElectricityBillStatus.INVOICE_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.EB_ENTRY_CANNOT_DELETE_INVOICE_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+
+        hostelEBReadingsRepository.delete(hr);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
 }

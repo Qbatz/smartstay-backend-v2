@@ -1163,7 +1163,10 @@ public class InvoiceV1Service {
         Double paidAmount = 0.0;
         Double balanceAmount = 0.0;
 
-        paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
+//        paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
+        if (invoicesV1.getPaidAmount() != null) {
+            paidAmount = invoicesV1.getPaidAmount();
+        }
         balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
         subTotal = invoicesV1.getTotalAmount();
         List<com.smartstay.smartstay.responses.invoices.InvoiceItems> listInvoiceItems = new ArrayList<>();
@@ -1627,6 +1630,7 @@ public class InvoiceV1Service {
         double refundableAmount = 0.0;
         double refundedAmount = 0.0;
         double pendingRefund = 0.0;
+        String invoiceDate = null;
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             if (invoicesV1.getTotalAmount() != null && invoicesV1.getTotalAmount() < 0) {
                 refundableAmount = -(invoicesV1.getTotalAmount());
@@ -1666,6 +1670,7 @@ public class InvoiceV1Service {
         String bedName = null;
         String floorName = null;
         String roomName = null;
+        invoiceDate = Utils.dateToString(invoicesV1.getInvoiceStartDate());
         if (bedHistory != null) {
             com.smartstay.smartstay.dto.beds.BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
             if (bedDetails != null) {
@@ -1682,6 +1687,7 @@ public class InvoiceV1Service {
                 refundableAmount,
                 refundedAmount,
                 pendingRefund,
+                invoiceDate,
                 listBanks);
         return new ResponseEntity<>(refundInitializations, HttpStatus.OK);
     }
@@ -2315,6 +2321,9 @@ public class InvoiceV1Service {
                     }
                     else if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name())) {
                         invoiceItem = i.getOtherItem();
+                    }
+                    else if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
+                        invoiceItem = "Amenity";
                     }
                     com.smartstay.smartstay.responses.invoices.InvoiceItems item = new com.smartstay.smartstay.responses.invoices.InvoiceItems(
                             invoicesV1.getInvoiceNumber(),

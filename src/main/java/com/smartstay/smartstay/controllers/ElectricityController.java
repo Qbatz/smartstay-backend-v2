@@ -30,10 +30,6 @@ public class ElectricityController {
     public ResponseEntity<?> addMeterReading(@PathVariable("hostelId") String hostelId,  @Valid @RequestBody AddReading readings) {
         return electricityService.addMeterReading(hostelId, readings);
     }
-    @PostMapping("/new/{hostelId}")
-    public ResponseEntity<?> addReading(@PathVariable("hostelId") String hostelId, @Valid @RequestBody AddReading reading) {
-        return electricityService.addMeterReadingNew(hostelId, reading);
-    }
 
     @GetMapping("/new/{hostelId}")
     public ResponseEntity<?> getAllReadings(@PathVariable("hostelId") String hostelId) {
@@ -62,6 +58,11 @@ public class ElectricityController {
     @PutMapping("/{hostelId}/{readingId}")
     public ResponseEntity<?> updateEbReading(@PathVariable("hostelId") String hostelId, @PathVariable("readingId") String readingId, UpdateElectricity updateElectricity) {
         return electricityService.updateEBReadings(hostelId, readingId, updateElectricity);
+    }
+
+    @DeleteMapping("/{hostelId}/{readingId}")
+    public ResponseEntity<?> deleteElectricity(@PathVariable("hostelId") String hostelId, @PathVariable("readingId") String readingId) {
+        return electricityService.deleteReading(hostelId, readingId);
     }
 
 }

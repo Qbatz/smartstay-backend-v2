@@ -20,6 +20,7 @@ public class ComplaintUpdates {
     //from user type enum
     String userType;
     String assignedTo;
+    String comments;
     String updatedBy;
     Date createdAt;
 

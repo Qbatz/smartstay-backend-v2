@@ -300,8 +300,8 @@ public class CustomersService {
                     item.getFloorName());
         }).collect(Collectors.toList());
 
-//        CustomersList response = new CustomersList(listCustomers, null);
-        return new ResponseEntity<>(listCustomers, HttpStatus.OK);
+        CustomersList response = new CustomersList(hostelId, listCustomers.size(), null, listCustomers);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     /**
@@ -2755,7 +2755,9 @@ public class CustomersService {
                 })
                 .toList();
 
-        return new ResponseEntity<>(listCustomers, HttpStatus.OK);
+        CheckoutList checkoutList = new CheckoutList(hostelId, listCustomers.size(), null, listCustomers);
+
+        return new ResponseEntity<>(checkoutList, HttpStatus.OK);
     }
 
     public List<Customers> getCustomerDetails(List<String> customerIds) {

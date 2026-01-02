@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.ComplaintListMapper;
 import com.smartstay.smartstay.Wrappers.Notifications.NotificationListMapper;
+import com.smartstay.smartstay.Wrappers.complaints.ComplaintUpdatesMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
@@ -201,6 +202,7 @@ public class ComplaintsService {
         complaintComments.setIsActive(true);
         complaintComments.setCreatedBy(user.getUserId());
         complaintComments.setUserType(UserType.ADMIN.name());
+        complaintComments.setComplaintStatus(complaintExist.getStatus());
         complaintComments.setUserName(user.getFirstName()+" "+user.getLastName());
         complaintComments.setCreatedAt(new Date());
         commentsRepository.save(complaintComments);
@@ -591,6 +593,7 @@ public class ComplaintsService {
         complaintUpdates.setStatus(ComplaintStatus.ASSIGNED.name());
         complaintUpdates.setUserType(UserType.ADMIN.name());
         complaintUpdates.setCreatedAt(new Date());
+        complaintUpdates.setAssignedTo(users.getUserId());
         complaintUpdates.setUpdatedBy(authentication.getName());
 
         listComplaintUpdates.add(complaintUpdates);
@@ -598,10 +601,10 @@ public class ComplaintsService {
 
         complaintRepository.save(complaint);
         StringBuilder userName = new StringBuilder();
-        userName.append(user.getFirstName());
-        if (user.getLastName() != null && !user.getLastName().equalsIgnoreCase("")) {
+        userName.append(users.getFirstName());
+        if (users.getLastName() != null && !users.getLastName().equalsIgnoreCase("")) {
             userName.append(" ");
-            userName.append(user.getLastName());
+            userName.append(users.getLastName());
         }
 
         //send a push notification
@@ -675,9 +678,60 @@ public class ComplaintsService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        return new ResponseEntity<>(HttpStatus.OK);
+        List<Integer> complaintType = new ArrayList<>();
+        complaintType.add(complaintsV1.getComplaintTypeId());
 
-//        List<ComplaintUpdates> listComplaintUpdates = getComplaintUpdates(
+
+        List<ComplaintTypeV1> complaintTypeV1s = complaintTypeService.getComplaintTypesById(complaintType);
+        String complaintTypeStr;
+        if (complaintTypeV1s != null) {
+            complaintTypeStr = complaintTypeV1s.get(0).getComplaintTypeName();
+        } else {
+            complaintTypeStr = null;
+        }
+
+        List<ComplaintUpdates> listComplaintUpdates = complaintsV1.getComplaintUpdates();
+        List<ComplaintComments> listComplaintComments = complaintsV1.getComplaintComments();
+        List<String> updatedByAdminUsers = new ArrayList<>(listComplaintUpdates
+                .stream()
+                .filter(i -> !i.getUserType().equalsIgnoreCase(UserType.TENANT.name()))
+                .map(ComplaintUpdates::getUpdatedBy)
+                .toList());
+        List<String> updatedByTenantUsers = new ArrayList<>(listComplaintUpdates
+                .stream()
+                .filter(i -> i.getUserType().equalsIgnoreCase(UserType.TENANT.name()))
+                .map(ComplaintUpdates::getUpdatedBy)
+                .toList());
+        updatedByAdminUsers.addAll(listComplaintComments
+                .stream()
+                .filter(i -> !i.getUserType().equalsIgnoreCase(UserType.TENANT.name()))
+                .map(ComplaintComments::getCreatedBy)
+                .toList());
+        updatedByTenantUsers.addAll(listComplaintComments
+                .stream()
+                .filter(i -> i.getUserType().equalsIgnoreCase(UserType.TENANT.name()))
+                .map(ComplaintComments::getCreatedBy)
+                .toList());
+
+        List<Users> adminUsers = usersService.findByListOfUserIds(updatedByAdminUsers);
+        List<Customers> tenantUsers = customersService.getCustomerDetails(updatedByTenantUsers);
+
+        List<String> assignedUsersIds = listComplaintUpdates
+                .stream()
+                .filter(i -> i.getStatus().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name()))
+                .map(ComplaintUpdates::getAssignedTo)
+                .toList();
+        List<Users> assignedUsers = usersService.findByListOfUserIds(assignedUsersIds);
+
+        List<com.smartstay.smartstay.responses.complaint.ComplaintUpdates> listComments =
+                listComplaintUpdates
+                        .stream()
+                        .map(i -> new ComplaintUpdatesMapper(tenantUsers, adminUsers, listComplaintComments, complaintsV1.getDescription(), assignedUsers, complaintTypeStr).apply(i))
+                        .toList();
+
+
+
+        return new ResponseEntity<>(listComments, HttpStatus.OK);
 
     }
 }

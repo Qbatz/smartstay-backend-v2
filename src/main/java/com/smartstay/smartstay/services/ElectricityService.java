@@ -1166,7 +1166,7 @@ public class ElectricityService {
         if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
             Integer id = Integer.parseInt(readingId);
 
-            ElectricityReadings currentReading = electricityReadingRepository.getRoomCurrentReading(id);
+            ElectricityReadings currentReading = electricityReadingRepository.getReferenceById(id);
             if (currentReading == null) {
                 return new ResponseEntity<>(Utils.EB_ENTRY_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
@@ -1219,6 +1219,60 @@ public class ElectricityService {
         }
         else {
             return hostelReadingsService.updateEbReading(hostelId, readingId, updateElectricity);
+        }
+
+    }
+
+    public ResponseEntity<?> deleteReading(String hostelId, String readingId) {
+        int id = 0;
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        try {
+            id = Integer.parseInt(readingId);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(Utils.INVALID_READING_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!Utils.checkNullOrEmpty(id)) {
+            return new ResponseEntity<>(Utils.INVALID_READING_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig == null) {
+            return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            ElectricityReadings er = electricityReadingRepository.findById(id).orElse(null);
+            if (er == null) {
+                return new ResponseEntity<>(Utils.INVALID_READING_ID, HttpStatus.BAD_REQUEST);
+            }
+            ElectricityReadings latestEntry = electricityReadingRepository.findTopByRoomIdAndHostelIdOrderByEntryDateDesc(er.getRoomId(), hostelId);
+            if (!latestEntry.getId().equals(er.getId())) {
+                return new ResponseEntity<>(Utils.DELETE_AVAILABLE_ONLY_FOR_LAST_ENTRY, HttpStatus.BAD_REQUEST);
+            }
+            if (er.getBillStatus().equalsIgnoreCase(ElectricityBillStatus.INVOICE_GENERATED.name())) {
+                return new ResponseEntity<>(Utils.EB_ENTRY_CANNOT_DELETE_INVOICE_GENERATED, HttpStatus.BAD_REQUEST);
+            }
+            electricityReadingRepository.delete(er);
+
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        else {
+            return hostelReadingsService.deleteLatestEntry(hostelId, readingId);
         }
 
     }

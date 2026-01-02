@@ -48,6 +48,7 @@ public class Utils {
 
     public static final String INVALID_FLOOR = "Invalid Floor";
     public static final String INVALID_USER = "Invalid User";
+    public static final String INVALID_USER_NAME_PASSWORD = "Invalid username/password";
     public static final String INVALID_OTP = "Invalid Otp";
     public static final String OTP_EXPIRED = "Otp Expired";
     public static final String ASSET_NAME_ALREADY_EXISTS = "Asset name already exists";
@@ -74,6 +75,7 @@ public class Utils {
     public static final String ACTIVE_USERS_FOUND = "Active users found";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
+    public static final String INVALID_READING_ID = "Invalid Reading Id";
     public static final String INVALID_TRANSACTION_ID = "Invalid transaction id";
     public static final String INVALID_INVOICE_ID = "Invalid invoice id";
     public static final String INVALID_INVOICE_DATE = "Invalid invoice date";
@@ -208,7 +210,14 @@ public class Utils {
     public static final String CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED = "Cannot delete receipts for settlement generated customers";
     public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
     public static final String EB_ENTRY_NOT_FOUND = "EB entry not found";
-    public static final String EB_ENTRY_CANNOT_CHANGE_INVOICE_GENERATED = "Cannot modify invoice generated EB readings";
+    public static final String EB_ENTRY_CANNOT_CHANGE_INVOICE_GENERATED = "Cannot modify invoice generated readings";
+    public static final String EB_ENTRY_CANNOT_DELETE_INVOICE_GENERATED = "Cannot delete invoice generated readings";
+    public static final String DELETE_AVAILABLE_ONLY_FOR_LAST_ENTRY = "Delete is available only for latest entries";
+    public static final String PIN_REQUIRED  = "Pin is required";
+    public static final String PIN_ALREADY_SETUP  = "Pin is added for this account";
+    public static final String INVALID_PIN = "Invalid Pin";
+    public static final String TOKEN_REQUIRED = "FCM token is required";
+    public static final String REFUNDING_DATE_OLDER_THAN_INVOICE = "Refund date cannot be before the invoice date";
 
     /**
      *  Defining module Id's here

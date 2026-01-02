@@ -12,12 +12,17 @@ import com.smartstay.smartstay.events.AddAdminEvents;
 import com.smartstay.smartstay.events.AddUserEvents;
 import com.smartstay.smartstay.payloads.*;
 import com.smartstay.smartstay.payloads.account.*;
+import com.smartstay.smartstay.payloads.profile.UpdateFCMToken;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
+import com.smartstay.smartstay.payloads.user.SetupPin;
+import com.smartstay.smartstay.payloads.user.VerifyPin;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
+import com.smartstay.smartstay.repositories.UsersConfigRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
 import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
+import com.smartstay.smartstay.responses.user.MobileLogin;
 import com.smartstay.smartstay.responses.user.OtpResponse;
 import com.smartstay.smartstay.util.Utils;
 import jdk.jshell.execution.Util;
@@ -31,6 +36,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -61,15 +67,16 @@ public class UsersService {
 
     @Autowired
     private com.smartstay.smartstay.config.Authentication authentication;
-
     @Autowired
     private UserHostelService userHostelService;
-
     @Autowired
     private RolesService rolesService;
-
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private UsersConfigRepository usersConfigRepository;
+    @Autowired
+    private MyUserDetailService myUserDetailService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -140,6 +147,43 @@ public class UsersService {
         return new ResponseEntity<>(new AdminUserResponse("", "", "Created successfully"), HttpStatus.CREATED);
     }
 
+
+    public ResponseEntity<?> mobileLogin(Login login) {
+        if (login == null) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+        if (!Utils.checkNullOrEmpty(login.emailId()) && !Utils.checkNullOrEmpty(login.password())) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+        Users users = userRepository.findByEmailIdAndIsDeletedFalse(login.emailId());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.INVALID_USER_NAME_PASSWORD, HttpStatus.BAD_REQUEST);
+        }
+
+        Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
+        if (authentication.isAuthenticated()) {
+            boolean isPinSetup = false;
+            UsersConfig config = users.getConfig();
+            if (config == null) {
+                isPinSetup = false;
+            }
+            else {
+                if (config.getPin() == null) {
+                    isPinSetup = false;
+                }
+                else {
+                    isPinSetup = true;
+                }
+            }
+            MobileLogin mobileLogin = new MobileLogin(users.getUserId(), isPinSetup);
+
+            return new ResponseEntity<>(mobileLogin, HttpStatus.OK);
+        }
+
+        else {
+            return new ResponseEntity<>(Utils.INVALID_USER_NAME_PASSWORD, HttpStatus.FORBIDDEN);
+        }
+    }
 
     public ResponseEntity<Object> login(Login login) {
         Users users = userRepository.findByEmailIdAndIsDeletedFalse(login.emailId());
@@ -844,5 +888,136 @@ public class UsersService {
                 .stream()
                 .map(Users::getUserId)
                 .toList();
+    }
+
+    public ResponseEntity<?> setupPin(String userId, SetupPin pin) {
+        if (pin == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (pin.pin() == null) {
+            return new ResponseEntity<>(Utils.PIN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        Users users = userRepository.findUserByUserId(userId);
+        if (users == null) {
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
+        }
+        UsersConfig config = users.getConfig();
+        if (config != null) {
+            if (config.getPin() == null || config.getPin() == 0) {
+                config.setPin(pin.pin());
+                config.setUser(users);
+                users.setConfig(config);
+                userRepository.save(users);
+                return new ResponseEntity<>(HttpStatus.OK);
+            }
+            else {
+                return new ResponseEntity<>(Utils.PIN_ALREADY_SETUP, HttpStatus.BAD_REQUEST);
+            }
+        }
+        else {
+            config = new UsersConfig();
+            config.setUser(users);
+            config.setPin(pin.pin());
+            users.setConfig(config);
+            userRepository.save(users);
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+    }
+
+    public ResponseEntity<?> verifyPin(String userId, VerifyPin pin) {
+        if (userId == null) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (pin == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (pin.pin() == null) {
+            return new ResponseEntity<>(Utils.PIN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        UsersConfig usersConfig = usersConfigRepository.findByUser_UserIdAndPin(userId, pin.pin()).orElse(null);
+        if (usersConfig == null) {
+            return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
+        }
+
+       if (usersConfig.getUser() == null) {
+           return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
+       }
+
+       Users users = usersConfig.getUser();
+
+        UserDetails userDetails = myUserDetailService.loadUserByUsername(users.getUserId());
+
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities()
+                );
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
+        }
+
+        HashMap<String, Object> claims = new HashMap<>();
+        claims.put("userId", users.getUserId());
+        claims.put("role", rolesService.findById(users.getRoleId()));
+
+        Long validity = System.currentTimeMillis() + (1000L * 60 * 60 * 24 * 15);
+
+        String token = jwtService.generateMobileToken(authentication.getName(), claims, validity);
+        com.smartstay.smartstay.responses.user.VerifyPin vPin = new com.smartstay.smartstay.responses.user.VerifyPin(validity, token);
+
+        return new ResponseEntity<>(token, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> addFCMToken(UpdateFCMToken updateFCMToken) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userRepository.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (updateFCMToken == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (updateFCMToken.token() == null) {
+            return new ResponseEntity<>(Utils.TOKEN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+
+        UsersConfig usersConfig = users.getConfig();
+        if (usersConfig != null) {
+            if (updateFCMToken.source().equalsIgnoreCase("WEB")) {
+                usersConfig.setFcmWebToken(updateFCMToken.token());
+                usersConfigRepository.save(usersConfig);
+            }
+            else {
+                usersConfig.setFcmToken(updateFCMToken.token());
+                usersConfigRepository.save(usersConfig);
+            }
+
+            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+        }
+        else {
+            usersConfig = new UsersConfig();
+            usersConfig.setUser(users);
+            if (updateFCMToken.source().equalsIgnoreCase("WEB")) {
+                usersConfig.setFcmWebToken(updateFCMToken.token());
+            }
+            else {
+                usersConfig.setFcmToken(updateFCMToken.token());
+            }
+
+            users.setConfig(usersConfig);
+
+            userRepository.save(users);
+
+            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+        }
+
+
     }
 }

@@ -15,6 +15,7 @@ public record ReceiptDetails(
         String emailId,
         String mobile,
         String countryCode,
+        String hostelId,
         ReceiptInfo receiptInfo,
         CustomerInfo customerInfo,
         StayInfo stayInfo,

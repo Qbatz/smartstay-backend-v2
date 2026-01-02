@@ -3,6 +3,7 @@ package com.smartstay.smartstay.controllers;
 import com.smartstay.smartstay.payloads.Password;
 import com.smartstay.smartstay.payloads.account.*;
 import com.smartstay.smartstay.payloads.UpdateUserProfilePayloads;
+import com.smartstay.smartstay.payloads.profile.UpdateFCMToken;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -83,9 +84,13 @@ public class ProfileController {
         return usersService.deleteUser(hostelId, userId);
     }
 
-
     @DeleteMapping("/delete-admin/{userId}")
     public ResponseEntity<?> deleteAdminUser(@PathVariable("userId") String userId) {
         return usersService.deleteAdminUser(userId);
+    }
+
+    @PutMapping("/fcm")
+    public ResponseEntity<?> updateFCMToken(@RequestBody @Valid UpdateFCMToken updateFCMToken) {
+        return usersService.addFCMToken(updateFCMToken);
     }
 }
