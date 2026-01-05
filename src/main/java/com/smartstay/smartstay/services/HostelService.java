@@ -786,5 +786,9 @@ public class HostelService {
     public List<BillingRules> findAllHostelsHavingBillingToday() {
         return hostelConfigService.findAllHostelsHavingBillingToday();
     }
+
+    public List<HostelV1> findAHostelsHavingBillingRuleEndingToday() {
+        return hostelConfigService.findAHostelsHavingBillingRuleEndingToday();
+    }
 }
 

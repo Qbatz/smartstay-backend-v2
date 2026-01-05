@@ -6,6 +6,7 @@ public record ComplaintUpdates(String update,
                                String description,
                                String updatedBy,
                                String initials,
+                               String profilePic,
                                String updatedAt,
                                String updatedTime,
                                List<ComplaintComments> comments) {

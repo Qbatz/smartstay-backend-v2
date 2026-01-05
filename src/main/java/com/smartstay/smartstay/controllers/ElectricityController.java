@@ -65,4 +65,14 @@ public class ElectricityController {
         return electricityService.deleteReading(hostelId, readingId);
     }
 
+    @PostMapping("/calculate/{hostelId}")
+    public ResponseEntity<?> calculateEb(@PathVariable("hostelId") String hostelId) {
+        return electricityService.calculateEbAmountForCustomers(hostelId);
+    }
+
+    @DeleteMapping("/all/{hostelId}")
+    public ResponseEntity<?> deleteEntries(@PathVariable("hostelId") String hostelId) {
+        return electricityService.deleteReadingAll(hostelId);
+    }
+
 }

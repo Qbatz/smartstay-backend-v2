@@ -15,7 +15,7 @@ public class RoomElectricityMapper implements Function<com.smartstay.smartstay.d
             fullName.append(roomElectricityCustomersList.getFirstName());
             initials.append(roomElectricityCustomersList.getFirstName().toUpperCase().charAt(0));
         }
-        if (roomElectricityCustomersList.getLastName() != null) {
+        if (roomElectricityCustomersList.getLastName() != null && !roomElectricityCustomersList.getLastName().equalsIgnoreCase("")) {
             fullName.append(" ");
             fullName.append(roomElectricityCustomersList.getLastName());
             if (!roomElectricityCustomersList.getLastName().trim().equalsIgnoreCase("")) {
@@ -23,7 +23,10 @@ public class RoomElectricityMapper implements Function<com.smartstay.smartstay.d
             }
         }
         else {
-            initials.append(roomElectricityCustomersList.getLastName().toUpperCase().charAt(1));
+            if (roomElectricityCustomersList.getFirstName().length() > 1) {
+                initials.append(roomElectricityCustomersList.getFirstName().toUpperCase().charAt(1));
+            }
+
         }
 
         double consumption =  Utils.roundOffWithTwoDigit(roomElectricityCustomersList.getConsumption());

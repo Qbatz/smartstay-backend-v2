@@ -123,6 +123,66 @@ public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, com.sm
         updatedAt = Utils.dateToString(complaintUpdates.getCreatedAt());
         updatedTime = Utils.dateToTime(complaintUpdates.getCreatedAt());
 
+        List<com.smartstay.smartstay.responses.complaint.ComplaintComments> listComments =
+                complaintComments
+                        .stream()
+                        .filter(i -> i.getComplaintStatus().equalsIgnoreCase(complaintUpdates.getStatus()))
+                        .map(i -> {
+                            String commentedBy = null;
+                            StringBuilder intl = new StringBuilder();
+                            StringBuilder fName = new StringBuilder();
+                            String pp = null;
+                            if (i.getUserType().equalsIgnoreCase(UserType.TENANT.name())) {
+                                if (listCustomers != null) {
+                                    Customers customer = listCustomers
+                                            .stream()
+                                            .filter(i2 -> i2.getCustomerId().equalsIgnoreCase(i.getCreatedBy()))
+                                            .findFirst()
+                                            .orElse(null);
+
+                                    if (customer != null) {
+                                        pp = customer.getProfilePic();
+                                        intl.append(customer.getFirstName().toUpperCase().charAt(0));
+                                        fName.append(customer.getFirstName());
+                                        if (customer.getLastName() != null && !customer.getLastName().trim().equalsIgnoreCase("")) {
+                                            intl.append(customer.getLastName().toUpperCase().charAt(0));
+                                            intl.append(" ");
+                                            fName.append(customer.getLastName());
+                                        }
+                                        else {
+                                            if (customer.getFirstName() != null && customer.getFirstName().length() > 1) {
+                                                intl.append(customer.getFirstName().toUpperCase().charAt(1));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else {
+                                Users user = listUsers
+                                        .stream()
+                                        .filter(i2 -> i2.getUserId().equalsIgnoreCase(i.getCreatedBy()))
+                                        .findFirst()
+                                        .orElse(null);
+                                if (user != null) {
+                                    pp = user.getProfileUrl();
+                                    intl.append(user.getFirstName().toUpperCase().charAt(0));
+                                    fName.append(user.getFirstName());
+                                    if (user.getLastName() != null && !user.getLastName().trim().equalsIgnoreCase("")) {
+                                        intl.append(user.getLastName().toUpperCase().charAt(0));
+                                        fName.append(" ");
+                                        fName.append(user.getLastName());
+                                    }
+                                    else {
+                                        if (user.getFirstName() != null && user.getFirstName().length() > 1) {
+                                            intl.append(user.getFirstName().toUpperCase().charAt(1));
+                                        }
+                                    }
+                                }
+                            }
+                            return new com.smartstay.smartstay.responses.complaint.ComplaintComments(fName.toString(), intl.toString(), pp, i.getComment());
+                        })
+                        .toList();
+
 
 
 
@@ -130,8 +190,9 @@ public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, com.sm
                 description,
                 fullName.toString(),
                 initials.toString(),
+                profilePic,
                 updatedAt,
                 updatedTime,
-                null);
+                listComments);
     }
 }

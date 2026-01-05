@@ -62,7 +62,7 @@ public class UsersService {
     @Autowired
     UploadFileToS3 uploadToS3;
 
-    @Value("ENVIRONMENT")
+    @Value("${ENVIRONMENT}")
     private String environment;
 
     @Autowired

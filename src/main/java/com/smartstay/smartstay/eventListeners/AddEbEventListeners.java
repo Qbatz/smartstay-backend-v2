@@ -42,9 +42,8 @@ public class AddEbEventListeners {
 
         Date startDate = null;
         if (electricityReadings == null) {
-            currentConsumption = ebEvents.getCurrentReading();
+            currentConsumption = electricityReadings.getCurrentReading();
             Calendar calendar = Calendar.getInstance();
-            calendar.setTime(ebEvents.getEntryDate());
             int startDay = 1;
             if (electricityConfig == null) {
                 calendar.set(Calendar.DAY_OF_MONTH, startDay);
@@ -57,15 +56,15 @@ public class AddEbEventListeners {
 
         }
         else {
-            currentConsumption = ebEvents.getCurrentReading() - electricityReadings.getCurrentReading();
+            currentConsumption =electricityReadings.getConsumption();
             Calendar cal = Calendar.getInstance();
             cal.setTime(electricityReadings.getEntryDate());
-            cal.add(Calendar.DAY_OF_MONTH, 1);
+//            cal.add(Calendar.DAY_OF_MONTH, 1);
 
-            startDate = cal.getTime();
+            startDate = electricityReadings.getBillStartDate();
         }
 
-        Date endDate = ebEvents.getEntryDate();
+        Date endDate = electricityReadings.getEntryDate();
 
         List<CustomersBedHistory> listCustomerBedHistory = customerBedHistory.getCustomersByBedIdAndDates(ebEvents.getRoomId(), startDate, endDate);
         if (!listCustomerBedHistory.isEmpty()) {
@@ -77,14 +76,14 @@ public class AddEbEventListeners {
             if (listCustomerBedHistory.size() == personCount) {
 //                long noOfDaysBetweenStartAndEndDate = Utils.findNumberOfDays(startDate, endDate);
                 double finalUnitsPerPerson =  currentConsumption / listCustomerBedHistory.size();
-                double finalAmount = ebEvents.getChargePerUnits() * finalUnitsPerPerson;
+                double finalAmount = electricityConfig.getCharge() * finalUnitsPerPerson;
 
                 Date finalStartDate1 = startDate;
                 List<CustomersEbHistory> listEbHistory = listCustomerBedHistory
                         .stream()
                         .map(item -> {
                             CustomersEbHistory ebHistory = new CustomersEbHistory();
-                            ebHistory.setReadingId(ebEvents.getNewReadingId());
+                            ebHistory.setReadingId(electricityReadings.getId());
                             ebHistory.setCustomerId(item.getCustomerId());
                             ebHistory.setRoomId(item.getRoomId());
                             ebHistory.setFloorId(item.getFloorId());
@@ -179,10 +178,10 @@ public class AddEbEventListeners {
                             }
 
                             double noOfUnitsConsumed = noOfDaysStayed * totalUnitsPerPerson;
-                            double finalAmount = noOfUnitsConsumed * ebEvents.getChargePerUnits();
+                            double finalAmount = noOfUnitsConsumed * electricityConfig.getCharge();
 
                             CustomersEbHistory ebHistory = new CustomersEbHistory();
-                            ebHistory.setReadingId(ebEvents.getNewReadingId());
+                            ebHistory.setReadingId(electricityReadings.getId());
                             ebHistory.setCustomerId(item.getCustomerId());
                             ebHistory.setRoomId(item.getRoomId());
                             ebHistory.setFloorId(item.getFloorId());

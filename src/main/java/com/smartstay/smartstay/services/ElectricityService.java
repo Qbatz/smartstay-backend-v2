@@ -13,6 +13,7 @@ import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
 import com.smartstay.smartstay.ennum.KycStatus;
 import com.smartstay.smartstay.events.AddEbEvents;
+import com.smartstay.smartstay.events.HostelReadingEbEvents;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
 import com.smartstay.smartstay.payloads.electricity.UpdateElectricity;
 import com.smartstay.smartstay.repositories.ElectricityReadingRepository;
@@ -62,6 +63,16 @@ public class ElectricityService {
     @Autowired
     private HostelReadingsService hostelReadingsService;
 
+    /**
+     *
+     * this is old way of generating invoices
+     *
+     * @param hostelId
+     * @param readings
+     * @return
+     */
+
+    @Deprecated
     public ResponseEntity<?> addMeterReadingNew(String hostelId, AddReading readings) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -161,7 +172,7 @@ public class ElectricityService {
 
             com.smartstay.smartstay.dao.ElectricityReadings newReading = electricityReadingRepository.save(newReadings);
             if (!isFirstEntry) {
-                eventPublisher.publishEvent(new AddEbEvents(this, hostelId, readings.roomId(), readings.reading(), electricityConfig1.getCharge(), date, users.getUserId(), electricityReadings, newReading.getId()));
+//                eventPublisher.publishEvent(new AddEbEvents(this, hostelId, readings.roomId(), readings.reading(), electricityConfig1.getCharge(), date, users.getUserId(), newReading.getId()));
             }
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
@@ -487,10 +498,8 @@ public class ElectricityService {
             List<CustomerIdRoomIdUnits> listCustomerIdRoomId = new ArrayList<>();
 
 
-            CurrentReadings finalCurrentReadings = currentReadings;
             int totalDays = listBeds.stream()
                     .mapToInt(item -> {
-                        assert finalCurrentReadings != null;
                         if (Utils.compareWithTwoDates(item.startDate(), finalStartDate) <= 0) {
                             if (item.endDate() == null) {
                                 return Math.toIntExact(Utils.findNumberOfDays(finalStartDate, finalReadingDate));
@@ -969,14 +978,8 @@ public class ElectricityService {
                 }
             }
 
-            Calendar calendar = Calendar.getInstance();
-            calendar.set(Calendar.DAY_OF_MONTH, 1);
-            calendar.set(Calendar.MONTH, 1);
-
             listCustomers = ebHistoryService.getCustomerEbListForRoom(roomId);
         }
-
-
 
         RoomUsages roomUsages = new RoomUsages(roomInfo, hostelId, roomList, listCustomers);
 
@@ -1275,5 +1278,97 @@ public class ElectricityService {
             return hostelReadingsService.deleteLatestEntry(hostelId, readingId);
         }
 
+    }
+
+
+    public List<ElectricityReadings> findAllInvoiceNotGenertedReadings(String hostelId) {
+        if (hostelId != null) {
+            return electricityReadingRepository.getNotInvoiceGeneratedInvoices(hostelId);
+        }
+
+        return null;
+    }
+
+    public ResponseEntity<?> calculateEbAmountForCustomers(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            List<ElectricityReadings> listElectricityReading = findAllInvoiceNotGenertedReadings(hostelId);
+            if (listElectricityReading != null) {
+                listElectricityReading.forEach(item -> {
+                    if (!item.isFirstEntry()) {
+                        eventPublisher.publishEvent(new AddEbEvents(this, hostelId, item.getRoomId(), item ));
+                    }
+                });
+                return new ResponseEntity<>(HttpStatus.OK);
+            }
+        }
+        else {
+            List<com.smartstay.smartstay.dao.HostelReadings> listHostelReading = hostelReadingsService.findAllInvoiceNotGeneratedReadingsForHostel(hostelId);
+            if (listHostelReading != null) {
+                listHostelReading.forEach(item -> {
+                    if (!item.isFirstEntry()) {
+                        eventPublisher.publishEvent(new HostelReadingEbEvents(this, item));
+                    }
+                });
+                return new ResponseEntity<>(HttpStatus.OK);
+            }
+        }
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
+    }
+
+    public List<com.smartstay.smartstay.dao.HostelReadings> findAllInvoiceNotGeneratedReadingsForHostel(String hostelId) {
+        return hostelReadingsService.findAllInvoiceNotGeneratedReadingsForHostel(hostelId);
+    }
+
+    public ElectricityReadings getRoomCurrentReading(Integer key) {
+        return electricityReadingRepository.getRoomCurrentReading(key);
+    }
+
+    public List<ElectricityReadings> saveAll(List<ElectricityReadings> listNewElectricityReading) {
+        return electricityReadingRepository.saveAll(listNewElectricityReading);
+    }
+
+    public ResponseEntity<?> deleteReadingAll(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        List<ElectricityReadings> listReading = electricityReadingRepository.findByHostelId(hostelId);
+        if (listReading != null) {
+            List<Integer> readingIds = listReading.stream()
+                    .map(ElectricityReadings::getId)
+                    .toList();
+            boolean isDeleted = ebHistoryService.deleteEntriesByIds(readingIds);
+            if (isDeleted) {
+                electricityReadingRepository.deleteAll(listReading);
+                if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.HOSTEL_READING.name())) {
+                    hostelReadingsService.deleteReadings(hostelId);
+                }
+            }
+        }
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

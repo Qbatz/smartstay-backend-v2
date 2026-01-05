@@ -173,4 +173,13 @@ public class HostelReadingsService {
         hostelEBReadingsRepository.delete(hr);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    public List<HostelReadings> findAllInvoiceNotGeneratedReadingsForHostel(String hostelId) {
+        return hostelEBReadingsRepository.findAllInvoiceNotGeneratedReadings(hostelId);
+    }
+
+    public void deleteReadings(String hostelId) {
+        List<HostelReadings> listReadings = hostelEBReadingsRepository.findByHostelId(hostelId);
+        hostelEBReadingsRepository.deleteAll(listReadings);
+    }
 }
