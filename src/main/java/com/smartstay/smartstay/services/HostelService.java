@@ -5,6 +5,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
 import com.smartstay.smartstay.ennum.BedStatus;
@@ -790,5 +791,6 @@ public class HostelService {
     public List<HostelV1> findAHostelsHavingBillingRuleEndingToday() {
         return hostelConfigService.findAHostelsHavingBillingRuleEndingToday();
     }
+
 }
 

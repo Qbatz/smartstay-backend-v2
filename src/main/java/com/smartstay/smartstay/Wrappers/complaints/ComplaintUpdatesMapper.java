@@ -6,13 +6,13 @@ import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.ennum.ComplaintStatus;
 import com.smartstay.smartstay.ennum.UserType;
+import com.smartstay.smartstay.responses.complaint.ComplaintUpdatesList;
 import com.smartstay.smartstay.util.Utils;
-import org.apache.catalina.User;
 
 import java.util.List;
 import java.util.function.Function;
 
-public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, com.smartstay.smartstay.responses.complaint.ComplaintUpdates> {
+public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, ComplaintUpdatesList> {
 
     List<Customers> listCustomers = null;
     List<Users> listUsers = null;
@@ -31,7 +31,7 @@ public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, com.sm
     }
 
     @Override
-    public com.smartstay.smartstay.responses.complaint.ComplaintUpdates apply(ComplaintUpdates complaintUpdates) {
+    public ComplaintUpdatesList apply(ComplaintUpdates complaintUpdates) {
         StringBuilder initials = new StringBuilder();
         StringBuilder fullName = new StringBuilder();
         String profilePic = null;
@@ -186,7 +186,7 @@ public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, com.sm
 
 
 
-        return new com.smartstay.smartstay.responses.complaint.ComplaintUpdates(update,
+        return new ComplaintUpdatesList(update,
                 description,
                 fullName.toString(),
                 initials.toString(),

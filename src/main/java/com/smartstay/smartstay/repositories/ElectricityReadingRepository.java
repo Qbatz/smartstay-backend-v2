@@ -101,4 +101,11 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
 
     List<com.smartstay.smartstay.dao.ElectricityReadings> findByHostelId(String hostelId);
 
+    @Query(value = """
+            SELECT * FROM electricity_readings er WHERE er.entry_date=(SELECT MAX(er2.entry_date) 
+            FROM electricity_readings er2 WHERE er2.room_id = er.room_id) AND 
+            hostel_id=:hostelId AND room_id in (:rooms) ORDER BY er.entry_date DESC
+            """, nativeQuery = true)
+    List<com.smartstay.smartstay.dao.ElectricityReadings> findLatestEntriesByHostelIdAndListRooms(@Param("hostelId") String hostelId, @Param("rooms") List<Integer> listRooms);
+
 }

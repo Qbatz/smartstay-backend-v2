@@ -24,6 +24,5 @@ public interface HostelEBReadingsRepository extends JpaRepository<HostelReadings
             SELECT hr from HostelReadings hr WHERE hr.hostelId=:hostelId AND hr.billStatus='INVOICE_NOT_GENERATED'
             """)
     List<HostelReadings> findAllInvoiceNotGeneratedReadings(String hostelId);
-
     List<HostelReadings> findByHostelId(String hostelId);
 }

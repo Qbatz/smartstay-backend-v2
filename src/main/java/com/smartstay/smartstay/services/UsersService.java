@@ -8,10 +8,12 @@ import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.Admin.UsersData;
+import com.smartstay.smartstay.ennum.AppSource;
 import com.smartstay.smartstay.events.AddAdminEvents;
 import com.smartstay.smartstay.events.AddUserEvents;
 import com.smartstay.smartstay.payloads.*;
 import com.smartstay.smartstay.payloads.account.*;
+import com.smartstay.smartstay.payloads.profile.Logout;
 import com.smartstay.smartstay.payloads.profile.UpdateFCMToken;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
 import com.smartstay.smartstay.payloads.user.SetupPin;
@@ -77,6 +79,8 @@ public class UsersService {
     private UsersConfigRepository usersConfigRepository;
     @Autowired
     private MyUserDetailService myUserDetailService;
+    @Autowired
+    private LoginHistoryService loginHistoryService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -206,6 +210,7 @@ public class UsersService {
                 HashMap<String, Object> claims = new HashMap<>();
                 claims.put("userId", users.getUserId());
                 claims.put("role", rolesService.findById(users.getRoleId()));
+                loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.WEB.name(), "");
                 return new ResponseEntity<>(jwtService.generateToken(authentication.getName(), claims), HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(HttpStatus.FORBIDDEN);
@@ -223,6 +228,8 @@ public class UsersService {
             HashMap<String, Object> claims = new HashMap<>();
             claims.put("userId", users.getUsers().getUserId());
             claims.put("role", rolesService.findById(users.getUsers().getRoleId()));
+            loginHistoryService.login(users.getUsers().getUserId(), users.getUsers().getParentId(), AppSource.WEB.name(), "");
+
             return new ResponseEntity<>(jwtService.generateToken(users.getUsers().getEmailId(), claims), HttpStatus.OK);
         } else if (users != null && users.getOtpValidity().before(new Date())) {
             return new ResponseEntity<>("Otp expired.", HttpStatus.BAD_REQUEST);
@@ -964,7 +971,7 @@ public class UsersService {
         claims.put("role", rolesService.findById(users.getRoleId()));
 
         Long validity = System.currentTimeMillis() + (1000L * 60 * 60 * 24 * 15);
-
+        loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.MOBILE.name(), "Android");
         String token = jwtService.generateMobileToken(authentication.getName(), claims, validity);
         com.smartstay.smartstay.responses.user.VerifyPin vPin = new com.smartstay.smartstay.responses.user.VerifyPin(validity, token);
 
@@ -1019,5 +1026,32 @@ public class UsersService {
         }
 
 
+    }
+
+    public ResponseEntity<?> logout(Logout logout) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (logout == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        UsersConfig usersConfig = users.getConfig();
+        if (usersConfig != null) {
+            if (logout.source().equalsIgnoreCase("WEB")) {
+                usersConfig.setFcmWebToken(null);
+            }
+            else if (logout.source().equalsIgnoreCase("MOBILE")) {
+                usersConfig.setFcmToken(null);
+            }
+
+            usersConfigRepository.save(usersConfig);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

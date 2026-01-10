@@ -118,5 +118,34 @@ public class SmartstayApplication {
 		};
 	}
 
+	/**
+	 *
+	 * required production build
+	 *
+	 * @param invoicesV1Repository
+	 * @param settlementDetailsRepository
+	 * @return
+	 */
+	@Bean
+	CommandLineRunner mapSettlementInvoicesWithSettlementDetails(InvoicesV1Repository invoicesV1Repository, SettlementDetailsRepository settlementDetailsRepository) {
+		return args -> {
+//			List<InvoicesV1> listInvoices = invoicesV1Repository.findAllSettlementInvoices();
+//			List<SettlementDetails> allSettlementDetails = listInvoices
+//					.stream()
+//					.map(i -> {
+//						SettlementDetails settlementDetails = new SettlementDetails();
+//						settlementDetails.setCustomerId(i.getCustomerId());
+//						settlementDetails.setLeavingDate(i.getInvoiceEndDate());
+//						settlementDetails.setCreatedAt(i.getInvoiceEndDate());
+//						settlementDetails.setCreatedBy(i.getCreatedBy());
+//
+//						return settlementDetails;
+//					})
+//					.toList();
+//
+//			settlementDetailsRepository.saveAll(allSettlementDetails);
+		};
+	}
+
 
 }

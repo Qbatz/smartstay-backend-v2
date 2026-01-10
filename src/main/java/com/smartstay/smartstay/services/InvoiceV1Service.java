@@ -5,6 +5,7 @@ import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.Wrappers.invoices.InitializeRefund;
 import com.smartstay.smartstay.Wrappers.invoices.InvoiceMapper;
 import com.smartstay.smartstay.Wrappers.invoices.NewInvoiceListMapper;
+import com.smartstay.smartstay.Wrappers.transactions.TransactionsListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
@@ -43,6 +44,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class InvoiceV1Service {
@@ -539,10 +541,36 @@ public class InvoiceV1Service {
     }
 
     public ResponseEntity<?> getAllReceiptsByHostelId(String hostelId) {
-        List<Receipts> listReceipts = transactionService.getAllReceiptsByHostelId(hostelId);
+        List<Receipts> listReceipts = transactionService.getAllReceiptsByHostelIdOld(hostelId);
         List<ReceiptsList> receipts = listReceipts
                 .stream()
                 .map(item -> new ReceiptMapper().apply(item))
+                .toList();
+        return new ResponseEntity<>(receipts, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllReceiptsByHostelIdNew(String hostelId) {
+        List<TransactionV1> listReceipts = transactionService.getAllReceiptsByHostelId(hostelId);
+        List<String> customerIds = listReceipts
+                .stream()
+                .map(TransactionV1::getCustomerId)
+                .toList();
+        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+        List<String> invoiceIds = listReceipts
+                .stream()
+                .map(TransactionV1::getInvoiceId)
+                .toList();
+        List<InvoicesV1> invoices = invoicesV1Repository.findByInvoiceIdIn(invoiceIds);
+        Set<String> bankIds = listReceipts
+                .stream()
+                .map(TransactionV1::getBankId)
+                .collect(Collectors.toSet());
+        List<BankingV1> listBanks = bankingService.findAllBanksById(bankIds);
+
+
+        List<ReceiptsList> receipts = listReceipts
+                .stream()
+                .map(item -> new TransactionsListMapper(listCustomers, listBanks, invoices).apply(item))
                 .toList();
         return new ResponseEntity<>(receipts, HttpStatus.OK);
     }
@@ -1091,7 +1119,11 @@ public class InvoiceV1Service {
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             double paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
+
             double balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
+            if (invoicesV1.getTotalAmount() < 0) {
+                balanceAmount = invoicesV1.getTotalAmount() + paidAmount;
+            }
             List<String> invoicesList = invoicesV1.getCancelledInvoices();
             List<com.smartstay.smartstay.responses.invoices.InvoiceItems> listInvoiceItems = new ArrayList<>();
             listInvoiceItems.add(new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(),
@@ -1238,7 +1270,7 @@ public class InvoiceV1Service {
         invoicesV1Repository.saveAll(unpaidUpdated);
     }
 
-    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction) {
+    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate) {
         List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customers.getCustomerId(), InvoiceType.SETTLEMENT.name());
         if (!invoicesV1.isEmpty()) {
             InvoicesV1 settlementInvoice = invoicesV1.get(0);
@@ -1251,9 +1283,9 @@ public class InvoiceV1Service {
             settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
             settlementInvoice.setBasePrice(Utils.roundOfDouble(totalAmountWithoutDeduction));
             settlementInvoice.setTotalAmount(totalAmountToBePaid);
-            settlementInvoice.setInvoiceStartDate(new Date());
-            settlementInvoice.setInvoiceDueDate(new Date());
-            settlementInvoice.setInvoiceEndDate(new Date());
+            settlementInvoice.setInvoiceStartDate(leavingDate);
+            settlementInvoice.setInvoiceDueDate(leavingDate);
+            settlementInvoice.setInvoiceEndDate(leavingDate);
             settlementInvoice.setUpdatedAt(new Date());
 
             List<InvoiceItems> listInvoiceItems = listDeductions
@@ -1321,9 +1353,9 @@ public class InvoiceV1Service {
             settlementInvoice.setCreatedBy(authentication.getName());
             settlementInvoice.setUpdatedBy(authentication.getName());
             settlementInvoice.setInvoiceGeneratedDate(new Date());
-            settlementInvoice.setInvoiceStartDate(new Date());
-            settlementInvoice.setInvoiceDueDate(new Date());
-            settlementInvoice.setInvoiceEndDate(new Date());
+            settlementInvoice.setInvoiceStartDate(leavingDate);
+            settlementInvoice.setInvoiceDueDate(leavingDate);
+            settlementInvoice.setInvoiceEndDate(leavingDate);
             settlementInvoice.setCreatedAt(new Date());
             settlementInvoice.setUpdatedAt(new Date());
 
@@ -1394,15 +1426,12 @@ public class InvoiceV1Service {
     public double calculateAndCreateInvoiceForReassign(Customers customers, String joiningDate, Double newRent) {
 
         Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        BillingDates billingDates = hostelService.getBillStartAndEndDateBasedOnDate(customers.getHostelId(), dateJoiningDate);
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(customers.getHostelId(), dateJoiningDate);
         if (billingDates != null) {
 //            List<InvoicesV1> listInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
             InvoicesV1 latestInvoice = invoicesV1Repository.findCurrentRunningInvoice(customers.getCustomerId(),  billingDates.currentBillStartDate());
             if (latestInvoice != null) {
                 CustomersBedHistory latestHistory = customersBedHistoryService.getLatestCustomerBed(customers.getCustomerId());
-//                    if (Utils.compareWithTwoDates(latestInvoice.getInvoiceStartDate(), latestHistory.getStartDate()) == 0) {
-//                        return 0;
-//                    }
 
                     Date billStartDate = latestInvoice.getInvoiceStartDate();
                     if (latestHistory !=  null) {

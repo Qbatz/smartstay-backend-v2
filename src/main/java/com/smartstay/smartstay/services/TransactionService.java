@@ -366,8 +366,16 @@ public class TransactionService {
         return transactionRespository.getTotalPaidAmountByInvoiceId(invoiceNumber);
     }
 
-    public List<Receipts> getAllReceiptsByHostelId(String hostelId) {
-        return transactionRespository.findByHostelId(hostelId);
+    public List<Receipts> getAllReceiptsByHostelIdOld(String hostelId) {
+        return transactionRespository.findAllByHostelId(hostelId);
+    }
+
+    public List<TransactionV1> getAllReceiptsByHostelId(String hostelId) {
+        List<TransactionV1> listTransactions = transactionRespository.findByHostelId(hostelId);
+        if (listTransactions == null) {
+            listTransactions = new ArrayList<>();
+        }
+        return listTransactions;
     }
 
     public String generateRandomNumber() {

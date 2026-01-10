@@ -3,7 +3,9 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.ElectricityConfig;
 import com.smartstay.smartstay.dao.HostelReadings;
+import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
 import com.smartstay.smartstay.payloads.electricity.UpdateElectricity;
@@ -12,6 +14,7 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -181,5 +184,29 @@ public class HostelReadingsService {
     public void deleteReadings(String hostelId) {
         List<HostelReadings> listReadings = hostelEBReadingsRepository.findByHostelId(hostelId);
         hostelEBReadingsRepository.deleteAll(listReadings);
+    }
+
+    public EBInfo getEbInfoForFinalSettlement(String hostelId, Date leavingDate, Double unitPrice) {
+        HostelReadings hr = hostelEBReadingsRepository.lastReading(hostelId);
+
+        boolean canAdd = false;
+        if (Utils.compareWithTwoDates(leavingDate, hr.getEntryDate()) <= 0) {
+            canAdd = false;
+        }
+        else {
+            canAdd = true;
+        }
+
+        EBInfo ebInfo = null;
+        if (hr != null) {
+            ebInfo = new EBInfo(hr.getCurrentReading(),
+                    unitPrice,
+                   Utils.dateToString(hr.getEntryDate()),
+                    EBReadingType.HOSTEL_READING.name(),
+                    true,
+                    canAdd);
+        }
+
+        return ebInfo;
     }
 }

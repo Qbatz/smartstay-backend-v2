@@ -1,31 +1,27 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.ComplaintListMapper;
-import com.smartstay.smartstay.Wrappers.Notifications.NotificationListMapper;
 import com.smartstay.smartstay.Wrappers.complaints.ComplaintUpdatesMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
-import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.ennum.ComplaintStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.payloads.complaints.*;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
+import com.smartstay.smartstay.responses.complaint.ComplaintUpdatesList;
+import com.smartstay.smartstay.responses.complaint.ComplaintsUpdates;
 import com.smartstay.smartstay.util.Utils;
-import org.apache.catalina.User;
-import org.checkerframework.checker.units.qual.C;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -723,15 +719,15 @@ public class ComplaintsService {
                 .toList();
         List<Users> assignedUsers = usersService.findByListOfUserIds(assignedUsersIds);
 
-        List<com.smartstay.smartstay.responses.complaint.ComplaintUpdates> listComments =
+        List<ComplaintUpdatesList> listComments =
                 listComplaintUpdates
                         .stream()
                         .map(i -> new ComplaintUpdatesMapper(tenantUsers, adminUsers, listComplaintComments, complaintsV1.getDescription(), assignedUsers, complaintTypeStr).apply(i))
                         .toList();
+        ComplaintsUpdates updates = new ComplaintsUpdates(complaintId, listComments);
 
 
-
-        return new ResponseEntity<>(listComments, HttpStatus.OK);
+        return new ResponseEntity<>(updates, HttpStatus.OK);
 
     }
 }

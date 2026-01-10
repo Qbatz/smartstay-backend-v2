@@ -405,7 +405,7 @@ public class BookingsService {
      */
     public boolean checkIsBedOccupied(Integer bedId) {
         List<BookingsV1> bookingsV1 = bookingsRepository.findOccupiedDetails(bedId);
-        if (bookingsV1 != null) {
+        if (bookingsV1 != null && !bookingsV1.isEmpty()) {
             return true;
         }
         return false;
@@ -1161,5 +1161,10 @@ public class BookingsService {
             return true;
         }
         return false;
+    }
+
+    public List<BookingsV1> findAvailableBookingOnDate(int bedId, Date joiningDate) {
+
+        return bookingsRepository.findAllBookingsBasedOnBedIdAndDate(bedId, joiningDate);
     }
 }

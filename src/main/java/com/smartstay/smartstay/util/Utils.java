@@ -170,6 +170,7 @@ public class Utils {
     public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund processed successfully";
     public static final String CANNOT_CREATE_INVOICE_CHECKOUT_CUSTOMERS = "Cannot create manual invoice for checkout customers";
     public static final String CANNOT_CREATE_INVOICE_SETTLEMET_CREATED_CUSTOMERS = "Settlement is created";
+    public static final String OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED = "Settlement cannot be generated for old months";
 
 
     //Date validation messages
@@ -218,6 +219,7 @@ public class Utils {
     public static final String INVALID_PIN = "Invalid Pin";
     public static final String TOKEN_REQUIRED = "FCM token is required";
     public static final String REFUNDING_DATE_OLDER_THAN_INVOICE = "Refund date cannot be before the invoice date";
+    public static final String SETTLEMENT_INFORMATION_NOT_AVAILABLE = "Settlement information is not available";
 
     /**
      *  Defining module Id's here

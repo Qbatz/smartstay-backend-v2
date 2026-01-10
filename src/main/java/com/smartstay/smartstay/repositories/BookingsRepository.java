@@ -173,4 +173,9 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """)
     List<BookingsV1> findAllBookingsByHostelIdExcludeCurrentCheckIn(Integer bedId, String customerId);
 
+    @Query(value = """
+            SELECT * FROM bookingsv1 WHERE bed_id=:bedId AND DATE(joining_date) <= DATE(:date) AND (checkout_date IS NULL OR DATE(checkout_date) > DATE(:date))
+            """, nativeQuery = true)
+    List<BookingsV1> findAllBookingsBasedOnBedIdAndDate(@Param("bedId") Integer bedId, @Param("date") Date date);
+
 }

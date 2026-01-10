@@ -475,4 +475,8 @@ public class AmenitiesService {
     public List<AmenitiesV1> findByAmenityIds(List<String> requestedAmenityIds) {
         return amentityRepository.findAllById(requestedAmenityIds);
     }
+
+    public List<CustomersAmenity> getAllCustomerAmenitiesForRecurring(String customerId, Date billingDate) {
+        return customerAmenityRepository.getAllCustomersAmenityByCustomerIdAndEndDate(customerId, billingDate);
+    }
 }

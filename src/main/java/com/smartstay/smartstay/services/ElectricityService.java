@@ -1371,4 +1371,38 @@ public class ElectricityService {
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    public EBInfo getEbInfoForFinalSettlement(String hostelId, List<Integer> roomIds, Date leavingDate) {
+        if (!authentication.isAuthenticated()) {
+            return null;
+        }
+        boolean canAdd = false;
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            EBInfo ebInfo = null;
+
+            List<ElectricityReadings> listReadings = electricityReadingRepository.findLatestEntriesByHostelIdAndListRooms(hostelId, roomIds);
+            if (listReadings != null && !listReadings.isEmpty()) {
+                ElectricityReadings readings = listReadings.get(0);
+
+                if (Utils.compareWithTwoDates(leavingDate, readings.getEntryDate()) <= 0) {
+                }
+                else {
+                    canAdd = true;
+                }
+                ebInfo = new EBInfo(readings.getCurrentReading(),
+                        electricityConfig.getCharge(),
+                        Utils.dateToString(readings.getEntryDate()),
+                        electricityConfig.getTypeOfReading(),
+                        false,
+                        canAdd);
+            }
+
+            return ebInfo;
+        }
+        else {
+            return hostelReadingsService.getEbInfoForFinalSettlement(hostelId, leavingDate, electricityConfig.getCharge());
+        }
+    }
 }
