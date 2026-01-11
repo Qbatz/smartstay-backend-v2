@@ -915,7 +915,7 @@ public class UsersService {
                 config.setUser(users);
                 users.setConfig(config);
                 userRepository.save(users);
-                return new ResponseEntity<>(HttpStatus.OK);
+                return generateToken(config);
             }
             else {
                 return new ResponseEntity<>(Utils.PIN_ALREADY_SETUP, HttpStatus.BAD_REQUEST);
@@ -927,7 +927,7 @@ public class UsersService {
             config.setPin(pin.pin());
             users.setConfig(config);
             userRepository.save(users);
-            return new ResponseEntity<>(HttpStatus.OK);
+            return generateToken(config);
         }
     }
 
@@ -951,8 +951,12 @@ public class UsersService {
            return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
        }
 
-       Users users = usersConfig.getUser();
 
+        return generateToken(usersConfig);
+    }
+
+    public ResponseEntity<?> generateToken(UsersConfig usersConfig) {
+        Users users = usersConfig.getUser();
         UserDetails userDetails = myUserDetailService.loadUserByUsername(users.getUserId());
 
         Authentication authentication =

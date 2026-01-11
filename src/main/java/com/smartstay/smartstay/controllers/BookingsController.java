@@ -65,7 +65,6 @@ public class BookingsController {
         return bookingService.updateAdvanceAmount(hostelId, bookingId, updateAdvance);
     }
 
-
     @PostMapping("/initialize/checkout/{hostelId}/{customerId}")
     public ResponseEntity<?> initializeCheckout(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
         return bookingService.initializeCheckout(hostelId, customerId);

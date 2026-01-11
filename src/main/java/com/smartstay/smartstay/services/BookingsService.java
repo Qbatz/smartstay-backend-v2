@@ -1167,4 +1167,8 @@ public class BookingsService {
 
         return bookingsRepository.findAllBookingsBasedOnBedIdAndDate(bedId, joiningDate);
     }
+
+    public BookingsV1 checkBedIsBookedByOthers(int bedId, String customerId) {
+        return bookingsRepository.findByBedIdAndCustomerIdNot(bedId, customerId);
+    }
 }

@@ -1298,6 +1298,8 @@ public class CustomersService {
             lDate = Utils.stringToDate(leavingDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
 
+
+
         BillingDates billDate = hostelService.getCurrentBillStartAndEndDates(customers.getHostelId());
         if (lDate != null) {
             if (Utils.compareWithTwoDates(lDate, new Date()) > 0) {
@@ -1310,8 +1312,16 @@ public class CustomersService {
         else {
             lDate = new Date();
         }
+        if (bookingDetails.getNoticeDate() != null) {
+            if (Utils.compareWithTwoDates(bookingDetails.getNoticeDate(), lDate) > 0) {
+                return new ResponseEntity<>(Utils.CANNOT_GENERATE_FINAL_SETTLEMENT_INVALID_NOTICE_DATE, HttpStatus.BAD_REQUEST);
+            }
+        }
 
         CustomersBedHistory cbh = bedHistory.getLatestCustomerBed(customerId);
+        if (Utils.compareWithTwoDates(cbh.getStartDate(), lDate) > 0) {
+            return new ResponseEntity<>(Utils.CANNOT_GENERATE_FINAL_SETTLEMENT_PREVIOUS_HISTORY_EXISTS, HttpStatus.BAD_REQUEST);
+        }
 
         if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
             return calculateFinalSettlemtForBedChange(customers, bookingDetails, billDate, lDate);
@@ -2583,4 +2593,75 @@ public class CustomersService {
         return customersRepository.findByHostelIdAndFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(hostelId, keyword, keyword);
     }
 
+    public ResponseEntity<?> initializeCancelCheckout(String hostelId, String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!customers.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_CHECKOUT, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_CHECKED_NOT_IN_NOTICE, HttpStatus.BAD_REQUEST);
+        }
+        boolean canCancel = true;
+        boolean isBedChanged = false;
+        String latestBedChange = null;
+        boolean canRecheckIn = false;
+        boolean isSettlementPaid = false;
+        BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(customerId);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        List<CustomersBedHistory> listBedHistories = bedHistory.getCheckedInReassignedHistory(customerId);
+        if (listBedHistories.size() > 1) {
+            isBedChanged = true;
+        }
+        CustomersBedHistory latestBed = bedHistory.getLatestCustomerBed(customerId);
+        if (latestBed != null) {
+            latestBedChange = Utils.dateToString(latestBed.getStartDate());
+        }
+        assert latestBed != null;
+        BookingsV1 otherCheckIn = bookingsService.checkBedIsBookedByOthers(latestBed.getBedId(), customerId);
+        if (otherCheckIn != null) {
+            canCancel = false;
+        }
+        InvoicesV1 invoicesV1 = invoiceService.findSettlementInvoiceByCustomerId(customerId, hostelId);
+        if (invoicesV1 == null) {
+            canRecheckIn = true;
+        }
+        else {
+            if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+                isSettlementPaid = true;
+            }
+        }
+
+        com.smartstay.smartstay.responses.customer.CancelCheckout cancelCheckout = new com.smartstay.smartstay.responses.customer.CancelCheckout(
+                customerId,
+                hostelId,
+                canCancel,
+                Utils.dateToString(bookingsV1.getJoiningDate()),
+                latestBedChange,
+                isBedChanged,
+                Utils.dateToString(bookingsV1.getNoticeDate()),
+                Utils.dateToString(bookingsV1.getLeavingDate()),
+                canRecheckIn,
+                isSettlementPaid
+        );
+
+        return new ResponseEntity<>(cancelCheckout, HttpStatus.OK);
+    }
 }

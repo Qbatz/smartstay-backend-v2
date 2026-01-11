@@ -33,22 +33,20 @@ public class InvoiceItemService {
                 .findFirst()
                 .orElse(null);
         if (ebItem == null) {
-            InvoiceItems newEBItem = recurringInvoiceItems
+            double ebAmount = recurringInvoiceItems
                     .stream()
                     .filter(i -> i.type().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name()))
-                    .map(i -> {
-                        InvoiceItems ii = new InvoiceItems();
-                        ii.setAmount(i.amount());
-                        ii.setInvoiceItem(i.type());
-                        ii.setInvoice(invoicesV1);
+                    .mapToDouble(UpdateRecurringInvoice::amount)
+                    .sum();
+            if (ebAmount > 0) {
+                InvoiceItems ii = new InvoiceItems();
+                ii.setAmount(ebAmount);
+                ii.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+                ii.setInvoice(invoicesV1);
 
-                        return ii;
-                    })
-                    .findFirst()
-                    .orElse(null);
-            if (newEBItem != null) {
-                newUpdatedItem.add(newEBItem);
+                newUpdatedItem.add(ii);
             }
+
         }
         else {
             InvoiceItems updateEbItems = recurringInvoiceItems
@@ -61,8 +59,9 @@ public class InvoiceItemService {
                     })
                     .findFirst()
                     .orElse(null);
-
-            newUpdatedItem.add(updateEbItems);
+            if (updateEbItems != null) {
+                newUpdatedItem.add(updateEbItems);
+            }
         }
 
         List<InvoiceItems> otherItems = new ArrayList<>(recurringInvoiceItems

@@ -102,6 +102,11 @@ public class CustomersController {
     public ResponseEntity<?> cancelCheckOut(@PathVariable("customerId") String customerId,@PathVariable("hostelId") String hostelId,@Valid @RequestBody CancelCheckout request) {
         return customersService.cancelCheckOut(hostelId, customerId, request);
     }
+
+    @GetMapping("/cancel-checkout/initialize/{hostelId}/{customerId}")
+    public ResponseEntity<?> initializeCancelCheckout(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
+        return customersService.initializeCancelCheckout(hostelId, customerId);
+    }
     @GetMapping("/checkout/{hostelId}")
     public ResponseEntity<?> checkoutCustomers(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required = false) String name) {
         return customersService.getCheckoutCustomers(hostelId, name);

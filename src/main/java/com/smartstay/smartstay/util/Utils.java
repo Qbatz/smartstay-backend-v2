@@ -117,6 +117,7 @@ public class Utils {
     public static final String TEMPLATE_NOT_AVAILABLE = "Template not available for this hostel";
     public static final String BILLING_RULE_NOT_AVAILABLE = "Billing Rule not found";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
+    public static final String CUSTOMER_ALREADY_CHECKED_OUT = "Customer is already checked out";
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";
     public static final String ELECTICITY_PRICE_REQUIRED = "Electricity Price Required";
     public static final String CUSTOMER_CHECKED_IN_INACTIVE_STATUS = "Cannot changed status to inactive for checked in customers";
@@ -161,7 +162,7 @@ public class Utils {
     public static final String PENDING = "PENDING";
     public static final String RESOLVED = "RESOLVED";
     public static final String NO_RECORDS_FOUND = "No records found";
-    public static final String CUSTOMER_NOT_CHECKED_IN = "Start date cannot be before joining date";
+    public static final String CUSTOMER_NOT_CHECKED_IN = "Customer is not checked in";
     public static final String REFUND_COMPLETED = "Refund already completed";
     public static final String CANNOT_REFUND_CANCELLED_INVOICE = "Cannot refund for cancelled invoices";
     public static final String CANNOT_REFUND_FOR_OLD_INVOICES = "Cannot refund for old invoices";
@@ -220,6 +221,8 @@ public class Utils {
     public static final String TOKEN_REQUIRED = "FCM token is required";
     public static final String REFUNDING_DATE_OLDER_THAN_INVOICE = "Refund date cannot be before the invoice date";
     public static final String SETTLEMENT_INFORMATION_NOT_AVAILABLE = "Settlement information is not available";
+    public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_PREVIOUS_HISTORY_EXISTS = "The final settlement can only be generated after the joining date or a bed switch.";
+    public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_INVALID_NOTICE_DATE = "The final settlement date must be after the notice date.";
 
     /**
      *  Defining module Id's here

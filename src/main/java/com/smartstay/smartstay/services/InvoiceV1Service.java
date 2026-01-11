@@ -2376,4 +2376,8 @@ public class InvoiceV1Service {
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
+
+    public InvoicesV1 findSettlementInvoiceByCustomerId(String customerId, String hostelId) {
+        return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.SETTLEMENT.name());
+    }
 }

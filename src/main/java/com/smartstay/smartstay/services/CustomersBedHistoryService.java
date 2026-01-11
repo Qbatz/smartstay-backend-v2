@@ -169,4 +169,5 @@ public class CustomersBedHistoryService {
     public List<CustomersBedHistory> getCustomersByBedIdAndDates(Integer roomId, Date startDate, Date endDate) {
         return customerBedHistoryRepository.findByRoomIdStartAndEndDate(roomId, startDate, endDate);
     }
+
 }
