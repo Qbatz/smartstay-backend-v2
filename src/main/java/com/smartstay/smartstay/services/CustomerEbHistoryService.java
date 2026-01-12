@@ -55,4 +55,8 @@ public class CustomerEbHistoryService {
         customerEbRepository.deleteAll(listHistories);
         return true;
     }
+
+    public List<CustomersEbHistory> findHistoryByCustomerIdAndReadingId(String customerId, List<Integer> listReadingIds) {
+        return customerEbRepository.findByCustomerIdAndReadingsId(customerId, listReadingIds);
+    }
 }

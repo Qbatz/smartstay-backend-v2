@@ -204,7 +204,9 @@ public class HostelReadingsService {
                    Utils.dateToString(hr.getEntryDate()),
                     EBReadingType.HOSTEL_READING.name(),
                     true,
-                    canAdd);
+                    canAdd,
+                    null,
+                    null);
         }
 
         return ebInfo;

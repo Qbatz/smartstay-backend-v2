@@ -1242,6 +1242,46 @@ public class CustomersService {
 
     }
 
+    public ResponseEntity<?> getInformationForFinalSettlement(String customerId, String leavingDate) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        BookingsV1 bookingDetails = bookingsService.getBookingsByCustomerId(customerId);
+        if (bookingDetails == null) {
+            return new ResponseEntity<>(Utils.NO_BOOKING_INFORMATION_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.VACATED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_VACATED, HttpStatus.BAD_REQUEST);
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.TERMINATED.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN_ERROR, HttpStatus.BAD_REQUEST);
+        } else if (bookingDetails.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_CHECKED_NOT_IN_NOTICE, HttpStatus.BAD_REQUEST);
+        }
+
+        return generateFinalSettlementCommon(customerId, bookingDetails, customers, leavingDate);
+    }
+
     public ResponseEntity<?> getInformationForFinalSettlementNew(String customerId, String leavingDate) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -1297,8 +1337,6 @@ public class CustomersService {
         if (leavingDate != null) {
             lDate = Utils.stringToDate(leavingDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
-
-
 
         BillingDates billDate = hostelService.getCurrentBillStartAndEndDates(customers.getHostelId());
         if (lDate != null) {
@@ -1527,14 +1565,6 @@ public class CustomersService {
 
         totalAmountToBePaid =  totalAmountToBePaid + totalDeductions;
 
-//        totalAmountToBePaid = unpaidInvoiceAmount - partialPaidAmount;
-//        if (!isAdvancePaid) {
-//            totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
-//        }
-//        else {
-//            totalAmountToBePaid = totalAmountToBePaid - (advancePaidAmount - totalDeductions);
-//        }
-
 
         List<UnpaidInvoices> unpaidInvoices = listUnpaidRentalInvoices
                 .stream()
@@ -1618,7 +1648,7 @@ public class CustomersService {
         BedDetails details = bedsService.getBedDetails(bookingDetails.getBedId());
         roomId.add(details.getRoomId());
 
-        EBInfo ebInfo = electricityService.getEbInfoForFinalSettlement(customers.getHostelId(), roomId, lDate);
+        EBInfo ebInfo = electricityService.getEbInfoForFinalSettlement(customers.getCustomerId(), customers.getHostelId(), roomId, lDate);
 
         FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, rentInfo, settlementInfo);
 
@@ -1857,7 +1887,7 @@ public class CustomersService {
                 isRefundable);
 
         settlementDetailsService.addSettlementForCustomer(customers.getCustomerId(), leavingDate);
-        EBInfo ebInfo = electricityService.getEbInfoForFinalSettlement(customers.getHostelId(), roomIds, leavingDate);
+        EBInfo ebInfo = electricityService.getEbInfoForFinalSettlement(customers.getCustomerId(), customers.getHostelId(), roomIds, leavingDate);
 
         FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, rentInfo, settlementInfo);
 

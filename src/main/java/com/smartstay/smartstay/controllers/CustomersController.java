@@ -88,6 +88,11 @@ public class CustomersController {
     }
     @GetMapping("/settlement/{customerId}")
     public ResponseEntity<?> getFinalSettlementInfo(@PathVariable("customerId") String customerId, @RequestParam(value = "leavingDate", required = false) String leavingDate) {
+        return customersService.getInformationForFinalSettlement(customerId, leavingDate);
+    }
+
+    @GetMapping("/new/settlement/{customerId}")
+    public ResponseEntity<?> getFinalSettlementInfoNew(@PathVariable("customerId") String customerId, @RequestParam(value = "leavingDate", required = false) String leavingDate) {
         return customersService.getInformationForFinalSettlementNew(customerId, leavingDate);
     }
     @PostMapping("/settlement/{customerId}")
