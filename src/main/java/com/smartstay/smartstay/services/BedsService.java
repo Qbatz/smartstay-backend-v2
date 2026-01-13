@@ -21,6 +21,8 @@ import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.EditBedRent;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
+import com.smartstay.smartstay.ennum.HostelEventModule;
+import com.smartstay.smartstay.ennum.HostelEventType;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.beds.*;
 import com.smartstay.smartstay.responses.customer.InitializeBooking;
@@ -62,6 +64,9 @@ public class BedsService {
     private BankingService bankingService;
     @Autowired
     private InvoiceV1Service invoiceService;
+
+    @Autowired
+    private HostelActivityLogService hostelActivityLogService;
 
     @Autowired
     public void setCustomersService(@Lazy CustomersService customersService) {
@@ -370,7 +375,6 @@ public class BedsService {
 
         return new ResponseEntity<>(bedDetails, HttpStatus.OK);
 
-
     }
 
     public ResponseEntity<?> updateBedById(int bedId, UpdateBed updateBed) {
@@ -414,6 +418,8 @@ public class BedsService {
         }
         existingBed.setUpdatedAt(new Date());
         bedsRepository.save(existingBed);
+        logActivity(existingBed.getHostelId(), user.getParentId(), String.valueOf(existingBed.getBedId()),
+                HostelEventType.BED_UPDATED, HostelEventModule.BED);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -461,6 +467,8 @@ public class BedsService {
         beds.setFreeFrom(null);
         beds.setRentAmount(addBed.amount());
         Beds bedsV1 = bedsRepository.save(beds);
+        logActivity(addBed.hostelId(), user.getParentId(), String.valueOf(bedsV1.getBedId()),
+                HostelEventType.BED_CREATED, HostelEventModule.BED);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -479,7 +487,12 @@ public class BedsService {
         }
         Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId, users.getParentId());
         if (existingBed != null) {
+            String hostelIdForLog = existingBed.getHostelId();
+            String parentIdForLog = users.getParentId();
+            int bedIdForLog = existingBed.getBedId();
             bedsRepository.delete(existingBed);
+            logActivity(hostelIdForLog, parentIdForLog, String.valueOf(bedIdForLog), HostelEventType.BED_DELETED,
+                    HostelEventModule.BED);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         return new ResponseEntity<>(Utils.NO_BED_FOUND_ERROR, HttpStatus.BAD_REQUEST);
@@ -633,8 +646,6 @@ public class BedsService {
         return bedsRepository.findByBedIdAndParentIdAndHostelId(bedId, parentId, hostelId) != null;
     }
 
-
-
     public int updateBedToNotice(int bedId, String relievingDate) {
         Beds bed = bedsRepository.findById(bedId).orElse(null);
         if (bed == null) {
@@ -763,7 +774,6 @@ public class BedsService {
         return bedsRepository.checkIsBedAvailable(bedId, joiningDate);
     }
 
-
     public void cancelBooking(int bedId, String parentId) {
         Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
         if (beds != null) {
@@ -798,7 +808,6 @@ public class BedsService {
     }
 
     public void unassignBed(Integer bedId) {
-
         bedsRepository.findById(bedId).ifPresent(currentBed -> {
             if (currentBed.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name()) && currentBed.isBooked()) {
                 currentBed.setCurrentStatus(BedStatus.VACANT.name());
@@ -829,7 +838,6 @@ public class BedsService {
 
                 bedsRepository.save(beds);
             }
-
 
         }
     }
@@ -899,7 +907,20 @@ public class BedsService {
         beds.setRentAmount(bedRent.newRent());
         beds.setUpdatedAt(new Date());
         bedsRepository.save(beds);
+        logActivity(beds.getHostelId(), users.getParentId(), String.valueOf(beds.getBedId()),
+                HostelEventType.BED_UPDATED, HostelEventModule.BED);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    private void logActivity(String hostelId, String parentId, String sourceId, HostelEventType eventType,
+            HostelEventModule module) {
+        hostelActivityLogService.saveActivityLog(
+                new Date(),
+                hostelId,
+                parentId,
+                sourceId,
+                eventType.getDisplayName(),
+                module.getDisplayName());
     }
 }

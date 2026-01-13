@@ -7,7 +7,8 @@ import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.ennum.BookingStatus;
-import com.smartstay.smartstay.ennum.CustomerStatus;
+import com.smartstay.smartstay.ennum.HostelEventModule;
+import com.smartstay.smartstay.ennum.HostelEventType;
 import com.smartstay.smartstay.payloads.floor.AddFloors;
 import com.smartstay.smartstay.payloads.floor.UpdateFloor;
 import com.smartstay.smartstay.repositories.FloorRepository;
@@ -22,7 +23,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class FloorsService {
@@ -42,6 +42,9 @@ public class FloorsService {
     @Autowired
     private UsersService usersService;
 
+    @Autowired
+    private HostelActivityLogService hostelActivityLogService;
+
     public ResponseEntity<?> getAllFloors(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
@@ -56,7 +59,7 @@ public class FloorsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<Floors> listFloor = floorRepository.findAllByHostelIdAndParentIdAndIsDeletedFalse(hostelId,user.getParentId());
+        List<Floors> listFloor = floorRepository.findAllByHostelIdAndParentIdAndIsDeletedFalse(hostelId, user.getParentId());
         List<FloorsResponse> floorsResponses = listFloor.stream().map(item -> new FloorsMapper().apply(item)).toList();
         return new ResponseEntity<>(floorsResponses, HttpStatus.OK);
     }
@@ -124,6 +127,7 @@ public class FloorsService {
         }
         existingFloor.setUpdatedAt(new Date());
         floorRepository.save(existingFloor);
+        logActivity(existingFloor.getHostelId(), user.getParentId(), String.valueOf(existingFloor.getFloorId()), HostelEventType.FLOOR_UPDATED, HostelEventModule.FLOOR);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -163,6 +167,8 @@ public class FloorsService {
         floors.setFloorName(addFloors.floorName());
         floors.setHostelId(addFloors.hostelId());
         floorRepository.save(floors);
+        logActivity(addFloors.hostelId(), user.getParentId(), String.valueOf(floors.getFloorId()), HostelEventType.FLOOR_CREATED, HostelEventModule.FLOOR);
+
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -184,6 +190,7 @@ public class FloorsService {
             }
             existingFloor.setIsDeleted(true);
             floorRepository.save(existingFloor);
+            logActivity(existingFloor.getHostelId(), users.getParentId(), String.valueOf(existingFloor.getFloorId()), HostelEventType.FLOOR_DELETED, HostelEventModule.FLOOR);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>("No Floor found", HttpStatus.BAD_REQUEST);
@@ -196,6 +203,10 @@ public class FloorsService {
 
     public int getFloorCounts(String hostelId) {
         return floorRepository.findFloorCountsBasedOnHostelId(hostelId).getCount().intValue();
+    }
+
+    private void logActivity(String hostelId, String parentId, String sourceId, HostelEventType eventType, HostelEventModule module) {
+        hostelActivityLogService.saveActivityLog(new Date(), hostelId, parentId, sourceId, eventType.getDisplayName(), module.getDisplayName());
     }
 
 }

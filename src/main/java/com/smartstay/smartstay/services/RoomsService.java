@@ -2,10 +2,14 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.RoomsMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.Floors;
+import com.smartstay.smartstay.dao.RolesV1;
+import com.smartstay.smartstay.dao.Rooms;
+import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.ennum.BookingStatus;
-import com.smartstay.smartstay.ennum.CustomerStatus;
+import com.smartstay.smartstay.ennum.HostelEventModule;
+import com.smartstay.smartstay.ennum.HostelEventType;
 import com.smartstay.smartstay.payloads.rooms.AddRoom;
 import com.smartstay.smartstay.payloads.rooms.UpdateRoom;
 import com.smartstay.smartstay.repositories.FloorRepository;
@@ -40,6 +44,9 @@ public class RoomsService {
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
+
+    @Autowired
+    private HostelActivityLogService hostelActivityLogService;
 
     public ResponseEntity<?> getAllRooms(int floorId) {
         if (!authentication.isAuthenticated()) {
@@ -118,6 +125,7 @@ public class RoomsService {
         }
         existingRoom.setUpdatedAt(new Date());
         roomRepository.save(existingRoom);
+        logActivity(existingRoom.getHostelId(), user.getParentId(), String.valueOf(existingRoom.getRoomId()), HostelEventType.ROOM_UPDATED, HostelEventModule.ROOM);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -165,6 +173,7 @@ public class RoomsService {
         room.setFloorId(addRoom.floorId());
         room.setHostelId(addRoom.hostelId());
         roomRepository.save(room);
+        logActivity(addRoom.hostelId(), user.getParentId(), String.valueOf(room.getRoomId()), HostelEventType.ROOM_CREATED, HostelEventModule.ROOM);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -187,6 +196,7 @@ public class RoomsService {
             existingRoom.setUpdatedAt(new Date());
             existingRoom.setIsDeleted(true);
             roomRepository.save(existingRoom);
+            logActivity(existingRoom.getHostelId(), users.getParentId(), String.valueOf(existingRoom.getRoomId()), HostelEventType.ROOM_DELETED, HostelEventModule.ROOM);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
@@ -248,5 +258,9 @@ public class RoomsService {
                     return new RoomInfoForEB(i.getFloorId(), i.getRoomId(), i.getRoomName(), i.getFloorName(), hostelId, 0l);
                 })
                 .toList();
+    }
+
+    private void logActivity(String hostelId, String parentId, String sourceId, HostelEventType eventType, HostelEventModule module) {
+        hostelActivityLogService.saveActivityLog(new Date(), hostelId, parentId, sourceId, eventType.getDisplayName(), module.getDisplayName());
     }
 }
