@@ -26,12 +26,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<?> handleIllegalException(IllegalArgumentException ex) {
-        return new ResponseEntity<>("Something went wrong", HttpStatus.BAD_REQUEST);
-    }
-
-
+//    @ExceptionHandler(IllegalArgumentException.class)
+//    public ResponseEntity<?> handleIllegalException(IllegalArgumentException ex) {
+//        return new ResponseEntity<>("Something went wrong", HttpStatus.BAD_REQUEST);
+//    }
+//
+//
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntimeException(RuntimeException ex) {
 

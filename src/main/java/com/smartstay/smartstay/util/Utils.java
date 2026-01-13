@@ -48,6 +48,7 @@ public class Utils {
 
     public static final String INVALID_FLOOR = "Invalid Floor";
     public static final String INVALID_USER = "Invalid User";
+    public static final String INVALID_USER_NAME_PASSWORD = "Invalid username/password";
     public static final String INVALID_OTP = "Invalid Otp";
     public static final String OTP_EXPIRED = "Otp Expired";
     public static final String ASSET_NAME_ALREADY_EXISTS = "Asset name already exists";
@@ -74,6 +75,7 @@ public class Utils {
     public static final String ACTIVE_USERS_FOUND = "Active users found";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
+    public static final String INVALID_READING_ID = "Invalid Reading Id";
     public static final String INVALID_TRANSACTION_ID = "Invalid transaction id";
     public static final String INVALID_INVOICE_ID = "Invalid invoice id";
     public static final String INVALID_INVOICE_DATE = "Invalid invoice date";
@@ -115,6 +117,7 @@ public class Utils {
     public static final String TEMPLATE_NOT_AVAILABLE = "Template not available for this hostel";
     public static final String BILLING_RULE_NOT_AVAILABLE = "Billing Rule not found";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
+    public static final String CUSTOMER_ALREADY_CHECKED_OUT = "Customer is already checked out";
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";
     public static final String ELECTICITY_PRICE_REQUIRED = "Electricity Price Required";
     public static final String CUSTOMER_CHECKED_IN_INACTIVE_STATUS = "Cannot changed status to inactive for checked in customers";
@@ -133,6 +136,7 @@ public class Utils {
     public static final String SUB_CATEGORY_NAME_ALREADY_REGISTERED = "Subcategory name is already exists";
     public static final String INSUFFICIENT_FUND_ERROR = "Insufficient funds";
     public static final String INVALID_CATEGORY_ID = "Invalid category id";
+    public static final String INVALID_COMPLAINT_ID_PASSED = "Invalid complaint id passed";
     public static final String SUB_CATEGORY_NAME_REQUIRED = "Sub category name required";
     public static final String SUB_CATEGORY_ID_REQUIRED = "Sub category id required";
     public static final String ADVANCE_AMOUNT_REQUIRED = "Advance amount required";
@@ -158,7 +162,7 @@ public class Utils {
     public static final String PENDING = "PENDING";
     public static final String RESOLVED = "RESOLVED";
     public static final String NO_RECORDS_FOUND = "No records found";
-    public static final String CUSTOMER_NOT_CHECKED_IN = "Start date cannot be before joining date";
+    public static final String CUSTOMER_NOT_CHECKED_IN = "Customer is not checked in";
     public static final String REFUND_COMPLETED = "Refund already completed";
     public static final String CANNOT_REFUND_CANCELLED_INVOICE = "Cannot refund for cancelled invoices";
     public static final String CANNOT_REFUND_FOR_OLD_INVOICES = "Cannot refund for old invoices";
@@ -167,6 +171,7 @@ public class Utils {
     public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund processed successfully";
     public static final String CANNOT_CREATE_INVOICE_CHECKOUT_CUSTOMERS = "Cannot create manual invoice for checkout customers";
     public static final String CANNOT_CREATE_INVOICE_SETTLEMET_CREATED_CUSTOMERS = "Settlement is created";
+    public static final String OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED = "Settlement cannot be generated for old months";
 
 
     //Date validation messages
@@ -206,6 +211,19 @@ public class Utils {
     public static final String CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR = "Cannot modify the billing rules. Tenant already exists.";
     public static final String CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED = "Cannot delete receipts for settlement generated customers";
     public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
+    public static final String EB_ENTRY_NOT_FOUND = "EB entry not found";
+    public static final String EB_ENTRY_CANNOT_CHANGE_INVOICE_GENERATED = "Cannot modify invoice generated readings";
+    public static final String EB_ENTRY_CANNOT_DELETE_INVOICE_GENERATED = "Cannot delete invoice generated readings";
+    public static final String DELETE_AVAILABLE_ONLY_FOR_LAST_ENTRY = "Delete is available only for latest entries";
+    public static final String PIN_REQUIRED  = "Pin is required";
+    public static final String PIN_ALREADY_SETUP  = "Pin is added for this account";
+    public static final String INVALID_PIN = "Invalid Pin";
+    public static final String TOKEN_REQUIRED = "FCM token is required";
+    public static final String REFUNDING_DATE_OLDER_THAN_INVOICE = "Refund date cannot be before the invoice date";
+    public static final String SETTLEMENT_INFORMATION_NOT_AVAILABLE = "Settlement information is not available";
+    public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_PREVIOUS_HISTORY_EXISTS = "The final settlement can only be generated after the joining date or a bed switch.";
+    public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_INVALID_NOTICE_DATE = "The final settlement date must be after the notice date.";
+
     /**
      *  Defining module Id's here
      *

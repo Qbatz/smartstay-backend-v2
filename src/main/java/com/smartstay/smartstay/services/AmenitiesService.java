@@ -143,6 +143,12 @@ public class AmenitiesService {
         amenitiesV1.setIsActive(true);
         amenitiesV1.setIsDeleted(false);
         amenitiesV1.setIsProRate(false);
+        if (request.description() != null && !request.description().trim().equalsIgnoreCase("")) {
+            amenitiesV1.setDescription(request.description());
+        }
+        if (request.termsOfUsage() != null && !request.termsOfUsage().trim().equalsIgnoreCase("")) {
+            amenitiesV1.setTermsAndCondition(request.termsOfUsage());
+        }
         amenitiesV1.setHostelId(hostelId);
         amenitiesV1.setAmenityName(request.amenityName());
         amenitiesV1.setAmenityAmount(request.amount());
@@ -186,6 +192,12 @@ public class AmenitiesService {
         }
         if (request.amount()!=null){
             amenitiesV1.setAmenityAmount(request.amount());
+        }
+        if (request.description() != null && !request.description().trim().equalsIgnoreCase("")) {
+            amenitiesV1.setDescription(request.description());
+        }
+        if (request.termsOfUsage() != null && !request.termsOfUsage().trim().equalsIgnoreCase("")) {
+            amenitiesV1.setTermsAndCondition(request.termsOfUsage());
         }
         amenitiesV1.setUpdatedAt(new java.util.Date());
         if (request.proRate() != null) {
@@ -474,5 +486,13 @@ public class AmenitiesService {
 
     public List<AmenitiesV1> findByAmenityIds(List<String> requestedAmenityIds) {
         return amentityRepository.findAllById(requestedAmenityIds);
+    }
+
+    public List<CustomersAmenity> getAllCustomerAmenitiesForRecurring(String customerId, Date billingDate) {
+        List<CustomersAmenity> customersAmenities = customerAmenityRepository.getAllCustomersAmenityByCustomerIdAndEndDate(customerId, billingDate);
+        if (customersAmenities == null) {
+            customersAmenities = new ArrayList<>();
+        }
+        return customersAmenities;
     }
 }

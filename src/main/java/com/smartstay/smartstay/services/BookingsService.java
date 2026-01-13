@@ -260,6 +260,7 @@ public class BookingsService {
         cbh.setCustomerId(bookingv1.getCustomerId());
         cbh.setChangedBy(authentication.getName());
         cbh.setType(CustomersBedType.CHECK_IN.name());
+        cbh.setReason("Initial check in");
         cbh.setActive(true);
         cbh.setCreatedAt(new Date());
         cbh.setRentAmount(request.rentalAmount());
@@ -342,7 +343,7 @@ public class BookingsService {
             cbh.setChangedBy(authentication.getName());
             cbh.setType(CustomersBedType.CHECK_IN.name());
             cbh.setRentAmount(payloads.rentalAmount());
-            cbh.setReason("Initial check in");
+//            cbh.setReason("Initial check in");
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
 
@@ -404,7 +405,7 @@ public class BookingsService {
      */
     public boolean checkIsBedOccupied(Integer bedId) {
         List<BookingsV1> bookingsV1 = bookingsRepository.findOccupiedDetails(bedId);
-        if (bookingsV1 != null) {
+        if (bookingsV1 != null && !bookingsV1.isEmpty()) {
             return true;
         }
         return false;
@@ -859,7 +860,12 @@ public class BookingsService {
                 .sum();
         double upcomingJoiningRents = newJoiners
                 .stream()
-                .mapToDouble(BookingsV1::getRentAmount)
+                .mapToDouble(i -> {
+                    if (i.getRentAmount() != null) {
+                        return i.getRentAmount();
+                    }
+                    return 0.0;
+                })
                 .sum();
 
         return checkInRent + noticeRentAmount + upcomingJoiningRents;
@@ -1147,5 +1153,22 @@ public class BookingsService {
             double newAdvance = bookingsV1.getBookingAmount() - receiptAmount;
             bookingsV1.setBookingAmount(newAdvance);
         }
+    }
+
+    public boolean checkOtherBookings(Integer bedId, String customerId) {
+        List<BookingsV1> listAllBookings = bookingsRepository.findAllBookingsByHostelIdExcludeCurrentCheckIn(bedId, customerId);
+        if (listAllBookings != null && !listAllBookings.isEmpty()) {
+            return true;
+        }
+        return false;
+    }
+
+    public List<BookingsV1> findAvailableBookingOnDate(int bedId, Date joiningDate) {
+
+        return bookingsRepository.findAllBookingsBasedOnBedIdAndDate(bedId, joiningDate);
+    }
+
+    public BookingsV1 checkBedIsBookedByOthers(int bedId, String customerId) {
+        return bookingsRepository.findByBedIdAndCustomerIdNot(bedId, customerId);
     }
 }

@@ -487,7 +487,7 @@ public class BedsService {
     }
 
     //assign bed
-    public ResponseEntity<?> addUserToBed(int bedId, String joiningDate) {
+    public ResponseEntity<?> addUserToBed(int bedId, String joiningDate, String customerId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -504,7 +504,13 @@ public class BedsService {
                 existingBed.setStatus(BedStatus.BOOKED.name());
                 existingBed.setBooked(true);
             } else {
-                existingBed.setBooked(false);
+                boolean isOtherBooingExist = bookingService.checkOtherBookings(existingBed.getBedId(), customerId);
+                if (isOtherBooingExist) {
+                    existingBed.setBooked(true);
+                }
+                else {
+                    existingBed.setBooked(false);
+                }
                 existingBed.setStatus(BedStatus.OCCUPIED.name());
                 existingBed.setCurrentStatus(BedStatus.OCCUPIED.name());
                 existingBed.setFreeFrom(null);
@@ -559,6 +565,11 @@ public class BedsService {
         } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
             return false;
         } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+            //check if the bed is checked in on this date
+            List<BookingsV1> bookingsV1 = bookingService.findAvailableBookingOnDate(bedId, joiningDate);
+            if (bookingsV1 != null && !bookingsV1.isEmpty()) {
+                return false;
+            }
             return true;
         } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);

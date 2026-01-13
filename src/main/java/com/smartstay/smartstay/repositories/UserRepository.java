@@ -130,6 +130,8 @@ public interface UserRepository extends JpaRepository<Users, String> {
             """)
     List<Users> findAdminUsersBasedOnHostelIdFromListUsers(List<String> listUsers);
 
+    Users findByEmailIdAndPasswordAndIsDeletedFalse(String emailId, String password);
+
 
 
 }

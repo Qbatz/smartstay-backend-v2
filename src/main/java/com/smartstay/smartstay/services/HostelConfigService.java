@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 
 import com.smartstay.smartstay.dao.BillingRules;
+import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.util.Utils;
@@ -108,5 +109,21 @@ public class HostelConfigService {
 
     public BillingRules getCurrentBillingRule(String hostelId) {
         return billingRuleRepository.findCurrentBillingRules(hostelId);
+    }
+
+    public List<HostelV1> findAHostelsHavingBillingRuleEndingToday() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_MONTH, 1);
+
+        int billingDay = Utils.findDateFromDate(calendar.getTime());
+        List<BillingRules> listBillingDates = billingRuleRepository.findAllHostelsHavingTodaysRecurring(billingDay);
+        List<HostelV1> listHostels = null;
+        if (listBillingDates != null) {
+            listHostels = listBillingDates
+                    .stream()
+                    .map(i -> i.getHostel())
+                    .toList();
+        }
+        return listHostels;
     }
 }

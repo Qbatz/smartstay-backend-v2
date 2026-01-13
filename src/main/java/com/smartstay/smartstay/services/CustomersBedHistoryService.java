@@ -25,6 +25,7 @@ public class CustomersBedHistoryService {
     @Autowired
     private CustomerBedHistoryRespository customerBedHistoryRepository;
 
+
     public CustomersBedHistory getCustomerBedByStartDate(String customerId, Date startDate, Date endDate) {
         CustomersBedHistory cbh = customerBedHistoryRepository.findByCustomerIdAndDate(customerId, startDate, endDate);
         return cbh;
@@ -164,4 +165,9 @@ public class CustomersBedHistoryService {
 
         return occupantsCountsByRoomId;
     }
+
+    public List<CustomersBedHistory> getCustomersByBedIdAndDates(Integer roomId, Date startDate, Date endDate) {
+        return customerBedHistoryRepository.findByRoomIdStartAndEndDate(roomId, startDate, endDate);
+    }
+
 }

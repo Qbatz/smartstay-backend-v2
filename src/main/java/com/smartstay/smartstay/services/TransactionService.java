@@ -366,8 +366,16 @@ public class TransactionService {
         return transactionRespository.getTotalPaidAmountByInvoiceId(invoiceNumber);
     }
 
-    public List<Receipts> getAllReceiptsByHostelId(String hostelId) {
-        return transactionRespository.findByHostelId(hostelId);
+    public List<Receipts> getAllReceiptsByHostelIdOld(String hostelId) {
+        return transactionRespository.findAllByHostelId(hostelId);
+    }
+
+    public List<TransactionV1> getAllReceiptsByHostelId(String hostelId) {
+        List<TransactionV1> listTransactions = transactionRespository.findByHostelId(hostelId);
+        if (listTransactions == null) {
+            listTransactions = new ArrayList<>();
+        }
+        return listTransactions;
     }
 
     public String generateRandomNumber() {
@@ -459,6 +467,12 @@ public class TransactionService {
         String bankName = null;
         if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
             bankName = "Cash";
+        }
+        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+            bankName = "Card";
+        }
+        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+            bankName = bankingV1.getBankName() + " Bank";
         }
         else {
             bankName = bankingV1.getBankName();
@@ -564,7 +578,7 @@ public class TransactionService {
                 fullName.append(customers.getFirstName());
             }
             if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
-                fullName.append(", ");
+                fullName.append(" ");
                 fullName.append(customers.getLastName());
             }
             if (customers.getHouseNo() != null && !customers.getHouseNo().trim().equalsIgnoreCase("")) {
@@ -659,7 +673,9 @@ public class TransactionService {
                 invoicesV1.getPaidAmount(),
                 dueAmount,
                 hostelEmail,
-                hostelPhone, "91", receiptInfo,
+                hostelPhone, "91",
+                invoicesV1.getHostelId(),
+                receiptInfo,
                 customerInfo,
                 stayInfo,
                 accountDetails,
@@ -696,6 +712,8 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.BAD_REQUEST);
         }
 
+        Date transactionDate = Utils.stringToDate(refundInvoice.refundDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
         InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(invoiceId);
         if (invoicesV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
@@ -708,6 +726,12 @@ public class TransactionService {
         }
         if (!bankingService.checkBankExist(refundInvoice.bankId())) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), transactionDate) > 0) {
+            return new ResponseEntity<>(Utils.REFUNDING_DATE_OLDER_THAN_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (Utils.compareWithTwoDates(new Date(), transactionDate) < 0) {
+            return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
         }
 
         String paymentStatus = null;
@@ -764,8 +788,6 @@ public class TransactionService {
         invoicesV1.setInvoiceEndDate(new Date());
         invoicesV1.setPaidAmount(refundedAmount + refundInvoice.refundAmount());
         invoiceService.saveInvoice(invoicesV1);
-
-        Date transactionDate = Utils.stringToDate(refundInvoice.refundDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
         TransactionV1 transactionV1 = new TransactionV1();
         transactionV1.setType(TransactionType.REFUND.name());

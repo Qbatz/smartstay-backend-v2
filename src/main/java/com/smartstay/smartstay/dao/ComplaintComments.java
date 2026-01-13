@@ -22,6 +22,7 @@ public class ComplaintComments {
     private Date updatedAt;
     private String createdBy;
     private String comment;
+    private String complaintStatus;
     private String userName;
     private String userType;
     private Boolean isActive;

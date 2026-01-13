@@ -11,5 +11,6 @@ public record InitializeRefund(
         Double refundableAmount,
         Double refundedAmount,
         Double pendingRefund,
+        String invoiceDate,
         List<RefundableBanks> listBanks) {
 }

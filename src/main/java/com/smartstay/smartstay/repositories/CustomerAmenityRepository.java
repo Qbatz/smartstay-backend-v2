@@ -66,5 +66,9 @@ public interface CustomerAmenityRepository extends JpaRepository<CustomersAmenit
             """, nativeQuery = true)
     List<CustomersAmenity> checkAmenityAssignedAndActive(String amenityId, Date todaysDate);
 
+    @Query(value = """
+            SELECT * FROM customers_amenity WHERE customer_id=:customerId AND (end_date IS NULL OR DATE(end_date) >= DATE(:date))
+            """, nativeQuery = true)
+    List<CustomersAmenity> getAllCustomersAmenityByCustomerIdAndEndDate(@Param("customerId") String customerId, @Param("date") Date date);
 
 }

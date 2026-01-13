@@ -69,6 +69,9 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
         if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
             isBooked = true;
         }
+        if (beds.isBooked()) {
+            isBooked = true;
+        }
 
         FloorNameRoomName floorNameRoomName = floorNameRoomNames
                 .stream()

@@ -42,20 +42,9 @@ public class InvoiceController {
         return invoiceV1Service.getAllInvoices(hostelId, startDate, endDate, types, createdBy, modes, searchKey, paymentStatus);
     }
 
-    @GetMapping("new/{hostelId}")
-    public ResponseEntity<?> getAllInvoicesNew(@PathVariable("hostelId") String hostelId,
-                                               @RequestParam(value = "startDate", required = false) String startDate,
-                                               @RequestParam(value = "endDate", required = false) String endDate,
-                                               @RequestParam(value = "type", required = false) List<String> types,
-                                               @RequestParam(value = "createdBy", required = false) List<String> createdBy,
-                                               @RequestParam(value = "modes", required = false) List<String> modes,
-                                               @RequestParam(value = "search", required = false) String searchKey,
-                                               @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus) {
-        return invoiceV1Service.getAllInvoices(hostelId, startDate, endDate, types, createdBy, modes, searchKey, paymentStatus);
-    }
     @GetMapping("/receipts/{hostelId}")
     public ResponseEntity<?> getAllReceipt(@PathVariable("hostelId") String hostelId) {
-        return invoiceV1Service.getAllReceiptsByHostelId(hostelId);
+        return invoiceV1Service.getAllReceiptsByHostelIdNew(hostelId);
     }
     @PostMapping("/manual/{customerId}")
     public ResponseEntity<?> generateManualInvoice(@PathVariable("customerId") String customerId, @RequestBody @Valid ManualInvoice manualInvoice) {
@@ -79,6 +68,11 @@ public class InvoiceController {
     @PostMapping("/recurring/{hostelId}")
     public ResponseEntity<?> generateRecurringInvoiceManually(@PathVariable("hostelId") String hostelId) {
         return invoiceV1Service.generateRecurringManually(hostelId);
+    }
+
+    @GetMapping("/details/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> getInvoiceDetails(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.getInvoiceDetailsForEdit(hostelId, invoiceId);
     }
 
 

@@ -49,4 +49,14 @@ public class CustomerEbHistoryService {
     public List<CustomersEbHistory> getAllByCustomerIdAndReadingId(String customerId, List<Integer> ebReadingsId) {
         return customerEbRepository.findByCustomerIdAndReadingsId(customerId, ebReadingsId);
     }
+
+    public boolean deleteEntriesByIds(List<Integer> readingIds) {
+        List<CustomersEbHistory> listHistories = customerEbRepository.findByReadingIdIn(readingIds);
+        customerEbRepository.deleteAll(listHistories);
+        return true;
+    }
+
+    public List<CustomersEbHistory> findHistoryByCustomerIdAndReadingId(String customerId, List<Integer> listReadingIds) {
+        return customerEbRepository.findByCustomerIdAndReadingsId(customerId, listReadingIds);
+    }
 }

@@ -10,6 +10,8 @@ public record AmenityRequest(
 
         @NotNull(message = "Amount required")
         Double amount,
+        String description,
+        String termsOfUsage,
 
         Boolean proRate
 

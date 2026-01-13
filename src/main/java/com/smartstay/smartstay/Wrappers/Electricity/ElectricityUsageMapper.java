@@ -24,28 +24,34 @@ public class ElectricityUsageMapper implements Function<RoomInfoForEB, Electrici
 
     @Override
     public ElectricityUsage apply(RoomInfoForEB roomInfoForEB) {
-        String[] sDateArr = startDate.split("-");
-        String[] eDateArr = endDate.split("-");
+        String startDateStr = "NA";
+        String endDateStr = "NA";
+        if (startDate != null) {
+            String[] sDateArr = startDate.split("-");
+            StringBuilder sDate = new StringBuilder();
 
-        StringBuilder sDate = new StringBuilder();
-        StringBuilder eDate = new StringBuilder();
-
-        for (int i = sDateArr.length; i>0; i-- ) {
-            sDate.append(sDateArr[i - 1]);
-            if ((i - 1) != 0) {
-                sDate.append("/");
+            for (int i = sDateArr.length; i>0; i-- ) {
+                sDate.append(sDateArr[i - 1]);
+                if ((i - 1) != 0) {
+                    sDate.append("/");
+                }
             }
-        }
-        for (int i = eDateArr.length; i>0; i-- ) {
-            eDate.append(eDateArr[i - 1]);
-            if ((i - 1) != 0) {
-                eDate.append("/");
-            }
-
+            startDateStr = sDate.toString();
         }
 
-//        String sDate = String.join("/", sDateArr);
-//        String eDate =  String.join("/", eDateArr);
+        if (endDate != null) {
+            String[] eDateArr = endDate.split("-");
+            StringBuilder eDate = new StringBuilder();
+
+            for (int i = eDateArr.length; i>0; i-- ) {
+                eDate.append(eDateArr[i - 1]);
+                if ((i - 1) != 0) {
+                    eDate.append("/");
+                }
+
+            }
+            endDateStr = eDate.toString();
+        }
 
         return new ElectricityUsage(roomInfoForEB.hostelId(),
                 0,
@@ -60,7 +66,7 @@ public class ElectricityUsageMapper implements Function<RoomInfoForEB, Electrici
                 0.0,
                 0.0,
                 roomInfoForEB.noOfTenants().intValue(),
-                sDate.toString(),
-                eDate.toString());
+                startDateStr,
+                endDateStr);
     }
 }
