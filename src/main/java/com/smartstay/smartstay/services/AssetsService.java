@@ -6,6 +6,8 @@ import com.smartstay.smartstay.dto.assets.AssetAssignmentResponse;
 import com.smartstay.smartstay.payloads.asset.AssetRequest;
 import com.smartstay.smartstay.payloads.asset.AssignAsset;
 import com.smartstay.smartstay.payloads.asset.UpdateAsset;
+import com.smartstay.smartstay.ennum.HostelEventModule;
+import com.smartstay.smartstay.ennum.HostelEventType;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +53,9 @@ public class AssetsService {
     @Autowired
     private UserHostelService userHostelService;
 
+    @Autowired
+    private HostelActivityLogService hostelActivityLogService;
+
     public ResponseEntity<?> getAllAssets(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
@@ -69,8 +74,7 @@ public class AssetsService {
         return new ResponseEntity<>(listAssets, HttpStatus.OK);
     }
 
-
-    public ResponseEntity<?> addAsset(AssetRequest request,String hostelId) {
+    public ResponseEntity<?> addAsset(AssetRequest request, String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
@@ -91,7 +95,7 @@ public class AssetsService {
             }
             asset.setVendorId(request.vendorId());
         }
-        boolean bankingV1 = bankingRepository.existsByHostelIdAndBankId(hostelId,request.bankingId());
+        boolean bankingV1 = bankingRepository.existsByHostelIdAndBankId(hostelId, request.bankingId());
         if (!bankingV1) {
             return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
         }
@@ -106,7 +110,6 @@ public class AssetsService {
                 return new ResponseEntity<>(Utils.SERIAL_NUMBER_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
             }
         }
-
 
         asset.setAssetName(request.assetName());
         asset.setProductName(request.productName());
@@ -126,6 +129,8 @@ public class AssetsService {
         asset.setHostelId(hostelId);
         asset.setParentId(user.getParentId());
         assetsRepository.save(asset);
+        logActivity(hostelId, user.getParentId(), String.valueOf(asset.getAssetId()), HostelEventType.ASSET_CREATED,
+                HostelEventModule.ASSET, "Asset Created: " + request.assetName());
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 
@@ -153,14 +158,14 @@ public class AssetsService {
             return new ResponseEntity<>(Utils.INVALID_ASSET, HttpStatus.NOT_FOUND);
         }
 
-       if (request.vendorId()!=null){
-           VendorV1 vendorV1 = vendorRepository.findByVendorIdAndHostelId(request.vendorId(), hostelId);
-              if (vendorV1 == null) {
+        if (request.vendorId() != null) {
+            VendorV1 vendorV1 = vendorRepository.findByVendorIdAndHostelId(request.vendorId(), hostelId);
+            if (vendorV1 == null) {
                 return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.FORBIDDEN);
-              }else {
+            } else {
                 asset.setVendorId(request.vendorId());
-              }
-       }
+            }
+        }
 
         if (request.assetName() != null) {
             boolean assetNameExists = assetsRepository.existsByAssetNameAndIsDeletedFalseAndAssetIdNotAndHostelId(request.assetName(), assetId, hostelId);
@@ -184,7 +189,7 @@ public class AssetsService {
         }
         if (request.price() != null) asset.setPrice(request.price());
         if (request.modeOfPayment() != null) {
-            boolean bankingExist = bankingRepository.existsByHostelIdAndBankId(hostelId,request.modeOfPayment());
+            boolean bankingExist = bankingRepository.existsByHostelIdAndBankId(hostelId, request.modeOfPayment());
             if (!bankingExist) {
                 return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
             }
@@ -194,6 +199,8 @@ public class AssetsService {
         if (request.isActive() != null) asset.setIsActive(request.isActive());
         asset.setUpdatedAt(new java.util.Date());
         assetsRepository.save(asset);
+        logActivity(hostelId, user.getParentId(), String.valueOf(asset.getAssetId()), HostelEventType.ASSET_UPDATED,
+                HostelEventModule.ASSET, "Asset Updated");
 
         return new ResponseEntity<>(
                 Utils.UPDATED,
@@ -281,6 +288,8 @@ public class AssetsService {
                     Utils.USER_INPUT_DATE_FORMAT
             ));
         }
+        logActivity(request.hostelId(), user.getParentId(), String.valueOf(asset.getAssetId()),
+                HostelEventType.ASSET_ASSIGNED, HostelEventModule.ASSET, "Asset Assigned");
 
         assetsRepository.save(asset);
 
@@ -301,12 +310,13 @@ public class AssetsService {
             existingAsset.setIsDeleted(true);
             existingAsset.setUpdatedAt(new Date());
             assetsRepository.save(existingAsset);
+            logActivity(existingAsset.getHostelId(), users.getParentId(), String.valueOf(existingAsset.getAssetId()),
+                    HostelEventType.ASSET_DELETED, HostelEventModule.ASSET, "Asset Deleted");
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>("No Asset found", HttpStatus.BAD_REQUEST);
 
     }
-
 
     private Rooms validateRoom(AssignAsset request, Users user) {
         Rooms room = roomRepository.findByRoomIdAndParentIdAndHostelId(
@@ -344,5 +354,11 @@ public class AssetsService {
                 .sum();
 
         return Utils.roundOfDouble(assetValue);
+    }
+
+    private void logActivity(String hostelId, String parentId, String sourceId, HostelEventType eventType,
+            HostelEventModule module, String description) {
+        hostelActivityLogService.saveActivityLog(new Date(), hostelId, parentId, sourceId, eventType.getDisplayName(),
+                module.getDisplayName(), description);
     }
 }

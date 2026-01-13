@@ -5,17 +5,18 @@ import com.smartstay.smartstay.Wrappers.amenity.CustomerAmenityMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
-import com.smartstay.smartstay.dto.beds.BedInformations;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.CustomerStatus;
-import com.smartstay.smartstay.payloads.amenity.*;
+import com.smartstay.smartstay.ennum.HostelEventModule;
+import com.smartstay.smartstay.ennum.HostelEventType;
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
+import com.smartstay.smartstay.payloads.amenity.AssignCustomer;
+import com.smartstay.smartstay.payloads.amenity.AssignRequest;
+import com.smartstay.smartstay.payloads.amenity.UnAssignRequest;
 import com.smartstay.smartstay.repositories.AmentityRepository;
 import com.smartstay.smartstay.repositories.CustomerAmenityRepository;
-import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.responses.amenitity.AmenityInfoProjection;
 import com.smartstay.smartstay.responses.amenitity.AmenityList;
-import com.smartstay.smartstay.responses.amenitity.AmenityResponse;
 import com.smartstay.smartstay.responses.customer.Amenities;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +24,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
 @Service
 public class AmenitiesService {
@@ -48,6 +51,9 @@ public class AmenitiesService {
     private HostelService hostelService;
     @Autowired
     private BedsService bedsService;
+
+    @Autowired
+    private HostelActivityLogService hostelActivityLogService;
 
     public ResponseEntity<?> getAllAmenities(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -77,7 +83,6 @@ public class AmenitiesService {
         }
         return new ResponseEntity<>(Utils.NO_RECORDS_FOUND, HttpStatus.BAD_REQUEST);
     }
-
 
     public ResponseEntity<?> getAmenitiesById(String hostelId, String amenitiesId) {
         if (!authentication.isAuthenticated()) {
@@ -154,9 +159,10 @@ public class AmenitiesService {
         amenitiesV1.setAmenityAmount(request.amount());
         amenitiesV1.setParentId(user.getParentId());
         amentityRepository.save(amenitiesV1);
+        logActivity(hostelId, user.getParentId(), amenitiesV1.getAmenityId(), HostelEventType.AMENITY_CREATED,
+                HostelEventModule.AMENITY, "Amenity Created: " + request.amenityName());
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
-
 
     public ResponseEntity<?> updateAmenity(AmenityRequest request, String amenityId, String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -203,7 +209,7 @@ public class AmenitiesService {
         if (request.proRate() != null) {
             amenitiesV1.setIsProRate(request.proRate());
             List<CustomersAmenity> customerAmenities = customerAmenityRepository.findLatestByAmenityId(amenityId);
-            if (request.proRate()){
+            if (request.proRate()) {
                 for (CustomersAmenity customerAmenity : customerAmenities) {
                     customerAmenity.setUpdatedAt(new Date());
                     customerAmenityRepository.save(customerAmenity);
@@ -216,11 +222,12 @@ public class AmenitiesService {
             }
         }
         amentityRepository.save(amenitiesV1);
+        logActivity(hostelId, user.getParentId(), amenitiesV1.getAmenityId(), HostelEventType.AMENITY_UPDATED,
+                HostelEventModule.AMENITY, "Amenity Updated");
 
         return new ResponseEntity<>(
                 Utils.UPDATED,
-                HttpStatus.OK
-        );
+                HttpStatus.OK);
     }
 
     public ResponseEntity<?> deleteAmenityById(String amenityId, String hostelId) {
@@ -253,6 +260,8 @@ public class AmenitiesService {
             existingAmenity.setIsDeleted(true);
             existingAmenity.setUpdatedAt(new Date());
             amentityRepository.save(existingAmenity);
+            logActivity(hostelId, users.getParentId(), existingAmenity.getAmenityId(), HostelEventType.AMENITY_DELETED,
+                    HostelEventModule.AMENITY, "Amenity Deleted");
             return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.BAD_REQUEST);
@@ -296,7 +305,13 @@ public class AmenitiesService {
                 customerAmenityRepository.save(customerAmenity);
             }
         }
-
+        logActivity(
+                hostelId,
+                user.getParentId(),
+                amenitiesV1.getAmenityId(),
+                HostelEventType.AMENITY_ASSIGNED,
+                HostelEventModule.AMENITY,
+                "Amenity Assigned");
 
         return new ResponseEntity<>(
                 Utils.UPDATED,
@@ -350,12 +365,18 @@ public class AmenitiesService {
             }
         }
 
+        logActivity(
+                hostelId,
+                user.getParentId(),
+                amenitiesV1.getAmenityId(),
+                HostelEventType.AMENITY_UNASSIGNED,
+                HostelEventModule.AMENITY,
+                "Amenity Unassigned");
+
         return new ResponseEntity<>(
                 Utils.UPDATED,
-                HttpStatus.OK
-        );
+                HttpStatus.OK);
     }
-
 
     public List<CustomersAmenity> getAllAmenitiesByCustomerId(String customerId) {
         return customerAmenityRepository.findByCustomerId(customerId);
@@ -452,8 +473,8 @@ public class AmenitiesService {
                     .map(i -> {
                         CustomersAmenity customersAmenity = new CustomersAmenity();
                         List<AmenitiesV1> listNewAmenity = listAmenities.stream()
-                                        .filter(itm -> itm.getAmenityId().equals(i))
-                                        .toList();
+                                .filter(itm -> itm.getAmenityId().equals(i))
+                                .toList();
                         AmenitiesV1 amenityV1 = null;
                         if (!listNewAmenity.isEmpty()) {
                             amenityV1 = listNewAmenity.get(0);
@@ -480,6 +501,13 @@ public class AmenitiesService {
 
             customerAmenityRepository.saveAll(listNewAmenities);
         }
+        logActivity(
+                hostelId,
+                users.getParentId(),
+                assignCustomer.customerId(),
+                HostelEventType.AMENITY_ASSIGNED_TO_CUSTOMER,
+                HostelEventModule.AMENITY,
+                "Amenity Assigned to Customer");
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
@@ -494,5 +522,11 @@ public class AmenitiesService {
             customersAmenities = new ArrayList<>();
         }
         return customersAmenities;
+    }
+
+    private void logActivity(String hostelId, String parentId, String sourceId, HostelEventType eventType,
+            HostelEventModule module, String description) {
+        hostelActivityLogService.saveActivityLog(new Date(), hostelId, parentId, sourceId, eventType.getDisplayName(),
+                module.getDisplayName(), description);
     }
 }

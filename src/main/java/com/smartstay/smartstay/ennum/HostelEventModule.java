@@ -7,7 +7,19 @@ public enum HostelEventModule {
     ELECTRICITY("Electricity"),
     FLOOR("Floor"),
     ROOM("Room"),
-    BED("Bed");
+    BED("Bed"),
+    AMENITY("Amenity"),
+    ASSET("Asset"),
+    BANK("Bank"),
+    BOOKING("Booking"),
+    COMPLAINT("Complaint"),
+    COMPLAINT_TYPE("Complaint Type"),
+    CUSTOMER_CONFIG("Customer Config"),
+    HOSTEL("Hostel"),
+    USER("User"),
+    EXPENSE("Expense"),
+    EXPENSE_CATEGORY("Expense Category"),
+    ROLE("Role");
 
     private final String displayName;
 
