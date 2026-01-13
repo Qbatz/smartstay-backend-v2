@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.electricity.AddReading;
+import com.smartstay.smartstay.payloads.electricity.UpdateElectricity;
 import com.smartstay.smartstay.services.ElectricityService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -30,9 +31,13 @@ public class ElectricityController {
         return electricityService.addMeterReading(hostelId, readings);
     }
 
-    @GetMapping("/{hostelId}")
+    @GetMapping("/new/{hostelId}")
     public ResponseEntity<?> getAllReadings(@PathVariable("hostelId") String hostelId) {
         return electricityService.getEBReadings(hostelId);
+    }
+    @GetMapping("/{hostelId}")
+    public ResponseEntity<?> getAllReadingsNew(@PathVariable("hostelId") String hostelId) {
+        return electricityService.getEbReadingsNew(hostelId);
     }
 
     @GetMapping("/customers/{hostelId}")
@@ -48,6 +53,26 @@ public class ElectricityController {
     @GetMapping("/customers/{hostelId}/{customerId}")
     public ResponseEntity<?> getAllEbReadingsByCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
         return electricityService.getAllReadingByCustomer(hostelId, customerId);
+    }
+
+    @PutMapping("/{hostelId}/{readingId}")
+    public ResponseEntity<?> updateEbReading(@PathVariable("hostelId") String hostelId, @PathVariable("readingId") String readingId, UpdateElectricity updateElectricity) {
+        return electricityService.updateEBReadings(hostelId, readingId, updateElectricity);
+    }
+
+    @DeleteMapping("/{hostelId}/{readingId}")
+    public ResponseEntity<?> deleteElectricity(@PathVariable("hostelId") String hostelId, @PathVariable("readingId") String readingId) {
+        return electricityService.deleteReading(hostelId, readingId);
+    }
+
+    @PostMapping("/calculate/{hostelId}")
+    public ResponseEntity<?> calculateEb(@PathVariable("hostelId") String hostelId) {
+        return electricityService.calculateEbAmountForCustomers(hostelId);
+    }
+
+    @DeleteMapping("/all/{hostelId}")
+    public ResponseEntity<?> deleteEntries(@PathVariable("hostelId") String hostelId) {
+        return electricityService.deleteReadingAll(hostelId);
     }
 
 }

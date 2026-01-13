@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.Wrappers.Electricity;
 
+import com.smartstay.smartstay.dao.ElectricityReadings;
 import com.smartstay.smartstay.dto.electricity.ElectricityReadingForRoom;
 import com.smartstay.smartstay.responses.electricity.RoomElectricityList;
 import com.smartstay.smartstay.util.Utils;
@@ -7,43 +8,43 @@ import com.smartstay.smartstay.util.Utils;
 import java.util.Date;
 import java.util.function.Function;
 
-public class ElectricityRoomMapper implements Function<ElectricityReadingForRoom, RoomElectricityList> {
+public class ElectricityRoomMapper implements Function<ElectricityReadings, RoomElectricityList> {
 
-    ElectricityReadingForRoom ebForRoom = null;
+    ElectricityReadings ebForRoom = null;
 
-    public ElectricityRoomMapper(ElectricityReadingForRoom ebForRoom) {
+    public ElectricityRoomMapper(ElectricityReadings ebForRoom) {
         this.ebForRoom = ebForRoom;
     }
 
     @Override
-    public RoomElectricityList apply(ElectricityReadingForRoom electricityReadingForRoom) {
-        String startDate = null;
+    public RoomElectricityList apply(ElectricityReadings electricityReadingForRoom) {
+        String startDate = Utils.dateToString(electricityReadingForRoom.getBillStartDate());
         String endDate = null;
         Double amount = 0.0;
+        Double consumption = 0.0;
 
-        if (ebForRoom != null) {
-            Date dateStartDate = Utils.addDaysToDate(ebForRoom.getEntryDate(), 1);
-            startDate = Utils.dateToString(dateStartDate);
-        }
-        else {
-            startDate = Utils.dateToString(electricityReadingForRoom.getStartDate());
-        }
+
 
         endDate = Utils.dateToString(electricityReadingForRoom.getEntryDate());
 
         if (electricityReadingForRoom.getConsumption() != null) {
-            amount = Utils.roundOfDouble(electricityReadingForRoom.getConsumption() * electricityReadingForRoom.getUnitPrice());
+            consumption = Utils.roundOffWithTwoDigit(electricityReadingForRoom.getConsumption());
+            amount = Utils.roundOffWithTwoDigit(electricityReadingForRoom.getConsumption() * electricityReadingForRoom.getCurrentUnitPrice());
+        }
+
+        if (electricityReadingForRoom.isFirstEntry()) {
+            amount = 0.0;
         }
 
         return new RoomElectricityList(electricityReadingForRoom.getId(),
-                electricityReadingForRoom.getUnitPrice(),
+                Utils.roundOffWithTwoDigit(electricityReadingForRoom.getCurrentUnitPrice()),
                 electricityReadingForRoom.getHostelId(),
                 electricityReadingForRoom.getRoomId(),
                 startDate,
                 endDate,
-                electricityReadingForRoom.getConsumption(),
-                electricityReadingForRoom.getCurrentReading(),
+                consumption,
+                Utils.roundOffWithTwoDigit(electricityReadingForRoom.getCurrentReading()),
                 endDate,
-                amount);
+                Utils.roundOffWithTwoDigit(amount));
     }
 }

@@ -61,5 +61,10 @@ public class ComplaintsController {
         return complaintsService.deleteComplaint(complaintId);
     }
 
+    @GetMapping("/updates/{hostelId}/{complaintId}")
+    public ResponseEntity<?> getComplaintUpdates(@PathVariable("hostelId") String hostelId, @PathVariable("complaintId") Integer complaintId) {
+        return complaintsService.getComplaintUpdates(hostelId, complaintId);
+    }
+
 
 }

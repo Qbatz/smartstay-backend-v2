@@ -11,8 +11,6 @@ import java.util.Date;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
 @Entity
 public class ElectricityReadings {
     @Id

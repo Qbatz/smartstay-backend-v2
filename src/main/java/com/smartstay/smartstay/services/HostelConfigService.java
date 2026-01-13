@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 
 import com.smartstay.smartstay.dao.BillingRules;
+import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.util.Utils;
@@ -33,56 +34,30 @@ public class HostelConfigService {
         billingRuleRepository.save(billingRule);
     }
 
-
-    public void updateExistingBillRule(BillingRules latestBillingRules) {
-        billingRuleRepository.save(latestBillingRules);
-    }
-
-    public BillingRules getLatestBillRuleByHostelIdAndStartDate(String hostelId, Date date) {
-        return billingRuleRepository.findByHostelIdAndStartDate(hostelId, date);
-    }
-
-    public BillingRules getNewBillRuleByHostelIdAndStartDate(String hostelId, Date date) {
-        return billingRuleRepository.findNewRuleByHostelIdAndDate(hostelId, date);
-    }
-
     public BillingRules getCurrentMonthTemplate(String hostelId) {
-        return billingRuleRepository.findLatestBillingRule(hostelId, new Date());
+        return billingRuleRepository.findCurrentBillingRules(hostelId);
     }
 
     public BillingDates getBillingRuleByDateAndHostelId(String hostelId, Date dateJoiningDate) {
-        BillingRules billingRules = billingRuleRepository.findBillingRulesOnDateAndHostelId(hostelId, dateJoiningDate);
+        BillingRules billingRules = billingRuleRepository.findCurrentBillingRules(hostelId);
         BillingDates billDates = null;
 
         int billStartDate = 1;
-        int billingRuleDueDate = 5;
+        int billingRuleDueDate = 10;
         int billMonth;
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(dateJoiningDate);
-        billMonth = calendar.get(Calendar.MONTH);
 
         if (billingRules != null) {
-            if (billingRules.isInitial()) {
-                List<BillingRules> listBillingRulesExceptInitial = billingRuleRepository.findAllBillingRulesByHostelIdExceptInitial(hostelId);
-                if (!listBillingRulesExceptInitial.isEmpty()) {
-                    billingRules = listBillingRulesExceptInitial.get(0);
-                }
-            }
             billStartDate = billingRules.getBillingStartDate();
             billingRuleDueDate = billingRules.getBillDueDays();
         }
 
-
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
-
         if (Utils.compareWithTwoDates(dateJoiningDate, calendar.getTime()) < 0) {
-            billMonth = billMonth - 1;
+            calendar.add(Calendar.MONTH, -1);
         }
-        calendar.set(Calendar.MONTH, billMonth);
-
-//        Calendar calendarDueDate = Calendar.getInstance();
-//        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
         Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
 
@@ -98,12 +73,12 @@ public class HostelConfigService {
         Date date = new Date();
         String day = Utils.getDayFromDate(date);
 
-        return billingRuleRepository.findAllHostelsHavingTodaysRecurring(day, date);
+        return billingRuleRepository.findAllHostelsHavingTodaysRecurring(day);
     }
 
     public BillingDates getNextMonthBillingDates(String hostelId) {
 
-        BillingRules billingRules = billingRuleRepository.findNextBillingDates(hostelId, new Date());
+        BillingRules billingRules = billingRuleRepository.findCurrentBillingRules(hostelId);
         BillingDates billingDates = null;
         if (billingRules != null) {
             Calendar cal = Calendar.getInstance();
@@ -130,5 +105,25 @@ public class HostelConfigService {
 
 
         return billingDates;
+    }
+
+    public BillingRules getCurrentBillingRule(String hostelId) {
+        return billingRuleRepository.findCurrentBillingRules(hostelId);
+    }
+
+    public List<HostelV1> findAHostelsHavingBillingRuleEndingToday() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_MONTH, 1);
+
+        int billingDay = Utils.findDateFromDate(calendar.getTime());
+        List<BillingRules> listBillingDates = billingRuleRepository.findAllHostelsHavingTodaysRecurring(billingDay);
+        List<HostelV1> listHostels = null;
+        if (listBillingDates != null) {
+            listHostels = listBillingDates
+                    .stream()
+                    .map(i -> i.getHostel())
+                    .toList();
+        }
+        return listHostels;
     }
 }

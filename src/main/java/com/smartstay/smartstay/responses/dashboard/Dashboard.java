@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.responses.dashboard;
 
-public record Dashboard(Integer totalRooms,
+public record Dashboard(
+        String hostelId,
+        Integer totalRooms,
                         Integer totalBeds,
                         Integer freeBeds,
                         Integer occupiedBeds,

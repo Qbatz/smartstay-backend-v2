@@ -65,6 +65,7 @@ public class BankTransactionService {
             }
             transactionsV1.setTransactionDate(Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
             transactionsV1.setBankId(transactionDto.bankId());
+            transactionsV1.setTransactionNumber(transactionDto.transactionId());
             transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
             transactionsV1.setAmount(transactionDto.amount());
             transactionsV1.setType(transactionDto.type());
@@ -209,5 +210,14 @@ public class BankTransactionService {
 
         return true;
 
+    }
+
+    public void deleteReceipt(TransactionDto transaction) {
+        if (transaction != null) {
+            BankTransactionsV1 transactionsV1 = bankRepository.findByTransactionNumber(transaction.transactionId());
+            if (transactionsV1 != null) {
+                bankRepository.delete(transactionsV1);
+            }
+        }
     }
 }

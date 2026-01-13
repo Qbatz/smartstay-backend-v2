@@ -5,6 +5,7 @@ import com.smartstay.smartstay.Wrappers.customers.BedHistoryMapper;
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dao.RentHistory;
+import com.smartstay.smartstay.dto.electricity.BedHistoryByRoomId;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.ennum.CustomersBedType;
 import com.smartstay.smartstay.repositories.CustomerBedHistoryRespository;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 @Service
@@ -22,6 +24,7 @@ public class CustomersBedHistoryService {
 
     @Autowired
     private CustomerBedHistoryRespository customerBedHistoryRepository;
+
 
     public CustomersBedHistory getCustomerBedByStartDate(String customerId, Date startDate, Date endDate) {
         CustomersBedHistory cbh = customerBedHistoryRepository.findByCustomerIdAndDate(customerId, startDate, endDate);
@@ -35,7 +38,7 @@ public class CustomersBedHistoryService {
     public List<CustomerBedsList> getAllCustomerFromBedsHistory(String hostelId, Date billStartDate, Date billEndDate) {
         return customerBedHistoryRepository.findByHostelIdAndStartAndEndDate(hostelId, billStartDate, billEndDate)
                 .stream()
-                .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), billEndDate) < 0)
+                .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), billEndDate) <= 0)
                 .map(item -> new BedHistoryCustomerListMapper().apply(item))
                 .toList();
     }
@@ -147,4 +150,24 @@ public class CustomersBedHistoryService {
     public List<CustomersBedHistory> getCurrentBedHistoryByCustomerIds(List<String> customerIds) {
         return customerBedHistoryRepository.findLatestBedHistoryForCustomers(customerIds);
     }
+
+    public HashMap<Integer, Integer> findByStartAndEndDateAndRoomIds(List<BedHistoryByRoomId> listBeds) {
+        HashMap<Integer, Integer> occupantsCountsByRoomId = new HashMap<>();
+        if (!listBeds.isEmpty()) {
+            listBeds
+                    .forEach(i -> {
+                       List<CustomersBedHistory> customersBedHistoryList = customerBedHistoryRepository.findByRoomIdStartAndEndDate(i.roomId(), i.startDate(), i.endDate());
+                       if (customersBedHistoryList != null) {
+                           occupantsCountsByRoomId.put(i.roomId(), customersBedHistoryList.size());
+                       }
+                    });
+        }
+
+        return occupantsCountsByRoomId;
+    }
+
+    public List<CustomersBedHistory> getCustomersByBedIdAndDates(Integer roomId, Date startDate, Date endDate) {
+        return customerBedHistoryRepository.findByRoomIdStartAndEndDate(roomId, startDate, endDate);
+    }
+
 }

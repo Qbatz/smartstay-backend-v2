@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface RolesRepository extends JpaRepository<RolesV1, Integer> {
 
+    List<RolesV1> findByRoleName(String roleName);
 
     List<RolesV1> findAllByParentId(String parentId);
 
@@ -22,7 +23,6 @@ public interface RolesRepository extends JpaRepository<RolesV1, Integer> {
     RolesV1 findByRoleIdAndRoleNameNotIn(int roleId, List<String> roleNames);
 
     RolesV1 findByRoleIdAndParentId(int roleId,String parentId);
-    RolesV1 findByRoleName(String roleName);
 
     RolesV1 findByRoleIdAndHostelId(int roleId, String hostelId);
     boolean existsByRoleId(int roleId);
@@ -31,9 +31,11 @@ public interface RolesRepository extends JpaRepository<RolesV1, Integer> {
     SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
     FROM rolesv1 role
     WHERE role.role_name = :roleName
-      AND role.parent_id = :parentId
+      AND role.hostel_id = :hostelId
     """, nativeQuery = true)
-    int existsByParentIdAndRoleName(@Param("roleName") String roleName, @Param("parentId") String parentId);
+    int existsByParentIdAndRoleName(@Param("roleName") String roleName, @Param("hostelId") String hostelId);
+
+
 
     @Query(value = """
     SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END

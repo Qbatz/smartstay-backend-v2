@@ -112,6 +112,7 @@ public class ExpenseService {
             unitPrice = expense.totalAmount() / count;
         }
 
+        String expenseNumber = generateExpenseNumber(hostelId);
         ExpensesV1 expensesV1 = new ExpensesV1();
         expensesV1.setCategoryId(expense.categoryId());
         expensesV1.setSubCategoryId(expense.subCategory());
@@ -121,7 +122,7 @@ public class ExpenseService {
         expensesV1.setUnitPrice(unitPrice);
         expensesV1.setUnitCount(count);
         expensesV1.setTotalPrice(expense.totalAmount());
-        expensesV1.setExpenseNumber(generateExpenseNumber(hostelId));
+        expensesV1.setExpenseNumber(expenseNumber);
 
         expensesV1.setTransactionAmount(expense.totalAmount());
         expensesV1.setSource(ExpenseSource.EXPENSE.name());
@@ -137,7 +138,8 @@ public class ExpenseService {
                 BankTransactionType.DEBIT.name(),
                 BankSource.EXPENSE.name(),
                 hostelId,
-                expense.purchaseDate());
+                expense.purchaseDate(),
+                expenseNumber);
 
         if (bankTransactionService.addExpenseTransaction(transactionDto)) {
             expensesRepository.save(expensesV1);

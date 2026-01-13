@@ -96,5 +96,40 @@ public class PaymentSummaryService {
         return 1;
     }
 
+    public int deleteReceipt(PaymentSummary summary) {
+        if (!authentication.isAuthenticated()) {
+            return 0;
+        }
+        com.smartstay.smartstay.dao.PaymentSummary paymentSummary = paymentSummaryRepository.findByCustomerId(summary.customerId());
+        if (paymentSummary == null) {
+            paymentSummary = new com.smartstay.smartstay.dao.PaymentSummary();
+            paymentSummary.setCustomerId(summary.customerId());
+            paymentSummary.setCustomerStatus(summary.customerStatus());
+            paymentSummary.setCustomerMailId(summary.customerMailId());
+            paymentSummary.setCustomerMobile(summary.customerMobile());
+            paymentSummary.setHostelId(summary.hostelId());
+            paymentSummary.setCreditAmount(0.0);
+            paymentSummary.setDebitAmount(0.0);
+            paymentSummary.setBalance(0.0);
+            paymentSummary.setLastInvoice(summary.invoiceId());
+            paymentSummary.setLastPayment(0.0);
+            paymentSummary.setLastUpdate(new Date());
+        }
+        else {
+            Double creditAmount = paymentSummary.getCreditAmount();
+            if (creditAmount == null) {
+                creditAmount = 0.0;
+            }
+            paymentSummary.setCreditAmount(creditAmount - summary.amount());
+            paymentSummary.setBalance(paymentSummary.getBalance() + summary.amount());
+
+            paymentSummary.setLastUpdate(new Date());
+        }
+
+        paymentSummaryRepository.save(paymentSummary);
+
+        return 1;
+    }
+
 
 }

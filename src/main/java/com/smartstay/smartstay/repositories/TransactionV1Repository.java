@@ -36,7 +36,8 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
                 customers customers on customers.customer_id=transaction.customer_id LEFT OUTER JOIN 
                 bankingv1 bank on bank.bank_id=transaction.bank_id WHERE transaction.hostel_id=:hostelId
                 """, nativeQuery = true)
-        List<Receipts> findByHostelId(@Param("hostelId") String hostelId);
+        List<Receipts> findAllByHostelId(@Param("hostelId") String hostelId);
+        List<TransactionV1> findByHostelId(String hostelId);
 
         boolean existsByTransactionReferenceId(String transactionReferenceId);
 
@@ -55,6 +56,8 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
         paid_at DESC
 """, nativeQuery = true)
     List<PaymentHistoryProjection> getPaymentHistoryByInvoiceId(@Param("invoiceId") String invoiceId);
+
+
 
 
 }

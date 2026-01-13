@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface HotelTypeRepository extends JpaRepository<HotelType, Integer> {
+    HotelType findByType(String type);
 }

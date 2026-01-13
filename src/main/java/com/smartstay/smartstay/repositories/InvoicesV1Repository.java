@@ -26,7 +26,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             invc.invoice_number as invoiceNumber, customers.first_name as firstName, customers.last_name as lastName,
             customers.profile_pic as profilePic, 
             advance.advance_amount as advanceAmount, advance.deductions as deductions,
-            invc.is_cancelled as cancelled, invc.paid_amount as paidAmount  
+            invc.is_cancelled as cancelled, invc.paid_amount as paidAmount, invc.invoice_mode as invoiceMode   
             from invoicesv1 invc inner join customers customers on customers.customer_id=invc.customer_id 
             left outer join advance advance on advance.customer_id=invc.customer_id where invc.hostel_id=:hostelId AND invc.invoice_type not in('BOOKING') 
             order by invc.invoice_start_date desc
@@ -47,6 +47,20 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """, nativeQuery = true)
     List<Receipts> findReceipts(@Param("hostelId") String hostelId);
 
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE hostelId=:hostelId 
+            AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate)) 
+            AND (:endDate IS NULL OR DATE(i.invoiceEndDate) <= DATE(:endDate)) 
+            AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy)) 
+            AND (:mode IS NULL OR i.invoiceMode in (:mode)) 
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus)) 
+            AND (:userId IS NULL OR i.customerId IN (:userId)) ORDER BY i.invoiceStartDate DESC
+            """)
+    List<InvoicesV1> findAllInvoicesByHostelId(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+                                               @Param("endDate") Date endDate, @Param("types") List<String> types,
+                                               @Param("createdBy") List<String> createdBy, @Param("mode") List<String> mode,
+                                               @Param("paymentStatus") List<String> paymentStatus, @Param("userId") List<String> userId);
+
     @Query(value = """
     SELECT * FROM invoicesv1
     WHERE hostel_id=:hostelId AND invoice_number LIKE CONCAT(:prefix, '%')
@@ -54,8 +68,6 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     LIMIT 1
 """, nativeQuery = true)
     InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix, @Param("hostelId") String hostelId);
-
-
     @Query(value = "SELECT * FROM invoicesv1 WHERE customer_id = :customerId ORDER BY invoice_start_date DESC LIMIT 1",
             nativeQuery = true)
     InvoicesV1 findLatestInvoiceByCustomerId(@Param("customerId") String customerId);
@@ -122,7 +134,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findPendingInvoices(String hostelId);
 
     @Query(value = """
-            SELECT * FROM invoicesv1 invc WHERE invc.customer_id=:customerId and DATE(invc.invoice_start_date) >= DATE(:startDate) ORDER BY invc.invoice_start_date DESC LIMIT 1;
+            SELECT * FROM invoicesv1 invc WHERE invc.customer_id=:customerId and DATE(invc.invoice_start_date) >= DATE(:startDate) AND invoice_type in ('RENT', 'REASSIGN_RENT') ORDER BY invc.invoice_start_date DESC LIMIT 1;
             """, nativeQuery = true)
     InvoicesV1 findCurrentRunningInvoice(@Param("customerId") String customerId, @Param("startDate") Date startDate);
 
@@ -156,5 +168,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                     FROM invoicesv1 WHERE customer_id IN :customerIds GROUP BY customer_id)
             """, nativeQuery = true)
     List<InvoicesV1> findLatestInvoicesByCustomerIds(@Param("customerIds") List<String> customerIds);
+
+    @Query("""
+            SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='SETTLEMENT'
+            """)
+    List<InvoicesV1> findAllSettlementInvoices();
 
 }

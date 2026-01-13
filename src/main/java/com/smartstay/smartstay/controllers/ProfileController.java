@@ -3,6 +3,8 @@ package com.smartstay.smartstay.controllers;
 import com.smartstay.smartstay.payloads.Password;
 import com.smartstay.smartstay.payloads.account.*;
 import com.smartstay.smartstay.payloads.UpdateUserProfilePayloads;
+import com.smartstay.smartstay.payloads.profile.Logout;
+import com.smartstay.smartstay.payloads.profile.UpdateFCMToken;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -32,8 +34,6 @@ public class ProfileController {
     public ResponseEntity<?> getProfileInformation() {
         return usersService.getProfileInformation();
     }
-
-
 
     @PutMapping("")
     public ResponseEntity<?> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
@@ -66,7 +66,7 @@ public class ProfileController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<Object> changePassword(@RequestBody Password password) {
+    public ResponseEntity<Object> changePassword(@Valid @RequestBody Password password) {
         return usersService.changePassword(password);
     }
 
@@ -80,14 +80,23 @@ public class ProfileController {
         return usersService.updateUsersProfile(hostelId, userId, payloads);
     }
 
-    @DeleteMapping("/delete-user/{userId}")
-    public ResponseEntity<?> deleteUser(@PathVariable("userId") String userId) {
-        return usersService.deleteUser(userId);
+    @DeleteMapping("/delete-user/{hostelId}/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable("hostelId") String hostelId, @PathVariable("userId") String userId) {
+        return usersService.deleteUser(hostelId, userId);
     }
-
 
     @DeleteMapping("/delete-admin/{userId}")
     public ResponseEntity<?> deleteAdminUser(@PathVariable("userId") String userId) {
         return usersService.deleteAdminUser(userId);
+    }
+
+    @PutMapping("/fcm")
+    public ResponseEntity<?> updateFCMToken(@RequestBody @Valid UpdateFCMToken updateFCMToken) {
+        return usersService.addFCMToken(updateFCMToken);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutFromApp(@Valid @RequestBody Logout logout) {
+        return usersService.logout(logout);
     }
 }

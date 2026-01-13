@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dao.Floors;
 import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.floor.AddFloors;
 import com.smartstay.smartstay.payloads.floor.UpdateFloor;
@@ -167,7 +168,7 @@ public class FloorsService {
 
     public ResponseEntity<?> deleteFloorById(int floorId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
@@ -177,9 +178,9 @@ public class FloorsService {
         Floors existingFloor = floorRepository.findByFloorIdAndParentId(floorId,users.getParentId());
         if (existingFloor != null) {
             boolean customerExist = floorRepository.existsActiveBookingForFloor(existingFloor.getHostelId(),floorId ,
-                    List.of(CustomerStatus.NOTICE.name(),CustomerStatus.CHECK_IN.name(), CustomerStatus.BOOKED.name()));
+                    List.of(BookingStatus.CHECKIN.name(), BookingStatus.NOTICE.name(), BookingStatus.BOOKED.name()));
             if (customerExist) {
-                return new ResponseEntity<>("Cannot delete floor — active bookings exist.", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Cannot delete floor — active tenant founds.", HttpStatus.BAD_REQUEST);
             }
             existingFloor.setIsDeleted(true);
             floorRepository.save(existingFloor);

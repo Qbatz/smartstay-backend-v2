@@ -170,22 +170,24 @@ public class TransactionService {
         else {
             transactionV1.setPaidAt(Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT));
         }
+        String transactionRandomNo = generateRandomNumber() ;
         transactionV1.setStatus(PaymentStatus.PAID.name());
         transactionV1.setPaidAmount(payment.amount());
         transactionV1.setHostelId(hostelId);
         transactionV1.setBankId(payment.bankId());
         transactionV1.setReferenceNumber(payment.referenceId());
         transactionV1.setUpdatedBy(authentication.getName());
-        transactionV1.setTransactionReferenceId(generateRandomNumber());
+        transactionV1.setTransactionReferenceId(transactionRandomNo);
         transactionV1.setInvoiceId(invoiceId);
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setCreatedAt(new Date());
+        transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(calendar.getTime());
 
         bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(), payment.paymentDate());
 
-        transactionRespository.save(transactionV1);
+        TransactionV1 trns = transactionRespository.save(transactionV1);
 
         PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(), payment.amount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(), "Active");
         int response = paymentSummaryService.addPayment(summary);
@@ -199,7 +201,8 @@ public class TransactionService {
                     BankTransactionType.CREDIT.name(),
                     BankSource.INVOICE.name(),
                     hostelId,
-                    payment.paymentDate());
+                    payment.paymentDate(),
+                    trns.getTransactionId());
 
             bankTransactionService.addTransaction(transaction);
 
@@ -294,11 +297,14 @@ public class TransactionService {
             paymentDate = Utils.stringToDate(payment.paymentDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
 
+        String transactionNumber = generateRandomNumber();
+
+        transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
         transactionV1.setHostelId(hostelId);
         transactionV1.setBankId(payment.bankId());
         transactionV1.setReferenceNumber(payment.referenceId());
         transactionV1.setUpdatedBy(authentication.getName());
-        transactionV1.setTransactionReferenceId(generateRandomNumber());
+        transactionV1.setTransactionReferenceId(transactionNumber);
         transactionV1.setInvoiceId(invoiceId);
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setCreatedAt(new Date());
@@ -307,7 +313,7 @@ public class TransactionService {
 
         bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(), payment.paymentDate());
 
-        transactionRespository.save(transactionV1);
+        TransactionV1 trnsV1 = transactionRespository.save(transactionV1);
 
         PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(), payment.amount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(), "Active");
         int response = paymentSummaryService.addPayment(summary);
@@ -321,7 +327,8 @@ public class TransactionService {
                     BankTransactionType.CREDIT.name(),
                     BankSource.INVOICE.name(),
                     hostelId,
-                    payment.paymentDate());
+                    payment.paymentDate(),
+                    trnsV1.getTransactionId());
 
             bankTransactionService.addTransaction(transaction);
 
@@ -359,8 +366,16 @@ public class TransactionService {
         return transactionRespository.getTotalPaidAmountByInvoiceId(invoiceNumber);
     }
 
-    public List<Receipts> getAllReceiptsByHostelId(String hostelId) {
-        return transactionRespository.findByHostelId(hostelId);
+    public List<Receipts> getAllReceiptsByHostelIdOld(String hostelId) {
+        return transactionRespository.findAllByHostelId(hostelId);
+    }
+
+    public List<TransactionV1> getAllReceiptsByHostelId(String hostelId) {
+        List<TransactionV1> listTransactions = transactionRespository.findByHostelId(hostelId);
+        if (listTransactions == null) {
+            listTransactions = new ArrayList<>();
+        }
+        return listTransactions;
     }
 
     public String generateRandomNumber() {
@@ -452,6 +467,12 @@ public class TransactionService {
         String bankName = null;
         if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
             bankName = "Cash";
+        }
+        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+            bankName = "Card";
+        }
+        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+            bankName = bankingV1.getBankName() + " Bank";
         }
         else {
             bankName = bankingV1.getBankName();
@@ -557,7 +578,7 @@ public class TransactionService {
                 fullName.append(customers.getFirstName());
             }
             if (customers.getLastName() != null && !customers.getLastName().trim().equalsIgnoreCase("")) {
-                fullName.append(", ");
+                fullName.append(" ");
                 fullName.append(customers.getLastName());
             }
             if (customers.getHouseNo() != null && !customers.getHouseNo().trim().equalsIgnoreCase("")) {
@@ -652,7 +673,9 @@ public class TransactionService {
                 invoicesV1.getPaidAmount(),
                 dueAmount,
                 hostelEmail,
-                hostelPhone, "91", receiptInfo,
+                hostelPhone, "91",
+                invoicesV1.getHostelId(),
+                receiptInfo,
                 customerInfo,
                 stayInfo,
                 accountDetails,
@@ -689,6 +712,8 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.BAD_REQUEST);
         }
 
+        Date transactionDate = Utils.stringToDate(refundInvoice.refundDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
         InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(invoiceId);
         if (invoicesV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
@@ -701,6 +726,12 @@ public class TransactionService {
         }
         if (!bankingService.checkBankExist(refundInvoice.bankId())) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), transactionDate) > 0) {
+            return new ResponseEntity<>(Utils.REFUNDING_DATE_OLDER_THAN_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (Utils.compareWithTwoDates(new Date(), transactionDate) < 0) {
+            return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
         }
 
         String paymentStatus = null;
@@ -758,8 +789,6 @@ public class TransactionService {
         invoicesV1.setPaidAmount(refundedAmount + refundInvoice.refundAmount());
         invoiceService.saveInvoice(invoicesV1);
 
-        Date transactionDate = Utils.stringToDate(refundInvoice.refundDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-
         TransactionV1 transactionV1 = new TransactionV1();
         transactionV1.setType(TransactionType.REFUND.name());
         transactionV1.setPaidAmount(refundInvoice.refundAmount());
@@ -808,5 +837,71 @@ public class TransactionService {
         return new DeleteReceipts(transactionV1.getInvoiceId(),
                 transactionV1.getPaidAmount(),
                 true);
+    }
+
+    public ResponseEntity<?> deleteReceipt(String hostelId, String receiptId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        TransactionV1 transactionV1 = transactionRespository.findById(receiptId).orElse(null);
+        if (transactionV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_RECEIPT_ID_PASSED, HttpStatus.BAD_REQUEST);
+        }
+        if (!transactionV1.getTransactionMode().equalsIgnoreCase(ReceiptMode.MANUAL.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_OTHER_MODE_RECEIPTS, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(transactionV1.getInvoiceId());
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND_TRANSACTION, HttpStatus.BAD_REQUEST);
+        }
+        if (!transactionV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 inv = invoiceService.deleteReceipt(invoicesV1, transactionV1);
+        if (inv == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+
+        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(), transactionV1.getBankId());
+
+        PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(), transactionV1.getPaidAmount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(), "Active");
+        int response = paymentSummaryService.deleteReceipt(summary);
+
+        if (response == 1) {
+
+            TransactionDto transaction = new TransactionDto(transactionV1.getBankId(),
+                    transactionV1.getReferenceNumber(),
+                    transactionV1.getPaidAmount(),
+                    BankTransactionType.DEBIT.name(),
+                    BankSource.INVOICE.name(),
+                    hostelId,
+                    null,
+                    transactionV1.getTransactionId());
+
+            bankTransactionService.deleteReceipt(transaction);
+
+        }
+
+
+        transactionRespository.delete(transactionV1);
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

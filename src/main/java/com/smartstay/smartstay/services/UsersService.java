@@ -8,28 +8,37 @@ import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.Admin.UsersData;
+import com.smartstay.smartstay.ennum.AppSource;
 import com.smartstay.smartstay.events.AddAdminEvents;
 import com.smartstay.smartstay.events.AddUserEvents;
 import com.smartstay.smartstay.payloads.*;
 import com.smartstay.smartstay.payloads.account.*;
+import com.smartstay.smartstay.payloads.profile.Logout;
+import com.smartstay.smartstay.payloads.profile.UpdateFCMToken;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
+import com.smartstay.smartstay.payloads.user.SetupPin;
+import com.smartstay.smartstay.payloads.user.VerifyPin;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
+import com.smartstay.smartstay.repositories.UsersConfigRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
 import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
+import com.smartstay.smartstay.responses.user.MobileLogin;
 import com.smartstay.smartstay.responses.user.OtpResponse;
 import com.smartstay.smartstay.util.Utils;
 import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -44,7 +53,6 @@ public class UsersService {
 
     @Autowired
     UserRepository userRepository;
-
     @Autowired
     OTPService otpService;
     @Autowired
@@ -56,29 +64,37 @@ public class UsersService {
     @Autowired
     UploadFileToS3 uploadToS3;
 
-    @Value("ENVIRONMENT")
+    @Value("${ENVIRONMENT}")
     private String environment;
 
     @Autowired
     private com.smartstay.smartstay.config.Authentication authentication;
-
     @Autowired
     private UserHostelService userHostelService;
-
     @Autowired
     private RolesService rolesService;
-
     @Autowired
     private ApplicationEventPublisher eventPublisher;
-
+    @Autowired
+    private UsersConfigRepository usersConfigRepository;
+    @Autowired
+    private MyUserDetailService myUserDetailService;
+    @Autowired
+    private LoginHistoryService loginHistoryService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
     private final RestTemplate restTemplate;
 
+    private BankingService bankingService;
+
     public UsersService() {
         this.restTemplate = new RestTemplate();
         restTemplate.setInterceptors(Collections.singletonList(new RestTemplateLoggingInterceptor()));
+    }
+    @Autowired
+    public void setBankingService(@Lazy BankingService bankingService) {
+        this.bankingService = bankingService;
     }
 
     public ResponseEntity<AdminUserResponse> createAccount(CreateAccount createAccount) {
@@ -136,6 +152,43 @@ public class UsersService {
     }
 
 
+    public ResponseEntity<?> mobileLogin(Login login) {
+        if (login == null) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+        if (!Utils.checkNullOrEmpty(login.emailId()) && !Utils.checkNullOrEmpty(login.password())) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+        Users users = userRepository.findByEmailIdAndIsDeletedFalse(login.emailId());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.INVALID_USER_NAME_PASSWORD, HttpStatus.BAD_REQUEST);
+        }
+
+        Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
+        if (authentication.isAuthenticated()) {
+            boolean isPinSetup = false;
+            UsersConfig config = users.getConfig();
+            if (config == null) {
+                isPinSetup = false;
+            }
+            else {
+                if (config.getPin() == null) {
+                    isPinSetup = false;
+                }
+                else {
+                    isPinSetup = true;
+                }
+            }
+            MobileLogin mobileLogin = new MobileLogin(users.getUserId(), isPinSetup);
+
+            return new ResponseEntity<>(mobileLogin, HttpStatus.OK);
+        }
+
+        else {
+            return new ResponseEntity<>(Utils.INVALID_USER_NAME_PASSWORD, HttpStatus.FORBIDDEN);
+        }
+    }
+
     public ResponseEntity<Object> login(Login login) {
         Users users = userRepository.findByEmailIdAndIsDeletedFalse(login.emailId());
         if (users != null) {
@@ -157,6 +210,7 @@ public class UsersService {
                 HashMap<String, Object> claims = new HashMap<>();
                 claims.put("userId", users.getUserId());
                 claims.put("role", rolesService.findById(users.getRoleId()));
+                loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.WEB.name(), "");
                 return new ResponseEntity<>(jwtService.generateToken(authentication.getName(), claims), HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(HttpStatus.FORBIDDEN);
@@ -174,6 +228,8 @@ public class UsersService {
             HashMap<String, Object> claims = new HashMap<>();
             claims.put("userId", users.getUsers().getUserId());
             claims.put("role", rolesService.findById(users.getUsers().getRoleId()));
+            loginHistoryService.login(users.getUsers().getUserId(), users.getUsers().getParentId(), AppSource.WEB.name(), "");
+
             return new ResponseEntity<>(jwtService.generateToken(users.getUsers().getEmailId(), claims), HttpStatus.OK);
         } else if (users != null && users.getOtpValidity().before(new Date())) {
             return new ResponseEntity<>("Otp expired.", HttpStatus.BAD_REQUEST);
@@ -550,7 +606,7 @@ public class UsersService {
                         fullName.append(" ");
                         fullName.append(user.getLastName());
                     }
-                    eventPublisher.publishEvent(new AddUserEvents(this, users.getUserId(), hostelId, fullName.toString(), user.getParentId()));
+                    eventPublisher.publishEvent(new AddUserEvents(this, user.getUserId(), hostelId, fullName.toString(), user.getParentId()));
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             }
@@ -579,7 +635,7 @@ public class UsersService {
         }
     }
 
-    public ResponseEntity<?> deleteUser(String userId) {
+    public ResponseEntity<?> deleteUser(String hostelId, String userId) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
             Users inputUser = userRepository.findUserByUserIdAndParentId(userId,users.getParentId());
@@ -593,9 +649,13 @@ public class UsersService {
                     return new ResponseEntity<>("Admin user cannot be deleted", HttpStatus.FORBIDDEN);
                 }
 
-                inputUser.setDeleted(true);
-                inputUser.setActive(false);
-                userRepository.save(inputUser);
+                if ( bankingService.deleteBankForUser(inputUser.getUserId(), hostelId)) {
+                    inputUser.setDeleted(true);
+                    inputUser.setActive(false);
+                    userRepository.save(inputUser);
+                }
+
+
                 return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
 
             } else {
@@ -653,12 +713,22 @@ public class UsersService {
                 if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PROFILE, Utils.PERMISSION_UPDATE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
+                if (payloads == null) {
+                    return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
+                if (payloads.mobile() != null) {
+                    int isMobileExsists = userRepository.getUsersCountByMobile(adminId, payloads.mobile());
+                    if (isMobileExsists > 0) {
+                        return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                    }
+                }
 
                 Users adminUser = userRepository.findUserByUserId(adminId);
 
                 if (adminUser == null) {
                     return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
                 }
+
 
                 Address add = adminUser.getAddress();
                 if (add == null ) {
@@ -687,6 +757,11 @@ public class UsersService {
                 if (payloads.lastName() != null && !payloads.lastName().equalsIgnoreCase("")) {
                     adminUser.setLastName(payloads.lastName());
                 }
+                else {
+                    if (adminUser.getLastName() != null) {
+                        adminUser.setLastName(null);
+                    }
+                }
                 if (payloads.mobile() != null && !payloads.mobile().equalsIgnoreCase("")) {
                     adminUser.setMobileNo(payloads.mobile());
                     //high priority, check mobile exist
@@ -695,11 +770,24 @@ public class UsersService {
                 if (payloads.houseNo() != null && !payloads.houseNo().equalsIgnoreCase("")) {
                     add.setHouseNo(payloads.houseNo());
                 }
+                else {
+                    if (add.getHouseNo() != null) {
+                        add.setHouseNo(null);
+                    }
+                }
                 if (payloads.street() != null && !payloads.street().equalsIgnoreCase("")) {
                     add.setStreet(payloads.street());
                 }
+                else if (add.getStreet() != null) {
+                    add.setStreet(null);
+                }
                 if (payloads.landmark() != null && !payloads.landmark().equalsIgnoreCase("")) {
                     add.setLandMark(payloads.landmark());
+                }
+                else {
+                    if (add.getLandMark() != null) {
+                        add.setLandMark(null);
+                    }
                 }
                 if (payloads.city() != null && !payloads.city().equalsIgnoreCase("")) {
                     add.setCity(payloads.city());
@@ -807,5 +895,167 @@ public class UsersService {
                 .stream()
                 .map(Users::getUserId)
                 .toList();
+    }
+
+    public ResponseEntity<?> setupPin(String userId, SetupPin pin) {
+        if (pin == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (pin.pin() == null) {
+            return new ResponseEntity<>(Utils.PIN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        Users users = userRepository.findUserByUserId(userId);
+        if (users == null) {
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
+        }
+        UsersConfig config = users.getConfig();
+        if (config != null) {
+            if (config.getPin() == null || config.getPin() == 0) {
+                config.setPin(pin.pin());
+                config.setUser(users);
+                users.setConfig(config);
+                userRepository.save(users);
+                return generateToken(config);
+            }
+            else {
+                return new ResponseEntity<>(Utils.PIN_ALREADY_SETUP, HttpStatus.BAD_REQUEST);
+            }
+        }
+        else {
+            config = new UsersConfig();
+            config.setUser(users);
+            config.setPin(pin.pin());
+            users.setConfig(config);
+            userRepository.save(users);
+            return generateToken(config);
+        }
+    }
+
+    public ResponseEntity<?> verifyPin(String userId, VerifyPin pin) {
+        if (userId == null) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (pin == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (pin.pin() == null) {
+            return new ResponseEntity<>(Utils.PIN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        UsersConfig usersConfig = usersConfigRepository.findByUser_UserIdAndPin(userId, pin.pin()).orElse(null);
+        if (usersConfig == null) {
+            return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
+        }
+
+       if (usersConfig.getUser() == null) {
+           return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
+       }
+
+
+        return generateToken(usersConfig);
+    }
+
+    public ResponseEntity<?> generateToken(UsersConfig usersConfig) {
+        Users users = usersConfig.getUser();
+        UserDetails userDetails = myUserDetailService.loadUserByUsername(users.getUserId());
+
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities()
+                );
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
+        }
+
+        HashMap<String, Object> claims = new HashMap<>();
+        claims.put("userId", users.getUserId());
+        claims.put("role", rolesService.findById(users.getRoleId()));
+
+        Long validity = System.currentTimeMillis() + (1000L * 60 * 60 * 24 * 15);
+        loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.MOBILE.name(), "Android");
+        String token = jwtService.generateMobileToken(authentication.getName(), claims, validity);
+        com.smartstay.smartstay.responses.user.VerifyPin vPin = new com.smartstay.smartstay.responses.user.VerifyPin(validity, token);
+
+        return new ResponseEntity<>(token, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> addFCMToken(UpdateFCMToken updateFCMToken) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userRepository.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (updateFCMToken == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (updateFCMToken.token() == null) {
+            return new ResponseEntity<>(Utils.TOKEN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+
+        UsersConfig usersConfig = users.getConfig();
+        if (usersConfig != null) {
+            if (updateFCMToken.source().equalsIgnoreCase("WEB")) {
+                usersConfig.setFcmWebToken(updateFCMToken.token());
+                usersConfigRepository.save(usersConfig);
+            }
+            else {
+                usersConfig.setFcmToken(updateFCMToken.token());
+                usersConfigRepository.save(usersConfig);
+            }
+
+            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+        }
+        else {
+            usersConfig = new UsersConfig();
+            usersConfig.setUser(users);
+            if (updateFCMToken.source().equalsIgnoreCase("WEB")) {
+                usersConfig.setFcmWebToken(updateFCMToken.token());
+            }
+            else {
+                usersConfig.setFcmToken(updateFCMToken.token());
+            }
+
+            users.setConfig(usersConfig);
+
+            userRepository.save(users);
+
+            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+        }
+
+
+    }
+
+    public ResponseEntity<?> logout(Logout logout) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (logout == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        UsersConfig usersConfig = users.getConfig();
+        if (usersConfig != null) {
+            if (logout.source().equalsIgnoreCase("WEB")) {
+                usersConfig.setFcmWebToken(null);
+            }
+            else if (logout.source().equalsIgnoreCase("MOBILE")) {
+                usersConfig.setFcmToken(null);
+            }
+
+            usersConfigRepository.save(usersConfig);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

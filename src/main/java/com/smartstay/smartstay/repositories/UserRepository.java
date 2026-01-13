@@ -118,12 +118,19 @@ public interface UserRepository extends JpaRepository<Users, String> {
     @Query("SELECT count(u) FROM Users u where u.emailId=:emailId and u.userId !=:userId")
     int getUsersCountByEmail(String userId, String emailId);
 
+    @Query("""
+            SELECT count(u) FROM Users u where u.mobileNo=:mobile and u.userId !=:userId
+            """)
+    int getUsersCountByMobile(@Param("userId") String userId, @Param("mobile") String mobile);
+
     Users findByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(String userId,String parentId);
 
     @Query("""
             SELECT u FROM Users u WHERE u.userId IN (:listUsers) AND (u.roleId=1 OR u.roleId=2)
             """)
     List<Users> findAdminUsersBasedOnHostelIdFromListUsers(List<String> listUsers);
+
+    Users findByEmailIdAndPasswordAndIsDeletedFalse(String emailId, String password);
 
 
 

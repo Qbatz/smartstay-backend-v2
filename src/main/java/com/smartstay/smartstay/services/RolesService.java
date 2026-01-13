@@ -145,7 +145,7 @@ public class RolesService {
 
     public ResponseEntity<?> addRole(AddRoles roleData) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
@@ -157,12 +157,12 @@ public class RolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        if (rolesRepository.existsByParentIdAndRoleName(roleData.roleName(), user.getParentId()) > 0) {
+        if (rolesRepository.existsByParentIdAndRoleName(roleData.roleName(), roleData.hostelId()) > 0) {
             return new ResponseEntity<>(Utils.ROLE_NAME_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
         if (hostelV1Repository.findByHostelIdAndParentId(roleData.hostelId(),user.getParentId()) == null){
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
         RolesV1 role = new RolesV1();

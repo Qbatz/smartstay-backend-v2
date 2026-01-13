@@ -33,7 +33,6 @@ public class InvoiceScheduler {
     @Scheduled(cron = "0 58 23 * * *")
     public void generateInvoice() {
 
-
         List<com.smartstay.smartstay.dao.BillingRules> listBillingRules = hostelConfigService.findAllHostelsHavingBillingToday();
 
         List<HostelV1> listHostels = listBillingRules

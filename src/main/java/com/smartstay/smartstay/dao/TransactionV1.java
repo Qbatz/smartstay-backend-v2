@@ -28,7 +28,7 @@ public class TransactionV1 {
     private String isInvoice;
     private String customerId;
     private Date paymentDate;
-    private String receiptMode;
+    private String transactionMode;
     //auto generated
     private String transactionReferenceId;
     //card/gpay or cash or bank

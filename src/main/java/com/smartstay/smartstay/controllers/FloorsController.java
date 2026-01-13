@@ -22,7 +22,6 @@ public class FloorsController {
     @Autowired
     private FloorsService floorsService;
 
-
     @GetMapping("/all-floors/{hostelId}")
     public ResponseEntity<?> getAllFloors(@PathVariable("hostelId") String hostelId) {
         return floorsService.getAllFloors(hostelId);

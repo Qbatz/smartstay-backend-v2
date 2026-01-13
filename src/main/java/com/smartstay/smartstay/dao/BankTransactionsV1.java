@@ -30,6 +30,8 @@ public class BankTransactionsV1 {
     //assets or rent or advance or expense
     private String source;
     private String hostelId;
+    //transactionId from transaction v1 table
+    private String transactionNumber;
     private Date transactionDate;
     private Date createdAt;
     private String createdBy;

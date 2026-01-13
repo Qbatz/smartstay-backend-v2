@@ -16,12 +16,13 @@ public class BillingRules {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     private Integer billingStartDate;
-    private Integer billingDueDate;
     private Integer billDueDays;
     private Integer noticePeriod;
     private boolean isInitial;
     private Date startFrom;
     private Date endTill;
+    private Date createdAt;
+    private String createdBy;
 
     @ManyToOne
     @JoinColumn(name = "hostel_id")

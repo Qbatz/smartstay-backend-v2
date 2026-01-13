@@ -77,4 +77,10 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
             """, nativeQuery = true)
     List<RoomInfo> getRoomInfo(@Param("roomId") List<Integer> roomId);
 
+    @Query(value = """
+            SELECT rms.room_id as roomId, rms.room_name as roomName, flr.floor_id as floorId, flr.floor_name as floorName FROM rooms rms 
+            inner join floors flr on flr.floor_id=rms.floor_id where rms.hostel_id=:hostelId AND rms.room_id NOT in (:roomId)
+            """, nativeQuery = true)
+    List<RoomInfo> getAllRoomsForEb(@Param("hostelId") String hostelId, @Param("roomId") List<Integer> roomId);
+
 }

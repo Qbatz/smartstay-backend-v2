@@ -28,5 +28,6 @@ public interface Invoices {
     Date getInvoiceStartDate();
     String getProfilePic();
     Boolean getCancelled();
+    String getInvoiceMode();
 
 }
