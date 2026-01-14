@@ -8,6 +8,8 @@ import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.Admin.UsersData;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.AppSource;
 import com.smartstay.smartstay.events.AddAdminEvents;
 import com.smartstay.smartstay.events.AddUserEvents;
@@ -81,6 +83,8 @@ public class UsersService {
     private MyUserDetailService myUserDetailService;
     @Autowired
     private LoginHistoryService loginHistoryService;
+    @Autowired
+    private UserActivitiesService userActivitiesService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -146,7 +150,8 @@ public class UsersService {
         address.setUser(users);
         users.setAddress(address);
 
-        userRepository.save(users);
+        Users usr = userRepository.save(users);
+        userActivitiesService.createUser( ActivitySource.PROFILE.name(), ActivitySourceType.CREATE.name(), usr);
 
         return new ResponseEntity<>(new AdminUserResponse("", "", "Created successfully"), HttpStatus.CREATED);
     }
@@ -211,6 +216,7 @@ public class UsersService {
                 claims.put("userId", users.getUserId());
                 claims.put("role", rolesService.findById(users.getRoleId()));
                 loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.WEB.name(), "");
+                userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(), ActivitySourceType.LOGGED_IN.name(), users.getUserId(), users);
                 return new ResponseEntity<>(jwtService.generateToken(authentication.getName(), claims), HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(HttpStatus.FORBIDDEN);
