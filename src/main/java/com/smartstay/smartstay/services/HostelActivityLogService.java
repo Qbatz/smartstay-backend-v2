@@ -26,14 +26,14 @@ public class HostelActivityLogService {
     @Autowired
     private HostelActivityLogRepository activityLogRepository;
 
-    @Autowired
-    private UsersService userService;
+//    @Autowired
+//    private UsersService userService;
 
-    @Autowired
-    private UserHostelService userHostelService;
+//    @Autowired
+//    private UserHostelService userHostelService;
 
-    @Autowired
-    private RolesService rolesService;
+//    @Autowired
+//    private RolesService rolesService;
 
     public HostelActivityLog saveActivityLog(Date loggedAt, String hostelId, String parentId, String sourceId,
             String source, String eventType) {
@@ -60,14 +60,14 @@ public class HostelActivityLogService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
-        Users user = userService.findUserByUserId(userId);
-        if (user == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
+//        Users user = userService.findUserByUserId(userId);
+//        if (user == null) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
 
-        if (!userHostelService.checkHostelAccess(userId, hostelId)) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-        }
+//        if (!userHostelService.checkHostelAccess(userId, hostelId)) {
+//            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+//        }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<HostelActivityLog> logs = activityLogRepository.searchByHostelId(hostelId, search, pageable);

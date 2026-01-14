@@ -2,6 +2,8 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.HostelEventModule;
+import com.smartstay.smartstay.ennum.HostelEventType;
 import com.smartstay.smartstay.payloads.complaints.AddComplaintType;
 import com.smartstay.smartstay.payloads.complaints.UpdateComplaintType;
 import com.smartstay.smartstay.repositories.ComplaintRepository;
@@ -38,6 +40,8 @@ public class ComplaintTypeService {
     @Autowired
     private RolesService rolesService;
 
+    @Autowired
+    private HostelActivityLogService hostelActivityLogService;
 
     public ResponseEntity<?> addComplaintType(AddComplaintType request) {
         if (!authentication.isAuthenticated()) {
@@ -60,7 +64,8 @@ public class ComplaintTypeService {
             return new ResponseEntity<>("Hostel not found.", HttpStatus.BAD_REQUEST);
         }
 
-        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentId(request.complaintTypeName(), request.hostelId(), user.getParentId());
+        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentId(
+                request.complaintTypeName(), request.hostelId(), user.getParentId());
         if (complaintType != null) {
             return new ResponseEntity<>("Complaint type already exist", HttpStatus.BAD_REQUEST);
         }
@@ -75,6 +80,9 @@ public class ComplaintTypeService {
         complaintTypeV1.setIsActive(true);
 
         complaintTypeV1Repository.save(complaintTypeV1);
+        logActivity(request.hostelId(), user.getParentId(), String.valueOf(complaintTypeV1.getComplaintTypeId()),
+                HostelEventType.COMPLAINT_TYPE_CREATED, HostelEventModule.COMPLAINT_TYPE,
+                "Complaint Type Created: " + request.complaintTypeName());
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
@@ -100,12 +108,15 @@ public class ComplaintTypeService {
             return new ResponseEntity<>("Complaint type not found.", HttpStatus.BAD_REQUEST);
         }
 
-        HostelV1 hostelV1 = hostelV1Repository.findByHostelIdAndParentId(complaintTypeV1.getHostelId(), user.getParentId());
+        HostelV1 hostelV1 = hostelV1Repository.findByHostelIdAndParentId(complaintTypeV1.getHostelId(),
+                user.getParentId());
         if (hostelV1 == null) {
             return new ResponseEntity<>("Hostel not found.", HttpStatus.BAD_REQUEST);
         }
 
-        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentIdAndComplaintTypeIdNot(request.complaintTypeName(), request.hostelId(), user.getParentId(), complaintTypeId);
+        ComplaintTypeV1 complaintType = complaintTypeV1Repository
+                .findByComplaintTypeNameAndHostelIdAndParentIdAndComplaintTypeIdNot(request.complaintTypeName(),
+                        request.hostelId(), user.getParentId(), complaintTypeId);
         if (complaintType != null) {
             return new ResponseEntity<>("Complaint type already exist", HttpStatus.BAD_REQUEST);
         }
@@ -120,10 +131,12 @@ public class ComplaintTypeService {
         complaintTypeV1.setUpdatedAt(new Date());
 
         complaintTypeV1Repository.save(complaintTypeV1);
+        logActivity(complaintTypeV1.getHostelId(), user.getParentId(),
+                String.valueOf(complaintTypeV1.getComplaintTypeId()), HostelEventType.COMPLAINT_TYPE_UPDATED,
+                HostelEventModule.COMPLAINT_TYPE, "Complaint Type Updated");
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
-
 
     public ResponseEntity<?> deleteComplaintType(Integer complaintTypeId) {
         if (!authentication.isAuthenticated()) {
@@ -142,14 +155,12 @@ public class ComplaintTypeService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        boolean exist = complaintRepository.existsByComplaintTypeIdAndIsActive(complaintTypeId,true);
+        boolean exist = complaintRepository.existsByComplaintTypeIdAndIsActive(complaintTypeId, true);
         if (exist) {
             return new ResponseEntity<>(
                     "Complaint exists for this ComplaintType so it can't be deleted",
-                    HttpStatus.BAD_REQUEST
-            );
+                    HttpStatus.BAD_REQUEST);
         }
-
 
         ComplaintTypeV1 complaintTypeV1 = complaintTypeV1Repository.findById(complaintTypeId).orElse(null);
 
@@ -158,6 +169,9 @@ public class ComplaintTypeService {
         }
 
         complaintTypeV1Repository.delete(complaintTypeV1);
+        logActivity(complaintTypeV1.getHostelId(), user.getParentId(),
+                String.valueOf(complaintTypeV1.getComplaintTypeId()), HostelEventType.COMPLAINT_TYPE_DELETED,
+                HostelEventModule.COMPLAINT_TYPE, "Complaint Type Deleted");
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
@@ -182,5 +196,11 @@ public class ComplaintTypeService {
 
     public List<ComplaintTypeV1> getComplaintTypesById(List<Integer> complaintTypeIds) {
         return complaintTypeV1Repository.findAllById(complaintTypeIds);
+    }
+
+    private void logActivity(String hostelId, String parentId, String sourceId, HostelEventType eventType,
+            HostelEventModule module, String description) {
+        hostelActivityLogService.saveActivityLog(new Date(), hostelId, parentId, sourceId, eventType.getDisplayName(),
+                module.getDisplayName(), description);
     }
 }

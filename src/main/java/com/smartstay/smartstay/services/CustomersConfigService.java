@@ -7,6 +7,8 @@ import com.smartstay.smartstay.dao.CustomersConfig;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.ennum.HostelEventModule;
+import com.smartstay.smartstay.ennum.HostelEventType;
 import com.smartstay.smartstay.payloads.recurring.UpdateRecurring;
 import com.smartstay.smartstay.repositories.CustomersConfigRepository;
 import com.smartstay.smartstay.responses.recurring.CustomersList;
@@ -39,6 +41,9 @@ public class CustomersConfigService {
     @Autowired
     private HostelService hostelService;
     private CustomersService customersService;
+
+    @Autowired
+    private HostelActivityLogService hostelActivityLogService;
 
     @Autowired
     private void setCustomersService(@Lazy CustomersService customersService) {
@@ -113,6 +118,8 @@ public class CustomersConfigService {
         }
 
         customersConfigRepository.save(customersConfig);
+        logActivity(hostelId, customerId, String.valueOf(customersConfig.getCustomerId()),
+                HostelEventType.CUSTOMER_CONFIG_UPDATED, HostelEventModule.CUSTOMER_CONFIG,"Updated recurring status to " + customersConfig.getEnabled());
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -130,7 +137,10 @@ public class CustomersConfigService {
         customersConfig.setIsActive(true);
         customersConfig.setEnabled(true);
 
-        return customersConfigRepository.save(customersConfig);
+        CustomersConfig savedConfig = customersConfigRepository.save(customersConfig);
+        logActivity(hostelId, customerId, String.valueOf(savedConfig.getCustomerId()),
+                HostelEventType.CUSTOMER_CONFIG_CREATED, HostelEventModule.CUSTOMER_CONFIG,"Added to recurring customers configuration");
+        return savedConfig;
     }
 
     public List<CustomersConfig> getAllActiveAndEnabledRecurringCustomers(String hostelId) {
@@ -153,5 +163,11 @@ public class CustomersConfigService {
 
     public CustomersConfig findByCustomerIdAndHostelId(String customerId, String hostelId) {
         return customersConfigRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+    }
+
+    private void logActivity(String hostelId, String parentId, String sourceId, HostelEventType eventType,
+            HostelEventModule module,String description) {
+        hostelActivityLogService.saveActivityLog(new Date(), hostelId, parentId, sourceId, eventType.getDisplayName(),
+                module.getDisplayName(),description);
     }
 }
