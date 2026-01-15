@@ -179,7 +179,7 @@ public class AddEBHRListener {
             listAddedReadingsAfterSavings = electricityService.saveAll(listNewElectricityReading);
         }
         else {
-            List<Rooms> listRooms = roomsService.getAllRoomsByHostelId(hostelId);
+            List<Rooms> listRooms = roomsService.getAllRoomsByHostelIdForListener(hostelId);
 
             Double currentReadingForNoOccupants = consumption / listRooms.size();
 

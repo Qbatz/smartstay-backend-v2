@@ -66,7 +66,7 @@ public class AddEbEventListeners {
 
         Date endDate = electricityReadings.getEntryDate();
 
-        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistory.getCustomersByBedIdAndDates(ebEvents.getRoomId(), startDate, endDate);
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistory.getCustomersByRoomIdAndDates(ebEvents.getRoomId(), startDate, endDate);
         if (!listCustomerBedHistory.isEmpty()) {
             Date finalStartDate = startDate;
             long personCount = listCustomerBedHistory

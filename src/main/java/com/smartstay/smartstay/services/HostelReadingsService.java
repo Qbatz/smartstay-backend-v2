@@ -34,10 +34,12 @@ public class HostelReadingsService {
         HostelReadings lastReadings = hostelEBReadingsRepository.lastReading(hostelId);
         double consumption = readings.reading();
         boolean isFirstReading = true;
+        double previousReading = 0.0;
         if (lastReadings != null) {
             consumption = readings.reading() - lastReadings.getCurrentReading() ;
             Date sDate = Utils.addDaysToDate(lastReadings.getEntryDate(), 1);
             billStartDate = sDate;
+            previousReading = lastReadings.getCurrentReading();
         }
         Date readingDate = null;
         if (readings.readingDate() != null) {
@@ -61,7 +63,7 @@ public class HostelReadingsService {
         HostelReadings hr = new HostelReadings();
         hr.setHostelId(hostelId);
         hr.setCurrentReading(readings.reading());
-        hr.setPreviousReading(0.0);
+        hr.setPreviousReading(previousReading);
         hr.setCurrentUnitPrice(electricityConfig.getCharge());
         hr.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
         hr.setBillStartDate(billStartDate);
@@ -79,25 +81,26 @@ public class HostelReadingsService {
 
     }
 
-    public List<com.smartstay.smartstay.dto.electricity.HostelReadings> getLastReading(String hostelId) {
+    public List<com.smartstay.smartstay.dto.electricity.HostelReadings> getLastReading(HostelReadings hostelReadings) {
         List<com.smartstay.smartstay.dto.electricity.HostelReadings> listHr = new ArrayList<>();
-        HostelReadings hr = hostelEBReadingsRepository.lastReading(hostelId);
-        if (hr != null) {
+
+        if (hostelReadings != null) {
             com.smartstay.smartstay.dto.electricity.HostelReadings hr1 = new com.smartstay.smartstay.dto.electricity.HostelReadings(
-                    hr.getId(),
-                    Utils.dateToString(hr.getBillStartDate()),
-                    Utils.dateToString(hr.getBillEndDate()),
-                    Utils.dateToString(hr.getEntryDate()),
-                    hr.getCurrentReading(),
-                    hr.getConsumption()
+                    hostelReadings.getId(),
+                    Utils.dateToString(hostelReadings.getBillStartDate()),
+                    Utils.dateToString(hostelReadings.getBillEndDate()),
+                    Utils.dateToString(hostelReadings.getEntryDate()),
+                    hostelReadings.getCurrentReading(),
+                    hostelReadings.getConsumption()
             );
 
             listHr.add(hr1);
         }
-
-
-
         return listHr;
+    }
+
+    public HostelReadings getLatestReading(String hostelId) {
+        return hostelEBReadingsRepository.lastReading(hostelId);
     }
 
     public ResponseEntity<?> updateEbReading(String hostelId, String readingId, UpdateElectricity updateElectricity) {
@@ -188,20 +191,18 @@ public class HostelReadingsService {
 
     public EBInfo getEbInfoForFinalSettlement(String hostelId, Date leavingDate, Double unitPrice) {
         HostelReadings hr = hostelEBReadingsRepository.lastReading(hostelId);
-
-        boolean canAdd = false;
-        if (Utils.compareWithTwoDates(leavingDate, hr.getEntryDate()) <= 0) {
-            canAdd = false;
-        }
-        else {
-            canAdd = true;
-        }
-
         EBInfo ebInfo = null;
         if (hr != null) {
+            boolean canAdd = false;
+            if (Utils.compareWithTwoDates(leavingDate, hr.getEntryDate()) <= 0) {
+                canAdd = false;
+            }
+            else {
+                canAdd = true;
+            }
             ebInfo = new EBInfo(hr.getCurrentReading(),
                     unitPrice,
-                   Utils.dateToString(hr.getEntryDate()),
+                    Utils.dateToString(hr.getEntryDate()),
                     EBReadingType.HOSTEL_READING.name(),
                     true,
                     canAdd,

@@ -225,7 +225,7 @@ public class InvoiceV1Service {
     /**
      * this is used only for booking purpose. Do not use it any where
      */
-    public String addBookingInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String bankId, String referenceNumber) {
+    public String addBookingInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String bankId, String referenceNumber, Date bookingDate) {
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
             BillTemplates templates = templateService.getBillTemplate(hostelId, InvoiceType.ADVANCE.name());
@@ -274,7 +274,9 @@ public class InvoiceV1Service {
             invoicesV1.setInvoiceType(InvoiceType.BOOKING.name());
             invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
             invoicesV1.setCreatedBy(authentication.getName());
-            invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(new Date(), 0));
+            invoicesV1.setInvoiceStartDate(bookingDate);
+            invoicesV1.setInvoiceEndDate(bookingDate);
+            invoicesV1.setInvoiceDueDate(bookingDate);
             invoicesV1.setCustomerMobile(customerMobile);
             invoicesV1.setCustomerMailId(customerMailId);
             invoicesV1.setCgst(cgst);

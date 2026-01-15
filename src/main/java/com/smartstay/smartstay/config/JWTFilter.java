@@ -38,7 +38,6 @@ public class JWTFilter extends OncePerRequestFilter {
         String token = null;
         String userName = null;
 
-        try {
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 token = authHeader.substring(7);
                 userName = jwtService.extractUserName(token);
@@ -81,11 +80,7 @@ public class JWTFilter extends OncePerRequestFilter {
 
 
 
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Please login again\"}");
-        }
+
     }
 }
 

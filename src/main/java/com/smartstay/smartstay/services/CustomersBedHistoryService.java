@@ -166,7 +166,7 @@ public class CustomersBedHistoryService {
         return occupantsCountsByRoomId;
     }
 
-    public List<CustomersBedHistory> getCustomersByBedIdAndDates(Integer roomId, Date startDate, Date endDate) {
+    public List<CustomersBedHistory> getCustomersByRoomIdAndDates(Integer roomId, Date startDate, Date endDate) {
         return customerBedHistoryRepository.findByRoomIdStartAndEndDate(roomId, startDate, endDate);
     }
 
