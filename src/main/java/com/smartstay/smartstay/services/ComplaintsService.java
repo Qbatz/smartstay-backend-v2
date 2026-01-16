@@ -290,12 +290,12 @@ public class ComplaintsService {
             listComplaintUpdates = new ArrayList<>();
         }
         String status = null;
-        if (request.status().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name())) {
-            status = ComplaintStatus.ASSIGNED.name();
-        } else if (request.status().equalsIgnoreCase(ComplaintStatus.PENDING.name())) {
+        if (request.status().equalsIgnoreCase(ComplaintStatus.PENDING.name())) {
             status = ComplaintStatus.PENDING.name();
         } else if (request.status().equalsIgnoreCase(ComplaintStatus.RESOLVED.name())) {
             status = ComplaintStatus.RESOLVED.name();
+        } else if (request.status().equalsIgnoreCase(ComplaintStatus.IN_PROGRESS.name())) {
+            status = ComplaintStatus.IN_PROGRESS.name();
         }
 
         ComplaintUpdates cu = new ComplaintUpdates();
