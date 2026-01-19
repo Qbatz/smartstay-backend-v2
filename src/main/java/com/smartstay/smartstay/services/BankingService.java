@@ -515,7 +515,7 @@ public class BankingService {
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> selfTransfer(String hostelId, SelfTransfer selfTransfer) r̥{
+    public ResponseEntity<?> selfTransfer(String hostelId, SelfTransfer selfTransfer) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }

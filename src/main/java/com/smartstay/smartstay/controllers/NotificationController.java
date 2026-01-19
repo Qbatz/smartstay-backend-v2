@@ -21,4 +21,10 @@ public class NotificationController {
     public ResponseEntity<?> getNotifications(@PathVariable("hostelId") String hostelId) {
         return notificationService.getAllNotifications(hostelId);
     }
+
+    @PutMapping("/read/{hostelId}")
+    public ResponseEntity<?> updateNotificationsAsRead(@PathVariable("hostelId") String hostelId) {
+        return notificationService.updateNotificationsAsRead(hostelId);
+    }
+
 }

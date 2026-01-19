@@ -9,7 +9,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface HostelActivityLogRepository extends JpaRepository<HostelActivityLog, Long> {
 
-    @Query("SELECT h FROM HostelActivityLog h WHERE h.hostelId = :hostelId AND (:search IS NULL OR :search = '' OR LOWER(h.description) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(h.eventType) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(h.source) LIKE LOWER(CONCAT('%', :search, '%')))")
-    Page<HostelActivityLog> searchByHostelId(@Param("hostelId") String hostelId, @Param("search") String search,
-            Pageable pageable);
+//    @Query("SELECT h FROM HostelActivityLog h WHERE h.hostelId = :hostelId AND (:search IS NULL OR :search = '' OR LOWER(h.description) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(h.eventType) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(h.source) LIKE LOWER(CONCAT('%', :search, '%')))")
+//    Page<HostelActivityLog> searchByHostelId(@Param("hostelId") String hostelId, @Param("search") String search,
+//            Pageable pageable);
+
+    @Query("SELECT h FROM HostelActivityLog h WHERE h.hostelId = :hostelId")
+    Page<HostelActivityLog> searchByHostelId(@Param("hostelId") String hostelId,
+                                             Pageable pageable);
 }

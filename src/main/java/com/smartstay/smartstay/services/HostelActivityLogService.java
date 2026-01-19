@@ -49,7 +49,6 @@ public class HostelActivityLogService {
         hostelActivityLog.setSourceId(sourceId);
         hostelActivityLog.setSource(source);
         hostelActivityLog.setEventType(eventType);
-        hostelActivityLog.setDescription(description);
         hostelActivityLog.setLoggedAt(loggedAt);
         hostelActivityLog.setCreatedAt(new Date());
         return activityLogRepository.save(hostelActivityLog);
@@ -70,7 +69,7 @@ public class HostelActivityLogService {
 //        }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<HostelActivityLog> logs = activityLogRepository.searchByHostelId(hostelId, search, pageable);
+        Page<HostelActivityLog> logs = activityLogRepository.searchByHostelId(hostelId, pageable);
 
         return new ResponseEntity<>(logs, HttpStatus.OK);
     }
