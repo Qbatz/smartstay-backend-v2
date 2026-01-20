@@ -1064,4 +1064,12 @@ public class UsersService {
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    public void addUserLog(String hostelId, String amenityId, ActivitySource activitySource, ActivitySourceType activitySourceType, Users users) {
+        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), amenityId, users);
+    }
+
+    public void addUserLog(String hostelId, String amenityId, ActivitySource activitySource, ActivitySourceType activitySourceType, Users user, List<String> customerIds) {
+        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), amenityId, user, customerIds);
+    }
 }

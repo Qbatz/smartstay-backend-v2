@@ -57,7 +57,7 @@ public class ElectricityRoomIdEbMapper implements Function<ElectricityReadings, 
                     .max(Comparator.comparing(CustomersBedHistory::getEndDate))
                     .orElse(null);
             if (bedHistory != null) {
-                if (Utils.compareWithTwoDates(electricityReadings.getEntryDate(), bedHistory.getStartDate()) > 0) {
+                if (Utils.compareWithTwoDates(electricityReadings.getEntryDate(), bedHistory.getStartDate()) >= 0) {
                     fromDate = Utils.dateToString(Utils.addDaysToDate(electricityReadings.getEntryDate(), 1));
                     if (bedHistory.getEndDate() != null) {
                         toDate = Utils.dateToString(bedHistory.getEndDate());

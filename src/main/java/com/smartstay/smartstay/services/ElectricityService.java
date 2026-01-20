@@ -1430,6 +1430,7 @@ public class ElectricityService {
             return null;
         }
         boolean canAdd = false;
+        double pendingEbAmount = 0.0;
 
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
         if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
@@ -1457,11 +1458,22 @@ public class ElectricityService {
                     .toList();
 //            List<RoomInfo> roomInfo = roomsService.getRoom(ids);
             List<BedDetails> bedDetails = bedsService.getBedDetails(ids);
-            List<ElectricityReadings> listLatestReadingsByHistory = electricityReadingRepository.findLatestEntriesByHostelIdAndListRooms(hostelId, ids);
+
+//            List<ElectricityReadings> listLatestReadingsByHistory = electricityReadingRepository.findLatestEntriesByHostelIdAndListRooms(hostelId, ids);
+            List<ElectricityReadings> listLatestReadingsByHistory = new ArrayList<>();
             List<ElectricityReadings> missedReading = new ArrayList<>();
             List<MissedEbRooms> missedEbForRoom = new ArrayList<>();
             List<PendingEbForSettlement> pendingEb = new ArrayList<>();
             List<ElectricityReadings> pendingHistoryAmount = new ArrayList<>();
+
+            if (listBeds != null && !listBeds.isEmpty()) {
+                listBeds.forEach(ite -> {
+                    List<ElectricityReadings> pElectricity = electricityReadingRepository.findPendingElectricitiesBetweenDates(ite.getHostelId(), ite.getRoomId(), ite.getStartDate(), ite.getEndDate());
+                    if (pElectricity != null && !pElectricity.isEmpty()) {
+                        listLatestReadingsByHistory.addAll(pElectricity);
+                    }
+                });
+            }
 
 
             if (listLatestReadingsByHistory != null && !listLatestReadingsByHistory.isEmpty()) {
@@ -1478,20 +1490,35 @@ public class ElectricityService {
                         }
                     });
                     if (pendingHistoryAmount != null && !pendingHistoryAmount.isEmpty()) {
-
+                        System.out.println("data is not empty");
                     }
-                    pendingEb.addAll(customerEbHistory
+                    List<PendingEbForSettlement> listPending = customerEbHistory
                             .stream()
                             .map(i -> new PendingEbMapper(listBeds, bedDetails).apply(i))
-                            .toList());
+                            .toList();
+                    pendingEb.addAll(listPending);
+                    pendingEbAmount = listPending
+                            .stream()
+                            .mapToDouble(PendingEbForSettlement::amount)
+                            .sum();
                 }
                 else {
-                    listLatestReadingsByHistory.forEach(item -> {
-                        pendingHistoryAmount.add(item);
-                    });
+                    pendingHistoryAmount.addAll(listLatestReadingsByHistory);
 
                     List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customerId, pendingHistoryAmount, bedDetails);
-                    pendingEb.addAll(listEbRooms);
+                    if (listEbRooms != null && !listEbRooms.isEmpty()) {
+                        pendingEbAmount = listEbRooms
+                                .stream()
+                                .mapToDouble(i -> {
+                                    if (i.amount() != null) {
+                                        return i.amount();
+                                    }
+                                    return 0.0;
+                                })
+                                .sum();
+                        pendingEb.addAll(listEbRooms);
+                    }
+
                 }
 
                 listBeds.forEach(item -> {
@@ -1530,6 +1557,7 @@ public class ElectricityService {
                         electricityConfig.getCharge(),
                         Utils.dateToString(readings.getEntryDate()),
                         electricityConfig.getTypeOfReading(),
+                        pendingEbAmount,
                         false,
                         canAdd,
                         missedEbForRoom,
@@ -1540,6 +1568,7 @@ public class ElectricityService {
                         electricityConfig.getCharge(),
                         "NA",
                         electricityConfig.getTypeOfReading(),
+                        pendingEbAmount,
                         false,
                         canAdd,
                         missedEbForRoom,

@@ -77,7 +77,7 @@ public class EbCalculationService {
                                 }
                                 else if (Utils.compareWithTwoDates(i.getBillEndDate(), item.getEndDate()) <= 0) {
                                     //leaving date is later than end date
-                                    totalNoOfPerson[0].set(totalNoOfPerson[0].get() + Utils.findNumberOfDays(i.getBillStartDate(), item.getEndDate()));
+                                    totalNoOfPerson[0].set(totalNoOfPerson[0].get() + Utils.findNumberOfDays(i.getBillStartDate(), i.getBillEndDate()));
 //                                    totalNoOfPerson[0] = totalNoOfPerson[0].get() + Utils.findNumberOfDays(i.getBillStartDate(), item.getEndDate());
                                 }
                             }
@@ -97,16 +97,31 @@ public class EbCalculationService {
                                 }
                             }
                         });
+
+                double unitsPerPersonPerDay = i.getConsumption() / totalNoOfPerson[0].get(); //per day
+                long noOfDaysStayed = Utils.findNumberOfDays(startDate.get(), endDate.get());
+                double totalUnitsPerPersion = unitsPerPersonPerDay * noOfDaysStayed;
+                double unitPrice = 0;
+                if (electricityConfig != null) {
+                    unitPrice = electricityConfig.getCharge();
+                }
+                double price = totalUnitsPerPersion * unitPrice;
+                PendingEbForSettlement pendingEbForSettlement = null;
+                if (bedDetails.get() != null) {
+                    pendingEbForSettlement = new PendingEbForSettlement(bedDetails.get().getRoomId(),
+                            bedDetails.get().getRoomName(),
+                            bedDetails.get().getBedName(),
+                            bedDetails.get().getFloorName(),
+                            totalUnitsPerPersion,
+                            price,
+                            Utils.dateToString(startDate.get()),
+                            Utils.dateToString(endDate.get()));
+                }
+
+                pendingAmount.add(pendingEbForSettlement);
             }
 
-            double unitsPerPersonPerDay = i.getConsumption() / totalNoOfPerson[0].get(); //per day
-            long noOfDaysStayed = Utils.findNumberOfDays(startDate.get(), endDate.get());
-            double totalUnitsPerPersion = unitsPerPersonPerDay * noOfDaysStayed;
-            double unitPrice = 0;
-            if (electricityConfig != null) {
-                unitPrice = electricityConfig.getCharge();
-            }
-            double price = totalUnitsPerPersion * unitPrice;
+
 
 //            MissedEbRooms missedEbRooms = new MissedEbRooms(bedDetails.get().getRoomId(),
 //                    bedDetails.get().getRoomName(),
@@ -115,16 +130,7 @@ public class EbCalculationService {
 //                    Utils.dateToString(startDate.get()),
 //                    Utils.dateToString(endDate.get()));
 
-            PendingEbForSettlement pendingEbForSettlement = new PendingEbForSettlement(bedDetails.get().getRoomId(),
-                    bedDetails.get().getRoomName(),
-                    bedDetails.get().getBedName(),
-                    bedDetails.get().getFloorName(),
-                    totalUnitsPerPersion,
-                    price,
-                    Utils.dateToString(startDate.get()),
-                    Utils.dateToString(endDate.get()));
 
-            pendingAmount.add(pendingEbForSettlement);
 
         });
 
