@@ -109,11 +109,11 @@ public class EbCalculationService {
                 PendingEbForSettlement pendingEbForSettlement = null;
                 if (bedDetails.get() != null) {
                     pendingEbForSettlement = new PendingEbForSettlement(bedDetails.get().getRoomId(),
-                            bedDetails.get().getRoomName(),
                             bedDetails.get().getBedName(),
+                            bedDetails.get().getRoomName(),
                             bedDetails.get().getFloorName(),
-                            totalUnitsPerPersion,
-                            price,
+                            Utils.roundOffWithTwoDigit(totalUnitsPerPersion),
+                            Utils.roundOfDouble(price),
                             Utils.dateToString(startDate.get()),
                             Utils.dateToString(endDate.get()));
                 }

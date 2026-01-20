@@ -1468,7 +1468,11 @@ public class ElectricityService {
 
             if (listBeds != null && !listBeds.isEmpty()) {
                 listBeds.forEach(ite -> {
-                    List<ElectricityReadings> pElectricity = electricityReadingRepository.findPendingElectricitiesBetweenDates(ite.getHostelId(), ite.getRoomId(), ite.getStartDate(), ite.getEndDate());
+                    Date endDate = new Date();
+                    if (ite.getEndDate() != null) {
+                        endDate = ite.getEndDate();
+                    }
+                    List<ElectricityReadings> pElectricity = electricityReadingRepository.findPendingElectricitiesBetweenDates(ite.getHostelId(), ite.getRoomId(), ite.getStartDate(), endDate);
                     if (pElectricity != null && !pElectricity.isEmpty()) {
                         listLatestReadingsByHistory.addAll(pElectricity);
                     }
@@ -1525,7 +1529,12 @@ public class ElectricityService {
                     List<ElectricityReadings> missedTemp = listLatestReadingsByHistory
                             .stream()
                             .filter(i -> i.getRoomId().equals(item.getRoomId()))
-                            .filter(i -> item.getEndDate() == null || Utils.compareWithTwoDates(i.getEntryDate(), item.getEndDate()) < 0)
+                            .filter(i -> {
+                                if (item.getEndDate() == null) {
+                                    return Utils.compareWithTwoDates(i.getEntryDate(), leavingDate) < 0;
+                                }
+                                return Utils.compareWithTwoDates(i.getEntryDate(), item.getEndDate()) < 0;
+                            })
                             .toList();
                     missedReading.addAll(missedTemp);
 
