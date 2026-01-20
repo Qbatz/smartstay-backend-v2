@@ -121,7 +121,7 @@ public class HostelConfigService {
         if (listBillingDates != null) {
             listHostels = listBillingDates
                     .stream()
-                    .map(i -> i.getHostel())
+                    .map(BillingRules::getHostel)
                     .toList();
         }
         return listHostels;

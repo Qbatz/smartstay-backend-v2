@@ -173,5 +173,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='SETTLEMENT'
             """)
     List<InvoicesV1> findAllSettlementInvoices();
+    @Query("""
+            SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='BOOKING'
+            """)
+    List<InvoicesV1> findAllBookingInvoices();
 
 }

@@ -246,6 +246,10 @@ public class RoomsService {
         }
     }
 
+    public List<Rooms> getAllRoomsByHostelIdForListener(String hostelId) {
+            return roomRepository.findByHostelId(hostelId);
+    }
+
     public List<RoomInfoForEB> getBedsNotRegisteredOnEB(List<Integer> listRoomsInMeterReadings, String hostelId) {
         if (listRoomsInMeterReadings.isEmpty()) {
             return roomRepository.getAllRoomsForEb(hostelId);

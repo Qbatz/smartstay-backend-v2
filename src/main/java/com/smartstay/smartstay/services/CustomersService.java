@@ -377,12 +377,11 @@ public class CustomersService {
 
                 customers.setExpJoiningDate(joiningDate);
 
-                String invoiceId = invoiceService.addBookingInvoice(customers.getCustomerId(), payloads.bookingAmount(),
-                        InvoiceType.BOOKING.name(), hostelId, customers.getMobile(), customers.getEmailId(),
-                        payloads.bankId(), payloads.referenceNumber());
-                // List<TransactionV1> transactions =
-                // transactionService.addBookingAmount(customers, payloads.bookingAmount());
-                // customers.setTransactions(transactions);
+
+                String invoiceId = invoiceService.addBookingInvoice(customers.getCustomerId(), payloads.bookingAmount(), InvoiceType.BOOKING.name(), hostelId, customers.getMobile(), customers.getEmailId(), payloads.bankId(), payloads.referenceNumber(), dt);
+//                List<TransactionV1> transactions = transactionService.addBookingAmount(customers, payloads.bookingAmount());
+//                customers.setTransactions(transactions);
+
                 customersRepository.save(customers);
 
                 bookingsService.addBooking(hostelId, payloads);
