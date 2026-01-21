@@ -7,6 +7,8 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedInformations;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.amenity.*;
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
@@ -153,7 +155,9 @@ public class AmenitiesService {
         amenitiesV1.setAmenityName(request.amenityName());
         amenitiesV1.setAmenityAmount(request.amount());
         amenitiesV1.setParentId(user.getParentId());
-        amentityRepository.save(amenitiesV1);
+        AmenitiesV1 amenities = amentityRepository.save(amenitiesV1);
+
+        usersService.addUserLog(hostelId, amenities.getAmenityId(), ActivitySource.AMENITY, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 
@@ -284,6 +288,7 @@ public class AmenitiesService {
         }
 
         if (request.customers() != null) {
+            List<String> customerIds = new ArrayList<>();
             for (String customerId : request.customers()) {
                 CustomersAmenity customerAmenity = new CustomersAmenity();
                 customerAmenity.setAmenityId(amenityId);
@@ -294,8 +299,13 @@ public class AmenitiesService {
                 customerAmenity.setStartDate(new Date());
                 customerAmenity.setUpdatedBy(user.getUserId());
                 customerAmenityRepository.save(customerAmenity);
+                customerIds.add(customerId);
+            }
+            if (!customerIds.isEmpty()) {
+                usersService.addUserLog(hostelId, amenityId, ActivitySource.AMENITY, ActivitySourceType.ASSIGN, user, customerIds);
             }
         }
+
 
 
         return new ResponseEntity<>(

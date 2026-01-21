@@ -1571,6 +1571,19 @@ public class CustomersService {
                 .map(item -> new UnpaidInvoicesMapper(lisPartialPayments).apply(item))
                 .toList();
 
+        List<Integer> roomId = new ArrayList<>();
+        BedDetails details = bedsService.getBedDetails(bookingDetails.getBedId());
+        roomId.add(details.getRoomId());
+
+        EBInfo ebInfo = electricityService.getEbInfoForFinalSettlement(customers.getCustomerId(), customers.getHostelId(), roomId, lDate);
+        double electricityAmount = 0.0;
+        if (ebInfo != null) {
+            if (ebInfo.pendingEbAmount() != null) {
+                electricityAmount = ebInfo.pendingEbAmount();
+                totalAmountToBePaid = totalAmountToBePaid + ebInfo.pendingEbAmount();
+            }
+        }
+
         CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(),
                 customers.getFirstName(),
                 customers.getLastName(),
@@ -1641,14 +1654,12 @@ public class CustomersService {
                 unpaidInvoiceAmount,
                 0.0,
                 0.0,
+                electricityAmount,
+                unpaidInvoiceAmount,
                 isRefundable);
 
         settlementDetailsService.addSettlementForCustomer(customerId, lDate);
-        List<Integer> roomId = new ArrayList<>();
-        BedDetails details = bedsService.getBedDetails(bookingDetails.getBedId());
-        roomId.add(details.getRoomId());
 
-        EBInfo ebInfo = electricityService.getEbInfoForFinalSettlement(customers.getCustomerId(), customers.getHostelId(), roomId, lDate);
 
         FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, rentInfo, settlementInfo);
 
@@ -1672,6 +1683,7 @@ public class CustomersService {
         double totalAmountToBePaid = 0.0;
         double totalCurrentMonthRent = 0.0;
         double totalCurrentMonthRentPaid = 0.0;
+        double electricityAmount = 0.0;
         double refundableRent = 0.0;
 
         if (customers.getFirstName() != null) {
@@ -1823,6 +1835,8 @@ public class CustomersService {
                 .map(BedDetails::getRoomId)
                 .toList();
 
+
+
         List<RentBreakUp> breakUpList = new ArrayList<>(currentMonthInvoicesBeforeBedChange
                 .stream()
                 .map(i -> new FinalSettlementMapper(listCustomerBedHistories, listBedDetails).apply(i))
@@ -1875,19 +1889,30 @@ public class CustomersService {
             totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
         }
 
+        EBInfo ebInfo = electricityService.getEbInfoForFinalSettlement(customers.getCustomerId(), customers.getHostelId(), roomIds, leavingDate);
+        if (ebInfo != null) {
+            if (ebInfo.pendingEbAmount() != null) {
+                electricityAmount = ebInfo.pendingEbAmount();
+                totalAmountToBePaid = totalAmountToBePaid + ebInfo.pendingEbAmount();
+            }
+        }
+
         if (totalAmountToBePaid < 0) {
             isRefundable = true;
         }
+
+
 
         SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
                 totalDeductions,
                 oldInvoiceBalanceAmount,
                 refundableRent,
                 0.0,
+                electricityAmount,
+                oldInvoiceBalanceAmount,
                 isRefundable);
 
         settlementDetailsService.addSettlementForCustomer(customers.getCustomerId(), leavingDate);
-        EBInfo ebInfo = electricityService.getEbInfoForFinalSettlement(customers.getCustomerId(), customers.getHostelId(), roomIds, leavingDate);
 
         FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, rentInfo, settlementInfo);
 

@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class UserActivitiesService {
@@ -65,4 +66,27 @@ public class UserActivitiesService {
 
     }
 
+    public void addLoginLog(String hostelId, String date, String source, String operation, String sourceId, Users users, List<String> customerIds) {
+        Date loggedAt = new Date();
+        if (date != null && !date.trim().equalsIgnoreCase("")) {
+            loggedAt = Utils.stringToDate(date.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+
+        UserActivities userActivities = new UserActivities();
+        userActivities.setDescription(ActivityLogUtils.getActivityDescription(source, operation));
+        userActivities.setUserId(users.getUserId());
+        userActivities.setLoggedAt(loggedAt);
+        userActivities.setCreatedAt(new Date());
+        userActivities.setParentId(users.getParentId());
+        userActivities.setSource(source);
+        userActivities.setSourceId(sourceId);
+        userActivities.setActivityType(operation);
+        userActivities.setHostelId(hostelId);
+
+        if (customerIds != null && !customerIds.isEmpty()) {
+            userActivities.setTenantIds(customerIds);
+        }
+
+        userActivitiesRepositories.save(userActivities);
+    }
 }

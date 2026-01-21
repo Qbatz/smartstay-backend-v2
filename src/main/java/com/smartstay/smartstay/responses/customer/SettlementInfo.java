@@ -4,6 +4,8 @@ public record SettlementInfo(Double amountTobePaid,
                              Double totalDeductions,
                              Double payableRent,
                              Double refundableRent,
-                             Double refundableAvance,
+                             Double refundableAdvance,
+                             Double electricityAmount,
+                             Double unpaidInvoiceAmount,
                              boolean isRefundable) {
 }

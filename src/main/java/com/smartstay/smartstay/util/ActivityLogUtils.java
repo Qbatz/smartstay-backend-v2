@@ -9,8 +9,16 @@ public class ActivityLogUtils {
             if (operationType.equalsIgnoreCase(ActivitySourceType.LOGGED_IN.name())) {
                 return "Logged in to smartstay";
             }
-            if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
                 return "Created Account in smartstay";
+            }
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.AMENITY.name())) {
+            if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+                return "Created amenity";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.ASSIGN.name())) {
+                return "Amenity assigned";
             }
         }
         return null;

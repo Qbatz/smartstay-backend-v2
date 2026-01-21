@@ -113,7 +113,7 @@ public class HostelConfigService {
 
     public List<HostelV1> findAHostelsHavingBillingRuleEndingToday() {
         Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DAY_OF_MONTH, 1);
+//        calendar.add(Calendar.DAY_OF_MONTH, 1);
 
         int billingDay = Utils.findDateFromDate(calendar.getTime());
         List<BillingRules> listBillingDates = billingRuleRepository.findAllHostelsHavingTodaysRecurring(billingDay);
