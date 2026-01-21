@@ -118,5 +118,8 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             String firstName, String lastName
     );
 
+        @Query("SELECT COUNT(c) FROM Customers c WHERE c.hostelId = :hostelId AND c.currentStatus IN :statuses")
+        int countByHostelIdAndStatusIn(@Param("hostelId") String hostelId, @Param("statuses") List<String> statuses);
+
 
 }

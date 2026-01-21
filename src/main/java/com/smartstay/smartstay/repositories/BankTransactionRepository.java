@@ -2,12 +2,14 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.BankTransactionsV1;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface BankTransactionRepository extends JpaRepository<BankTransactionsV1, Integer>  {
+public interface BankTransactionRepository extends JpaRepository<BankTransactionsV1, Integer> {
 
     List<BankTransactionsV1> findByBankIdIn(List<String> listBankIds);
 
@@ -21,6 +23,7 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     BankTransactionsV1 findByTransactionNumber(String transactionNumber);
 
-
+    @Query("SELECT COUNT(bt) FROM BankTransactionsV1 bt WHERE bt.hostelId = :hostelId")
+    int countByHostelId(@Param("hostelId") String hostelId);
 
 }
