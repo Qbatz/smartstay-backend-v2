@@ -58,6 +58,10 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     List<PaymentHistoryProjection> getPaymentHistoryByInvoiceId(@Param("invoiceId") String invoiceId);
 
 
+    @Query("SELECT COUNT(t) FROM TransactionV1 t WHERE t.hostelId = :hostelId")
+    int countByHostelId(@Param("hostelId") String hostelId);
 
+    @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId")
+    Double sumPaidAmountByHostelId(@Param("hostelId") String hostelId);
 
 }

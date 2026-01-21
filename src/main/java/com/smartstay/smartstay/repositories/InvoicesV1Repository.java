@@ -178,4 +178,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """)
     List<InvoicesV1> findAllBookingInvoices();
 
+        @Query("SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId = :hostelId")
+        int countByHostelId(@Param("hostelId") String hostelId);
+
+        @Query("SELECT COALESCE(SUM(i.totalAmount), 0) FROM InvoicesV1 i WHERE i.hostelId = :hostelId")
+        Double sumTotalAmountByHostelId(@Param("hostelId") String hostelId);
+
 }
