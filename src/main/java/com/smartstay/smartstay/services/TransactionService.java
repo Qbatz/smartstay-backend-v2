@@ -151,13 +151,7 @@ public class TransactionService {
             paymentDate = Utils.stringToDate(payment.paymentDate(), Utils.USER_INPUT_DATE_FORMAT);
         }
 
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(paymentDate);
 
-        Calendar cal = Calendar.getInstance();
-        calendar.set(Calendar.HOUR, cal.get(Calendar.HOUR));
-        calendar.set(Calendar.MINUTE, cal.get(Calendar.MINUTE));
-        calendar.set(Calendar.SECOND, cal.get(Calendar.SECOND));
 
         TransactionV1 transactionV1 = new TransactionV1();
         InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(invoiceId);
@@ -183,7 +177,7 @@ public class TransactionService {
         transactionV1.setCreatedAt(new Date());
         transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
         transactionV1.setCreatedBy(authentication.getName());
-        transactionV1.setPaymentDate(calendar.getTime());
+        transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
 
         bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(), payment.paymentDate());
 
@@ -474,14 +468,16 @@ public class TransactionService {
         else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
             bankName = bankingV1.getBankName() + " Bank";
         }
-        else {
-            bankName = bankingV1.getBankName();
+        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
+            bankName = BankAccountType.UPI.name();
         }
         StringBuilder account = new StringBuilder();
         account.append(bankingV1.getAccountHolderName());
         account.append("-");
         account.append(bankName);
-        AccountDetails accountDetails = new AccountDetails(bankingV1.getAccountNumber(), bankingV1.getIfscCode(), account.toString(), bankingV1.getUpiId(), null);;
+        AccountDetails accountDetails = new AccountDetails(bankingV1.getAccountNumber(),
+                bankingV1.getIfscCode(),
+                account.toString(), bankingV1.getUpiId(), null);;
         ReceiptConfigInfo receiptConfigInfo = null;
         com.smartstay.smartstay.dao.BillTemplates hostelTemplates = templatesService.getTemplateByHostelId(hostelId);
         if (hostelTemplates != null) {
