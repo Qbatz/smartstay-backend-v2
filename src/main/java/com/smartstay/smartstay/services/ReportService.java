@@ -2,8 +2,10 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.ComplaintStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.RequestStatus;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.Reports.ReportResponse;
@@ -46,6 +48,9 @@ public class ReportService {
     @Autowired
     private AmenityRequestRepository amenityRequestRepository;
 
+    @Autowired
+    private HostelService hostelService;
+
     public ResponseEntity<?> getReports(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -60,13 +65,21 @@ public class ReportService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
         // Invoices for hostel
         int invoiceCount = invoicesRepository.countByHostelId(hostelId);
-        Double invoiceTotal = invoicesRepository.sumTotalAmountByHostelId(hostelId);
+        Double invoiceTotal = invoicesRepository.sumTotalAmountByHostelIdExcludingSettlement(hostelId, InvoiceType.SETTLEMENT.name());
+        Double paidTotal = invoicesRepository.sumPaidAmountByHostelIdExcludingSettlement(hostelId, InvoiceType.SETTLEMENT.name());
         ReportResponse.InvoiceReport invoiceReport = ReportResponse.InvoiceReport.builder()
                 .noOfInvoices(invoiceCount)
                 .totalAmount(invoiceTotal)
                 .build();
+
+        Double outstandingAmount = 0.0;
+        if (invoiceTotal != null && paidTotal != null) {
+            outstandingAmount = invoiceTotal - paidTotal;
+        }
 
         // Receipts
         int receiptCount = transactionRepository.countByHostelId(hostelId);
@@ -106,6 +119,11 @@ public class ReportService {
                 .totalExpenseAmount(expenseTotal)
                 .build();
 
+        Double totalRevenue = 0.0;
+        if (invoiceTotal != null && expenseTotal != null) {
+            totalRevenue = invoiceTotal - expenseTotal;
+        }
+
         // Vendor
         int vendorCount = vendorRepository.countByHostelId(hostelId);
         ReportResponse.VendorReport vendorReport = ReportResponse.VendorReport.builder()
@@ -132,8 +150,10 @@ public class ReportService {
 
         ReportResponse response = ReportResponse.builder()
                 .hostelId(hostelId)
-                .startDate(null)
-                .endDate(null)
+                .startDate(Utils.dateToString(billingDates.currentBillStartDate()))
+                .endDate(Utils.dateToString(billingDates.currentBillEndDate()))
+                .outStandingAmount(outstandingAmount)
+                .totalRevenue(totalRevenue)
                 .invoices(invoiceReport)
                 .receipts(receiptReport)
                 .banking(bankingReport)

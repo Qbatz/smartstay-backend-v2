@@ -12,8 +12,10 @@ import java.util.Date;
 @Builder
 public class ReportResponse {
     private String hostelId;
-    private Date startDate;
-    private Date endDate;
+    private String startDate;
+    private String endDate;
+    private Double outStandingAmount;
+    private Double totalRevenue;
     private InvoiceReport invoices;
     private ReceiptReport receipts;
     private BankingReport banking;
