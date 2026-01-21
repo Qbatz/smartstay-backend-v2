@@ -95,4 +95,7 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
     List<BankingV1> findByParentId(String parentId);
     List<BankingV1> findByUserIdAndHostelId(String userId, String hostelId);
 
+       @Query("SELECT COALESCE(SUM(b.balance), 0) FROM BankingV1 b WHERE b.hostelId = :hostelId AND b.isActive = true AND b.isDeleted = false")
+       Double sumBalanceByHostelId(@Param("hostelId") String hostelId);
+
 }

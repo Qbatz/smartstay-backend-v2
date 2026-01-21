@@ -175,4 +175,10 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
     );
 
     List<ComplaintsV1> findByHostelIdOrderByComplaintDateDesc(String hostelId);
+
+    @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false")
+    int countByHostelId(@Param("hostelId") String hostelId);
+
+    @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.status IN :statuses AND c.isActive = true AND c.isDeleted = false")
+    int countActiveByHostelId(@Param("hostelId") String hostelId, @Param("statuses") List<String> statuses);
 }
