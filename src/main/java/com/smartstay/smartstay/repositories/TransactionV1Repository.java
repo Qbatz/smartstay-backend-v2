@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -58,10 +59,13 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     List<PaymentHistoryProjection> getPaymentHistoryByInvoiceId(@Param("invoiceId") String invoiceId);
 
 
-    @Query("SELECT COUNT(t) FROM TransactionV1 t WHERE t.hostelId = :hostelId")
-    int countByHostelId(@Param("hostelId") String hostelId);
 
-    @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId")
-    Double sumPaidAmountByHostelId(@Param("hostelId") String hostelId);
+    @Query("SELECT COUNT(t) FROM TransactionV1 t WHERE t.hostelId = :hostelId AND t.paidAt >= :startDate AND t.paidAt <= :endDate")
+    int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+                                    @Param("endDate") Date endDate);
+
+    @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId AND t.paidAt >= :startDate AND t.paidAt <= :endDate")
+    Double sumPaidAmountByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+                                               @Param("endDate") Date endDate);
 
 }
