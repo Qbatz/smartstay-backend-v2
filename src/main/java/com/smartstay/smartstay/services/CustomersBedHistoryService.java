@@ -31,8 +31,8 @@ public class CustomersBedHistoryService {
         return cbh;
     }
 
-    public List<CustomersBedHistory> getCustomersBedHistory(String customerId, Date startDate, Date endDate) {
-        return customerBedHistoryRepository.listBedsByCustomerIdAndDate(customerId, startDate, endDate);
+    public List<CustomersBedHistory> getCustomersBedHistoryList(String customerId) {
+        return customerBedHistoryRepository.listBedsByCustomerIdAndDate(customerId);
     }
 
     public List<CustomerBedsList> getAllCustomerFromBedsHistory(String hostelId, Date billStartDate, Date billEndDate) {

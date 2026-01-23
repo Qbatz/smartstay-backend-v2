@@ -1575,7 +1575,7 @@ public class CustomersService {
         BedDetails details = bedsService.getBedDetails(bookingDetails.getBedId());
         roomId.add(details.getRoomId());
 
-        EBInfo ebInfo = electricityService.getEbInfoForFinalSettlement(customers.getCustomerId(), customers.getHostelId(), roomId, lDate);
+        EBInfo ebInfo = electricityService.getEbInfoForSettlement(customers, customers.getHostelId(), lDate);
         double electricityAmount = 0.0;
         if (ebInfo != null) {
             if (ebInfo.pendingEbAmount() != null) {
@@ -1590,6 +1590,8 @@ public class CustomersService {
                 fullName.toString(),
                 customers.getProfilePic(),
                 initials.toString(),
+                "91",
+                customers.getMobile(),
                 Utils.dateToString(bookingDetails.getJoiningDate()),
                 customers.getAdvance().getAdvanceAmount(),
                 bookingDetails.getRentAmount(),
@@ -1654,7 +1656,7 @@ public class CustomersService {
                 unpaidInvoiceAmount,
                 0.0,
                 0.0,
-                electricityAmount,
+                0.0,
                 unpaidInvoiceAmount,
                 isRefundable);
 
@@ -1816,6 +1818,8 @@ public class CustomersService {
                 fullName.toString(),
                 customers.getProfilePic(),
                 initials.toString(),
+                "91",
+                customers.getMobile(),
                 Utils.dateToString(bookingDetails.getJoiningDate()),
                 customers.getAdvance().getAdvanceAmount(),
                 bookingDetails.getRentAmount(),
@@ -1889,7 +1893,7 @@ public class CustomersService {
             totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
         }
 
-        EBInfo ebInfo = electricityService.getEbInfoForFinalSettlement(customers.getCustomerId(), customers.getHostelId(), roomIds, leavingDate);
+        EBInfo ebInfo = electricityService.getEbInfoForSettlement(customers, customers.getHostelId(), leavingDate);
         if (ebInfo != null) {
             if (ebInfo.pendingEbAmount() != null) {
                 electricityAmount = ebInfo.pendingEbAmount();

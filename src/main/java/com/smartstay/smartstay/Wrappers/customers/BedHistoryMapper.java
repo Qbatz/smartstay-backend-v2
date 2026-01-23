@@ -43,6 +43,7 @@ public class BedHistoryMapper implements Function<com.smartstay.smartstay.dto.cu
 
         return new BedHistory(bedHistory.getHistoryId(),
                 bedHistory.getBedId(),
+                bedHistory.getRoomId(),
                 bedHistory.getBedName(),
                 bedHistory.getRoomName(),
                 startDate,

@@ -18,7 +18,7 @@ public class ActivityLogUtils {
                 return "Created amenity";
             }
             else if (operationType.equalsIgnoreCase(ActivitySourceType.ASSIGN.name())) {
-                return "Amenity assigned";
+                return "Amenity has been assigned";
             }
         }
         return null;

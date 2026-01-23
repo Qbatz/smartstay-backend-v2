@@ -457,9 +457,11 @@ public class AmenitiesService {
         }
 
         if (!unassignedAmenities.isEmpty()) {
+            List<String> amenities = new ArrayList<>();
             List<CustomersAmenity> listNewAmenities = unassignedAmenities
                     .stream()
                     .map(i -> {
+                        amenities.add(i);
                         CustomersAmenity customersAmenity = new CustomersAmenity();
                         List<AmenitiesV1> listNewAmenity = listAmenities.stream()
                                         .filter(itm -> itm.getAmenityId().equals(i))
@@ -489,6 +491,13 @@ public class AmenitiesService {
                     .toList();
 
             customerAmenityRepository.saveAll(listNewAmenities);
+
+            if (!amenities.isEmpty()) {
+                amenities.forEach(item -> {
+                    usersService.addUserLog(hostelId, item, ActivitySource.AMENITY, ActivitySourceType.ASSIGN, users);
+                });
+            }
+
         }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);

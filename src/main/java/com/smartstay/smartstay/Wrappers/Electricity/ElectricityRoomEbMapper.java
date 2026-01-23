@@ -55,6 +55,8 @@ public class ElectricityRoomEbMapper implements Function<CustomersBedHistory, Mi
                 bedName,
                 floorName,
                 Utils.dateToString(customersBedHistory.getStartDate()),
-                toDate);
+                toDate,
+                0.0,
+                null);
     }
 }

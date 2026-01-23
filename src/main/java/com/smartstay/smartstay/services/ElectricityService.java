@@ -17,11 +17,13 @@ import com.smartstay.smartstay.events.HostelReadingEbEvents;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
 import com.smartstay.smartstay.payloads.electricity.UpdateElectricity;
 import com.smartstay.smartstay.repositories.ElectricityReadingRepository;
+import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.electricity.*;
 import com.smartstay.smartstay.responses.electricity.RoomElectricityCustomersList;
 import com.smartstay.smartstay.responses.rooms.RoomInfoForEB;
 import com.smartstay.smartstay.rooms.EBReadingRoomsInfo;
 import com.smartstay.smartstay.util.Utils;
+import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
@@ -1425,7 +1427,7 @@ public class ElectricityService {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    public EBInfo getEbInfoForFinalSettlement(String customerId, String hostelId, List<Integer> roomIds, Date leavingDate) {
+    public EBInfo getEbInfoForFinalSettlement(Customers customers, String hostelId, List<Integer> roomIds, Date leavingDate) {
         if (!authentication.isAuthenticated()) {
             return null;
         }
@@ -1435,8 +1437,9 @@ public class ElectricityService {
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
         if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
             EBInfo ebInfo = null;
-            List<CustomersBedHistory> listBeds = bedHistoryService.getCheckedInReassignedHistory(customerId);
+            List<CustomersBedHistory> listBeds = bedHistoryService.getCheckedInReassignedHistory(customers.getCustomerId());
 
+            List<ElectricityReadings> pendingHistoryAmount = new ArrayList<>();
             List<ElectricityReadings> listReadings = electricityReadingRepository.findLatestEntriesByHostelIdAndListRooms(hostelId, roomIds);
             List<Integer> listReadingIds = new ArrayList<>();
             if (listReadings != null && !listReadings.isEmpty()) {
@@ -1447,7 +1450,9 @@ public class ElectricityService {
             }
             List<CustomersEbHistory> customerEbHistory;
             if (listReadings != null && !listReadings.isEmpty()) {
-                customerEbHistory = ebHistoryService.findHistoryByCustomerIdAndReadingId(customerId, listReadingIds);
+                List<CustomersEbHistory> latestCustomerEbHistories = ebHistoryService.findHistoryByCustomerIdAndReadingId(customers.getCustomerId(), listReadingIds);
+                customerEbHistory = latestCustomerEbHistories;
+
             } else {
                 customerEbHistory = new ArrayList<>();
             }
@@ -1456,15 +1461,11 @@ public class ElectricityService {
                     .stream()
                     .map(CustomersBedHistory::getBedId)
                     .toList();
-//            List<RoomInfo> roomInfo = roomsService.getRoom(ids);
             List<BedDetails> bedDetails = bedsService.getBedDetails(ids);
 
-//            List<ElectricityReadings> listLatestReadingsByHistory = electricityReadingRepository.findLatestEntriesByHostelIdAndListRooms(hostelId, ids);
             List<ElectricityReadings> listLatestReadingsByHistory = new ArrayList<>();
-            List<ElectricityReadings> missedReading = new ArrayList<>();
             List<MissedEbRooms> missedEbForRoom = new ArrayList<>();
             List<PendingEbForSettlement> pendingEb = new ArrayList<>();
-            List<ElectricityReadings> pendingHistoryAmount = new ArrayList<>();
 
             if (listBeds != null && !listBeds.isEmpty()) {
                 listBeds.forEach(ite -> {
@@ -1477,6 +1478,30 @@ public class ElectricityService {
                         listLatestReadingsByHistory.addAll(pElectricity);
                     }
                 });
+
+                List<ElectricityReadings> latestReadingOfRooms = electricityReadingRepository.findLatestEntriesByHostelIdAndListRooms(hostelId, roomIds);
+                if (latestReadingOfRooms != null && !latestReadingOfRooms.isEmpty()) {
+                    if (listBeds.size() != latestReadingOfRooms.size()) {
+                        List<MissedEbRooms> missedRoomsNotRegisteredOnEb = new ArrayList<>();
+                        listBeds.forEach(item -> {
+                            ElectricityReadings readings = latestReadingOfRooms
+                                    .stream()
+                                    .filter(i -> i.getRoomId().equals(item.getRoomId()))
+                                    .findFirst()
+                                    .orElse(null);
+                            if (readings == null) {
+                                MissedEbRooms missedEbRooms = findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, leavingDate);
+                                if (missedEbRooms != null) {
+                                    missedRoomsNotRegisteredOnEb.add(missedEbRooms);
+                                }
+                            }
+                        });
+                       if (!missedRoomsNotRegisteredOnEb.isEmpty()) {
+                           missedEbForRoom.addAll(missedRoomsNotRegisteredOnEb);
+                       }
+                    }
+                }
+                missedEbForRoom.addAll(findMissedEB(latestReadingOfRooms, listBeds, bedDetails, leavingDate));
             }
 
 
@@ -1486,16 +1511,24 @@ public class ElectricityService {
                     listLatestReadingsByHistory.forEach(item -> {
                         CustomersEbHistory customersEbHistory = customerEbHistory
                                 .stream()
-                                .filter(i -> !item.getId().equals(i.getReadingId()))
+                                .filter(i -> item.getRoomId().equals(i.getRoomId()))
                                 .findFirst()
                                 .orElse(null);
-                        if (customersEbHistory != null) {
+                        if (customersEbHistory == null) {
                             pendingHistoryAmount.add(item);
                         }
                     });
+
                     if (pendingHistoryAmount != null && !pendingHistoryAmount.isEmpty()) {
-                        System.out.println("data is not empty");
+                        List<Integer> previousIds = pendingHistoryAmount
+                                .stream()
+                                .map(ElectricityReadings::getId)
+                                .toList();
+                        List<CustomersEbHistory> listPreviousEbHistory = ebHistoryService.findHistoryByCustomerIdAndReadingId(customers.getCustomerId(), previousIds);
+                        customerEbHistory.addAll(listPreviousEbHistory);
                     }
+
+
                     List<PendingEbForSettlement> listPending = customerEbHistory
                             .stream()
                             .map(i -> new PendingEbMapper(listBeds, bedDetails).apply(i))
@@ -1509,7 +1542,7 @@ public class ElectricityService {
                 else {
                     pendingHistoryAmount.addAll(listLatestReadingsByHistory);
 
-                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customerId, pendingHistoryAmount, bedDetails);
+                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), pendingHistoryAmount, bedDetails);
                     if (listEbRooms != null && !listEbRooms.isEmpty()) {
                         pendingEbAmount = listEbRooms
                                 .stream()
@@ -1523,27 +1556,6 @@ public class ElectricityService {
                         pendingEb.addAll(listEbRooms);
                     }
 
-                }
-
-                listBeds.forEach(item -> {
-                    List<ElectricityReadings> missedTemp = listLatestReadingsByHistory
-                            .stream()
-                            .filter(i -> i.getRoomId().equals(item.getRoomId()))
-                            .filter(i -> {
-                                if (item.getEndDate() == null) {
-                                    return Utils.compareWithTwoDates(i.getEntryDate(), leavingDate) < 0;
-                                }
-                                return Utils.compareWithTwoDates(i.getEntryDate(), item.getEndDate()) < 0;
-                            })
-                            .toList();
-                    missedReading.addAll(missedTemp);
-
-                });
-                if (missedReading != null) {
-                    missedEbForRoom.addAll(missedReading
-                            .stream()
-                            .map(i -> new ElectricityRoomIdEbMapper(bedDetails, listBeds, leavingDate).apply(i))
-                            .toList());
                 }
             }
             else {
@@ -1589,5 +1601,240 @@ public class ElectricityService {
         else {
             return hostelReadingsService.getEbInfoForFinalSettlement(hostelId, leavingDate, electricityConfig.getCharge());
         }
+    }
+
+    public EBInfo getEbInfoForSettlement(Customers customers, String hostelId, Date leavingDate) {
+        if (!authentication.isAuthenticated()) {
+            return null;
+        }
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            List<CustomersBedHistory> bedHistories = bedHistoryService.getCustomersBedHistoryList(customers.getCustomerId());
+            List<ElectricityReadings> listElectricityReadings = new ArrayList<>();
+            List<PendingEbForSettlement> pendingEb = new ArrayList<>();
+            List<Integer> roomIds = bedHistories
+                    .stream()
+                    .map(CustomersBedHistory::getRoomId)
+                    .toList();
+            List<Integer> bedIds = bedHistories
+                    .stream()
+                    .map(CustomersBedHistory::getBedId)
+                    .toList();
+            List<BedDetails> bedDetails = bedsService.getBedDetails(bedIds);
+            List<ElectricityReadings> latestReadingOfRooms = electricityReadingRepository.findLatestEntriesByHostelIdAndListRooms(hostelId, roomIds);
+
+            List<Integer> entryIdsNotInCustomerEbHistory = new ArrayList<>();
+            List<MissedEbRooms> missedEbForRoom = new ArrayList<>();
+
+            bedHistories.forEach(item -> {
+                Date endDate = item.getEndDate();
+                if (item.getEndDate() == null) {
+                    endDate = leavingDate;
+                }
+                List<ElectricityReadings> readings = electricityReadingRepository.findPendingElectricitiesBetweenDates(hostelId, item.getRoomId(), item.getStartDate(), endDate);
+                if (readings != null && !readings.isEmpty()) {
+                    listElectricityReadings.addAll(readings);
+                }
+            });
+
+            if (!listElectricityReadings.isEmpty()) {
+                List<Integer> entryIds = listElectricityReadings
+                        .stream()
+                        .map(ElectricityReadings::getId)
+                        .toList();
+
+                List<CustomersEbHistory> customersEbHistories = ebHistoryService.findHistoryByCustomerIdAndReadingId(customers.getCustomerId(), entryIds);
+                if (!customersEbHistories.isEmpty()) {
+                    List<PendingEbForSettlement> listPendingEbs = customersEbHistories
+                            .stream()
+                            .map(i -> new PendingEbMapper(bedHistories, bedDetails).apply(i))
+                            .toList();
+                    pendingEb.addAll(listPendingEbs);
+
+                    entryIds.forEach(i -> {
+                        //checking the entries not in customer history table.
+                        //so it should be equal not a not equl
+                        CustomersEbHistory ebHistory = customersEbHistories
+                                .stream()
+                                .filter(i1 -> i1.getReadingId().equals(i))
+                                .findFirst()
+                                .orElse(null);
+                        if (ebHistory == null) {
+                            entryIdsNotInCustomerEbHistory.add(i);
+                        }
+                    });
+
+                    if (!entryIdsNotInCustomerEbHistory.isEmpty()) {
+                        List<ElectricityReadings> listReadings = new ArrayList<>();
+                        entryIdsNotInCustomerEbHistory.forEach(item -> {
+                            ElectricityReadings electricityReadings = listElectricityReadings
+                                    .stream()
+                                    .filter(e -> e.getId().equals(item))
+                                    .findFirst()
+                                    .orElse(null);
+                            if (electricityReadings != null) {
+                                listReadings.add(electricityReadings);
+                            }
+                        });
+                        List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), listReadings, bedDetails);
+                        pendingEb.addAll(listEbRooms);
+                    }
+
+                    bedHistories.forEach(item -> {
+                        missedEbForRoom.add(findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, leavingDate));
+                    });
+
+
+                }
+                else  {
+                    List<ElectricityReadings> pendingHistoryAmount = new ArrayList<>();
+                    entryIds.forEach(item -> {
+                        ElectricityReadings electricityReadings = listElectricityReadings
+                                .stream()
+                                .filter(i -> i.getId().equals(item))
+                                .findFirst()
+                                .orElse(null);
+                        if (electricityReadings != null) {
+                            pendingHistoryAmount.add(electricityReadings);
+                        }
+                    });
+
+                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), pendingHistoryAmount, bedDetails);
+                    pendingEb.addAll(listEbRooms);
+
+                    missedEbForRoom.addAll(findMissedEB(latestReadingOfRooms, bedHistories, bedDetails, leavingDate));
+
+                }
+
+
+
+            } else {
+                //may goes to missed
+                bedHistories.forEach(item -> {
+                    missedEbForRoom.add(findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, leavingDate));
+                });
+
+
+            }
+
+            double pendingEbAmount = 0.0;
+            if (!pendingEb.isEmpty()) {
+                pendingEbAmount = pendingEb.stream()
+                        .mapToDouble(PendingEbForSettlement::amount)
+                        .sum();
+            }
+
+            EBInfo ebInfo = new EBInfo(0.0,
+                    electricityConfig.getCharge(),
+                    "NA",
+                    electricityConfig.getTypeOfReading(),
+                    pendingEbAmount,
+                    false,
+                    true,
+                    missedEbForRoom,
+                    pendingEb);
+
+            return ebInfo;
+        }
+        return null;
+
+    }
+
+    private List<MissedEbRooms> findMissedEB(List<ElectricityReadings> latestReadingOfRooms, List<CustomersBedHistory> listBeds, List<BedDetails> bedDetails, Date leavingDate) {
+        List<MissedEbRooms> listMissedEbRooms = new ArrayList<>();
+        listBeds.forEach(item -> {
+            ElectricityReadings latestReadingOfRoom = latestReadingOfRooms
+                    .stream()
+                    .filter(i -> i.getRoomId().equals(item.getRoomId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (latestReadingOfRoom != null) {
+//                if (item.getEndDate() != null) {
+//                    if (Utils.compareWithTwoDates(item.getEndDate(), latestReadingOfRoom.getEntryDate()) < 0) {
+//
+//                    }
+//                }
+
+                if (item.getEndDate() != null && Utils.compareWithTwoDates(item.getEndDate(), latestReadingOfRoom.getEntryDate()) > 0) {
+                    listMissedEbRooms.add(new ElectricityRoomIdEbMapper(bedDetails, listBeds, item.getEndDate()).apply(latestReadingOfRoom));
+                }
+                else if (item.getEndDate() == null) {
+                    if (Utils.compareWithTwoDates(leavingDate, latestReadingOfRoom.getEntryDate()) > 0) {
+                        listMissedEbRooms.add(new ElectricityRoomIdEbMapper(bedDetails, listBeds, leavingDate).apply(latestReadingOfRoom));
+                    }
+                }
+
+            }
+            else {
+                Date endDate = item.getEndDate();
+                if (item.getEndDate() == null) {
+                    endDate = leavingDate;
+                }
+                listMissedEbRooms.add(new ElectricityRoomEbMapper(bedDetails, endDate).apply(item));
+            }
+        });
+
+        return listMissedEbRooms;
+    }
+
+    /**
+     * case when eb is not started
+     *
+     * @param bed
+     * @param listBedDetails
+     * @param leavingDate
+     * @return
+     */
+
+    private MissedEbRooms findMissedEbForRoomNotRegisteredOnEB(List<ElectricityReadings> listElectricityByRoom, CustomersBedHistory bed, List<BedDetails> listBedDetails, Date leavingDate) {
+        if (listBedDetails != null && !listBedDetails.isEmpty()) {
+            String roomName = null;
+            String bedName = null;
+            String floorName = null;
+            String fromDate = null;
+            String toDate = null;
+            BedDetails bedDetails = listBedDetails
+                    .stream()
+                    .filter(i -> i.getRoomId().equals(bed.getRoomId()))
+                    .findFirst()
+                    .orElse(null);
+            if (bedDetails != null) {
+                roomName = bedDetails.getRoomName();
+                bedName = bedDetails.getBedName();
+                floorName = bedDetails.getFloorName();
+            }
+
+            fromDate = Utils.dateToString(bed.getStartDate());
+            if (bed.getEndDate() == null) {
+                toDate = Utils.dateToString(leavingDate);
+            }
+            else {
+                toDate = Utils.dateToString(bed.getEndDate());
+            }
+
+            ElectricityReadings electricityReadings = listElectricityByRoom
+                    .stream()
+                    .filter(i -> i.getRoomId().equals(bed.getRoomId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (electricityReadings != null) {
+                if (Utils.compareWithTwoDates(electricityReadings.getEntryDate(), bed.getStartDate()) > 0) {
+                    fromDate = Utils.dateToString(Utils.addDaysToDate(electricityReadings.getEntryDate(), 1));
+                }
+            }
+
+
+            return new MissedEbRooms(bed.getRoomId(),
+                    roomName,
+                    bedName,
+                    floorName,
+                    fromDate,
+                    toDate,
+                    0.0,
+                    null);
+        }
+        return null;
     }
 }
