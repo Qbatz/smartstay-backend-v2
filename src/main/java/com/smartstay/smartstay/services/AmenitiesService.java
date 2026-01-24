@@ -220,6 +220,7 @@ public class AmenitiesService {
             }
         }
         amentityRepository.save(amenitiesV1);
+        usersService.addUserLog(hostelId, amenityId, ActivitySource.AMENITY, ActivitySourceType.UPDATE, user);
 
         return new ResponseEntity<>(
                 Utils.UPDATED,
@@ -257,6 +258,7 @@ public class AmenitiesService {
             existingAmenity.setIsDeleted(true);
             existingAmenity.setUpdatedAt(new Date());
             amentityRepository.save(existingAmenity);
+            usersService.addUserLog(hostelId, amenityId, ActivitySource.AMENITY, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.BAD_REQUEST);
@@ -358,6 +360,8 @@ public class AmenitiesService {
                     customerAmenityRepository.save(exists);
                 }
             }
+
+            usersService.addUserLog(hostelId, amenityId, ActivitySource.AMENITY, ActivitySourceType.UNASSIGN, user, request.customers());
         }
 
         return new ResponseEntity<>(

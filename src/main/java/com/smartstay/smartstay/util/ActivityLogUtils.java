@@ -20,6 +20,23 @@ public class ActivityLogUtils {
             else if (operationType.equalsIgnoreCase(ActivitySourceType.ASSIGN.name())) {
                 return "Amenity has been assigned";
             }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+                return "Amenity has been updated";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.UNASSIGN.name())) {
+                return "Amenity has been un-assigned";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+                return "Amenity has been deleted";
+            }
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.SETTLEMENT.name())) {
+            if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+                return "Generated final settlement";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+                return "Updated final settlement";
+            }
         }
         return null;
     }

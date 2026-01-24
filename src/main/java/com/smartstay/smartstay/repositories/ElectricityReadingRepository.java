@@ -114,4 +114,10 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
             AND DATE(bill_start_date) <= DATE(:endDate) AND DATE(bill_end_date) >= DATE(:startDate) AND bill_status='INVOICE_NOT_GENERATED' AND is_first_entry=false
             """, nativeQuery = true)
     List<com.smartstay.smartstay.dao.ElectricityReadings> findPendingElectricitiesBetweenDates(@Param("hostelId") String hostelId, @Param("roomId") Integer roomId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+    @Query(value = """
+            SELECT * FROM electricity_readings WHERE hostel_id=:hostelId AND room_id=:roomId and 
+            DATE(bill_end_date) <= DATE(:endDate) AND bill_status='INVOICE_NOT_GENERATED'
+            """, nativeQuery = true)
+    List<com.smartstay.smartstay.dao.ElectricityReadings> findAllInvoiceNotGeneratedEntriesBasedOnEndDate(@Param("hostelId") String hostelId, @Param("roomId") Integer roomId, @Param("endDate") Date endDate);
 }

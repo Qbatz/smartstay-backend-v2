@@ -18,6 +18,7 @@ public class UserActivities {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long activityId;
     private String description;
+    //logged in user ids
     private String userId;
     private Date loggedAt;
     private Date createdAt;

@@ -43,6 +43,8 @@ public class RecurringEventListener {
     private NotificationService notificationService;
     @Autowired
     private CustomersConfigService customersConfigService;
+    @Autowired
+    private CustomerWalletHistoryService customerWalletHistoryService;
 
     @Async
     @EventListener
@@ -67,6 +69,8 @@ public class RecurringEventListener {
                 .stream()
                 .map(BookingsV1::getCustomerId)
                 .toList();
+
+        List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getWalletListForRecurring(customerIds);
 
         List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
         List<ElectricityReadings> listElectricityForAHostel = electricityService.getAllElectricityReadingForRecurring(recurringEvents.getHostelId(),

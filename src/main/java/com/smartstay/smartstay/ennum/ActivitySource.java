@@ -4,6 +4,7 @@ public enum ActivitySource {
 
     CUSTOMER,
     INVOICE,
+    SETTLEMENT,
     EB,
     AMENITY,
     PROFILE
