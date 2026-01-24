@@ -14,17 +14,26 @@ import java.util.Date;
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
-public class CustomerWallerHistory {
+public class CustomerWalletHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long historyId;
-    private Double transactionDate;
+    private Date transactionDate;
     private Double amount;
     private String billingStatus;
     private String customerId;
+    //Amenity id for amenities and eb reading id for eb readings
     private String sourceId;
     //Rent or amenity or EB or any other source
     private String sourceType;
+    //from wallet transaction type enum
+    //debit -> owner has to return
+    //credit -> owner should receive
+    private String transactionType;
+    private Date billStartDate;
+    private Date billEndDate;
     private Date createdAt;
     private String createdBy;
+
+
 }

@@ -38,6 +38,10 @@ public class CustomerEbHistoryService {
         return customerEbRepository.fetchAllCustomersList(roomIds);
     }
 
+    public List<CustomersEbHistory> getAllByReadingId(List<Integer> readingIds) {
+        return customerEbRepository.findByReadingIdIn(readingIds);
+    }
+
     public List<ElectricityHistoryBySingleCustomer> getAllReadingByCustomerId(String customerId, Date startDate, Date endDate) {
         return customerEbRepository.getSingleCustomerEbHistory(customerId, startDate, endDate);
     }

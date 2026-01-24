@@ -20,6 +20,8 @@ import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.ennum.InvoiceItems;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
+import com.smartstay.smartstay.events.AddRoomSettlementEbEvents;
+import com.smartstay.smartstay.events.HostelEvents;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.CancelCheckout;
@@ -33,6 +35,7 @@ import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -83,6 +86,10 @@ public class CustomersService {
     private CustomersConfigService customersConfigService;
     @Autowired
     private SettlementDetailsService settlementDetailsService;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private CustomerWalletHistoryService customerWalletHistoryService;
 
     private ElectricityService electricityService;
 
@@ -1167,6 +1174,16 @@ public class CustomersService {
                 .map(i -> new TransctionsForCustomerDetails(listOfInvoices, listOFBankings, listUsers).apply(i))
                 .toList();
 
+        List<WalletTransactions> walletTransactions = customerWalletHistoryService.getWalletTransactions(customerId);
+        double walletAmount = 0.0;
+        if (customers.getWallet() != null) {
+            if (customers.getWallet().getAmount() != null) {
+                walletAmount = Utils.roundOffWithTwoDigit(customers.getWallet().getAmount());
+            }
+        }
+
+        WalletInfo walletInfo = new WalletInfo(walletAmount, walletTransactions);
+
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getHostelId(),
@@ -1190,7 +1207,7 @@ public class CustomersService {
                 listBeds,
                 listTransactionResponse,
                 amenities,
-                listRequestedAmenities);
+                listRequestedAmenities, walletInfo);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -1969,7 +1986,7 @@ public class CustomersService {
         }
 
         if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-            return calculateAndGenerateFinalSettlemtForBedChange(customers, bookingDetails, billDate, cbh, deductions, settlementDetails);
+            return calculateAndGenerateFinalSettlemtForBedChange(customers, bookingDetails, billDate, cbh, deductions, settlementDetails, users);
         }
 
         boolean isCurrentRentPaid = false;
@@ -2165,19 +2182,29 @@ public class CustomersService {
 
 
         totalAmountToBePaid = Math.round(totalAmountToBePaid);
+        //fetch the EB Amount
+        double ebAmount = electricityService.getEbAmountForSettlement(customers.getCustomerId(), customers.getHostelId(), settlementDetails.getLeavingDate());
 
+        totalAmountToBePaid = totalAmountToBePaid + ebAmount;
         invoiceService.cancelActiveInvoice(unpaidUpdated);
         if (invAdvanceInvoice != null) {
-            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate());
+            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
 
             customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
             customersRepository.save(customers);
+
+            ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
+            if (electricityConfig != null) {
+                if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+                    eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customerId, settlementDetails.getLeavingDate(), authentication.getName()));
+                }
+            }
         }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
-    public ResponseEntity<?> calculateAndGenerateFinalSettlemtForBedChange(Customers customers, BookingsV1 bookings, BillingDates billingDates, CustomersBedHistory latestBed, List<Settlement> deductions, SettlementDetails settlementDetails) {
+    public ResponseEntity<?> calculateAndGenerateFinalSettlemtForBedChange(Customers customers, BookingsV1 bookings, BillingDates billingDates, CustomersBedHistory latestBed, List<Settlement> deductions, SettlementDetails settlementDetails, Users users) {
         Double advanceAmount = 0.0;
         Double bookingAmount = 0.0;
         Double advancePaidAmount = 0.0;
@@ -2344,6 +2371,10 @@ public class CustomersService {
 
         totalAmountToBePaid = totalAmountToBePaid + deductionsAmount;
 
+        double ebAmount = electricityService.getEbAmountForSettlement(customers.getCustomerId(), customers.getHostelId(), settlementDetails.getLeavingDate());
+
+        totalAmountToBePaid = totalAmountToBePaid + ebAmount;
+
         assert listAllUnpaidInvoices != null;
         List<InvoicesV1> unpaidInvoicesForCancelling = new ArrayList<>(listAllUnpaidInvoices);
         if (advaceInvoice != null) {
@@ -2376,10 +2407,18 @@ public class CustomersService {
 
 
         if (advaceInvoice != null) {
-            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(totalAmountToBePaid), cancellInvoices, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate());
+            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(totalAmountToBePaid), cancellInvoices, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
 
             customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
             customersRepository.save(customers);
+
+            ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
+            if (electricityConfig != null) {
+                if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+                    eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customers.getCustomerId(), settlementDetails.getLeavingDate(), authentication.getName()));
+                }
+            }
+
         }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -2427,8 +2466,11 @@ public class CustomersService {
         //check is it after or equal current billing cycle
         Date joiningDate = Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
-        double balanceAmount = invoiceService.calculateAndCreateInvoiceForReassign(customers, request.joiningDate(), request.rentAmount());
-
+        ReassignRent reassignRent = invoiceService.calculateAndCreateInvoiceForReassign(customers, request.joiningDate(), request.rentAmount());
+        double balanceAmount = 0.0;
+        if (reassignRent != null) {
+            balanceAmount = reassignRent.balanceAmount() * -1;
+        }
         bedsService.unassignBed(bookingsV1.getBedId());
         bedsService.reassignBed(customerId, request.bedId());
 
@@ -2438,21 +2480,27 @@ public class CustomersService {
 
         bookingsService.reassignBed(bedRoomFloor, bookingsV1, request);
 
-
-        CustomerWallet wallet = customers.getWallet();
-        if (wallet != null && wallet.getAmount() != null) {
-            wallet.setAmount(wallet.getAmount() - balanceAmount);
-            wallet.setTransactionDate(joiningDate);
-        } else {
-            if (wallet == null) {
-                wallet = new CustomerWallet();
+        if (balanceAmount < 0) {
+            CustomerWallet wallet = customers.getWallet();
+            if (wallet != null && wallet.getAmount() != null) {
+                wallet.setAmount(wallet.getAmount() - balanceAmount);
+                wallet.setTransactionDate(joiningDate);
+            } else {
+                if (wallet == null) {
+                    wallet = new CustomerWallet();
+                }
+                wallet.setAmount(balanceAmount);
+                wallet.setTransactionDate(joiningDate);
             }
-            wallet.setAmount(balanceAmount);
-            wallet.setTransactionDate(joiningDate);
-        }
-        wallet.setCustomers(customers);
+            wallet.setCustomers(customers);
 
-        customers.setWallet(wallet);
+            customers.setWallet(wallet);
+
+            customerWalletHistoryService.addReassignRentIntoWalletHistory(balanceAmount, reassignRent.newInvoiceId(), customers.getCustomerId(), reassignRent.invoiceDate());
+        }
+
+
+
 
         customersRepository.save(customers);
 
@@ -2722,5 +2770,9 @@ public class CustomersService {
         );
 
         return new ResponseEntity<>(cancelCheckout, HttpStatus.OK);
+    }
+
+    public void updateCustomerWallets(List<Customers> customerWallets) {
+        customersRepository.saveAll(customerWallets);
     }
 }

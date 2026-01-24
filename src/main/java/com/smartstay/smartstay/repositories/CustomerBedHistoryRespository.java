@@ -21,7 +21,7 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
     CustomersBedHistory findByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
     @Query(value = """
-            SELECT * FROM customers_bed_history WHERE customer_id=:customerId
+            SELECT * FROM customers_bed_history WHERE customer_id=:customerId AND type != 'BOOKED'
             """, nativeQuery = true)
     List<CustomersBedHistory> listBedsByCustomerIdAndDate(@Param("customerId") String customerId);
 
