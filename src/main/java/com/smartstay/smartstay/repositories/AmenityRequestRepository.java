@@ -12,14 +12,16 @@ import java.util.List;
 @Repository
 public interface AmenityRequestRepository extends JpaRepository<AmenityRequest, Long> {
 
-    @Query("SELECT ar FROM AmenityRequest ar WHERE ar.customerId=:customerId AND ar.hostelId=:hostelId AND currentStatus IN('PENDING', 'OPEN')")
-    List<AmenityRequest> findByCustomerIdAndHostelId(String customerId, String hostelId);
-    @Query("SELECT COUNT(ar) FROM AmenityRequest ar WHERE ar.hostelId = :hostelId AND ar.createdAt >= :startDate AND ar.createdAt <= :endDate")
-    int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate);
+        @Query("SELECT ar FROM AmenityRequest ar WHERE ar.customerId=:customerId AND ar.hostelId=:hostelId AND currentStatus IN('PENDING', 'OPEN')")
+        List<AmenityRequest> findByCustomerIdAndHostelId(String customerId, String hostelId);
 
-    @Query("SELECT COUNT(ar) FROM AmenityRequest ar WHERE ar.hostelId = :hostelId AND ar.currentStatus IN :statuses AND ar.createdAt >= :startDate AND ar.createdAt <= :endDate")
-    int countActiveByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("statuses") List<String> statuses,
-            @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+        @Query("SELECT COUNT(ar) FROM AmenityRequest ar WHERE ar.hostelId = :hostelId AND DATE(ar.createdAt) >= DATE(:startDate) AND DATE(ar.createdAt) <= DATE(:endDate)")
+        int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+                        @Param("endDate") Date endDate);
+
+        @Query("SELECT COUNT(ar) FROM AmenityRequest ar WHERE ar.hostelId = :hostelId AND ar.currentStatus IN :statuses AND DATE(ar.createdAt) >= DATE(:startDate) AND DATE(ar.createdAt) <= DATE(:endDate)")
+        int countActiveByHostelIdAndDateRange(@Param("hostelId") String hostelId,
+                        @Param("statuses") List<String> statuses,
+                        @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
 }

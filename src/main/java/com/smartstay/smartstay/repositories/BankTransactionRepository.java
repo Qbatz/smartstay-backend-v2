@@ -24,7 +24,7 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     BankTransactionsV1 findByTransactionNumber(String transactionNumber);
 
-    @Query("SELECT COUNT(bt) FROM BankTransactionsV1 bt WHERE bt.hostelId = :hostelId AND bt.transactionDate >= :startDate AND bt.transactionDate <= :endDate")
+    @Query("SELECT COUNT(bt) FROM BankTransactionsV1 bt WHERE bt.hostelId = :hostelId AND DATE(bt.transactionDate) >= DATE(:startDate) AND DATE(bt.transactionDate) <= DATE(:endDate)")
     int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
 

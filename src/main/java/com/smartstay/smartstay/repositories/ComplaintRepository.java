@@ -175,11 +175,11 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
     );
 
     List<ComplaintsV1> findByHostelIdOrderByComplaintDateDesc(String hostelId);
-    @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false AND c.complaintDate >= :startDate AND c.complaintDate <= :endDate")
+    @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false AND DATE(c.complaintDate) >= DATE(:startDate) AND DATE(c.complaintDate) <= DATE(:endDate)")
     int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
                                     @Param("endDate") Date endDate);
 
-    @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.status IN :statuses AND c.isActive = true AND c.isDeleted = false AND c.complaintDate >= :startDate AND c.complaintDate <= :endDate")
+    @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.status IN :statuses AND c.isActive = true AND c.isDeleted = false AND DATE(c.complaintDate) >= DATE(:startDate) AND DATE(c.complaintDate) <= DATE(:endDate)")
     int countActiveByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("statuses") List<String> statuses,
                                           @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 }

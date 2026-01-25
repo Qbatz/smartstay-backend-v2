@@ -179,16 +179,16 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findAllBookingInvoices();
 
 
-        @Query("SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.invoiceStartDate >= :startDate AND i.invoiceStartDate <= :endDate")
+        @Query("SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND DATE(i.invoiceStartDate) >= DATE(:startDate) AND DATE(i.invoiceStartDate) <= DATE(:endDate)")
         int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
                                         @Param("endDate") Date endDate);
 
-        @Query("SELECT COALESCE(SUM(i.totalAmount), 0) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.invoiceType != :invoiceType AND i.invoiceStartDate >= :startDate AND i.invoiceStartDate <= :endDate")
+        @Query("SELECT COALESCE(SUM(i.totalAmount), 0) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.invoiceType != :invoiceType AND DATE(i.invoiceStartDate) >= DATE(:startDate) AND DATE(i.invoiceStartDate) <= DATE(:endDate)")
         Double sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(@Param("hostelId") String hostelId,
                                                                        @Param("invoiceType") String invoiceType, @Param("startDate") Date startDate,
                                                                        @Param("endDate") Date endDate);
 
-        @Query("SELECT COALESCE(SUM(i.paidAmount), 0) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.invoiceType != :invoiceType AND i.invoiceStartDate >= :startDate AND i.invoiceStartDate <= :endDate")
+        @Query("SELECT COALESCE(SUM(i.paidAmount), 0) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.invoiceType != :invoiceType AND DATE(i.invoiceStartDate) >= DATE(:startDate) AND DATE(i.invoiceStartDate) <= DATE(:endDate)")
         Double sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(@Param("hostelId") String hostelId,
                                                                       @Param("invoiceType") String invoiceType, @Param("startDate") Date startDate,
                                                                       @Param("endDate") Date endDate);

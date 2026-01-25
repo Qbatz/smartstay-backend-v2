@@ -23,12 +23,12 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             LEFT OUTER JOIN expense_sub_category expSub on expSub.sub_category_id=exp.sub_category_id WHERE exp.hostel_id=:hostelId and exp.is_active=true;
             """, nativeQuery = true)
     List<ExpenseList> findAllExpensesByHostelId(@Param("hostelId") String hostelId);
-    @Query("SELECT COUNT(e) FROM ExpensesV1 e WHERE e.hostelId = :hostelId AND e.isActive = true AND e.transactionDate >= :startDate AND e.transactionDate <= :endDate")
+    @Query("SELECT COUNT(e) FROM ExpensesV1 e WHERE e.hostelId = :hostelId AND e.isActive = true AND DATE(e.transactionDate) >= DATE(:startDate) AND DATE(e.transactionDate) <= DATE(:endDate)")
     int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
 
-    @Query("SELECT COALESCE(SUM(e.totalPrice), 0) FROM ExpensesV1 e WHERE e.hostelId = :hostelId AND e.isActive = true AND e.transactionDate >= :startDate AND e.transactionDate <= :endDate")
-    Double sumAmountByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate);
+        @Query("SELECT COALESCE(SUM(e.totalPrice), 0) FROM ExpensesV1 e WHERE e.hostelId = :hostelId AND e.isActive = true AND DATE(e.transactionDate) >= DATE(:startDate) AND DATE(e.transactionDate) <= DATE(:endDate)")
+        Double sumAmountByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+                                               @Param("endDate") Date endDate);
 
 }
