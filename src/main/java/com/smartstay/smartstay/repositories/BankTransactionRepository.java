@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -23,7 +24,8 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     BankTransactionsV1 findByTransactionNumber(String transactionNumber);
 
-    @Query("SELECT COUNT(bt) FROM BankTransactionsV1 bt WHERE bt.hostelId = :hostelId")
-    int countByHostelId(@Param("hostelId") String hostelId);
+    @Query("SELECT COUNT(bt) FROM BankTransactionsV1 bt WHERE bt.hostelId = :hostelId AND DATE(bt.transactionDate) >= DATE(:startDate) AND DATE(bt.transactionDate) <= DATE(:endDate)")
+    int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+            @Param("endDate") Date endDate);
 
 }
