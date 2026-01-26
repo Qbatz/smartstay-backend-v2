@@ -22,4 +22,10 @@ public class SubscriptionController {
     public ResponseEntity<?> getCurrentPlan(@PathVariable("hostelId") String hostelId) {
         return subscriptionService.getCurrentPlan(hostelId);
     }
+
+    @PostMapping("/subscribe/{hostelId}")
+    public ResponseEntity<?> addSubscription(@PathVariable("hostelId") String hostelId) {
+        return subscriptionService.subscribeSingleHostel(hostelId);
+    }
+
 }

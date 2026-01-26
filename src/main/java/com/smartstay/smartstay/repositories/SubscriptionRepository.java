@@ -19,4 +19,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             """, nativeQuery = true)
     Subscription checkSubscriptionForToday(@Param("hostelId") String hostelId, @Param("todaysDate") Date todaysDate);
 
+    Subscription findTopByHostelIdOrderByPlanEndsAtDesc(String hostelId);
+
 }

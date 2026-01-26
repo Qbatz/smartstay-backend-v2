@@ -104,107 +104,167 @@ public class RecurringEventListener {
 
             double rentEbAmount = rentAmount + ebAmount;
             double rentEbAndAmenity = rentEbAmount + amenityAmount;
+            double walletAmount = 0.0;
+            double finalAmount = rentEbAndAmenity;
 
             Customers customers = listCustomers
                     .stream()
                     .filter(i -> i.getCustomerId().equalsIgnoreCase(item.getCustomerId()))
-                    .findFirst().get();
-
-                    StringBuilder prefixSuffix = new StringBuilder();
-
-                    String prefix = "INV";
-                    com.smartstay.smartstay.dao.BillTemplates templates = templatesService.getTemplateByHostelId(customers.getHostelId());
-                    if (templates != null && templates.getTemplateTypes() != null) {
-                        if (!templates.getTemplateTypes().isEmpty()) {
-                            BillTemplateType rentTemplateType = templates.getTemplateTypes()
-                                    .stream()
-                                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                                    .findFirst()
-                                    .get();
-                            prefix = rentTemplateType.getInvoicePrefix();
-                        }
-                        prefixSuffix.append(prefix);
+                    .findFirst()
+                    .orElse(null);
+            if (customers != null) {
+                CustomerWallet customerWallet = customers.getWallet();
+                if (customerWallet != null) {
+                    if (customerWallet.getAmount() != null) {
+                        walletAmount = customerWallet.getAmount();
+                        finalAmount = finalAmount + walletAmount;
                     }
-                    InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix, hostelV1.getHostelId());
+                }
+                StringBuilder prefixSuffix = new StringBuilder();
 
-                    if (inv != null) {
-                        String[] prefArr = inv.getInvoiceNumber().split("-");
-                        if (prefArr.length > 1) {
-                            int suffix = Integer.parseInt(prefArr[prefArr.length - 1]) + 1;
-                            prefixSuffix.append("-");
-                            if (suffix < 10) {
-                                prefixSuffix.append("00");
-                                prefixSuffix.append(suffix);
-                            }
-                            else if (suffix < 100) {
-                                prefixSuffix.append("0");
-                                prefixSuffix.append(suffix);
-                            }
-                            else {
-                                prefixSuffix.append(suffix);
-                            }
-                        }
+                String prefix = "INV";
+                com.smartstay.smartstay.dao.BillTemplates templates = templatesService.getTemplateByHostelId(customers.getHostelId());
+                if (templates != null && templates.getTemplateTypes() != null) {
+                    if (!templates.getTemplateTypes().isEmpty()) {
+                        BillTemplateType rentTemplateType = templates.getTemplateTypes()
+                                .stream()
+                                .filter(i -> i.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                                .findFirst()
+                                .get();
+                        prefix = rentTemplateType.getInvoicePrefix();
                     }
-                    else {
-                        //this is going to be the first invoice
+                    prefixSuffix.append(prefix);
+                }
+
+                InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix, hostelV1.getHostelId());
+
+                if (inv != null) {
+                    String[] prefArr = inv.getInvoiceNumber().split("-");
+                    if (prefArr.length > 1) {
+                        int suffix = Integer.parseInt(prefArr[prefArr.length - 1]) + 1;
                         prefixSuffix.append("-");
-                        prefixSuffix.append("001");
+                        if (suffix < 10) {
+                            prefixSuffix.append("00");
+                            prefixSuffix.append(suffix);
+                        }
+                        else if (suffix < 100) {
+                            prefixSuffix.append("0");
+                            prefixSuffix.append(suffix);
+                        }
+                        else {
+                            prefixSuffix.append(suffix);
+                        }
                     }
+                }
+                else {
+                    //this is going to be the first invoice
+                    prefixSuffix.append("-");
+                    prefixSuffix.append("001");
+                }
 
-            InvoicesV1 invoicesV1 = new InvoicesV1();
-            invoicesV1.setCancelled(false);
-            invoicesV1.setCustomerId(item.getCustomerId());
-            invoicesV1.setCustomerMailId(customers.getEmailId());
-            invoicesV1.setCustomerMobile(customers.getMobile());
-            invoicesV1.setHostelId(recurringEvents.getHostelId());
-            invoicesV1.setInvoiceNumber(prefixSuffix.toString());
-            invoicesV1.setInvoiceType(InvoiceType.RENT.name());
-            invoicesV1.setBasePrice(rentEbAndAmenity);
-            invoicesV1.setTotalAmount(rentEbAndAmenity);
-            invoicesV1.setPaidAmount(0.0);
-            invoicesV1.setCgst(0.0);
-            invoicesV1.setSgst(0.0);
-            invoicesV1.setGst(0.0);
-            invoicesV1.setGstPercentile(0.0);
-            invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
-            invoicesV1.setOthersDescription(null);
-            invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
-            invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
-            invoicesV1.setInvoiceGeneratedDate(new Date());
-            invoicesV1.setInvoiceDueDate(billingDates.dueDate());
-            invoicesV1.setInvoiceStartDate(billingDates.currentBillStartDate());
-            invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
-            invoicesV1.setCreatedAt(new Date());
 
-            List<InvoiceItems> invoicesItems = new ArrayList<>();
-            if (rentAmount > 0) {
-                InvoiceItems item1 = new InvoiceItems();
-                item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
-                item1.setAmount(rentAmount);
-                item1.setInvoice(invoicesV1);
-                invoicesItems.add(item1);
+                InvoicesV1 invoicesV1 = new InvoicesV1();
+                invoicesV1.setCancelled(false);
+                invoicesV1.setCustomerId(item.getCustomerId());
+                invoicesV1.setCustomerMailId(customers.getEmailId());
+                invoicesV1.setCustomerMobile(customers.getMobile());
+                invoicesV1.setHostelId(recurringEvents.getHostelId());
+                invoicesV1.setInvoiceNumber(prefixSuffix.toString());
+                invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+                invoicesV1.setBasePrice(finalAmount);
+                invoicesV1.setTotalAmount(finalAmount);
+                invoicesV1.setPaidAmount(0.0);
+                invoicesV1.setCgst(0.0);
+                invoicesV1.setSgst(0.0);
+                invoicesV1.setGst(0.0);
+                invoicesV1.setGstPercentile(0.0);
+                invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+                invoicesV1.setOthersDescription(null);
+                invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
+                invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
+                invoicesV1.setInvoiceGeneratedDate(new Date());
+                invoicesV1.setInvoiceDueDate(billingDates.dueDate());
+                invoicesV1.setInvoiceStartDate(billingDates.currentBillStartDate());
+                invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
+                invoicesV1.setCreatedAt(new Date());
+
+                List<InvoiceItems> invoicesItems = new ArrayList<>();
+                if (rentAmount > 0) {
+                    InvoiceItems item1 = new InvoiceItems();
+                    item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+                    item1.setAmount(rentAmount);
+                    item1.setInvoice(invoicesV1);
+                    invoicesItems.add(item1);
+                }
+
+                if (ebAmount > 0) {
+                    InvoiceItems item1 = new InvoiceItems();
+                    item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+                    item1.setAmount(ebAmount);
+                    item1.setInvoice(invoicesV1);
+                    invoicesItems.add(item1);
+                }
+
+                if (amenityAmount > 0) {
+                    InvoiceItems item1 = new InvoiceItems();
+                    item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
+                    item1.setAmount(amenityAmount);
+                    item1.setInvoice(invoicesV1);
+                    invoicesItems.add(item1);
+                }
+
+                List<CustomerWalletHistory> wh = listCustomerWallets
+                        .stream()
+                                .filter(i -> i.getCustomerId().equalsIgnoreCase(customers.getCustomerId()))
+                                        .toList();
+                if (!wh.isEmpty()) {
+                    wh.forEach(it -> {
+                        InvoiceItems itms = new InvoiceItems();
+                        if (it.getSourceType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
+                            itms.setInvoiceItem(it.getSourceType());
+                        }
+                        else if (it.getSourceType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
+                            itms.setInvoiceItem(it.getSourceType());
+                        }
+                        else {
+                            itms.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
+                            itms.setOtherItem(it.getSourceType());
+                        }
+                        itms.setAmount(it.getAmount());
+                        itms.setInvoice(invoicesV1);
+
+                        invoicesItems.add(itms);
+                    });
+                }
+
+
+                invoicesV1.setInvoiceItems(invoicesItems);
+
+                invoicesV1Repository.save(invoicesV1);
+
+                CustomerWallet updateWallet = customers.getWallet();
+                if (updateWallet != null) {
+                  updateWallet.setAmount(0.0);
+                  customers.setWallet(updateWallet);
+                }
+
+                customersService.updateCustomersFromRecurring(customers);
+
+                if (!wh.isEmpty()) {
+                    List<CustomerWalletHistory> whu = wh
+                            .stream()
+                            .map(im -> {
+                                im.setBillingStatus(WalletBillingStatus.INVOICE_GENERATED.name());
+                                return im;
+                            })
+                            .toList();
+
+                    customerWalletHistoryService.saveAll(whu);
+                }
+
             }
 
-            if (ebAmount > 0) {
-                InvoiceItems item1 = new InvoiceItems();
-                item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
-                item1.setAmount(ebAmount);
-                item1.setInvoice(invoicesV1);
-                invoicesItems.add(item1);
-            }
 
-            if (amenityAmount > 0) {
-                InvoiceItems item1 = new InvoiceItems();
-                item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
-                item1.setAmount(amenityAmount);
-                item1.setInvoice(invoicesV1);
-                invoicesItems.add(item1);
-            }
-
-
-            invoicesV1.setInvoiceItems(invoicesItems);
-
-            invoicesV1Repository.save(invoicesV1);
 
         });
 
