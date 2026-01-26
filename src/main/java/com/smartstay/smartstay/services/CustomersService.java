@@ -2775,4 +2775,8 @@ public class CustomersService {
     public void updateCustomerWallets(List<Customers> customerWallets) {
         customersRepository.saveAll(customerWallets);
     }
+
+    public void updateCustomersFromRecurring(Customers customers) {
+        customersRepository.save(customers);
+    }
 }

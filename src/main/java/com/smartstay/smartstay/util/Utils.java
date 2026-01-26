@@ -79,6 +79,7 @@ public class Utils {
     public static final String INVALID_TRANSACTION_ID = "Invalid transaction id";
     public static final String INVALID_INVOICE_ID = "Invalid invoice id";
     public static final String INVALID_INVOICE_DATE = "Invalid invoice date";
+    public static final String INVALID_SUBSCRIPTION = "Invalid subscription";
     public static final String PAYMENT_SUCCESS = "Payment Success";
     public static final String CUSTOMER_ON_NOTICE = "Customer is already on notice";
     public static final String CUSTOMER_BOOKING_NOT_FOUND = "Booking not found for this customer";
