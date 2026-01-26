@@ -28,7 +28,8 @@ public class ReportService {
     private UsersService usersService;
     @Autowired
     private RolesService rolesService;
-
+    @Autowired
+    private UserHostelService userHostelService;
     @Autowired
     private InvoicesV1Repository invoicesRepository;
     @Autowired
@@ -57,10 +58,13 @@ public class ReportService {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        String userId = authentication.getName();
-        Users user = usersService.findUserByUserId(userId);
+        Users user = usersService.findUserByUserId(authentication.getName());
         if (user == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {

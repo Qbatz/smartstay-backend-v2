@@ -48,6 +48,7 @@ public class EBBillingScheduler {
         if (listElectricityReading != null) {
             listElectricityReading.forEach(item -> {
                 if (!item.isFirstEntry()) {
+                    //Add Eb Events listener
                     eventPublisher.publishEvent(new AddEbEvents(this, hostelId, item.getRoomId(), item ));
                 }
             });

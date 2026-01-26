@@ -1064,4 +1064,18 @@ public class UsersService {
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    public void addUserLog(String hostelId, String amenityId, ActivitySource activitySource, ActivitySourceType activitySourceType, Users users) {
+        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), amenityId, users);
+    }
+
+    public void addUserLog(String hostelId, String amenityId, ActivitySource activitySource, ActivitySourceType activitySourceType, Users user, List<String> customerIds) {
+        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), amenityId, user, customerIds);
+    }
+
+    public void finalSettlementGenetated(String hostelId, String invoiceId, ActivitySource activitySource, ActivitySourceType activitySourceType, String customerId, Users users) {
+        List<String> customerIds = new ArrayList<>();
+        customerIds.add(customerId);
+        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), invoiceId, users, customerIds);
+    }
 }

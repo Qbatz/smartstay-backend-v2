@@ -170,7 +170,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """, nativeQuery = true)
         List<InvoicesV1> findLatestInvoicesByCustomerIds(@Param("customerIds") List<String> customerIds);
 
-        @Query("""
+    @Query("""
             SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='BOOKING'
             """)
         List<InvoicesV1> findAllBookingInvoices();

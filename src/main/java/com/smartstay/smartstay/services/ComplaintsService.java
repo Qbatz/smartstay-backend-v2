@@ -93,7 +93,7 @@ public class ComplaintsService {
                 return new ResponseEntity<>("Floor not found in this hostel.", HttpStatus.BAD_REQUEST);
             }
             complaint.setFloorId(request.floorId());
-        }else {
+        } else {
             complaint.setFloorId(0);
         }
 
@@ -111,7 +111,7 @@ public class ComplaintsService {
                 }
             }
             complaint.setRoomId(request.roomId());
-        }else {
+        } else {
             complaint.setRoomId(0);
         }
 
@@ -131,21 +131,22 @@ public class ComplaintsService {
                 Beds bedInFloorRoom = bedsRepository.findByBedIdAndRoomIdAndParentId(
                         request.bedId(), rooms.getRoomId(), user.getParentId());
                 if (bedInFloorRoom == null) {
-                    return new ResponseEntity<>("This bed is not linked to the given floor and room combination.", HttpStatus.BAD_REQUEST);
+                    return new ResponseEntity<>("This bed is not linked to the given floor and room combination.",
+                            HttpStatus.BAD_REQUEST);
                 }
             }
             complaint.setBedId(request.bedId());
 
-        }else {
+        } else {
             complaint.setBedId(0);
         }
         List<String> currentStatus = Arrays.asList(
                 CustomerStatus.CHECK_IN.name(),
-                CustomerStatus.NOTICE.name()
-        );
+                CustomerStatus.NOTICE.name());
 
-        boolean customerExist = customersService.existsByHostelIdAndCustomerIdAndStatusesIn(request.hostelId(), request.customerId(),currentStatus);
-         if (!customerExist){
+        boolean customerExist = customersService.existsByHostelIdAndCustomerIdAndStatusesIn(request.hostelId(),
+                request.customerId(), currentStatus);
+        if (!customerExist) {
             return new ResponseEntity<>("Customer not found.", HttpStatus.BAD_REQUEST);
         }
 
@@ -211,7 +212,6 @@ public class ComplaintsService {
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
-
 
     public ResponseEntity<?> updateComplaints(int complaintId, UpdateComplaint request) {
         if (!authentication.isAuthenticated()) {
@@ -281,14 +281,12 @@ public class ComplaintsService {
             listComplaintUpdates = new ArrayList<>();
         }
         String status = null;
-        if (request.status().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name())) {
-            status = ComplaintStatus.ASSIGNED.name();
-        }
-        else if (request.status().equalsIgnoreCase(ComplaintStatus.PENDING.name())) {
+        if (request.status().equalsIgnoreCase(ComplaintStatus.PENDING.name())) {
             status = ComplaintStatus.PENDING.name();
-        }
-        else if (request.status().equalsIgnoreCase(ComplaintStatus.RESOLVED.name())) {
+        } else if (request.status().equalsIgnoreCase(ComplaintStatus.RESOLVED.name())) {
             status = ComplaintStatus.RESOLVED.name();
+        } else if (request.status().equalsIgnoreCase(ComplaintStatus.IN_PROGRESS.name())) {
+            status = ComplaintStatus.IN_PROGRESS.name();
         }
 
         ComplaintUpdates cu = new ComplaintUpdates();
@@ -521,28 +519,28 @@ public class ComplaintsService {
             dto.setComments(commentsNew);
         }
         // fetch comments separately
-//        List<Map<String, Object>> commentRows = complaintRepository.getCommentsByComplaintId(dto.getComplaintId());
-//
-//        List<CommentResponse> comments = commentRows.stream()
-//                .map(c -> {
-//                    StringBuilder intials = new StringBuilder();
-//                    String profilePic = null;
-//                    String userName = (String)c.get("userName");
-//
-//                    return new CommentResponse(
-//                            (Integer) c.get("commentId"),
-//                            (Integer) c.get("complaintId"),
-//                            (String) c.get("commentText"),
-//                            (String) c.get("userName"),
-//                            (Date) c.get("commentDate"),
-//                            intials.toString(),
-//                            profilePic);
-//                        }
-//                )
-//                .toList();
+        // List<Map<String, Object>> commentRows =
+        // complaintRepository.getCommentsByComplaintId(dto.getComplaintId());
+        //
+        // List<CommentResponse> comments = commentRows.stream()
+        // .map(c -> {
+        // StringBuilder intials = new StringBuilder();
+        // String profilePic = null;
+        // String userName = (String)c.get("userName");
+        //
+        // return new CommentResponse(
+        // (Integer) c.get("commentId"),
+        // (Integer) c.get("complaintId"),
+        // (String) c.get("commentText"),
+        // (String) c.get("userName"),
+        // (Date) c.get("commentDate"),
+        // intials.toString(),
+        // profilePic);
+        // }
+        // )
+        // .toList();
 
-
-//        dto.setComments(comments);
+        // dto.setComments(comments);
         return new ResponseEntity<>(dto, HttpStatus.OK);
     }
 

@@ -67,9 +67,9 @@ public class SmartstayApplication {
 //		};
 //	}
 
-	@Bean
-	CommandLineRunner findSubscriptionEndedHostels(HostelPlanRepository hostelPlanRepository, SubscriptionRepository subscriptionRepository) {
-		return args -> {
+//	@Bean
+//	CommandLineRunner findSubscriptionEndedHostels(HostelPlanRepository hostelPlanRepository, SubscriptionRepository subscriptionRepository) {
+//		return args -> {
 //			List<HostelPlan> listHostelPlan = hostelPlanRepository.findNotActiveHostels(new Date());
 //			List<Subscription> listSubscriptionWithNewDate = listHostelPlan
 //					.stream()
@@ -115,37 +115,15 @@ public class SmartstayApplication {
 //					.toList();
 //
 //			hostelPlanRepository.saveAll(newPlans);
-		};
-	}
+//		};
+//	}
+
 
 	/**
 	 *
-	 * required production build
+	 * no need in production anymore
 	 *
-	 * @param invoicesV1Repository
-	 * @param settlementDetailsRepository
-	 * @return
 	 */
-	@Bean
-	CommandLineRunner mapSettlementInvoicesWithSettlementDetails(InvoicesV1Repository invoicesV1Repository, SettlementDetailsRepository settlementDetailsRepository) {
-		return args -> {
-//			List<InvoicesV1> listInvoices = invoicesV1Repository.findAllSettlementInvoices();
-//			List<SettlementDetails> allSettlementDetails = listInvoices
-//					.stream()
-//					.map(i -> {
-//						SettlementDetails settlementDetails = new SettlementDetails();
-//						settlementDetails.setCustomerId(i.getCustomerId());
-//						settlementDetails.setLeavingDate(i.getInvoiceEndDate());
-//						settlementDetails.setCreatedAt(i.getInvoiceEndDate());
-//						settlementDetails.setCreatedBy(i.getCreatedBy());
-//
-//						return settlementDetails;
-//					})
-//					.toList();
-//
-//			settlementDetailsRepository.saveAll(allSettlementDetails);
-		};
-	}
 
 //	@Bean
 //	CommandLineRunner mapBookingDateToBookingInvoice(InvoicesV1Repository invoicesV1Repository) {

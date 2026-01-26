@@ -5,5 +5,7 @@ public record MissedEbRooms(Integer roomId,
                             String bedName,
                             String floorName,
                             String fromDate,
-                            String toDate) {
+                            String toDate,
+                            Double lastReading,
+                            String lastEntryDate) {
 }

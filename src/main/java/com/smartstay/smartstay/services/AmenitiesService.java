@@ -7,6 +7,8 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedInformations;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.amenity.*;
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
@@ -153,7 +155,9 @@ public class AmenitiesService {
         amenitiesV1.setAmenityName(request.amenityName());
         amenitiesV1.setAmenityAmount(request.amount());
         amenitiesV1.setParentId(user.getParentId());
-        amentityRepository.save(amenitiesV1);
+        AmenitiesV1 amenities = amentityRepository.save(amenitiesV1);
+
+        usersService.addUserLog(hostelId, amenities.getAmenityId(), ActivitySource.AMENITY, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 
@@ -216,6 +220,7 @@ public class AmenitiesService {
             }
         }
         amentityRepository.save(amenitiesV1);
+        usersService.addUserLog(hostelId, amenityId, ActivitySource.AMENITY, ActivitySourceType.UPDATE, user);
 
         return new ResponseEntity<>(
                 Utils.UPDATED,
@@ -253,6 +258,7 @@ public class AmenitiesService {
             existingAmenity.setIsDeleted(true);
             existingAmenity.setUpdatedAt(new Date());
             amentityRepository.save(existingAmenity);
+            usersService.addUserLog(hostelId, amenityId, ActivitySource.AMENITY, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.BAD_REQUEST);
@@ -284,6 +290,7 @@ public class AmenitiesService {
         }
 
         if (request.customers() != null) {
+            List<String> customerIds = new ArrayList<>();
             for (String customerId : request.customers()) {
                 CustomersAmenity customerAmenity = new CustomersAmenity();
                 customerAmenity.setAmenityId(amenityId);
@@ -294,8 +301,13 @@ public class AmenitiesService {
                 customerAmenity.setStartDate(new Date());
                 customerAmenity.setUpdatedBy(user.getUserId());
                 customerAmenityRepository.save(customerAmenity);
+                customerIds.add(customerId);
+            }
+            if (!customerIds.isEmpty()) {
+                usersService.addUserLog(hostelId, amenityId, ActivitySource.AMENITY, ActivitySourceType.ASSIGN, user, customerIds);
             }
         }
+
 
 
         return new ResponseEntity<>(
@@ -348,6 +360,8 @@ public class AmenitiesService {
                     customerAmenityRepository.save(exists);
                 }
             }
+
+            usersService.addUserLog(hostelId, amenityId, ActivitySource.AMENITY, ActivitySourceType.UNASSIGN, user, request.customers());
         }
 
         return new ResponseEntity<>(
@@ -447,9 +461,11 @@ public class AmenitiesService {
         }
 
         if (!unassignedAmenities.isEmpty()) {
+            List<String> amenities = new ArrayList<>();
             List<CustomersAmenity> listNewAmenities = unassignedAmenities
                     .stream()
                     .map(i -> {
+                        amenities.add(i);
                         CustomersAmenity customersAmenity = new CustomersAmenity();
                         List<AmenitiesV1> listNewAmenity = listAmenities.stream()
                                         .filter(itm -> itm.getAmenityId().equals(i))
@@ -479,6 +495,13 @@ public class AmenitiesService {
                     .toList();
 
             customerAmenityRepository.saveAll(listNewAmenities);
+
+            if (!amenities.isEmpty()) {
+                amenities.forEach(item -> {
+                    usersService.addUserLog(hostelId, item, ActivitySource.AMENITY, ActivitySourceType.ASSIGN, users);
+                });
+            }
+
         }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);

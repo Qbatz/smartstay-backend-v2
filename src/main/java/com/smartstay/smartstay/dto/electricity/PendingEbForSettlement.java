@@ -4,8 +4,8 @@ public record PendingEbForSettlement(Integer roomId,
                                      String bedName,
                                      String roomName,
                                      String floorName,
-                                     Double unit,
-                                     Double price,
+                                     Double units,
+                                     Double amount,
                                      String fromDate,
                                      String toDate) {
 }

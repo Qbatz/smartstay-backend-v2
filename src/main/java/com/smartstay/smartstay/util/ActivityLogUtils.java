@@ -9,8 +9,33 @@ public class ActivityLogUtils {
             if (operationType.equalsIgnoreCase(ActivitySourceType.LOGGED_IN.name())) {
                 return "Logged in to smartstay";
             }
-            if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
                 return "Created Account in smartstay";
+            }
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.AMENITY.name())) {
+            if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+                return "Created amenity";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.ASSIGN.name())) {
+                return "Amenity has been assigned";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+                return "Amenity has been updated";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.UNASSIGN.name())) {
+                return "Amenity has been un-assigned";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+                return "Amenity has been deleted";
+            }
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.SETTLEMENT.name())) {
+            if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+                return "Generated final settlement";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+                return "Updated final settlement";
             }
         }
         return null;
