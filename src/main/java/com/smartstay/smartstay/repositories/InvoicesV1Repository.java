@@ -251,4 +251,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                         """, nativeQuery = true)
         List<Object[]> findDistinctCreatedBy(@Param("hostelId") String hostelId);
 
+        @Query("""
+                SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='SETTLEMENT' AND inv.hostelId=:hostelId AND 
+                DATE(inv.invoiceStartDate) >=DATE(:startDate) AND DATE(inv.invoiceEndDate)<=DATE(:endDate)
+                """)
+        List<InvoicesV1> findSettlementByHostelIdAndStartDateAndEndDate(String hostelId, Date startDate, Date endDate);
+
 }

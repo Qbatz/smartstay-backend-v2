@@ -4,6 +4,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.reports.ElectricityForReports;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.Reports.ReportDetailsResponse;
@@ -29,6 +30,8 @@ public class ReportService {
     @Autowired
     private RolesService rolesService;
     @Autowired
+    private InvoiceV1Service invoicesService;
+    @Autowired
     private UserHostelService userHostelService;
     @Autowired
     private InvoicesV1Repository invoicesRepository;
@@ -53,6 +56,8 @@ public class ReportService {
 
     @Autowired
     private HostelService hostelService;
+    @Autowired
+    private ElectricityService electricityService;
 
     public ResponseEntity<?> getReports(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -165,6 +170,56 @@ public class ReportService {
                 .activeRequests(requestActiveCount)
                 .build();
 
+        List<InvoicesV1> finalSettlements = invoicesService.getCurrentMonthFinalSettlement(hostelId, startDate, endDate);
+        int totalSettlement = finalSettlements.size();
+        double totalAmount = finalSettlements
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getTotalAmount() < 0) {
+                        return i.getTotalAmount() * -1;
+                    }
+                    return i.getTotalAmount();
+                })
+                .sum();
+        double totalReturnedAmount = finalSettlements
+                .stream()
+                .filter(i -> i.getTotalAmount() < 0)
+                .mapToDouble(i -> {
+                    return i.getTotalAmount() * -1;
+                })
+                .sum();
+        double totalPayableAmount = finalSettlements
+                .stream()
+                .filter(i -> i.getTotalAmount() >= 0)
+                .mapToDouble(InvoicesV1::getTotalAmount)
+                .sum();
+
+        ReportResponse.FinalSettlementReport settlementReport = ReportResponse
+                .FinalSettlementReport
+                .builder()
+                .totalReturnedAmount(totalReturnedAmount)
+                .totalPaidAmount(totalPayableAmount)
+                .totalAmount(totalAmount)
+                .totalSettlements(totalSettlement)
+                .build();
+
+        Calendar calPreviousMonth = Calendar.getInstance();
+        calPreviousMonth.setTime(startDate);
+        calPreviousMonth.add(Calendar.MONTH, -1);
+
+        BillingDates previousBillingDate = hostelService.getBillingRuleOnDate(hostelId, calPreviousMonth.getTime());
+        ElectricityForReports ebReports = electricityService.getPreviousMonthEbAmount(hostelId, previousBillingDate.currentBillStartDate(), previousBillingDate.currentBillEndDate());
+
+
+        ReportResponse.ElectricityReport ebReportResponse = ReportResponse.ElectricityReport
+                .builder()
+                .totalAmount(ebReports.totalAmount())
+                .totalUnits(ebReports.totalUnits())
+                .totalEntries(ebReports.noOfEntries())
+                .build();
+
+
+
         ReportResponse response = ReportResponse.builder()
                 .hostelId(hostelId)
                 .startDate(Utils.dateToString(billingDates.currentBillStartDate()))
@@ -179,6 +234,8 @@ public class ReportService {
                 .vendor(vendorReport)
                 .complaints(complaintReport)
                 .requests(requestReport)
+                .electricity(ebReportResponse)
+                .settlement(settlementReport)
                 .build();
 
         return new ResponseEntity<>(response, HttpStatus.OK);

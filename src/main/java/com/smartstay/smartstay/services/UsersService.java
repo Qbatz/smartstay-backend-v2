@@ -1065,12 +1065,12 @@ public class UsersService {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    public void addUserLog(String hostelId, String amenityId, ActivitySource activitySource, ActivitySourceType activitySourceType, Users users) {
-        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), amenityId, users);
+    public void addUserLog(String hostelId, String sourceId, ActivitySource activitySource, ActivitySourceType activitySourceType, Users users) {
+        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), sourceId, users);
     }
 
-    public void addUserLog(String hostelId, String amenityId, ActivitySource activitySource, ActivitySourceType activitySourceType, Users user, List<String> customerIds) {
-        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), amenityId, user, customerIds);
+    public void addUserLog(String hostelId, String sourceId, ActivitySource activitySource, ActivitySourceType activitySourceType, Users user, List<String> customerIds) {
+        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), sourceId, user, customerIds);
     }
 
     public void finalSettlementGenetated(String hostelId, String invoiceId, ActivitySource activitySource, ActivitySourceType activitySourceType, String customerId, Users users) {
