@@ -2388,4 +2388,8 @@ public class InvoiceV1Service {
     public InvoicesV1 findSettlementInvoiceByCustomerId(String customerId, String hostelId) {
         return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.SETTLEMENT.name());
     }
+
+    public List<InvoicesV1> getCurrentMonthFinalSettlement(String hostelId, Date startDate, Date endDate) {
+        return invoicesV1Repository.findSettlementByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate);
+    }
 }

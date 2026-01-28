@@ -24,6 +24,8 @@ public class ReportResponse {
     private VendorReport vendor;
     private ComplaintReport complaints;
     private RequestReport requests;
+    private ElectricityReport electricity;
+    private FinalSettlementReport settlement;
 
     @Data
     @AllArgsConstructor
@@ -94,5 +96,26 @@ public class ReportResponse {
     public static class RequestReport {
         private int totalRequests;
         private int activeRequests;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class ElectricityReport {
+        private int totalEntries;
+        private Double totalUnits;
+        private Double totalAmount;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class FinalSettlementReport {
+        private int totalSettlements;
+        private Double totalReturnedAmount;
+        private Double totalPaidAmount;
+        private Double totalAmount;
     }
 }

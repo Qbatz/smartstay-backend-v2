@@ -25,7 +25,7 @@ public class ReportController {
         return reportService.getReports(hostelId);
     }
 
-    @GetMapping("/details/{hostelId}")
+    @GetMapping("/invoice/{hostelId}")
     public ResponseEntity<?> getInvoiceReportDetails(
             @PathVariable("hostelId") String hostelId,
             @RequestParam(value = "search", required = false) String search,

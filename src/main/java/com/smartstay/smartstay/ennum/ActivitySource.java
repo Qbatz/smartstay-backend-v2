@@ -7,5 +7,6 @@ public enum ActivitySource {
     SETTLEMENT,
     EB,
     AMENITY,
-    PROFILE
+    PROFILE,
+    ASSETS
 }

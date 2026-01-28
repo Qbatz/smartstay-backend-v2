@@ -3,6 +3,8 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.assets.AssetAssignmentResponse;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.payloads.asset.AssetRequest;
 import com.smartstay.smartstay.payloads.asset.AssignAsset;
 import com.smartstay.smartstay.payloads.asset.UpdateAsset;
@@ -13,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -125,7 +128,8 @@ public class AssetsService {
         asset.setIsDeleted(false);
         asset.setHostelId(hostelId);
         asset.setParentId(user.getParentId());
-        assetsRepository.save(asset);
+        AssetsV1 av1 = assetsRepository.save(asset);
+        usersService.addUserLog(hostelId, String.valueOf(av1.getAssetId()), ActivitySource.ASSETS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 
@@ -194,6 +198,8 @@ public class AssetsService {
         if (request.isActive() != null) asset.setIsActive(request.isActive());
         asset.setUpdatedAt(new java.util.Date());
         assetsRepository.save(asset);
+
+        usersService.addUserLog(hostelId, String.valueOf(assetId), ActivitySource.ASSETS, ActivitySourceType.UPDATE, user);
 
         return new ResponseEntity<>(
                 Utils.UPDATED,

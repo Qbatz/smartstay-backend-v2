@@ -31,10 +31,7 @@ public class ElectricityController {
         return electricityService.addMeterReading(hostelId, readings);
     }
 
-    @GetMapping("/new/{hostelId}")
-    public ResponseEntity<?> getAllReadings(@PathVariable("hostelId") String hostelId) {
-        return electricityService.getEBReadingsNew(hostelId);
-    }
+
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getAllReadingsNew(@PathVariable("hostelId") String hostelId) {
         return electricityService.getEbReadings(hostelId);
