@@ -792,5 +792,8 @@ public class HostelService {
         return hostelConfigService.findAHostelsHavingBillingRuleEndingToday();
     }
 
+    public void updateHostel(HostelV1 hostelV1) {
+        hostelV1Repository.save(hostelV1);
+    }
 }
 

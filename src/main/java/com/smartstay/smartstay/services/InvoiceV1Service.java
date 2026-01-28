@@ -1338,7 +1338,7 @@ public class InvoiceV1Service {
         invoicesV1Repository.saveAll(unpaidUpdated);
     }
 
-    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate) {
+    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate, Users users) {
         List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customers.getCustomerId(), InvoiceType.SETTLEMENT.name());
         if (!invoicesV1.isEmpty()) {
             InvoicesV1 settlementInvoice = invoicesV1.get(0);
@@ -1387,6 +1387,8 @@ public class InvoiceV1Service {
             }
 
            invoicesV1Repository.save(settlementInvoice);
+
+           usersService.finalSettlementGenetated(hostelId, settlementInvoice.getInvoiceId(), ActivitySource.SETTLEMENT, ActivitySourceType.UPDATE, customers.getCustomerId(), users);
 
         }
         else {
@@ -1577,7 +1579,7 @@ public class InvoiceV1Service {
         return null;
     }
 
-    public Double createNewInvoice(InvoicesV1 oldInvoice, String joiningDate, Double rent, BillingDates billingDates, double balanceAmount) {
+    public ReassignRent createNewInvoice(InvoicesV1 oldInvoice, String joiningDate, Double rent, BillingDates billingDates, double balanceAmount) {
         double newBalanceAmount = 0.0;
         Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
@@ -2458,5 +2460,9 @@ public class InvoiceV1Service {
                 startDate,
                 endDate
         );
+    }
+
+    public List<InvoicesV1> getCurrentMonthFinalSettlement(String hostelId, Date startDate, Date endDate) {
+        return invoicesV1Repository.findSettlementByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate);
     }
 }

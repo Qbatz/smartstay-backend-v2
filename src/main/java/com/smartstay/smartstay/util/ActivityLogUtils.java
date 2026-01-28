@@ -38,6 +38,14 @@ public class ActivityLogUtils {
                 return "Updated final settlement";
             }
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.ASSETS.name())) {
+            if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+                return "Added new assets";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+                return "Assets has been updated";
+            }
+        }
         return null;
     }
 }

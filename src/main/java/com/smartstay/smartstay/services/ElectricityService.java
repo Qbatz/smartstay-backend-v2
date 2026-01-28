@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Electricity.*;
+import com.smartstay.smartstay.Wrappers.reports.ReportsEbMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.ElectricityReadings;
@@ -8,6 +9,7 @@ import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.electricity.*;
 import com.smartstay.smartstay.dto.electricity.HostelReadings;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.reports.ElectricityForReports;
 import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
@@ -721,83 +723,6 @@ public class ElectricityService {
     private com.smartstay.smartstay.dao.ElectricityReadings findLatestEntryByHostelId(String hostelId) {
         return electricityReadingRepository.findTopByHostelIdOrderByEntryDateDesc(hostelId);
     }
-
-    public ResponseEntity<?> getEBReadingsNew(String hostelId) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        Users users = usersService.findUserByUserId(authentication.getName());
-        if (users == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!Utils.checkNullOrEmpty(hostelId)) {
-            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
-        }
-        if (!userHostelService.checkHostelAccess(users.getUserId(),hostelId)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
-
-            String startDate;
-            String endDate;
-            com.smartstay.smartstay.dao.ElectricityReadings ebReading = electricityReadingRepository.findTopByHostelIdOrderByEntryDateDesc(hostelId);
-            if (ebReading != null) {
-                Calendar calendar = Calendar.getInstance();
-                calendar.setTime(ebReading.getBillEndDate());
-
-                startDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + electricityConfig.getBillDate();
-                endDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.DAY_OF_MONTH);
-            } else {
-                endDate = "";
-                startDate = "";
-            }
-        List<com.smartstay.smartstay.dto.electricity.ElectricityReadings> listElectricity = electricityReadingRepository.getElectricity(hostelId, startDate, endDate);
-            List<Integer> listRoomsInMeterReadings = new ArrayList<>();
-
-            List<ElectricityUsage> listUsages = new ArrayList<>(listElectricity
-                    .stream()
-                    .map(item -> {
-                        listRoomsInMeterReadings.add(item.getRoomId());
-                        return new ListReadingMapper().apply(item);
-                    })
-                    .toList());
-
-            List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings, hostelId, startDate, endDate);
-            if (!listBedForEb.isEmpty()) {
-                List<ElectricityUsage> usages =  listBedForEb.stream()
-                        .map(item -> new ElectricityUsageMapper(startDate, endDate).apply(item))
-                        .toList();
-
-                listUsages.addAll(usages);
-
-            }
-
-            boolean isHostelBased = false;
-            Double lastReading = 0.0;
-            if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.HOSTEL_READING.name())) {
-                isHostelBased = true;
-                Double lReading = electricityReadingRepository.getLastReading(hostelId);
-                if (lReading != null) {
-                    lastReading = Utils.roundOfDouble(lReading);
-                }
-                else {
-                    lastReading = 0.0;
-                }
-            }
-
-
-            ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
-
-            return new ResponseEntity<>(list, HttpStatus.OK);
-
-
-    }
-
     public ResponseEntity<?> getEbReadings(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -1906,5 +1831,34 @@ public class ElectricityService {
 
     public List<ElectricityReadings> getAllByIds(List<Integer> missingReadingIds) {
         return electricityReadingRepository.findAllById(missingReadingIds);
+    }
+
+    public ElectricityForReports getPreviousMonthEbAmount(String hostelId, Date startDate, Date endDate) {
+        ElectricityConfig ebConfig = hostelService.getElectricityConfig(hostelId);
+        if (ebConfig != null) {
+            if (ebConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+                List<ElectricityReadings> listEbReadings = electricityReadingRepository.findByHostelIdStartDateAndEndDate(hostelId, startDate, endDate);
+                List<ElectricityForReports> ebReportsList = listEbReadings
+                        .stream()
+                        .map(i -> new ReportsEbMapper().apply(i))
+                        .toList();
+
+                double totalUnits = ebReportsList
+                        .stream()
+                        .mapToDouble(ElectricityForReports::totalUnits)
+                        .sum();
+                double totalAmount = ebReportsList
+                        .stream()
+                        .mapToDouble(ElectricityForReports::totalAmount)
+                        .sum();
+
+                return new ElectricityForReports(Utils.roundOffWithTwoDigit(totalUnits), Utils.roundOffWithTwoDigit(totalAmount), ebReportsList.size());
+            }
+            else {
+                return hostelReadingsService.findByHostelIdAndDate(hostelId, startDate, endDate);
+            }
+        }
+
+        return new ElectricityForReports(0.0, 0.0, 0);
     }
 }

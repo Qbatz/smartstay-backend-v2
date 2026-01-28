@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -25,4 +26,10 @@ public interface HostelEBReadingsRepository extends JpaRepository<HostelReadings
             """)
     List<HostelReadings> findAllInvoiceNotGeneratedReadings(String hostelId);
     List<HostelReadings> findByHostelId(String hostelId);
+
+    @Query("""
+            SELECT hr from HostelReadings hr WHERE hr.hostelId=:hostelId AND DATE(hr.billStartDate) >= DATE(:startDate) AND
+            DATE(hr.billEndDate) <= DATE(:endDate)
+            """)
+    List<HostelReadings> findByHostelIdAndStartDateAndEndDate(String hostelId, Date startDate, Date endDate);
 }

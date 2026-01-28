@@ -5,6 +5,7 @@ import com.smartstay.smartstay.dao.ElectricityConfig;
 import com.smartstay.smartstay.dao.HostelReadings;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.reports.ElectricityForReports;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
@@ -212,5 +213,36 @@ public class HostelReadingsService {
         }
 
         return ebInfo;
+    }
+
+    public ElectricityForReports findByHostelIdAndDate(String hostelId, Date startDate, Date endDate) {
+        List<HostelReadings> hostelReadingsList = hostelEBReadingsRepository.findByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate);
+        double totalUnits = hostelReadingsList
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getConsumption() != null) {
+                        return i.getConsumption();
+                    }
+                    return 0.0;
+                })
+                .sum();
+
+        double totalAmount = hostelReadingsList
+                .stream()
+                .mapToDouble(i -> {
+                    double consumption = 0.0;
+                    double charge = 0.0;
+                    if (i.getConsumption() != null) {
+                        consumption = i.getConsumption();
+
+                    }
+                    if (i.getCurrentUnitPrice() != null) {
+                        charge = i.getCurrentUnitPrice();
+                    }
+                    return consumption * charge;
+                })
+                .sum();
+
+        return new ElectricityForReports(Utils.roundOffWithTwoDigit(totalUnits), Utils.roundOffWithTwoDigit(totalAmount), hostelReadingsList.size());
     }
 }

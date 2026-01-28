@@ -4,6 +4,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.reports.ElectricityForReports;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.responses.Reports.ReportDetailsResponse;
 import com.smartstay.smartstay.responses.Reports.ReportResponse;
@@ -27,6 +28,8 @@ public class ReportService {
     private UsersService usersService;
     @Autowired
     private RolesService rolesService;
+    @Autowired
+    private InvoiceV1Service invoicesService;
     @Autowired
     private UserHostelService userHostelService;
     @Autowired
@@ -53,6 +56,8 @@ public class ReportService {
 
     @Autowired
     private HostelService hostelService;
+    @Autowired
+    private ElectricityService electricityService;
 
     public ResponseEntity<?> getReports(String hostelId) {
         if (!authentication.isAuthenticated()) {
