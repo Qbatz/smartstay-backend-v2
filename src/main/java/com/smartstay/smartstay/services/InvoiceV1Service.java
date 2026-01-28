@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -2449,5 +2450,13 @@ public class InvoiceV1Service {
 
     public InvoicesV1 findSettlementInvoiceByCustomerId(String customerId, String hostelId) {
         return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.SETTLEMENT.name());
+    }
+
+    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return invoicesV1Repository.countByHostelIdAndDateRange(
+                hostelId,
+                startDate,
+                endDate
+        );
     }
 }
