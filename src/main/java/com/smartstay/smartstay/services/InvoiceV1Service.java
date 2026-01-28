@@ -37,12 +37,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -88,7 +87,6 @@ public class InvoiceV1Service {
     private HostelService hostelService;
     private BedsService bedService;
 
-
     @Autowired
     public void setCustomersService(@Lazy CustomersService customersService) {
         this.customersService = customersService;
@@ -108,6 +106,7 @@ public class InvoiceV1Service {
     public void setBedsService(@Lazy BedsService bedsService) {
         this.bedService = bedsService;
     }
+
     @Autowired
     public void setTransactionService(@Lazy TransactionService transactionService) {
         this.transactionService = transactionService;
@@ -389,7 +388,73 @@ public class InvoiceV1Service {
             paymentSummaryService.addInvoice(summary);
         }
 
+    }
 
+    public Double sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(String hostelId, String invoiceType,
+            Date startDate, Date endDate) {
+        return invoicesV1Repository.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, invoiceType,
+                startDate, endDate);
+    }
+
+    public Double sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(String hostelId, String invoiceType,
+            Date startDate, Date endDate) {
+        return invoicesV1Repository.sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, invoiceType,
+                startDate, endDate);
+    }
+
+    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search,
+            List<String> paymentStatus, List<String> invoiceModes,
+            List<String> invoiceTypes, List<String> createdBy, Pageable pageable) {
+        List<String> customerIds = null;
+        if (search != null && !search.trim().isEmpty()) {
+            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
+            if (customers == null || customers.isEmpty()) {
+                return new ArrayList<>();
+            }
+            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+        }
+
+        if (customerIds != null && !customerIds.isEmpty()) {
+            return invoicesV1Repository.findInvoicesByFiltersNoJoinWithCustomers(hostelId, startDate, endDate,
+                    customerIds,
+                    paymentStatus, invoiceModes, invoiceTypes, createdBy, pageable);
+        } else {
+            return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate,
+                    paymentStatus, invoiceModes, invoiceTypes, createdBy, pageable);
+        }
+    }
+
+    public List<Object[]> getInvoiceAggregatesForReport(String hostelId, Date startDate, Date endDate, String search,
+            List<String> paymentStatus, List<String> invoiceModes,
+            List<String> invoiceTypes, List<String> createdBy) {
+        List<String> customerIds = null;
+        if (search != null && !search.trim().isEmpty()) {
+            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
+            if (customers == null || customers.isEmpty()) {
+                return new ArrayList<>();
+            }
+            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+        }
+
+        if (customerIds != null && !customerIds.isEmpty()) {
+            return invoicesV1Repository.findInvoiceAggregatesByFiltersNoJoinWithCustomers(hostelId, startDate, endDate,
+                    customerIds,
+                    paymentStatus, invoiceModes, invoiceTypes, createdBy);
+        } else {
+            return invoicesV1Repository.findInvoiceAggregatesByFiltersNoJoin(hostelId, startDate, endDate,
+                    paymentStatus, invoiceModes, invoiceTypes, createdBy);
+        }
+    }
+
+    public List<Object[]> getDistinctCreators(String hostelId) {
+        List<String> creatorIds = invoicesV1Repository.findDistinctCreatedByNoJoin(hostelId);
+        if (creatorIds == null || creatorIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Users> users = usersService.findAllUsersFromUserId(creatorIds);
+        return users.stream()
+                .map(u -> new Object[] { u.getUserId(), u.getFirstName(), u.getLastName() })
+                .collect(Collectors.toList());
     }
 
     /**
@@ -2387,6 +2452,14 @@ public class InvoiceV1Service {
 
     public InvoicesV1 findSettlementInvoiceByCustomerId(String customerId, String hostelId) {
         return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.SETTLEMENT.name());
+    }
+
+    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return invoicesV1Repository.countByHostelIdAndDateRange(
+                hostelId,
+                startDate,
+                endDate
+        );
     }
 
     public List<InvoicesV1> getCurrentMonthFinalSettlement(String hostelId, Date startDate, Date endDate) {

@@ -213,4 +213,8 @@ public class VendorService {
 
     }
 
+    public int countByHostelId(String hostelId) {
+        return vendorRepository.countByHostelId(hostelId);
+    }
+
 }

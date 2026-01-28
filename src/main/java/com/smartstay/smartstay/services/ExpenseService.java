@@ -197,4 +197,12 @@ public class ExpenseService {
 
         return new ResponseEntity<>(listExpenses, HttpStatus.OK);
     }
+
+    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return expensesRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
+    }
+
+    public Double sumAmountByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return expensesRepository.sumAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
+    }
 }

@@ -728,4 +728,12 @@ public class ComplaintsService {
         return new ResponseEntity<>(updates, HttpStatus.OK);
 
     }
+
+    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return complaintRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
+    }
+
+    public int countActiveByHostelIdAndDateRange(String hostelId, List<String> statuses, Date startDate, Date endDate) {
+        return complaintRepository.countActiveByHostelIdAndDateRange(hostelId, statuses, startDate, endDate);
+    }
 }
