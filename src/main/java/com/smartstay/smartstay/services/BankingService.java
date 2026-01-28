@@ -706,4 +706,8 @@ public class BankingService {
 
         return true;
     }
+
+    public Double sumBalanceByHostelId(String hostelId) {
+        return bankingV1Repository.sumBalanceByHostelId(hostelId);
+    }
 }

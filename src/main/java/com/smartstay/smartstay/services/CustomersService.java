@@ -2694,4 +2694,8 @@ public class CustomersService {
 
         return new ResponseEntity<>(cancelCheckout, HttpStatus.OK);
     }
+
+    public int countByHostelIdAndStatusIn(String hostelId, List<String> statuses) {
+        return customersRepository.countByHostelIdAndStatusIn(hostelId, statuses);
+    }
 }
