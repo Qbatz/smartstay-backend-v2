@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.Wrappers.Electricity;
 
 import com.smartstay.smartstay.dao.CustomersBedHistory;
+import com.smartstay.smartstay.dao.ElectricityReadings;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.electricity.MissedEbRooms;
 import com.smartstay.smartstay.util.Utils;
@@ -29,6 +30,8 @@ public class ElectricityRoomEbMapper implements Function<CustomersBedHistory, Mi
         String floorName = null;
 
         String toDate = null;
+        String lastEntryDate = null;
+        Double lastReading = 0.0;
 
         if (bedInformations != null) {
             BedDetails bedDetails = bedInformations
@@ -55,6 +58,8 @@ public class ElectricityRoomEbMapper implements Function<CustomersBedHistory, Mi
                 bedName,
                 floorName,
                 Utils.dateToString(customersBedHistory.getStartDate()),
-                toDate);
+                toDate,
+                lastReading,
+                lastEntryDate);
     }
 }

@@ -438,7 +438,7 @@ public class BankingService {
         return bankingV1Repository.findByBankIdIn(bankLists.stream().toList());
     }
 
-    public ResponseEntity<?>  addMoney(String hostelId, UpdateBankBalance balance) {
+    public ResponseEntity<?> addMoney(String hostelId, UpdateBankBalance balance) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -466,7 +466,7 @@ public class BankingService {
             return new ResponseEntity<>(Utils.INVALID_ACCOUNT_TYPE, HttpStatus.BAD_REQUEST);
         }
 
-        if (bankingV1.getTransactionType().equalsIgnoreCase(BankPurpose.DEBIT.name())){
+        if (bankingV1.getTransactionType().equalsIgnoreCase(BankPurpose.DEBIT.name())) {
             return new ResponseEntity<>(Utils.INVALID_TRANSACTION_TYPE, HttpStatus.BAD_REQUEST);
         }
 
@@ -477,7 +477,7 @@ public class BankingService {
         bankTransactionsV11.setHostelId(hostelId);
         bankTransactionsV11.setType("CREDIT");
         bankTransactionsV11.setSource(BankSource.DEPOSIT.name());
-        if (bankTransactionsV1 != null && bankTransactionsV1.getAccountBalance() != null){
+        if (bankTransactionsV1 != null && bankTransactionsV1.getAccountBalance() != null) {
             bankTransactionsV11.setAccountBalance(bankTransactionsV1.getAccountBalance() + balance.balance());
         } else {
             bankTransactionsV11.setAccountBalance(balance.balance());
@@ -487,7 +487,6 @@ public class BankingService {
         bankTransactionsV11.setCreatedAt(new Date());
         bankTransactionsV11.setCreatedBy(authentication.getName());
         transactionService.saveTransaction(bankTransactionsV11);
-
 
         Double oldBalance = 0.0;
         if (bankingV1.getBalance() != null) {
@@ -564,7 +563,7 @@ public class BankingService {
         bankTransactionsV11.setHostelId(hostelId);
         bankTransactionsV11.setType("DEBIT");
         bankTransactionsV11.setSource(BankSource.SELF_TRANSFER.name());
-        if (fromAccountTransaction != null && fromAccountTransaction.getAccountBalance() != null){
+        if (fromAccountTransaction != null && fromAccountTransaction.getAccountBalance() != null) {
             bankTransactionsV11.setAccountBalance(fromAccountTransaction.getAccountBalance() - selfTransfer.balance());
         } else {
             bankTransactionsV11.setAccountBalance(selfTransfer.balance());
@@ -581,7 +580,7 @@ public class BankingService {
         toBankTransactions.setHostelId(hostelId);
         toBankTransactions.setType("CREDIT");
         toBankTransactions.setSource(BankSource.SELF_TRANSFER.name());
-        if (toAccountTransaction != null && toAccountTransaction.getAccountBalance() != null){
+        if (toAccountTransaction != null && toAccountTransaction.getAccountBalance() != null) {
             toBankTransactions.setAccountBalance(toAccountTransaction.getAccountBalance() + selfTransfer.balance());
         } else {
             toBankTransactions.setAccountBalance(selfTransfer.balance());
@@ -641,7 +640,6 @@ public class BankingService {
             }
         }
 
-
         bankingV1.setUpdatedBy(authentication.getName());
         bankingV1.setUpdatedAt(new Date());
 
@@ -663,8 +661,8 @@ public class BankingService {
         if (bankingV1.getBalance() < amount) {
             return false;
         }
-         if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
-                bankingV1.setBalance(bankingV1.getBalance() - amount);
+        if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+            bankingV1.setBalance(bankingV1.getBalance() - amount);
         }
 
         Calendar cal = Calendar.getInstance();

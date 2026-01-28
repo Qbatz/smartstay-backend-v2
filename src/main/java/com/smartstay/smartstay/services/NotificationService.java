@@ -34,6 +34,7 @@ public class NotificationService {
     public void setHostelService(@Lazy HostelService hostelService) {
         this.hostelService = hostelService;
     }
+
     @Autowired
     public void setCustomersService(@Lazy CustomersService customersService) {
         this.customersService = customersService;
@@ -100,5 +101,30 @@ public class NotificationService {
             return listUnreadNotifications.size();
         }
         return 0;
+    }
+
+    public ResponseEntity<?> updateNotificationsAsRead(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        List<AdminNotifications> listUnreadNotifications = notificationV1Repository.findUnReadNotifications(hostelId);
+        if (listUnreadNotifications != null && !listUnreadNotifications.isEmpty()) {
+            for (AdminNotifications adminNotifications : listUnreadNotifications) {
+                adminNotifications.setRead(true);
+                adminNotifications.setUpdatedAt(new Date());
+            }
+            notificationV1Repository.saveAll(listUnreadNotifications);
+        }
+        return new ResponseEntity<>("Notifications updated successfully", HttpStatus.OK);
     }
 }

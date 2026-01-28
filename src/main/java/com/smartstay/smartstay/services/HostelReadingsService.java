@@ -204,6 +204,7 @@ public class HostelReadingsService {
                     unitPrice,
                     Utils.dateToString(hr.getEntryDate()),
                     EBReadingType.HOSTEL_READING.name(),
+                    0.0,
                     true,
                     canAdd,
                     null,

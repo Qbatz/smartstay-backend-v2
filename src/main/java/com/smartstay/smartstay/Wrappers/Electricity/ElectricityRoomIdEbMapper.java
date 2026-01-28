@@ -37,6 +37,14 @@ public class ElectricityRoomIdEbMapper implements Function<ElectricityReadings, 
         String floorName = null;
         String fromDate = null;
         String toDate = null;
+        String lastEntryDate = null;
+        double latestReading = 0.0;
+
+        if (electricityReadings.getCurrentReading() != null) {
+            latestReading = electricityReadings.getCurrentReading();
+            lastEntryDate = Utils.dateToString(electricityReadings.getEntryDate());
+        }
+
 
         if (bedInformations != null) {
             BedDetails bedDetails = bedInformations
@@ -57,7 +65,7 @@ public class ElectricityRoomIdEbMapper implements Function<ElectricityReadings, 
                     .max(Comparator.comparing(CustomersBedHistory::getEndDate))
                     .orElse(null);
             if (bedHistory != null) {
-                if (Utils.compareWithTwoDates(electricityReadings.getEntryDate(), bedHistory.getStartDate()) > 0) {
+                if (Utils.compareWithTwoDates(electricityReadings.getEntryDate(), bedHistory.getStartDate()) >= 0) {
                     fromDate = Utils.dateToString(Utils.addDaysToDate(electricityReadings.getEntryDate(), 1));
                     if (bedHistory.getEndDate() != null) {
                         toDate = Utils.dateToString(bedHistory.getEndDate());
@@ -83,6 +91,8 @@ public class ElectricityRoomIdEbMapper implements Function<ElectricityReadings, 
                 bedName,
                 floorName,
                 fromDate,
-                toDate);
+                toDate,
+                latestReading,
+                lastEntryDate);
     }
 }

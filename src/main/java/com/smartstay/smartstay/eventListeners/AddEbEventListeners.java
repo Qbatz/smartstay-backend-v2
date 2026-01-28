@@ -38,47 +38,24 @@ public class AddEbEventListeners {
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(ebEvents.getHostelId());
         ElectricityReadings electricityReadings = ebEvents.getElectricityReadings();
 
-        Double currentConsumption = 0.0;
+        Double currentConsumption = electricityReadings.getConsumption();
 
-        Date startDate = null;
-        if (electricityReadings == null) {
-            currentConsumption = electricityReadings.getCurrentReading();
-            Calendar calendar = Calendar.getInstance();
-            int startDay = 1;
-            if (electricityConfig == null) {
-                calendar.set(Calendar.DAY_OF_MONTH, startDay);
-            }
-            else {
-                calendar.set(Calendar.DAY_OF_MONTH, electricityConfig.getBillDate());
-            }
+        Date electricityStartDate = electricityReadings.getBillStartDate();
 
-            startDate = calendar.getTime();
 
-        }
-        else {
-            currentConsumption =electricityReadings.getConsumption();
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(electricityReadings.getEntryDate());
-//            cal.add(Calendar.DAY_OF_MONTH, 1);
+        Date electricityEndDate = electricityReadings.getEntryDate();
 
-            startDate = electricityReadings.getBillStartDate();
-        }
-
-        Date endDate = electricityReadings.getEntryDate();
-
-        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistory.getCustomersByRoomIdAndDates(ebEvents.getRoomId(), startDate, endDate);
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistory.getCustomersByRoomIdAndDates(ebEvents.getRoomId(), electricityStartDate, electricityEndDate);
         if (!listCustomerBedHistory.isEmpty()) {
-            Date finalStartDate = startDate;
             long personCount = listCustomerBedHistory
                     .stream()
-                    .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), finalStartDate) <= 0 && (item.getEndDate() == null || Utils.compareWithTwoDates(endDate, item.getEndDate()) <= 0)).count();
+                    .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0 && (item.getEndDate() == null || Utils.compareWithTwoDates(electricityEndDate, item.getEndDate()) <= 0)).count();
 
             if (listCustomerBedHistory.size() == personCount) {
 //                long noOfDaysBetweenStartAndEndDate = Utils.findNumberOfDays(startDate, endDate);
                 double finalUnitsPerPerson =  currentConsumption / listCustomerBedHistory.size();
                 double finalAmount = electricityConfig.getCharge() * finalUnitsPerPerson;
 
-                Date finalStartDate1 = startDate;
                 List<CustomersEbHistory> listEbHistory = listCustomerBedHistory
                         .stream()
                         .map(item -> {
@@ -90,8 +67,8 @@ public class AddEbEventListeners {
                             ebHistory.setBedId(item.getBedId());
                             ebHistory.setUnits(finalUnitsPerPerson);
                             ebHistory.setAmount(finalAmount);
-                            ebHistory.setStartDate(finalStartDate1);
-                            ebHistory.setEndDate(endDate);
+                            ebHistory.setStartDate(electricityStartDate);
+                            ebHistory.setEndDate(electricityEndDate);
                             ebHistory.setCreatedAt(new Date());
                             ebHistory.setCreatedBy(ebHistory.getCreatedBy());
 
@@ -102,32 +79,31 @@ public class AddEbEventListeners {
                 ebHistoryService.addEbForCustomer(listEbHistory);
             }
             else {
-                Date finalStartDate2 = startDate;
                 AtomicLong totalNoOfPerson = new AtomicLong();
                 listCustomerBedHistory
                         .forEach(item -> {
-                            if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) <= 0 && item.getEndDate() == null) {
-                                totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(finalStartDate2, endDate));
+                            if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0 && item.getEndDate() == null) {
+                                totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(electricityStartDate, electricityEndDate));
                             }
-                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) <= 0 && item.getEndDate() != null) {
-                                if (Utils.compareWithTwoDates(item.getEndDate(), endDate) <=0) {
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0 && item.getEndDate() != null) {
+                                if (Utils.compareWithTwoDates(item.getEndDate(), electricityEndDate) <=0) {
                                     //leaving date is before than end date
-                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(finalStartDate2, item.getEndDate()));
+                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(electricityStartDate, item.getEndDate()));
                                 }
-                                else if (Utils.compareWithTwoDates(endDate, item.getEndDate()) <= 0) {
+                                else if (Utils.compareWithTwoDates(electricityEndDate, item.getEndDate()) <= 0) {
                                     //leaving date is later than end date
-                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(finalStartDate2, endDate));
+                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(electricityStartDate, electricityEndDate));
                                 }
                             }
-                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) > 0 && item.getEndDate() == null) {
-                                totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getStartDate(), endDate));
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) > 0 && item.getEndDate() == null) {
+                                totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getStartDate(), electricityEndDate));
                             }
-                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) > 0 && item.getEndDate() != null) {
-                                if (Utils.compareWithTwoDates(item.getEndDate(), endDate) <=0) {
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) > 0 && item.getEndDate() != null) {
+                                if (Utils.compareWithTwoDates(item.getEndDate(), electricityEndDate) <=0) {
                                     totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getStartDate(), item.getEndDate()));
                                 }
-                                else if (Utils.compareWithTwoDates(endDate, item.getEndDate()) <= 0) {
-                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getStartDate(), endDate));
+                                else if (Utils.compareWithTwoDates(electricityStartDate, item.getEndDate()) <= 0) {
+                                    totalNoOfPerson.set(totalNoOfPerson.get() + Utils.findNumberOfDays(item.getStartDate(), electricityEndDate));
                                 }
                             }
                         });
@@ -140,40 +116,40 @@ public class AddEbEventListeners {
                             double noOfDaysStayed = 0;
                             Date stateDate = new Date();
                             Date eDate = new Date();
-                            if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) <= 0 && item.getEndDate() == null) {
-                                noOfDaysStayed =  Utils.findNumberOfDays(finalStartDate2, endDate);
-                                stateDate = finalStartDate2;
-                                eDate = endDate;
+                            if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0 && item.getEndDate() == null) {
+                                noOfDaysStayed =  Utils.findNumberOfDays(electricityStartDate, electricityEndDate);
+                                stateDate = electricityStartDate;
+                                eDate = electricityEndDate;
                             }
-                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) <= 0 && item.getEndDate() != null) {
-                                if (Utils.compareWithTwoDates(item.getEndDate(), endDate) <=0) {
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0 && item.getEndDate() != null) {
+                                if (Utils.compareWithTwoDates(item.getEndDate(), electricityEndDate) <=0) {
                                     //leaving date is before than end date
-                                    noOfDaysStayed = Utils.findNumberOfDays(finalStartDate2, item.getEndDate());
-                                    stateDate = finalStartDate2;
+                                    noOfDaysStayed = Utils.findNumberOfDays(electricityStartDate, item.getEndDate());
+                                    stateDate = electricityStartDate;
                                     eDate = item.getEndDate();
                                 }
-                                else if (Utils.compareWithTwoDates(endDate, item.getEndDate()) <= 0) {
+                                else if (Utils.compareWithTwoDates(electricityEndDate, item.getEndDate()) <= 0) {
                                     //leaving date is later than end date
-                                    noOfDaysStayed = Utils.findNumberOfDays(finalStartDate2, endDate);
-                                    stateDate = finalStartDate2;
-                                    eDate = endDate;
+                                    noOfDaysStayed = Utils.findNumberOfDays(electricityStartDate, electricityEndDate);
+                                    stateDate = electricityStartDate;
+                                    eDate = electricityEndDate;
                                 }
                             }
-                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) > 0 && item.getEndDate() == null) {
-                                noOfDaysStayed = Utils.findNumberOfDays(item.getStartDate(), endDate);
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) > 0 && item.getEndDate() == null) {
+                                noOfDaysStayed = Utils.findNumberOfDays(item.getStartDate(), electricityEndDate);
                                 stateDate = item.getStartDate();
-                                eDate = endDate;
+                                eDate = electricityEndDate;
                             }
-                            else if (Utils.compareWithTwoDates(item.getStartDate(), finalStartDate2) > 0 && item.getEndDate() != null) {
-                                if (Utils.compareWithTwoDates(item.getEndDate(), endDate) <=0) {
+                            else if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) > 0 && item.getEndDate() != null) {
+                                if (Utils.compareWithTwoDates(item.getEndDate(), electricityEndDate) <=0) {
                                     noOfDaysStayed =  Utils.findNumberOfDays(item.getStartDate(), item.getEndDate());
                                     stateDate = item.getStartDate();
                                     eDate = item.getEndDate();
                                 }
-                                else if (Utils.compareWithTwoDates(endDate, item.getEndDate()) <= 0) {
-                                    noOfDaysStayed = Utils.findNumberOfDays(item.getStartDate(), endDate);
+                                else if (Utils.compareWithTwoDates(electricityEndDate, item.getEndDate()) <= 0) {
+                                    noOfDaysStayed = Utils.findNumberOfDays(item.getStartDate(), electricityEndDate);
                                     stateDate = item.getStartDate();
-                                    eDate = endDate;
+                                    eDate = electricityEndDate;
                                 }
                             }
 

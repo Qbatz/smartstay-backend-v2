@@ -25,7 +25,7 @@ public class Utils {
     public static final String USER_INPUT_DATE_FORMAT = "dd-MM-yyyy";
 
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
-    public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss aa";
+    public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
     public static final String OUTPUT_MONTH_FORMAT = "MMM YYYY";
     public static final String OUTPUT_DATE_MONTH_FORMAT = "dd MMM";
 
@@ -552,8 +552,13 @@ public class Utils {
                 .toLocalDate();
         LocalTime currentTime = LocalTime.now();
 
+        LocalDateTime dateTime = LocalDateTime.of(
+                localDate,
+                LocalTime.now(ZoneId.systemDefault())
+        );
+
         // Combine both
-        LocalDateTime dateTime = LocalDateTime.of(localDate, currentTime);
+//        LocalDateTime dateTime = LocalDateTime.of(localDate, currentTime);
         return Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 
