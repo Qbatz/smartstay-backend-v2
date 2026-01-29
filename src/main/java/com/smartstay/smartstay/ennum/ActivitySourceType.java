@@ -7,4 +7,5 @@ public enum ActivitySourceType {
     ASSIGN,
     UNASSIGN,
     LOGGED_IN
+
 }

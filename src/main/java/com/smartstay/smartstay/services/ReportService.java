@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
@@ -82,14 +83,30 @@ public class ReportService {
         Date endDate = billingDates.currentBillEndDate();
 
         // Invoices for hostel
-        int invoiceCount = invoicesRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
-        Double invoiceTotal = invoicesRepository.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(
-                hostelId, InvoiceType.SETTLEMENT.name(), startDate, endDate);
-        Double paidTotal = invoicesRepository.sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(hostelId,
-                InvoiceType.SETTLEMENT.name(), startDate, endDate);
+        List<InvoicesV1> listInvoices = invoicesService.findInvoiceByHostelIdAndStartAndEndDate(hostelId, startDate, endDate);
+        int invoiceCount = listInvoices.size();
+
+        Double invoiceTotal = listInvoices
+                .stream()
+                .mapToDouble(InvoicesV1::getTotalAmount)
+                .sum();
+        Double paidTotal = listInvoices
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getPaidAmount() != null) {
+                        return i.getPaidAmount();
+                    }
+                    return 0.0;
+                })
+                .sum();
+
+        Double outstanding = invoiceTotal - paidTotal;
+
         ReportResponse.InvoiceReport invoiceReport = ReportResponse.InvoiceReport.builder()
                 .noOfInvoices(invoiceCount)
                 .totalAmount(invoiceTotal)
+                .paidAmount(paidTotal)
+                .outstandingAmount(outstanding)
                 .build();
 
         Double outstandingAmount = 0.0;
@@ -116,8 +133,10 @@ public class ReportService {
                 .build();
 
         // Tenants
-        int tenantCount = customersRepository.countByHostelIdAndStatusIn(hostelId,
-                Arrays.asList(CustomerStatus.CHECK_IN.name(), CustomerStatus.NOTICE.name()));
+        List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId,
+                Arrays.asList(CustomerStatus.CHECK_IN.name(), CustomerStatus.NOTICE.name(),
+                        CustomerStatus.BOOKED.name(), CustomerStatus.NOTICE.name(),
+                        CustomerStatus.SETTLEMENT_GENERATED.name(), CustomerStatus.VACATED.name()));
         int filledBeds = bedsRepository.countOccupiedByHostelId(hostelId);
         int totalBeds = bedsRepository.countAllByHostelId(hostelId);
         double occupancyRate = 0.0;
@@ -125,9 +144,28 @@ public class ReportService {
             occupancyRate = ((double) filledBeds / totalBeds) * 100;
             occupancyRate = Utils.roundOffWithTwoDigit(occupancyRate);
         }
+
+        List<Customers> checkedInCustomers = listCustomers
+                .stream()
+                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()))
+                .toList();
+
+        List<Customers> noticeCustomer = listCustomers
+                .stream()
+                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name()) || i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()))
+                .toList();
+
+        List<Customers> vacatedCustomers = listCustomers
+                .stream()
+                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name()))
+                .toList();
+
         ReportResponse.TenantReport tenantReport = ReportResponse.TenantReport.builder()
-                .totalTenants(tenantCount)
+                .totalTenants(listCustomers.size())
                 .occupancyRate(occupancyRate)
+                .noticeTenantCount(noticeCustomer.size())
+                .activeTenantCount(checkedInCustomers.size())
+                .checkoutTenantsCount(vacatedCustomers.size())
                 .build();
 
         // Expenses

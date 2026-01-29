@@ -171,6 +171,7 @@ public class InvoiceV1Service {
             invoicesV1.setInvoiceType(type);
             invoicesV1.setCustomerId(customerId);
             invoicesV1.setInvoiceNumber(invoiceNumber.toString());
+            invoicesV1.setPaidAmount(0.0);
             invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
             invoicesV1.setCreatedBy(authentication.getName());
             invoicesV1.setGst(gstAmount);
@@ -269,6 +270,7 @@ public class InvoiceV1Service {
 
             invoicesV1.setBasePrice(basePrice);
             invoicesV1.setTotalAmount(amount);
+            invoicesV1.setPaidAmount(amount);
             invoicesV1.setInvoiceType(type);
             invoicesV1.setCustomerId(customerId);
             invoicesV1.setInvoiceNumber(invoiceNumber.toString());
@@ -2391,5 +2393,27 @@ public class InvoiceV1Service {
 
     public List<InvoicesV1> getCurrentMonthFinalSettlement(String hostelId, Date startDate, Date endDate) {
         return invoicesV1Repository.findSettlementByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate);
+    }
+
+    /**
+     *
+     * this is for reports page.
+     * it fetches only rent, reassign rent
+     *
+     * @param hostelId
+     * @param startDate
+     * @param endDate
+     * @return
+     */
+    public List<InvoicesV1> findInvoiceByHostelIdAndStartAndEndDate(String hostelId, Date startDate, Date endDate) {
+        List<String> invoiceTypes = new ArrayList<>();
+        invoiceTypes.add(InvoiceType.RENT.name());
+        invoiceTypes.add(InvoiceType.ADVANCE.name());
+        invoiceTypes.add(InvoiceType.RENT.name());
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findInvoiceByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate, invoiceTypes);
+        if (listInvoices != null) {
+            return listInvoices;
+        }
+        return new ArrayList<>();
     }
 }

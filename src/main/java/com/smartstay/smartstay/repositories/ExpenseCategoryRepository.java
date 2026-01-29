@@ -21,5 +21,6 @@ public interface ExpenseCategoryRepository extends JpaRepository<ExpenseCategory
           AND (s.isActive = true OR s IS NULL)
     """)
     List<ExpenseCategory> findAllByHostelIdAndIsActiveTrue(@Param("hostelId") String hostelId);
+    ExpenseCategory findByCategoryId(Long id);
 
 }

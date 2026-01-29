@@ -8,5 +8,8 @@ public enum ActivitySource {
     EB,
     AMENITY,
     PROFILE,
-    ASSETS
+    ASSETS,
+    EXPENSE,
+    EXPENSE_CATEGORY,
+    EXPENSE_SUB_CATEGORY
 }
