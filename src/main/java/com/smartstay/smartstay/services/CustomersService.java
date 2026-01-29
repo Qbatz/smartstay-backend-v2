@@ -2830,8 +2830,9 @@ public class CustomersService {
         return new ResponseEntity<>(cancelCheckout, HttpStatus.OK);
     }
 
-    public int countByHostelIdAndStatusIn(String hostelId, List<String> statuses) {
-        return customersRepository.countByHostelIdAndStatusIn(hostelId, statuses);
+
+    public List<Customers> findCustomerByHostelId(String hostelId, List<String> status) {
+        return customersRepository.findCustomerByHostelId(hostelId, status);
     }
 
     public void updateCustomerWallets(List<Customers> customerWallets) {

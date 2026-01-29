@@ -125,13 +125,13 @@ public class ReportService {
         ReportResponse.BankingReport bankingReport = ReportResponse.BankingReport.builder().totalTransactions(bankTransCount).totalAmount(bankBalance).build();
 
         // Tenants
-        int tenantCount = customersService.countByHostelIdAndStatusIn(hostelId, Arrays.asList(CustomerStatus.CHECK_IN.name(), CustomerStatus.NOTICE.name()));
+//        int tenantCount = customersService.countByHostelIdAndStatusIn(hostelId, Arrays.asList(CustomerStatus.CHECK_IN.name(), CustomerStatus.NOTICE.name()));
         int filledBeds = bedsService.countOccupiedByHostelId(hostelId);
         int totalBeds = bedsService.countAllByHostelId(hostelId);
-        List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId,
-                Arrays.asList(CustomerStatus.CHECK_IN.name(), CustomerStatus.NOTICE.name(),
+        List<Customers> listCustomers = customersService.findCustomerByHostelId(hostelId,
+                Arrays.asList(CustomerStatus.CHECK_IN.name(),
                         CustomerStatus.BOOKED.name(), CustomerStatus.NOTICE.name(),
-                        CustomerStatus.SETTLEMENT_GENERATED.name(), CustomerStatus.VACATED.name()));
+                        CustomerStatus.SETTLEMENT_GENERATED.name()));
 
         double occupancyRate = 0.0;
         if (totalBeds > 0) {
@@ -186,7 +186,69 @@ public class ReportService {
         int requestActiveCount = amenityRequestService.countActiveByHostelIdAndDateRange(hostelId, Arrays.asList(RequestStatus.PENDING.name(), RequestStatus.OPEN.name(), RequestStatus.INPROGRESS.name()), startDate, endDate);
         ReportResponse.RequestReport requestReport = ReportResponse.RequestReport.builder().totalRequests(requestCount).activeRequests(requestActiveCount).build();
 
-        ReportResponse response = ReportResponse.builder().hostelId(hostelId).startDate(Utils.dateToString(billingDates.currentBillStartDate())).endDate(Utils.dateToString(billingDates.currentBillEndDate())).outStandingAmount(outstandingAmount).totalRevenue(totalRevenue).invoices(invoiceReport).receipts(receiptReport).banking(bankingReport).tenantInfo(tenantReport).expense(expenseReport).vendor(vendorReport).complaints(complaintReport).requests(requestReport).build();
+        List<InvoicesV1> finalSettlements = invoicesService.getCurrentMonthFinalSettlement(hostelId, startDate, endDate);
+        int totalSettlement = finalSettlements.size();
+        double totalAmount = finalSettlements
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getTotalAmount() < 0) {
+                        return i.getTotalAmount() * -1;
+                    }
+                    return i.getTotalAmount();
+                })
+                .sum();
+        double totalReturnedAmount = finalSettlements
+                .stream()
+                .filter(i -> i.getTotalAmount() < 0)
+                .mapToDouble(i -> {
+                    return i.getTotalAmount() * -1;
+                })
+                .sum();
+        double totalPayableAmount = finalSettlements
+                .stream()
+                .filter(i -> i.getTotalAmount() >= 0)
+                .mapToDouble(InvoicesV1::getTotalAmount)
+                .sum();
+
+        ReportResponse.FinalSettlementReport settlementReport = ReportResponse
+                .FinalSettlementReport
+                .builder()
+                .totalReturnedAmount(totalReturnedAmount)
+                .totalPaidAmount(totalPayableAmount)
+                .totalAmount(totalAmount)
+                .totalSettlements(totalSettlement)
+                .build();
+
+        Calendar calPreviousMonth = Calendar.getInstance();
+        calPreviousMonth.setTime(startDate);
+        calPreviousMonth.add(Calendar.MONTH, -1);
+
+        BillingDates previousBillingDate = hostelService.getBillingRuleOnDate(hostelId, calPreviousMonth.getTime());
+        ElectricityForReports ebReports = electricityService.getPreviousMonthEbAmount(hostelId, previousBillingDate.currentBillStartDate(), previousBillingDate.currentBillEndDate());
+
+
+        ReportResponse.ElectricityReport ebReportResponse = ReportResponse.ElectricityReport
+                .builder()
+                .totalAmount(ebReports.totalAmount())
+                .totalUnits(ebReports.totalUnits())
+                .totalEntries(ebReports.noOfEntries())
+                .build();
+
+
+        ReportResponse response = ReportResponse.builder()
+                .hostelId(hostelId)
+                .startDate(Utils.dateToString(billingDates.currentBillStartDate()))
+                .endDate(Utils.dateToString(billingDates.currentBillEndDate()))
+                .outStandingAmount(outstandingAmount).totalRevenue(totalRevenue)
+                .invoices(invoiceReport).receipts(receiptReport)
+                .banking(bankingReport)
+                .tenantInfo(tenantReport)
+                .expense(expenseReport)
+                .vendor(vendorReport)
+                .complaints(complaintReport)
+                .electricity(ebReportResponse)
+                .settlement(settlementReport)
+                .requests(requestReport).build();
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
