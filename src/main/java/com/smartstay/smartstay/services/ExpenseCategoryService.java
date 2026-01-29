@@ -245,9 +245,11 @@ public class ExpenseCategoryService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-
-
         if (expenseCategory.newCategoryName() != null) {
+            List<com.smartstay.smartstay.dao.ExpenseCategory> existingCategory = expensesCategoryRepository.findByCategoryName(expenseCategory.newCategoryName(), catId);
+            if (existingCategory != null && !existingCategory.isEmpty()) {
+                return new ResponseEntity<>(Utils.CATEGORY_NAME_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
+            }
             expCategory.setCategoryName(expenseCategory.newCategoryName());
             expensesCategoryRepository.save(expCategory);
             usersService.addUserLog(hostelId, String.valueOf(expCategory.getCategoryId()), ActivitySource.EXPENSE_CATEGORY, ActivitySourceType.UPDATE, users);

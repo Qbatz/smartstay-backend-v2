@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class ExpenseSubCategoryService {
 
@@ -48,6 +50,11 @@ public class ExpenseSubCategoryService {
 
         if (subCategory.newSubCategoryName() == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        List<ExpenseSubCategory> listExpSubCate = expenseSubCategoryRepository.findBySUbCatNameAndId(subCategory.newSubCategoryName(), subCatId);
+        if (listExpSubCate != null && !listExpSubCate.isEmpty()) {
+            return new ResponseEntity<>(Utils.SUB_CATEGORY_NAME_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
         }
 
         expSub.setSubCategoryName(subCategory.newSubCategoryName());

@@ -22,9 +22,11 @@ public class CustomerWalletHistory {
     private Double amount;
     private String billingStatus;
     private String customerId;
+    private String invoiceId;
     //Amenity id for amenities and eb reading id for eb readings
     private String sourceId;
     //Rent or amenity or EB or any other source
+    //From WalletSource enum
     private String sourceType;
     //from wallet transaction type enum
     //debit -> owner has to return

@@ -1397,6 +1397,7 @@ public class CustomersService {
         long noOfDaySatayed = 0l;
         double currentRentPaid = 0.0;
         Double currentMonthRent = 0.0;
+        double walletAmount = 0.0;
 
         double unpaidInvoiceAmount = 0.0;
         double partialPaidAmount = 0.0;
@@ -1404,6 +1405,13 @@ public class CustomersService {
         Double totalDeductions = 0.0;
         boolean isRefundable = false;
         boolean isCurrentRentPaid = false;
+
+        if (customers.getWallet() != null) {
+            CustomerWallet wallet = customers.getWallet();
+            if (wallet.getAmount() != null) {
+                walletAmount = wallet.getAmount();
+            }
+        }
 
         if (customers.getFirstName() != null) {
             fullName.append(customers.getFirstName());
@@ -1459,7 +1467,6 @@ public class CustomersService {
         }
 
         billStartDate = calBillStartDate.getTime();
-
 
         Calendar calEndDate = Calendar.getInstance();
         calEndDate.setTime(billDate.currentBillEndDate());
@@ -1582,6 +1589,7 @@ public class CustomersService {
         }
 
         totalAmountToBePaid =  totalAmountToBePaid + totalDeductions;
+        totalAmountToBePaid = totalAmountToBePaid + walletAmount;
 
 
         List<UnpaidInvoices> unpaidInvoices = listUnpaidRentalInvoices
@@ -1601,6 +1609,11 @@ public class CustomersService {
                 totalAmountToBePaid = totalAmountToBePaid + ebInfo.pendingEbAmount();
             }
         }
+
+        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService
+                .getInvoicePendingByCustomerId(customers.getCustomerId());
+
+        com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
         CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(),
                 customers.getFirstName(),
@@ -1681,7 +1694,7 @@ public class CustomersService {
         settlementDetailsService.addSettlementForCustomer(customerId, lDate);
 
 
-        FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, rentInfo, settlementInfo);
+        FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, rentInfo, walletInfo, settlementInfo);
 
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
     }
@@ -1705,6 +1718,7 @@ public class CustomersService {
         double totalCurrentMonthRentPaid = 0.0;
         double electricityAmount = 0.0;
         double refundableRent = 0.0;
+        double walletAmount = 0.0;
 
         if (customers.getFirstName() != null) {
             fullName.append(customers.getFirstName());
@@ -1726,6 +1740,13 @@ public class CustomersService {
                     .stream()
                     .mapToDouble(Deductions::getAmount)
                     .sum();
+        }
+
+        if (customers.getWallet() != null) {
+            CustomerWallet wallet = customers.getWallet();
+            if (wallet.getAmount() != null) {
+                walletAmount = wallet.getAmount();
+            }
         }
 
         StayInfo stayInfo = new StayInfo(Utils.dateToString(bookingDetails.getBookingDate()),
@@ -1829,6 +1850,10 @@ public class CustomersService {
             refundableRent = -1 * refundableRent;
         }
 
+        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService
+                .getInvoicePendingByCustomerId(customers.getCustomerId());
+
+        com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
         CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(),
                 customers.getFirstName(),
@@ -1910,6 +1935,7 @@ public class CustomersService {
         if (totalDeductions > 0) {
             totalAmountToBePaid = totalAmountToBePaid + totalDeductions;
         }
+        totalAmountToBePaid = totalAmountToBePaid + walletAmount;
 
         EBInfo ebInfo = electricityService.getEbInfoForSettlement(customers, customers.getHostelId(), leavingDate);
         if (ebInfo != null) {
@@ -1936,7 +1962,7 @@ public class CustomersService {
 
         settlementDetailsService.addSettlementForCustomer(customers.getCustomerId(), leavingDate);
 
-        FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, rentInfo, settlementInfo);
+        FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, rentInfo, walletInfo,  settlementInfo);
 
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
     }
@@ -2004,6 +2030,7 @@ public class CustomersService {
         double partialPaidAmount = 0.0;
         double totalAmountToBePaid = 0.0;
         double totalAmountWithoutDeductions = 0.0;
+        double walletAmount = 0.0;
         List<Deductions> listDeductions = new ArrayList<>();
 
         if (bookingDetails.getBookingAmount() != null) {
@@ -2018,6 +2045,13 @@ public class CustomersService {
                     .sum();
 
             listDeductions = customers.getAdvance().getDeductions();
+        }
+
+        CustomerWallet cw = customers.getWallet();
+        if (cw != null) {
+            if (cw.getAmount() != null) {
+                walletAmount = cw.getAmount();
+            }
         }
 
         List<InvoicesV1> listUnpaidInvoices = invoiceService.listAllUnpaidInvoices(customerId, customers.getHostelId());
@@ -2143,6 +2177,7 @@ public class CustomersService {
         double invoiceBalance = unpaidInvoiceAmount - partialPaidAmount;
 
         totalAmountToBePaid = invoiceBalance - advancePaidAmount;
+        totalAmountToBePaid = totalAmountToBePaid + walletAmount;
 
         if (isCurrentRentPaid) {
             totalAmountToBePaid = totalAmountToBePaid + (currentMonthPayableRent - currentRentPaid);
@@ -2189,9 +2224,17 @@ public class CustomersService {
         totalAmountToBePaid = totalAmountToBePaid + ebAmount;
         invoiceService.cancelActiveInvoice(unpaidUpdated);
         if (invAdvanceInvoice != null) {
-            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
+            InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
 
+
+            if (cw != null) {
+                cw.setAmount(0.0);
+                cw.setCustomers(customers);
+                customers.setWallet(cw);
+                customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
+            }
             customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
+
             customersRepository.save(customers);
 
             ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
@@ -2216,6 +2259,7 @@ public class CustomersService {
         double totalAdvacePaidAmount = 0.0;
         double currentPayableRent = 0.0;
         double totalAmountToBePaid = 0.0;
+        double walletAmount = 0.0;
         Double totalAmountWithoutDeductions = 0.0;
         List<Deductions> listDeductions = new ArrayList<>();
 
@@ -2267,6 +2311,12 @@ public class CustomersService {
         if (bookings != null) {
             if (bookings.getBookingAmount() != null) {
                 bookingAmount = bookings.getBookingAmount();
+            }
+        }
+        CustomerWallet cw = customers.getWallet();
+        if (cw != null) {
+            if (cw.getAmount() != null) {
+                walletAmount = cw.getAmount();
             }
         }
 
@@ -2371,6 +2421,7 @@ public class CustomersService {
         totalAmountToBePaid = currentPayableRent - totalAdvacePaidAmount - currentMonthPaidAmount;
 
         totalAmountToBePaid = totalAmountToBePaid + deductionsAmount;
+        totalAmountToBePaid = totalAmountToBePaid + walletAmount;
 
         double ebAmount = electricityService.getEbAmountForSettlement(customers.getCustomerId(), customers.getHostelId(), settlementDetails.getLeavingDate());
 
@@ -2408,8 +2459,14 @@ public class CustomersService {
 
 
         if (advaceInvoice != null) {
-            invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(totalAmountToBePaid), cancellInvoices, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
+            InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(totalAmountToBePaid), cancellInvoices, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
 
+            if (cw != null) {
+                cw.setAmount(0.0);
+                cw.setCustomers(customers);
+                customers.setWallet(cw);
+                customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
+            }
             customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
             customersRepository.save(customers);
 

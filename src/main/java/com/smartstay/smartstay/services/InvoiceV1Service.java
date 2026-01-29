@@ -1275,7 +1275,7 @@ public class InvoiceV1Service {
         invoicesV1Repository.saveAll(unpaidUpdated);
     }
 
-    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate, Users users) {
+    public InvoicesV1 createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate, Users users) {
         List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customers.getCustomerId(), InvoiceType.SETTLEMENT.name());
         if (!invoicesV1.isEmpty()) {
             InvoicesV1 settlementInvoice = invoicesV1.get(0);
@@ -1326,7 +1326,7 @@ public class InvoiceV1Service {
            invoicesV1Repository.save(settlementInvoice);
 
            usersService.finalSettlementGenetated(hostelId, settlementInvoice.getInvoiceId(), ActivitySource.SETTLEMENT, ActivitySourceType.UPDATE, customers.getCustomerId(), users);
-
+            return settlementInvoice;
         }
         else {
             List<String> listUnpaidInvoicesId = unpaidInvoices
@@ -1398,6 +1398,7 @@ public class InvoiceV1Service {
 
             InvoicesV1 invoicesV11 = invoicesV1Repository.save(settlementInvoice);
             usersService.finalSettlementGenetated(hostelId, invoicesV11.getInvoiceId(), ActivitySource.SETTLEMENT, ActivitySourceType.CREATE, customers.getCustomerId(), users);
+            return invoicesV11;
         }
     }
 
