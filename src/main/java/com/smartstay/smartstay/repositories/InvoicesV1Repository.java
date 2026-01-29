@@ -9,7 +9,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
 import java.util.Date;
@@ -220,36 +219,99 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                                                                       @Param("endDate") Date endDate);
 
         @Query(value = """
-                        SELECT COUNT(*), SUM(invc.total_amount), SUM(invc.paid_amount)
-                        FROM invoicesv1 invc
-                        JOIN customers c ON invc.customer_id = c.customer_id
+                        SELECT * FROM invoicesv1 invc
                         WHERE invc.hostel_id = :hostelId
                         AND invc.invoice_type != 'SETTLEMENT'
                         AND (:startDate IS NULL OR DATE(invc.invoice_start_date) >= DATE(:startDate))
                         AND (:endDate IS NULL OR DATE(invc.invoice_start_date) <= DATE(:endDate))
-                        AND (:search IS NULL OR (LOWER(c.first_name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(c.last_name) LIKE LOWER(CONCAT('%', :search, '%'))))
+                        AND (:paymentStatus IS NULL OR invc.payment_status IN (:paymentStatus))
+                        AND (:invoiceModes IS NULL OR invc.invoice_mode IN (:invoiceModes))
+                        AND (:invoiceTypes IS NULL OR invc.invoice_type IN (:invoiceTypes))
+                        AND (:createdBy IS NULL OR invc.created_by IN (:createdBy))
+                        ORDER BY invc.invoice_start_date DESC
+                        """, nativeQuery = true)
+        List<InvoicesV1> findInvoicesByFilters(@Param("hostelId") String hostelId,
+                                               @Param("startDate") Date startDate,
+                                               @Param("endDate") Date endDate,
+                                               @Param("paymentStatus") List<String> paymentStatus,
+                                               @Param("invoiceModes") List<String> invoiceModes,
+                                               @Param("invoiceTypes") List<String> invoiceTypes,
+                                               @Param("createdBy") List<String> createdBy,
+                                               Pageable pageable);
+
+        @Query(value = """
+                        SELECT * FROM invoicesv1 invc
+                        WHERE invc.hostel_id = :hostelId
+                        AND invc.invoice_type != 'SETTLEMENT'
+                        AND (:startDate IS NULL OR DATE(invc.invoice_start_date) >= DATE(:startDate))
+                        AND (:endDate IS NULL OR DATE(invc.invoice_start_date) <= DATE(:endDate))
+                        AND invc.customer_id IN (:customerIds)
+                        AND (:paymentStatus IS NULL OR invc.payment_status IN (:paymentStatus))
+                        AND (:invoiceModes IS NULL OR invc.invoice_mode IN (:invoiceModes))
+                        AND (:invoiceTypes IS NULL OR invc.invoice_type IN (:invoiceTypes))
+                        AND (:createdBy IS NULL OR invc.created_by IN (:createdBy))
+                        ORDER BY invc.invoice_start_date DESC
+                        """, nativeQuery = true)
+        List<InvoicesV1> findInvoicesByFiltersNoJoinWithCustomers(@Param("hostelId") String hostelId,
+                                                                  @Param("startDate") Date startDate,
+                                                                  @Param("endDate") Date endDate,
+                                                                  @Param("customerIds") List<String> customerIds,
+                                                                  @Param("paymentStatus") List<String> paymentStatus,
+                                                                  @Param("invoiceModes") List<String> invoiceModes,
+                                                                  @Param("invoiceTypes") List<String> invoiceTypes,
+                                                                  @Param("createdBy") List<String> createdBy,
+                                                                  Pageable pageable);
+
+        @Query(value = """
+                        SELECT COUNT(*), SUM(invc.total_amount), SUM(invc.paid_amount)
+                        FROM invoicesv1 invc
+                        WHERE invc.hostel_id = :hostelId
+                        AND invc.invoice_type != 'SETTLEMENT'
+                        AND (:startDate IS NULL OR DATE(invc.invoice_start_date) >= DATE(:startDate))
+                        AND (:endDate IS NULL OR DATE(invc.invoice_start_date) <= DATE(:endDate))
                         AND (:paymentStatus IS NULL OR invc.payment_status IN (:paymentStatus))
                         AND (:invoiceModes IS NULL OR invc.invoice_mode IN (:invoiceModes))
                         AND (:invoiceTypes IS NULL OR invc.invoice_type IN (:invoiceTypes))
                         AND (:createdBy IS NULL OR invc.created_by IN (:createdBy))
                         """, nativeQuery = true)
-        List<Object[]> findInvoiceAggregatesByFilters(@Param("hostelId") String hostelId,
-                                                      @Param("startDate") Date startDate,
-                                                      @Param("endDate") Date endDate,
-                                                      @Param("search") String search,
-                                                      @Param("paymentStatus") List<String> paymentStatus,
-                                                      @Param("invoiceModes") List<String> invoiceModes,
-                                                      @Param("invoiceTypes") List<String> invoiceTypes,
-                                                      @Param("createdBy") List<String> createdBy);
+        List<Object[]> findInvoiceAggregatesByFiltersNoJoin(@Param("hostelId") String hostelId,
+                                                            @Param("startDate") Date startDate,
+                                                            @Param("endDate") Date endDate,
+                                                            @Param("paymentStatus") List<String> paymentStatus,
+                                                            @Param("invoiceModes") List<String> invoiceModes,
+                                                            @Param("invoiceTypes") List<String> invoiceTypes,
+                                                            @Param("createdBy") List<String> createdBy);
 
         @Query(value = """
-                        SELECT DISTINCT u.user_id, u.first_name, u.last_name
+                        SELECT COUNT(*), SUM(invc.total_amount), SUM(invc.paid_amount)
                         FROM invoicesv1 invc
-                        JOIN users u ON invc.created_by = u.user_id
                         WHERE invc.hostel_id = :hostelId
                         AND invc.invoice_type != 'SETTLEMENT'
+                        AND (:startDate IS NULL OR DATE(invc.invoice_start_date) >= DATE(:startDate))
+                        AND (:endDate IS NULL OR DATE(invc.invoice_start_date) <= DATE(:endDate))
+                        AND invc.customer_id IN (:customerIds)
+                        AND (:paymentStatus IS NULL OR invc.payment_status IN (:paymentStatus))
+                        AND (:invoiceModes IS NULL OR invc.invoice_mode IN (:invoiceModes))
+                        AND (:invoiceTypes IS NULL OR invc.invoice_type IN (:invoiceTypes))
+                        AND (:createdBy IS NULL OR invc.created_by IN (:createdBy))
                         """, nativeQuery = true)
-        List<Object[]> findDistinctCreatedBy(@Param("hostelId") String hostelId);
+        List<Object[]> findInvoiceAggregatesByFiltersNoJoinWithCustomers(@Param("hostelId") String hostelId,
+                                                                         @Param("startDate") Date startDate,
+                                                                         @Param("endDate") Date endDate,
+                                                                         @Param("customerIds") List<String> customerIds,
+                                                                         @Param("paymentStatus") List<String> paymentStatus,
+                                                                         @Param("invoiceModes") List<String> invoiceModes,
+                                                                         @Param("invoiceTypes") List<String> invoiceTypes,
+                                                                         @Param("createdBy") List<String> createdBy);
+
+        @Query(value = """
+                        SELECT DISTINCT created_by
+                        FROM invoicesv1
+                        WHERE hostel_id = :hostelId
+                        AND invoice_type != 'SETTLEMENT'
+                        """, nativeQuery = true)
+        List<String> findDistinctCreatedByNoJoin(@Param("hostelId") String hostelId);
+
 
         @Query("""
                 SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='SETTLEMENT' AND inv.hostelId=:hostelId AND 
