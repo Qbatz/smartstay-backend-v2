@@ -900,4 +900,12 @@ public class TransactionService {
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return transactionRespository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
+    }
+
+    public Double sumPaidAmountByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return transactionRespository.sumPaidAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
+    }
 }

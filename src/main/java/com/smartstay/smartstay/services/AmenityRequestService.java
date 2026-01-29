@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -51,5 +52,13 @@ public class AmenityRequestService {
 
         return amenityRequests;
 
+    }
+
+    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return amenityRequestRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
+    }
+
+    public int countActiveByHostelIdAndDateRange(String hostelId, List<String> statuses, Date startDate, Date endDate) {
+        return amenityRequestRepository.countActiveByHostelIdAndDateRange(hostelId, statuses, startDate, endDate);
     }
 }

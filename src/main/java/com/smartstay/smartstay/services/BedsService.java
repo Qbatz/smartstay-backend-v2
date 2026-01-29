@@ -902,4 +902,12 @@ public class BedsService {
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
+
+    public int countOccupiedByHostelId(String hostelId) {
+        return bedsRepository.countOccupiedByHostelId(hostelId);
+    }
+
+    public int countAllByHostelId(String hostelId) {
+        return bedsRepository.countAllByHostelId(hostelId);
+    }
 }

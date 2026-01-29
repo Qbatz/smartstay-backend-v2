@@ -220,4 +220,8 @@ public class BankTransactionService {
             }
         }
     }
+
+    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return bankRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
+    }
 }
