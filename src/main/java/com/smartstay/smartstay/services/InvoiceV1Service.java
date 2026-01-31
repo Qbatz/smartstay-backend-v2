@@ -170,6 +170,7 @@ public class InvoiceV1Service {
             invoicesV1.setInvoiceType(type);
             invoicesV1.setCustomerId(customerId);
             invoicesV1.setInvoiceNumber(invoiceNumber.toString());
+            invoicesV1.setPaidAmount(0.0);
             invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
             invoicesV1.setCreatedBy(authentication.getName());
             invoicesV1.setGst(gstAmount);
@@ -268,6 +269,7 @@ public class InvoiceV1Service {
 
             invoicesV1.setBasePrice(basePrice);
             invoicesV1.setTotalAmount(amount);
+            invoicesV1.setPaidAmount(amount);
             invoicesV1.setInvoiceType(type);
             invoicesV1.setCustomerId(customerId);
             invoicesV1.setInvoiceNumber(invoiceNumber.toString());
@@ -1338,7 +1340,7 @@ public class InvoiceV1Service {
         invoicesV1Repository.saveAll(unpaidUpdated);
     }
 
-    public void createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate, Users users) {
+    public InvoicesV1 createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate, Users users) {
         List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customers.getCustomerId(), InvoiceType.SETTLEMENT.name());
         if (!invoicesV1.isEmpty()) {
             InvoicesV1 settlementInvoice = invoicesV1.get(0);
@@ -1389,7 +1391,7 @@ public class InvoiceV1Service {
            invoicesV1Repository.save(settlementInvoice);
 
            usersService.finalSettlementGenetated(hostelId, settlementInvoice.getInvoiceId(), ActivitySource.SETTLEMENT, ActivitySourceType.UPDATE, customers.getCustomerId(), users);
-
+            return settlementInvoice;
         }
         else {
             List<String> listUnpaidInvoicesId = unpaidInvoices
@@ -1461,6 +1463,7 @@ public class InvoiceV1Service {
 
             InvoicesV1 invoicesV11 = invoicesV1Repository.save(settlementInvoice);
             usersService.finalSettlementGenetated(hostelId, invoicesV11.getInvoiceId(), ActivitySource.SETTLEMENT, ActivitySourceType.CREATE, customers.getCustomerId(), users);
+            return invoicesV11;
         }
     }
 
@@ -2464,5 +2467,27 @@ public class InvoiceV1Service {
 
     public List<InvoicesV1> getCurrentMonthFinalSettlement(String hostelId, Date startDate, Date endDate) {
         return invoicesV1Repository.findSettlementByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate);
+    }
+
+    /**
+     *
+     * this is for reports page.
+     * it fetches only rent, reassign rent
+     *
+     * @param hostelId
+     * @param startDate
+     * @param endDate
+     * @return
+     */
+    public List<InvoicesV1> findInvoiceByHostelIdAndStartAndEndDate(String hostelId, Date startDate, Date endDate) {
+        List<String> invoiceTypes = new ArrayList<>();
+        invoiceTypes.add(InvoiceType.RENT.name());
+        invoiceTypes.add(InvoiceType.ADVANCE.name());
+        invoiceTypes.add(InvoiceType.RENT.name());
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findInvoiceByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate, invoiceTypes);
+        if (listInvoices != null) {
+            return listInvoices;
+        }
+        return new ArrayList<>();
     }
 }

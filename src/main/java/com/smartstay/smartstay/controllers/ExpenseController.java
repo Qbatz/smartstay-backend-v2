@@ -2,6 +2,8 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.expense.Expense;
 import com.smartstay.smartstay.payloads.expense.ExpenseCategory;
+import com.smartstay.smartstay.payloads.expense.UpdateExpenseCategory;
+import com.smartstay.smartstay.payloads.expense.UpdateSubCategory;
 import com.smartstay.smartstay.services.ExpenseCategoryService;
 import com.smartstay.smartstay.services.ExpenseService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -31,6 +33,16 @@ public class ExpenseController {
     @PostMapping("/category/{hostelId}")
     public ResponseEntity<?> addExpenseCategory(@PathVariable("hostelId") String hostelId, @RequestBody(required = false) ExpenseCategory expenseCategory) {
         return expenseCategoryService.createExpenseCategory(expenseCategory, hostelId);
+    }
+
+    @PutMapping("/category/{hostelId}/{categoryId}")
+    public ResponseEntity<?> updateExpenseCategory(@PathVariable("hostelId") String hostelId, @PathVariable("categoryId") String categoryId, @Valid @RequestBody UpdateExpenseCategory expenseCategory) {
+        return expenseCategoryService.updateExpenseCategory(hostelId, categoryId, expenseCategory);
+    }
+
+    @PutMapping("/subCategory/{hostelId}/{subCategoryId}")
+    public ResponseEntity<?> updateSubCategory(@PathVariable("hostelId") String hostelId,  @PathVariable("subCategoryId") String subCategoryId, @Valid @RequestBody UpdateSubCategory subCategory) {
+        return expenseCategoryService.updateExpenseSubCategory(hostelId, subCategoryId, subCategory);
     }
 
     @GetMapping("/category/{hostelId}")

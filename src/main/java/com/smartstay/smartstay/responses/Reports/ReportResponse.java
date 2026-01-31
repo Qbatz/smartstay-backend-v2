@@ -34,6 +34,8 @@ public class ReportResponse {
     public static class InvoiceReport {
         private int noOfInvoices;
         private Double totalAmount;
+        private Double paidAmount;
+        private Double outstandingAmount;
     }
 
     @Data
@@ -61,6 +63,9 @@ public class ReportResponse {
     public static class TenantReport {
         private int totalTenants;
         private Double occupancyRate;
+        private int activeTenantCount;
+        private int noticeTenantCount;
+        private int checkoutTenantsCount;
     }
 
     @Data

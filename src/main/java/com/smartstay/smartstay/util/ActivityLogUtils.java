@@ -46,6 +46,38 @@ public class ActivityLogUtils {
                 return "Assets has been updated";
             }
         }
+
+        if (activitySource.equalsIgnoreCase(ActivitySource.EXPENSE_CATEGORY.name())) {
+            return getExpenseCategoryOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.EXPENSE_SUB_CATEGORY.name())) {
+            return getExpenseSubCategoryOperations(operationType);
+        }
+
         return null;
     }
+
+    private static String getExpenseSubCategoryOperations(String operationType) {
+        if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Added expense subcategories";
+        }
+        else if (operationType.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated expense subcategory";
+        }
+        return null;
+    }
+
+
+    private static String getExpenseCategoryOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Created expense category";
+        }
+        else if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated expense category";
+        }
+        return null;
+    }
+
+
+
 }

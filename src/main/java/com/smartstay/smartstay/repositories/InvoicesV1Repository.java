@@ -319,4 +319,12 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                 """)
         List<InvoicesV1> findSettlementByHostelIdAndStartDateAndEndDate(String hostelId, Date startDate, Date endDate);
 
+    @Query("""
+                SELECT inv FROM InvoicesV1 inv WHERE inv.hostelId=:hostelId AND 
+                DATE(inv.invoiceStartDate) >=DATE(:startDate) AND DATE(inv.invoiceEndDate)<=DATE(:endDate) AND 
+                inv.invoiceType IN (:invoiceTypes) AND inv.isCancelled = false
+                """)
+    List<InvoicesV1> findInvoiceByHostelIdAndStartDateAndEndDate(String hostelId, Date startDate, Date endDate, List<String> invoiceTypes);
+
+
 }

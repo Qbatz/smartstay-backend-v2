@@ -137,6 +137,7 @@ public class Utils {
     public static final String SUB_CATEGORY_NAME_ALREADY_REGISTERED = "Subcategory name is already exists";
     public static final String INSUFFICIENT_FUND_ERROR = "Insufficient funds";
     public static final String INVALID_CATEGORY_ID = "Invalid category id";
+    public static final String INVALID_SUB_CATEGORY_ID = "Invalid Subcategory id";
     public static final String INVALID_COMPLAINT_ID_PASSED = "Invalid complaint id passed";
     public static final String SUB_CATEGORY_NAME_REQUIRED = "Sub category name required";
     public static final String SUB_CATEGORY_ID_REQUIRED = "Sub category id required";

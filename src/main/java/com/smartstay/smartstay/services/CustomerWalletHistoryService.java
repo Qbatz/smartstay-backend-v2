@@ -1,15 +1,13 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.Wallet.WalletSettlement;
 import com.smartstay.smartstay.Wrappers.Wallet.WalltetTransactionMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.CustomerWalletHistory;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.CustomersEbHistory;
 import com.smartstay.smartstay.dto.customer.WalletTransactions;
-import com.smartstay.smartstay.ennum.ElectricityBillStatus;
-import com.smartstay.smartstay.ennum.SourceType;
-import com.smartstay.smartstay.ennum.WalletBillingStatus;
-import com.smartstay.smartstay.ennum.WalletTransactionType;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.repositories.CustomerWalletHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,7 +26,7 @@ public class CustomerWalletHistoryService {
     public CustomerWalletHistory formWalletHistory(String customerId, CustomersEbHistory history, String createdBy) {
         CustomerWalletHistory walletHistory = new CustomerWalletHistory();
         walletHistory.setCustomerId(customerId);
-        walletHistory.setSourceType(SourceType.EB.name());
+        walletHistory.setSourceType(WalletSource.ELECTRICITY.name());
         walletHistory.setAmount(history.getAmount());
         walletHistory.setTransactionDate(history.getEndDate());
         walletHistory.setTransactionType(WalletTransactionType.CREDIT.name());
@@ -54,7 +52,7 @@ public class CustomerWalletHistoryService {
     public void addReassignRentIntoWalletHistory(double balanceAmount, String invoiceId, String customerId, Date transactionDate) {
         CustomerWalletHistory walletHistory = new CustomerWalletHistory();
         walletHistory.setCustomerId(customerId);
-        walletHistory.setSourceType(SourceType.REASSIGN_RENT.name());
+        walletHistory.setSourceType(WalletSource.CHANGE_BED.name());
         walletHistory.setAmount(balanceAmount);
         walletHistory.setTransactionDate(transactionDate);
         walletHistory.setTransactionType(WalletTransactionType.DEBIT.name());
@@ -78,5 +76,33 @@ public class CustomerWalletHistoryService {
                     .toList();
         }
         return walletTransactions;
+    }
+
+    public List<com.smartstay.smartstay.dto.wallet.WalletTransactions> getInvoicePendingByCustomerId(String customerId) {
+        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallteTransactions = new ArrayList<>();
+        List<CustomerWalletHistory> walletHistories = walletHistoryRepository
+                .findInvoiceNotGeneratedByCustomerId(customerId);
+        if (!walletHistories.isEmpty()) {
+            listWallteTransactions = walletHistories
+                    .stream()
+                    .map(i -> new WalletSettlement().apply(i))
+                    .toList();
+        }
+        return listWallteTransactions;
+    }
+
+    public void makePendingToInvoiceGenerated(String customerId, String invoiceId) {
+        List<CustomerWalletHistory> walletHistories = walletHistoryRepository
+                .findInvoiceNotGeneratedByCustomerId(customerId)
+                .stream()
+                .map(i -> {
+                    i.setInvoiceId(invoiceId);
+                    i.setBillingStatus(WalletBillingStatus.INVOICE_GENERATED.name());
+                    return i;
+                })
+                .toList();
+
+
+        walletHistoryRepository.saveAll(walletHistories);
     }
 }
