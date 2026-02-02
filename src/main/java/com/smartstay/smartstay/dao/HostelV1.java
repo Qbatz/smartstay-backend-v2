@@ -17,6 +17,7 @@ import java.util.List;
 public class HostelV1 {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String hostelId;
     private int hostelType;
     private String hostelName;

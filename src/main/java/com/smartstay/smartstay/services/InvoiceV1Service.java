@@ -472,17 +472,6 @@ public class InvoiceV1Service {
         return invoicesV1Repository.findById(invoiceId).orElse(null);
     }
 
-    public ResponseEntity<?> getTransactions(String hostelId) {
-        List<Invoices> listInvoices = invoicesV1Repository.findByHostelId(hostelId);
-
-        List<InvoicesList> invoicesResponse = listInvoices
-                .stream()
-                .map(item -> new InvoiceListMapper().apply(item))
-                .toList();
-
-        return new ResponseEntity<>(invoicesResponse, HttpStatus.OK);
-    }
-
     public ResponseEntity<?> getAllInvoices(String hostelId, String startDate, String endDate, List<String> types, List<String> createdBy, List<String> mode, String searchKey, List<String> paymentStatus) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -598,16 +587,6 @@ public class InvoiceV1Service {
             return 1;
         }
         return 0;
-    }
-
-
-    public ResponseEntity<?> getAllReceipts(String hostelId) {
-        List<Receipts> listReceipts = invoicesV1Repository.findReceipts(hostelId);
-        List<ReceiptsList> receipts = listReceipts
-                .stream()
-                .map(item -> new ReceiptMapper().apply(item))
-                .toList();
-        return new ResponseEntity<>(receipts, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getAllReceiptsByHostelId(String hostelId) {
@@ -1522,6 +1501,7 @@ public class InvoiceV1Service {
                             .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem()))
                             .mapToDouble(InvoiceItems::getAmount)
                             .sum();
+//                    double rent = latestHistory.getRentAmount();
                     double rentPerDay = rent/noOfDaysInOldInvoice;
                     Calendar lastDayCal = Calendar.getInstance();
                     lastDayCal.setTime(dateJoiningDate);
@@ -1536,7 +1516,7 @@ public class InvoiceV1Service {
 
                     if (latestInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
                         balanceAmount = latestInvoice.getTotalAmount() - totalAmountForOldInvoice;
-                        latestInvoice.setPaidAmount(rentForOldInvoice);
+                        latestInvoice.setPaidAmount(totalAmountForOldInvoice);
                     }
                     else if (latestInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                         balanceAmount = latestInvoice.getPaidAmount() - totalAmountForOldInvoice;
@@ -1821,20 +1801,22 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        List<com.smartstay.smartstay.dao.BillingRules> listBillingRules = hostelService.findAllHostelsHavingBillingToday();
+        applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
 
-        List<HostelV1> listHostels = listBillingRules
-                .stream()
-                .map(BillingRules::getHostel)
-                .toList();
+//        List<com.smartstay.smartstay.dao.BillingRules> listBillingRules = hostelService.findAllHostelsHavingBillingToday();
 
-        if (listHostels != null && !listHostels.isEmpty()) {
-           listHostels.forEach(item -> {
-               applicationEventPublisher.publishEvent(new RecurringEvents(this, item.getHostelId()));
-           });
+//        List<HostelV1> listHostels = listBillingRules
+//                .stream()
+//                .map(BillingRules::getHostel)
+//                .toList();
+//
+//        if (listHostels != null && !listHostels.isEmpty()) {
+//           listHostels.forEach(item -> {
+//
+//           });
 
-            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
-        }
+//            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+//        }
         return new ResponseEntity<>("Not today", HttpStatus.BAD_REQUEST);
     }
 
@@ -2482,6 +2464,7 @@ public class InvoiceV1Service {
     public List<InvoicesV1> findInvoiceByHostelIdAndStartAndEndDate(String hostelId, Date startDate, Date endDate) {
         List<String> invoiceTypes = new ArrayList<>();
         invoiceTypes.add(InvoiceType.RENT.name());
+        invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
         invoiceTypes.add(InvoiceType.ADVANCE.name());
         invoiceTypes.add(InvoiceType.RENT.name());
         List<InvoicesV1> listInvoices = invoicesV1Repository.findInvoiceByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate, invoiceTypes);

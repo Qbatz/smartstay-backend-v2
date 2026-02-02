@@ -11,5 +11,8 @@ public enum ActivitySource {
     ASSETS,
     EXPENSE,
     EXPENSE_CATEGORY,
-    EXPENSE_SUB_CATEGORY
+    EXPENSE_SUB_CATEGORY,
+    BANKING,
+    BEDS,
+    BOOKING
 }

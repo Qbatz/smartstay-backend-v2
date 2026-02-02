@@ -162,6 +162,8 @@ public class BankingService {
 
         BankingV1 v1 = bankingV1Repository.save(bankingV1);
 
+        usersService.addUserLog(hostelId, v1.getBankId(), ActivitySource.BANKING, ActivitySourceType.CREATE, users);
+
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -276,6 +278,7 @@ public class BankingService {
 
         bankingV1.setUpdatedAt(new Date());
         bankingV1Repository.save(bankingV1);
+        usersService.addUserLog(hostelId, bankingV1.getBankId(), ActivitySource.BANKING, ActivitySourceType.UPDATE, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -497,6 +500,7 @@ public class BankingService {
         bankingV1.setUpdatedBy(authentication.getName());
         bankingV1Repository.save(bankingV1);
 
+        usersService.addUserLog(hostelId, bankingV1.getBankId(), ActivitySource.BANKING, ActivitySourceType.ADD_MONEY, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -589,7 +593,9 @@ public class BankingService {
         toBankTransactions.setTransactionDate(new Date());
         toBankTransactions.setCreatedAt(new Date());
         toBankTransactions.setCreatedBy(authentication.getName());
-        transactionService.saveTransaction(toBankTransactions);
+        BankTransactionsV1 bankTransactionsV1 = transactionService.saveTransaction(toBankTransactions);
+
+        usersService.addUserLog(hostelId, bankTransactionsV1.getBankId(), ActivitySource.BANKING, ActivitySourceType.TRANSFER, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 

@@ -76,20 +76,23 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
         }
 
-        Subscription subscription = subscriptionRepository.findByHostelId(hostelId);
+        List<Subscription> subscription = subscriptionRepository.findByHostelId(hostelId);
         if (subscription == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
         }
 
-        com.smartstay.smartstay.responses.subscriptions.Subscription subscription1 = new com.smartstay.smartstay.responses.subscriptions.Subscription(
-                subscription.getSubscriptionId(),
-                 Utils.dateToString(subscription.getPlanStartsAt()),
-                Utils.dateToString(subscription.getPlanEndsAt()),
-                subscription.getSubscriptionNumber(),
-                subscription.getPlanName(),
-                subscription.getPlanCode());
+        List<com.smartstay.smartstay.responses.subscriptions.Subscription> listSubscriptionResponse = subscription
+                .stream()
+                .map(i ->  new com.smartstay.smartstay.responses.subscriptions.Subscription(
+                        i.getSubscriptionId(),
+                        Utils.dateToString(i.getPlanStartsAt()),
+                        Utils.dateToString(i.getPlanEndsAt()),
+                        i.getSubscriptionNumber(),
+                        i.getPlanName(),
+                        i.getPlanCode()))
+                .toList();
 
-        return new ResponseEntity<>(subscription1, HttpStatus.OK);
+        return new ResponseEntity<>(listSubscriptionResponse, HttpStatus.OK);
 
     }
 
@@ -147,7 +150,7 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        Subscription latestSubscription = subscriptionRepository.findByHostelId(hostelId);
+        Subscription latestSubscription = subscriptionRepository.findLatestSubscription(hostelId);
         if (latestSubscription == null) {
             return new ResponseEntity<>(Utils.INVALID_SUBSCRIPTION, HttpStatus.BAD_REQUEST);
         }

@@ -16,37 +16,6 @@ import java.util.List;
 
 @Repository
 public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> {
-
-        @Query(value = """
-            select invc.invoice_id as invoiceId, invc.base_price as basePrice, invc.total_amount as totalAmount, invc.gst, invc.cgst, invc.sgst,
-            invc.created_at as createdAt, invc.created_by as createdBy, invc.customer_id as customerId, 
-            invc.hostel_id as hostelId, invc.invoice_generated_date as invoiceGeneratedAt, invc.invoice_start_date as invoiceStartDate,
-            invc.invoice_due_date as invoiceDueDate, invc.invoice_type as invoiceType, 
-            invc.payment_status as paymentStatus, invc.updated_at as updatedAt, 
-            invc.invoice_number as invoiceNumber, customers.first_name as firstName, customers.last_name as lastName,
-            customers.profile_pic as profilePic, 
-            advance.advance_amount as advanceAmount, advance.deductions as deductions,
-            invc.is_cancelled as cancelled, invc.paid_amount as paidAmount, invc.invoice_mode as invoiceMode   
-            from invoicesv1 invc inner join customers customers on customers.customer_id=invc.customer_id 
-            left outer join advance advance on advance.customer_id=invc.customer_id where invc.hostel_id=:hostelId AND invc.invoice_type not in('BOOKING') 
-            order by invc.invoice_start_date desc
-            """, nativeQuery = true)
-        List<Invoices> findByHostelId(@Param("hostelId") String hostelId);
-
-        @Query(value = """
-            SELECT invc.invoice_id as invoiceId, invc.invoice_number as invoiceNumber, invc.invoice_mode as invoiceMode, invc.invoice_type as invoiceType, 
-            invc.payment_status as paymentStatus, cus.profile_pic as profilePic,
-            transaction.paid_amount as paidAmount, transaction.paid_at as paidAt, invc.customer_id as customerId, transaction.transaction_id as transactionId, cus.first_name as firstName, cus.last_name as lastName, 
-            transaction.reference_number as referenceNumber,
-            transaction.bank_id as bankId, bank.bank_name as bankName, bank.account_holder_name as holderName 
-            FROM invoicesv1 invc 
-            inner join transactionv1 transaction on transaction.invoice_id=invc.invoice_id 
-            inner join customers cus on cus.customer_id=invc.customer_id 
-            inner join bankingv1 bank on bank.bank_id=transaction.bank_id 
-            where invc.hostel_id=:hostelId and invc.payment_status in ('PARTIAL_PAYMENT', 'PAID') and invc.is_cancelled=false
-            """, nativeQuery = true)
-        List<Receipts> findReceipts(@Param("hostelId") String hostelId);
-
         @Query("""
             SELECT i FROM InvoicesV1 i WHERE hostelId=:hostelId 
             AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate)) 
@@ -326,5 +295,8 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                 """)
     List<InvoicesV1> findInvoiceByHostelIdAndStartDateAndEndDate(String hostelId, Date startDate, Date endDate, List<String> invoiceTypes);
 
-
+    @Query(value = """
+            SELECT * FROM invoicesv1 where invoice_type='BOOKING' and paid_amount>total_amount;
+            """, nativeQuery = true)
+    List<InvoicesV1> findBookingAmountGreaterThanPaidAmount();
 }

@@ -12,8 +12,8 @@ public interface ExpenseSubCategoryRepository extends JpaRepository<ExpenseSubCa
     boolean existsBySubCategoryNameIgnoreCaseAndHostelId(String subCategoryName, String hostelId);
 
     @Query("""
-            SELECT esc FROM ExpenseSubCategory esc WHERE LOWER(esc.subCategoryName)=LOWER(:subCateName) AND
-            esc.subCategoryId !=:id
+            SELECT esc FROM ExpenseSubCategory esc WHERE LOWER(esc.subCategoryName)=LOWER(:subCateName) AND 
+            esc.hostelId=:hostelId AND esc.subCategoryId !=:id
             """)
-    List<ExpenseSubCategory> findBySUbCatNameAndId(String subCateName, Long id);
+    List<ExpenseSubCategory> findBySUbCatNameAndId(String hostelId, String subCateName, Long id);
 }
