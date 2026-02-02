@@ -187,7 +187,8 @@ public class TransactionService {
         int response = paymentSummaryService.addPayment(summary);
 
         if (response == 1) {
-            invoiceService.recordPayment(invoiceId, PaymentStatus.PAID.name(), payment.amount());
+            //dont have to add the amount. For booking invoice is already created.
+            invoiceService.recordPayment(invoiceId, PaymentStatus.PAID.name(), 0);
 
             TransactionDto transaction = new TransactionDto(payment.bankId(),
                     payment.referenceId(),

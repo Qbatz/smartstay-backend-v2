@@ -1652,7 +1652,22 @@ public class ElectricityService {
             } else {
                 //may goes to missed
                 bedHistories.forEach(item -> {
-                    missedEbForRoom.add(findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, leavingDate));
+                   ElectricityReadings latestReadingOfIndividualRoom = latestReadingOfRooms
+                           .stream()
+                                   .filter(i -> i.getRoomId().equals(item.getRoomId()))
+                                           .findFirst()
+                                                   .orElse(null);
+                   Date endDate = item.getEndDate();
+                   if (item.getEndDate() == null) {
+                       endDate = leavingDate;
+                   }
+                   if (latestReadingOfIndividualRoom == null) {
+                       missedEbForRoom.add(findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, leavingDate));
+                   }
+                   else if (Utils.compareWithTwoDates(latestReadingOfIndividualRoom.getEntryDate(), endDate) < 0) {
+                       missedEbForRoom.add(findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, leavingDate));
+                   }
+
                 });
 
 

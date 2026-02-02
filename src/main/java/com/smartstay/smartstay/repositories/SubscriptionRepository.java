@@ -11,7 +11,7 @@ import java.util.List;
 
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
-    Subscription findByHostelId(String hostelId);
+    List<Subscription> findByHostelId(String hostelId);
 
     @Query(value = """
             SELECT * FROM subscription WHERE hostel_id=:hostelId and DATE(plan_starts_at) <= DATE(:todaysDate) 
@@ -20,5 +20,10 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     Subscription checkSubscriptionForToday(@Param("hostelId") String hostelId, @Param("todaysDate") Date todaysDate);
 
     Subscription findTopByHostelIdOrderByPlanEndsAtDesc(String hostelId);
+
+    @Query(value = """
+            SELECT * FROM subscription WHERE hostel_id=:hostelId order by plan_starts_at DESC LIMIT 1
+            """, nativeQuery = true)
+    Subscription findLatestSubscription(String hostelId);
 
 }

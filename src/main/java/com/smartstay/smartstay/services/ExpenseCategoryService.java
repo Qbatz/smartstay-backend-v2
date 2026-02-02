@@ -94,7 +94,7 @@ public class ExpenseCategoryService {
                 }
 
                 com.smartstay.smartstay.dao.ExpenseCategory expCat = expensesCategoryRepository.save(expenseCategory);
-                usersService.addUserLog(hostelId, String.valueOf(expCat.getCategoryId()), ActivitySource.EXPENSE, ActivitySourceType.CREATE, users);
+                usersService.addUserLog(hostelId, String.valueOf(expCat.getCategoryId()), ActivitySource.EXPENSE_CATEGORY, ActivitySourceType.CREATE, users);
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
             }
         }
@@ -246,7 +246,7 @@ public class ExpenseCategoryService {
         }
 
         if (expenseCategory.newCategoryName() != null) {
-            List<com.smartstay.smartstay.dao.ExpenseCategory> existingCategory = expensesCategoryRepository.findByCategoryName(expenseCategory.newCategoryName(), catId);
+            List<com.smartstay.smartstay.dao.ExpenseCategory> existingCategory = expensesCategoryRepository.findByCategoryName(hostelId, expenseCategory.newCategoryName(), catId);
             if (existingCategory != null && !existingCategory.isEmpty()) {
                 return new ResponseEntity<>(Utils.CATEGORY_NAME_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
             }

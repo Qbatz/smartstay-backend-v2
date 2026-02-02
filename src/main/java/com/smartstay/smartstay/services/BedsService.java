@@ -16,6 +16,8 @@ import com.smartstay.smartstay.dto.beds.FreeBeds;
 import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.dashboard.BedsStatus;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.payloads.beds.AddBed;
@@ -414,6 +416,7 @@ public class BedsService {
         }
         existingBed.setUpdatedAt(new Date());
         bedsRepository.save(existingBed);
+        usersService.addUserLog(existingBed.getHostelId(), String.valueOf(existingBed.getBedId()), ActivitySource.BEDS, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -461,6 +464,7 @@ public class BedsService {
         beds.setFreeFrom(null);
         beds.setRentAmount(addBed.amount());
         Beds bedsV1 = bedsRepository.save(beds);
+        usersService.addUserLog(addBed.hostelId(), String.valueOf(bedsV1.getBedId()), ActivitySource.BEDS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -478,11 +482,14 @@ public class BedsService {
 
         }
         Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId, users.getParentId());
-        if (existingBed != null) {
-            bedsRepository.delete(existingBed);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        if (existingBed == null) {
+            return new ResponseEntity<>(Utils.NO_BED_FOUND_ERROR, HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(Utils.NO_BED_FOUND_ERROR, HttpStatus.BAD_REQUEST);
+
+        bedsRepository.delete(existingBed);
+        usersService.addUserLog(existingBed.getHostelId(), String.valueOf(existingBed.getBedId()), ActivitySource.BEDS, ActivitySourceType.DELETE, users);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
 
     }
 
@@ -899,7 +906,7 @@ public class BedsService {
         beds.setRentAmount(bedRent.newRent());
         beds.setUpdatedAt(new Date());
         bedsRepository.save(beds);
-
+        usersService.addUserLog(beds.getHostelId(), String.valueOf(bedId), ActivitySource.BEDS, ActivitySourceType.UPDATE, users);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 

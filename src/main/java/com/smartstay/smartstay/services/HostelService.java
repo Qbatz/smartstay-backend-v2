@@ -110,9 +110,7 @@ public class HostelService {
             emailId = usersService.findUserByUserId(userId).getEmailId();
         }
 
-        String hostelID = hostelIdGenerator();
         HostelV1 hostelV1 = new HostelV1();
-        hostelV1.setHostelId(hostelID);
         hostelV1.setCreatedBy(userId);
         hostelV1.setParentId(users.getParentId());
         hostelV1.setHostelType(1);
@@ -155,7 +153,7 @@ public class HostelService {
             hostelV1.setAdditionalImages(listHostelImages);
         }
 
-        hostelV1Repository.save(hostelV1);
+        HostelV1 hostelV11 = hostelV1Repository.save(hostelV1);
 
 
         int result = userHostelService.addHostelToExistingUsers(users.getParentId(), hostelV1.getHostelId());
@@ -166,22 +164,22 @@ public class HostelService {
                 userHostelService.addHostelToExistingUsers(users.getParentId(), listUsers, hostelV1.getHostelId());
             }
         }
-        eventPublisher.publishEvent(new HostelEvents(this, hostelID, authentication.getName(), users.getParentId()));
+        eventPublisher.publishEvent(new HostelEvents(this, hostelV11.getHostelId(), authentication.getName(), users.getParentId()));
         return new ResponseEntity<>("Created successfully", HttpStatus.CREATED);
     }
 
     public void updateHostelFromEvents(HostelV1 hostelV1) {
         hostelV1Repository.save(hostelV1);
     }
-    public String hostelIdGenerator() {
-        UUID uuid = UUID.randomUUID();
-        String uuidString = uuid.toString();
-        HostelV1 v1 = hostelV1Repository.findById(uuidString).orElse(null);
-        if (v1 == null) {
-            return uuidString;
-        }
-        return hostelIdGenerator();
-    }
+//    public String hostelIdGenerator() {
+//        UUID uuid = UUID.randomUUID();
+//        String uuidString = uuid.toString();
+//        HostelV1 v1 = hostelV1Repository.findById(uuidString).orElse(null);
+//        if (v1 == null) {
+//            return uuidString;
+//        }
+//        return hostelIdGenerator();
+//    }
 
     protected ZohoSubscriptionRequest formSubscription(AddHostelPayloads payloads, String emailId) {
 

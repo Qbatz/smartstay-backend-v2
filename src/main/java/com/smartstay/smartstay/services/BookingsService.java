@@ -545,7 +545,7 @@ public class BookingsService {
         }
 
         bedsService.cancelBooking(bookingsV1.getBedId(), user.getParentId());
-
+        userService.addUserLog(bookingsV1.getHostelId(), bookingsV1.getBookingId(), ActivitySource.BOOKING, ActivitySourceType.CANCEL, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
@@ -664,6 +664,8 @@ public class BookingsService {
         bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
         bookingsRepository.save(bookingsV1);
         customersConfigService.disableRecurring(customerId);
+
+        userService.addUserLog(bookingsV1.getHostelId(), bookingsV1.getBookingId(), ActivitySource.BOOKING, ActivitySourceType.CHECKOUT, user);
 
         return new ResponseEntity<>(HttpStatus.OK);
 
@@ -921,6 +923,7 @@ public class BookingsService {
                     bookingsV1.setJoiningDate(joinigDate);
                     bookingsRepository.save(bookingsV1);
 
+                    userService.addUserLog(hostelId, bookingId, ActivitySource.BOOKING, ActivitySourceType.JOINING_DATE, users);
                     return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
                 }
@@ -994,6 +997,7 @@ public class BookingsService {
 
             }
 
+            userService.addUserLog(hostelId, bookingId, ActivitySource.BOOKING, ActivitySourceType.UPDATE_AMOUNT, users);
 
 
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
@@ -1066,6 +1070,7 @@ public class BookingsService {
 
         bookingsRepository.save(bookingsV1);
 
+        userService.addUserLog(hostelId, bookingsV1.getBookingId(), ActivitySource.BOOKING, ActivitySourceType.ADVANCE_AMOUNT, users);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }

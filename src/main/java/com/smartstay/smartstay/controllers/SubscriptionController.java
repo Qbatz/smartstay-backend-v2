@@ -17,7 +17,6 @@ public class SubscriptionController {
     @Autowired
     private SubscriptionService subscriptionService;
 
-
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getCurrentPlan(@PathVariable("hostelId") String hostelId) {
         return subscriptionService.getCurrentPlan(hostelId);

@@ -2541,7 +2541,7 @@ public class CustomersService {
         if (balanceAmount < 0) {
             CustomerWallet wallet = customers.getWallet();
             if (wallet != null && wallet.getAmount() != null) {
-                wallet.setAmount(wallet.getAmount() - balanceAmount);
+                wallet.setAmount(wallet.getAmount() + balanceAmount);
                 wallet.setTransactionDate(joiningDate);
             } else {
                 if (wallet == null) {
