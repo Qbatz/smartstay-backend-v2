@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Pattern;
 public record UpdateStatus(
         @NotNull(message = "Status is required")
         @NotEmpty(message = "Status is required")
-        @Pattern(regexp = "^(ASSIGNED|PENDING|RESOLVED|assigned|pending|resolved)?$", message = "Status must be either 'assigned' or 'pending' or 'resolved'")
+        @Pattern(regexp = "^(INPROGRESS|PENDING|RESOLVED|inprogress|pending|resolved)?$", message = "Status must be either 'in progress' or 'pending' or 'resolved'")
         String status
 ) {
 }

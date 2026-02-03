@@ -21,17 +21,25 @@ public class CustomerNotificationService {
     @Autowired
     private FCMNotificationService fcmNotificationService;
 
-    public void addComplainUpdateStatus(ComplaintsV1 complaint, String name, String xuid, String newStatus) {
+    public void addComplainUpdateStatus(ComplaintsV1 complaint, String name, String xuid, String newStatus, String complaintType) {
         String titleMessage = "Complaint updates";
+        String description = complaintType + " has some update";
 
         if (newStatus.toLowerCase().equalsIgnoreCase(ComplaintStatus.RESOLVED.name().toLowerCase())) {
-            titleMessage = "Your complaint has been ressolved";
+            description = "Your complaint for " + complaintType + " has been ressolved";
+            titleMessage = "Updates on complaint " + complaintType;
         }
         else if (newStatus.toLowerCase().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name().toLowerCase())) {
-            titleMessage = "Your complaint has been assigned to " + name;
+            titleMessage = "Updates on complaint " + complaintType;
+            description = "Your complaint for " + complaintType + " has been assigned to " + name;
+        }
+        else if (newStatus.toLowerCase().equalsIgnoreCase(ComplaintStatus.IN_PROGRESS.name().toLowerCase())) {
+            titleMessage = "Updates on complaint " + complaintType;
+            description = "Your complaint for " + complaintType + " is moved for inprogress " + name;
         }
         else if (newStatus.toLowerCase().equalsIgnoreCase(ComplaintStatus.PENDING.name().toLowerCase())) {
-            titleMessage = "Your complaint has been put on pending by " + name;
+            titleMessage = "Updates on complaint " + complaintType;
+            description = "Your complaint has been put on pending by " + name;
         }
 
         CustomerNotifications customerNotifications = new CustomerNotifications();
@@ -39,7 +47,7 @@ public class CustomerNotificationService {
         customerNotifications.setNotificationType(NotificationType.COMPLAINT.name());
         customerNotifications.setUserId(complaint.getCustomerId());
         customerNotifications.setHostelId(complaint.getHostelId());
-        customerNotifications.setDescription("");
+        customerNotifications.setDescription(description);
         customerNotifications.setSourceId(String.valueOf(complaint.getComplaintId()));
         customerNotifications.setTitle(titleMessage);
         customerNotifications.setUserType(UserType.TENANT.name());

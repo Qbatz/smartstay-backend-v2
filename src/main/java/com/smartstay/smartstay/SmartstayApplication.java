@@ -142,27 +142,5 @@ public class SmartstayApplication {
 //		};
 //	}
 
-	/**
-	 *
-	 * required production
-	 *
-	 * @param invoicesV1Repository
-	 * @return
-	 */
-	@Bean
-	CommandLineRunner mapBookingAmountDeoubler(InvoicesV1Repository invoicesV1Repository) {
-		return args -> {
-			List<InvoicesV1> findBookingInvoices = invoicesV1Repository
-					.findBookingAmountGreaterThanPaidAmount()
-					.stream()
-					.map(i -> {
-						i.setPaidAmount(i.getTotalAmount());
-						return i;
-					})
-					.toList();
-
-			invoicesV1Repository.saveAll(findBookingInvoices);
-		};
-	}
 
 }

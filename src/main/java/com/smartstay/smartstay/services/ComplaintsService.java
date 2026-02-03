@@ -301,7 +301,13 @@ public class ComplaintsService {
         complaint.setUpdatedAt(new Date());
         complaintRepository.save(complaint);
 
-        customerNotificationService.addComplainUpdateStatus(complaint, fullName.toString(), customers.getXuid(), request.status());
+        ComplaintTypeV1 complaintTypeV1 = complaintTypeService.getComplaintType(complaint.getComplaintTypeId());
+        String complaintTypeName = null;
+        if (complaintTypeV1 != null) {
+            complaintTypeName = complaintTypeV1.getComplaintTypeName();
+        }
+
+        customerNotificationService.addComplainUpdateStatus(complaint, fullName.toString(), customers.getXuid(), request.status(), complaintTypeName);
 
         return new ResponseEntity<>(Utils.STATUS_UPDATED, HttpStatus.OK);
     }
@@ -566,6 +572,11 @@ public class ComplaintsService {
             return new ResponseEntity<>(Utils.COMPLAINT_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
         Customers customers = customersService.getCustomerInformation(complaint.getCustomerId());
+        ComplaintTypeV1 complaintTypeV1 = complaintTypeService.getComplaintType(complaint.getComplaintTypeId());
+        String complaintTypeName = null;
+        if (complaintTypeV1 != null) {
+            complaintTypeName = complaintTypeV1.getComplaintTypeName();
+        }
 
         Users users = usersService.existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(request.userId(), user.getParentId());
 
@@ -602,7 +613,7 @@ public class ComplaintsService {
         }
 
         //send a push notification
-        customerNotificationService.addComplainUpdateStatus(complaint, userName.toString(), customers.getXuid(), ComplaintStatus.ASSIGNED.name());
+        customerNotificationService.addComplainUpdateStatus(complaint, userName.toString(), customers.getXuid(), ComplaintStatus.ASSIGNED.name(), complaintTypeName);
 
         return new ResponseEntity<>(Utils.USER_ASSIGNED, HttpStatus.OK);
     }

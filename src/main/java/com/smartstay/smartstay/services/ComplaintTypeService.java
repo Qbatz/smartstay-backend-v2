@@ -183,4 +183,8 @@ public class ComplaintTypeService {
     public List<ComplaintTypeV1> getComplaintTypesById(List<Integer> complaintTypeIds) {
         return complaintTypeV1Repository.findAllById(complaintTypeIds);
     }
+
+    public ComplaintTypeV1 getComplaintType(Integer complaintTypeId) {
+        return complaintTypeV1Repository.findById(complaintTypeId).orElse(null);
+    }
 }
