@@ -39,4 +39,17 @@ public class ReportController {
         return reportService.getInvoiceReportDetails(hostelId, search, paymentStatus, invoiceModes, invoiceTypes,
                 createdBy, period, page, size);
     }
+
+    @GetMapping("/transaction/{hostelId}")
+    public ResponseEntity<?> getTransactionReportDetails(
+            @PathVariable("hostelId") String hostelId,
+            @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus,
+            @RequestParam(value = "period", required = false) String period,
+            @RequestParam(value = "startDate", required = false) String customStartDate,
+            @RequestParam(value = "endDate", required = false) String customEndDate,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        return reportService.getReceiptDetails(hostelId, period, customStartDate, customEndDate,
+                paymentStatus, page, size);
+    }
 }

@@ -8,6 +8,7 @@ import com.smartstay.smartstay.dto.reports.ElectricityForReports;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.responses.Reports.ReportDetailsResponse;
 import com.smartstay.smartstay.responses.Reports.ReportResponse;
+import com.smartstay.smartstay.responses.receiptForReport.ReceiptReportResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -29,12 +30,9 @@ public class ReportService {
     @Autowired
     private RolesService rolesService;
     @Autowired
-    private InvoiceV1Service invoicesService;
-    @Autowired
     private UserHostelService userHostelService;
     @Autowired
     private InvoiceV1Service invoiceV1Service;
-
     @Autowired
     private TransactionService transactionService;
     @Autowired
@@ -83,9 +81,12 @@ public class ReportService {
 
         // Invoices for hostel
         int invoiceCount = invoiceV1Service.countByHostelIdAndDateRange(hostelId, startDate, endDate);
-        Double invoiceTotal = invoiceV1Service.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, InvoiceType.SETTLEMENT.name(), startDate, endDate);
-        Double paidTotal = invoiceV1Service.sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, InvoiceType.SETTLEMENT.name(), startDate, endDate);
-        ReportResponse.InvoiceReport invoiceReport = ReportResponse.InvoiceReport.builder().noOfInvoices(invoiceCount).totalAmount(invoiceTotal).build();
+        Double invoiceTotal = invoiceV1Service.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId,
+                InvoiceType.SETTLEMENT.name(), startDate, endDate);
+        Double paidTotal = invoiceV1Service.sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(hostelId,
+                InvoiceType.SETTLEMENT.name(), startDate, endDate);
+        ReportResponse.InvoiceReport invoiceReport = ReportResponse.InvoiceReport.builder().noOfInvoices(invoiceCount)
+                .totalAmount(invoiceTotal).build();
 
         Double outstandingAmount = 0.0;
         if (invoiceTotal != null && paidTotal != null) {
@@ -95,15 +96,18 @@ public class ReportService {
         // Receipts
         int receiptCount = transactionService.countByHostelIdAndDateRange(hostelId, startDate, endDate);
         Double receiptTotal = transactionService.sumPaidAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
-        ReportResponse.ReceiptReport receiptReport = ReportResponse.ReceiptReport.builder().totalReceipts(receiptCount).totalAmount(receiptTotal).build();
+        ReportResponse.ReceiptReport receiptReport = ReportResponse.ReceiptReport.builder().totalReceipts(receiptCount)
+                .totalAmount(receiptTotal).build();
 
         // Banking
         int bankTransCount = bankTransactionService.countByHostelIdAndDateRange(hostelId, startDate, endDate);
         Double bankBalance = bankingService.sumBalanceByHostelId(hostelId);
-        ReportResponse.BankingReport bankingReport = ReportResponse.BankingReport.builder().totalTransactions(bankTransCount).totalAmount(bankBalance).build();
+        ReportResponse.BankingReport bankingReport = ReportResponse.BankingReport.builder()
+                .totalTransactions(bankTransCount).totalAmount(bankBalance).build();
 
         // Tenants
-        int tenantCount = customersService.countByHostelIdAndStatusIn(hostelId, Arrays.asList(CustomerStatus.CHECK_IN.name(), CustomerStatus.NOTICE.name()));
+        int tenantCount = customersService.countByHostelIdAndStatusIn(hostelId,
+                Arrays.asList(CustomerStatus.CHECK_IN.name(), CustomerStatus.NOTICE.name()));
         int filledBeds = bedsService.countOccupiedByHostelId(hostelId);
         int totalBeds = bedsService.countAllByHostelId(hostelId);
         double occupancyRate = 0.0;
@@ -111,12 +115,14 @@ public class ReportService {
             occupancyRate = ((double) filledBeds / totalBeds) * 100;
             occupancyRate = Utils.roundOffWithTwoDigit(occupancyRate);
         }
-        ReportResponse.TenantReport tenantReport = ReportResponse.TenantReport.builder().totalTenants(tenantCount).occupancyRate(occupancyRate).build();
+        ReportResponse.TenantReport tenantReport = ReportResponse.TenantReport.builder().totalTenants(tenantCount)
+                .occupancyRate(occupancyRate).build();
 
         // Expenses
         int expenseCount = expenseService.countByHostelIdAndDateRange(hostelId, startDate, endDate);
         Double expenseTotal = expenseService.sumAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
-        ReportResponse.ExpenseReport expenseReport = ReportResponse.ExpenseReport.builder().totalExpenses(expenseCount).totalExpenseAmount(expenseTotal).build();
+        ReportResponse.ExpenseReport expenseReport = ReportResponse.ExpenseReport.builder().totalExpenses(expenseCount)
+                .totalExpenseAmount(expenseTotal).build();
 
         Double totalRevenue = 0.0;
         if (invoiceTotal != null && expenseTotal != null) {
@@ -125,24 +131,37 @@ public class ReportService {
 
         // Vendor
         int vendorCount = vendorService.countByHostelId(hostelId);
-        ReportResponse.VendorReport vendorReport = ReportResponse.VendorReport.builder().totalVendors(vendorCount).build();
+        ReportResponse.VendorReport vendorReport = ReportResponse.VendorReport.builder().totalVendors(vendorCount)
+                .build();
 
         // Complaints
         int complaintCount = complaintService.countByHostelIdAndDateRange(hostelId, startDate, endDate);
-        int complaintActiveCount = complaintService.countActiveByHostelIdAndDateRange(hostelId, Arrays.asList(ComplaintStatus.PENDING.name(), ComplaintStatus.OPENED.name()), startDate, endDate);
-        ReportResponse.ComplaintReport complaintReport = ReportResponse.ComplaintReport.builder().totalComplaints(complaintCount).activeComplaints(complaintActiveCount).build();
+        int complaintActiveCount = complaintService.countActiveByHostelIdAndDateRange(hostelId,
+                Arrays.asList(ComplaintStatus.PENDING.name(), ComplaintStatus.OPENED.name()), startDate, endDate);
+        ReportResponse.ComplaintReport complaintReport = ReportResponse.ComplaintReport.builder()
+                .totalComplaints(complaintCount).activeComplaints(complaintActiveCount).build();
 
         // Requests
         int requestCount = amenityRequestService.countByHostelIdAndDateRange(hostelId, startDate, endDate);
-        int requestActiveCount = amenityRequestService.countActiveByHostelIdAndDateRange(hostelId, Arrays.asList(RequestStatus.PENDING.name(), RequestStatus.OPEN.name(), RequestStatus.INPROGRESS.name()), startDate, endDate);
-        ReportResponse.RequestReport requestReport = ReportResponse.RequestReport.builder().totalRequests(requestCount).activeRequests(requestActiveCount).build();
+        int requestActiveCount = amenityRequestService.countActiveByHostelIdAndDateRange(hostelId,
+                Arrays.asList(RequestStatus.PENDING.name(), RequestStatus.OPEN.name(), RequestStatus.INPROGRESS.name()),
+                startDate, endDate);
+        ReportResponse.RequestReport requestReport = ReportResponse.RequestReport.builder().totalRequests(requestCount)
+                .activeRequests(requestActiveCount).build();
 
-        ReportResponse response = ReportResponse.builder().hostelId(hostelId).startDate(Utils.dateToString(billingDates.currentBillStartDate())).endDate(Utils.dateToString(billingDates.currentBillEndDate())).outStandingAmount(outstandingAmount).totalRevenue(totalRevenue).invoices(invoiceReport).receipts(receiptReport).banking(bankingReport).tenantInfo(tenantReport).expense(expenseReport).vendor(vendorReport).complaints(complaintReport).requests(requestReport).build();
+        ReportResponse response = ReportResponse.builder().hostelId(hostelId)
+                .startDate(Utils.dateToString(billingDates.currentBillStartDate()))
+                .endDate(Utils.dateToString(billingDates.currentBillEndDate())).outStandingAmount(outstandingAmount)
+                .totalRevenue(totalRevenue).invoices(invoiceReport).receipts(receiptReport).banking(bankingReport)
+                .tenantInfo(tenantReport).expense(expenseReport).vendor(vendorReport).complaints(complaintReport)
+                .requests(requestReport).build();
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getInvoiceReportDetails(String hostelId, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, String period, int page, int size) {
+    public ResponseEntity<?> getInvoiceReportDetails(String hostelId, String search, List<String> paymentStatus,
+            List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, String period, int page,
+            int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -161,12 +180,14 @@ public class ReportService {
         Date endDate = dates.currentBillEndDate();
 
         Pageable pageable = PageRequest.of(page, size);
-        List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes, createdBy, pageable);
+        List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
+                paymentStatus, invoiceModes, invoiceTypes, createdBy, pageable);
         List<ReportDetailsResponse.InvoiceDetail> invoiceDetails = mapToInvoiceDetails(invoices);
 
         ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);
 
-        return buildReportResponse(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes, createdBy, invoices, invoiceDetails, options, page, size);
+        return buildReportResponse(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes,
+                createdBy, invoices, invoiceDetails, options, page, size);
     }
 
     private BillingDates calculateDateRange(String period, String hostelId) {
@@ -199,22 +220,34 @@ public class ReportService {
     }
 
     private List<ReportDetailsResponse.InvoiceDetail> mapToInvoiceDetails(List<InvoicesV1> invoices) {
-        List<ReportDetailsResponse.InvoiceDetail> details = invoices.stream().map(this::convertToInvoiceDetail).collect(Collectors.toList());
+        List<ReportDetailsResponse.InvoiceDetail> details = invoices.stream().map(this::convertToInvoiceDetail)
+                .collect(Collectors.toList());
 
         populateCustomerDetails(details, invoices);
         return details;
     }
 
     private ReportDetailsResponse.InvoiceDetail convertToInvoiceDetail(InvoicesV1 inv) {
-        return ReportDetailsResponse.InvoiceDetail.builder().invoiceId(inv.getInvoiceId()).invoiceNumber(inv.getInvoiceNumber()).customerId(inv.getCustomerId()).invoiceAmount(inv.getTotalAmount()).baseAmount(inv.getBasePrice()).paidAmount(inv.getPaidAmount()).dueAmount(inv.getTotalAmount() - (inv.getPaidAmount() != null ? inv.getPaidAmount() : 0.0)).cgst(inv.getCgst()).sgst(inv.getSgst()).gst(inv.getGst()).createdAt(Utils.dateToString(inv.getCreatedAt())).createdBy(inv.getCreatedBy()).hostelId(inv.getHostelId()).invoiceDate(Utils.dateToString(inv.getInvoiceStartDate())).dueDate(Utils.dateToString(inv.getInvoiceDueDate())).invoiceType(inv.getInvoiceType()).invoiceMode(inv.getInvoiceMode()).paymentStatus(inv.getPaymentStatus()).updatedAt(Utils.dateToString(inv.getUpdatedAt())).isCancelled(inv.isCancelled()).build();
+        return ReportDetailsResponse.InvoiceDetail.builder().invoiceId(inv.getInvoiceId())
+                .invoiceNumber(inv.getInvoiceNumber()).customerId(inv.getCustomerId())
+                .invoiceAmount(inv.getTotalAmount()).baseAmount(inv.getBasePrice()).paidAmount(inv.getPaidAmount())
+                .dueAmount(inv.getTotalAmount() - (inv.getPaidAmount() != null ? inv.getPaidAmount() : 0.0))
+                .cgst(inv.getCgst()).sgst(inv.getSgst()).gst(inv.getGst())
+                .createdAt(Utils.dateToString(inv.getCreatedAt())).createdBy(inv.getCreatedBy())
+                .hostelId(inv.getHostelId()).invoiceDate(Utils.dateToString(inv.getInvoiceStartDate()))
+                .dueDate(Utils.dateToString(inv.getInvoiceDueDate())).invoiceType(inv.getInvoiceType())
+                .invoiceMode(inv.getInvoiceMode()).paymentStatus(inv.getPaymentStatus())
+                .updatedAt(Utils.dateToString(inv.getUpdatedAt())).isCancelled(inv.isCancelled()).build();
     }
 
     private void populateCustomerDetails(List<ReportDetailsResponse.InvoiceDetail> details, List<InvoicesV1> invoices) {
-        List<String> customerIds = invoices.stream().map(InvoicesV1::getCustomerId).distinct().collect(Collectors.toList());
+        List<String> customerIds = invoices.stream().map(InvoicesV1::getCustomerId).distinct()
+                .collect(Collectors.toList());
 
         if (!customerIds.isEmpty()) {
             List<com.smartstay.smartstay.dao.Customers> customerList = customersService.getCustomerDetails(customerIds);
-            Map<String, com.smartstay.smartstay.dao.Customers> customerMap = customerList.stream().collect(Collectors.toMap(com.smartstay.smartstay.dao.Customers::getCustomerId, c -> c));
+            Map<String, com.smartstay.smartstay.dao.Customers> customerMap = customerList.stream()
+                    .collect(Collectors.toMap(com.smartstay.smartstay.dao.Customers::getCustomerId, c -> c));
 
             details.forEach(detail -> {
                 com.smartstay.smartstay.dao.Customers c = customerMap.get(detail.getCustomerId());
@@ -254,20 +287,28 @@ public class ReportService {
                 String fName = (String) row[1];
                 String lName = (String) row[2];
                 String fullName = (fName != null ? fName : "") + " " + (lName != null ? lName : "");
-                createdByOptions.add(ReportDetailsResponse.UserFilterItem.builder().userId(uId).name(fullName.trim()).build());
+                createdByOptions
+                        .add(ReportDetailsResponse.UserFilterItem.builder().userId(uId).name(fullName.trim()).build());
             }
         }
 
-        return ReportDetailsResponse.FilterOptions.builder().paymentStatus(toFilterItems(PaymentStatus.values())).invoiceModes(toFilterItems(InvoiceMode.values())).invoiceTypes(toFilterItems(InvoiceType.values())).createdBy(createdByOptions).build();
+        return ReportDetailsResponse.FilterOptions.builder().paymentStatus(toFilterItems(PaymentStatus.values()))
+                .invoiceModes(toFilterItems(InvoiceMode.values())).invoiceTypes(toFilterItems(InvoiceType.values()))
+                .createdBy(createdByOptions).build();
     }
 
     private <E extends Enum<E>> List<ReportDetailsResponse.FilterItem> toFilterItems(E[] values) {
-        return Arrays.stream(values).map(e -> new ReportDetailsResponse.FilterItem(e.name(), e.name())).collect(Collectors.toList());
+        return Arrays.stream(values).map(e -> new ReportDetailsResponse.FilterItem(e.name(), e.name()))
+                .collect(Collectors.toList());
     }
 
-    private ResponseEntity<?> buildReportResponse(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, List<InvoicesV1> invoices, List<ReportDetailsResponse.InvoiceDetail> invoiceDetails, ReportDetailsResponse.FilterOptions options, int page, int size) {
+    private ResponseEntity<?> buildReportResponse(String hostelId, Date startDate, Date endDate, String search,
+            List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy,
+            List<InvoicesV1> invoices, List<ReportDetailsResponse.InvoiceDetail> invoiceDetails,
+            ReportDetailsResponse.FilterOptions options, int page, int size) {
 
-        List<Object[]> aggregates = invoiceV1Service.getInvoiceAggregatesForReport(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes, createdBy);
+        List<Object[]> aggregates = invoiceV1Service.getInvoiceAggregatesForReport(hostelId, startDate, endDate, search,
+                paymentStatus, invoiceModes, invoiceTypes, createdBy);
 
         int totalInvoices = 0;
         Double totalAmount = 0.0;
@@ -275,15 +316,65 @@ public class ReportService {
 
         if (aggregates != null && !aggregates.isEmpty()) {
             Object[] row = aggregates.get(0);
-            if (row[0] != null) totalInvoices = ((Number) row[0]).intValue();
-            if (row[1] != null) totalAmount = ((Number) row[1]).doubleValue();
-            if (row[2] != null) paidAmount = ((Number) row[2]).doubleValue();
+            if (row[0] != null)
+                totalInvoices = ((Number) row[0]).intValue();
+            if (row[1] != null)
+                totalAmount = ((Number) row[1]).doubleValue();
+            if (row[2] != null)
+                paidAmount = ((Number) row[2]).doubleValue();
         }
         Double outStandingAmount = totalAmount - paidAmount;
 
         int totalPages = (int) Math.ceil((double) totalInvoices / size);
 
-        ReportDetailsResponse response = ReportDetailsResponse.builder().totalInvoices(totalInvoices).currentPage(page).totalPages(totalPages).totalAmount(totalAmount).outStandingAmount(outStandingAmount).paidAmount(paidAmount).filterOptions(options).invoiceList(invoiceDetails).build();
+        ReportDetailsResponse response = ReportDetailsResponse.builder().totalInvoices(totalInvoices).currentPage(page)
+                .totalPages(totalPages).totalAmount(totalAmount).outStandingAmount(outStandingAmount)
+                .paidAmount(paidAmount).filterOptions(options).invoiceList(invoiceDetails).build();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getReceiptDetails(String hostelId, String date, String customStartDate,
+            String customEndDate, List<String> paymentStatus, int page, int size) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+
+        Date startDate = null;
+        Date endDate = null;
+
+        if (customStartDate != null && customEndDate != null) {
+            startDate = Utils.stringToDate(customStartDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            endDate = Utils.stringToDate(customEndDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        } else {
+            BillingDates billingDates;
+            if (date != null) {
+                billingDates = hostelService.getBillingRuleOnDate(hostelId,
+                        Utils.stringToDate(date.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+            } else {
+                billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+            }
+
+            if (billingDates != null) {
+                startDate = billingDates.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+        }
+
+        ReceiptReportResponse response = transactionService
+                .getReceiptReports(hostelId, startDate, endDate, paymentStatus, page, size);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
