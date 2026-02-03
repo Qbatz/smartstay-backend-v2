@@ -125,4 +125,12 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate,
             @Param("paymentStatus") List<String> paymentStatus);
+
+        @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId AND t.type IN ('BOOKING', 'ADVANCE', 'RENT') AND DATE(t.paidAt) >= DATE(:startDate) AND DATE(t.paidAt) <= DATE(:endDate)")
+        Double sumIncomeByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+                                               @Param("endDate") Date endDate);
+
+        @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId AND t.type = 'REFUND' AND DATE(t.paidAt) >= DATE(:startDate) AND DATE(t.paidAt) <= DATE(:endDate)")
+        Double sumRefundByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+                                               @Param("endDate") Date endDate);
 }

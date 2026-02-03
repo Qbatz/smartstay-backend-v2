@@ -24,6 +24,8 @@ import com.smartstay.smartstay.responses.receipt.ReceiptConfigInfo;
 import com.smartstay.smartstay.responses.receipt.ReceiptDetails;
 import com.smartstay.smartstay.responses.receipt.ReceiptInfo;
 import com.smartstay.smartstay.responses.receiptForReport.ReceiptReportResponse;
+import com.smartstay.smartstay.responses.expenseForReport.ExpenseReportResponse;
+import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.util.Utils;
 import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,6 +74,12 @@ public class TransactionService {
     private BankTransactionService bankTransactionService;
     @Autowired
     private TransactionV1Repository transactionRespository;
+    @Autowired
+    private ExpensesRepository expensesRepository;
+    @Autowired
+    private ExpenseCategoryService expenseCategoryService;
+    @Autowired
+    private VendorService vendorService;
 
     /**
      * not using it
@@ -991,4 +999,94 @@ public class TransactionService {
                 .receipts(receiptDetails)
                 .build();
     }
+
+        public ExpenseReportResponse getExpenseReports (String hostelId, Date startDate, Date endDate,int page, int size)
+        {
+            int offset = page * size;
+            int limit = size;
+
+            Double totalIncome = transactionRespository.sumIncomeByHostelIdAndDateRange(hostelId, startDate, endDate);
+            Double totalRefunds = transactionRespository.sumRefundByHostelIdAndDateRange(hostelId, startDate, endDate);
+            Double totalHostelExpenses = expensesRepository.sumAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
+
+            double totalExpenses = totalHostelExpenses + totalRefunds;
+            double balanceAmount = totalIncome - totalExpenses;
+            double profit = balanceAmount > 0 ? balanceAmount : 0;
+            double loss = balanceAmount < 0 ? Math.abs(balanceAmount) : 0;
+
+            // Paginated Expenses
+            List<ExpensesV1> expensesList = expensesRepository.findExpensesByFiltersNoJoin(hostelId, startDate, endDate, limit, offset);
+            int totalExpensesCount = expensesRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
+            int totalPages = (int) Math.ceil((double) totalExpensesCount / size);
+
+            List<ExpenseReportResponse.ExpenseDetail> details = expensesList.stream().map(e -> {
+                String categoryName = "Unknown";
+                String subCategoryName = "Unknown";
+                String vendorName = "Unknown";
+                String bankName = "Unknown";
+
+                // Resolve names (no joins used)
+                try {
+                    if (e.getCategoryId() != null) {
+                        // Assuming a simple way to get name. If service doesn't have it, we'd need another repo or method.
+                        // For now, let's assume we can fetch it.
+                        com.smartstay.smartstay.dao.ExpenseCategory cat = expenseCategoryService.getExpenseCategoryById(e.getCategoryId());
+                        if (cat != null) {
+                            categoryName = cat.getCategoryName();
+                            if (e.getSubCategoryId() != null && cat.getListSubCategories() != null) {
+                                subCategoryName = cat.getListSubCategories().stream()
+                                        .filter(s -> s.getSubCategoryId().equals(e.getSubCategoryId()))
+                                        .map(com.smartstay.smartstay.dao.ExpenseSubCategory::getSubCategoryName)
+                                        .findFirst().orElse("Unknown");
+                            }
+                        }
+                    }
+                    if (e.getVendorId() != null) {
+                        com.smartstay.smartstay.dao.VendorV1 vendor = vendorService.getVendorObjectById(Integer.parseInt(e.getVendorId()));
+                        if (vendor != null) {
+                            vendorName = vendor.getBusinessName() != null ? vendor.getBusinessName() : vendor.getFirstName();
+                        }
+                    }
+                    if (e.getBankId() != null) {
+                        BankingV1 bank = bankingService.getBankDetails(e.getBankId());
+                        if (bank != null) {
+                            bankName = bank.getBankName();
+                        }
+                    }
+                } catch (Exception ex) {
+                    // Keep defaults if error
+                }
+
+                return ExpenseReportResponse.ExpenseDetail.builder()
+                        .expenseId(e.getExpenseId())
+                        .expenseNumber(e.getExpenseNumber())
+                        .categoryName(categoryName)
+                        .subCategoryName(subCategoryName)
+                        .description(e.getDescription())
+                        .amount(e.getTransactionAmount())
+                        .transactionDate(Utils.dateToString(e.getTransactionDate()))
+                        .bankName(bankName)
+                        .vendorName(vendorName)
+                        .build();
+            }).collect(Collectors.toList());
+
+            ExpenseReportResponse.ExpenseSummary summary = ExpenseReportResponse.ExpenseSummary.builder()
+                    .totalCount(totalExpensesCount)
+                    .startDate(startDate != null ? Utils.dateToString(startDate) : null)
+                    .endDate(endDate != null ? Utils.dateToString(endDate) : null)
+                    .build();
+
+            return ExpenseReportResponse.builder()
+                    .totalExpenses(totalExpenses)
+                    .balanceAmount(balanceAmount)
+                    .profit(profit)
+                    .loss(loss)
+                    .currentPage(page)
+                    .totalPages(totalPages)
+                    .expenseSummary(summary)
+                    .expenses(details)
+                    .build();
+        }
+
+
 }
