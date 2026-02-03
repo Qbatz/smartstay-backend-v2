@@ -40,6 +40,6 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
                 ORDER BY e.transaction_date DESC
                 LIMIT :limit OFFSET :offset
                 """, nativeQuery = true)
-        List<ExpensesV1> findExpensesByFiltersNoJoin(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("limit") int limit, @Param("offset") int offset);
+        List<ExpensesV1> findExpensesByFilters(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("limit") int limit, @Param("offset") int offset);
 
 }
