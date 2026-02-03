@@ -6,5 +6,13 @@ public enum ActivitySourceType {
     DELETE,
     ASSIGN,
     UNASSIGN,
-    LOGGED_IN
+    LOGGED_IN,
+    ADD_MONEY,
+    TRANSFER,
+    UPDATE_AMOUNT,
+    CANCEL,
+    CHECKOUT,
+    JOINING_DATE,
+    ADVANCE_AMOUNT
+
 }

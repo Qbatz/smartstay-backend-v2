@@ -6,7 +6,11 @@ import com.smartstay.smartstay.dao.ExpenseSubCategory;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.expenses.ExpensesCategory;
 import com.smartstay.smartstay.dto.expenses.ExpensesSubCategory;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.payloads.expense.ExpenseCategory;
+import com.smartstay.smartstay.payloads.expense.UpdateExpenseCategory;
+import com.smartstay.smartstay.payloads.expense.UpdateSubCategory;
 import com.smartstay.smartstay.repositories.ExpenseCategoryRepository;
 import com.smartstay.smartstay.responses.expenses.ExpensesCategories;
 import com.smartstay.smartstay.responses.expenses.ExpensesSubCategories;
@@ -88,8 +92,9 @@ public class ExpenseCategoryService {
                     listSubCategory.add(subCategory);
                     expenseCategory.setListSubCategories(listSubCategory);
                 }
-                expensesCategoryRepository.save(expenseCategory);
 
+                com.smartstay.smartstay.dao.ExpenseCategory expCat = expensesCategoryRepository.save(expenseCategory);
+                usersService.addUserLog(hostelId, String.valueOf(expCat.getCategoryId()), ActivitySource.EXPENSE_CATEGORY, ActivitySourceType.CREATE, users);
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
             }
         }
@@ -122,7 +127,8 @@ public class ExpenseCategoryService {
                     listSubCategories.add(subCat);
                     expenseCategory.setListSubCategories(listSubCategories);
 
-                    expensesCategoryRepository.save(expenseCategory);
+                    com.smartstay.smartstay.dao.ExpenseCategory expCategory = expensesCategoryRepository.save(expenseCategory);
+                    usersService.addUserLog(hostelId, String.valueOf(expCategory.getCategoryId()), ActivitySource.EXPENSE_SUB_CATEGORY, ActivitySourceType.CREATE, users);
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
                 }
@@ -199,5 +205,82 @@ public class ExpenseCategoryService {
                 .count();
 
         return counts > 0;
+    }
+
+    public ResponseEntity<?> updateExpenseCategory(String hostelId, String categoryId, UpdateExpenseCategory expenseCategory) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (expenseCategory == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        Long catId = 0l;
+        try {
+            catId = Long.valueOf(categoryId);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        com.smartstay.smartstay.dao.ExpenseCategory expCategory = expensesCategoryRepository.getReferenceById(catId);
+        if (expCategory == null) {
+            return new ResponseEntity<>(Utils.INVALID_CATEGORY_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!hostelId.equalsIgnoreCase(expCategory.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (expenseCategory.newCategoryName() != null) {
+            List<com.smartstay.smartstay.dao.ExpenseCategory> existingCategory = expensesCategoryRepository.findByCategoryName(hostelId, expenseCategory.newCategoryName(), catId);
+            if (existingCategory != null && !existingCategory.isEmpty()) {
+                return new ResponseEntity<>(Utils.CATEGORY_NAME_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
+            }
+            expCategory.setCategoryName(expenseCategory.newCategoryName());
+            expensesCategoryRepository.save(expCategory);
+            usersService.addUserLog(hostelId, String.valueOf(expCategory.getCategoryId()), ActivitySource.EXPENSE_CATEGORY, ActivitySourceType.UPDATE, users);
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+        else {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    public ResponseEntity<?> updateExpenseSubCategory(String hostelId, String subCategoryId, UpdateSubCategory subCategory) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (subCategory == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        return expenseSubCategory.updateSubCategry(hostelId, subCategoryId, subCategory);
     }
 }

@@ -46,6 +46,99 @@ public class ActivityLogUtils {
                 return "Assets has been updated";
             }
         }
+
+        if (activitySource.equalsIgnoreCase(ActivitySource.EXPENSE_CATEGORY.name())) {
+            return getExpenseCategoryOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.EXPENSE_SUB_CATEGORY.name())) {
+            return getExpenseSubCategoryOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.BANKING.name())) {
+            return getBankingOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.BEDS.name())) {
+            return getBedsOperations(operationType);
+        }
+
+        if (activitySource.equalsIgnoreCase(ActivitySource.BOOKING.name())) {
+            return getBedsOperations(operationType);
+        }
+
+
         return null;
     }
+
+    private static String getExpenseSubCategoryOperations(String operationType) {
+        if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Added expense subcategories";
+        }
+        else if (operationType.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated expense subcategory";
+        }
+        return null;
+    }
+
+
+    private static String getExpenseCategoryOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Created expense category";
+        }
+        else if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated expense category";
+        }
+        return null;
+    }
+
+    private static String getBankingOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Added a new bank account";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated bank account";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.ADD_MONEY.name())) {
+            return "Added money to the account";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.TRANSFER.name())) {
+            return "Transferred money from ";
+        }
+
+        return null;
+    }
+
+    private static String getBedsOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Created a new bed";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated a bed";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE_AMOUNT.name())) {
+            return "Updated amount for bed";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted a bed";
+        }
+        return null;
+    }
+
+    private static String getBookingsOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CANCEL.name())) {
+            return "Cancelled a booking";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CHECKOUT.name())) {
+            return "Checkout a customer ";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE_AMOUNT.name())) {
+            return "Updated rent amount for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.JOINING_DATE.name())) {
+            return "Updated joining date for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.ADVANCE_AMOUNT.name())) {
+            return "Updated advance amount for";
+        }
+        return null;
+    }
+
 }

@@ -96,8 +96,8 @@ public class BankTransactionService {
         return bankRepository.findTopByBankIdAndHostelIdOrderByCreatedAtDesc(bankId,hostelId);
     }
 
-    public void saveTransaction(BankTransactionsV1 transaction) {
-        bankRepository.save(transaction);
+    public BankTransactionsV1 saveTransaction(BankTransactionsV1 transaction) {
+        return bankRepository.save(transaction);
     }
 
     /**
