@@ -1467,7 +1467,7 @@ public class ElectricityService {
                 else {
                     pendingHistoryAmount.addAll(listLatestReadingsByHistory);
 
-                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), pendingHistoryAmount, bedDetails);
+                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), pendingHistoryAmount, bedDetails, leavingDate);
                     if (listEbRooms != null && !listEbRooms.isEmpty()) {
                         pendingEbAmount = listEbRooms
                                 .stream()
@@ -1601,7 +1601,7 @@ public class ElectricityService {
                                 listReadings.add(electricityReadings);
                             }
                         });
-                        List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), listReadings, bedDetails);
+                        List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), listReadings, bedDetails, leavingDate);
                         pendingEb.addAll(listEbRooms);
                     }
 
@@ -1640,7 +1640,7 @@ public class ElectricityService {
                         }
                     });
 
-                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), pendingHistoryAmount, bedDetails);
+                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), pendingHistoryAmount, bedDetails, leavingDate);
                     pendingEb.addAll(listEbRooms);
 
                     missedEbForRoom.addAll(findMissedEB(latestReadingOfRooms, bedHistories, bedDetails, leavingDate));
@@ -1825,7 +1825,7 @@ public class ElectricityService {
                             .map(CustomersBedHistory::getBedId)
                             .toList();
                     List<BedDetails> bedDetails = bedsService.getBedDetails(bedIds);
-                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customerId, listElectricityReadings, bedDetails);
+                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customerId, listElectricityReadings, bedDetails, leavingDate);
                     double ebAmount = 0.0;
                     if (!listEbRooms.isEmpty()) {
                         ebAmount = listEbRooms

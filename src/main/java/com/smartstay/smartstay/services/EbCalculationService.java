@@ -25,13 +25,8 @@ public class EbCalculationService {
     private CustomersBedHistoryService customersBedHistoryService;
     @Autowired
     private HostelService hostelService;
-//    private ElectricityService electricityService;
-//    @Autowired
-//    public void setElectricityService(@Lazy ElectricityService electricityService) {
-//        this.electricityService = electricityService;
-//    }
 
-    public List<PendingEbForSettlement> calculateEbAmountAndUnit(String hostelId, String customerId, List<ElectricityReadings> pendingHistoryAmount, List<BedDetails> roomInfo) {
+    public List<PendingEbForSettlement> calculateEbAmountAndUnit(String hostelId, String customerId, List<ElectricityReadings> pendingHistoryAmount, List<BedDetails> roomInfo, Date leavingDate) {
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
 
         List<PendingEbForSettlement> pendingAmount = new ArrayList<>();
@@ -52,7 +47,17 @@ public class EbCalculationService {
                                     }
                                 }
                                 else if (item.getEndDate() == null) {
-                                    endDate.set(i.getBillEndDate());
+                                    if (leavingDate != null) {
+                                        if (Utils.compareWithTwoDates(i.getBillEndDate(), leavingDate) <= 0) {
+                                            endDate.set(leavingDate);
+                                        }
+                                        else {
+                                            endDate.set(i.getBillEndDate());
+                                        }
+                                    }
+                                    else {
+                                        endDate.set(i.getBillEndDate());
+                                    }
                                 }
                                 if (Utils.compareWithTwoDates(item.getStartDate(), i.getBillStartDate()) <= 0) {
                                     startDate.set(i.getBillStartDate());
