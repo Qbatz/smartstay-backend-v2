@@ -2473,4 +2473,8 @@ public class InvoiceV1Service {
         }
         return new ArrayList<>();
     }
+
+    public List<InvoicesV1> findByInvoiceIdIn(List<String> invoiceIds) {
+        return invoicesV1Repository.findByInvoiceIdIn(invoiceIds);
+    }
 }

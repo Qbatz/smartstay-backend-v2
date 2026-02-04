@@ -283,4 +283,8 @@ public class ExpenseCategoryService {
 
         return expenseSubCategory.updateSubCategry(hostelId, subCategoryId, subCategory);
     }
+
+    public com.smartstay.smartstay.dao.ExpenseCategory getExpenseCategoryById(Long id) {
+        return expensesCategoryRepository.findByCategoryId(id);
+    }
 }

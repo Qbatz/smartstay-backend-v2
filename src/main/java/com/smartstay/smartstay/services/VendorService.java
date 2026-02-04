@@ -217,4 +217,7 @@ public class VendorService {
         return vendorRepository.countByHostelId(hostelId);
     }
 
+    public com.smartstay.smartstay.dao.VendorV1 getVendorObjectById(int id) {
+        return vendorRepository.findByVendorId(id);
+    }
 }
