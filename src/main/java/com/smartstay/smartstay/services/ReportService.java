@@ -468,8 +468,9 @@ public class ReportService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getExpenseDetails(String hostelId, String date, String customStartDate,
-            String customEndDate, int page, int size) {
+    public ResponseEntity<?> getExpenseDetails(String hostelId, String period, String customStartDate,
+            String customEndDate, List<Long> categoryIds, List<Long> subCategoryIds, List<String> paymentModes,
+            List<String> paidTo, List<String> createdBy, int page, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -484,29 +485,8 @@ public class ReportService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        Date startDate = null;
-        Date endDate = null;
-
-        if (customStartDate != null && customEndDate != null) {
-            startDate = Utils.stringToDate(customStartDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-            endDate = Utils.stringToDate(customEndDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        } else {
-            BillingDates billingDates;
-            if (date != null) {
-                billingDates = hostelService.getBillingRuleOnDate(hostelId,
-                        Utils.stringToDate(date.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
-            } else {
-                billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
-            }
-
-            if (billingDates != null) {
-                startDate = billingDates.currentBillStartDate();
-                endDate = billingDates.currentBillEndDate();
-            }
-        }
-
-        ExpenseReportResponse response = transactionService.getExpenseReports(hostelId, startDate, endDate, page, size);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(expenseService.getExpenseReportDetails(hostelId, period, customStartDate, customEndDate,
+                categoryIds, subCategoryIds, paymentModes, paidTo, createdBy, page, size), HttpStatus.OK);
     }
 
     public ResponseEntity<?> getTenantRegister(String hostelId, String customStartDate, String customEndDate,
@@ -552,7 +532,8 @@ public class ReportService {
                 activeAmount += amount;
             } else if (BookingStatus.NOTICE.name().equalsIgnoreCase(status)) {
                 noticeAmount += amount;
-            } else if (BookingStatus.VACATED.name().equalsIgnoreCase(status) || BookingStatus.TERMINATED.name().equalsIgnoreCase(status)) {
+            } else if (BookingStatus.VACATED.name().equalsIgnoreCase(status)
+                    || BookingStatus.TERMINATED.name().equalsIgnoreCase(status)) {
                 checkoutAmount += amount;
             } else if (BookingStatus.CANCELLED.name().equalsIgnoreCase(status)) {
                 inactiveAmount += amount;
@@ -571,7 +552,6 @@ public class ReportService {
                 .inactive(new TenantRegisterResponse.SegmentSummary(
                         inactiveAmount, 0))
                 .build();
-
 
         List<BookingsV1> paginatedBookings = bookingsService
                 .findBookingsForTenantRegister(hostelId, startDate, endDate, page, size);

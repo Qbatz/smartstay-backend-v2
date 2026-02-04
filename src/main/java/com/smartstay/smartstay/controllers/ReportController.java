@@ -59,9 +59,15 @@ public class ReportController {
             @RequestParam(value = "period", required = false) String period,
             @RequestParam(value = "startDate", required = false) String customStartDate,
             @RequestParam(value = "endDate", required = false) String customEndDate,
+            @RequestParam(value = "categoryId", required = false) List<Long> categoryId,
+            @RequestParam(value = "subCategoryId", required = false) List<Long> subCategoryId,
+            @RequestParam(value = "paymentMode", required = false) List<String> paymentMode,
+            @RequestParam(value = "paidTo", required = false) List<String> paidTo,
+            @RequestParam(value = "createdBy", required = false) List<String> createdBy,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
-        return reportService.getExpenseDetails(hostelId, period, customStartDate, customEndDate, page, size);
+        return reportService.getExpenseDetails(hostelId, period, customStartDate, customEndDate,
+                categoryId, subCategoryId, paymentMode, paidTo, createdBy, page, size);
     }
 
     @GetMapping("/tenant-register/{hostelId}")

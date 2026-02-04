@@ -46,7 +46,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -96,6 +95,7 @@ public class UsersService {
         this.restTemplate = new RestTemplate();
         restTemplate.setInterceptors(Collections.singletonList(new RestTemplateLoggingInterceptor()));
     }
+
     @Autowired
     public void setBankingService(@Lazy BankingService bankingService) {
         this.bankingService = bankingService;
@@ -119,15 +119,13 @@ public class UsersService {
         if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
             return new ResponseEntity<>(
                     new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
-                    HttpStatus.BAD_REQUEST
-            );
+                    HttpStatus.BAD_REQUEST);
         }
 
         if (!createAccount.password().equalsIgnoreCase(createAccount.confirmPassword())) {
             return new ResponseEntity<>(
                     new AdminUserResponse("", "", "Password and confirm password is not matching"),
-                    HttpStatus.BAD_REQUEST
-            );
+                    HttpStatus.BAD_REQUEST);
         }
 
         Users users = new Users();
@@ -151,11 +149,10 @@ public class UsersService {
         users.setAddress(address);
 
         Users usr = userRepository.save(users);
-        userActivitiesService.createUser( ActivitySource.PROFILE.name(), ActivitySourceType.CREATE.name(), usr);
+        userActivitiesService.createUser(ActivitySource.PROFILE.name(), ActivitySourceType.CREATE.name(), usr);
 
         return new ResponseEntity<>(new AdminUserResponse("", "", "Created successfully"), HttpStatus.CREATED);
     }
-
 
     public ResponseEntity<?> mobileLogin(Login login) {
         if (login == null) {
@@ -169,18 +166,17 @@ public class UsersService {
             return new ResponseEntity<>(Utils.INVALID_USER_NAME_PASSWORD, HttpStatus.BAD_REQUEST);
         }
 
-        Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
+        Authentication authentication = authManager
+                .authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
         if (authentication.isAuthenticated()) {
             boolean isPinSetup = false;
             UsersConfig config = users.getConfig();
             if (config == null) {
                 isPinSetup = false;
-            }
-            else {
+            } else {
                 if (config.getPin() == null) {
                     isPinSetup = false;
-                }
-                else {
+                } else {
                     isPinSetup = true;
                 }
             }
@@ -197,12 +193,14 @@ public class UsersService {
     public ResponseEntity<Object> login(Login login) {
         Users users = userRepository.findByEmailIdAndIsDeletedFalse(login.emailId());
         if (users != null) {
-            Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
+            Authentication authentication = authManager
+                    .authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
 
             if (authentication.isAuthenticated()) {
                 if (users.isTwoStepVerificationStatus()) {
                     int otp = Utils.generateOtp();
-                    String otpMessage = "Dear user, your SmartStay Login OTP is " + otp + ". Use this OTP to verify your login. Do not share it with anyone. - SmartStay";
+                    String otpMessage = "Dear user, your SmartStay Login OTP is " + otp
+                            + ". Use this OTP to verify your login. Do not share it with anyone. - SmartStay";
                     otpService.insertOTP(users, otp);
                     if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
                         otpService.sendOtp(users.getMobileNo(), otpMessage);
@@ -216,13 +214,13 @@ public class UsersService {
                 claims.put("userId", users.getUserId());
                 claims.put("role", rolesService.findById(users.getRoleId()));
                 loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.WEB.name(), "");
-                userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(), ActivitySourceType.LOGGED_IN.name(), users.getUserId(), users);
+                userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
+                        ActivitySourceType.LOGGED_IN.name(), users.getUserId(), users);
                 return new ResponseEntity<>(jwtService.generateToken(authentication.getName(), claims), HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(HttpStatus.FORBIDDEN);
             }
-        }
-        else {
+        } else {
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
 
@@ -234,7 +232,8 @@ public class UsersService {
             HashMap<String, Object> claims = new HashMap<>();
             claims.put("userId", users.getUsers().getUserId());
             claims.put("role", rolesService.findById(users.getUsers().getRoleId()));
-            loginHistoryService.login(users.getUsers().getUserId(), users.getUsers().getParentId(), AppSource.WEB.name(), "");
+            loginHistoryService.login(users.getUsers().getUserId(), users.getUsers().getParentId(),
+                    AppSource.WEB.name(), "");
 
             return new ResponseEntity<>(jwtService.generateToken(users.getUsers().getEmailId(), claims), HttpStatus.OK);
         } else if (users != null && users.getOtpValidity().before(new Date())) {
@@ -248,17 +247,16 @@ public class UsersService {
 
         if (authentication.isAuthenticated()) {
             LoginUsersDetails details1 = null;
-            com.smartstay.smartstay.dto.LoginUsersDetails usersDetails = userRepository.getLoginUserDetails(authentication.getName());
+            com.smartstay.smartstay.dto.LoginUsersDetails usersDetails = userRepository
+                    .getLoginUserDetails(authentication.getName());
             StringBuilder initials = new StringBuilder();
             initials.append(usersDetails.firstName().toUpperCase().charAt(0));
             if (usersDetails.lastName() != null && !usersDetails.lastName().equalsIgnoreCase("")) {
                 initials.append(usersDetails.lastName().toUpperCase().charAt(0));
-            }
-            else {
+            } else {
                 if (usersDetails.firstName().length() > 1) {
                     initials.append(usersDetails.firstName().toUpperCase().charAt(1));
-                }
-                else {
+                } else {
                     initials.append(usersDetails.firstName().toUpperCase().charAt(0));
                 }
 
@@ -278,8 +276,7 @@ public class UsersService {
                         usersDetails.countryName(),
                         usersDetails.currency(),
                         usersDetails.countryCode(), initials.toString());
-            }
-            else {
+            } else {
                 details1 = new LoginUsersDetails(usersDetails.userId(),
                         usersDetails.firstName(),
                         usersDetails.lastName(),
@@ -340,7 +337,7 @@ public class UsersService {
         if (user == null) {
             return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
-        UserOtp usersOtp = otpService.verifyOtp(request.userId(),request.otp());
+        UserOtp usersOtp = otpService.verifyOtp(request.userId(), request.otp());
         if (usersOtp == null) {
             return new ResponseEntity<>(Utils.INVALID_OTP, HttpStatus.OK);
         } else if (usersOtp.getOtpValidity().before(new Date())) {
@@ -352,7 +349,6 @@ public class UsersService {
 
         return new ResponseEntity<>(Utils.PASSWORD_RESET_SUCCESS, HttpStatus.OK);
     }
-
 
     public ResponseEntity<Object> deleteUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -391,7 +387,8 @@ public class UsersService {
         }
     }
 
-    public ResponseEntity<Object> updateProfileInformations(UpdateUserProfilePayloads updateProfile, MultipartFile file) {
+    public ResponseEntity<Object> updateProfileInformations(UpdateUserProfilePayloads updateProfile,
+            MultipartFile file) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!authentication.isAuthenticated()) {
@@ -433,7 +430,6 @@ public class UsersService {
         return configUUID();
     }
 
-
     public ResponseEntity<?> listAllAdmins() {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
@@ -441,17 +437,19 @@ public class UsersService {
                 if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_READ)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
-                List<UsersData> admins = userRepository.getAdminUserList(2, users.getParentId(),authentication.getName());
+                List<UsersData> admins = userRepository.getAdminUserList(2, users.getParentId(),
+                        authentication.getName());
                 if (admins.isEmpty()) {
                     return new ResponseEntity<>("No admins found", HttpStatus.NO_CONTENT);
                 }
 
-                List<com.smartstay.smartstay.responses.user.UsersData> listAdmins = admins.stream().map(itm -> new AdminDataMapper().apply(itm)).toList();
+                List<com.smartstay.smartstay.responses.user.UsersData> listAdmins = admins.stream()
+                        .map(itm -> new AdminDataMapper().apply(itm)).toList();
                 return new ResponseEntity<>(listAdmins, HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
-        }else {
+        } else {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
     }
@@ -466,7 +464,7 @@ public class UsersService {
                 if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
                     return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
                 }
-                List<UsersData> usersList = userRepository.getUserList(hostelId,users.getUserId());
+                List<UsersData> usersList = userRepository.getUserList(hostelId, users.getUserId());
                 if (usersList.isEmpty()) {
                     return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.NO_CONTENT);
                 }
@@ -474,7 +472,7 @@ public class UsersService {
             } else {
                 return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
-        }else {
+        } else {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
     }
@@ -489,22 +487,22 @@ public class UsersService {
                 String mobileStatus = "";
                 String emailStatus = "";
 
-                if (createAccount.mailId() !=null && !createAccount.mailId().isEmpty() && userRepository.existsByEmailIdAndIsDeletedFalse(createAccount.mailId())) {
+                if (createAccount.mailId() != null && !createAccount.mailId().isEmpty()
+                        && userRepository.existsByEmailIdAndIsDeletedFalse(createAccount.mailId())) {
                     emailStatus = Utils.EMAIL_ID_EXISTS;
                 }
 
-                if (createAccount.mobile() !=null && !createAccount.mobile().isEmpty() && userRepository.existsByMobileNoAndIsDeletedFalse(createAccount.mobile())) {
+                if (createAccount.mobile() != null && !createAccount.mobile().isEmpty()
+                        && userRepository.existsByMobileNoAndIsDeletedFalse(createAccount.mobile())) {
                     mobileStatus = Utils.MOBILE_NO_EXISTS;
                 }
 
                 if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
                     return new ResponseEntity<>(
                             new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
-                            HttpStatus.BAD_REQUEST
-                    );
-                }
-                else {
-                    Users adminUser  = new Users();
+                            HttpStatus.BAD_REQUEST);
+                } else {
+                    Users adminUser = new Users();
                     adminUser.setCreatedBy(users.getUserId());
                     adminUser.setParentId(users.getParentId());
                     adminUser.setPassword(encoder.encode(createAccount.password()));
@@ -522,7 +520,8 @@ public class UsersService {
                     Users createdAccount = userRepository.save(adminUser);
 
                     if (createdAccount != null) {
-                        userHostelService.addUserToExistingHostel(users.getParentId(), createdAccount.getUserId(), users.getUserId());
+                        userHostelService.addUserToExistingHostel(users.getParentId(), createdAccount.getUserId(),
+                                users.getUserId());
                     }
 
                     StringBuilder fullName = new StringBuilder();
@@ -533,16 +532,15 @@ public class UsersService {
                         fullName.append(" ");
                         fullName.append(createdAccount.getLastName());
                     }
-                    eventPublisher.publishEvent(new AddAdminEvents(this, users.getParentId(), createdAccount.getUserId(), fullName.toString()));
+                    eventPublisher.publishEvent(new AddAdminEvents(this, users.getParentId(),
+                            createdAccount.getUserId(), fullName.toString()));
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
-            }
-            else {
+            } else {
                 return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
 
-        }
-        else {
+        } else {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
     }
@@ -566,24 +564,24 @@ public class UsersService {
                 String mobileStatus = "";
                 String emailStatus = "";
 
-                if (adminUser.emailId() !=null && !adminUser.emailId().isEmpty() && userRepository.existsByEmailIdAndIsDeletedFalse(adminUser.emailId())) {
+                if (adminUser.emailId() != null && !adminUser.emailId().isEmpty()
+                        && userRepository.existsByEmailIdAndIsDeletedFalse(adminUser.emailId())) {
                     emailStatus = Utils.EMAIL_ID_EXISTS;
                 }
 
-                if (adminUser.mobile() !=null && !adminUser.mobile().isEmpty() && userRepository.existsByMobileNoAndIsDeletedFalse(adminUser.mobile())) {
+                if (adminUser.mobile() != null && !adminUser.mobile().isEmpty()
+                        && userRepository.existsByMobileNoAndIsDeletedFalse(adminUser.mobile())) {
                     mobileStatus = Utils.MOBILE_NO_EXISTS;
                 }
 
                 if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
                     return new ResponseEntity<>(
                             new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
-                            HttpStatus.BAD_REQUEST
-                    );
+                            HttpStatus.BAD_REQUEST);
                 }
                 if (!rolesService.checkRoleId(adminUser.roleId())) {
                     return new ResponseEntity<>(Utils.INVALID_ROLE, HttpStatus.BAD_REQUEST);
-                }
-                else {
+                } else {
                     Users admin = new Users();
                     admin.setMobileNo(adminUser.mobile());
                     admin.setEmailId(adminUser.emailId());
@@ -612,15 +610,14 @@ public class UsersService {
                         fullName.append(" ");
                         fullName.append(user.getLastName());
                     }
-                    eventPublisher.publishEvent(new AddUserEvents(this, user.getUserId(), hostelId, fullName.toString(), user.getParentId()));
+                    eventPublisher.publishEvent(new AddUserEvents(this, user.getUserId(), hostelId, fullName.toString(),
+                            user.getParentId()));
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
-            }
-            else {
+            } else {
                 return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
-        }
-        else {
+        } else {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
     }
@@ -635,8 +632,7 @@ public class UsersService {
             user.setLastUpdate(new Date());
             userRepository.save(user);
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
-        }
-        else {
+        } else {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
     }
@@ -644,7 +640,7 @@ public class UsersService {
     public ResponseEntity<?> deleteUser(String hostelId, String userId) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
-            Users inputUser = userRepository.findUserByUserIdAndParentId(userId,users.getParentId());
+            Users inputUser = userRepository.findUserByUserIdAndParentId(userId, users.getParentId());
 
             if (inputUser != null) {
                 if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
@@ -655,12 +651,11 @@ public class UsersService {
                     return new ResponseEntity<>("Admin user cannot be deleted", HttpStatus.FORBIDDEN);
                 }
 
-                if ( bankingService.deleteBankForUser(inputUser.getUserId(), hostelId)) {
+                if (bankingService.deleteBankForUser(inputUser.getUserId(), hostelId)) {
                     inputUser.setDeleted(true);
                     inputUser.setActive(false);
                     userRepository.save(inputUser);
                 }
-
 
                 return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
 
@@ -675,10 +670,11 @@ public class UsersService {
     public ResponseEntity<?> deleteAdminUser(String userId) {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
-            Users inputUser = userRepository.findUserByUserIdAndParentId(userId,users.getParentId());
+            Users inputUser = userRepository.findUserByUserIdAndParentId(userId, users.getParentId());
 
             if (inputUser != null) {
-                if (!rolesService.checkPermission(inputUser.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
+                if (!rolesService.checkPermission(inputUser.getRoleId(), Utils.MODULE_ID_USER,
+                        Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
 
@@ -699,13 +695,12 @@ public class UsersService {
         }
     }
 
-
     public List<Users> findActiveUsersByRole(int roleId) {
         return userRepository.findByRoleIdAndIsActiveTrueAndIsDeletedFalse(roleId);
     }
 
-    public Users existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(String userId,String parentId) {
-        return userRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(userId,parentId);
+    public Users existsByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(String userId, String parentId) {
+        return userRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(userId, parentId);
     }
 
     public ResponseEntity<?> updateAdminProfile(String adminId, EditAdmin payloads, MultipartFile profilePic) {
@@ -735,9 +730,8 @@ public class UsersService {
                     return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
                 }
 
-
                 Address add = adminUser.getAddress();
-                if (add == null ) {
+                if (add == null) {
                     add = new Address();
                 }
                 if (payloads.mailId() != null && !payloads.mailId().equalsIgnoreCase("")) {
@@ -762,35 +756,31 @@ public class UsersService {
 
                 if (payloads.lastName() != null && !payloads.lastName().equalsIgnoreCase("")) {
                     adminUser.setLastName(payloads.lastName());
-                }
-                else {
+                } else {
                     if (adminUser.getLastName() != null) {
                         adminUser.setLastName(null);
                     }
                 }
                 if (payloads.mobile() != null && !payloads.mobile().equalsIgnoreCase("")) {
                     adminUser.setMobileNo(payloads.mobile());
-                    //high priority, check mobile exist
+                    // high priority, check mobile exist
                 }
 
                 if (payloads.houseNo() != null && !payloads.houseNo().equalsIgnoreCase("")) {
                     add.setHouseNo(payloads.houseNo());
-                }
-                else {
+                } else {
                     if (add.getHouseNo() != null) {
                         add.setHouseNo(null);
                     }
                 }
                 if (payloads.street() != null && !payloads.street().equalsIgnoreCase("")) {
                     add.setStreet(payloads.street());
-                }
-                else if (add.getStreet() != null) {
+                } else if (add.getStreet() != null) {
                     add.setStreet(null);
                 }
                 if (payloads.landmark() != null && !payloads.landmark().equalsIgnoreCase("")) {
                     add.setLandMark(payloads.landmark());
-                }
-                else {
+                } else {
                     if (add.getLandMark() != null) {
                         add.setLandMark(null);
                     }
@@ -810,12 +800,10 @@ public class UsersService {
                 userRepository.save(adminUser);
 
                 return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
-            }
-            else {
+            } else {
                 return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
-        }
-        else {
+        } else {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
@@ -859,7 +847,7 @@ public class UsersService {
             userToUpdate.setFirstName(names[0]);
             if (names.length > 1) {
                 StringBuilder builder = new StringBuilder();
-                for (int i=1; i<names.length; i++) {
+                for (int i = 1; i < names.length; i++) {
                     builder.append(names[i]);
                 }
                 userToUpdate.setLastName(builder.toString());
@@ -879,18 +867,6 @@ public class UsersService {
 
     }
 
-    public List<Users> findAllUsersFromUserId(List<String> users) {
-        List<Users> listUsers = new ArrayList<>();
-
-        userRepository.findAllById(users)
-                .forEach(item -> {
-                    if (item.getRoleId() == 1 || item.getRoleId() == 2) {
-                        listUsers.add(item);
-                    }
-                });
-
-        return listUsers;
-    }
 
     public List<Users> findByListOfUserIds(List<String> assignes) {
         return userRepository.findAllById(assignes);
@@ -922,12 +898,10 @@ public class UsersService {
                 users.setConfig(config);
                 userRepository.save(users);
                 return generateToken(config);
-            }
-            else {
+            } else {
                 return new ResponseEntity<>(Utils.PIN_ALREADY_SETUP, HttpStatus.BAD_REQUEST);
             }
-        }
-        else {
+        } else {
             config = new UsersConfig();
             config.setUser(users);
             config.setPin(pin.pin());
@@ -953,10 +927,9 @@ public class UsersService {
             return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
         }
 
-       if (usersConfig.getUser() == null) {
-           return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
-       }
-
+        if (usersConfig.getUser() == null) {
+            return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
+        }
 
         return generateToken(usersConfig);
     }
@@ -965,12 +938,10 @@ public class UsersService {
         Users users = usersConfig.getUser();
         UserDetails userDetails = myUserDetailService.loadUserByUsername(users.getUserId());
 
-        Authentication authentication =
-                new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.getAuthorities());
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
@@ -983,7 +954,8 @@ public class UsersService {
         Long validity = System.currentTimeMillis() + (1000L * 60 * 60 * 24 * 15);
         loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.MOBILE.name(), "Android");
         String token = jwtService.generateMobileToken(authentication.getName(), claims, validity);
-        com.smartstay.smartstay.responses.user.VerifyPin vPin = new com.smartstay.smartstay.responses.user.VerifyPin(validity, token);
+        com.smartstay.smartstay.responses.user.VerifyPin vPin = new com.smartstay.smartstay.responses.user.VerifyPin(
+                validity, token);
 
         return new ResponseEntity<>(token, HttpStatus.OK);
     }
@@ -1004,27 +976,23 @@ public class UsersService {
             return new ResponseEntity<>(Utils.TOKEN_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
-
         UsersConfig usersConfig = users.getConfig();
         if (usersConfig != null) {
             if (updateFCMToken.source().equalsIgnoreCase("WEB")) {
                 usersConfig.setFcmWebToken(updateFCMToken.token());
                 usersConfigRepository.save(usersConfig);
-            }
-            else {
+            } else {
                 usersConfig.setFcmToken(updateFCMToken.token());
                 usersConfigRepository.save(usersConfig);
             }
 
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
-        }
-        else {
+        } else {
             usersConfig = new UsersConfig();
             usersConfig.setUser(users);
             if (updateFCMToken.source().equalsIgnoreCase("WEB")) {
                 usersConfig.setFcmWebToken(updateFCMToken.token());
-            }
-            else {
+            } else {
                 usersConfig.setFcmToken(updateFCMToken.token());
             }
 
@@ -1034,7 +1002,6 @@ public class UsersService {
 
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
         }
-
 
     }
 
@@ -1054,8 +1021,7 @@ public class UsersService {
         if (usersConfig != null) {
             if (logout.source().equalsIgnoreCase("WEB")) {
                 usersConfig.setFcmWebToken(null);
-            }
-            else if (logout.source().equalsIgnoreCase("MOBILE")) {
+            } else if (logout.source().equalsIgnoreCase("MOBILE")) {
                 usersConfig.setFcmToken(null);
             }
 
@@ -1065,17 +1031,32 @@ public class UsersService {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    public void addUserLog(String hostelId, String sourceId, ActivitySource activitySource, ActivitySourceType activitySourceType, Users users) {
-        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), sourceId, users);
+    public void addUserLog(String hostelId, String sourceId, ActivitySource activitySource,
+            ActivitySourceType activitySourceType, Users users) {
+        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), sourceId,
+                users);
     }
 
-    public void addUserLog(String hostelId, String sourceId, ActivitySource activitySource, ActivitySourceType activitySourceType, Users user, List<String> customerIds) {
-        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), sourceId, user, customerIds);
+    public void addUserLog(String hostelId, String sourceId, ActivitySource activitySource,
+            ActivitySourceType activitySourceType, Users user, List<String> customerIds) {
+        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), sourceId,
+                user, customerIds);
     }
 
-    public void finalSettlementGenetated(String hostelId, String invoiceId, ActivitySource activitySource, ActivitySourceType activitySourceType, String customerId, Users users) {
+    public void finalSettlementGenetated(String hostelId, String invoiceId, ActivitySource activitySource,
+            ActivitySourceType activitySourceType, String customerId, Users users) {
         List<String> customerIds = new ArrayList<>();
         customerIds.add(customerId);
-        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), invoiceId, users, customerIds);
+        userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), invoiceId,
+                users, customerIds);
+    }
+
+    public List<Users> findAllUsersByHostelId(String hostelId) {
+        List<String> userIds = userHostelService.listAllUsersFromHostelId(hostelId);
+        return userRepository.findAllByUserIdIn(userIds);
+    }
+
+    public List<Users> findAllUsersFromUserId(List<String> userIds) {
+        return userRepository.findAllByUserIdIn(userIds);
     }
 }
