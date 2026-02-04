@@ -1,7 +1,6 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
-import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.Wrappers.invoices.InitializeRefund;
 import com.smartstay.smartstay.Wrappers.invoices.InvoiceMapper;
 import com.smartstay.smartstay.Wrappers.invoices.NewInvoiceListMapper;
@@ -16,25 +15,21 @@ import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.customer.ReassignRent;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
-import com.smartstay.smartstay.dto.invoices.Invoices;
-import com.smartstay.smartstay.dto.receipts.DeleteReceipts;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
-import com.smartstay.smartstay.payloads.customer.Settlement;
 import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
-import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Pageable;
@@ -390,73 +385,6 @@ public class InvoiceV1Service {
             paymentSummaryService.addInvoice(summary);
         }
 
-    }
-
-    public Double sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(String hostelId, String invoiceType,
-            Date startDate, Date endDate) {
-        return invoicesV1Repository.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, invoiceType,
-                startDate, endDate);
-    }
-
-    public Double sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(String hostelId, String invoiceType,
-            Date startDate, Date endDate) {
-        return invoicesV1Repository.sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, invoiceType,
-                startDate, endDate);
-    }
-
-    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search,
-            List<String> paymentStatus, List<String> invoiceModes,
-            List<String> invoiceTypes, List<String> createdBy, Pageable pageable) {
-        List<String> customerIds = null;
-        if (search != null && !search.trim().isEmpty()) {
-            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
-            if (customers == null || customers.isEmpty()) {
-                return new ArrayList<>();
-            }
-            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
-        }
-
-        if (customerIds != null && !customerIds.isEmpty()) {
-            return invoicesV1Repository.findInvoicesByFiltersNoJoinWithCustomers(hostelId, startDate, endDate,
-                    customerIds,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy, pageable);
-        } else {
-            return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy, pageable);
-        }
-    }
-
-    public List<Object[]> getInvoiceAggregatesForReport(String hostelId, Date startDate, Date endDate, String search,
-            List<String> paymentStatus, List<String> invoiceModes,
-            List<String> invoiceTypes, List<String> createdBy) {
-        List<String> customerIds = null;
-        if (search != null && !search.trim().isEmpty()) {
-            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
-            if (customers == null || customers.isEmpty()) {
-                return new ArrayList<>();
-            }
-            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
-        }
-
-        if (customerIds != null && !customerIds.isEmpty()) {
-            return invoicesV1Repository.findInvoiceAggregatesByFiltersNoJoinWithCustomers(hostelId, startDate, endDate,
-                    customerIds,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy);
-        } else {
-            return invoicesV1Repository.findInvoiceAggregatesByFiltersNoJoin(hostelId, startDate, endDate,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy);
-        }
-    }
-
-    public List<Object[]> getDistinctCreators(String hostelId) {
-        List<String> creatorIds = invoicesV1Repository.findDistinctCreatedByNoJoin(hostelId);
-        if (creatorIds == null || creatorIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-        List<Users> users = usersService.findAllUsersFromUserId(creatorIds);
-        return users.stream()
-                .map(u -> new Object[] { u.getUserId(), u.getFirstName(), u.getLastName() })
-                .collect(Collectors.toList());
     }
 
     /**
@@ -2439,18 +2367,6 @@ public class InvoiceV1Service {
         return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.SETTLEMENT.name());
     }
 
-    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
-        return invoicesV1Repository.countByHostelIdAndDateRange(
-                hostelId,
-                startDate,
-                endDate
-        );
-    }
-
-    public List<InvoicesV1> getCurrentMonthFinalSettlement(String hostelId, Date startDate, Date endDate) {
-        return invoicesV1Repository.findSettlementByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate);
-    }
-
     /**
      *
      * this is for reports page.
@@ -2476,5 +2392,95 @@ public class InvoiceV1Service {
 
     public List<InvoicesV1> findByInvoiceIdIn(List<String> invoiceIds) {
         return invoicesV1Repository.findByInvoiceIdIn(invoiceIds);
+    }
+
+
+
+    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return invoicesV1Repository.countByHostelIdAndDateRange(
+                hostelId,
+                startDate,
+                endDate
+        );
+    }
+
+    public Double sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(String hostelId, String invoiceType,
+                                                                          Date startDate, Date endDate) {
+        return invoicesV1Repository.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, invoiceType,
+                startDate, endDate);
+    }
+
+
+    public Double sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(String hostelId, String invoiceType,
+                                                                         Date startDate, Date endDate) {
+        return invoicesV1Repository.sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, invoiceType,
+                startDate, endDate);
+    }
+
+    public List<InvoicesV1> getCurrentMonthFinalSettlement(String hostelId, Date startDate, Date endDate) {
+        return invoicesV1Repository.findSettlementByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate);
+    }
+
+    public InvoiceAggregateDto getInvoiceAggregatesForReport(String hostelId, Date startDate, Date endDate,
+                                                             String search,
+                                                             List<String> paymentStatus, List<String> invoiceModes,
+                                                             List<String> invoiceTypes, List<String> createdBy,
+                                                             Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount) {
+        List<String> customerIds = null;
+        if (search != null && !search.trim().isEmpty()) {
+            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
+            if (customers == null || customers.isEmpty()) {
+                return new InvoiceAggregateDto(0L, 0.0, 0.0);
+            }
+            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+        }
+
+        if (customerIds != null && !customerIds.isEmpty()) {
+            return invoicesV1Repository.findInvoiceAggregatesByFiltersWithCustomers(hostelId, startDate, endDate,
+                    customerIds,
+                    paymentStatus, invoiceModes, invoiceTypes, createdBy,
+                    minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount);
+        } else {
+            return invoicesV1Repository.findInvoiceAggregatesByFilters(hostelId, startDate, endDate,
+                    paymentStatus, invoiceModes, invoiceTypes, createdBy,
+                    minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount);
+        }
+    }
+
+    public List<Object[]> getDistinctCreators(String hostelId) {
+        List<String> creatorIds = invoicesV1Repository.findDistinctCreatedBy(hostelId);
+        if (creatorIds == null || creatorIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Users> users = usersService.findAllUsersFromUserId(creatorIds);
+        return users.stream()
+                .map(u -> new Object[] { u.getUserId(), u.getFirstName(), u.getLastName() })
+                .collect(Collectors.toList());
+    }
+
+    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search,
+                                                 List<String> paymentStatus, List<String> invoiceModes,
+                                                 List<String> invoiceTypes, List<String> createdBy,
+                                                 Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount,
+                                                 Pageable pageable) {
+        List<String> customerIds = null;
+        if (search != null && !search.trim().isEmpty()) {
+            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
+            if (customers == null || customers.isEmpty()) {
+                return new ArrayList<>();
+            }
+            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+        }
+
+        if (customerIds != null && !customerIds.isEmpty()) {
+            return invoicesV1Repository.findInvoicesByFiltersWithCustomers(hostelId, startDate, endDate,
+                    customerIds,
+                    paymentStatus, invoiceModes, invoiceTypes, createdBy,
+                    minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageable);
+        } else {
+            return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate,
+                    paymentStatus, invoiceModes, invoiceTypes, createdBy,
+                    minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageable);
+        }
     }
 }
