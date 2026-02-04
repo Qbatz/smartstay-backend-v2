@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.Users;
@@ -9,6 +10,7 @@ import com.smartstay.smartstay.dto.reports.ElectricityForReports;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.responses.Reports.ReportDetailsResponse;
 import com.smartstay.smartstay.responses.Reports.ReportResponse;
+import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.receiptForReport.ReceiptReportResponse;
 import com.smartstay.smartstay.responses.expenseForReport.ExpenseReportResponse;
 import com.smartstay.smartstay.util.Utils;
@@ -19,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,6 +32,9 @@ public class ReportService {
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
+
+    @Autowired
+    private BookingsService bookingsService;
     @Autowired
     private RolesService rolesService;
     @Autowired
@@ -500,6 +506,142 @@ public class ReportService {
         }
 
         ExpenseReportResponse response = transactionService.getExpenseReports(hostelId, startDate, endDate, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getTenantRegister(String hostelId, String customStartDate, String customEndDate,
+            int page, int size) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        Date startDate;
+        Date endDate;
+        if (customStartDate != null && customEndDate != null) {
+            startDate = Utils.stringToDate(customStartDate, Utils.USER_INPUT_DATE_FORMAT);
+            endDate = Utils.stringToDate(customEndDate, Utils.USER_INPUT_DATE_FORMAT);
+        } else {
+            BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+            startDate = billingDates.currentBillStartDate();
+            endDate = billingDates.currentBillEndDate();
+        }
+
+        // Summary calculations
+        List<BookingsV1> allBookings = bookingsService
+                .findAllBookingsForTenantRegister(hostelId, startDate, endDate);
+
+        Set<String> uniqueTenants = new HashSet<>();
+        double activeAmount = 0;
+        double noticeAmount = 0;
+        double checkoutAmount = 0;
+        double inactiveAmount = 0;
+
+        for (BookingsV1 b : allBookings) {
+            uniqueTenants.add(b.getCustomerId());
+            String status = b.getCurrentStatus();
+            double amount = (b.getRentAmount() != null ? b.getRentAmount() : 0);
+
+            if (BookingStatus.CHECKIN.name().equalsIgnoreCase(status)) {
+                activeAmount += amount;
+            } else if (BookingStatus.NOTICE.name().equalsIgnoreCase(status)) {
+                noticeAmount += amount;
+            } else if (BookingStatus.VACATED.name().equalsIgnoreCase(status) || BookingStatus.TERMINATED.name().equalsIgnoreCase(status)) {
+                checkoutAmount += amount;
+            } else if (BookingStatus.CANCELLED.name().equalsIgnoreCase(status)) {
+                inactiveAmount += amount;
+            }
+        }
+
+        TenantRegisterResponse.Summary summary = TenantRegisterResponse.Summary
+                .builder()
+                .totalTenants(uniqueTenants.size())
+                .activeTenants(new TenantRegisterResponse.SegmentSummary(
+                        activeAmount, 0))
+                .noticePeriod(new TenantRegisterResponse.SegmentSummary(
+                        noticeAmount, 0))
+                .checkoutMTD(new TenantRegisterResponse.SegmentSummary(
+                        checkoutAmount, 0))
+                .inactive(new TenantRegisterResponse.SegmentSummary(
+                        inactiveAmount, 0))
+                .build();
+
+
+        List<BookingsV1> paginatedBookings = bookingsService
+                .findBookingsForTenantRegister(hostelId, startDate, endDate, page, size);
+        long totalRecords = bookingsService.countBookingsForTenantRegister(hostelId, startDate, endDate);
+
+        List<String> customerIds = paginatedBookings.stream().map(BookingsV1::getCustomerId)
+                .collect(Collectors.toList());
+        Map<String, Customers> customerMap = customersService.getCustomerDetails(customerIds).stream()
+                .collect(Collectors.toMap(Customers::getCustomerId, c -> c, (a, b1) -> b1));
+
+        Map<Integer, Long> sharingMap = bedsService.countBedsByRoomForHostel(hostelId).stream()
+                .collect(Collectors.toMap(com.smartstay.smartstay.dto.beds.RoomBedCount::getRoomId,
+                        com.smartstay.smartstay.dto.beds.RoomBedCount::getBedCount, (a, b1) -> b1));
+
+        List<TenantRegisterResponse.TenantDetail> details = new ArrayList<>();
+        for (BookingsV1 b : paginatedBookings) {
+            Customers c = customerMap.get(b.getCustomerId());
+            String name = (c != null) ? (c.getFirstName() + " " + (c.getLastName() != null ? c.getLastName() : ""))
+                    : "Unknown";
+            String mobile = (c != null) ? c.getMobile() : "N/A";
+
+            String sharing = "N/A";
+            Long bedCount = sharingMap.get(b.getRoomId());
+            if (bedCount != null) {
+                if (bedCount == 1)
+                    sharing = "Single";
+                else if (bedCount == 2)
+                    sharing = "Double";
+                else if (bedCount == 3)
+                    sharing = "Triple";
+                else
+                    sharing = bedCount + " Sharing";
+            }
+
+            long diffInMillis = (b.getCheckoutDate() != null ? b.getCheckoutDate().getTime()
+                    : System.currentTimeMillis()) - b.getJoiningDate().getTime();
+            long days = Math.max(1, diffInMillis / (1000 * 60 * 60 * 24));
+            String stayDuration = days + (days == 1 ? " day" : " days");
+
+            details.add(TenantRegisterResponse.TenantDetail.builder()
+                    .tenantId(b.getCustomerId())
+                    .name(name.trim())
+                    .mobileNo(mobile)
+                    .sharing(sharing)
+                    .checkInDate(Utils.dateToString(b.getJoiningDate()))
+                    .checkOutDate(b.getCheckoutDate() != null ? Utils.dateToString(b.getCheckoutDate()) : null)
+                    .checkInAmount(b.getRentAmount() != null ? b.getRentAmount() : 0)
+                    .checkOutAmount(b.getRentAmount() != null ? b.getRentAmount() : 0)
+                    .stayDuration(stayDuration)
+                    .build());
+        }
+
+        TenantRegisterResponse response = TenantRegisterResponse
+                .builder()
+                .status(true)
+                .message("Tenant register fetched successfully")
+                .dateRange(TenantRegisterResponse.DateRange.builder()
+                        .from(Utils.dateToString(startDate))
+                        .to(Utils.dateToString(endDate))
+                        .build())
+                .summary(summary)
+                .tenants(details)
+                .pagination(TenantRegisterResponse.Pagination.builder()
+                        .currentPage(page)
+                        .pageSize(size)
+                        .totalRecords(totalRecords)
+                        .totalPages((int) Math.ceil((double) totalRecords / size))
+                        .build())
+                .build();
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

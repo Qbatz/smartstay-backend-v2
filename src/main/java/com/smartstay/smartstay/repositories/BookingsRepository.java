@@ -183,4 +183,26 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """, nativeQuery = true)
     List<BookingsV1> findAllBookingsBasedOnBedIdAndDate(@Param("bedId") Integer bedId, @Param("date") Date date);
 
+        @Query(value = """
+                        SELECT * FROM bookingsv1 WHERE hostel_id = :hostelId
+                        AND (joining_date <= DATE(:endDate) AND (checkout_date IS NULL OR checkout_date >= DATE(:startDate)))
+                        ORDER BY joining_date DESC
+                        """, nativeQuery = true)
+        List<BookingsV1> findBookingsForTenantRegister(@Param("hostelId") String hostelId,
+                                                       @Param("startDate") Date startDate, @Param("endDate") Date endDate,
+                                                       org.springframework.data.domain.Pageable pageable);
+
+        @Query(value = """
+                        SELECT * FROM bookingsv1 WHERE hostel_id = :hostelId
+                        AND (joining_date <= DATE(:endDate) AND (checkout_date IS NULL OR checkout_date >= DATE(:startDate)))
+                        """, nativeQuery = true)
+        List<BookingsV1> findAllBookingsForTenantRegister(@Param("hostelId") String hostelId,
+                                                          @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+        @Query(value = """
+                        SELECT COUNT(*) FROM bookingsv1 WHERE hostel_id = :hostelId
+                        AND (joining_date <= DATE(:endDate) AND (checkout_date IS NULL OR checkout_date >= DATE(:startDate)))
+                        """, nativeQuery = true)
+        long countBookingsForTenantRegister(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+                                            @Param("endDate") Date endDate);
 }

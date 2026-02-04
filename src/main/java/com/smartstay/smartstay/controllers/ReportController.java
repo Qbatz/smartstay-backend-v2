@@ -63,4 +63,14 @@ public class ReportController {
             @RequestParam(value = "size", defaultValue = "10") int size) {
         return reportService.getExpenseDetails(hostelId, period, customStartDate, customEndDate, page, size);
     }
+
+    @GetMapping("/tenant-register/{hostelId}")
+    public ResponseEntity<?> getTenantRegisterDetails(
+            @PathVariable("hostelId") String hostelId,
+            @RequestParam(value = "startDate", required = false) String startDate,
+            @RequestParam(value = "endDate", required = false) String endDate,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        return reportService.getTenantRegister(hostelId, startDate, endDate, page, size);
+    }
 }

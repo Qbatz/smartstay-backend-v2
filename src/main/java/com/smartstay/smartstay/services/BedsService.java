@@ -7,11 +7,10 @@ import com.smartstay.smartstay.Wrappers.beds.CustomersTenantMapper;
 import com.smartstay.smartstay.Wrappers.beds.InitializeBedsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.Beds;
 import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
-import com.smartstay.smartstay.dto.beds.BedInformations;
-import com.smartstay.smartstay.dto.beds.FloorNameRoomName;
-import com.smartstay.smartstay.dto.beds.BedRoomFloor;
+import com.smartstay.smartstay.dto.beds.*;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
 import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.dashboard.BedsStatus;
@@ -25,6 +24,7 @@ import com.smartstay.smartstay.payloads.beds.EditBedRent;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.beds.*;
+import com.smartstay.smartstay.responses.beds.BedDetails;
 import com.smartstay.smartstay.responses.customer.InitializeBooking;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -916,5 +916,9 @@ public class BedsService {
 
     public int countAllByHostelId(String hostelId) {
         return bedsRepository.countAllByHostelId(hostelId);
+    }
+
+    public List<RoomBedCount> countBedsByRoomForHostel(String hostelId) {
+        return bedsRepository.countBedsByRoomForHostel(hostelId);
     }
 }
