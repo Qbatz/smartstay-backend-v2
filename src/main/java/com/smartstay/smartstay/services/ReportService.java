@@ -10,6 +10,7 @@ import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.responses.Reports.ReportDetailsResponse;
 import com.smartstay.smartstay.responses.Reports.ReportResponse;
 import com.smartstay.smartstay.responses.receiptForReport.ReceiptReportResponse;
+import com.smartstay.smartstay.responses.expenseForReport.ExpenseReportResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -127,7 +128,8 @@ public class ReportService {
 
         List<Customers> noticeCustomer = listCustomers
                 .stream()
-                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name()) || i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()))
+                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())
+                        || i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()))
                 .toList();
 
         List<Customers> vacatedCustomers = listCustomers
@@ -174,7 +176,8 @@ public class ReportService {
         ReportResponse.RequestReport requestReport = ReportResponse.RequestReport.builder().totalRequests(requestCount)
                 .activeRequests(requestActiveCount).build();
 
-        List<InvoicesV1> finalSettlements = invoiceV1Service.getCurrentMonthFinalSettlement(hostelId, startDate, endDate);
+        List<InvoicesV1> finalSettlements = invoiceV1Service.getCurrentMonthFinalSettlement(hostelId, startDate,
+                endDate);
         int totalSettlement = finalSettlements.size();
         double totalAmount = finalSettlements
                 .stream()
@@ -198,8 +201,7 @@ public class ReportService {
                 .mapToDouble(InvoicesV1::getTotalAmount)
                 .sum();
 
-        ReportResponse.FinalSettlementReport settlementReport = ReportResponse
-                .FinalSettlementReport
+        ReportResponse.FinalSettlementReport settlementReport = ReportResponse.FinalSettlementReport
                 .builder()
                 .totalReturnedAmount(totalReturnedAmount)
                 .totalPaidAmount(totalPayableAmount)
@@ -212,8 +214,8 @@ public class ReportService {
         calPreviousMonth.add(Calendar.MONTH, -1);
 
         BillingDates previousBillingDate = hostelService.getBillingRuleOnDate(hostelId, calPreviousMonth.getTime());
-        ElectricityForReports ebReports = electricityService.getPreviousMonthEbAmount(hostelId, previousBillingDate.currentBillStartDate(), previousBillingDate.currentBillEndDate());
-
+        ElectricityForReports ebReports = electricityService.getPreviousMonthEbAmount(hostelId,
+                previousBillingDate.currentBillStartDate(), previousBillingDate.currentBillEndDate());
 
         ReportResponse.ElectricityReport ebReportResponse = ReportResponse.ElectricityReport
                 .builder()
@@ -221,7 +223,6 @@ public class ReportService {
                 .totalUnits(ebReports.totalUnits())
                 .totalEntries(ebReports.noOfEntries())
                 .build();
-
 
         ReportResponse response = ReportResponse.builder()
                 .hostelId(hostelId)
@@ -374,16 +375,23 @@ public class ReportService {
             }
         }
 
-        return ReportDetailsResponse.FilterOptions.builder().paymentStatus(toFilterItems(PaymentStatus.values())).invoiceModes(toFilterItems(InvoiceMode.values())).invoiceTypes(toFilterItems(InvoiceType.values())).createdBy(createdByOptions).build();
+        return ReportDetailsResponse.FilterOptions.builder().paymentStatus(toFilterItems(PaymentStatus.values()))
+                .invoiceModes(toFilterItems(InvoiceMode.values())).invoiceTypes(toFilterItems(InvoiceType.values()))
+                .createdBy(createdByOptions).build();
     }
 
     private <E extends Enum<E>> List<ReportDetailsResponse.FilterItem> toFilterItems(E[] values) {
-        return Arrays.stream(values).map(e -> new ReportDetailsResponse.FilterItem(e.name(), e.name())).collect(Collectors.toList());
+        return Arrays.stream(values).map(e -> new ReportDetailsResponse.FilterItem(e.name(), e.name()))
+                .collect(Collectors.toList());
     }
 
-    private ResponseEntity<?> buildReportResponse(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, List<InvoicesV1> invoices, List<ReportDetailsResponse.InvoiceDetail> invoiceDetails, ReportDetailsResponse.FilterOptions options, int page, int size) {
+    private ResponseEntity<?> buildReportResponse(String hostelId, Date startDate, Date endDate, String search,
+            List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy,
+            List<InvoicesV1> invoices, List<ReportDetailsResponse.InvoiceDetail> invoiceDetails,
+            ReportDetailsResponse.FilterOptions options, int page, int size) {
 
-        List<Object[]> aggregates = invoiceV1Service.getInvoiceAggregatesForReport(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes, createdBy);
+        List<Object[]> aggregates = invoiceV1Service.getInvoiceAggregatesForReport(hostelId, startDate, endDate, search,
+                paymentStatus, invoiceModes, invoiceTypes, createdBy);
 
         int totalInvoices = 0;
         Double totalAmount = 0.0;
@@ -391,9 +399,12 @@ public class ReportService {
 
         if (aggregates != null && !aggregates.isEmpty()) {
             Object[] row = aggregates.get(0);
-            if (row[0] != null) totalInvoices = ((Number) row[0]).intValue();
-            if (row[1] != null) totalAmount = ((Number) row[1]).doubleValue();
-            if (row[2] != null) paidAmount = ((Number) row[2]).doubleValue();
+            if (row[0] != null)
+                totalInvoices = ((Number) row[0]).intValue();
+            if (row[1] != null)
+                totalAmount = ((Number) row[1]).doubleValue();
+            if (row[2] != null)
+                paidAmount = ((Number) row[2]).doubleValue();
         }
         Double outStandingAmount = totalAmount - paidAmount;
 
@@ -451,4 +462,44 @@ public class ReportService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    public ResponseEntity<?> getExpenseDetails(String hostelId, String date, String customStartDate,
+            String customEndDate, int page, int size) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Date startDate = null;
+        Date endDate = null;
+
+        if (customStartDate != null && customEndDate != null) {
+            startDate = Utils.stringToDate(customStartDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            endDate = Utils.stringToDate(customEndDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        } else {
+            BillingDates billingDates;
+            if (date != null) {
+                billingDates = hostelService.getBillingRuleOnDate(hostelId,
+                        Utils.stringToDate(date.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+            } else {
+                billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+            }
+
+            if (billingDates != null) {
+                startDate = billingDates.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+        }
+
+        ExpenseReportResponse response = transactionService.getExpenseReports(hostelId, startDate, endDate, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

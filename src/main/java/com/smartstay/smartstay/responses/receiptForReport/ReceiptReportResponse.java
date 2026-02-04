@@ -12,45 +12,29 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class ReceiptReportResponse {
-    private Double totalRentCollected;
-    private BankCollectionInfo highestCollectingBank;
-    private int currentPage;
-    private int totalPages;
-    private BasicReceiptDetails basicDetails;
-    private List<ReceiptDetail> receipts;
-
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder
-    public static class BankCollectionInfo {
-        private String bankName;
-        private Double totalAmount;
-    }
-
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder
-    public static class BasicReceiptDetails {
-        private int totalReceipts;
-        private String startDate;
-        private String endDate;
-    }
+    private String startDate;
+    private String endDate;
+    private Double totalInvoiceAmount;
+    private Double receivedAmount;
+    private List<ReceiptDetail> receiptsList;
+    private String hostelId;
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
     public static class ReceiptDetail {
-        private String transactionId;
-        private String customerName;
-        private String paymentDate;
+        private String receiptNo;
+        private String Date;
+        private String type;
         private Double amount;
-        private String bankName;
-        private String transactionType;
-        private String transactionReferenceId;
-        private String referenceNumber;
-        private String status;
+        private Double paymentMade;
+        private String collectedBy;
+        private String bankAccount;
+        private String customerName;
+        private String bed;
+        private String room;
+        private String floor;
+        private String invoiceNumber;
     }
 }

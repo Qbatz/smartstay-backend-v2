@@ -15,7 +15,6 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
-import com.smartstay.smartstay.dto.transaction.BankCollectionProjection;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
 import com.smartstay.smartstay.responses.invoices.AccountDetails;
 import com.smartstay.smartstay.responses.invoices.CustomerInfo;
@@ -24,8 +23,9 @@ import com.smartstay.smartstay.responses.receipt.ReceiptConfigInfo;
 import com.smartstay.smartstay.responses.receipt.ReceiptDetails;
 import com.smartstay.smartstay.responses.receipt.ReceiptInfo;
 import com.smartstay.smartstay.responses.receiptForReport.ReceiptReportResponse;
+import com.smartstay.smartstay.responses.expenseForReport.ExpenseReportResponse;
+import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.util.Utils;
-import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
@@ -72,6 +72,12 @@ public class TransactionService {
     private BankTransactionService bankTransactionService;
     @Autowired
     private TransactionV1Repository transactionRespository;
+    @Autowired
+    private ExpensesRepository expensesRepository;
+    @Autowired
+    private ExpenseCategoryService expenseCategoryService;
+    @Autowired
+    private VendorService vendorService;
 
     /**
      * not using it
@@ -188,7 +194,7 @@ public class TransactionService {
         int response = paymentSummaryService.addPayment(summary);
 
         if (response == 1) {
-            //dont have to add the amount. For booking invoice is already created.
+            // dont have to add the amount. For booking invoice is already created.
             invoiceService.recordPayment(invoiceId, PaymentStatus.PAID.name(), 0);
 
             TransactionDto transaction = new TransactionDto(payment.bankId(),
@@ -905,90 +911,176 @@ public class TransactionService {
         List<TransactionV1> transactions = transactionRespository.findTransactionsByFiltersNoJoin(hostelId, startDate,
                 endDate, paymentStatus, limit, offset);
 
-        int totalTransactions = transactionRespository.countByFiltersNoJoin(hostelId, startDate, endDate,
-                paymentStatus);
-        int totalPages = (int) Math.ceil((double) totalTransactions / size);
-
-        Double totalCollection = transactionRespository.findTotalCollectionByFiltersNoJoin(hostelId, startDate, endDate,
-                paymentStatus);
-
-        List<BankCollectionProjection> highestCollectingBankData = transactionRespository
-                .findHighestCollectingBankNoJoin(hostelId, startDate, endDate, paymentStatus);
-
-        ReceiptReportResponse.BankCollectionInfo bankInfo = new com.smartstay.smartstay.responses.receiptForReport.ReceiptReportResponse.BankCollectionInfo();
-
-        if (highestCollectingBankData != null && !highestCollectingBankData.isEmpty()) {
-            BankCollectionProjection data = highestCollectingBankData.get(0);
-            String bankId = data.getBankId();
-            Double amount = data.getTotalAmount();
-            bankInfo.setTotalAmount(amount);
-
-            BankingV1 bank = bankingService.getBankDetails(bankId);
-            if (bank != null) {
-                bankInfo.setBankName(bank.getAccountHolderName() + "-" + bank.getBankName());
-            } else {
-                bankInfo.setBankName("Unknown Bank");
-            }
-        }
+        Double totalAmountSummary = invoiceService.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId,
+                InvoiceType.SETTLEMENT.name(), startDate, endDate);
+        Double receivedAmountSummary = transactionRespository.sumPaidAmountByHostelIdAndDateRange(hostelId, startDate,
+                endDate);
 
         List<String> customerIds = transactions.stream().map(TransactionV1::getCustomerId).filter(Objects::nonNull)
-                .distinct().collect(Collectors.toList());
+                .distinct().toList();
         List<String> bankIds = transactions.stream().map(TransactionV1::getBankId).filter(Objects::nonNull).distinct()
                 .toList();
+        List<String> invoiceIds = transactions.stream().map(TransactionV1::getInvoiceId).filter(Objects::nonNull)
+                .distinct().toList();
+        List<String> userIds = transactions.stream().map(TransactionV1::getCreatedBy).filter(Objects::nonNull)
+                .distinct()
+                .toList();
 
-        List<Customers> customers = new ArrayList<>();
+        Map<String, Customers> customerMap = new HashMap<>();
         if (!customerIds.isEmpty()) {
-            customers = customersService.getCustomerDetails(customerIds);
+            customersService.getCustomerDetails(customerIds).forEach(c -> customerMap.put(c.getCustomerId(), c));
         }
 
-        Map<String, String> customerNameMap = customers.stream()
-                .collect(Collectors.toMap(Customers::getCustomerId, c -> {
-                    String name = c.getFirstName();
-                    if (c.getLastName() != null)
-                        name += " " + c.getLastName();
-                    return name;
-                }, (existing, replacement) -> existing));
-
-        Map<String, String> bankNameMap = new HashMap<>();
+        Map<String, BankingV1> bankMap = new HashMap<>();
         for (String bId : bankIds) {
             BankingV1 b = bankingService.getBankDetails(bId);
             if (b != null) {
-                String bName = b.getAccountHolderName() == null ? b.getBankName()
-                        : b.getAccountHolderName() + "-" + b.getBankName();
-                bankNameMap.put(bId, bName);
+                bankMap.put(bId, b);
             }
+        }
+
+        Map<String, InvoicesV1> invoiceMap = new HashMap<>();
+        if (!invoiceIds.isEmpty()) {
+            invoiceService.findByInvoiceIdIn(invoiceIds).forEach(i -> invoiceMap.put(i.getInvoiceId(), i));
+        }
+
+        Map<String, Users> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            usersService.findAllUsersFromUserId(userIds).forEach(u -> userMap.put(u.getUserId(), u));
         }
 
         List<ReceiptReportResponse.ReceiptDetail> receiptDetails = transactions
                 .stream().map(t -> {
+                    Customers c = customerMap.get(t.getCustomerId());
+                    InvoicesV1 inv = invoiceMap.get(t.getInvoiceId());
+                    Users creator = userMap.get(t.getCreatedBy());
+                    BankingV1 b = bankMap.get(t.getBankId());
+
+                    String bedName = "";
+                    String roomName = "";
+                    String floorName = "";
+
+                    if (t.getCustomerId() != null) {
+                        CustomersBedHistory bedHistory = customersBedHistoryService
+                                .getCustomerBedByStartDate(t.getCustomerId(), t.getPaidAt(), t.getPaidAt());
+                        if (bedHistory != null) {
+                            BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
+                            if (bedDetails != null) {
+                                bedName = bedDetails.getBedName();
+                                roomName = bedDetails.getRoomName();
+                                floorName = bedDetails.getFloorName();
+                            }
+                        }
+                    }
+
                     return ReceiptReportResponse.ReceiptDetail
                             .builder()
-                            .transactionId(t.getTransactionId())
-                            .customerName(customerNameMap.getOrDefault(t.getCustomerId(), "Unknown"))
-                            .paymentDate(Utils.dateToString(t.getPaidAt()))
+                            .receiptNo(t.getTransactionReferenceId())
+                            .Date(Utils.dateToString(t.getPaidAt()))
+                            .type(t.getType())
                             .amount(t.getPaidAmount())
-                            .bankName(bankNameMap.getOrDefault(t.getBankId(), "Unknown"))
-                            .transactionType(t.getType())
-                            .transactionReferenceId(t.getTransactionReferenceId())
-                            .referenceNumber(t.getReferenceNumber())
-                            .status(t.getStatus())
+                            .paymentMade(t.getPaidAmount())
+                            .collectedBy(creator != null
+                                    ? (creator.getFirstName()
+                                            + (creator.getLastName() != null ? " " + creator.getLastName() : ""))
+                                    : "Unknown")
+                            .bankAccount(b != null ? (b.getAccountHolderName() + "-" + b.getBankName()) : "Unknown")
+                            .customerName(c != null
+                                    ? (c.getFirstName() + (c.getLastName() != null ? " " + c.getLastName() : ""))
+                                    : "Unknown")
+                            .bed(bedName)
+                            .room(roomName)
+                            .floor(floorName)
+                            .invoiceNumber(inv != null ? inv.getInvoiceNumber() : "")
                             .build();
                 }).collect(Collectors.toList());
 
-        ReceiptReportResponse.BasicReceiptDetails basicDetails = com.smartstay.smartstay.responses.receiptForReport.ReceiptReportResponse.BasicReceiptDetails
-                .builder()
-                .totalReceipts(totalTransactions)
+        return ReceiptReportResponse.builder()
                 .startDate(startDate != null ? Utils.dateToString(startDate) : null)
                 .endDate(endDate != null ? Utils.dateToString(endDate) : null)
-                .build();
-
-        return ReceiptReportResponse.builder()
-                .totalRentCollected(totalCollection != null ? totalCollection : 0.0)
-                .highestCollectingBank(bankInfo)
-                .currentPage(page)
-                .totalPages(totalPages)
-                .basicDetails(basicDetails)
-                .receipts(receiptDetails)
+                .totalInvoiceAmount(totalAmountSummary != null ? totalAmountSummary : 0.0)
+                .receivedAmount(receivedAmountSummary != null ? receivedAmountSummary : 0.0)
+                .receiptsList(receiptDetails)
+                .hostelId(hostelId)
                 .build();
     }
+
+    public ExpenseReportResponse getExpenseReports(String hostelId, Date startDate, Date endDate, int page, int size) {
+        int offset = page * size;
+        int limit = size;
+
+        Double totalRefunds = transactionRespository.sumRefundByHostelIdAndDateRange(hostelId, startDate, endDate);
+        Double totalHostelExpenses = expensesRepository.sumAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
+        double totalAmount = (totalHostelExpenses != null ? totalHostelExpenses : 0.0)
+                + (totalRefunds != null ? totalRefunds : 0.0);
+
+        int totalExpensesCount = expensesRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
+
+        List<ExpensesV1> expensesList = expensesRepository.findExpensesByFilters(hostelId, startDate, endDate,
+                limit, offset);
+
+        List<Long> categoryIds = expensesList.stream().map(ExpensesV1::getCategoryId).filter(Objects::nonNull)
+                .distinct().toList();
+        List<String> bankIds = expensesList.stream().map(ExpensesV1::getBankId).filter(Objects::nonNull).distinct()
+                .toList();
+
+        Map<Long, ExpenseCategory> categoryMap = new HashMap<>();
+        for (Long cId : categoryIds) {
+            ExpenseCategory cat = expenseCategoryService.getExpenseCategoryById(cId);
+            if (cat != null) {
+                categoryMap.put(cId, cat);
+            }
+        }
+
+        Map<String, BankingV1> bankMap = new HashMap<>();
+        for (String bId : bankIds) {
+            BankingV1 b = bankingService.getBankDetails(bId);
+            if (b != null) {
+                bankMap.put(bId, b);
+            }
+        }
+
+        List<ExpenseReportResponse.ExpenseDetail> details = expensesList.stream().map(e -> {
+            String categoryName = "Unknown";
+            String subCategoryName = "Unknown";
+            String bankName = "Unknown";
+
+            ExpenseCategory cat = categoryMap.get(e.getCategoryId());
+            if (cat != null) {
+                categoryName = cat.getCategoryName();
+                if (e.getSubCategoryId() != null && cat.getListSubCategories() != null) {
+                    subCategoryName = cat.getListSubCategories().stream()
+                            .filter(s -> s.getSubCategoryId().equals(e.getSubCategoryId()))
+                            .map(ExpenseSubCategory::getSubCategoryName)
+                            .findFirst().orElse("Unknown");
+                }
+            }
+
+            BankingV1 b = bankMap.get(e.getBankId());
+            if (b != null) {
+                bankName = b.getBankName();
+            }
+
+            return ExpenseReportResponse.ExpenseDetail.builder()
+                    .date(Utils.dateToString(e.getTransactionDate()))
+                    .expenseCategory(categoryName)
+                    .expenseSubCategory(subCategoryName)
+                    .description(e.getDescription())
+                    .counts(e.getUnitCount() != null ? e.getUnitCount() : 1)
+                    .assetsName("")
+                    .vendorName("")
+                    .account(bankName)
+                    .build();
+        }).collect(Collectors.toList());
+
+        return ExpenseReportResponse.builder()
+                .hostelId(hostelId)
+                .startDate(startDate != null ? Utils.dateToString(startDate) : null)
+                .endDate(endDate != null ? Utils.dateToString(endDate) : null)
+                .totalExpenses(totalExpensesCount)
+                .totalAmount(totalAmount)
+                .expenseLists(details)
+                .build();
+    }
+
 }

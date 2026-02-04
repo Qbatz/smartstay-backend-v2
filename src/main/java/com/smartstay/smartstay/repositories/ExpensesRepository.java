@@ -31,4 +31,15 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
         Double sumAmountByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
                                                @Param("endDate") Date endDate);
 
+        @Query(value = """
+                SELECT * FROM expensesv1 e
+                WHERE e.hostel_id = :hostelId
+                AND e.is_active = true
+                AND (:startDate IS NULL OR DATE(e.transaction_date) >= DATE(:startDate))
+                AND (:endDate IS NULL OR DATE(e.transaction_date) <= DATE(:endDate))
+                ORDER BY e.transaction_date DESC
+                LIMIT :limit OFFSET :offset
+                """, nativeQuery = true)
+        List<ExpensesV1> findExpensesByFilters(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("limit") int limit, @Param("offset") int offset);
+
 }

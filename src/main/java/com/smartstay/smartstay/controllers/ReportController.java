@@ -52,4 +52,15 @@ public class ReportController {
         return reportService.getReceiptDetails(hostelId, period, customStartDate, customEndDate,
                 paymentStatus, page, size);
     }
+
+    @GetMapping("/expense/{hostelId}")
+    public ResponseEntity<?> getExpenseReportDetails(
+            @PathVariable("hostelId") String hostelId,
+            @RequestParam(value = "period", required = false) String period,
+            @RequestParam(value = "startDate", required = false) String customStartDate,
+            @RequestParam(value = "endDate", required = false) String customEndDate,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        return reportService.getExpenseDetails(hostelId, period, customStartDate, customEndDate, page, size);
+    }
 }
