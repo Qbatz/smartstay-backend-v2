@@ -50,9 +50,10 @@ public class AssetsService {
     private UsersService usersService;
     @Autowired
     private RolesService rolesService;
-
     @Autowired
     private UserHostelService userHostelService;
+    @Autowired
+    private BankTransactionService bankTransactionService;
 
     public ResponseEntity<?> getAllAssets(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -99,6 +100,7 @@ public class AssetsService {
             return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
         }
 
+
         boolean assetNameExists = assetsRepository.existsByAssetNameAndIsDeletedFalseAndHostelId(request.assetName(),hostelId);
         if (assetNameExists) {
             return new ResponseEntity<>(Utils.ASSET_NAME_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
@@ -116,19 +118,23 @@ public class AssetsService {
 
         asset.setBrandName(request.brandName());
         asset.setSerialNumber(request.serialNumber());
+        Date purchaseDate = new Date();
         if (request.purchaseDate() != null) {
             String formattedDate = request.purchaseDate().replace("/", "-");
-            asset.setPurchaseDate(Utils.stringToDate(formattedDate, Utils.USER_INPUT_DATE_FORMAT));
+            purchaseDate = Utils.stringToDate(formattedDate, Utils.USER_INPUT_DATE_FORMAT);
+            asset.setPurchaseDate(purchaseDate);
         }
         asset.setPrice(request.price());
         asset.setBankId(request.bankingId());
         asset.setCreatedBy(user.getUserId());
-        asset.setCreatedAt(new java.util.Date());
+        asset.setCreatedAt(new Date());
         asset.setIsActive(true);
         asset.setIsDeleted(false);
         asset.setHostelId(hostelId);
         asset.setParentId(user.getParentId());
         AssetsV1 av1 = assetsRepository.save(asset);
+
+        bankTransactionService.addAssetsTransaction(av1.getAssetId(), request.price(), purchaseDate, request.bankingId(), hostelId, request.serialNumber());
         usersService.addUserLog(hostelId, String.valueOf(av1.getAssetId()), ActivitySource.ASSETS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }

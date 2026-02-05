@@ -14,5 +14,7 @@ public enum ActivitySource {
     EXPENSE_SUB_CATEGORY,
     BANKING,
     BEDS,
-    BOOKING
+    BOOKING,
+    COMPLAINTS,
+    COMMENTS
 }

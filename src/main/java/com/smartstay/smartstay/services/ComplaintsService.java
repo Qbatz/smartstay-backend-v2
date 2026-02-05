@@ -7,9 +7,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
-import com.smartstay.smartstay.ennum.ComplaintStatus;
-import com.smartstay.smartstay.ennum.CustomerStatus;
-import com.smartstay.smartstay.ennum.UserType;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.complaints.*;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
@@ -166,7 +164,10 @@ public class ComplaintsService {
         complaint.setStatus(ComplaintStatus.PENDING.name());
         complaint.setIsDeleted(false);
 
-        complaintRepository.save(complaint);
+        ComplaintsV1 complaintsV1 = complaintRepository.save(complaint);
+        List<String> tenantId = new ArrayList<>();
+        tenantId.add(request.customerId());
+        usersService.addUserLog(hostelV1.getHostelId(), String.valueOf(complaintsV1.getComplaintId()), ActivitySource.COMPLAINTS, ActivitySourceType.CREATE, user, tenantId);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
@@ -209,6 +210,7 @@ public class ComplaintsService {
             customerNotificationService.sendNotifications(customers.getXuid(), complaintExist, request.message(), user.getFirstName()+" "+user.getLastName());
         }
 
+        usersService.addUserLog(rolesV1.getHostelId(), String.valueOf(complaintId), ActivitySource.COMMENTS, ActivitySourceType.CREATE, user);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
@@ -236,6 +238,7 @@ public class ComplaintsService {
         }
 
         updateComplaint(complaint, request);
+        usersService.addUserLog(complaint.getHostelId(), String.valueOf(complaintId), ActivitySource.COMPLAINTS, ActivitySourceType.UPDATE, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -307,8 +310,10 @@ public class ComplaintsService {
             complaintTypeName = complaintTypeV1.getComplaintTypeName();
         }
 
+        List<String> tenantId = new ArrayList<>();
+        tenantId.add(complaint.getCustomerId());
         customerNotificationService.addComplainUpdateStatus(complaint, fullName.toString(), customers.getXuid(), request.status(), complaintTypeName);
-
+        usersService.addUserLog(complaint.getHostelId(), String.valueOf(complaintId), ActivitySource.COMPLAINTS, ActivitySourceType.ASSIGN, user, tenantId);
         return new ResponseEntity<>(Utils.STATUS_UPDATED, HttpStatus.OK);
     }
 
@@ -643,6 +648,7 @@ public class ComplaintsService {
         complaint.setIsDeleted(true);
         complaint.setIsActive(false);
         complaintRepository.save(complaint);
+        usersService.addUserLog(complaint.getHostelId(), String.valueOf(complaintId), ActivitySource.COMPLAINTS, ActivitySourceType.DELETE, user);
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 

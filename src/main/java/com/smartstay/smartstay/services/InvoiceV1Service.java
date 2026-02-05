@@ -1523,7 +1523,7 @@ public class InvoiceV1Service {
 
                         if (latestInvoice.getPaidAmount() >= rentForOldInvoice) {
                             latestInvoice.setPaymentStatus(PaymentStatus.PAID.name());
-                            latestInvoice.setPaidAmount(rentForOldInvoice);
+                            latestInvoice.setPaidAmount(totalAmountForOldInvoice);
                         }
                         else {
                             if (latestInvoice.getPaidAmount() > 0) {

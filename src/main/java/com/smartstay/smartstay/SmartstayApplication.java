@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
+import com.smartstay.smartstay.payloads.roles.Permission;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.services.TemplatesService;
 import com.smartstay.smartstay.util.BillingCycle;
@@ -141,6 +142,5 @@ public class SmartstayApplication {
 //
 //		};
 //	}
-
 
 }

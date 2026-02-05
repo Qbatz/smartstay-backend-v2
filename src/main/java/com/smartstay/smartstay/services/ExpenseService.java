@@ -141,8 +141,10 @@ public class ExpenseService {
                 expense.purchaseDate(),
                 expenseNumber);
 
-        if (bankTransactionService.addExpenseTransaction(transactionDto)) {
-            expensesRepository.save(expensesV1);
+        ExpensesV1 expV1 = expensesRepository.save(expensesV1);
+
+        if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId())) {
+
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
         else {

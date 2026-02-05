@@ -61,7 +61,14 @@ public class ActivityLogUtils {
         }
 
         if (activitySource.equalsIgnoreCase(ActivitySource.BOOKING.name())) {
-            return getBedsOperations(operationType);
+            return getBookingsOperations(operationType);
+        }
+
+        if (activitySource.equalsIgnoreCase(ActivitySource.COMPLAINTS.name())) {
+            return getComplaintsOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.COMMENTS.name())) {
+            return getCommentOperations(operationType);
         }
 
 
@@ -138,6 +145,30 @@ public class ActivityLogUtils {
         if (operationName.equalsIgnoreCase(ActivitySourceType.ADVANCE_AMOUNT.name())) {
             return "Updated advance amount for";
         }
+        return null;
+    }
+
+    private static String getComplaintsOperations(String opeationName) {
+        if (opeationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Complain has been raised behalf of";
+        }
+        return null;
+    }
+
+    private static String getCommentOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Added comments for ";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Complaint has been updated";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.ASSIGN.name())) {
+            return "Complaint has been assigned to";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Complaint has been deleted by";
+        }
+
         return null;
     }
 

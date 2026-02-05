@@ -855,6 +855,13 @@ public class CustomersService {
             if (updateInfo.state() != null && !updateInfo.state().equalsIgnoreCase("")) {
                 customers.setState(updateInfo.state());
             }
+            if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
+                int cus = customersRepository.findCustomersByMobile(customerId, updateInfo.mobile());
+                if (cus > 0) {
+                    return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                }
+                customers.setMobile(updateInfo.mobile());
+            }
 
             customersRepository.save(customers);
 

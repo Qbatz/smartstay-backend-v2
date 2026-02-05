@@ -186,21 +186,23 @@ public class SubscriptionService {
 
         subscriptionRepository.save(newSubscription);
 
-        HostelPlan hostelPlan = hostelV1.getHostelPlan();
-        if (hostelPlan == null) {
-            hostelPlan = new HostelPlan();
-            hostelPlan.setCurrentPlanCode(latestSubscription.getPlanCode());
-            hostelPlan.setCurrentPlanName(latestSubscription.getPlanName());
-            hostelPlan.setHostel(hostelV1);
-        }
-        hostelPlan.setCurrentPlanStartsAt(newSubscription.getPlanStartsAt());
-        hostelPlan.setCurrentPlanEndsAt(newSubscription.getPlanEndsAt());
-        hostelPlan.setCurrentPlanPrice(0.0);
-        hostelPlan.setPaidAmount(0.0);
-        hostelPlan.setTrial(true);
-        hostelPlan.setTrialEndingAt(newSubscription.getPlanEndsAt());
+        if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) <=0 ){
+            HostelPlan hostelPlan = hostelV1.getHostelPlan();
+            if (hostelPlan == null) {
+                hostelPlan = new HostelPlan();
+                hostelPlan.setCurrentPlanCode(latestSubscription.getPlanCode());
+                hostelPlan.setCurrentPlanName(latestSubscription.getPlanName());
+                hostelPlan.setHostel(hostelV1);
+            }
+            hostelPlan.setCurrentPlanStartsAt(newSubscription.getPlanStartsAt());
+            hostelPlan.setCurrentPlanEndsAt(newSubscription.getPlanEndsAt());
+            hostelPlan.setCurrentPlanPrice(0.0);
+            hostelPlan.setPaidAmount(0.0);
+            hostelPlan.setTrial(true);
+            hostelPlan.setTrialEndingAt(newSubscription.getPlanEndsAt());
 
-        hostelService.updateHostel(hostelV1);
+            hostelService.updateHostel(hostelV1);
+        }
 
         return new ResponseEntity<>(HttpStatus.OK);
 

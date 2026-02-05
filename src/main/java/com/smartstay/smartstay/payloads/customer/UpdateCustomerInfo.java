@@ -9,6 +9,7 @@ public record UpdateCustomerInfo(
         String landmark,
         Integer pincode,
         String city,
-        String state
+        String state,
+        String mobile
 ) {
 }
