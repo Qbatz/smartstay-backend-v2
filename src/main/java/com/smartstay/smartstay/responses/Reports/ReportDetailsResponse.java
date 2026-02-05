@@ -18,6 +18,8 @@ public class ReportDetailsResponse {
     private Double totalAmount;
     private Double outStandingAmount;
     private Double paidAmount;
+    private String startDate;
+    private String endDate;
     private FilterOptions filterOptions;
     private List<InvoiceDetail> invoiceList;
 
@@ -30,6 +32,7 @@ public class ReportDetailsResponse {
         private List<FilterItem> invoiceModes;
         private List<FilterItem> invoiceTypes;
         private List<UserFilterItem> createdBy;
+        private List<String> periods;
     }
 
     @Data

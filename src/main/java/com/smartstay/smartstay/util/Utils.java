@@ -45,7 +45,6 @@ public class Utils {
     public static final String AMENITY_ALREADY_DELETED = "Amenity already deleted";
     public static final String CANNOT_DELETE_ASSIGNED_AMENITIES = "Amenities that are currently assigned cannot be deleted.";
 
-
     public static final String INVALID_FLOOR = "Invalid Floor";
     public static final String INVALID_USER = "Invalid User";
     public static final String INVALID_USER_NAME_PASSWORD = "Invalid username/password";
@@ -175,8 +174,7 @@ public class Utils {
     public static final String CANNOT_CREATE_INVOICE_SETTLEMET_CREATED_CUSTOMERS = "Settlement is created";
     public static final String OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED = "Settlement cannot be generated for old months";
 
-
-    //Date validation messages
+    // Date validation messages
     public static final String REQUEST_DATE_MUST_AFTER_JOINING_DATE = "Request date must be after joining date.";
     public static final String CHECKOUT_DATE_MUST_AFTER_REQUEST_DATE = "Checkout date must be after request date.";
 
@@ -217,8 +215,8 @@ public class Utils {
     public static final String EB_ENTRY_CANNOT_CHANGE_INVOICE_GENERATED = "Cannot modify invoice generated readings";
     public static final String EB_ENTRY_CANNOT_DELETE_INVOICE_GENERATED = "Cannot delete invoice generated readings";
     public static final String DELETE_AVAILABLE_ONLY_FOR_LAST_ENTRY = "Delete is available only for latest entries";
-    public static final String PIN_REQUIRED  = "Pin is required";
-    public static final String PIN_ALREADY_SETUP  = "Pin is added for this account";
+    public static final String PIN_REQUIRED = "Pin is required";
+    public static final String PIN_ALREADY_SETUP = "Pin is added for this account";
     public static final String INVALID_PIN = "Invalid Pin";
     public static final String TOKEN_REQUIRED = "FCM token is required";
     public static final String REFUNDING_DATE_OLDER_THAN_INVOICE = "Refund date cannot be before the invoice date";
@@ -227,11 +225,11 @@ public class Utils {
     public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_INVALID_NOTICE_DATE = "The final settlement date must be after the notice date.";
 
     /**
-     *  Defining module Id's here
+     * Defining module Id's here
      *
-     *  while doing so correct on smartstayApplication.java file aswell.
+     * while doing so correct on smartstayApplication.java file aswell.
      *
-     *   This always linked to the db
+     * This always linked to the db
      */
 
     public static int MODULE_ID_DASHBOARD = 1;
@@ -261,9 +259,11 @@ public class Utils {
     public static int MODULE_ID_AGREEMENT = 24;
     public static int MODULE_ID_SUBSCRIPTION = 25;
     public static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+
     public static int generateOtp() {
-        return (int)(Math.random() * 900000) + 100000;
+        return (int) (Math.random() * 900000) + 100000;
     }
+
     public static boolean verifyEmail(String email) {
         return EMAIL_PATTERN.matcher(email).matches();
     }
@@ -276,8 +276,7 @@ public class Utils {
         }
     }
 
-
-    //this accepts only dd-MM-yyyy format
+    // this accepts only dd-MM-yyyy format
     public static String stringToDateFormat(String inputDate) {
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat("dd-MM-yyyy");
@@ -294,9 +293,9 @@ public class Utils {
         return Double.parseDouble(df.format(origionalNumber));
     }
 
-
     public static Date convertStringToDate(String dateStr) {
-        if (dateStr == null || dateStr.trim().isEmpty()) return null;
+        if (dateStr == null || dateStr.trim().isEmpty())
+            return null;
 
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
@@ -336,7 +335,6 @@ public class Utils {
         return new SimpleDateFormat(OUTPUT_TIME_FORMAT).format(date);
     }
 
-
     public static boolean compareWithTodayDate(Date date2) {
         String dateString = new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(new Date());
         Date today;
@@ -359,9 +357,9 @@ public class Utils {
         return uuid.toString();
     }
 
-
     public static int calculateRemainingDays(Date nextBillingAt) {
-        if (nextBillingAt == null) return 0;
+        if (nextBillingAt == null)
+            return 0;
 
         LocalDate billingDate = nextBillingAt.toInstant()
                 .atZone(ZoneId.systemDefault())
@@ -371,7 +369,6 @@ public class Utils {
         return (int) Math.max(0, remainingDays);
 
     }
-
 
     public static int compareWithTwoDates(Date date1, Date date2) {
         LocalDate localDate1 = date1.toInstant()
@@ -389,7 +386,7 @@ public class Utils {
             return false;
         }
         if (data instanceof String) {
-            if (((String)data).equalsIgnoreCase("")) {
+            if (((String) data).equalsIgnoreCase("")) {
                 return false;
             }
         }
@@ -409,7 +406,7 @@ public class Utils {
 
     public static long findNumberOfDays(Date date1, Date date2) {
         LocalDate start = date1.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        LocalDate end   = date2.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate end = date2.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
         return ChronoUnit.DAYS.between(start, end) + 1;
     }
@@ -455,7 +452,8 @@ public class Utils {
     public static final Date findLastDate(Integer cycleStartDay, Date date) {
         LocalDate today = date.toInstant()
                 .atZone(ZoneId.systemDefault())
-                .toLocalDate();;
+                .toLocalDate();
+        ;
         LocalDate startDate = LocalDate.of(today.getYear(), today.getMonth(), cycleStartDay);
 
         LocalDate cycleEnd;
@@ -477,7 +475,6 @@ public class Utils {
         return Date.from(cycleEnd.atStartOfDay(ZoneId.systemDefault()).toInstant());
 
     }
-
 
     public static int generateExpenseNumber() {
         Random random = new Random();
@@ -556,11 +553,10 @@ public class Utils {
 
         LocalDateTime dateTime = LocalDateTime.of(
                 localDate,
-                LocalTime.now(ZoneId.systemDefault())
-        );
+                LocalTime.now(ZoneId.systemDefault()));
 
         // Combine both
-//        LocalDateTime dateTime = LocalDateTime.of(localDate, currentTime);
+        // LocalDateTime dateTime = LocalDateTime.of(localDate, currentTime);
         return Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 
@@ -570,25 +566,23 @@ public class Utils {
         if (invoicePrefixSuffix.length > 0) {
             prefixSuffix.append(invoicePrefixSuffix[0]);
             if (invoicePrefixSuffix.length > 1) {
-               if (invoicePrefixSuffix.length > 2) {
-                   for (int i=0; i<invoicePrefixSuffix.length-2; i++) {
-                       prefixSuffix.append("-");
-                       prefixSuffix.append(invoicePrefixSuffix[i]);
-                   }
-               }
-               prefixSuffix.append("-");
-               int lastNumber = Integer.parseInt(invoicePrefixSuffix[invoicePrefixSuffix.length - 1]) + 1;
-               if (lastNumber < 10) {
-                   prefixSuffix.append("00");
-                   prefixSuffix.append(lastNumber);
-               }
-               else if (lastNumber < 100) {
+                if (invoicePrefixSuffix.length > 2) {
+                    for (int i = 0; i < invoicePrefixSuffix.length - 2; i++) {
+                        prefixSuffix.append("-");
+                        prefixSuffix.append(invoicePrefixSuffix[i]);
+                    }
+                }
+                prefixSuffix.append("-");
+                int lastNumber = Integer.parseInt(invoicePrefixSuffix[invoicePrefixSuffix.length - 1]) + 1;
+                if (lastNumber < 10) {
+                    prefixSuffix.append("00");
+                    prefixSuffix.append(lastNumber);
+                } else if (lastNumber < 100) {
                     prefixSuffix.append("0");
                     prefixSuffix.append(lastNumber);
+                } else {
+                    prefixSuffix.append(lastNumber);
                 }
-                else {
-                   prefixSuffix.append(lastNumber);
-               }
             }
         }
 
@@ -604,8 +598,18 @@ public class Utils {
     }
 
     public static String capitalize(String value) {
-        if (value == null || value.isEmpty()) return value;
-        return value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase();
+        if (value == null || value.isEmpty())
+            return value;
+        String[] words = value.split("[\\s_]+");
+        StringBuilder sb = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                sb.append(Character.toUpperCase(word.charAt(0)))
+                        .append(word.substring(1).toLowerCase())
+                        .append(" ");
+            }
+        }
+        return sb.toString().trim();
     }
 
 }
