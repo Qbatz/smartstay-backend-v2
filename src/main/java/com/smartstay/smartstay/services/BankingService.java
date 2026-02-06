@@ -725,4 +725,12 @@ public class BankingService {
     public Double sumBalanceByHostelId(String hostelId) {
         return bankingV1Repository.sumBalanceByHostelId(hostelId);
     }
+
+    public List<String> findBankIdsByAccountTypes(String hostelId, List<String> accountTypes) {
+        return bankingV1Repository.findBankIdsByAccountTypes(hostelId, accountTypes);
+    }
+
+    public List<String> findBankIdsByAccountHolderNames(String hostelId, List<String> names) {
+        return bankingV1Repository.findBankIdsByAccountHolderNames(hostelId, names);
+    }
 }

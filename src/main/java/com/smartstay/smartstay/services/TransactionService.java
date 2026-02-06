@@ -15,6 +15,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
+import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
 import com.smartstay.smartstay.responses.invoices.AccountDetails;
 import com.smartstay.smartstay.responses.invoices.CustomerInfo;
@@ -22,12 +23,12 @@ import com.smartstay.smartstay.responses.invoices.StayInfo;
 import com.smartstay.smartstay.responses.receipt.ReceiptConfigInfo;
 import com.smartstay.smartstay.responses.receipt.ReceiptDetails;
 import com.smartstay.smartstay.responses.receipt.ReceiptInfo;
-import com.smartstay.smartstay.responses.receiptForReport.ReceiptReportResponse;
-import com.smartstay.smartstay.responses.expenseForReport.ExpenseReportResponse;
-import com.smartstay.smartstay.repositories.ExpensesRepository;
+import com.smartstay.smartstay.responses.transaction.TransactionReportResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -81,7 +82,7 @@ public class TransactionService {
 
     /**
      * not using it
-     * 
+     *
      * @param customer
      * @param amount
      * @return
@@ -184,27 +185,18 @@ public class TransactionService {
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
 
-        bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
-                payment.paymentDate());
+        bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(), payment.paymentDate());
 
         TransactionV1 trns = transactionRespository.save(transactionV1);
 
-        PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(),
-                payment.amount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(), "Active");
+        PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(), payment.amount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(), "Active");
         int response = paymentSummaryService.addPayment(summary);
 
         if (response == 1) {
             // dont have to add the amount. For booking invoice is already created.
             invoiceService.recordPayment(invoiceId, PaymentStatus.PAID.name(), 0);
 
-            TransactionDto transaction = new TransactionDto(payment.bankId(),
-                    payment.referenceId(),
-                    payment.amount(),
-                    BankTransactionType.CREDIT.name(),
-                    BankSource.INVOICE.name(),
-                    hostelId,
-                    payment.paymentDate(),
-                    trns.getTransactionId());
+            TransactionDto transaction = new TransactionDto(payment.bankId(), payment.referenceId(), payment.amount(), BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(), trns.getTransactionId());
 
             bankTransactionService.addTransaction(transaction, trns.getTransactionId());
 
@@ -308,26 +300,17 @@ public class TransactionService {
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
 
-        bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
-                payment.paymentDate());
+        bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(), payment.paymentDate());
 
         TransactionV1 trnsV1 = transactionRespository.save(transactionV1);
 
-        PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(),
-                payment.amount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(), "Active");
+        PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(), payment.amount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(), "Active");
         int response = paymentSummaryService.addPayment(summary);
 
         if (response == 1) {
             invoiceService.recordPayment(invoiceId, typeOfPayment, payment.amount());
 
-            TransactionDto transaction = new TransactionDto(payment.bankId(),
-                    payment.referenceId(),
-                    payment.amount(),
-                    BankTransactionType.CREDIT.name(),
-                    BankSource.INVOICE.name(),
-                    hostelId,
-                    payment.paymentDate(),
-                    trnsV1.getTransactionId());
+            TransactionDto transaction = new TransactionDto(payment.bankId(), payment.referenceId(), payment.amount(), BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(), trnsV1.getTransactionId());
 
             bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId());
 
@@ -342,23 +325,18 @@ public class TransactionService {
         double paidAmount = 0.0;
         if (!listTransaction.isEmpty()) {
 
-            paidAmount = listTransaction.stream()
-                    .mapToDouble(i -> {
-                        if (i.getPaidAmount() == null) {
-                            return 0.0;
-                        }
-                        return i.getPaidAmount();
-                    })
-                    .sum();
+            paidAmount = listTransaction.stream().mapToDouble(i -> {
+                if (i.getPaidAmount() == null) {
+                    return 0.0;
+                }
+                return i.getPaidAmount();
+            }).sum();
         }
         return paidAmount;
     }
 
     public List<PartialPaidInvoiceInfo> getTransactionInfo(List<String> partialPaymentInvoices) {
-        return transactionRespository.findByInvoiceIdIn(partialPaymentInvoices)
-                .stream()
-                .map(item -> new PartialPaidInvoiceInfo(item.getInvoiceId(), item.getPaidAmount()))
-                .toList();
+        return transactionRespository.findByInvoiceIdIn(partialPaymentInvoices).stream().map(item -> new PartialPaidInvoiceInfo(item.getInvoiceId(), item.getPaidAmount())).toList();
     }
 
     public Double getAdvancePaidAmount(String invoiceNumber) {
@@ -451,8 +429,7 @@ public class TransactionService {
 
         String invoiceMonth = null;
         if (invoicesV1.getInvoiceStartDate() != null) {
-            BillingDates billingDates = hostelService.getBillingRuleOnDate(invoicesV1.getHostelId(),
-                    invoicesV1.getInvoiceStartDate());
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(invoicesV1.getHostelId(), invoicesV1.getInvoiceStartDate());
             if (billingDates != null) {
                 if (billingDates.currentBillStartDate() != null) {
                     invoiceMonth = Utils.dateToMonth(billingDates.currentBillStartDate());
@@ -471,35 +448,20 @@ public class TransactionService {
         } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
             bankName = BankAccountType.UPI.name();
         }
-        StringBuilder account = new StringBuilder();
-        account.append(bankingV1.getAccountHolderName());
-        account.append("-");
-        account.append(bankName);
-        AccountDetails accountDetails = new AccountDetails(bankingV1.getAccountNumber(),
-                bankingV1.getIfscCode(),
-                account.toString(), bankingV1.getUpiId(), null);
-        ;
+        String account = bankingV1.getAccountHolderName() +
+                "-" +
+                bankName;
+        AccountDetails accountDetails = new AccountDetails(bankingV1.getAccountNumber(), bankingV1.getIfscCode(), account, bankingV1.getUpiId(), null);
         ReceiptConfigInfo receiptConfigInfo = null;
         com.smartstay.smartstay.dao.BillTemplates hostelTemplates = templatesService.getTemplateByHostelId(hostelId);
         if (hostelTemplates != null) {
             if (!hostelTemplates.isMobileCustomized()) {
                 hostelPhone = hostelTemplates.getMobile();
             } else {
-                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())
-                        || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
-                    hostelPhone = hostelTemplates.getTemplateTypes()
-                            .stream()
-                            .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
-                            .map(BillTemplateType::getReceiptPhoneNumber)
-                            .toList()
-                            .getFirst();
+                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                    hostelPhone = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name())).map(BillTemplateType::getReceiptPhoneNumber).toList().getFirst();
                 } else {
-                    hostelPhone = hostelTemplates.getTemplateTypes()
-                            .stream()
-                            .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                            .map(BillTemplateType::getReceiptPhoneNumber)
-                            .toList()
-                            .getFirst();
+                    hostelPhone = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).map(BillTemplateType::getReceiptPhoneNumber).toList().getFirst();
                 }
 
             }
@@ -507,41 +469,19 @@ public class TransactionService {
             if (!hostelTemplates.isEmailCustomized()) {
                 hostelEmail = hostelTemplates.getEmailId();
             } else {
-                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())
-                        || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
-                    hostelEmail = hostelTemplates.getTemplateTypes()
-                            .stream()
-                            .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
-                            .map(BillTemplateType::getReceiptMailId)
-                            .toList()
-                            .getFirst();
+                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                    hostelEmail = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name())).map(BillTemplateType::getReceiptMailId).toList().getFirst();
                 } else {
-                    hostelEmail = hostelTemplates.getTemplateTypes()
-                            .stream()
-                            .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                            .map(BillTemplateType::getReceiptMailId)
-                            .toList()
-                            .getFirst();
+                    hostelEmail = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).map(BillTemplateType::getReceiptMailId).toList().getFirst();
                 }
 
             }
 
             BillTemplateType templateType = null;
-            if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())
-                    || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
-                templateType = hostelTemplates
-                        .getTemplateTypes()
-                        .stream()
-                        .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name()))
-                        .toList()
-                        .getFirst();
+            if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                templateType = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name())).toList().getFirst();
             } else {
-                templateType = hostelTemplates
-                        .getTemplateTypes()
-                        .stream()
-                        .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                        .toList()
-                        .getFirst();
+                templateType = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).toList().getFirst();
             }
 
             if (!hostelTemplates.isSignatureCustomized()) {
@@ -555,13 +495,7 @@ public class TransactionService {
                 hostelLogo = templateType.getReceiptLogoUrl();
             }
 
-            receiptConfigInfo = new ReceiptConfigInfo(templateType.getReceiptTermsAndCondition(),
-                    receiptSignatureUrl,
-                    hostelLogo,
-                    hostelFullAddress.toString(),
-                    templateType.getReceiptTemplateColor(),
-                    templateType.getReceiptNotes(),
-                    invoiceType);
+            receiptConfigInfo = new ReceiptConfigInfo(templateType.getReceiptTermsAndCondition(), receiptSignatureUrl, hostelLogo, hostelFullAddress.toString(), templateType.getReceiptTemplateColor(), templateType.getReceiptNotes(), invoiceType);
         }
 
         Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());
@@ -597,27 +531,18 @@ public class TransactionService {
                 fullAddress.append(customers.getPincode());
             }
 
-            customerInfo = new CustomerInfo(customers.getFirstName(),
-                    customers.getLastName(),
-                    fullName.toString(),
-                    customers.getCustomerId(),
-                    customers.getMobile(),
-                    "91",
-                    fullAddress.toString(),
-                    Utils.dateToString(customers.getJoiningDate()));
+            customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(), customers.getCustomerId(), customers.getMobile(), "91", fullAddress.toString(), Utils.dateToString(customers.getJoiningDate()));
         }
 
         StayInfo stayInfo = new StayInfo(null, null, null, null);
         CustomersBedHistory bedHistory = null;
         if (!invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
             assert customers != null;
-            bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(),
-                    invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+            bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
             if (bedHistory != null) {
                 BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
                 if (bedDetails != null) {
-                    stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(),
-                            bedDetails.getRoomName(), hostelV1.getHostelName());
+                    stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(), hostelV1.getHostelName());
                 }
             }
 
@@ -626,8 +551,7 @@ public class TransactionService {
             bedHistory = customersBedHistoryService.getCustomerBookedBed(customers.getCustomerId());
             BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
             if (bedDetails != null) {
-                stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(),
-                        hostelV1.getHostelName());
+                stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName(), hostelV1.getHostelName());
             }
         }
         StringBuilder receiverfullName = new StringBuilder();
@@ -643,36 +567,14 @@ public class TransactionService {
             receiverfullName.append(createdBy.getLastName());
         }
 
-        ReceiptInfo receiptInfo = new ReceiptInfo(transactionV1.getTransactionReferenceId(),
-                transactionV1.getTransactionId(),
-                Utils.dateToString(transactionV1.getPaymentDate()),
-                Utils.dateToTime(transactionV1.getPaymentDate()),
-                transactionV1.getPaidAmount(),
-                invoiceType,
-                transactionV1.getReferenceNumber(),
-                receiverfullName.toString(),
-                invoiceMonth);
+        ReceiptInfo receiptInfo = new ReceiptInfo(transactionV1.getTransactionReferenceId(), transactionV1.getTransactionId(), Utils.dateToString(transactionV1.getPaymentDate()), Utils.dateToTime(transactionV1.getPaymentDate()), transactionV1.getPaidAmount(), invoiceType, transactionV1.getReferenceNumber(), receiverfullName.toString(), invoiceMonth);
 
         double dueAmount = 0.0;
         if (invoicesV1.getPaidAmount() != null) {
             dueAmount = invoicesV1.getTotalAmount() - invoicesV1.getPaidAmount();
         }
 
-        ReceiptDetails details = new ReceiptDetails(invoicesV1.getInvoiceNumber(),
-                transactionV1.getTransactionReferenceId(),
-                Utils.dateToString(invoicesV1.getInvoiceStartDate()),
-                invoicesV1.getInvoiceId(),
-                invoicesV1.getTotalAmount(),
-                invoicesV1.getPaidAmount(),
-                dueAmount,
-                hostelEmail,
-                hostelPhone, "91",
-                invoicesV1.getHostelId(),
-                receiptInfo,
-                customerInfo,
-                stayInfo,
-                accountDetails,
-                receiptConfigInfo);
+        ReceiptDetails details = new ReceiptDetails(invoicesV1.getInvoiceNumber(), transactionV1.getTransactionReferenceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), invoicesV1.getInvoiceId(), invoicesV1.getTotalAmount(), invoicesV1.getPaidAmount(), dueAmount, hostelEmail, hostelPhone, "91", invoicesV1.getHostelId(), receiptInfo, customerInfo, stayInfo, accountDetails, receiptConfigInfo);
         return new ResponseEntity<>(details, HttpStatus.OK);
 
     }
@@ -680,10 +582,7 @@ public class TransactionService {
     public Double getFinalSettlementPaidAmount(String invoiceId) {
         List<TransactionV1> listTransactions = transactionRespository.findByInvoiceId(invoiceId);
 
-        return listTransactions
-                .stream()
-                .mapToDouble(TransactionV1::getPaidAmount)
-                .sum();
+        return listTransactions.stream().mapToDouble(TransactionV1::getPaidAmount).sum();
     }
 
     public ResponseEntity<?> refundForInvoice(String hostelId, String invoiceId, RefundInvoice refundInvoice) {
@@ -704,8 +603,7 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.BAD_REQUEST);
         }
 
-        Date transactionDate = Utils.stringToDate(refundInvoice.refundDate().replace("/", "-"),
-                Utils.USER_INPUT_DATE_FORMAT);
+        Date transactionDate = Utils.stringToDate(refundInvoice.refundDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
         InvoicesV1 invoicesV1 = invoiceService.findInvoiceDetails(invoiceId);
         if (invoicesV1 == null) {
@@ -740,8 +638,7 @@ public class TransactionService {
         } else {
             BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
             if (billingDates != null && billingDates.currentBillStartDate() != null) {
-                if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(),
-                        billingDates.currentBillStartDate()) < 0) {
+                if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), billingDates.currentBillStartDate()) < 0) {
                     return new ResponseEntity<>(Utils.CANNOT_REFUND_FOR_OLD_INVOICES, HttpStatus.BAD_REQUEST);
                 }
             }
@@ -805,9 +702,7 @@ public class TransactionService {
         if (authentication.isAuthenticated()) {
             List<TransactionV1> listTransactions = transactionRespository.findByCustomerId(customerId);
 
-            return listTransactions.stream()
-                    .map(i -> new TransactionForCustomerDetailsMapper().apply(i))
-                    .toList();
+            return listTransactions.stream().map(i -> new TransactionForCustomerDetailsMapper().apply(i)).toList();
         }
         return new ArrayList<>();
     }
@@ -821,9 +716,7 @@ public class TransactionService {
 
         transactionRespository.delete(transactionV1);
 
-        return new DeleteReceipts(transactionV1.getInvoiceId(),
-                transactionV1.getPaidAmount(),
-                true);
+        return new DeleteReceipts(transactionV1.getInvoiceId(), transactionV1.getPaidAmount(), true);
     }
 
     public ResponseEntity<?> deleteReceipt(String hostelId, String receiptId) {
@@ -866,24 +759,14 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
-        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
-                transactionV1.getBankId());
+        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(), transactionV1.getBankId());
 
-        PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(),
-                transactionV1.getPaidAmount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(),
-                "Active");
+        PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(), transactionV1.getPaidAmount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(), "Active");
         int response = paymentSummaryService.deleteReceipt(summary);
 
         if (response == 1) {
 
-            TransactionDto transaction = new TransactionDto(transactionV1.getBankId(),
-                    transactionV1.getReferenceNumber(),
-                    transactionV1.getPaidAmount(),
-                    BankTransactionType.DEBIT.name(),
-                    BankSource.INVOICE.name(),
-                    hostelId,
-                    null,
-                    transactionV1.getTransactionId());
+            TransactionDto transaction = new TransactionDto(transactionV1.getBankId(), transactionV1.getReferenceNumber(), transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(), BankSource.INVOICE.name(), hostelId, null, transactionV1.getTransactionId());
 
             bankTransactionService.deleteReceipt(transaction);
 
@@ -902,185 +785,148 @@ public class TransactionService {
         return transactionRespository.sumPaidAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
     }
 
-    public ReceiptReportResponse getReceiptReports(String hostelId,
-            Date startDate, Date endDate, List<String> paymentStatus, int page, int size) {
+    public TransactionReportResponse getTransactionReport(String hostelId, String period, String customStartDate, String customEndDate, List<String> invoiceType, List<String> paymentMode, List<String> collectedBy, int page, int size) {
 
-        int offset = page * size;
-        int limit = size;
+        Date startDate = null;
+        Date endDate = null;
 
-        List<TransactionV1> transactions = transactionRespository.findTransactionsByFiltersNoJoin(hostelId, startDate,
-                endDate, paymentStatus, limit, offset);
+        if (customStartDate != null && customEndDate != null) {
+            startDate = Utils.stringToDate(customStartDate, Utils.USER_INPUT_DATE_FORMAT);
+            endDate = Utils.stringToDate(customEndDate, Utils.USER_INPUT_DATE_FORMAT);
+        } else {
+            if (period != null) {
+                Calendar cal = Calendar.getInstance();
+                endDate = cal.getTime();
+                if ("this_month".equalsIgnoreCase(period)) {
+                    cal.set(Calendar.DAY_OF_MONTH, 1);
+                    startDate = cal.getTime();
+                } else if ("last_month".equalsIgnoreCase(period)) {
+                    cal.add(Calendar.MONTH, -1);
+                    cal.set(Calendar.DAY_OF_MONTH, 1);
+                    startDate = cal.getTime();
+                    cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
+                    endDate = cal.getTime();
+                } else if ("last_6_months".equalsIgnoreCase(period)) {
+                    cal.add(Calendar.MONTH, -6);
+                    cal.set(Calendar.DAY_OF_MONTH, 1);
+                    startDate = cal.getTime();
 
-        Double totalAmountSummary = invoiceService.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId,
-                InvoiceType.SETTLEMENT.name(), startDate, endDate);
-        Double receivedAmountSummary = transactionRespository.sumPaidAmountByHostelIdAndDateRange(hostelId, startDate,
-                endDate);
+                    cal = Calendar.getInstance();
+                    endDate = cal.getTime();
+                } else {
+                    BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+                    if (billingDates != null) {
+                        startDate = billingDates.currentBillStartDate();
+                        endDate = billingDates.currentBillEndDate();
+                    }
+                }
+            } else {
+                BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+                if (billingDates != null) {
+                    startDate = billingDates.currentBillStartDate();
+                    endDate = billingDates.currentBillEndDate();
+                }
+            }
+        }
 
-        List<String> customerIds = transactions.stream().map(TransactionV1::getCustomerId).filter(Objects::nonNull)
-                .distinct().toList();
-        List<String> bankIds = transactions.stream().map(TransactionV1::getBankId).filter(Objects::nonNull).distinct()
-                .toList();
-        List<String> invoiceIds = transactions.stream().map(TransactionV1::getInvoiceId).filter(Objects::nonNull)
-                .distinct().toList();
-        List<String> userIds = transactions.stream().map(TransactionV1::getCreatedBy).filter(Objects::nonNull)
-                .distinct()
-                .toList();
+        List<String> bankIds = null;
+        if (paymentMode != null && !paymentMode.isEmpty()) {
+            List<String> normalizedModes = paymentMode.stream().map(String::toUpperCase).collect(Collectors.toList());
+
+            bankIds = bankingService.findBankIdsByAccountTypes(hostelId, normalizedModes);
+            if (bankIds.isEmpty()) {
+                return buildEmptyTransactionResponse(hostelId, startDate, endDate, page, size);
+            }
+        }
+
+        List<String> invoiceIds = null;
+        if (invoiceType != null && !invoiceType.isEmpty()) {
+            List<String> normalizedTypes = invoiceType.stream().map(String::toUpperCase).collect(Collectors.toList());
+            invoiceIds = invoiceService.findInvoiceIdsByHostelIdAndTypeIn(hostelId, normalizedTypes);
+            if (invoiceIds.isEmpty()) {
+                return buildEmptyTransactionResponse(hostelId, startDate, endDate, page, size);
+            }
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        List<TransactionV1> transactions = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate, endDate, bankIds, collectedBy, invoiceIds, pageable);
+        long totalRecords = transactionRespository.countTransactionsByFiltersNew(hostelId, startDate, endDate, bankIds, collectedBy, invoiceIds);
+        Double receivedAmount = transactionRespository.sumPaidAmountByFiltersNew(hostelId, startDate, endDate, bankIds, collectedBy, invoiceIds);
+
+        Double totalInvoiceAmount = invoiceService.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, "SETTLEMENT", startDate, endDate);
+
+
+        List<String> customerIds = transactions.stream().map(TransactionV1::getCustomerId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        List<String> tBankIds = transactions.stream().map(TransactionV1::getBankId).filter(Objects::nonNull).distinct().toList();
+        List<String> tUserIds = transactions.stream().map(TransactionV1::getCreatedBy).filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        List<String> tInvoiceIds = transactions.stream().map(TransactionV1::getInvoiceId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
         Map<String, Customers> customerMap = new HashMap<>();
-        if (!customerIds.isEmpty()) {
+        if (!customerIds.isEmpty())
             customersService.getCustomerDetails(customerIds).forEach(c -> customerMap.put(c.getCustomerId(), c));
-        }
 
         Map<String, BankingV1> bankMap = new HashMap<>();
-        for (String bId : bankIds) {
-            BankingV1 b = bankingService.getBankDetails(bId);
-            if (b != null) {
-                bankMap.put(bId, b);
-            }
-        }
-
-        Map<String, InvoicesV1> invoiceMap = new HashMap<>();
-        if (!invoiceIds.isEmpty()) {
-            invoiceService.findByInvoiceIdIn(invoiceIds).forEach(i -> invoiceMap.put(i.getInvoiceId(), i));
-        }
+        if (!tBankIds.isEmpty())
+            bankingService.findAllBanksById(new HashSet<>(tBankIds)).forEach(b -> bankMap.put(b.getBankId(), b));
 
         Map<String, Users> userMap = new HashMap<>();
-        if (!userIds.isEmpty()) {
-            usersService.findAllUsersFromUserId(userIds).forEach(u -> userMap.put(u.getUserId(), u));
-        }
+        if (!tUserIds.isEmpty())
+            usersService.findAllUsersFromUserId(tUserIds).forEach(u -> userMap.put(u.getUserId(), u));
 
-        List<ReceiptReportResponse.ReceiptDetail> receiptDetails = transactions
-                .stream().map(t -> {
-                    Customers c = customerMap.get(t.getCustomerId());
-                    InvoicesV1 inv = invoiceMap.get(t.getInvoiceId());
-                    Users creator = userMap.get(t.getCreatedBy());
-                    BankingV1 b = bankMap.get(t.getBankId());
+        Map<String, InvoicesV1> invoiceMap = new HashMap<>();
+        if (!tInvoiceIds.isEmpty())
+            invoiceService.findByInvoiceIdIn(tInvoiceIds).forEach(i -> invoiceMap.put(i.getInvoiceId(), i));
 
-                    String bedName = "";
-                    String roomName = "";
-                    String floorName = "";
+        List<TransactionReportResponse.TransactionData> dataList = transactions.stream().map(t -> {
+            Customers c = customerMap.get(t.getCustomerId());
+            BankingV1 b = bankMap.get(t.getBankId());
+            Users u = userMap.get(t.getCreatedBy());
+            InvoicesV1 inv = invoiceMap.get(t.getInvoiceId());
 
-                    if (t.getCustomerId() != null) {
-                        CustomersBedHistory bedHistory = customersBedHistoryService
-                                .getCustomerBedByStartDate(t.getCustomerId(), t.getPaidAt(), t.getPaidAt());
-                        if (bedHistory != null) {
-                            BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
-                            if (bedDetails != null) {
-                                bedName = bedDetails.getBedName();
-                                roomName = bedDetails.getRoomName();
-                                floorName = bedDetails.getFloorName();
-                            }
-                        }
+            String bedName = "N/A", roomName = "N/A", floorName = "N/A";
+            if (t.getCustomerId() != null) {
+                CustomersBedHistory bedHistory = customersBedHistoryService.getCustomerBedByStartDate(t.getCustomerId(), t.getPaidAt(), t.getPaidAt());
+                if (bedHistory != null) {
+                    BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
+                    if (bedDetails != null) {
+                        bedName = bedDetails.getBedName();
+                        roomName = bedDetails.getRoomName();
+                        floorName = bedDetails.getFloorName();
                     }
-
-                    return ReceiptReportResponse.ReceiptDetail
-                            .builder()
-                            .receiptNo(t.getTransactionReferenceId())
-                            .Date(Utils.dateToString(t.getPaidAt()))
-                            .type(t.getType())
-                            .amount(t.getPaidAmount())
-                            .paymentMade(t.getPaidAmount())
-                            .collectedBy(creator != null
-                                    ? (creator.getFirstName()
-                                            + (creator.getLastName() != null ? " " + creator.getLastName() : ""))
-                                    : "Unknown")
-                            .bankAccount(b != null ? (b.getAccountHolderName() + "-" + b.getBankName()) : "Unknown")
-                            .customerName(c != null
-                                    ? (c.getFirstName() + (c.getLastName() != null ? " " + c.getLastName() : ""))
-                                    : "Unknown")
-                            .bed(bedName)
-                            .room(roomName)
-                            .floor(floorName)
-                            .invoiceNumber(inv != null ? inv.getInvoiceNumber() : "")
-                            .build();
-                }).collect(Collectors.toList());
-
-        return ReceiptReportResponse.builder()
-                .startDate(startDate != null ? Utils.dateToString(startDate) : null)
-                .endDate(endDate != null ? Utils.dateToString(endDate) : null)
-                .totalInvoiceAmount(totalAmountSummary != null ? totalAmountSummary : 0.0)
-                .receivedAmount(receivedAmountSummary != null ? receivedAmountSummary : 0.0)
-                .receiptsList(receiptDetails)
-                .hostelId(hostelId)
-                .build();
-    }
-
-    public ExpenseReportResponse getExpenseReports(String hostelId, Date startDate, Date endDate, int page, int size) {
-        int offset = page * size;
-        int limit = size;
-
-        Double totalRefunds = transactionRespository.sumRefundByHostelIdAndDateRange(hostelId, startDate, endDate);
-        Double totalHostelExpenses = expensesRepository.sumAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
-        double totalAmount = (totalHostelExpenses != null ? totalHostelExpenses : 0.0)
-                + (totalRefunds != null ? totalRefunds : 0.0);
-
-        int totalExpensesCount = expensesRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
-
-        List<ExpensesV1> expensesList = expensesRepository.findExpensesByFilters(hostelId, startDate, endDate,
-                limit, offset);
-
-        List<Long> categoryIds = expensesList.stream().map(ExpensesV1::getCategoryId).filter(Objects::nonNull)
-                .distinct().toList();
-        List<String> bankIds = expensesList.stream().map(ExpensesV1::getBankId).filter(Objects::nonNull).distinct()
-                .toList();
-
-        Map<Long, ExpenseCategory> categoryMap = new HashMap<>();
-        for (Long cId : categoryIds) {
-            ExpenseCategory cat = expenseCategoryService.getExpenseCategoryById(cId);
-            if (cat != null) {
-                categoryMap.put(cId, cat);
-            }
-        }
-
-        Map<String, BankingV1> bankMap = new HashMap<>();
-        for (String bId : bankIds) {
-            BankingV1 b = bankingService.getBankDetails(bId);
-            if (b != null) {
-                bankMap.put(bId, b);
-            }
-        }
-
-        List<ExpenseReportResponse.ExpenseDetail> details = expensesList.stream().map(e -> {
-            String categoryName = "Unknown";
-            String subCategoryName = "Unknown";
-            String bankName = "Unknown";
-
-            ExpenseCategory cat = categoryMap.get(e.getCategoryId());
-            if (cat != null) {
-                categoryName = cat.getCategoryName();
-                if (e.getSubCategoryId() != null && cat.getListSubCategories() != null) {
-                    subCategoryName = cat.getListSubCategories().stream()
-                            .filter(s -> s.getSubCategoryId().equals(e.getSubCategoryId()))
-                            .map(ExpenseSubCategory::getSubCategoryName)
-                            .findFirst().orElse("Unknown");
                 }
             }
 
-            BankingV1 b = bankMap.get(e.getBankId());
-            if (b != null) {
-                bankName = b.getBankName();
-            }
-
-            return ExpenseReportResponse.ExpenseDetail.builder()
-                    .date(Utils.dateToString(e.getTransactionDate()))
-                    .expenseCategory(categoryName)
-                    .expenseSubCategory(subCategoryName)
-                    .description(e.getDescription())
-                    .counts(e.getUnitCount() != null ? e.getUnitCount() : 1)
-                    .assetsName("")
-                    .vendorName("")
-                    .account(bankName)
-                    .build();
+            return TransactionReportResponse.TransactionData.builder().receiptNo(t.getTransactionReferenceId()).type(inv != null ? Utils.capitalize(inv.getInvoiceType()) : (t.getType() != null ? Utils.capitalize(t.getType()) : null)).amount(inv != null ? inv.getTotalAmount() : 0.0).paymentMade(t.getPaidAmount()).collectedBy(u != null ? Utils.capitalize(u.getFirstName() + " " + (u.getLastName() != null ? u.getLastName() : "")) : "Unknown").bankAccount(b != null ? b.getAccountHolderName() + "-" + Utils.capitalize(b.getAccountType()) : "Unknown").customerName(c != null ? Utils.capitalize(c.getFirstName() + " " + (c.getLastName() != null ? c.getLastName() : "")) : "Unknown").bed(bedName).room(roomName).floor(floorName).invoiceNumber(inv != null ? inv.getInvoiceNumber() : "N/A").date(Utils.dateToString(t.getPaidAt())).build();
         }).collect(Collectors.toList());
 
-        return ExpenseReportResponse.builder()
-                .hostelId(hostelId)
-                .startDate(startDate != null ? Utils.dateToString(startDate) : null)
-                .endDate(endDate != null ? Utils.dateToString(endDate) : null)
-                .totalExpenses(totalExpensesCount)
-                .totalAmount(totalAmount)
-                .expenseLists(details)
-                .build();
+        int totalPages = (int) Math.ceil((double) totalRecords / size);
+
+        return TransactionReportResponse.builder().status(true).message("Receipts report fetched successfully").summary(TransactionReportResponse.Summary.builder().hostelId(hostelId).startDate(Utils.dateToString(startDate)).endDate(Utils.dateToString(endDate)).totalInvoiceAmount(totalInvoiceAmount != null ? totalInvoiceAmount : 0.0).receivedAmount(receivedAmount != null ? receivedAmount : 0.0).build()).filters(TransactionReportResponse.Filters.builder().invoiceType(buildInvoiceTypeFilters()).period(buildPeriodFilters()).paymentMode(buildPaymentModeFilters()).collectedBy(buildCollectedByFilters(hostelId)).build()).pagination(TransactionReportResponse.Pagination.builder().currentPage(page).pageSize(size).totalRecords(totalRecords).totalPages(totalPages).hasNextPage(page < totalPages - 1).hasPreviousPage(page > 0).build()).data(dataList).build();
     }
 
+    private List<TransactionReportResponse.FilterOption> buildInvoiceTypeFilters() {
+        return Arrays.stream(InvoiceType.values()).filter(type -> type != InvoiceType.SETTLEMENT).map(type -> TransactionReportResponse.FilterOption.builder().id(type.name()).label(Utils.capitalize(type.name())).build()).collect(Collectors.toList());
+    }
+
+    private List<TransactionReportResponse.FilterOption> buildPaymentModeFilters() {
+        return Arrays.stream(BankAccountType.values()).map(type -> TransactionReportResponse.FilterOption.builder().id(type.name()).label(Utils.capitalize(type.name())).build()).collect(Collectors.toList());
+    }
+
+    private List<TransactionReportResponse.FilterOption> buildPeriodFilters() {
+        return Arrays.asList(new TransactionReportResponse.FilterOption("this_month", "This Month"), new TransactionReportResponse.FilterOption("last_month", "Last Month"), new TransactionReportResponse.FilterOption("last_6_months", "Last 6 Months"));
+    }
+
+    private List<TransactionReportResponse.UserFilterOption> buildCollectedByFilters(String hostelId) {
+        List<String> creatorIds = transactionRespository.findDistinctCreatedByByHostelId(hostelId);
+        List<TransactionReportResponse.UserFilterOption> options = new ArrayList<>();
+        if (creatorIds != null && !creatorIds.isEmpty()) {
+            usersService.findAllUsersFromUserId(creatorIds).forEach(u -> options.add(new TransactionReportResponse.UserFilterOption(u.getUserId(), Utils.capitalize(u.getFirstName() + " " + (u.getLastName() != null ? u.getLastName() : "")))));
+        }
+        return options;
+    }
+
+    private TransactionReportResponse buildEmptyTransactionResponse(String hostelId, Date startDate, Date endDate, int page, int size) {
+        return TransactionReportResponse.builder().status(true).message("Receipts report fetched successfully").summary(TransactionReportResponse.Summary.builder().hostelId(hostelId).startDate(Utils.dateToString(startDate)).endDate(Utils.dateToString(endDate)).totalInvoiceAmount(0.0).receivedAmount(0.0).build()).filters(TransactionReportResponse.Filters.builder().build()) // Populate basic options if needed, or
+                .pagination(TransactionReportResponse.Pagination.builder().currentPage(page).pageSize(size).totalRecords(0).totalPages(0).hasNextPage(false).hasPreviousPage(false).build()).data(new ArrayList<>()).build();
+    }
 }

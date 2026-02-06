@@ -1176,4 +1176,18 @@ public class BookingsService {
     public BookingsV1 checkBedIsBookedByOthers(int bedId, String customerId) {
         return bookingsRepository.findByBedIdAndCustomerIdNot(bedId, customerId);
     }
+
+    public List<BookingsV1> findBookingsForTenantRegister(String hostelId, Date startDate, Date endDate, int page,
+                                                          int size) {
+        return bookingsRepository.findBookingsForTenantRegister(hostelId, startDate, endDate,
+                org.springframework.data.domain.PageRequest.of(page, size));
+    }
+
+    public List<BookingsV1> findAllBookingsForTenantRegister(String hostelId, Date startDate, Date endDate) {
+        return bookingsRepository.findAllBookingsForTenantRegister(hostelId, startDate, endDate);
+    }
+
+    public long countBookingsForTenantRegister(String hostelId, Date startDate, Date endDate) {
+        return bookingsRepository.countBookingsForTenantRegister(hostelId, startDate, endDate);
+    }
 }

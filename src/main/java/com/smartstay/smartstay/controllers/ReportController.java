@@ -21,46 +21,27 @@ public class ReportController {
     private ReportService reportService;
 
     @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getReports(@PathVariable("hostelId") String hostelId) {
-        return reportService.getReports(hostelId);
+    public ResponseEntity<?> getReports(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate) {
+        return reportService.getReports(hostelId, startDate, endDate);
     }
 
     @GetMapping("/invoice/{hostelId}")
-    public ResponseEntity<?> getInvoiceReportDetails(
-            @PathVariable("hostelId") String hostelId,
-            @RequestParam(value = "search", required = false) String search,
-            @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus,
-            @RequestParam(value = "invoiceModes", required = false) List<String> invoiceModes,
-            @RequestParam(value = "invoiceTypes", required = false) List<String> invoiceTypes,
-            @RequestParam(value = "createdBy", required = false) List<String> createdBy,
-            @RequestParam(value = "period", required = false) String period,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
-        return reportService.getInvoiceReportDetails(hostelId, search, paymentStatus, invoiceModes, invoiceTypes,
-                createdBy, period, page, size);
+    public ResponseEntity<?> getInvoiceReportDetails(@PathVariable("hostelId") String hostelId, @RequestParam(value = "search", required = false) String search, @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus, @RequestParam(value = "invoiceModes", required = false) List<String> invoiceModes, @RequestParam(value = "invoiceTypes", required = false) List<String> invoiceTypes, @RequestParam(value = "createdBy", required = false) List<String> createdBy, @RequestParam(value = "period", required = false) String period, @RequestParam(value = "minPaidAmount", required = false) Double minPaidAmount, @RequestParam(value = "maxPaidAmount", required = false) Double maxPaidAmount, @RequestParam(value = "minOutstandingAmount", required = false) Double minOutstandingAmount, @RequestParam(value = "maxOutstandingAmount", required = false) Double maxOutstandingAmount, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate, @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "size", defaultValue = "10") int size) {
+        return reportService.getInvoiceReportDetails(hostelId, search, paymentStatus, invoiceModes, invoiceTypes, createdBy, period, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, startDate, endDate, page, size);
     }
 
     @GetMapping("/transaction/{hostelId}")
-    public ResponseEntity<?> getTransactionReportDetails(
-            @PathVariable("hostelId") String hostelId,
-            @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus,
-            @RequestParam(value = "period", required = false) String period,
-            @RequestParam(value = "startDate", required = false) String customStartDate,
-            @RequestParam(value = "endDate", required = false) String customEndDate,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
-        return reportService.getReceiptDetails(hostelId, period, customStartDate, customEndDate,
-                paymentStatus, page, size);
+    public ResponseEntity<?> getTransactionReportDetails(@PathVariable("hostelId") String hostelId, @RequestParam(value = "invoiceType", required = false) List<String> invoiceType, @RequestParam(value = "paymentMode", required = false) List<String> paymentMode, @RequestParam(value = "collectedBy", required = false) List<String> collectedBy, @RequestParam(value = "period", required = false) String period, @RequestParam(value = "startDate", required = false) String customStartDate, @RequestParam(value = "endDate", required = false) String customEndDate, @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "size", defaultValue = "10") int size) {
+        return reportService.getReceiptDetails(hostelId, period, customStartDate, customEndDate, invoiceType, paymentMode, collectedBy, page, size);
     }
 
     @GetMapping("/expense/{hostelId}")
-    public ResponseEntity<?> getExpenseReportDetails(
-            @PathVariable("hostelId") String hostelId,
-            @RequestParam(value = "period", required = false) String period,
-            @RequestParam(value = "startDate", required = false) String customStartDate,
-            @RequestParam(value = "endDate", required = false) String customEndDate,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
-        return reportService.getExpenseDetails(hostelId, period, customStartDate, customEndDate, page, size);
+    public ResponseEntity<?> getExpenseReportDetails(@PathVariable("hostelId") String hostelId, @RequestParam(value = "period", required = false) String period, @RequestParam(value = "startDate", required = false) String customStartDate, @RequestParam(value = "endDate", required = false) String customEndDate, @RequestParam(value = "categoryId", required = false) List<Long> categoryId, @RequestParam(value = "subCategoryId", required = false) List<Long> subCategoryId, @RequestParam(value = "paymentMode", required = false) List<String> paymentMode, @RequestParam(value = "paidTo", required = false) List<String> paidTo, @RequestParam(value = "createdBy", required = false) List<String> createdBy, @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "size", defaultValue = "10") int size) {
+        return reportService.getExpenseDetails(hostelId, period, customStartDate, customEndDate, categoryId, subCategoryId, paymentMode, paidTo, createdBy, page, size);
+    }
+
+    @GetMapping("/tenant-register/{hostelId}")
+    public ResponseEntity<?> getTenantRegisterDetails(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate, @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "size", defaultValue = "10") int size) {
+        return reportService.getTenantRegister(hostelId, startDate, endDate, page, size);
     }
 }
