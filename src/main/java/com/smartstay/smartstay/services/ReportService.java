@@ -14,6 +14,7 @@ import com.smartstay.smartstay.responses.Reports.ReportResponse;
 import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.transaction.TransactionReportResponse;
 import com.smartstay.smartstay.util.Utils;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -96,7 +97,8 @@ public class ReportService {
         }
 
         // Invoices for hostel
-        int invoiceCount = invoiceV1Service.countByHostelIdAndDateRange(hostelId, startDate, endDate);
+//        invoiceV1Service.countByHostelIdAndDateRange(hostelId, startDate, endDate);
+        int invoiceCount = 0;
         Double invoiceTotal = invoiceV1Service.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, InvoiceType.SETTLEMENT.name(), startDate, endDate);
         Double paidTotal = invoiceV1Service.sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(hostelId, InvoiceType.SETTLEMENT.name(), startDate, endDate);
         ReportResponse.InvoiceReport invoiceReport = ReportResponse.InvoiceReport.builder().noOfInvoices(invoiceCount).totalAmount(invoiceTotal).build();
@@ -159,7 +161,8 @@ public class ReportService {
         int requestActiveCount = amenityRequestService.countActiveByHostelIdAndDateRange(hostelId, Arrays.asList(RequestStatus.PENDING.name(), RequestStatus.OPEN.name(), RequestStatus.INPROGRESS.name()), startDate, endDate);
         ReportResponse.RequestReport requestReport = ReportResponse.RequestReport.builder().totalRequests(requestCount).activeRequests(requestActiveCount).build();
 
-        List<InvoicesV1> finalSettlements = invoiceV1Service.getCurrentMonthFinalSettlement(hostelId, startDate, endDate);
+//        List<InvoicesV1> finalSettlements = invoiceV1Service.getCurrentMonthFinalSettlement(hostelId, startDate, endDate);
+        List<InvoicesV1> finalSettlements = new ArrayList<>();
         int totalSettlement = finalSettlements.size();
         double totalAmount = finalSettlements.stream().mapToDouble(i -> {
             if (i.getTotalAmount() < 0) {
@@ -189,37 +192,38 @@ public class ReportService {
     }
 
     public ResponseEntity<?> getInvoiceReportDetails(String hostelId, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, String period, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, String customStartDate, String customEndDate, int page, int size) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        String userId = authentication.getName();
-        Users user = usersService.findUserByUserId(userId);
-        if (user == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        BillingDates dates = calculateDateRange(period, hostelId);
-        Date startDate = dates.currentBillStartDate();
-        Date endDate = dates.currentBillEndDate();
-
-        if (customStartDate != null && !customStartDate.isEmpty()) {
-            startDate = Utils.stringToDate(customStartDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        }
-        if (customEndDate != null && !customEndDate.isEmpty()) {
-            endDate = Utils.stringToDate(customEndDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        }
-
-        Pageable pageable = PageRequest.of(page, size);
-        List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageable);
-        List<ReportDetailsResponse.InvoiceDetail> invoiceDetails = mapToInvoiceDetails(invoices);
-
-        ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);
-
-        return buildReportResponse(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, invoices, invoiceDetails, options, page, size);
+//        if (!authentication.isAuthenticated()) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//        String userId = authentication.getName();
+//        Users user = usersService.findUserByUserId(userId);
+//        if (user == null) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//
+//        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
+//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//        }
+//
+//        BillingDates dates = calculateDateRange(period, hostelId);
+//        Date startDate = dates.currentBillStartDate();
+//        Date endDate = dates.currentBillEndDate();
+//
+//        if (customStartDate != null && !customStartDate.isEmpty()) {
+//            startDate = Utils.stringToDate(customStartDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+//        }
+//        if (customEndDate != null && !customEndDate.isEmpty()) {
+//            endDate = Utils.stringToDate(customEndDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+//        }
+//
+//        Pageable pageable = PageRequest.of(page, size);
+//        List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageable);
+//        List<ReportDetailsResponse.InvoiceDetail> invoiceDetails = mapToInvoiceDetails(invoices);
+//
+//        ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);
+//
+//        return buildReportResponse(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, invoices, invoiceDetails, options, page, size);
+        return null;
     }
 
     private BillingDates calculateDateRange(String period, String hostelId) {
@@ -304,7 +308,8 @@ public class ReportService {
     }
 
     private ReportDetailsResponse.FilterOptions buildFilterOptions(String hostelId) {
-        List<Object[]> creators = invoiceV1Service.getDistinctCreators(hostelId);
+//        List<Object[]> creators = invoiceV1Service.getDistinctCreators(hostelId);
+        List<Object[]> creators = new ArrayList<>();
         List<ReportDetailsResponse.UserFilterItem> createdByOptions = new ArrayList<>();
         if (creators != null) {
             for (Object[] row : creators) {
@@ -327,8 +332,9 @@ public class ReportService {
 
     private ResponseEntity<?> buildReportResponse(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, List<InvoicesV1> invoices, List<ReportDetailsResponse.InvoiceDetail> invoiceDetails, ReportDetailsResponse.FilterOptions options, int page, int size) {
 
-        InvoiceAggregateDto aggregates = invoiceV1Service.getInvoiceAggregatesForReport(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount);
+//        InvoiceAggregateDto aggregates = invoiceV1Service.getInvoiceAggregatesForReport(hostelId, startDate, endDate, search, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount);
 
+        InvoiceAggregateDto aggregates = null;
         int totalInvoices = 0;
         Double totalAmount = 0.0;
         Double paidAmount = 0.0;

@@ -842,10 +842,10 @@ public class TransactionService {
         List<String> invoiceIds = null;
         if (invoiceType != null && !invoiceType.isEmpty()) {
             List<String> normalizedTypes = invoiceType.stream().map(String::toUpperCase).collect(Collectors.toList());
-            invoiceIds = invoiceService.findInvoiceIdsByHostelIdAndTypeIn(hostelId, normalizedTypes);
-            if (invoiceIds.isEmpty()) {
-                return buildEmptyTransactionResponse(hostelId, startDate, endDate, page, size);
-            }
+//            invoiceIds = invoiceService.findInvoiceIdsByHostelIdAndTypeIn(hostelId, normalizedTypes);
+//            if (invoiceIds.isEmpty()) {
+//                return buildEmptyTransactionResponse(hostelId, startDate, endDate, page, size);
+//            }
         }
 
         Pageable pageable = PageRequest.of(page, size);

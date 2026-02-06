@@ -405,60 +405,60 @@ public class InvoiceV1Service {
                 startDate, endDate);
     }
 
-    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search,
-            List<String> paymentStatus, List<String> invoiceModes,
-            List<String> invoiceTypes, List<String> createdBy, Pageable pageable) {
-        List<String> customerIds = null;
-        if (search != null && !search.trim().isEmpty()) {
-            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
-            if (customers == null || customers.isEmpty()) {
-                return new ArrayList<>();
-            }
-            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
-        }
+//    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search,
+//            List<String> paymentStatus, List<String> invoiceModes,
+//            List<String> invoiceTypes, List<String> createdBy, Pageable pageable) {
+//        List<String> customerIds = null;
+//        if (search != null && !search.trim().isEmpty()) {
+//            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
+//            if (customers == null || customers.isEmpty()) {
+//                return new ArrayList<>();
+//            }
+//            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+//        }
+//
+//        if (customerIds != null && !customerIds.isEmpty()) {
+//            return invoicesV1Repository.findInvoicesByFiltersNoJoinWithCustomers(hostelId, startDate, endDate,
+//                    customerIds,
+//                    paymentStatus, invoiceModes, invoiceTypes, createdBy, pageable);
+//        } else {
+//            return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate,
+//                    paymentStatus, invoiceModes, invoiceTypes, createdBy, pageable);
+//        }
+//    }
 
-        if (customerIds != null && !customerIds.isEmpty()) {
-            return invoicesV1Repository.findInvoicesByFiltersNoJoinWithCustomers(hostelId, startDate, endDate,
-                    customerIds,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy, pageable);
-        } else {
-            return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy, pageable);
-        }
-    }
+//    public List<Object[]> getInvoiceAggregatesForReport(String hostelId, Date startDate, Date endDate, String search,
+//            List<String> paymentStatus, List<String> invoiceModes,
+//            List<String> invoiceTypes, List<String> createdBy) {
+//        List<String> customerIds = null;
+//        if (search != null && !search.trim().isEmpty()) {
+//            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
+//            if (customers == null || customers.isEmpty()) {
+//                return new ArrayList<>();
+//            }
+//            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+//        }
+//
+//        if (customerIds != null && !customerIds.isEmpty()) {
+//            return invoicesV1Repository.findInvoiceAggregatesByFiltersNoJoinWithCustomers(hostelId, startDate, endDate,
+//                    customerIds,
+//                    paymentStatus, invoiceModes, invoiceTypes, createdBy);
+//        } else {
+//            return invoicesV1Repository.findInvoiceAggregatesByFiltersNoJoin(hostelId, startDate, endDate,
+//                    paymentStatus, invoiceModes, invoiceTypes, createdBy);
+//        }
+//    }
 
-    public List<Object[]> getInvoiceAggregatesForReport(String hostelId, Date startDate, Date endDate, String search,
-            List<String> paymentStatus, List<String> invoiceModes,
-            List<String> invoiceTypes, List<String> createdBy) {
-        List<String> customerIds = null;
-        if (search != null && !search.trim().isEmpty()) {
-            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
-            if (customers == null || customers.isEmpty()) {
-                return new ArrayList<>();
-            }
-            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
-        }
-
-        if (customerIds != null && !customerIds.isEmpty()) {
-            return invoicesV1Repository.findInvoiceAggregatesByFiltersNoJoinWithCustomers(hostelId, startDate, endDate,
-                    customerIds,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy);
-        } else {
-            return invoicesV1Repository.findInvoiceAggregatesByFiltersNoJoin(hostelId, startDate, endDate,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy);
-        }
-    }
-
-    public List<Object[]> getDistinctCreators(String hostelId) {
-        List<String> creatorIds = invoicesV1Repository.findDistinctCreatedByNoJoin(hostelId);
-        if (creatorIds == null || creatorIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-        List<Users> users = usersService.findAllUsersFromUserId(creatorIds);
-        return users.stream()
-                .map(u -> new Object[] { u.getUserId(), u.getFirstName(), u.getLastName() })
-                .collect(Collectors.toList());
-    }
+//    public List<Object[]> getDistinctCreators(String hostelId) {
+//        List<String> creatorIds = invoicesV1Repository.findDistinctCreatedByNoJoin(hostelId);
+//        if (creatorIds == null || creatorIds.isEmpty()) {
+//            return new ArrayList<>();
+//        }
+//        List<Users> users = usersService.findAllUsersFromUserId(creatorIds);
+//        return users.stream()
+//                .map(u -> new Object[] { u.getUserId(), u.getFirstName(), u.getLastName() })
+//                .collect(Collectors.toList());
+//    }
 
     /**
      * Using in transaction service.
@@ -1272,9 +1272,6 @@ public class InvoiceV1Service {
             listInvoiceItems.add(responseItem);
         }
         List<PaymentHistoryProjection> paymentHistoryList = transactionService.getPaymentHistoryByInvoiceId(invoiceId);
-
-
-        InvoiceInfo invoiceInfo = new InvoiceInfo(subTotal, 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), 0.0, listInvoiceItems, null);
 
         InvoiceInfo invoiceInfo = new InvoiceInfo(subTotal,
                 0.0,
