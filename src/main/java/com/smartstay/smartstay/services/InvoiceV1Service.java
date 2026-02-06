@@ -1,13 +1,11 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
-import com.smartstay.smartstay.Wrappers.InvoiceListMapper;
 import com.smartstay.smartstay.Wrappers.invoices.InitializeRefund;
 import com.smartstay.smartstay.Wrappers.invoices.InvoiceMapper;
 import com.smartstay.smartstay.Wrappers.invoices.NewInvoiceListMapper;
 import com.smartstay.smartstay.Wrappers.transactions.TransactionsListMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dao.InvoiceItems;
@@ -775,7 +773,10 @@ public class InvoiceV1Service {
         BillingDates currentBillingDate = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), new Date());
         BillingDates invoiceBillingDate = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), invoiceDate);
 
-        boolean isCurrentCycle = Utils.compareWithTwoDates(invoiceDate, currentBillingDate.currentBillStartDate()) >= 0;
+        boolean isCurrentCycle = true;
+        if (Utils.compareWithTwoDates(invoiceDate, currentBillingDate.currentBillStartDate()) < 0) {
+            isCurrentCycle = false;
+        }
 
 //        dateStartDate = cal.getTime();
 //        Date dateEndDate = Utils.findLastDate(day, cal.getTime());
@@ -2438,18 +2439,6 @@ public class InvoiceV1Service {
 
     public InvoicesV1 findSettlementInvoiceByCustomerId(String customerId, String hostelId) {
         return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.SETTLEMENT.name());
-    }
-
-    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
-        return invoicesV1Repository.countByHostelIdAndDateRange(
-                hostelId,
-                startDate,
-                endDate
-        );
-    }
-
-    public List<InvoicesV1> getCurrentMonthFinalSettlement(String hostelId, Date startDate, Date endDate) {
-        return invoicesV1Repository.findSettlementByHostelIdAndStartDateAndEndDate(hostelId, startDate, endDate);
     }
 
     /**
