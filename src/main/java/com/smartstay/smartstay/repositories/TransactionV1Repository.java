@@ -1,9 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
-import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
-import com.smartstay.smartstay.dto.transaction.BankCollectionProjection;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -61,25 +59,10 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     List<PaymentHistoryProjection> getPaymentHistoryByInvoiceId(@Param("invoiceId") String invoiceId);
 
     @Query("SELECT COUNT(t) FROM TransactionV1 t WHERE t.hostelId = :hostelId AND DATE(t.paidAt) >= DATE(:startDate) AND DATE(t.paidAt) <= DATE(:endDate)")
-    int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate);
+    int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
     @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId AND DATE(t.paidAt) >= DATE(:startDate) AND DATE(t.paidAt) <= DATE(:endDate)")
-    Double sumPaidAmountByHostelIdAndDateRange(@Param("hostelId") String hostelId,
-            @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate);
-
-    @Query(value = """
-            SELECT COUNT(*) FROM transactionv1 t
-            WHERE t.hostel_id = :hostelId
-            AND (:startDate IS NULL OR DATE(t.paid_at) >= DATE(:startDate))
-            AND (:endDate IS NULL OR DATE(t.paid_at) <= DATE(:endDate))
-            AND (:paymentStatus IS NULL OR t.status IN (:paymentStatus))
-            """, nativeQuery = true)
-    int countByFiltersNoJoin(@Param("hostelId") String hostelId,
-            @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate,
-            @Param("paymentStatus") List<String> paymentStatus);
+    Double sumPaidAmountByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
     @Query(value = """
             SELECT * FROM transactionv1 t
@@ -90,47 +73,18 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             ORDER BY t.paid_at DESC
             LIMIT :limit OFFSET :offset
             """, nativeQuery = true)
-    List<TransactionV1> findTransactionsByFiltersNoJoin(@Param("hostelId") String hostelId,
-            @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate,
-            @Param("paymentStatus") List<String> paymentStatus,
-            @Param("limit") int limit,
-            @Param("offset") int offset);
+    List<TransactionV1> findTransactionsByFiltersNoJoin(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("paymentStatus") List<String> paymentStatus, @Param("limit") int limit, @Param("offset") int offset);
 
-    @Query(value = """
-            SELECT t.bank_id as bankId, SUM(t.paid_amount) as totalAmount
-            FROM transactionv1 t
-            WHERE t.hostel_id = :hostelId
-            AND (:startDate IS NULL OR DATE(t.paid_at) >= DATE(:startDate))
-            AND (:endDate IS NULL OR DATE(t.paid_at) <= DATE(:endDate))
-            AND (:paymentStatus IS NULL OR t.status IN (:paymentStatus))
-            GROUP BY t.bank_id
-            ORDER BY SUM(t.paid_amount) DESC
-            LIMIT 1
-            """, nativeQuery = true)
-    List<BankCollectionProjection> findHighestCollectingBankNoJoin(@Param("hostelId") String hostelId,
-            @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate,
-            @Param("paymentStatus") List<String> paymentStatus);
 
-    @Query(value = """
-            SELECT SUM(t.paid_amount)
-            FROM transactionv1 t
-            WHERE t.hostel_id = :hostelId
-            AND (:startDate IS NULL OR DATE(t.paid_at) >= DATE(:startDate))
-            AND (:endDate IS NULL OR DATE(t.paid_at) <= DATE(:endDate))
-            AND (:paymentStatus IS NULL OR t.status IN (:paymentStatus))
-            """, nativeQuery = true)
-    Double findTotalCollectionByFiltersNoJoin(@Param("hostelId") String hostelId,
-            @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate,
-            @Param("paymentStatus") List<String> paymentStatus);
+    @Query(value = "SELECT DISTINCT t.createdBy FROM TransactionV1 t WHERE t.hostelId = :hostelId")
+    List<String> findDistinctCreatedByByHostelId(@Param("hostelId") String hostelId);
 
-        @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId AND t.type IN ('BOOKING', 'ADVANCE', 'RENT') AND DATE(t.paidAt) >= DATE(:startDate) AND DATE(t.paidAt) <= DATE(:endDate)")
-        Double sumIncomeByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
-                                               @Param("endDate") Date endDate);
+    @Query(value = "SELECT t FROM TransactionV1 t WHERE t.hostelId = :hostelId " + "AND (:startDate IS NULL OR t.paidAt >= :startDate) " + "AND (:endDate IS NULL OR t.paidAt <= :endDate) " + "AND (:bankIds IS NULL OR t.bankId IN :bankIds) " + "AND (:userIds IS NULL OR t.createdBy IN :userIds) " + "AND (:invoiceIds IS NULL OR t.invoiceId IN :invoiceIds)")
+    List<TransactionV1> findTransactionsByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds, org.springframework.data.domain.Pageable pageable);
 
-        @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId AND t.type = 'REFUND' AND DATE(t.paidAt) >= DATE(:startDate) AND DATE(t.paidAt) <= DATE(:endDate)")
-        Double sumRefundByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
-                                               @Param("endDate") Date endDate);
+    @Query(value = "SELECT COUNT(t) FROM TransactionV1 t WHERE t.hostelId = :hostelId " + "AND (:startDate IS NULL OR t.paidAt >= :startDate) " + "AND (:endDate IS NULL OR t.paidAt <= :endDate) " + "AND (:bankIds IS NULL OR t.bankId IN :bankIds) " + "AND (:userIds IS NULL OR t.createdBy IN :userIds) " + "AND (:invoiceIds IS NULL OR t.invoiceId IN :invoiceIds)")
+    long countTransactionsByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds);
+
+    @Query(value = "SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId " + "AND (:startDate IS NULL OR t.paidAt >= :startDate) " + "AND (:endDate IS NULL OR t.paidAt <= :endDate) " + "AND (:bankIds IS NULL OR t.bankId IN :bankIds) " + "AND (:userIds IS NULL OR t.createdBy IN :userIds) " + "AND (:invoiceIds IS NULL OR t.invoiceId IN :invoiceIds)")
+    Double sumPaidAmountByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds);
 }
