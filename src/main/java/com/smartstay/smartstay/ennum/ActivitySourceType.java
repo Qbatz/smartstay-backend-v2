@@ -12,7 +12,12 @@ public enum ActivitySourceType {
     UPDATE_AMOUNT,
     CANCEL,
     CHECKOUT,
+    CHECKIN,
     JOINING_DATE,
-    ADVANCE_AMOUNT
+    ADVANCE_AMOUNT,
+    BOOKING,
+    NOTICE,
+    SETTLEMENT,
+    CHANGED_BED
 
 }

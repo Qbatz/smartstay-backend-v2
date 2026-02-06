@@ -70,6 +70,12 @@ public class ActivityLogUtils {
         if (activitySource.equalsIgnoreCase(ActivitySource.COMMENTS.name())) {
             return getCommentOperations(operationType);
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.COMPLAINT_TYPE.name())) {
+            return getComplaintTypeDescription(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.CUSTOMERS.name())) {
+            return getCustomerDescription(operationType);
+        }
 
 
         return null;
@@ -169,6 +175,53 @@ public class ActivityLogUtils {
             return "Complaint has been deleted by";
         }
 
+        return null;
+    }
+
+    private static String getComplaintTypeDescription(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Created complaint type";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated the complaint type";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted the complaint type";
+        }
+        return null;
+    }
+
+    private static String getCustomerDescription(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CHECKIN.name())) {
+            return "Checked in a customer";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Added a walk in customer";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated customer information's";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.ASSIGN.name())) {
+            return "Assigned a bed for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.BOOKING.name())) {
+            return "Created a booking for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.NOTICE.name())) {
+            return "Moved a customer to notice";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.SETTLEMENT.name())) {
+            return "Generated settlement for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CHANGED_BED.name())) {
+            return "Changed the bed for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CANCEL.name())) {
+            return "Cancelled the checkout";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted user.";
+        }
         return null;
     }
 

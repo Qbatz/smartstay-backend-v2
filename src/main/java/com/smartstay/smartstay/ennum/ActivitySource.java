@@ -2,7 +2,6 @@ package com.smartstay.smartstay.ennum;
 
 public enum ActivitySource {
 
-    CUSTOMER,
     INVOICE,
     SETTLEMENT,
     EB,
@@ -16,5 +15,7 @@ public enum ActivitySource {
     BEDS,
     BOOKING,
     COMPLAINTS,
-    COMMENTS
+    COMMENTS,
+    COMPLAINT_TYPE,
+    CUSTOMERS
 }
