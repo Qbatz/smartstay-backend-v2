@@ -541,7 +541,7 @@ public class BookingsService {
                     Utils.dateToString(cancelDate).replace("/", "-"),
                     "");
 
-            bankTransactionService.cancelBooking(transactionDto);
+            bankTransactionService.cancelBooking(transactionDto, invoicesV1.getInvoiceId());
         }
 
         bedsService.cancelBooking(bookingsV1.getBedId(), user.getParentId());

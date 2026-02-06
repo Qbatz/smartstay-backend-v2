@@ -28,4 +28,13 @@ public class CustomerCredentialsService {
     public CustomerCredentials findByXuid(String xuid) {
         return customerCredentialsRepository.findByXuid(xuid);
     }
+
+    public void updateCustomerMobile(String mobile, String xuid) {
+        CustomerCredentials ccs = customerCredentialsRepository.findByXuid(xuid);
+        if (ccs != null) {
+            ccs.setCustomerMobile(mobile);
+            customerCredentialsRepository.save(ccs);
+        }
+
+    }
 }

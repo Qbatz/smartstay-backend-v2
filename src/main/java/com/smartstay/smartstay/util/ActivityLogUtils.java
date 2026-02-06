@@ -46,6 +46,9 @@ public class ActivityLogUtils {
                 return "Assets has been updated";
             }
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.EXPENSE.name())) {
+            return getExpenseOperations(operationType);
+        }
 
         if (activitySource.equalsIgnoreCase(ActivitySource.EXPENSE_CATEGORY.name())) {
             return getExpenseCategoryOperations(operationType);
@@ -61,9 +64,27 @@ public class ActivityLogUtils {
         }
 
         if (activitySource.equalsIgnoreCase(ActivitySource.BOOKING.name())) {
-            return getBedsOperations(operationType);
+            return getBookingsOperations(operationType);
         }
 
+        if (activitySource.equalsIgnoreCase(ActivitySource.COMPLAINTS.name())) {
+            return getComplaintsOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.COMMENTS.name())) {
+            return getCommentOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.COMPLAINT_TYPE.name())) {
+            return getComplaintTypeDescription(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.CUSTOMERS.name())) {
+            return getCustomerDescription(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.ELECTRICITY.name())) {
+            return getElectricityOperation(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.FLOORS.name())) {
+            return getFloorsOperations(operationType);
+        }
 
         return null;
     }
@@ -141,4 +162,110 @@ public class ActivityLogUtils {
         return null;
     }
 
+    private static String getComplaintsOperations(String opeationName) {
+        if (opeationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Complain has been raised behalf of";
+        }
+        return null;
+    }
+
+    private static String getCommentOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Added comments for ";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Complaint has been updated";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.ASSIGN.name())) {
+            return "Complaint has been assigned to";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Complaint has been deleted by";
+        }
+
+        return null;
+    }
+
+    private static String getComplaintTypeDescription(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Created complaint type";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated the complaint type";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted the complaint type";
+        }
+        return null;
+    }
+
+    private static String getCustomerDescription(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CHECKIN.name())) {
+            return "Checked in a customer";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Added a walk in customer";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated customer information's";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.ASSIGN.name())) {
+            return "Assigned a bed for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.BOOKING.name())) {
+            return "Created a booking for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.NOTICE.name())) {
+            return "Moved a customer to notice";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.SETTLEMENT.name())) {
+            return "Generated settlement for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CHANGED_BED.name())) {
+            return "Changed the bed for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CANCEL.name())) {
+            return "Cancelled the checkout";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted user.";
+        }
+        return null;
+    }
+
+    private static String getElectricityOperation(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Electricity reading added";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated electricity date";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE_READING.name())) {
+            return "Updated electricity";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted electricity entry";
+        }
+        return null;
+    }
+
+    private static String getExpenseOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "New expense has been added";
+        }
+        return null;
+    }
+
+    private static String getFloorsOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "New Floor has been added";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Floor has updated by";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Floor has been deleted";
+        }
+        return null;
+    }
 }

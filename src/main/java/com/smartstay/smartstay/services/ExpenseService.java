@@ -2,15 +2,14 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.expenses.ExpenseListMapper;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.ExpensesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.expenses.ExpensesCategory;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
-import com.smartstay.smartstay.ennum.BankSource;
-import com.smartstay.smartstay.ennum.BankTransactionType;
-import com.smartstay.smartstay.ennum.ExpenseSource;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.expense.Expense;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
@@ -146,10 +145,14 @@ public class ExpenseService {
                 expense.purchaseDate(),
                 expenseNumber);
 
-        if (bankTransactionService.addExpenseTransaction(transactionDto)) {
-            expensesRepository.save(expensesV1);
+        ExpensesV1 expV1 = expensesRepository.save(expensesV1);
+
+        usersService.addUserLog(hostelId, expV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.CREATE, users);
+        if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId())) {
+
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
-        } else {
+        }
+        else {
             return new ResponseEntity<>(Utils.INSUFFICIENT_FUND_ERROR, HttpStatus.BAD_REQUEST);
         }
 
@@ -197,6 +200,7 @@ public class ExpenseService {
                 .stream()
                 .map(item -> new ExpenseListMapper().apply(item))
                 .toList();
+
 
         return new ResponseEntity<>(listExpenses, HttpStatus.OK);
     }

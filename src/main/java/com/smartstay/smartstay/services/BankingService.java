@@ -653,7 +653,7 @@ public class BankingService {
     }
 
 
-    public boolean updateBalanceForExpense(double amount, String transactionType, String bankId, String transactionDate) {
+    public boolean updateBalanceForExpense(double amount, String transactionType, String bankId) {
         BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
         if (bankingV1 == null) {
             return false;
@@ -671,14 +671,25 @@ public class BankingService {
             bankingV1.setBalance(bankingV1.getBalance() - amount);
         }
 
-        Calendar cal = Calendar.getInstance();
-        Date dt = Utils.stringToDate(transactionDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        cal.setTime(dt);
-        if (cal.get(Calendar.MINUTE) == 0 && cal.get(Calendar.HOUR) == 0) {
-            Calendar cal2 = Calendar.getInstance();
-            cal.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
-            cal.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
-            cal.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
+        bankingV1.setUpdatedBy(authentication.getName());
+        bankingV1.setUpdatedAt(new Date());
+
+        bankingV1Repository.save(bankingV1);
+
+        return true;
+    }
+
+    public boolean updateBalanceForAssets(double amount, String transactionType, String bankId) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        if (bankingV1 == null) {
+            return false;
+        }
+        Double balance = bankingV1.getBalance();
+        if (bankingV1.getBalance() == null) {
+            balance = 0.0;
+        }
+        if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+            bankingV1.setBalance(balance - amount);
         }
 
         bankingV1.setUpdatedBy(authentication.getName());

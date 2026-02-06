@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
+import com.smartstay.smartstay.payloads.roles.Permission;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.services.TemplatesService;
 import com.smartstay.smartstay.util.BillingCycle;
@@ -119,50 +120,5 @@ public class SmartstayApplication {
 //	}
 
 
-	/**
-	 *
-	 * no need in production anymore
-	 *
-	 */
-
-//	@Bean
-//	CommandLineRunner mapBookingDateToBookingInvoice(InvoicesV1Repository invoicesV1Repository) {
-//		return args -> {
-//			List<InvoicesV1> listInvoices = invoicesV1Repository.findAllBookingInvoices()
-//					.stream()
-//					.map(i -> {
-//						i.setInvoiceStartDate(i.getInvoiceDueDate());
-//						i.setInvoiceEndDate(i.getInvoiceDueDate());
-//						return i;
-//					})
-//					.toList();
-//
-//			invoicesV1Repository.saveAll(listInvoices);
-//
-//		};
-//	}
-
-	/**
-	 *
-	 * required production
-	 *
-	 * @param invoicesV1Repository
-	 * @return
-	 */
-	@Bean
-	CommandLineRunner mapBookingAmountDeoubler(InvoicesV1Repository invoicesV1Repository) {
-		return args -> {
-			List<InvoicesV1> findBookingInvoices = invoicesV1Repository
-					.findBookingAmountGreaterThanPaidAmount()
-					.stream()
-					.map(i -> {
-						i.setPaidAmount(i.getTotalAmount());
-						return i;
-					})
-					.toList();
-
-			invoicesV1Repository.saveAll(findBookingInvoices);
-		};
-	}
 
 }

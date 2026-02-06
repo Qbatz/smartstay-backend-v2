@@ -198,7 +198,7 @@ public class TransactionService {
 
             TransactionDto transaction = new TransactionDto(payment.bankId(), payment.referenceId(), payment.amount(), BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(), trns.getTransactionId());
 
-            bankTransactionService.addTransaction(transaction);
+            bankTransactionService.addTransaction(transaction, trns.getTransactionId());
 
             return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
         }
@@ -246,7 +246,7 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.CANNOT_MAKE_PAYMENT_CANCELLED_INVOICES, HttpStatus.BAD_REQUEST);
         }
 
-        double paidAmount = findPaidAmountForInvoice(invoiceId);
+        double paidAmount = invoicesV1.getPaidAmount();
 
         TransactionV1 transactionV1 = new TransactionV1();
         Double gstAmount = invoicesV1.getGst();
@@ -312,7 +312,7 @@ public class TransactionService {
 
             TransactionDto transaction = new TransactionDto(payment.bankId(), payment.referenceId(), payment.amount(), BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(), trnsV1.getTransactionId());
 
-            bankTransactionService.addTransaction(transaction);
+            bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId());
 
             return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
         }
@@ -650,7 +650,7 @@ public class TransactionService {
             }
         }
 
-        if (bankTransactionService.refundInvoice(invoicesV1, refundInvoice)) {
+        if (bankTransactionService.refundInvoice(invoicesV1, refundInvoice, invoiceId)) {
             creditDebitNoteService.refunInvoice(invoiceId, invoicesV1, refundInvoice);
         } else {
             return new ResponseEntity<>(Utils.INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);

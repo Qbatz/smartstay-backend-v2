@@ -189,7 +189,10 @@ public class CustomersService {
             customersRepository.save(customers);
 
             bookingsService.assignBedToCustomer(assignBed);
+            List<String> tenantId = new ArrayList<>();
+            tenantId.add(customers.getCustomerId());
 
+            userService.addUserLog(customers.getHostelId(), String.valueOf(assignBed.bedId()), ActivitySource.CUSTOMERS, ActivitySourceType.ASSIGN, user, tenantId);
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
         } else {
@@ -383,6 +386,7 @@ public class CustomersService {
 
                 AddPayment addPayment = new AddPayment(payloads.bankId(), payloads.bookingDate(), payloads.referenceNumber(), payloads.bookingAmount());
                 transactionService.recordPaymentForBooking(hostelId, invoiceId, addPayment);
+                userService.addUserLog(hostelId, customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.BOOKING, user);
                 return bedsService.assignCustomer(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
             } else {
                 return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
@@ -499,6 +503,7 @@ public class CustomersService {
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
             }
             calculateRentAndCreateRentalInvoice(customers, payloads);
+            userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
         } else {
@@ -633,7 +638,7 @@ public class CustomersService {
             }
 
             calculateRentAndCreateRentalInvoice(customers, request);
-
+            userService.addUserLog(hostelV1.getHostelId(), customerId, ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
@@ -723,8 +728,8 @@ public class CustomersService {
                 customers.setXuid(customerCredentials.getXuid());
             }
 
-            customersRepository.save(customers);
-
+            Customers savedCustomers = customersRepository.save(customers);
+            userService.addUserLog(hostelId, savedCustomers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CREATE, user);
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         } else {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -789,8 +794,8 @@ public class CustomersService {
         if (customerCredentials != null) {
             customers.setXuid(customerCredentials.getXuid());
         }
-        customersRepository.save(customers);
-
+        Customers savedCustomer = customersRepository.save(customers);
+        userService.addUserLog(hostelId, savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -855,9 +860,19 @@ public class CustomersService {
             if (updateInfo.state() != null && !updateInfo.state().equalsIgnoreCase("")) {
                 customers.setState(updateInfo.state());
             }
+            if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
+                int cus = customersRepository.findCustomersByMobile(customerId, updateInfo.mobile());
+                if (cus > 0) {
+                    return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                }
+                customers.setMobile(updateInfo.mobile());
+            }
 
             customersRepository.save(customers);
-
+            if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
+               ccs.updateCustomerMobile(updateInfo.mobile(), customers.getXuid());
+            }
+            userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.UPDATE, user);
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
         } else {
@@ -923,6 +938,7 @@ public class CustomersService {
         bookingsService.moveToNotice(customers.getCustomerId(), checkoutNotice.checkoutDate(), checkoutNotice.requestDate(), checkoutNotice.reason());
         customersRepository.save(customers);
 
+        userService.addUserLog(hostelId, customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.NOTICE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
     }
@@ -2237,6 +2253,7 @@ public class CustomersService {
 
             customersRepository.save(customers);
 
+            userService.addUserLog(bookingDetails.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.SETTLEMENT, users);
             ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
             if (electricityConfig != null) {
                 if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
@@ -2470,6 +2487,8 @@ public class CustomersService {
             customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
             customersRepository.save(customers);
 
+            userService.addUserLog(bookings.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.SETTLEMENT, users);
+
             ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
             if (electricityConfig != null) {
                 if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
@@ -2561,7 +2580,7 @@ public class CustomersService {
 
 
         customersRepository.save(customers);
-
+        userService.addUserLog(hostelId, customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHANGED_BED, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -2624,6 +2643,8 @@ public class CustomersService {
         customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
         customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
         customersRepository.save(customers);
+
+        userService.addUserLog(hostelId, bookingsV1.getBookingId(), ActivitySource.CUSTOMERS, ActivitySourceType.CANCEL, user);
 
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
@@ -2750,6 +2771,7 @@ public class CustomersService {
         customers.setCurrentStatus(CustomerStatus.DELETED.name());
         customersRepository.save(customers);
 
+        userService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.DELETE, users);
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }

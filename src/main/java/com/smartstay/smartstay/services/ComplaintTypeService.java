@@ -2,6 +2,8 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.payloads.complaints.AddComplaintType;
 import com.smartstay.smartstay.payloads.complaints.UpdateComplaintType;
 import com.smartstay.smartstay.repositories.ComplaintRepository;
@@ -74,8 +76,8 @@ public class ComplaintTypeService {
         complaintTypeV1.setHostelId(request.hostelId());
         complaintTypeV1.setIsActive(true);
 
-        complaintTypeV1Repository.save(complaintTypeV1);
-
+        ComplaintTypeV1 cmpType = complaintTypeV1Repository.save(complaintTypeV1);
+        usersService.addUserLog(request.hostelId(), String.valueOf(cmpType.getComplaintTypeId()), ActivitySource.COMPLAINT_TYPE, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -120,7 +122,7 @@ public class ComplaintTypeService {
         complaintTypeV1.setUpdatedAt(new Date());
 
         complaintTypeV1Repository.save(complaintTypeV1);
-
+        usersService.addUserLog(request.hostelId(), String.valueOf(complaintTypeV1.getComplaintTypeId()), ActivitySource.COMPLAINT_TYPE, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
@@ -158,6 +160,7 @@ public class ComplaintTypeService {
         }
 
         complaintTypeV1Repository.delete(complaintTypeV1);
+        usersService.addUserLog(complaintTypeV1.getHostelId(), String.valueOf(complaintTypeV1.getComplaintTypeId()), ActivitySource.COMPLAINT_TYPE, ActivitySourceType.DELETE, user);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
@@ -182,5 +185,9 @@ public class ComplaintTypeService {
 
     public List<ComplaintTypeV1> getComplaintTypesById(List<Integer> complaintTypeIds) {
         return complaintTypeV1Repository.findAllById(complaintTypeIds);
+    }
+
+    public ComplaintTypeV1 getComplaintType(Integer complaintTypeId) {
+        return complaintTypeV1Repository.findById(complaintTypeId).orElse(null);
     }
 }

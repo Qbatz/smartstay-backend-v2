@@ -6,6 +6,8 @@ import com.smartstay.smartstay.dao.Floors;
 import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.floor.AddFloors;
@@ -124,6 +126,7 @@ public class FloorsService {
         }
         existingFloor.setUpdatedAt(new Date());
         floorRepository.save(existingFloor);
+        usersService.addUserLog(existingFloor.getHostelId(), String.valueOf(existingFloor.getFloorId()), ActivitySource.FLOORS, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -162,7 +165,8 @@ public class FloorsService {
         floors.setIsDeleted(false);
         floors.setFloorName(addFloors.floorName());
         floors.setHostelId(addFloors.hostelId());
-        floorRepository.save(floors);
+        Floors flrs = floorRepository.save(floors);
+        usersService.addUserLog(hostelV1.getHostelId(), String.valueOf(flrs.getFloorId()), ActivitySource.FLOORS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -184,6 +188,7 @@ public class FloorsService {
             }
             existingFloor.setIsDeleted(true);
             floorRepository.save(existingFloor);
+            usersService.addUserLog(existingFloor.getHostelId(), String.valueOf(existingFloor.getHostelId()), ActivitySource.FLOORS, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>("No Floor found", HttpStatus.BAD_REQUEST);

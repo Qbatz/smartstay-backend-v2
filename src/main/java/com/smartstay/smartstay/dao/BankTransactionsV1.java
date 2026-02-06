@@ -29,6 +29,7 @@ public class BankTransactionsV1 {
     private String type;
     //assets or rent or advance or expense
     private String source;
+    private String sourceId;
     private String hostelId;
     //transactionId from transaction v1 table
     private String transactionNumber;
