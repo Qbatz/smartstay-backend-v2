@@ -18,6 +18,7 @@ public enum ActivitySourceType {
     BOOKING,
     NOTICE,
     SETTLEMENT,
-    CHANGED_BED
+    CHANGED_BED,
+    UPDATE_READING
 
 }

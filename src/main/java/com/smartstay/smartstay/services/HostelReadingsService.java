@@ -3,9 +3,12 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.ElectricityConfig;
 import com.smartstay.smartstay.dao.HostelReadings;
+import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.reports.ElectricityForReports;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
@@ -30,8 +33,10 @@ public class HostelReadingsService {
     private HostelEBReadingsRepository hostelEBReadingsRepository;
     @Autowired
     private HostelService hostelService;
+    @Autowired
+    private UsersService usersService;
 
-    public ResponseEntity<?> addEbReadings(String hostelId, AddReading readings, Date billStartDate, Date billEndDate, ElectricityConfig electricityConfig) {
+    public ResponseEntity<?> addEbReadings(String hostelId, AddReading readings, Date billStartDate, Date billEndDate, ElectricityConfig electricityConfig, Users users) {
         HostelReadings lastReadings = hostelEBReadingsRepository.lastReading(hostelId);
         double consumption = readings.reading();
         boolean isFirstReading = true;
@@ -76,8 +81,9 @@ public class HostelReadingsService {
         hr.setCreatedAt(new Date());
         hr.setCreatedBy(authentication.getName());
 
-        hostelEBReadingsRepository.save(hr);
+        HostelReadings hr2 = hostelEBReadingsRepository.save(hr);
 
+        usersService.addUserLog(hostelId, String.valueOf(hr2.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.CREATE, users);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
 
     }
@@ -104,7 +110,7 @@ public class HostelReadingsService {
         return hostelEBReadingsRepository.lastReading(hostelId);
     }
 
-    public ResponseEntity<?> updateEbReading(String hostelId, String readingId, UpdateElectricity updateElectricity) {
+    public ResponseEntity<?> updateEbReading(String hostelId, String readingId, UpdateElectricity updateElectricity, Users users) {
         Long id = Long.parseLong(readingId);
         HostelReadings currentReading = hostelEBReadingsRepository.findById(id).orElse(null);
         if (currentReading == null) {
@@ -136,6 +142,7 @@ public class HostelReadingsService {
             }
 
             hostelEBReadingsRepository.save(currentReading);
+            usersService.addUserLog(hostelId, String.valueOf(currentReading.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.UPDATE, users);
         }
         else {
             if (updateElectricity.reading() != null) {
@@ -156,13 +163,15 @@ public class HostelReadingsService {
             currentReading.setUpdatedBy(authentication.getName());
             currentReading.setUpdatedAt(new Date());
 
+            usersService.addUserLog(hostelId, String.valueOf(currentReading.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.UPDATE, users);
+
             hostelEBReadingsRepository.save(currentReading);
         }
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> deleteLatestEntry(String hostelId, String readingId) {
+    public ResponseEntity<?> deleteLatestEntry(String hostelId, String readingId, Users users) {
         Long id = Long.parseLong(readingId);
 
         HostelReadings hr = hostelEBReadingsRepository.findById(id).orElse(null);
@@ -178,6 +187,7 @@ public class HostelReadingsService {
         }
 
         hostelEBReadingsRepository.delete(hr);
+        usersService.addUserLog(hostelId, String.valueOf(hr.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.DELETE, users);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 

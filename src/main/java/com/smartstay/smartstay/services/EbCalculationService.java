@@ -48,7 +48,7 @@ public class EbCalculationService {
                                 }
                                 else if (item.getEndDate() == null) {
                                     if (leavingDate != null) {
-                                        if (Utils.compareWithTwoDates(i.getBillEndDate(), leavingDate) <= 0) {
+                                        if (Utils.compareWithTwoDates(leavingDate, i.getBillEndDate()) <= 0) {
                                             endDate.set(leavingDate);
                                         }
                                         else {

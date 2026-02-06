@@ -8,9 +8,7 @@ import com.smartstay.smartstay.dao.ExpensesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.expenses.ExpensesCategory;
-import com.smartstay.smartstay.ennum.BankSource;
-import com.smartstay.smartstay.ennum.BankTransactionType;
-import com.smartstay.smartstay.ennum.ExpenseSource;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.expense.Expense;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
@@ -143,6 +141,7 @@ public class ExpenseService {
 
         ExpensesV1 expV1 = expensesRepository.save(expensesV1);
 
+        usersService.addUserLog(hostelId, expV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.CREATE, users);
         if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId())) {
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);

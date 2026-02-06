@@ -10,7 +10,7 @@ import java.util.List;
 public interface CustomerCredentialsRepository extends JpaRepository<CustomerCredentials, String> {
 
     CustomerCredentials findByCustomerMobile(String mobile);
-    CustomerCredentials findByXuid(String customerId);
+    CustomerCredentials findByXuid(String xuid);
 
     List<CustomerCredentials> findByCustomerMobileIn(List<String> mobiles);
 }

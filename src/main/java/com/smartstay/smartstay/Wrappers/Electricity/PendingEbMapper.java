@@ -8,16 +8,20 @@ import com.smartstay.smartstay.dto.electricity.PendingEbForSettlement;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
 
 public class PendingEbMapper implements Function<CustomersEbHistory, PendingEbForSettlement> {
 //    List<CustomersBedHistory> listCustomerBedHistory = new ArrayList<>();
     List<BedDetails> listBeds = new ArrayList<>();
+    List<CustomersBedHistory> customersBedHistories = new ArrayList<>();
+    Date leavingDate = null;
 
-    public PendingEbMapper(List<CustomersBedHistory> listCustomerBedHistory, List<BedDetails> listBeds) {
-//        this.listCustomerBedHistory = listCustomerBedHistory;
+    public PendingEbMapper(List<CustomersBedHistory> listCustomerBedHistory, List<BedDetails> listBeds, Date leavingDate) {
+        this.customersBedHistories = listCustomerBedHistory;
         this.listBeds = listBeds;
+        this.leavingDate = leavingDate;
     }
 
     @Override
@@ -28,22 +32,27 @@ public class PendingEbMapper implements Function<CustomersEbHistory, PendingEbFo
         String fromDate = Utils.dateToString(customersEbHistory.getStartDate());
         String endDate = Utils.dateToString(customersEbHistory.getEndDate());
         Double price = null;
-//        if (listCustomerBedHistory != null && !listCustomerBedHistory.isEmpty()) {
-//            CustomersBedHistory cbh = listCustomerBedHistory
-//                    .stream()
-//                    .filter(i -> customersEbHistory.getRoomId().equals(i.getRoomId()))
-//                    .findFirst()
-//                    .orElse(null);
-//            if (cbh != null) {
-//
-//            }
-//
-//        }
+
+
+        if (customersBedHistories != null && !customersBedHistories.isEmpty()) {
+            CustomersBedHistory cbh = customersBedHistories
+                    .stream()
+                    .filter(i -> customersEbHistory.getRoomId().equals(i.getRoomId()))
+                    .findFirst()
+                    .orElse(null);
+            if (cbh != null) {
+                if (leavingDate != null) {
+                    if (Utils.compareWithTwoDates(leavingDate, customersEbHistory.getEndDate()) < 0) {
+                        endDate = Utils.dateToString(leavingDate);
+                    }
+                }
+            }
+
+        }
         if (listBeds != null && !listBeds.isEmpty()) {
             BedDetails beds = listBeds
                     .stream()
                     .filter(i -> {
-                        System.out.println(i.getRoomId());
                         return customersEbHistory.getRoomId().equals(i.getRoomId());
                     })
                     .findFirst()

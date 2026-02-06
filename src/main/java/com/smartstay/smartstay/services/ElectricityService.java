@@ -11,9 +11,7 @@ import com.smartstay.smartstay.dto.electricity.HostelReadings;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.reports.ElectricityForReports;
 import com.smartstay.smartstay.dto.room.RoomInfo;
-import com.smartstay.smartstay.ennum.EBReadingType;
-import com.smartstay.smartstay.ennum.ElectricityBillStatus;
-import com.smartstay.smartstay.ennum.KycStatus;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.AddEbEvents;
 import com.smartstay.smartstay.events.HostelReadingEbEvents;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
@@ -285,12 +283,13 @@ public class ElectricityService {
             newReadings.setBillStartDate(billStartDate);
             newReadings.setBillEndDate(billEndDate);
 
-            electricityReadingRepository.save(newReadings);
+            ElectricityReadings nr = electricityReadingRepository.save(newReadings);
 
+            usersService.addUserLog(hostelId, String.valueOf(nr.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.CREATE, users);
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
         else {
-            return hostelReadingsService.addEbReadings(hostelId, readings, billStartDate, billEndDate, electricityConfig1);
+            return hostelReadingsService.addEbReadings(hostelId, readings, billStartDate, billEndDate, electricityConfig1, users);
         }
     }
 
@@ -1178,6 +1177,8 @@ public class ElectricityService {
                 currentReading.setUpdatedBy(authentication.getName());
                 currentReading.setUpdatedAt(new Date());
                 electricityReadingRepository.save(currentReading);
+
+                usersService.addUserLog(hostelId, String.valueOf(currentReading.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.UPDATE_READING, users);
             }
             else {
                 if (updateElectricity.reading() != null) {
@@ -1197,11 +1198,12 @@ public class ElectricityService {
                 currentReading.setUpdatedAt(new Date());
                 currentReading.setUpdatedBy(authentication.getName());
                 electricityReadingRepository.save(currentReading);
+                usersService.addUserLog(hostelId, String.valueOf(currentReading.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.UPDATE, users);
             }
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
         }
         else {
-            return hostelReadingsService.updateEbReading(hostelId, readingId, updateElectricity);
+            return hostelReadingsService.updateEbReading(hostelId, readingId, updateElectricity, users);
         }
 
     }
@@ -1251,11 +1253,11 @@ public class ElectricityService {
                 return new ResponseEntity<>(Utils.EB_ENTRY_CANNOT_DELETE_INVOICE_GENERATED, HttpStatus.BAD_REQUEST);
             }
             electricityReadingRepository.delete(er);
-
+            usersService.addUserLog(hostelId, String.valueOf(er.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         else {
-            return hostelReadingsService.deleteLatestEntry(hostelId, readingId);
+            return hostelReadingsService.deleteLatestEntry(hostelId, readingId, users);
         }
 
     }
@@ -1456,7 +1458,7 @@ public class ElectricityService {
 
                     List<PendingEbForSettlement> listPending = customerEbHistory
                             .stream()
-                            .map(i -> new PendingEbMapper(listBeds, bedDetails).apply(i))
+                            .map(i -> new PendingEbMapper(listBeds, bedDetails, leavingDate).apply(i))
                             .toList();
                     pendingEb.addAll(listPending);
                     pendingEbAmount = listPending
@@ -1572,7 +1574,7 @@ public class ElectricityService {
                 if (!customersEbHistories.isEmpty()) {
                     List<PendingEbForSettlement> listPendingEbs = customersEbHistories
                             .stream()
-                            .map(i -> new PendingEbMapper(bedHistories, bedDetails).apply(i))
+                            .map(i -> new PendingEbMapper(bedHistories, bedDetails, leavingDate).apply(i))
                             .toList();
                     pendingEb.addAll(listPendingEbs);
 

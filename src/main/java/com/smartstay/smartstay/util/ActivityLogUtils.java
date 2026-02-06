@@ -46,6 +46,9 @@ public class ActivityLogUtils {
                 return "Assets has been updated";
             }
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.EXPENSE.name())) {
+            return getExpenseOperations(operationType);
+        }
 
         if (activitySource.equalsIgnoreCase(ActivitySource.EXPENSE_CATEGORY.name())) {
             return getExpenseCategoryOperations(operationType);
@@ -76,7 +79,12 @@ public class ActivityLogUtils {
         if (activitySource.equalsIgnoreCase(ActivitySource.CUSTOMERS.name())) {
             return getCustomerDescription(operationType);
         }
-
+        if (activitySource.equalsIgnoreCase(ActivitySource.ELECTRICITY.name())) {
+            return getElectricityOperation(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.FLOORS.name())) {
+            return getFloorsOperations(operationType);
+        }
 
         return null;
     }
@@ -225,4 +233,39 @@ public class ActivityLogUtils {
         return null;
     }
 
+    private static String getElectricityOperation(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Electricity reading added";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated electricity date";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE_READING.name())) {
+            return "Updated electricity";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted electricity entry";
+        }
+        return null;
+    }
+
+    private static String getExpenseOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "New expense has been added";
+        }
+        return null;
+    }
+
+    private static String getFloorsOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "New Floor has been added";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Floor has updated by";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Floor has been deleted";
+        }
+        return null;
+    }
 }

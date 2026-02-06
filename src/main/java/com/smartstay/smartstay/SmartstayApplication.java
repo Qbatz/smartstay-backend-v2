@@ -120,27 +120,5 @@ public class SmartstayApplication {
 //	}
 
 
-	/**
-	 *
-	 * no need in production anymore
-	 *
-	 */
-
-//	@Bean
-//	CommandLineRunner mapBookingDateToBookingInvoice(InvoicesV1Repository invoicesV1Repository) {
-//		return args -> {
-//			List<InvoicesV1> listInvoices = invoicesV1Repository.findAllBookingInvoices()
-//					.stream()
-//					.map(i -> {
-//						i.setInvoiceStartDate(i.getInvoiceDueDate());
-//						i.setInvoiceEndDate(i.getInvoiceDueDate());
-//						return i;
-//					})
-//					.toList();
-//
-//			invoicesV1Repository.saveAll(listInvoices);
-//
-//		};
-//	}
 
 }

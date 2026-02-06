@@ -869,6 +869,9 @@ public class CustomersService {
             }
 
             customersRepository.save(customers);
+            if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
+               ccs.updateCustomerMobile(updateInfo.mobile(), customers.getXuid());
+            }
             userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.UPDATE, user);
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
