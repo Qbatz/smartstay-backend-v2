@@ -16,6 +16,7 @@ import com.smartstay.smartstay.responses.rooms.RoomInfoForEB;
 import com.smartstay.smartstay.responses.rooms.RoomsResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,12 @@ public class RoomsService {
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
+    private BedsService bedsService;
+
+    @Autowired
+    public void setBedsService(@Lazy BedsService bedsService) {
+        this.bedsService = bedsService;
+    }
 
     public ResponseEntity<?> getAllRooms(int floorId) {
         if (!authentication.isAuthenticated()) {
@@ -187,6 +194,7 @@ public class RoomsService {
             existingRoom.setUpdatedAt(new Date());
             existingRoom.setIsDeleted(true);
             roomRepository.save(existingRoom);
+            bedsService.deleteBedsByRoomId(existingRoom.getRoomId(), existingRoom.getParentId());
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);

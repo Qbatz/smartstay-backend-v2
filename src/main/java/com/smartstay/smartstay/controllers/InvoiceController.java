@@ -74,10 +74,9 @@ public class InvoiceController {
         return invoiceV1Service.getInvoiceDetailsForEdit(hostelId, invoiceId);
     }
 
-    @GetMapping("/pdf/{hostelId}/{invoiceId}")
-    public ResponseEntity<?> downloadPDF(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
-        return invoiceV1Service.downloadInvoicePdf(hostelId, invoiceId);
+    @GetMapping("/download/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> downloadInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.downloadInvoice(hostelId, invoiceId);
     }
-
 
 }
