@@ -17,10 +17,7 @@ import java.util.List;
 @Repository
 public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
-    @Query(value = "SELECT bookings.booking_id, bookings.customer_id, bookings.joining_date, bookings.rent_amount, " +
-            "bookings.hostel_id, cus.first_name, cus.city, cus.state, cus.country, cus.current_status, cus.email_id, " +
-            "cus.profile_pic FROM bookingsv1 bookings left outer join customers cus " +
-            "on cus.customer_id=bookings.customer_id where bookings.hostel_id=:hostelId", nativeQuery = true)
+    @Query(value = "SELECT bookings.booking_id, bookings.customer_id, bookings.joining_date, bookings.rent_amount, " + "bookings.hostel_id, cus.first_name, cus.city, cus.state, cus.country, cus.current_status, cus.email_id, " + "cus.profile_pic FROM bookingsv1 bookings left outer join customers cus " + "on cus.customer_id=bookings.customer_id where bookings.hostel_id=:hostelId", nativeQuery = true)
     List<Bookings> findAllByHostelId(@Param("hostelId") String hostelId);
 
     @Query(value = "SELECT * FROM bookingsv1 where bed_id=:bedId ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
@@ -33,6 +30,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('CHECKIN', 'NOTICE')
             """, nativeQuery = true)
     List<BookingsV1> findOccupiedDetails(@Param("bedId") Integer bedId);
+
     @Query(value = """
             SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('BOOKED')
             """, nativeQuery = true)
@@ -87,7 +85,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             booking.current_status in ('CHECKIN', 'NOTICE') and booking.joining_date <=DATE(:endDate) 
             and (booking.leaving_date is NULL or booking.leaving_date >= DATE(:startDate))
             """, nativeQuery = true)
-    List<BookedCustomerInfoElectricity> getBookingInfoForElectricity(@Param("roomId")Integer roomId, @Param("startDate")Date startDate, @Param("endDate") Date endDate);
+    List<BookedCustomerInfoElectricity> getBookingInfoForElectricity(@Param("roomId") Integer roomId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
     @Query(value = """
             SELECT * FROM bookingsv1 booking WHERE booking.customer_id=:customerId AND booking.joining_date <= DATE(:endDate) AND (booking.leaving_date IS NULL OR leaving_date >= DATE(:startDate));
@@ -101,16 +99,13 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     BookingsV1 checkBedsAvailabilityForDate(@Param("bedId") Integer bedId);
 
     @Query(value = """
-    SELECT * FROM bookingsv1 b
-    WHERE b.bed_id = :bedId
-      AND b.customer_id <> :customerId
-      AND DATE(b.expected_joining_date) = DATE(DATE_ADD(:expectedJoiningDate, INTERVAL 1 DAY))
-    """, nativeQuery = true)
-    List<BookingsV1> findNextDayBookingForSameBed(
-            @Param("bedId") int bedId,
-            @Param("customerId") String customerId,
-            @Param("expectedJoiningDate") Date expectedJoiningDate
-    );
+            SELECT * FROM bookingsv1 b
+            WHERE b.bed_id = :bedId
+              AND b.customer_id <> :customerId
+              AND DATE(b.expected_joining_date) = DATE(DATE_ADD(:expectedJoiningDate, INTERVAL 1 DAY))
+            """, nativeQuery = true)
+    List<BookingsV1> findNextDayBookingForSameBed(@Param("bedId") int bedId, @Param("customerId") String customerId, @Param("expectedJoiningDate") Date expectedJoiningDate);
+
     @Query(value = """
             SELECT bed_id as bedId, current_status as currentStatus, joining_date as joiningDate,
             leaving_date as leavingDate, customer_id as customerId FROM bookingsv1 where current_status in ('BOOKED', 'NOTICE', 'CHECKIN') and bed_id in (:listBedIds)
@@ -160,6 +155,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             SELECT * FROM bookingsv1 where hostel_id=:hostelId AND customer_id IN (:customerIds) AND current_status IN ('CHECKIN', 'NOTICE')
             """, nativeQuery = true)
     List<BookingsV1> findBookingsByListOfCustomersAndHostelId(List<String> customerIds, String hostelId);
+
     @Query("""
             SELECT booking FROM BookingsV1 booking WHERE booking.bedId=:bedId AND booking.customerId !=:customerId 
             AND booking.currentStatus IN ('CHECKIN')
@@ -183,26 +179,29 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """, nativeQuery = true)
     List<BookingsV1> findAllBookingsBasedOnBedIdAndDate(@Param("bedId") Integer bedId, @Param("date") Date date);
 
-        @Query(value = """
-                        SELECT * FROM bookingsv1 WHERE hostel_id = :hostelId
-                        AND (joining_date <= DATE(:endDate) AND (checkout_date IS NULL OR checkout_date >= DATE(:startDate)))
-                        ORDER BY joining_date DESC
-                        """, nativeQuery = true)
-        List<BookingsV1> findBookingsForTenantRegister(@Param("hostelId") String hostelId,
-                                                       @Param("startDate") Date startDate, @Param("endDate") Date endDate,
-                                                       org.springframework.data.domain.Pageable pageable);
+    @Query(value = """
+            SELECT * FROM bookingsv1 WHERE hostel_id = :hostelId
+            AND (joining_date <= DATE(:endDate) AND (checkout_date IS NULL OR checkout_date >= DATE(:startDate)))
+            ORDER BY joining_date DESC
+            """, nativeQuery = true)
+    List<BookingsV1> findBookingsForTenantRegister(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, org.springframework.data.domain.Pageable pageable);
 
-        @Query(value = """
-                        SELECT * FROM bookingsv1 WHERE hostel_id = :hostelId
-                        AND (joining_date <= DATE(:endDate) AND (checkout_date IS NULL OR checkout_date >= DATE(:startDate)))
-                        """, nativeQuery = true)
-        List<BookingsV1> findAllBookingsForTenantRegister(@Param("hostelId") String hostelId,
-                                                          @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+    @Query(value = """
+            SELECT * FROM bookingsv1 WHERE hostel_id = :hostelId
+            AND (joining_date <= DATE(:endDate) AND (checkout_date IS NULL OR checkout_date >= DATE(:startDate)))
+            """, nativeQuery = true)
+    List<BookingsV1> findAllBookingsForTenantRegister(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
-        @Query(value = """
-                        SELECT COUNT(*) FROM bookingsv1 WHERE hostel_id = :hostelId
-                        AND (joining_date <= DATE(:endDate) AND (checkout_date IS NULL OR checkout_date >= DATE(:startDate)))
-                        """, nativeQuery = true)
-        long countBookingsForTenantRegister(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
-                                            @Param("endDate") Date endDate);
+    @Query(value = """
+            SELECT COUNT(*) FROM bookingsv1 WHERE hostel_id = :hostelId
+            AND (joining_date <= DATE(:endDate) AND (checkout_date IS NULL OR checkout_date >= DATE(:startDate)))
+            """, nativeQuery = true)
+    long countBookingsForTenantRegister(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+
+    @Query(value = "SELECT b FROM BookingsV1 b WHERE b.hostelId = :hostelId " + "AND (cast(b.joiningDate as date) >= cast(:startDate as date) AND cast(b.joiningDate as date) <= cast(:endDate as date)) " + "AND (:customerIds IS NULL OR b.customerId IN :customerIds) " + "AND (:statuses IS NULL OR b.currentStatus IN :statuses) " + "AND (:roomIds IS NULL OR b.roomId IN :roomIds) " + "AND (:floorIds IS NULL OR b.floorId IN :floorIds) " + "ORDER BY b.joiningDate DESC")
+    org.springframework.data.domain.Page<BookingsV1> findBookingsWithFilters(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("customerIds") List<String> customerIds, @Param("statuses") List<String> statuses, @Param("roomIds") List<Integer> roomIds, @Param("floorIds") List<Integer> floorIds, org.springframework.data.domain.Pageable pageable);
+
+    @Query(value = "SELECT b FROM BookingsV1 b WHERE b.hostelId = :hostelId " + "AND (cast(b.joiningDate as date) >= cast(:startDate as date) AND cast(b.joiningDate as date) <= cast(:endDate as date)) " + "AND (:customerIds IS NULL OR b.customerId IN :customerIds) " + "AND (:statuses IS NULL OR b.currentStatus IN :statuses) " + "AND (:roomIds IS NULL OR b.roomId IN :roomIds) " + "AND (:floorIds IS NULL OR b.floorId IN :floorIds)")
+    List<BookingsV1> findAllBookingsWithFilters(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("customerIds") List<String> customerIds, @Param("statuses") List<String> statuses, @Param("roomIds") List<Integer> roomIds, @Param("floorIds") List<Integer> floorIds);
 }

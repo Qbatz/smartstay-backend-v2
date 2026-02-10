@@ -2864,4 +2864,10 @@ public class CustomersService {
     public void updateCustomersFromRecurring(Customers customers) {
         customersRepository.save(customers);
     }
+
+    public List<String> findCustomerIdsByName(String hostelId, String name) {
+        List<Customers> customers = customersRepository
+                .findByHostelIdAndFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(hostelId, name, name);
+        return customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+    }
 }
