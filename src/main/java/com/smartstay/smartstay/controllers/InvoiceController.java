@@ -69,11 +69,14 @@ public class InvoiceController {
     public ResponseEntity<?> generateRecurringInvoiceManually(@PathVariable("hostelId") String hostelId) {
         return invoiceV1Service.generateRecurringManually(hostelId);
     }
-
     @GetMapping("/details/{hostelId}/{invoiceId}")
     public ResponseEntity<?> getInvoiceDetails(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return invoiceV1Service.getInvoiceDetailsForEdit(hostelId, invoiceId);
     }
 
+    @GetMapping("/download/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> downloadInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.downloadInvoice(hostelId, invoiceId);
+    }
 
 }

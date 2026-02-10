@@ -19,6 +19,8 @@ public enum ActivitySourceType {
     NOTICE,
     SETTLEMENT,
     CHANGED_BED,
-    UPDATE_READING
+    UPDATE_READING,
+    FILES_UPLOAD,
+    FILE_DELETE
 
 }
