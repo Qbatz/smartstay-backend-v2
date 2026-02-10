@@ -14,6 +14,7 @@ import com.smartstay.smartstay.dto.customer.*;
 import com.smartstay.smartstay.dto.customer.CustomerData;
 import com.smartstay.smartstay.dto.customer.TransactionDto;
 import com.smartstay.smartstay.dto.customer.WalletInfo;
+import com.smartstay.smartstay.dto.documents.CustomerFiles;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
@@ -96,6 +97,12 @@ public class CustomersService {
 
     private AmenityRequestService amenityRequestService;
     private AmenitiesService amenitiesService;
+    private CustomerDocumentsService customerDocumentsService;
+
+    @Autowired
+    public void setCustomerDocumentsService(@Lazy CustomerDocumentsService customerDocumentsService) {
+        this.customerDocumentsService = customerDocumentsService;
+    }
     @Autowired
     public void setAmenitiesService(@Lazy AmenitiesService amenitiesService) {
         this.amenitiesService = amenitiesService;
@@ -1200,7 +1207,7 @@ public class CustomersService {
         }
 
         WalletInfo walletInfo = new WalletInfo(walletAmount, walletTransactions);
-
+        CustomerFiles customerFiles = customerDocumentsService.getCustomerFiles(customerId);
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getHostelId(),
@@ -1224,7 +1231,9 @@ public class CustomersService {
                 listBeds,
                 listTransactionResponse,
                 amenities,
-                listRequestedAmenities, walletInfo);
+                listRequestedAmenities,
+                walletInfo,
+                customerFiles);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -1704,7 +1713,7 @@ public class CustomersService {
                 0.0,
                 0.0,
                 0.0,
-                unpaidInvoiceAmount,
+                Utils.roundOfDouble(unpaidInvoiceAmount),
                 isRefundable);
 
         settlementDetailsService.addSettlementForCustomer(customerId, lDate);
@@ -1788,6 +1797,7 @@ public class CustomersService {
             }
         }
 
+        advancePaidAmount = advancePaidAmount + bookingAmount;
 
         double oldTotalInvoiceAmount = listUnpaidInvoices
                 .stream()
@@ -1968,12 +1978,12 @@ public class CustomersService {
 
 
         SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
-                totalDeductions,
-                oldInvoiceBalanceAmount,
-                refundableRent,
+                Utils.roundOfDouble(totalDeductions),
+                Utils.roundOfDouble(oldInvoiceBalanceAmount),
+                Utils.roundOfDouble(refundableRent),
                 0.0,
                 electricityAmount,
-                oldInvoiceBalanceAmount,
+                Utils.roundOfDouble(oldInvoiceBalanceAmount),
                 isRefundable);
 
         settlementDetailsService.addSettlementForCustomer(customers.getCustomerId(), leavingDate);

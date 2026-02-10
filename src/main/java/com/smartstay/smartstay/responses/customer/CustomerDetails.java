@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.customer.BookingInfo;
 import com.smartstay.smartstay.dto.customer.CheckoutInfo;
 import com.smartstay.smartstay.dto.customer.WalletInfo;
+import com.smartstay.smartstay.dto.documents.CustomerFiles;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 
 import java.util.List;
@@ -31,5 +32,6 @@ public record CustomerDetails(String customerId,
                               List<TransactionDto> transactionList,
                               List<Amenities> assignedAmenities,
                               List<AmenityRequestDTO> requestedAmenities,
-                              WalletInfo walletInfo) {
+                              WalletInfo walletInfo,
+                              CustomerFiles files) {
 }

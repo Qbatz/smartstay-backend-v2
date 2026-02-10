@@ -43,6 +43,7 @@ public class Utils {
 
     public static final String INVALID_AMENITY = "Invalid Amenity";
     public static final String AMENITY_ALREADY_DELETED = "Amenity already deleted";
+    public static final String DOCUMENT_ALREADY_DELETED = "Document is already deleted";
     public static final String CANNOT_DELETE_ASSIGNED_AMENITIES = "Amenities that are currently assigned cannot be deleted.";
 
     public static final String INVALID_FLOOR = "Invalid Floor";
@@ -96,6 +97,7 @@ public class Utils {
     public static final String PAYLOADS_REQUIRED = "Payloads required";
     public static final String TRY_AGAIN = "Try Again";
     public static final String INVALID_BED_ID = "Invalid bed id passed";
+    public static final String INVALID_DOCUMENT_ID = "Invalid document id";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
     public static final String FUTURE_DATES_NOT_ALLOWED = "Future Dates are not allowed";
@@ -223,6 +225,7 @@ public class Utils {
     public static final String SETTLEMENT_INFORMATION_NOT_AVAILABLE = "Settlement information is not available";
     public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_PREVIOUS_HISTORY_EXISTS = "The final settlement can only be generated after the joining date or a bed switch.";
     public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_INVALID_NOTICE_DATE = "The final settlement date must be after the notice date.";
+    public static final String FILES_ARE_REQUIRED_TO_UPLOAD = "Files cannot be empty";
 
     /**
      * Defining module Id's here
