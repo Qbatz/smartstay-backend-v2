@@ -1618,10 +1618,12 @@ public class CustomersService {
 
         List<PartialPaidInvoiceInfo> lisPartialPayments = transactionService.getTransactionInfo(partialPaymentInvoices);
 
-        partialPaidAmount = lisPartialPayments
+        partialPaidAmount = listUnpaidRentalInvoices
                 .stream()
-                .mapToDouble(PartialPaidInvoiceInfo::paidAmount)
+                .filter(invoicesV1 -> invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                .mapToDouble(InvoicesV1::getPaidAmount)
                 .sum();
+
         unpaidInvoiceAmount = listUnpaidInvoices
                 .stream()
                 .filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
@@ -1629,6 +1631,7 @@ public class CustomersService {
                 .sum();
 
         double invoiceBalance = unpaidInvoiceAmount - partialPaidAmount;
+        unpaidInvoiceAmount = unpaidInvoiceAmount - partialPaidAmount;
 
         totalAmountToBePaid = invoiceBalance - advancePaidAmount;
 
@@ -2154,12 +2157,12 @@ public class CustomersService {
 
         List<InvoicesV1> listUnpaidRentalInvoices = listUnpaidInvoices
                 .stream()
-                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
+                .filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
                 .toList();
 
         List<InvoicesV1> currentMonthInvoice = listUnpaidInvoices
                 .stream()
-                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) >= 0)
+                .filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) >= 0)
                 .toList();
 
         Calendar calStartDate = Calendar.getInstance();
@@ -2258,11 +2261,11 @@ public class CustomersService {
                 .map(InvoicesV1::getInvoiceId)
                 .toList();
 
-        List<PartialPaidInvoiceInfo> lisPartialPayments = transactionService.getTransactionInfo(partialPaymentInvoices);
+//        List<PartialPaidInvoiceInfo> lisPartialPayments = transactionService.getTransactionInfo(partialPaymentInvoices);
 
-        partialPaidAmount = lisPartialPayments
+        partialPaidAmount = listUnpaidInvoices
                 .stream()
-                .mapToDouble(PartialPaidInvoiceInfo::paidAmount)
+                .mapToDouble(InvoicesV1::getPaidAmount)
                 .sum();
         unpaidInvoiceAmount = listUnpaidInvoices
                 .stream()

@@ -254,7 +254,12 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.CANNOT_MAKE_PAYMENT_CANCELLED_INVOICES, HttpStatus.BAD_REQUEST);
         }
 
-        double paidAmount = invoicesV1.getPaidAmount();
+        double paidAmount = 0.0;
+
+        if (invoicesV1.getPaidAmount() != null) {
+            paidAmount = invoicesV1.getPaidAmount();
+        }
+
 
         TransactionV1 transactionV1 = new TransactionV1();
         Double gstAmount = invoicesV1.getGst();
