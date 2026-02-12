@@ -16,6 +16,7 @@ public class TenantRegisterResponse {
     private String message;
     private DateRange dateRange;
     private Summary summary;
+    private Filters filters;
     private List<TenantDetail> tenants;
     private Pagination pagination;
 
@@ -74,5 +75,25 @@ public class TenantRegisterResponse {
         private int pageSize;
         private long totalRecords;
         private int totalPages;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class Filters {
+        private List<FilterItem> tenantStatus;
+        private List<FilterItem> period;
+        private List<FilterItem> floor;
+        private List<FilterItem> room;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class FilterItem {
+        private Object id;
+        private String label;
     }
 }
