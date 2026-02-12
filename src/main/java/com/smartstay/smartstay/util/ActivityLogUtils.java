@@ -230,6 +230,12 @@ public class ActivityLogUtils {
         if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
             return "Deleted user.";
         }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.FILES_UPLOAD.name())) {
+            return "Files uploaded";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.FILE_DELETE.name())) {
+            return "Deleted a file";
+        }
         return null;
     }
 

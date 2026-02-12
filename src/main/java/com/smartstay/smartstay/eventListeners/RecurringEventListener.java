@@ -82,7 +82,6 @@ public class RecurringEventListener {
             Double rentAmount = item.getRentAmount();
             List<Integer> ebReadingsId = listElectricityForAHostel
                     .stream()
-                    .filter(i -> i.getRoomId() == item.getRoomId())
                     .map(ElectricityReadings::getId)
                     .toList();
             List<CustomersEbHistory> listCustomerEb = customerEbHistoryService.getAllByCustomerIdAndReadingId(item.getCustomerId(), ebReadingsId);
