@@ -12,6 +12,7 @@ import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.expense.Expense;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
+import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.expenses.ExpenseList;
 import com.smartstay.smartstay.responses.expenses.InitializeExpenses;
@@ -384,6 +385,13 @@ public class ExpenseService {
     }
 
     private ExpenseReportResponse.FiltersData buildFiltersData(String hostelId) {
+
+        List<ExpenseReportResponse.FilterItem> periodList = new ArrayList<>();
+        periodList.add(new ExpenseReportResponse.FilterItem("THIS_MONTH", "This Month"));
+        periodList.add(new ExpenseReportResponse.FilterItem("LAST_3_MONTHS", "Last Month"));
+        periodList.add(new ExpenseReportResponse.FilterItem("LAST_6_MONTHS", "Last 6 Months"));
+
+
         List<com.smartstay.smartstay.dto.expenses.ExpensesCategory> allCategories = expenseCategoryService
                 .getAllActiveCategories(hostelId);
 
@@ -407,6 +415,7 @@ public class ExpenseService {
                 .collect(Collectors.toList());
 
         return ExpenseReportResponse.FiltersData.builder()
+                .period(periodList)
                 .category(catFilters)
                 .subCategory(subCatFilters)
                 .createdBy(creators)

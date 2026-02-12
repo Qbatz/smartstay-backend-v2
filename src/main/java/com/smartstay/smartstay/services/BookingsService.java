@@ -3,11 +3,9 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.BookingsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.beds.BedDetails;
-import com.smartstay.smartstay.dto.beds.BedInformations;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
@@ -16,9 +14,8 @@ import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
-import com.smartstay.smartstay.dto.room.RoomInfo;
-import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.booking.CancelBooking;
@@ -32,7 +29,6 @@ import com.smartstay.smartstay.responses.bookings.InitializeCancel;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckIn;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckout;
 import com.smartstay.smartstay.util.Utils;
-import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
@@ -155,7 +151,7 @@ public class BookingsService {
         List<String> statuses = new ArrayList<>();
         statuses.add(BookingStatus.NOTICE.name());
         statuses.add(BookingStatus.CHECKIN.name());
-        List<BookingsV1> checkIncount =  bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
+        List<BookingsV1> checkIncount = bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
         if (checkIncount != null) {
             return checkIncount.size();
         }
@@ -220,10 +216,10 @@ public class BookingsService {
     }
 
     /**
-     *
      * this works only for the customer who are directly checkin
-     *
+     * <p>
      * not booked then check in
+     *
      * @return
      */
     public BookingsV1 checkinCustomer(CheckInRequest request, Customers customers) {
@@ -352,7 +348,7 @@ public class BookingsService {
             bookingsRepository.save(bookingsV1);
 
             rentHistoryService.addInitialRent(bookingsV1);
-        }else {
+        } else {
             BookingsV1 bookingsV11 = checkinCustomer(payloads, customers);
             rentHistoryService.addInitialRent(bookingsV11);
         }
@@ -400,15 +396,11 @@ public class BookingsService {
     }
 
     /**
-     *
      * this function is for deleting a bed
      */
     public boolean checkIsBedOccupied(Integer bedId) {
         List<BookingsV1> bookingsV1 = bookingsRepository.findOccupiedDetails(bedId);
-        if (bookingsV1 != null && !bookingsV1.isEmpty()) {
-            return true;
-        }
-        return false;
+        return bookingsV1 != null && !bookingsV1.isEmpty();
     }
 
     public CustomersBookingDetails getCustomerBookingDetails(String customerId) {
@@ -431,7 +423,7 @@ public class BookingsService {
         boolean canCheckIn = true;
         BookingsV1 bookingsV1 = bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
         if (bookingsV1 != null) {
-            Beds bed = bedsService.isBedAvailabeForCheckIn(bookingsV1.getBedId(),bookingsV1.getExpectedJoiningDate());
+            Beds bed = bedsService.isBedAvailabeForCheckIn(bookingsV1.getBedId(), bookingsV1.getExpectedJoiningDate());
             bookingAmount = invoiceService.getBookingAmount(customerId, hostelId);
             if (bookingAmount == null) {
                 bookingAmount = 0.0;
@@ -440,19 +432,10 @@ public class BookingsService {
             if (bed != null) {
                 if (bed.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
                     canCheckIn = true;
-                }
-                else if (Utils.compareWithTwoDates(new Date(), bed.getFreeFrom()) > 0) {
+                } else if (Utils.compareWithTwoDates(new Date(), bed.getFreeFrom()) > 0) {
                     canCheckIn = false;
                 }
-                InitializeCheckIn initializeCheckIn = new InitializeCheckIn(
-                        bed.getBedId(),
-                        bed.getBedName(),
-                        bookingAmount,
-                        Utils.dateToString(bookingsV1.getBookingDate()),
-                        bed.getRentAmount(),
-                        canCheckIn,
-                        bookingsV1.getBookingId()
-                );
+                InitializeCheckIn initializeCheckIn = new InitializeCheckIn(bed.getBedId(), bed.getBedName(), bookingAmount, Utils.dateToString(bookingsV1.getBookingDate()), bed.getRentAmount(), canCheckIn, bookingsV1.getBookingId());
 
                 return new ResponseEntity<>(initializeCheckIn, HttpStatus.OK);
             }
@@ -506,8 +489,7 @@ public class BookingsService {
             if (Utils.compareWithTwoDates(cancelDate, bookingsV1.getBookingDate()) < 0) {
                 return new ResponseEntity<>(Utils.DATE_VALIDATION_ERROR_CANCEL_BOOKING, HttpStatus.BAD_REQUEST);
             }
-        }
-        else {
+        } else {
             cancelDate = new Date();
         }
         bookingsV1.setCancelDate(cancelDate);
@@ -522,24 +504,12 @@ public class BookingsService {
 
         if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
             invoiceService.cancelBookingInvoice(invoicesV1);
-            CancelBookingDto cancelBookingDto = new CancelBookingDto(cancelBooking.reason(),
-                    customerId,
-                    bookingsV1.getBookingAmount(),
-                    invoicesV1.getInvoiceId(),
-                    cancelBooking.bankId(),
-                    cancelBooking.referenceNumber());
+            CancelBookingDto cancelBookingDto = new CancelBookingDto(cancelBooking.reason(), customerId, bookingsV1.getBookingAmount(), invoicesV1.getInvoiceId(), cancelBooking.bankId(), cancelBooking.referenceNumber());
 
             creditDebitNoteService.cancelBooking(cancelBookingDto);
 
 
-            TransactionDto transactionDto = new TransactionDto(cancelBooking.bankId(),
-                    cancelBooking.referenceNumber(),
-                    bookingsV1.getBookingAmount(),
-                    BankTransactionType.DEBIT.name(),
-                    BankSource.INVOICE.name(),
-                    bookingsV1.getHostelId(),
-                    Utils.dateToString(cancelDate).replace("/", "-"),
-                    "");
+            TransactionDto transactionDto = new TransactionDto(cancelBooking.bankId(), cancelBooking.referenceNumber(), bookingsV1.getBookingAmount(), BankTransactionType.DEBIT.name(), BankSource.INVOICE.name(), bookingsV1.getHostelId(), Utils.dateToString(cancelDate).replace("/", "-"), "");
 
             bankTransactionService.cancelBooking(transactionDto, invoicesV1.getInvoiceId());
         }
@@ -585,23 +555,13 @@ public class BookingsService {
         }
         List<DebitsBank> listBanks = bankingService.getAllBankForReturn(bookingsV1.getHostelId());
 
-        InitializeCancel initializeCancel = new InitializeCancel(
-                bookingsV1.getHostelId(),
-                bookingsV1.getBookingId(),
-                bookingsV1.getCustomerId(),
-                bookingsV1.getBookingAmount(),
-                Utils.dateToString(bookingsV1.getExpectedJoiningDate()),
-                roomName,
-                bedName,
-                floorName,
-                listBanks);
+        InitializeCancel initializeCancel = new InitializeCancel(bookingsV1.getHostelId(), bookingsV1.getBookingId(), bookingsV1.getCustomerId(), bookingsV1.getBookingAmount(), Utils.dateToString(bookingsV1.getExpectedJoiningDate()), roomName, bedName, floorName, listBanks);
         return new ResponseEntity<>(initializeCancel, HttpStatus.OK);
     }
 
     /**
-     *
      * this will be called while checking out the customer
-     *
+     * <p>
      * this should be trigered when cuctomer is in notice
      *
      * @param customerId
@@ -697,11 +657,7 @@ public class BookingsService {
     }
 
     public boolean isBedBookedNextDay(int bedId, String customerId, Date expectedJoiningDate) {
-        List<BookingsV1> conflicts = bookingsRepository.findNextDayBookingForSameBed(
-                bedId,
-                customerId,
-                expectedJoiningDate
-        );
+        List<BookingsV1> conflicts = bookingsRepository.findNextDayBookingForSameBed(bedId, customerId, expectedJoiningDate);
         return !conflicts.isEmpty();
     }
 
@@ -713,11 +669,9 @@ public class BookingsService {
         }
         if (bookingsV1.getLeavingDate() != null) {
             return Utils.compareWithTwoDates(joiningDateDt, bookingsV1.getLeavingDate()) >= 0;
-        }
-        else if (bookingsV1.getJoiningDate() != null) {
+        } else if (bookingsV1.getJoiningDate() != null) {
             return Utils.compareWithTwoDates(joiningDateDt, bookingsV1.getJoiningDate()) < 0;
-        }
-        else {
+        } else {
             return Utils.compareWithTwoDates(joiningDateDt, bookingsV1.getExpectedJoiningDate()) < 0;
         }
     }
@@ -727,7 +681,7 @@ public class BookingsService {
         Date endDate = Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         Calendar previousEndDate = Calendar.getInstance();
         previousEndDate.setTime(endDate);
-        previousEndDate.set(Calendar.DAY_OF_MONTH, previousEndDate.get(Calendar.DAY_OF_MONTH) -1);
+        previousEndDate.set(Calendar.DAY_OF_MONTH, previousEndDate.get(Calendar.DAY_OF_MONTH) - 1);
 
 
         CustomersBedHistory currentBed = customersBedHistoryService.getLatestCustomerBed(bookingsV1.getCustomerId());
@@ -737,7 +691,7 @@ public class BookingsService {
         CustomersBedHistory cbh = new CustomersBedHistory();
         Double rent = bookingsV1.getRentAmount();
 
-        if (request.rentAmount() != null ) {
+        if (request.rentAmount() != null) {
             bookingsV1.setRentAmount(request.rentAmount());
             rent = request.rentAmount();
         }
@@ -778,26 +732,16 @@ public class BookingsService {
             return true;
         }
 
-        BookingsV1 currenlyCheckIn = listBookings
-                .stream()
-                .filter(i -> (i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()) || i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())))
-                .findAny()
-                .orElse(null);
+        BookingsV1 currenlyCheckIn = listBookings.stream().filter(i -> (i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()) || i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name()))).findAny().orElse(null);
 
         if (currenlyCheckIn == null) {
             return false;
         }
 
 
-
         Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
-        if (Utils.compareWithTwoDates(dateJoiningDate, currenlyCheckIn.getLeavingDate()) >= 0) {
-            return true;
-        }
-        else {
-            return false;
-        }
+        return Utils.compareWithTwoDates(dateJoiningDate, currenlyCheckIn.getLeavingDate()) >= 0;
 
     }
 
@@ -808,7 +752,7 @@ public class BookingsService {
     public Integer getBookedBedCount(String hostelId) {
         List<BookingsV1> listBookings = bookingsRepository.findBookingsByHostelId(hostelId);
         if (listBookings == null) {
-            return  0;
+            return 0;
         }
         return listBookings.size();
     }
@@ -817,7 +761,7 @@ public class BookingsService {
         List<String> statuses = new ArrayList<>();
         statuses.add(BookingStatus.NOTICE.name());
         statuses.add(BookingStatus.CHECKIN.name());
-        List<BookingsV1> checkedInUsers =  bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
+        List<BookingsV1> checkedInUsers = bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
 
         Calendar nextMonthBillStartDate = Calendar.getInstance();
         nextMonthBillStartDate.setTime(currentMonthBillingDate.currentBillStartDate());
@@ -830,45 +774,32 @@ public class BookingsService {
 
         List<BookingsV1> newJoiners = bookingsRepository.findBookingsWithDate(hostelId, nextMonthBillStartDate.getTime());
 
-        double checkInRent = checkedInUsers
-                .stream()
-                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()))
-                .mapToDouble(BookingsV1::getRentAmount)
-                .sum();
-        double noticeRentAmount = checkedInUsers
-                .stream()
-                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name()))
-                .mapToDouble(item -> {
-                    if (Utils.compareWithTwoDates(item.getLeavingDate(), nextMonthBillStartDate.getTime()) > 0) {
-                        if (Utils.compareWithTwoDates(item.getLeavingDate(), nextMonthBillEndDate.getTime()) < 0) {
-                            long totalNumberOfDays = Utils.findNumberOfDays(nextMonthBillStartDate.getTime(), nextMonthBillEndDate.getTime());
-                            long noOfDaysStaying = Utils.findNumberOfDays(nextMonthBillStartDate.getTime(), item.getLeavingDate());
+        double checkInRent = checkedInUsers.stream().filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())).mapToDouble(BookingsV1::getRentAmount).sum();
+        double noticeRentAmount = checkedInUsers.stream().filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())).mapToDouble(item -> {
+            if (Utils.compareWithTwoDates(item.getLeavingDate(), nextMonthBillStartDate.getTime()) > 0) {
+                if (Utils.compareWithTwoDates(item.getLeavingDate(), nextMonthBillEndDate.getTime()) < 0) {
+                    long totalNumberOfDays = Utils.findNumberOfDays(nextMonthBillStartDate.getTime(), nextMonthBillEndDate.getTime());
+                    long noOfDaysStaying = Utils.findNumberOfDays(nextMonthBillStartDate.getTime(), item.getLeavingDate());
 
 
-                            double rentPerDay = item.getRentAmount() / totalNumberOfDays;
-                            double rentForLeavingDate = noOfDaysStaying * rentPerDay;
+                    double rentPerDay = item.getRentAmount() / totalNumberOfDays;
+                    double rentForLeavingDate = noOfDaysStaying * rentPerDay;
 
-                            return Math.round(rentForLeavingDate);
-                        }
-                        else {
-                            return item.getRentAmount();
-                        }
-                    }
-                    else {
-                        return 0.0;
-                    }
+                    return Math.round(rentForLeavingDate);
+                } else {
+                    return item.getRentAmount();
+                }
+            } else {
+                return 0.0;
+            }
 
-                })
-                .sum();
-        double upcomingJoiningRents = newJoiners
-                .stream()
-                .mapToDouble(i -> {
-                    if (i.getRentAmount() != null) {
-                        return i.getRentAmount();
-                    }
-                    return 0.0;
-                })
-                .sum();
+        }).sum();
+        double upcomingJoiningRents = newJoiners.stream().mapToDouble(i -> {
+            if (i.getRentAmount() != null) {
+                return i.getRentAmount();
+            }
+            return 0.0;
+        }).sum();
 
         return checkInRent + noticeRentAmount + upcomingJoiningRents;
 
@@ -926,18 +857,15 @@ public class BookingsService {
                     userService.addUserLog(hostelId, bookingId, ActivitySource.BOOKING, ActivitySourceType.JOINING_DATE, users);
                     return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
-                }
-                else {
+                } else {
                     return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
                 }
 
-            }
-            else {
+            } else {
                 return new ResponseEntity<>(Utils.CANNOT_CHANGE_JOINING_DATE_CUSTOMER_NOT_CHECKEDIN, HttpStatus.BAD_REQUEST);
             }
 
-        }
-        else if (updateInfo.newRent() != null) {
+        } else if (updateInfo.newRent() != null) {
             if (updateInfo.newRent() <= 0.5) {
                 return new ResponseEntity<>(Utils.RENT_AMOUNT_REQUIRED_TO_UPDATE_RENT, HttpStatus.BAD_REQUEST);
             }
@@ -959,8 +887,7 @@ public class BookingsService {
                     calendar.add(Calendar.MONTH, -1);
 
                     currentRentEndDate = calendar.getTime();
-                }
-                else {
+                } else {
                     currentRentEndDate = billingDates.currentBillEndDate();
                     startDate = newBillingCalendar.getTime();
                 }
@@ -968,7 +895,7 @@ public class BookingsService {
                 rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), startDate, currentRentEndDate);
 
 
-                RentHistory rentHistory  = new RentHistory();
+                RentHistory rentHistory = new RentHistory();
                 rentHistory.setRent(updateInfo.newRent());
                 rentHistory.setStartsFrom(startDate);
                 rentHistory.setCustomerId(customers.getCustomerId());
@@ -981,8 +908,7 @@ public class BookingsService {
                 listRentHistories.add(rentHistory);
 
                 bookingsRepository.save(bookingsV1);
-            }
-            else {
+            } else {
                 BillingDates billingDateTimeOfJoining = hostelService.getBillingRuleOnDate(hostelId, bookingsV1.getJoiningDate());
                 //this is to handle the first time
                 if (invoiceService.canChangeRentalAmount(customers, updateInfo.newRent(), bookingsV1.getJoiningDate(), billingDateTimeOfJoining)) {
@@ -990,8 +916,7 @@ public class BookingsService {
                     rentHistoryService.updateRentAmount(customers.getCustomerId(), updateInfo.newRent());
                     bookingsV1.setRentAmount(updateInfo.newRent());
                     bookingsRepository.save(bookingsV1);
-                }
-                else {
+                } else {
                     return new ResponseEntity<>(Utils.CANNOT_CHANGE_RENT_FOR_OLD_DATES, HttpStatus.BAD_REQUEST);
                 }
 
@@ -1076,21 +1001,17 @@ public class BookingsService {
     }
 
     /**
-     *
      * used for update the new rent for all the customers
      */
     public void updateRentalAmount() {
 
         List<RentHistory> listRentHistory = rentHistoryService.findAnyNewRent();
 
-        List<BookingsV1> bookings = listRentHistory
-                .stream()
-                .map(i -> {
-                    BookingsV1 bookingsV1 = i.getBooking();
-                    bookingsV1.setRentAmount(i.getRent());
-                    return bookingsV1;
-                })
-                .toList();
+        List<BookingsV1> bookings = listRentHistory.stream().map(i -> {
+            BookingsV1 bookingsV1 = i.getBooking();
+            bookingsV1.setRentAmount(i.getRent());
+            return bookingsV1;
+        }).toList();
 
 
         bookingsRepository.saveAll(bookings);
@@ -1140,10 +1061,7 @@ public class BookingsService {
         boolean finalSettlementStatus = invoiceService.isFinalSettlementPaid(finalSettlementInvoice);
 
 
-
-        InitializeCheckout initializeCheckout = new InitializeCheckout(finalSettlementStatus,
-                Utils.dateToString(bookingsV1.getLeavingDate()),
-                Utils.dateToString(bookingsV1.getJoiningDate()));
+        InitializeCheckout initializeCheckout = new InitializeCheckout(finalSettlementStatus, Utils.dateToString(bookingsV1.getLeavingDate()), Utils.dateToString(bookingsV1.getJoiningDate()));
 
         return new ResponseEntity<>(initializeCheckout, HttpStatus.OK);
     }
@@ -1162,10 +1080,7 @@ public class BookingsService {
 
     public boolean checkOtherBookings(Integer bedId, String customerId) {
         List<BookingsV1> listAllBookings = bookingsRepository.findAllBookingsByHostelIdExcludeCurrentCheckIn(bedId, customerId);
-        if (listAllBookings != null && !listAllBookings.isEmpty()) {
-            return true;
-        }
-        return false;
+        return listAllBookings != null && !listAllBookings.isEmpty();
     }
 
     public List<BookingsV1> findAvailableBookingOnDate(int bedId, Date joiningDate) {
@@ -1177,10 +1092,8 @@ public class BookingsService {
         return bookingsRepository.findByBedIdAndCustomerIdNot(bedId, customerId);
     }
 
-    public List<BookingsV1> findBookingsForTenantRegister(String hostelId, Date startDate, Date endDate, int page,
-                                                          int size) {
-        return bookingsRepository.findBookingsForTenantRegister(hostelId, startDate, endDate,
-                org.springframework.data.domain.PageRequest.of(page, size));
+    public List<BookingsV1> findBookingsForTenantRegister(String hostelId, Date startDate, Date endDate, int page, int size) {
+        return bookingsRepository.findBookingsForTenantRegister(hostelId, startDate, endDate, org.springframework.data.domain.PageRequest.of(page, size));
     }
 
     public List<BookingsV1> findAllBookingsForTenantRegister(String hostelId, Date startDate, Date endDate) {
@@ -1189,5 +1102,13 @@ public class BookingsService {
 
     public long countBookingsForTenantRegister(String hostelId, Date startDate, Date endDate) {
         return bookingsRepository.countBookingsForTenantRegister(hostelId, startDate, endDate);
+    }
+
+    public org.springframework.data.domain.Page<BookingsV1> findBookingsWithFilters(String hostelId, Date startDate, Date endDate, List<String> customerIds, List<String> statuses, List<Integer> roomIds, List<Integer> floorIds, int page, int size) {
+        return bookingsRepository.findBookingsWithFilters(hostelId, startDate, endDate, (customerIds != null && !customerIds.isEmpty()) ? customerIds : null, (statuses != null && !statuses.isEmpty()) ? statuses : null, (roomIds != null && !roomIds.isEmpty()) ? roomIds : null, (floorIds != null && !floorIds.isEmpty()) ? floorIds : null, org.springframework.data.domain.PageRequest.of(page, size));
+    }
+
+    public List<BookingsV1> findAllBookingsWithFilters(String hostelId, Date startDate, Date endDate, List<String> customerIds, List<String> statuses, List<Integer> roomIds, List<Integer> floorIds) {
+        return bookingsRepository.findAllBookingsWithFilters(hostelId, startDate, endDate, (customerIds != null && !customerIds.isEmpty()) ? customerIds : null, (statuses != null && !statuses.isEmpty()) ? statuses : null, (roomIds != null && !roomIds.isEmpty()) ? roomIds : null, (floorIds != null && !floorIds.isEmpty()) ? floorIds : null);
     }
 }

@@ -26,6 +26,7 @@ public class ExpenseReportResponse {
         private List<SubCategoryFilter> subCategory;
         private List<String> paymentMode;
         private List<UserFilter> createdBy;
+        private List<FilterItem> period;
     }
 
     @Data
@@ -96,5 +97,14 @@ public class ExpenseReportResponse {
         private String account;
         private Double amount;
         private String createdBy;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class FilterItem {
+        private Object id;
+        private String label;
     }
 }
