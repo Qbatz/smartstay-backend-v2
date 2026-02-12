@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.transactions.InvoiceRefundMapper;
 import com.smartstay.smartstay.Wrappers.transactions.TransactionForCustomerDetailsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
@@ -7,6 +8,7 @@ import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
+import com.smartstay.smartstay.dto.customer.InvoiceRefundHistory;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.receipts.DeleteReceipts;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
@@ -928,5 +930,31 @@ public class TransactionService {
     private TransactionReportResponse buildEmptyTransactionResponse(String hostelId, Date startDate, Date endDate, int page, int size) {
         return TransactionReportResponse.builder().status(true).message("Receipts report fetched successfully").summary(TransactionReportResponse.Summary.builder().hostelId(hostelId).startDate(Utils.dateToString(startDate)).endDate(Utils.dateToString(endDate)).totalInvoiceAmount(0.0).receivedAmount(0.0).build()).filters(TransactionReportResponse.Filters.builder().build()) // Populate basic options if needed, or
                 .pagination(TransactionReportResponse.Pagination.builder().currentPage(page).pageSize(size).totalRecords(0).totalPages(0).hasNextPage(false).hasPreviousPage(false).build()).data(new ArrayList<>()).build();
+    }
+
+    public List<InvoiceRefundHistory> getRefundHistory(String hostelId, String invoiceId) {
+        List<TransactionV1> refundHistories = transactionRespository.findByHostelIdAndInvoiceId(hostelId, invoiceId);
+
+        List<InvoiceRefundHistory> invoiceRefundHistory = new ArrayList<>();
+
+        if (refundHistories != null && !refundHistories.isEmpty()) {
+
+            Set<String> bankIds = refundHistories.stream()
+                    .map(TransactionV1::getBankId)
+                    .collect(Collectors.toSet());
+
+            List<String> paidBy = refundHistories
+                    .stream()
+                    .map(TransactionV1::getCreatedBy)
+                    .toList();
+            List<Users> paidByUsers = usersService.findAllUsersFromUserId(paidBy);
+            List<BankingV1> banks = bankingService.findAllBanksById(bankIds);
+
+            invoiceRefundHistory = refundHistories.stream()
+                    .map(i -> new InvoiceRefundMapper(paidByUsers, banks).apply(i))
+                    .collect(Collectors.toList());
+        }
+
+        return invoiceRefundHistory;
     }
 }

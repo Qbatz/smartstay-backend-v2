@@ -15,6 +15,7 @@ import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.dto.customer.InvoiceRefundHistory;
 import com.smartstay.smartstay.dto.customer.ReassignRent;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto;
@@ -1161,6 +1162,7 @@ public class InvoiceV1Service {
                     listInvoiceItems,
                     listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
+            List<InvoiceRefundHistory> listRefunds = transactionService.getRefundHistory(hostelId, invoiceId);
             FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(
                     invoicesV1.getInvoiceNumber(),
                     invoicesV1.getInvoiceId(),
@@ -1176,7 +1178,8 @@ public class InvoiceV1Service {
                     accountDetails,
                     signatureInfo,
                     invoiceSummaries,
-                    invoiceInfo
+                    invoiceInfo,
+                    listRefunds
             );
             return new ResponseEntity<>(finalSettlementResponse, HttpStatus.OK);
 

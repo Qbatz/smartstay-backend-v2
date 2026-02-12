@@ -19,6 +19,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     List<TransactionV1> findByInvoiceId(String invoiceId);
 
     List<TransactionV1> findByInvoiceIdIn(List<String> invoiceId);
+    List<TransactionV1> findByHostelIdAndInvoiceId(String hostelId, String invoiceId);
 
     TransactionV1 findByTransactionId(String transactionId);
 
