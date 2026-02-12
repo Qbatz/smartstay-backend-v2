@@ -129,9 +129,29 @@ public class ReportService {
         // Tenants
         int filledBeds = bedsService.countOccupiedByHostelId(hostelId);
         int totalBeds = bedsService.countAllByHostelId(hostelId);
-        List<Customers> listCustomers = customersService.findCustomerByHostelId(hostelId,
-                Arrays.asList(CustomerStatus.CHECK_IN.name(), CustomerStatus.BOOKED.name(),
-                        CustomerStatus.NOTICE.name(), CustomerStatus.SETTLEMENT_GENERATED.name()));
+
+        List<BookingsV1> tenantBookings = bookingsService.findAllBookingsWithFilters(hostelId, startDate, endDate, null,
+                null, null, null);
+
+        Set<String> uniqueTenants = new HashSet<>();
+        int activeCount = 0;
+        int noticeCount = 0;
+        int checkoutCount = 0;
+
+        for (BookingsV1 b : tenantBookings) {
+            uniqueTenants.add(b.getCustomerId());
+            String status = b.getCurrentStatus();
+
+            if (BookingStatus.CHECKIN.name().equalsIgnoreCase(status)) {
+                activeCount++;
+            } else if (BookingStatus.NOTICE.name().equalsIgnoreCase(status)
+                    ) {
+                noticeCount++;
+            } else if (BookingStatus.VACATED.name().equalsIgnoreCase(status)
+                    || BookingStatus.TERMINATED.name().equalsIgnoreCase(status)) {
+                checkoutCount++;
+            }
+        }
 
         double occupancyRate = 0.0;
         if (totalBeds > 0) {
@@ -139,21 +159,10 @@ public class ReportService {
             occupancyRate = Utils.roundOffWithTwoDigit(occupancyRate);
         }
 
-        List<Customers> checkedInCustomers = listCustomers.stream()
-                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())).toList();
-
-        List<Customers> noticeCustomer = listCustomers.stream()
-                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())
-                        || i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()))
-                .toList();
-
-        List<Customers> vacatedCustomers = listCustomers.stream()
-                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())).toList();
-
         ReportResponse.TenantReport tenantReport = ReportResponse.TenantReport.builder()
-                .totalTenants(listCustomers.size()).occupancyRate(occupancyRate)
-                .noticeTenantCount(noticeCustomer.size()).activeTenantCount(checkedInCustomers.size())
-                .checkoutTenantsCount(vacatedCustomers.size()).build();
+                .totalTenants(uniqueTenants.size()).occupancyRate(occupancyRate)
+                .noticeTenantCount(noticeCount).activeTenantCount(activeCount)
+                .checkoutTenantsCount(checkoutCount).build();
 
         // Expenses
         int expenseCount = expenseService.countByHostelIdAndDateRange(hostelId, startDate, endDate);
