@@ -20,7 +20,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
 
     List<TransactionV1> findByInvoiceIdIn(List<String> invoiceId);
     List<TransactionV1> findByHostelIdAndInvoiceId(String hostelId, String invoiceId);
-
+    TransactionV1 findByHostelIdAndTransactionId(String hostelId, String transactionId);
     TransactionV1 findByTransactionId(String transactionId);
 
     @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.invoiceId = :invoiceId")

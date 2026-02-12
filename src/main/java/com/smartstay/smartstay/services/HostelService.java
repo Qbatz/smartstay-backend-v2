@@ -714,15 +714,34 @@ public class HostelService {
             if (listImg == null) {
                 listImg = new ArrayList<>();
             }
-            listImg.addAll(listImageUrls.stream().map(item -> {
-                        HostelImages hostelImg = new HostelImages();
-                        hostelImg.setCreatedBy(authentication.getName());
-                        hostelImg.setImageUrl(item);
-                        hostelImg.setHostel(hostelV1);
-                        return hostelImg;
-                    }).toList());
 
-            hostelV1.setAdditionalImages(listImg);
+            if (hostelV1.getAdditionalImages() != null) {
+                listImageUrls.forEach(item -> {
+                    HostelImages hostelImg = new HostelImages();
+                    hostelImg.setCreatedBy(authentication.getName());
+                    hostelImg.setImageUrl(item);
+                    hostelImg.setHostel(hostelV1);
+
+
+                    hostelV1.getAdditionalImages().add(hostelImg);
+                });
+            }
+
+            else {
+                listImg.addAll(listImageUrls.stream().map(item -> {
+                    HostelImages hostelImg = new HostelImages();
+                    hostelImg.setCreatedBy(authentication.getName());
+                    hostelImg.setImageUrl(item);
+                    hostelImg.setHostel(hostelV1);
+                    return hostelImg;
+                }).toList());
+
+                hostelV1.setAdditionalImages(listImg);
+            }
+
+
+
+//            hostelV1.setAdditionalImages(new ArrayList<>(listImg));
         }
 
         if (updatePg != null) {

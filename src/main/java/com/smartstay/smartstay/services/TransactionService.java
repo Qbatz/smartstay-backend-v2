@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.transactions.InvoiceRefundMapper;
 import com.smartstay.smartstay.Wrappers.transactions.TransactionForCustomerDetailsMapper;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
@@ -28,18 +29,21 @@ import com.smartstay.smartstay.responses.receipt.ReceiptInfo;
 import com.smartstay.smartstay.responses.transaction.TransactionReportResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class TransactionService {
+    @Value("${REPORTS_URL}")
+    private String reportsUrl;
     @Autowired
     private Authentication authentication;
     @Autowired
@@ -81,6 +85,8 @@ public class TransactionService {
     private ExpenseCategoryService expenseCategoryService;
     @Autowired
     private VendorService vendorService;
+    @Autowired
+    private DownloadService downloadService;
 
     /**
      * not using it
@@ -956,5 +962,36 @@ public class TransactionService {
         }
 
         return invoiceRefundHistory;
+    }
+
+    public ResponseEntity<?> downloadRecipt(String hostelId, String transactionId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        TransactionV1 transactionV1 = transactionRespository.findByHostelIdAndTransactionId(hostelId, transactionId);
+        if (transactionV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_TRANSACTION_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!transactionV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        String endpoint = reportsUrl + "/v2/reports/receipts/"+ hostelId + "/" +  transactionId;
+        String url = downloadService.downloadFromUrl(endpoint);
+
+        if (url == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(url, HttpStatus.OK);
     }
 }
