@@ -142,13 +142,13 @@ public class HostelService {
         }
 
         if (!listImageUrls.isEmpty()) {
-            List<HostelImages> listHostelImages = listImageUrls.stream().map(item -> {
+            List<HostelImages> listHostelImages = new ArrayList<>(listImageUrls.stream().map(item -> {
                 HostelImages hostelImg = new HostelImages();
                 hostelImg.setCreatedBy(userId);
                 hostelImg.setImageUrl(item);
                 hostelImg.setHostel(hostelV1);
                 return hostelImg;
-            }).toList();
+            }).toList());
 
             hostelV1.setAdditionalImages(listHostelImages);
         }
