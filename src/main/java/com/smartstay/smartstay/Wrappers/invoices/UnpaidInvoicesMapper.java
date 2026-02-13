@@ -27,16 +27,8 @@ public class UnpaidInvoicesMapper implements Function<InvoicesV1, UnpaidInvoices
         Double ebAmount = 0.0;
         Double amenityAmount = 0.0;
 
-        if (listPartialPayments != null && !listPartialPayments.isEmpty()) {
-            Double paidAmount = listPartialPayments
-                    .stream()
-                    .filter(item -> Objects.equals(item.invoiceId(), invoicesV1.getInvoiceId()))
-                    .mapToDouble(PartialPaidInvoiceInfo::paidAmount)
-                    .sum();
-            invoicePendingAmount = invoicesV1.getTotalAmount() - paidAmount;
-        }
-        else {
-            invoicePendingAmount = invoicesV1.getTotalAmount();
+        if (invoicesV1.getPaidAmount() != null) {
+            invoicePendingAmount = invoicesV1.getTotalAmount() - invoicesV1.getPaidAmount();
         }
 
         ebAmount = invoicesV1
@@ -59,7 +51,6 @@ public class UnpaidInvoicesMapper implements Function<InvoicesV1, UnpaidInvoices
                 invoicesV1.getTotalAmount(),
                 invoicePendingAmount,
                 ebAmount,
-                amenityAmount
-                );
+                amenityAmount);
     }
 }
