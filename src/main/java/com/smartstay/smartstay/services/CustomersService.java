@@ -1529,6 +1529,7 @@ public class CustomersService {
 
         List<CurrentMonthOtherItems> otherItems = new ArrayList<>();
         final double[] currentMonthOtherItemsAmount = {0.0};
+        double currentMonthPayableAmount = 0;
 
         //taken from unpaid invoices. So current month invoice is empty for paid
         if (!currentMonthInvoice.isEmpty()) {
@@ -1634,7 +1635,7 @@ public class CustomersService {
         double rentPerDay = bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth;
 
         currentMonthPayableRent = noOfDaySatayed * rentPerDay;
-        currentMonthPayableRent = currentMonthPayableRent + currentMonthOtherItemsAmount[0];
+        currentMonthPayableAmount = currentMonthPayableRent + currentMonthOtherItemsAmount[0];
 
         List<InvoicesV1> advanceInvoice = listUnpaidInvoices
                 .stream()
@@ -1693,9 +1694,9 @@ public class CustomersService {
         totalAmountToBePaid = invoiceBalance - advancePaidAmount;
 
         if (isCurrentRentPaid) {
-            totalAmountToBePaid = totalAmountToBePaid + (currentMonthPayableRent - currentRentPaid);
+            totalAmountToBePaid = totalAmountToBePaid + (currentMonthPayableAmount - currentRentPaid);
         } else {
-            totalAmountToBePaid = totalAmountToBePaid + currentMonthPayableRent;
+            totalAmountToBePaid = totalAmountToBePaid + currentMonthPayableAmount;
         }
 
         totalAmountToBePaid =  totalAmountToBePaid + totalDeductions;
@@ -1763,6 +1764,8 @@ public class CustomersService {
                     Utils.dateToString(new Date()),
                     Utils.findNumberOfDays(billDate.currentBillStartDate(), lDate),
                     (double) Math.round(currentMonthPayableRent),
+                    Utils.roundOffWithTwoDigit(rentPerDay),
+                    (double) Math.round(currentMonthPayableRent),
                     bedName,
                     roomName,
                     floorName);
@@ -1772,6 +1775,8 @@ public class CustomersService {
             RentBreakUp rentBreakUp = new RentBreakUp(Utils.dateToString(bookingDetails.getJoiningDate()),
                     Utils.dateToString(new Date()),
                     Utils.findNumberOfDays(bookingDetails.getJoiningDate(), lDate),
+                    (double) Math.round(currentMonthPayableRent),
+                    Utils.roundOffWithTwoDigit(rentPerDay),
                     (double) Math.round(currentMonthPayableRent),
                     bedName,
                     roomName,
@@ -1783,10 +1788,10 @@ public class CustomersService {
                 (double) Math.round(currentRentPaid),
                 (int) noOfDaySatayed,
                 currentMonthRent,
-                Utils.roundOffDecimal(rentPerDay),
+                Utils.roundOffWithTwoDigit(currentMonthPayableAmount),
                 Utils.dateToString(calStartDate.getTime()),
                 Utils.dateToString(calEndDate.getTime()),
-                0.0,
+                currentMonthOtherItemsAmount[0],
                 otherItems,
                 rentBreakUpList);
 
@@ -2043,6 +2048,8 @@ public class CustomersService {
         RentBreakUp rentBreakUpForNewInvoice = new RentBreakUp(Utils.dateToString(findLatestInvoice.getInvoiceStartDate()),
                 Utils.dateToString(new Date()),
                 findNoOfDaysStayedInNewBedAsOfToday,
+                Utils.roundOfDouble(Math.round(payableRentAsOfToday)),
+                Utils.roundOffWithTwoDigit(newRentPerDay),
                 Utils.roundOfDouble(Math.round(payableRentAsOfToday)),
                 bedName,
                 roomName,
