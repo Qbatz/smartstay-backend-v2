@@ -46,7 +46,8 @@ public class TenantRegisterResponse {
     @NoArgsConstructor
     @Builder
     public static class SegmentSummary {
-        private double count;
+        private int count;
+        private double amount;
         private int trend;
     }
 
