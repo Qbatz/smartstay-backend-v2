@@ -41,6 +41,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -849,17 +850,40 @@ public class CustomersService {
             if (updateInfo.mailId() != null && !updateInfo.mailId().equalsIgnoreCase("")) {
                 customers.setEmailId(updateInfo.mailId());
             }
+            else {
+                if (customers.getEmailId() != null) {
+                    customers.setEmailId(null);
+                }
+            }
             if (updateInfo.houseNo() != null && !updateInfo.houseNo().equalsIgnoreCase("")) {
                 customers.setHouseNo(updateInfo.houseNo());
+            }
+            else {
+                if (customers.getHouseNo() != null) {
+                    customers.setHouseNo(null);
+                }
             }
             if (updateInfo.street() != null && !updateInfo.street().equalsIgnoreCase("")) {
                 customers.setStreet(updateInfo.street());
             }
+            else {
+                if (customers.getStreet() != null) {
+                    customers.setStreet(null);
+                }
+            }
             if (updateInfo.landmark() != null && !updateInfo.landmark().equalsIgnoreCase("")) {
                 customers.setLandmark(updateInfo.landmark());
             }
+            else {
+                if (customers.getLandmark() != null) {
+                    customers.setLandmark(null);
+                }
+            }
             if (updateInfo.pincode() != null) {
                 customers.setPincode(updateInfo.pincode());
+            }
+            else {
+                customers.setPincode(0);
             }
             if (updateInfo.city() != null && !updateInfo.city().equalsIgnoreCase("")) {
                 customers.setCity(updateInfo.city());
@@ -867,8 +891,9 @@ public class CustomersService {
             if (updateInfo.state() != null && !updateInfo.state().equalsIgnoreCase("")) {
                 customers.setState(updateInfo.state());
             }
+
             if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
-                int cus = customersRepository.findCustomersByMobile(customerId, updateInfo.mobile());
+                int cus = customersRepository.findCustomerByMobileAndHostelId(customers.getHostelId(), customerId, updateInfo.mobile());
                 if (cus > 0) {
                     return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
                 }
@@ -1471,7 +1496,7 @@ public class CustomersService {
 
         List<InvoicesV1> listUnpaidRentalInvoices = listUnpaidInvoices
                 .stream()
-                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
+                .filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
                 .toList();
 
         List<InvoicesV1> currentMonthInvoice = listUnpaidInvoices
@@ -1593,17 +1618,20 @@ public class CustomersService {
 
         List<PartialPaidInvoiceInfo> lisPartialPayments = transactionService.getTransactionInfo(partialPaymentInvoices);
 
-        partialPaidAmount = lisPartialPayments
+        partialPaidAmount = listUnpaidRentalInvoices
                 .stream()
-                .mapToDouble(PartialPaidInvoiceInfo::paidAmount)
+                .filter(invoicesV1 -> invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                .mapToDouble(InvoicesV1::getPaidAmount)
                 .sum();
+
         unpaidInvoiceAmount = listUnpaidInvoices
                 .stream()
-                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
+                .filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
                 .mapToDouble(InvoicesV1::getTotalAmount)
                 .sum();
 
         double invoiceBalance = unpaidInvoiceAmount - partialPaidAmount;
+        unpaidInvoiceAmount = unpaidInvoiceAmount - partialPaidAmount;
 
         totalAmountToBePaid = invoiceBalance - advancePaidAmount;
 
@@ -1694,7 +1722,7 @@ public class CustomersService {
             rentBreakUpList.add(rentBreakUp);
         }
 
-        RentInfo rentInfo = new RentInfo((double) Math.round(currentMonthPayableRent),
+        RentInfo rentInfo = new RentInfo(Utils.roundOffWithTwoDigit(currentMonthPayableRent),
                 (double) Math.round(currentRentPaid),
                 (int) noOfDaySatayed,
                 currentMonthRent,
@@ -1707,11 +1735,30 @@ public class CustomersService {
             isRefundable = true;
         }
 
+        double refundableRent = 0.0;
+        double refundableAdvance = 0.0;
+        if (totalAmountToBePaid < 0) {
+            if (currentRentPaid > 0) {
+                refundableRent = (currentRentPaid - currentMonthPayableRent);
+                if (refundableRent < 0) {
+                    refundableRent = refundableRent * -1;
+                }
+            }
+            if (refundableRent > 0) {
+                refundableAdvance = advancePaidAmount;
+            }
+            else {
+                refundableAdvance = advancePaidAmount - (currentMonthPayableRent - currentRentPaid);
+            }
+
+
+        }
+
         SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
                 totalDeductions,
                 unpaidInvoiceAmount,
-                0.0,
-                0.0,
+                Utils.roundOffWithTwoDigit(refundableRent),
+                Utils.roundOffWithTwoDigit(refundableAdvance),
                 0.0,
                 Utils.roundOfDouble(unpaidInvoiceAmount),
                 isRefundable);
@@ -1975,16 +2022,42 @@ public class CustomersService {
             isRefundable = true;
         }
 
+        double refundableAdvance = 0.0;
+        if (totalAmountToBePaid < 0) {
+            if (currentMonthPaidRent > 0) {
+                refundableRent = (currentMonthPaidRent - totalRentIncludePreviousBed);
+                if (refundableRent < 0) {
+                    refundableRent = refundableRent * -1;
+                }
+            }
+            if (refundableRent > 0) {
+                refundableAdvance = advancePaidAmount;
+            }
+            else {
+                refundableAdvance = advancePaidAmount - (payableRentAsOfToday - totalRentIncludePreviousBed);
+            }
+
+
+        }
 
 
         SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
                 Utils.roundOfDouble(totalDeductions),
                 Utils.roundOfDouble(oldInvoiceBalanceAmount),
                 Utils.roundOfDouble(refundableRent),
-                0.0,
+                Utils.roundOffWithTwoDigit(refundableAdvance),
                 electricityAmount,
                 Utils.roundOfDouble(oldInvoiceBalanceAmount),
                 isRefundable);
+
+//        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
+//                totalDeductions,
+//                unpaidInvoiceAmount,
+//                Utils.roundOffWithTwoDigit(refundableRent),
+//                Utils.roundOffWithTwoDigit(refundableAdvance),
+//                electricityAmount,
+//                Utils.roundOfDouble(unpaidInvoiceAmount),
+//                isRefundable);
 
         settlementDetailsService.addSettlementForCustomer(customers.getCustomerId(), leavingDate);
 
@@ -2084,12 +2157,12 @@ public class CustomersService {
 
         List<InvoicesV1> listUnpaidRentalInvoices = listUnpaidInvoices
                 .stream()
-                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
+                .filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
                 .toList();
 
         List<InvoicesV1> currentMonthInvoice = listUnpaidInvoices
                 .stream()
-                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) >= 0)
+                .filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) >= 0)
                 .toList();
 
         Calendar calStartDate = Calendar.getInstance();
@@ -2188,11 +2261,11 @@ public class CustomersService {
                 .map(InvoicesV1::getInvoiceId)
                 .toList();
 
-        List<PartialPaidInvoiceInfo> lisPartialPayments = transactionService.getTransactionInfo(partialPaymentInvoices);
+//        List<PartialPaidInvoiceInfo> lisPartialPayments = transactionService.getTransactionInfo(partialPaymentInvoices);
 
-        partialPaidAmount = lisPartialPayments
+        partialPaidAmount = listUnpaidInvoices
                 .stream()
-                .mapToDouble(PartialPaidInvoiceInfo::paidAmount)
+                .mapToDouble(InvoicesV1::getPaidAmount)
                 .sum();
         unpaidInvoiceAmount = listUnpaidInvoices
                 .stream()

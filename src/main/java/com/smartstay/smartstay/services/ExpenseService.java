@@ -100,6 +100,19 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
 
+        if (expense.count() == null) {
+            return new ResponseEntity<>(Utils.EXPENSE_COUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        try {
+            int count = Integer.parseInt(expense.count().toString());
+            if (count == 0) {
+                return new ResponseEntity<>(Utils.INVALID_COUNT, HttpStatus.BAD_REQUEST);
+            }
+        }
+        catch (Exception e){
+            return new ResponseEntity<>(Utils.INVALID_COUNT, HttpStatus.BAD_REQUEST);
+        }
+
         boolean hasSubCategory = expenseCategoryService.checkCategoryHavingSubCategory(hostelId, expense.categoryId());
         if (hasSubCategory) {
             if (!Utils.checkNullOrEmpty(expense.subCategory())) {

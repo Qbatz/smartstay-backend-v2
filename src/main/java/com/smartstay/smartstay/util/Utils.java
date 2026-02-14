@@ -40,6 +40,8 @@ public class Utils {
     public static final String INVALID_BANKING = "Invalid Banking";
     public static final String INVALID_BANKING_DETAILS = "Bank details not found. Please add bank details first.";
     public static final String INVALID_ASSET = "Invalid Asset";
+    public static final String INVALID_TEMPLATE_ID = "Invalid template id";
+    public static final String INVALID_TEMPLAYE_TYPE_ID = "Invalid template type id";
 
     public static final String INVALID_AMENITY = "Invalid Amenity";
     public static final String AMENITY_ALREADY_DELETED = "Amenity already deleted";
@@ -226,6 +228,8 @@ public class Utils {
     public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_PREVIOUS_HISTORY_EXISTS = "The final settlement can only be generated after the joining date or a bed switch.";
     public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_INVALID_NOTICE_DATE = "The final settlement date must be after the notice date.";
     public static final String FILES_ARE_REQUIRED_TO_UPLOAD = "Files cannot be empty";
+    public static final String EXPENSE_COUNT_REQUIRED = "Expense count is required";
+    public static final String INVALID_COUNT = "Invalid expense count";
 
     /**
      * Defining module Id's here

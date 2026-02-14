@@ -11,8 +11,11 @@ import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillTemplate;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillingRule;
+import com.smartstay.smartstay.payloads.templates.DeleteUrls;
 import com.smartstay.smartstay.repositories.BankingRepository;
+import com.smartstay.smartstay.repositories.BillTemplateTypeRepository;
 import com.smartstay.smartstay.repositories.BillTemplatesRepository;
+import com.smartstay.smartstay.responses.templates.TemplateTypes;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -50,6 +53,8 @@ public class TemplatesService {
 
     @Autowired
     private BillTemplatesRepository templateRepository;
+    @Autowired
+    private BillTemplateTypeRepository billTemplateTypeRepository;
 
     @Autowired
     private BankingRepository bankingRepository;
@@ -512,5 +517,92 @@ public class TemplatesService {
 
     private String uploadIfPresent(MultipartFile file) {
         return uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "users/Bills");
+    }
+
+    public ResponseEntity<?> deleteFiles(String hostelId, String templateId, String templateTypeId, DeleteUrls deleteUrls) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (deleteUrls == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (deleteUrls.type() == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        Integer tId = 0;
+        Integer ttId = 0;
+        try {
+            tId = Integer.parseInt(templateId);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(Utils.INVALID_TEMPLATE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            ttId = Integer.parseInt(templateTypeId);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(Utils.INVALID_TEMPLAYE_TYPE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (tId == 0) {
+            return new ResponseEntity<>(Utils.INVALID_TEMPLATE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (ttId == 0) {
+            return new ResponseEntity<>(Utils.INVALID_TEMPLAYE_TYPE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        BillTemplates billTemplateType = templateRepository.findByHostelIdAndTemplateId(hostelId, tId);
+        if (billTemplateType == null) {
+            return new ResponseEntity<>(Utils.INVALID_TEMPLATE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!billTemplateType.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        Integer finalTtId = ttId;
+        BillTemplateType templateType = billTemplateType
+                .getTemplateTypes()
+                .stream()
+                .filter(i -> finalTtId.equals(i.getTemplateTypeId()))
+                .findFirst()
+                .orElse(null);
+        if (templateType == null) {
+            return new ResponseEntity<>(Utils.INVALID_TEMPLAYE_TYPE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        //QRCO
+       if (deleteUrls.type().equalsIgnoreCase("QRCODE")) {
+           templateType.setQrCode(null);
+       }
+       else if (deleteUrls.type().equalsIgnoreCase("invoice-logo")) {
+           templateType.setInvoiceLogoUrl(null);
+       }
+       else if (deleteUrls.type().equalsIgnoreCase("receipt-logo")) {
+           templateType.setReceiptLogoUrl(null);
+       }
+       else if (deleteUrls.type().equalsIgnoreCase("invoice-signature")) {
+           templateType.setInvoiceSignatureUrl(null);
+       }
+       else if (deleteUrls.type().equalsIgnoreCase("receipt-signature")) {
+            templateType.setReceiptSignatureUrl(null);
+       }
+
+       billTemplateTypeRepository.save(templateType);
+
+       return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
     }
 }

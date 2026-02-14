@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.responses.invoices;
 
+import com.smartstay.smartstay.dto.customer.InvoiceRefundHistory;
+
 import java.util.List;
 
 public record FinalSettlementResponse(String invoiceNumber,
@@ -17,6 +19,7 @@ public record FinalSettlementResponse(String invoiceNumber,
                                       ConfigInfo configurations,
 
                                       List<InvoiceSummary> invoiceSummaries,
-                                      InvoiceInfo invoiceInfo
+                                      InvoiceInfo invoiceInfo,
+                                      List<InvoiceRefundHistory> refundHistory
 ) {
 }
