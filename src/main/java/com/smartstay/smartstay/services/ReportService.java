@@ -456,13 +456,19 @@ public class ReportService {
                         if (aggregates.getPaidAmount() != null)
                                 paidAmount = aggregates.getPaidAmount();
                 }
+                Double refundAmount = 0.0;
+                if (aggregates != null && aggregates.getRefundAmount() != null) {
+                        refundAmount = aggregates.getRefundAmount();
+                }
+                Double profit = totalAmount - refundAmount;
                 Double outStandingAmount = totalAmount - paidAmount;
 
                 int totalPages = (int) Math.ceil((double) totalInvoices / size);
 
                 ReportDetailsResponse response = ReportDetailsResponse.builder().totalInvoices(totalInvoices)
                                 .currentPage(page)
-                                .totalPages(totalPages).totalAmount(totalAmount).outStandingAmount(outStandingAmount)
+                                .totalPages(totalPages).totalAmount(totalAmount).refundAmount(refundAmount)
+                                .profit(profit).outStandingAmount(outStandingAmount)
                                 .paidAmount(paidAmount).startDate(Utils.dateToString(startDate))
                                 .endDate(Utils.dateToString(endDate))
                                 .filterOptions(options).invoiceList(invoiceDetails).build();
