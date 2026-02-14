@@ -45,6 +45,24 @@ public class UserActivitiesService {
 
     }
 
+    public void addLogBasedOnProfile( String source, String operation,  Users users) {
+        Date loggedAt = new Date();
+
+        UserActivities userActivities = new UserActivities();
+        userActivities.setDescription(ActivityLogUtils.getActivityDescription(source, operation));
+        userActivities.setUserId(users.getUserId());
+        userActivities.setLoggedAt(loggedAt);
+        userActivities.setCreatedAt(new Date());
+        userActivities.setParentId(users.getParentId());
+        userActivities.setSource(source);
+        userActivities.setSourceId(users.getUserId());
+        userActivities.setActivityType(operation);
+        userActivities.setHostelId(null);
+
+        userActivitiesRepositories.save(userActivities);
+
+    }
+
     public void addLoginLog(String hostelId, String date, String source, String operation, String sourceId, Users users) {
         Date loggedAt = new Date();
         if (date != null && !date.trim().equalsIgnoreCase("")) {

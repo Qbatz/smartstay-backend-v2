@@ -6,6 +6,8 @@ import com.smartstay.smartstay.dao.Modules;
 import com.smartstay.smartstay.dao.RolesPermission;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.roles.AddRoles;
 import com.smartstay.smartstay.payloads.roles.Permission;
@@ -139,6 +141,7 @@ public class RolesService {
         }
         existingRole.setUpdatedAt(new Date());
         rolesRepository.save(existingRole);
+        usersService.addUserLog(rolesV1.getHostelId(), String.valueOf(existingRole.getRoleId()), ActivitySource.ROLE, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -176,7 +179,10 @@ public class RolesService {
         role.setParentId(user.getParentId());
         role.setHostelId(roleData.hostelId());
         role.setPermissions(rolesPermissions);
-        rolesRepository.save(role);
+        RolesV1 roleV1 = rolesRepository.save(role);
+
+        usersService.addUserLog(roleData.hostelId(), String.valueOf(roleV1.getRoleId()), ActivitySource.ROLE, ActivitySourceType.CREATE, user);
+
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -195,6 +201,7 @@ public class RolesService {
         RolesV1 existingRole = rolesRepository.findByRoleIdAndParentId(roleId,users.getParentId());
         if (existingRole != null) {
             rolesRepository.delete(existingRole);
+            usersService.addUserLog(existingRole.getHostelId(), String.valueOf(existingRole.getRoleId()), ActivitySource.ROLE, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
         }
         return new ResponseEntity<>("No Roles found", HttpStatus.BAD_REQUEST);

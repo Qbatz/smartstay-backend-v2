@@ -838,9 +838,8 @@ public class InvoiceV1Service {
         invoicesV1.setInvoiceItems(listInvoicesItems);
 
 
-        invoicesV1Repository.save(invoicesV1);
-
-
+        InvoicesV1 invoicesV11 = invoicesV1Repository.save(invoicesV1);
+        usersService.addUserLog(hostelV1.getHostelId(), invoicesV11.getInvoiceId(), ActivitySource.INVOICE, ActivitySourceType.MANUAL_BILL, users);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 
 
@@ -2266,7 +2265,7 @@ public class InvoiceV1Service {
         invoicesV1.setTotalAmount(newInvoiceAmount);
 
         invoicesV1Repository.save(invoicesV1);
-
+        usersService.addUserLog(hostelId, invoicesV1.getInvoiceId(), ActivitySource.INVOICE, ActivitySourceType.UPDATE, users);
         return new ResponseEntity<>(HttpStatus.OK);
 
     }

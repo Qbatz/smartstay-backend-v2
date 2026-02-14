@@ -83,7 +83,7 @@ public class HostelReadingsService {
 
         HostelReadings hr2 = hostelEBReadingsRepository.save(hr);
 
-        usersService.addUserLog(hostelId, String.valueOf(hr2.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.CREATE, users);
+        usersService.addUserLog(hostelId, "HR"+hr2.getId(), ActivitySource.ELECTRICITY, ActivitySourceType.CREATE, users);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
 
     }
@@ -142,7 +142,7 @@ public class HostelReadingsService {
             }
 
             hostelEBReadingsRepository.save(currentReading);
-            usersService.addUserLog(hostelId, String.valueOf(currentReading.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.UPDATE, users);
+            usersService.addUserLog(hostelId, "HR" +currentReading.getId(), ActivitySource.ELECTRICITY, ActivitySourceType.UPDATE, users);
         }
         else {
             if (updateElectricity.reading() != null) {
@@ -163,7 +163,7 @@ public class HostelReadingsService {
             currentReading.setUpdatedBy(authentication.getName());
             currentReading.setUpdatedAt(new Date());
 
-            usersService.addUserLog(hostelId, String.valueOf(currentReading.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.UPDATE, users);
+            usersService.addUserLog(hostelId, "HR" + currentReading.getId(), ActivitySource.ELECTRICITY, ActivitySourceType.UPDATE, users);
 
             hostelEBReadingsRepository.save(currentReading);
         }
@@ -187,7 +187,7 @@ public class HostelReadingsService {
         }
 
         hostelEBReadingsRepository.delete(hr);
-        usersService.addUserLog(hostelId, String.valueOf(hr.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.DELETE, users);
+        usersService.addUserLog(hostelId, "HR" + hr.getId(), ActivitySource.ELECTRICITY, ActivitySourceType.DELETE, users);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 

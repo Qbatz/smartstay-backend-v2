@@ -18,6 +18,7 @@ import com.smartstay.smartstay.dto.documents.CustomerFiles;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.settlement.CurrentMonthOtherItems;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.ennum.InvoiceItems;
 import com.smartstay.smartstay.ennum.PaymentStatus;
@@ -1526,6 +1527,9 @@ public class CustomersService {
 
         noOfDaySatayed = Utils.findNumberOfDays(billStartDate, lDate);
 
+        List<CurrentMonthOtherItems> otherItems = new ArrayList<>();
+        final double[] currentMonthOtherItemsAmount = {0.0};
+
         //taken from unpaid invoices. So current month invoice is empty for paid
         if (!currentMonthInvoice.isEmpty()) {
 //            List<> currentInvoice = currentMonthInvoice.get(0);
@@ -1533,6 +1537,32 @@ public class CustomersService {
                     .stream()
                     .mapToDouble(InvoicesV1::getTotalAmount)
                     .sum();
+
+
+            currentMonthInvoice.forEach(item -> {
+                otherItems.addAll(item.getInvoiceItems()
+                        .stream()
+                        .filter(i -> !i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name()))
+                        .map(i -> {
+                            if (i.getAmount() != null) {
+                                currentMonthOtherItemsAmount[0] = currentMonthOtherItemsAmount[0] + i.getAmount();
+                            }
+                            String itemName = null;
+                            if (i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.OTHERS.name())) {
+                                itemName = i.getOtherItem();
+                            }
+                            else {
+                                if (i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.EB.name())) {
+                                    itemName = "Electricity";
+                                }
+                                else if (i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.AMENITY.name())) {
+                                    itemName = "Amenities";
+                                }
+                            }
+                            return new CurrentMonthOtherItems(itemName, i.getAmount());
+                        })
+                        .toList());
+            });
 
             List<String> currentMonthInfo = currentMonthInvoice
                     .stream()
@@ -1571,6 +1601,32 @@ public class CustomersService {
                         .mapToDouble(InvoicesV1::getTotalAmount)
                         .sum();
                 isCurrentRentPaid = true;
+
+                listCurrentInvoicesPaid.forEach(item -> {
+                    otherItems.addAll(item.getInvoiceItems()
+                            .stream()
+                            .filter(i -> !i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name()))
+                            .map(i -> {
+                                if (i.getAmount() != null) {
+                                    currentMonthOtherItemsAmount[0] = currentMonthOtherItemsAmount[0] + i.getAmount();
+                                }
+                                String itemName = null;
+                                if (i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.OTHERS.name())) {
+                                    itemName = i.getOtherItem();
+                                }
+                                else {
+                                    if (i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.EB.name())) {
+                                        itemName = "Electricity";
+                                    }
+                                    else if (i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.AMENITY.name())) {
+                                        itemName = "Amenities";
+                                    }
+                                }
+                                return new CurrentMonthOtherItems(itemName, i.getAmount());
+                            })
+                            .toList());
+                });
+
             }
         }
 
@@ -1578,6 +1634,7 @@ public class CustomersService {
         double rentPerDay = bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth;
 
         currentMonthPayableRent = noOfDaySatayed * rentPerDay;
+        currentMonthPayableRent = currentMonthPayableRent + currentMonthOtherItemsAmount[0];
 
         List<InvoicesV1> advanceInvoice = listUnpaidInvoices
                 .stream()
@@ -1729,6 +1786,8 @@ public class CustomersService {
                 Utils.roundOffDecimal(rentPerDay),
                 Utils.dateToString(calStartDate.getTime()),
                 Utils.dateToString(calEndDate.getTime()),
+                0.0,
+                otherItems,
                 rentBreakUpList);
 
         if (totalAmountToBePaid < 0) {
@@ -2001,6 +2060,8 @@ public class CustomersService {
                 Utils.roundOffDecimal(newRentPerDay),
                 Utils.dateToString(currentMonthInvoiceStartDate),
                 Utils.dateToString(billDate.currentBillEndDate()),
+                null,
+                null,
                 breakUpList);
 
         totalAmountToBePaid = oldInvoiceBalanceAmount - advancePaidAmount;

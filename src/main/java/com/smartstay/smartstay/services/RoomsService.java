@@ -4,6 +4,8 @@ import com.smartstay.smartstay.Wrappers.RoomsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.room.RoomInfo;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.rooms.AddRoom;
@@ -125,6 +127,7 @@ public class RoomsService {
         }
         existingRoom.setUpdatedAt(new Date());
         roomRepository.save(existingRoom);
+        usersService.addUserLog(hostelId, String.valueOf(existingRoom.getRoomId()), ActivitySource.ROOMS, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -171,7 +174,8 @@ public class RoomsService {
         room.setParentId(user.getParentId());
         room.setFloorId(addRoom.floorId());
         room.setHostelId(addRoom.hostelId());
-        roomRepository.save(room);
+        Rooms roms = roomRepository.save(room);
+        usersService.addUserLog(addRoom.hostelId(), String.valueOf(roms.getRoomId()), ActivitySource.ROOMS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -195,6 +199,7 @@ public class RoomsService {
             existingRoom.setIsDeleted(true);
             roomRepository.save(existingRoom);
             bedsService.deleteBedsByRoomId(existingRoom.getRoomId(), existingRoom.getParentId());
+            usersService.addUserLog(existingRoom.getHostelId(), String.valueOf(existingRoom.getRoomId()), ActivitySource.ROOMS, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
