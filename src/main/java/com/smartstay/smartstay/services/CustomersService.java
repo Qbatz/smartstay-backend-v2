@@ -1761,10 +1761,10 @@ public class CustomersService {
         List<RentBreakUp> rentBreakUpList = new ArrayList<>();
         if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) <= 0) {
             RentBreakUp rentBreakUp = new RentBreakUp(Utils.dateToString(billDate.currentBillStartDate()),
-                    Utils.dateToString(new Date()),
+                    Utils.dateToString(lDate),
                     Utils.findNumberOfDays(billDate.currentBillStartDate(), lDate),
-                    (double) Math.round(currentMonthPayableRent),
                     Utils.roundOffWithTwoDigit(rentPerDay),
+                    (double) Math.round(currentMonthPayableRent),
                     (double) Math.round(currentMonthPayableRent),
                     bedName,
                     roomName,
@@ -1773,7 +1773,7 @@ public class CustomersService {
         }
         else {
             RentBreakUp rentBreakUp = new RentBreakUp(Utils.dateToString(bookingDetails.getJoiningDate()),
-                    Utils.dateToString(new Date()),
+                    Utils.dateToString(lDate),
                     Utils.findNumberOfDays(bookingDetails.getJoiningDate(), lDate),
                     (double) Math.round(currentMonthPayableRent),
                     Utils.roundOffWithTwoDigit(rentPerDay),
@@ -2046,7 +2046,7 @@ public class CustomersService {
             }
         }
         RentBreakUp rentBreakUpForNewInvoice = new RentBreakUp(Utils.dateToString(findLatestInvoice.getInvoiceStartDate()),
-                Utils.dateToString(new Date()),
+                Utils.dateToString(leavingDate),
                 findNoOfDaysStayedInNewBedAsOfToday,
                 Utils.roundOfDouble(Math.round(payableRentAsOfToday)),
                 Utils.roundOffWithTwoDigit(newRentPerDay),
