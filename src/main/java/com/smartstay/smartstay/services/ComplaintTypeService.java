@@ -1,7 +1,10 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.ComplaintTypeV1;
+import com.smartstay.smartstay.dao.HostelV1;
+import com.smartstay.smartstay.dao.RolesV1;
+import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.payloads.complaints.AddComplaintType;
@@ -144,12 +147,9 @@ public class ComplaintTypeService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        boolean exist = complaintRepository.existsByComplaintTypeIdAndIsActive(complaintTypeId,true);
+        boolean exist = complaintRepository.existsByComplaintTypeIdAndIsActive(complaintTypeId, true);
         if (exist) {
-            return new ResponseEntity<>(
-                    "Complaint exists for this ComplaintType so it can't be deleted",
-                    HttpStatus.BAD_REQUEST
-            );
+            return new ResponseEntity<>("Complaint exists for this ComplaintType so it can't be deleted", HttpStatus.BAD_REQUEST);
         }
 
 
@@ -189,5 +189,9 @@ public class ComplaintTypeService {
 
     public ComplaintTypeV1 getComplaintType(Integer complaintTypeId) {
         return complaintTypeV1Repository.findById(complaintTypeId).orElse(null);
+    }
+
+    public List<ComplaintTypeResponse> getComplaintTypesByHostelId(String hostelId) {
+        return complaintTypeV1Repository.getAllComplaintsType(hostelId);
     }
 }

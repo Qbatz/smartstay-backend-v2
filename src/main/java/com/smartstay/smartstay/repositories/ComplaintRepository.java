@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.ComplaintComments;
 import com.smartstay.smartstay.dao.ComplaintsV1;
 import com.smartstay.smartstay.responses.complaint.ComplaintResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,7 +14,9 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String> {
+public interface ComplaintRepository
+        extends JpaRepository<ComplaintsV1, String>,
+        JpaSpecificationExecutor<ComplaintsV1> {
 
 
     ComplaintsV1 findByComplaintIdAndParentId(int complaintId, String parentId);
@@ -182,4 +185,7 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
     @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.status IN :statuses AND c.isActive = true AND c.isDeleted = false AND DATE(c.complaintDate) >= DATE(:startDate) AND DATE(c.complaintDate) <= DATE(:endDate)")
     int countActiveByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("statuses") List<String> statuses,
                                           @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+    @Query("SELECT DISTINCT c.customerId FROM ComplaintsV1 c WHERE c.hostelId = :hostelId")
+    List<String> findDistinctCustomerIdsByHostelId(@Param("hostelId") String hostelId);
 }
