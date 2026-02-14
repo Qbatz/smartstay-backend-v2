@@ -122,7 +122,8 @@ public class InvoiceV1Service {
         this.transactionService = transactionService;
     }
 
-    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate, BillingDates billingDates) {
+    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile,
+            String customerMailId, String joiningDate, BillingDates billingDates) {
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
             BillTemplates templates = templateService.getBillTemplate(hostelId, type);
@@ -162,8 +163,7 @@ public class InvoiceV1Service {
                     invoiceNumber.append("-");
                     int suff = Integer.parseInt(suffix[1]) + 1;
                     invoiceNumber.append(String.format("%03d", suff));
-                }
-                else {
+                } else {
                     invoiceNumber.append("-00");
                     invoiceNumber.append("1");
 
@@ -204,11 +204,9 @@ public class InvoiceV1Service {
             invoiceItems.setInvoice(invoicesV1);
             if (type.equalsIgnoreCase(InvoiceType.RENT.name())) {
                 invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
-            }
-            else if(type.equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            } else if (type.equalsIgnoreCase(InvoiceType.BOOKING.name())) {
                 invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.BOOKING.name());
-            }
-            else if(type.equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            } else if (type.equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
                 invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.ADVANCE.name());
             }
 
@@ -216,7 +214,6 @@ public class InvoiceV1Service {
             listInvoiceItems.add(invoiceItems);
 
             invoicesV1.setInvoiceItems(listInvoiceItems);
-
 
             invoicesV1Repository.save(invoicesV1);
             String status = null;
@@ -836,7 +833,6 @@ public class InvoiceV1Service {
         invoicesV1.setCancelled(false);
 
         invoicesV1.setInvoiceItems(listInvoicesItems);
-
 
         InvoicesV1 invoicesV11 = invoicesV1Repository.save(invoicesV1);
         usersService.addUserLog(hostelV1.getHostelId(), invoicesV11.getInvoiceId(), ActivitySource.INVOICE, ActivitySourceType.MANUAL_BILL, users);
@@ -2265,7 +2261,7 @@ public class InvoiceV1Service {
         invoicesV1.setTotalAmount(newInvoiceAmount);
 
         invoicesV1Repository.save(invoicesV1);
-        usersService.addUserLog(hostelId, invoicesV1.getInvoiceId(), ActivitySource.INVOICE, ActivitySourceType.UPDATE, users);
+
         return new ResponseEntity<>(HttpStatus.OK);
 
     }
