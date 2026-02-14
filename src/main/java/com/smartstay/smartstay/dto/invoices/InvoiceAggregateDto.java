@@ -11,4 +11,5 @@ public class InvoiceAggregateDto {
     private Long count;
     private Double totalAmount;
     private Double paidAmount;
+    private Double refundAmount;
 }

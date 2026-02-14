@@ -16,6 +16,8 @@ public class ReportDetailsResponse {
     private int currentPage;
     private int totalPages;
     private Double totalAmount;
+    private Double refundAmount;
+    private Double profit;
     private Double outStandingAmount;
     private Double paidAmount;
     private String startDate;
