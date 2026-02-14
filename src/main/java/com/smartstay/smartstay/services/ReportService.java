@@ -1,14 +1,16 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.BookingsV1;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.InvoicesV1;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.beds.BedDetails;
+import com.smartstay.smartstay.dto.beds.RoomBedCount;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto;
+import com.smartstay.smartstay.dto.reports.ComplaintsReportFilterRequest;
+import com.smartstay.smartstay.dto.reports.ComplaintsReportResponse;
 import com.smartstay.smartstay.dto.reports.ElectricityForReports;
 import com.smartstay.smartstay.ennum.*;
+import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.responses.Reports.ReportDetailsResponse;
 import com.smartstay.smartstay.responses.Reports.ReportResponse;
 import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
@@ -57,6 +59,8 @@ public class ReportService {
     private VendorService vendorService;
     @Autowired
     private ComplaintsService complaintService;
+    @Autowired
+    private ComplaintTypeService complaintTypeService;
     @Autowired
     private AmenityRequestService amenityRequestService;
 
@@ -144,8 +148,7 @@ public class ReportService {
 
             if (BookingStatus.CHECKIN.name().equalsIgnoreCase(status)) {
                 activeCount++;
-            } else if (BookingStatus.NOTICE.name().equalsIgnoreCase(status)
-                    ) {
+            } else if (BookingStatus.NOTICE.name().equalsIgnoreCase(status)) {
                 noticeCount++;
             } else if (BookingStatus.VACATED.name().equalsIgnoreCase(status)
                     || BookingStatus.TERMINATED.name().equalsIgnoreCase(status)) {
@@ -568,8 +571,8 @@ public class ReportService {
                 .collect(Collectors.toMap(Customers::getCustomerId, c -> c, (a, b1) -> b1));
 
         Map<Integer, Long> sharingMap = bedsService.countBedsByRoomForHostel(hostelId).stream()
-                .collect(Collectors.toMap(com.smartstay.smartstay.dto.beds.RoomBedCount::getRoomId,
-                        com.smartstay.smartstay.dto.beds.RoomBedCount::getBedCount, (a, b1) -> b1));
+                .collect(Collectors.toMap(RoomBedCount::getRoomId,
+                        RoomBedCount::getBedCount, (a, b1) -> b1));
 
         List<TenantRegisterResponse.TenantDetail> details = new ArrayList<>();
         for (BookingsV1 b : paginatedBookings) {
@@ -658,5 +661,185 @@ public class ReportService {
 
         return TenantRegisterResponse.Filters.builder().tenantStatus(statusList).period(periodList).floor(floorList)
                 .room(roomList).build();
+    }
+
+    public ResponseEntity<?> getComplaintsReport(String hostelId,
+            ComplaintsReportFilterRequest request) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Date startDate;
+        Date endDate;
+        if (request.getPeriod() != null && !request.getPeriod().isEmpty()) {
+            BillingDates dates = calculateDateRange(request.getPeriod(), hostelId);
+            startDate = dates.currentBillStartDate();
+            endDate = dates.currentBillEndDate();
+        } else if (request.getStartDate() != null || request.getEndDate() != null) {
+            startDate = request.getStartDate() != null && !request.getStartDate().isEmpty()
+                    ? Utils.stringToDate(request.getStartDate(), Utils.USER_INPUT_DATE_FORMAT)
+                    : Utils.stringToDate("01/01/2000", Utils.USER_INPUT_DATE_FORMAT);
+            endDate = request.getEndDate() != null && !request.getEndDate().isEmpty()
+                    ? Utils.stringToDate(request.getEndDate(), Utils.USER_INPUT_DATE_FORMAT)
+                    : new Date();
+        } else {
+            BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+            startDate = billingDates.currentBillStartDate();
+            endDate = billingDates.currentBillEndDate();
+        }
+
+        List<String> statusStrings = request.getStatus() != null
+                ? request.getStatus().stream().map(Enum::name).collect(Collectors.toList())
+                : null;
+
+        Page<ComplaintsV1> complaintPage = complaintService.getFilteredComplaints(
+                hostelId, startDate, endDate, statusStrings, request.getRaisedBy(), request.getComplaintTypeIds(),
+                request.getPage(), request.getSize());
+
+        List<ComplaintsV1> complaints = complaintPage.getContent();
+
+        // Fetch Maps
+        Set<String> customerIds = complaints.stream().map(ComplaintsV1::getCustomerId)
+                .collect(Collectors.toSet());
+        Set<Integer> complaintTypeIds = complaints.stream()
+                .map(ComplaintsV1::getComplaintTypeId).collect(Collectors.toSet());
+        Set<Integer> roomIds = complaints.stream().filter(c -> c.getRoomId() != null && c.getRoomId() != 0)
+                .map(ComplaintsV1::getRoomId).collect(Collectors.toSet());
+        Set<Integer> bedIds = complaints.stream().filter(c -> c.getBedId() != null && c.getBedId() != 0)
+                .map(ComplaintsV1::getBedId).collect(Collectors.toSet());
+        Set<Integer> floorIds = complaints.stream().filter(c -> c.getFloorId() != null && c.getFloorId() != 0)
+                .map(ComplaintsV1::getFloorId).collect(Collectors.toSet());
+        Set<String> assigneeIds = complaints.stream().filter(c -> c.getAssigneeId() != null)
+                .map(ComplaintsV1::getAssigneeId).collect(Collectors.toSet());
+
+        Map<String, Customers> customerMap = !customerIds.isEmpty()
+                ? customersService.getCustomerDetails(new ArrayList<>(customerIds)).stream().collect(
+                        Collectors.toMap(Customers::getCustomerId, c -> c))
+                : new HashMap<>();
+        Map<Integer, ComplaintTypeV1> typeMap = !complaintTypeIds.isEmpty()
+                ? complaintTypeService.getComplaintTypesById(new ArrayList<>(complaintTypeIds)).stream().collect(
+                        Collectors.toMap(ComplaintTypeV1::getComplaintTypeId, t -> t))
+                : new HashMap<>();
+        Map<Integer, Rooms> roomMap = !roomIds.isEmpty()
+                ? roomsService.getAllRoomsByHostelId(hostelId).stream().filter(r -> roomIds.contains(r.getRoomId()))
+                        .collect(Collectors.toMap(Rooms::getRoomId, r -> r))
+                : new HashMap<>();
+        Map<Integer, BedDetails> bedMap = !bedIds.isEmpty()
+                ? bedsService.getBedDetails(new ArrayList<>(bedIds)).stream()
+                        .collect(Collectors.toMap(BedDetails::getBedId, b -> b))
+                : new HashMap<>();
+        Map<Integer, Floors> floorMap = !floorIds.isEmpty()
+                ? floorsService.getFloorByHostelID(hostelId, user.getParentId()).stream()
+                        .filter(f -> floorIds.contains(f.getFloorId()))
+                        .collect(Collectors.toMap(Floors::getFloorId, f -> f))
+                : new HashMap<>();
+        Map<String, Users> userMap = !assigneeIds.isEmpty()
+                ? usersService.findByListOfUserIds(new ArrayList<>(assigneeIds)).stream().collect(
+                        Collectors.toMap(Users::getUserId, u -> u))
+                : new HashMap<>();
+
+        List<ComplaintsReportResponse.ComplaintDetail> details = complaints.stream()
+                .map(c -> {
+                    Customers cust = customerMap.get(c.getCustomerId());
+                    ComplaintTypeV1 type = typeMap.get(c.getComplaintTypeId());
+                    Rooms room = roomMap.get(c.getRoomId());
+                    BedDetails bed = bedMap.get(c.getBedId());
+                    Floors floor = floorMap.get(c.getFloorId());
+                    Users assignee = c.getAssigneeId() != null ? userMap.get(c.getAssigneeId()) : null;
+
+                    return ComplaintsReportResponse.ComplaintDetail.builder()
+                            .complaintId(c.getComplaintId())
+                            .complaintType(type != null ? type.getComplaintTypeName() : "Unknown")
+                            .raisedBy(cust != null
+                                    ? Utils.capitalize(getResultName(cust.getFirstName(), cust.getLastName()))
+                                    : "Unknown")
+                            .status(Utils.capitalize(c.getStatus()))
+                            .assignedTo(assignee != null
+                                    ? Utils.capitalize(getResultName(assignee.getFirstName(), assignee.getLastName()))
+                                    : "Unassigned")
+                            .complaintDate(Utils.dateToString(c.getComplaintDate()))
+                            .roomName(room != null ? room.getRoomName() : null)
+                            .bedName(bed != null ? bed.getBedName() : null)
+                            .floorName(floor != null ? floor.getFloorName() : null)
+                            .build();
+                }).collect(Collectors.toList());
+
+        Map<String, Long> summaryCounts = complaintService.getComplaintSummary(hostelId, startDate, endDate,
+                statusStrings, request.getRaisedBy(), request.getComplaintTypeIds());
+
+        ComplaintsReportResponse.Summary summary = ComplaintsReportResponse.Summary
+                .builder()
+                .total(summaryCounts.getOrDefault("total", 0L).intValue())
+                .resolved(summaryCounts.getOrDefault("resolved", 0L).intValue())
+                .inprogress(summaryCounts.getOrDefault("inprogress", 0L).intValue())
+                .completed(summaryCounts.getOrDefault("completed", 0L).intValue())
+                .build();
+
+        // Filters
+        List<ComplaintsReportResponse.LabelValue> periods = Arrays.asList(
+                new ComplaintsReportResponse.LabelValue("This Month", "this_month"),
+                new ComplaintsReportResponse.LabelValue("Last Month", "last_month"),
+                new ComplaintsReportResponse.LabelValue("Last 6 Months",
+                        "last_6_months"));
+
+        List<ComplaintsReportResponse.LabelValue> statuses = Arrays
+                .stream(ComplaintStatus.values())
+                .map(s -> new ComplaintsReportResponse.LabelValue(
+                        Utils.capitalize(s.name()), s.name()))
+                .collect(Collectors.toList());
+
+        List<ComplaintsReportResponse.LabelValue> categories = complaintTypeService
+                .getComplaintTypesByHostelId(hostelId).stream()
+                .map(ct -> new ComplaintsReportResponse.LabelValue(
+                        ct.getComplaintTypeName(), ct.getComplaintTypeId()))
+                .collect(Collectors.toList());
+
+        List<String> distinctCustomerIds = complaintService.getDistinctCustomerIdsByHostelId(hostelId);
+        List<ComplaintsReportResponse.UserFilter> raisedBy = new ArrayList<>();
+        if (!distinctCustomerIds.isEmpty()) {
+            raisedBy = customersService.getCustomerDetails(distinctCustomerIds).stream()
+                    .map(c -> new ComplaintsReportResponse.UserFilter(
+                            c.getCustomerId(),
+                            Utils.capitalize(getResultName(c.getFirstName(), c.getLastName()))))
+                    .collect(Collectors.toList());
+        }
+
+        ComplaintsReportResponse response = ComplaintsReportResponse
+                .builder()
+                .status(true)
+                .message("Complaints report successfully")
+                .dateRange(new ComplaintsReportResponse.DateRange(
+                        Utils.dateToString(startDate), Utils.dateToString(endDate)))
+                .summary(summary)
+                .filters(ComplaintsReportResponse.FilterValues.builder()
+                        .complaintCategories(categories)
+                        .period(periods)
+                        .status(statuses)
+                        .raisedBy(raisedBy)
+                        .build())
+                .complaints(details)
+                .pagination(ComplaintsReportResponse.Pagination.builder()
+                        .currentPage(complaintPage.getNumber())
+                        .pageSize(complaintPage.getSize())
+                        .totalRecords(complaintPage.getTotalElements())
+                        .totalPages(complaintPage.getTotalPages())
+                        .build())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    private String getResultName(String firstName, String lastName) {
+        return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
     }
 }
