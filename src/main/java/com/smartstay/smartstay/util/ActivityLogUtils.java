@@ -12,6 +12,30 @@ public class ActivityLogUtils {
             else if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
                 return "Created Account in smartstay";
             }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.SETUP.name())) {
+                return "Setup the login pin";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.ADD_ADMIN.name())) {
+                return "Added admin user";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.ADD_USER.name())) {
+                return "Added admin user";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+                return "Updated Profile information";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.CHANGE_SELF_PASSWORD.name())) {
+                return "Changes the password";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.CHANGE_ADMIN_PASSWORD.name())) {
+                return "Changes the admin password";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.DELETE_ADMIN_USER.name())) {
+                return "Deleted the admin user";
+            }
+            else if (operationType.equalsIgnoreCase(ActivitySourceType.LOGOUT.name())) {
+                return "Logged out from the application";
+            }
         }
         if (activitySource.equalsIgnoreCase(ActivitySource.AMENITY.name())) {
             if (operationType.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
@@ -84,6 +108,18 @@ public class ActivityLogUtils {
         }
         if (activitySource.equalsIgnoreCase(ActivitySource.FLOORS.name())) {
             return getFloorsOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.HOSTEL.name())) {
+            return getHostelsOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.INVOICE.name())) {
+            return getInvoiceOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.ROLE.name())) {
+            return getRolesOperation(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.ROOMS.name())) {
+            return getRoomsOperation(operationType);
         }
 
         return null;
@@ -271,6 +307,67 @@ public class ActivityLogUtils {
         }
         if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
             return "Floor has been deleted";
+        }
+        return null;
+    }
+
+    public static String getHostelsOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Created a hostel";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.REMOVE_USER.name())) {
+            return "Removed user ";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted hostel";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE_EB_AMOUNT.name())) {
+            return "Updated EB amount";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE_EB_CONFIG.name())) {
+            return "Updated EB configuration";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE_BILLING_CONFIG.name())) {
+            return "Updated billing rules";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated hostel information";
+        }
+
+        return null;
+    }
+
+    private static String getInvoiceOperations(String operation) {
+        if (operation.equalsIgnoreCase(ActivitySourceType.MANUAL_BILL.name())) {
+            return "Created a manual invoice";
+        }
+        if (operation.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated invoice";
+        }
+        return null;
+    }
+
+    private static String getRolesOperation(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Created a new Role";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated a role";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted a role";
+        }
+        return null;
+    }
+    private static String getRoomsOperation(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Created a new Room";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Updated a room";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted a room";
         }
         return null;
     }

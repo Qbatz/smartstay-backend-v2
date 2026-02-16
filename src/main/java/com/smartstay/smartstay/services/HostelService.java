@@ -8,6 +8,8 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.events.HostelEvents;
@@ -165,6 +167,7 @@ public class HostelService {
             }
         }
         eventPublisher.publishEvent(new HostelEvents(this, hostelV11.getHostelId(), authentication.getName(), users.getParentId()));
+        usersService.addUserLog(null, hostelV11.getHostelId(), ActivitySource.HOSTEL, ActivitySourceType.CREATE, users);
         return new ResponseEntity<>("Created successfully", HttpStatus.CREATED);
     }
 
@@ -258,6 +261,7 @@ public class HostelService {
         }
 
         userHostelService.deleteUserFromHostel(removeUserPayload.userId(), removeUserPayload.hostelId());
+        usersService.addUserLog(removeUserPayload.hostelId(), removeUserPayload.userId(), ActivitySource.HOSTEL, ActivitySourceType.REMOVE_USER, users);
         return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
     }
 
@@ -286,6 +290,7 @@ public class HostelService {
         hostelV1Repository.save(hostelV1);
 
         userHostelService.deleteAllHostels(hostelId);
+        usersService.addUserLog(hostelId, hostelId, ActivitySource.HOSTEL, ActivitySourceType.DELETE, users);
         return new ResponseEntity<>("Hostel Deleted", HttpStatus.OK);
     }
     public ResponseEntity<?> getHostelDetails(String hostelId) {
@@ -439,6 +444,7 @@ public class HostelService {
         hostel.setElectricityConfig(config);
 
         hostelV1Repository.save(hostel);
+        usersService.addUserLog(hostelId, String.valueOf(config.getId()), ActivitySource.HOSTEL, ActivitySourceType.UPDATE_EB_AMOUNT, users);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -547,7 +553,7 @@ public class HostelService {
         ebConfig.setHostel(hostel);
 
         hostelV1Repository.save(hostel);
-
+        usersService.addUserLog(hostelId, String.valueOf(ebConfig.getId()), ActivitySource.HOSTEL, ActivitySourceType.UPDATE_EB_CONFIG, users);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -665,7 +671,11 @@ public class HostelService {
         listBillingRules.add(newBillingRules);
 
         hostel.setBillingRulesList(listBillingRules);
-        hostelV1Repository.save(hostel);
+        HostelV1 hostelV1 = hostelV1Repository.save(hostel);
+        List<BillingRules> billingRules = hostelV1.getBillingRulesList();
+        BillingRules br = billingRules.getLast();
+
+        usersService.addUserLog(hostelId, String.valueOf(br.getId()), ActivitySource.HOSTEL, ActivitySourceType.UPDATE_BILLING_CONFIG, users);
 
         return new ResponseEntity<>(HttpStatus.OK);
 
@@ -792,7 +802,7 @@ public class HostelService {
         }
 
         hostelV1Repository.save(hostelV1);
-
+        usersService.addUserLog(hostelId, hostelId, ActivitySource.HOSTEL, ActivitySourceType.UPDATE, users);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }

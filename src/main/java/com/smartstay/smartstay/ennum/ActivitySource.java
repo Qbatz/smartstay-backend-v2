@@ -19,5 +19,8 @@ public enum ActivitySource {
     COMPLAINT_TYPE,
     CUSTOMERS,
     ELECTRICITY,
-    FLOORS
+    FLOORS,
+    HOSTEL,
+    ROLE,
+    ROOMS
 }

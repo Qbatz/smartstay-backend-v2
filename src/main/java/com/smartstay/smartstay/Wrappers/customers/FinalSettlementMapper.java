@@ -3,6 +3,7 @@ package com.smartstay.smartstay.Wrappers.customers;
 import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.beds.BedDetails;
+import com.smartstay.smartstay.ennum.InvoiceItems;
 import com.smartstay.smartstay.responses.customer.RentBreakUp;
 import com.smartstay.smartstay.util.Utils;
 
@@ -24,6 +25,11 @@ public class FinalSettlementMapper implements Function<InvoicesV1, RentBreakUp> 
     public RentBreakUp apply(InvoicesV1 invoicesV1) {
         double rentAmount = invoicesV1.getTotalAmount();
         long noOfDays = Utils.findNumberOfDays(invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+        double rentPerDay = invoicesV1.getInvoiceItems()
+                .stream()
+                .filter(i -> i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name()))
+                .mapToDouble(com.smartstay.smartstay.dao.InvoiceItems::getAmount)
+                .sum()/ noOfDays;
         String bedName = null;
         String roomName = null;
         String floorName = null;
@@ -57,7 +63,9 @@ public class FinalSettlementMapper implements Function<InvoicesV1, RentBreakUp> 
         return new RentBreakUp(Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                 Utils.dateToString(invoicesV1.getInvoiceEndDate()),
                 noOfDays,
-                Utils.roundOfDouble(Math.round(rentAmount)),
+                Utils.roundOffWithTwoDigit(rentPerDay),
+                Utils.roundOffWithTwoDigit(rentPerDay * noOfDays),
+                Utils.roundOffWithTwoDigit(rentPerDay * noOfDays),
                 bedName,
                 roomName,
                 floorName);
