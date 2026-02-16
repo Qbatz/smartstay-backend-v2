@@ -36,3 +36,4 @@ out/
 ### VS Code ###
 .vscode/
 /src/main/resources/ss-admin.json
+/src/main/resources/application-prod.properties

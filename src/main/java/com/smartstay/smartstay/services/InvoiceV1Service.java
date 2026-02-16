@@ -2427,7 +2427,7 @@ public class InvoiceV1Service {
         if (search != null && !search.trim().isEmpty()) {
             List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
             if (customers == null || customers.isEmpty()) {
-                return new InvoiceAggregateDto(0L, 0.0, 0.0);
+                return new InvoiceAggregateDto(0L, 0.0, 0.0, 0.0);
             }
             customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
         }

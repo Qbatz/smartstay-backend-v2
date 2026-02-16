@@ -1072,30 +1072,31 @@ public class TransactionService {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        Users users = usersService.findUserByUserId(authentication.getName());
-        if (users == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-        TransactionV1 transactionV1 = transactionRespository.findByHostelIdAndTransactionId(hostelId, transactionId);
-        if (transactionV1 == null) {
-            return new ResponseEntity<>(Utils.INVALID_TRANSACTION_ID, HttpStatus.BAD_REQUEST);
-        }
-        if (!transactionV1.getHostelId().equalsIgnoreCase(hostelId)) {
-            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
-        }
-        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-        }
-
-        String endpoint = reportsUrl + "/v2/reports/receipts/"+ hostelId + "/" +  transactionId;
-        String url = downloadService.downloadFromUrl(endpoint);
-
-        if (url == null) {
-            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
-        }
-        return new ResponseEntity<>(url, HttpStatus.OK);
+//
+//        Users users = usersService.findUserByUserId(authentication.getName());
+//        if (users == null) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_READ)) {
+//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//        }
+//        TransactionV1 transactionV1 = transactionRespository.findByHostelIdAndTransactionId(hostelId, transactionId);
+//        if (transactionV1 == null) {
+//            return new ResponseEntity<>(Utils.INVALID_TRANSACTION_ID, HttpStatus.BAD_REQUEST);
+//        }
+//        if (!transactionV1.getHostelId().equalsIgnoreCase(hostelId)) {
+//            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+//        }
+//        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+//            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+//        }
+//
+//        String endpoint = reportsUrl + "/v2/reports/receipts/"+ hostelId + "/" +  transactionId;
+//        String url = downloadService.downloadFromUrl(endpoint);
+//
+//        if (url == null) {
+//            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+//        }
+        return new ResponseEntity<>("Not available", HttpStatus.BAD_REQUEST);
     }
 }

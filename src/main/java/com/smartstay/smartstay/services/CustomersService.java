@@ -24,7 +24,6 @@ import com.smartstay.smartstay.ennum.InvoiceItems;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.AddRoomSettlementEbEvents;
-import com.smartstay.smartstay.events.HostelEvents;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.CancelCheckout;
@@ -42,11 +41,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Service
@@ -1803,7 +1802,7 @@ public class CustomersService {
         double refundableAdvance = 0.0;
         if (totalAmountToBePaid < 0) {
             if (currentRentPaid > 0) {
-                refundableRent = (currentRentPaid - currentMonthPayableRent);
+                refundableRent = (currentRentPaid - currentMonthPayableAmount);
                 if (refundableRent < 0) {
                     refundableRent = refundableRent * -1;
                 }
@@ -1812,7 +1811,7 @@ public class CustomersService {
                 refundableAdvance = advancePaidAmount;
             }
             else {
-                refundableAdvance = advancePaidAmount - (currentMonthPayableRent - currentRentPaid);
+                refundableAdvance = advancePaidAmount - (currentMonthPayableAmount - currentRentPaid);
             }
 
 
@@ -1935,9 +1934,43 @@ public class CustomersService {
                 .filter(i -> !i.getInvoiceId().equalsIgnoreCase(findLatestInvoice.getInvoiceId()))
                 .toList();
 
+        List<CurrentMonthOtherItems> currentMonthOtherItems = new ArrayList<>();
+        AtomicReference<Double> currentMonthOtherItemAmount = new AtomicReference<>(0.0);
+
+        currentMonthInvoices.forEach(item -> {
+            item.getInvoiceItems().forEach(item2 -> {
+                if (!item2.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name())) {
+                    String itemName = null;
+                    double itemAmount = 0.0;
+                    if (item2.getInvoiceItem().equalsIgnoreCase(InvoiceItems.EB.name())) {
+                        itemName = "Electricity";
+                    }
+                    else if (item2.getInvoiceItem().equalsIgnoreCase(InvoiceItems.AMENITY.name())) {
+                        itemName = "Amenities";
+                    }
+                    else if (item2.getInvoiceItem().equalsIgnoreCase(InvoiceItems.OTHERS.name())) {
+                        itemName = item2.getOtherItem();
+                    }
+                    if (item2.getAmount() != null) {
+                        itemAmount = item2.getAmount();
+                        currentMonthOtherItemAmount.set(currentMonthOtherItemAmount.get() + item2.getAmount());
+                    }
+
+                    CurrentMonthOtherItems otherItems = new CurrentMonthOtherItems(itemName, itemAmount);
+                    currentMonthOtherItems.add(otherItems);
+                }
+            });
+        });
+
         double currentMonthRentBeforeChangingBed = currentMonthInvoicesBeforeBedChange
                 .stream()
-                .mapToDouble(InvoicesV1::getTotalAmount)
+                .mapToDouble(i -> {
+                    return i.getInvoiceItems()
+                            .stream()
+                            .filter(i2 -> i2.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name()))
+                            .mapToDouble(com.smartstay.smartstay.dao.InvoiceItems::getAmount)
+                            .sum();
+                })
                 .sum();
         double currentMonthPaidAmountBeforeChangingBed = currentMonthInvoicesBeforeBedChange
                 .stream()
@@ -1979,6 +2012,8 @@ public class CustomersService {
         double payableRentAsOfToday = newRentPerDay * findNoOfDaysStayedInNewBedAsOfToday;
 
         double totalRentIncludePreviousBed = payableRentAsOfToday + currentMonthRentBeforeChangingBed;
+//        totalRentIncludePreviousBed = totalRentIncludePreviousBed + currentMonthOtherItemAmount.get();
+        double totalAmountIncludePreviousBed = totalRentIncludePreviousBed + currentMonthOtherItemAmount.get();
         refundableRent = totalRentIncludePreviousBed - currentMonthPaidRent;
         if (refundableRent > 0) {
             refundableRent = 0.0;
@@ -2048,9 +2083,9 @@ public class CustomersService {
         RentBreakUp rentBreakUpForNewInvoice = new RentBreakUp(Utils.dateToString(findLatestInvoice.getInvoiceStartDate()),
                 Utils.dateToString(leavingDate),
                 findNoOfDaysStayedInNewBedAsOfToday,
-                Utils.roundOfDouble(Math.round(payableRentAsOfToday)),
                 Utils.roundOffWithTwoDigit(newRentPerDay),
-                Utils.roundOfDouble(Math.round(payableRentAsOfToday)),
+                Utils.roundOffWithTwoDigit(payableRentAsOfToday),
+                Utils.roundOffWithTwoDigit(payableRentAsOfToday),
                 bedName,
                 roomName,
                 floorName);
@@ -2060,15 +2095,15 @@ public class CustomersService {
         }
 
 
-        RentInfo rentInfo = new RentInfo((double) Math.round(totalRentIncludePreviousBed),
+        RentInfo rentInfo = new RentInfo(Utils.roundOffWithTwoDigit(totalRentIncludePreviousBed),
                 (double) Math.round(currentMonthPaidRent),
                 (int) totalNoOfDaysStayedIncludeOldAndNewBed,
-                findLatestInvoice.getTotalAmount(),
-                Utils.roundOffDecimal(newRentPerDay),
+                findLatestInvoice.getTotalAmount() + oldTotalInvoiceAmount,
+                Utils.roundOffWithTwoDigit(totalAmountIncludePreviousBed),
                 Utils.dateToString(currentMonthInvoiceStartDate),
                 Utils.dateToString(billDate.currentBillEndDate()),
-                null,
-                null,
+                Utils.roundOffWithTwoDigit(currentMonthOtherItemAmount.get()),
+                currentMonthOtherItems,
                 breakUpList);
 
         totalAmountToBePaid = oldInvoiceBalanceAmount - advancePaidAmount;
@@ -2093,7 +2128,7 @@ public class CustomersService {
         double refundableAdvance = 0.0;
         if (totalAmountToBePaid < 0) {
             if (currentMonthPaidRent > 0) {
-                refundableRent = (currentMonthPaidRent - totalRentIncludePreviousBed);
+                refundableRent = (currentMonthPaidRent - totalAmountIncludePreviousBed);
                 if (refundableRent < 0) {
                     refundableRent = refundableRent * -1;
                 }
@@ -2102,14 +2137,14 @@ public class CustomersService {
                 refundableAdvance = advancePaidAmount;
             }
             else {
-                refundableAdvance = advancePaidAmount - (payableRentAsOfToday - totalRentIncludePreviousBed);
+                refundableAdvance = advancePaidAmount - (payableRentAsOfToday - totalAmountIncludePreviousBed);
             }
 
 
         }
 
 
-        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
+        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountIncludePreviousBed),
                 Utils.roundOfDouble(totalDeductions),
                 Utils.roundOfDouble(oldInvoiceBalanceAmount),
                 Utils.roundOfDouble(refundableRent),
@@ -2251,6 +2286,8 @@ public class CustomersService {
 
         noOfDaySatayed = Utils.findNumberOfDays(dateStartDate, settlementDetails.getLeavingDate());
 
+        double currentMonthOtherPayableAmount = 0.0;
+        double currentMonthTotalPayableAmount = 0.0;
         //taken from unpaid invoices. So current month invoice is empty for paid
         if (!currentMonthInvoice.isEmpty()) {
             InvoicesV1 currentInvoice = currentMonthInvoice.get(0);
@@ -2266,6 +2303,16 @@ public class CustomersService {
             if (currentRentPaid > 0) {
                 isCurrentRentPaid = true;
             }
+            currentMonthOtherPayableAmount = currentInvoice.getInvoiceItems()
+                    .stream()
+                    .filter(i -> !i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name()))
+                    .mapToDouble(i -> {
+                        if (i.getAmount() == null) {
+                            return 0.0;
+                        }
+                        return i.getAmount();
+                    })
+                    .sum();
         } else {
             //current month invoice is paid rent
             InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthRentInvoice(customerId);
@@ -2279,8 +2326,23 @@ public class CustomersService {
                 }
 
                 isCurrentRentPaid = true;
+
+                currentMonthOtherPayableAmount = invoicesV1.getInvoiceItems()
+                        .stream()
+                        .filter(i -> !i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name()))
+                        .mapToDouble(i -> {
+                            if (i.getAmount() == null) {
+                                return 0.0;
+                            }
+                            return i.getAmount();
+                        })
+                        .sum();
             }
+
+
         }
+
+
 
 
         double rentPerDay = bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth;
@@ -2288,6 +2350,8 @@ public class CustomersService {
             rentPerDay = bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth;
         }
         currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay);
+        currentMonthTotalPayableAmount = currentMonthPayableRent + currentMonthOtherPayableAmount;
+
 
         List<InvoicesV1> advanceInvoice = listUnpaidInvoices
                 .stream()
@@ -2317,6 +2381,10 @@ public class CustomersService {
                     isAdvancePaid = true;
                     advancePaidAmount = paidAmount;
                 }
+                else {
+                    isAdvancePaid = false;
+                    advancePaidAmount = paidAmount;
+                }
             }
         }
 
@@ -2333,6 +2401,7 @@ public class CustomersService {
 
         partialPaidAmount = listUnpaidInvoices
                 .stream()
+                .filter(i -> !i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
                 .mapToDouble(InvoicesV1::getPaidAmount)
                 .sum();
         unpaidInvoiceAmount = listUnpaidInvoices
@@ -2347,9 +2416,9 @@ public class CustomersService {
         totalAmountToBePaid = totalAmountToBePaid + walletAmount;
 
         if (isCurrentRentPaid) {
-            totalAmountToBePaid = totalAmountToBePaid + (currentMonthPayableRent - currentRentPaid);
+            totalAmountToBePaid = totalAmountToBePaid + (currentMonthTotalPayableAmount - currentRentPaid);
         } else {
-            totalAmountToBePaid = totalAmountToBePaid + currentMonthPayableRent;
+            totalAmountToBePaid = totalAmountToBePaid + currentMonthTotalPayableAmount;
         }
 
         totalAmountWithoutDeductions = totalAmountToBePaid;
@@ -2533,6 +2602,8 @@ public class CustomersService {
             currentMonthPaidAmount = currentMonthPaidAmount + currentRunningInvoice.getPaidAmount();
         }
 
+        List<CurrentMonthOtherItems> currentMonthOtherItems = new ArrayList<>();
+
         if (currentMonthInvoices != null && !currentMonthInvoices.isEmpty()) {
             double rentForOldBeds = currentMonthInvoices
                     .stream()
@@ -2557,6 +2628,8 @@ public class CustomersService {
                     .sum();
 
             currentMonthPaidAmount = currentMonthPaidAmount + rentPaidForOldBeds;
+
+
 
         }
 
