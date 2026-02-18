@@ -306,32 +306,28 @@ public class ReportService {
                         return hostelService.getCurrentBillStartAndEndDates(hostelId);
                 }
 
-                Calendar calendar = Calendar.getInstance();
-                Date today = new Date();
-                calendar.setTime(today);
-                Date startDate = null;
-                Date endDate = null;
+                Calendar cal = Calendar.getInstance();
+                BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+                if (period.equalsIgnoreCase("this month") || period.equalsIgnoreCase("this_month")) {
+                       return billingDates;
+                } else if (period.equalsIgnoreCase("last month") || period.equalsIgnoreCase("last_month")) {
 
-                if (period.equalsIgnoreCase("this month")) {
-                        calendar.set(Calendar.DAY_OF_MONTH, 1);
-                        startDate = calendar.getTime();
-                        endDate = today;
-                } else if (period.equalsIgnoreCase("last month")) {
-                        calendar.add(Calendar.MONTH, -1);
-                        calendar.set(Calendar.DAY_OF_MONTH, 1);
-                        startDate = calendar.getTime();
-                        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
-                        endDate = calendar.getTime();
-                } else if (period.equalsIgnoreCase("last 3 month")) {
-                        calendar.add(Calendar.MONTH, -3);
-                        startDate = calendar.getTime();
-                        endDate = today;
-                } else if (period.equalsIgnoreCase("6 month")) {
-                        calendar.add(Calendar.MONTH, -6);
-                        startDate = calendar.getTime();
-                        endDate = today;
+                        cal.setTime(billingDates.currentBillStartDate());
+                        cal.add(Calendar.MONTH, -1);
+
+                        return hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                } else if (period.equalsIgnoreCase("last 3 month") || period.equalsIgnoreCase("last_3_month")) {
+                        cal.setTime(billingDates.currentBillStartDate());
+                        cal.add(Calendar.MONTH, -3);
+                        BillingDates bDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                        return new BillingDates(bDates.currentBillStartDate(), billingDates.currentBillEndDate(), bDates.dueDate(), bDates.dueDays());
+                } else if (period.equalsIgnoreCase("last 6 months") || period.equalsIgnoreCase("last_6_months")) {
+                        cal.setTime(billingDates.currentBillStartDate());
+                        cal.add(Calendar.MONTH, -6);
+                        BillingDates bDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                        return new BillingDates(bDates.currentBillStartDate(), billingDates.currentBillEndDate(), bDates.dueDate(), bDates.dueDays());
                 }
-                return new BillingDates(startDate, endDate, null, null);
+                return billingDates;
         }
 
         private List<ReportDetailsResponse.InvoiceDetail> mapToInvoiceDetails(List<InvoicesV1> invoices) {
@@ -530,7 +526,7 @@ public class ReportService {
         public ResponseEntity<?> getTenantRegister(String hostelId, String search, List<String> status,
                         List<Integer> rooms,
                         List<Integer> floors, String period, String customStartDate, String customEndDate, int page,
-                        int size) {
+                        int size, List<String> sharingType) {
                 if (!authentication.isAuthenticated()) {
                         return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
                 }
@@ -540,6 +536,19 @@ public class ReportService {
                 }
                 if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
                         return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+                }
+
+                if (sharingType != null) {
+                        List<Integer> shareTypes = sharingType
+                                .stream()
+                                .map(Integer::parseInt)
+                                .toList();
+                        if (rooms == null) {
+                             rooms = roomsService.findByHostelIdAndShareType(hostelId, shareTypes)
+                                     .stream()
+                                     .map(Rooms::getRoomId)
+                                     .toList();
+                        }
                 }
 
                 Date startDate;
@@ -587,6 +596,7 @@ public class ReportService {
                 double checkoutAmount = 0;
                 int inactiveCount = 0;
                 double inactiveAmount = 0;
+                int bookedCount = 0;
 
                 for (BookingsV1 b : allBookings) {
                         uniqueTenants.add(b.getCustomerId());
@@ -607,15 +617,21 @@ public class ReportService {
                                 inactiveCount++;
                                 inactiveAmount += amount;
                         }
+                        else if (BookingStatus.BOOKED.name().equalsIgnoreCase(bookingStatus)) {
+                                bookedCount++;
+
+                        }
+
                 }
 
                 TenantRegisterResponse.Summary summary = TenantRegisterResponse.Summary.builder()
                                 .totalTenants(uniqueTenants.size())
-                                .activeTenants(new TenantRegisterResponse.SegmentSummary(activeCount, activeAmount, 0))
-                                .noticePeriod(new TenantRegisterResponse.SegmentSummary(noticeCount, noticeAmount, 0))
-                                .checkoutMTD(new TenantRegisterResponse.SegmentSummary(checkoutCount, checkoutAmount,
+                                .activeTenants(new TenantRegisterResponse.SegmentSummary(activeCount, 0))
+                                .noticePeriod(new TenantRegisterResponse.SegmentSummary(noticeCount, 0))
+                                .checkoutMTD(new TenantRegisterResponse.SegmentSummary(checkoutCount,
                                                 0))
-                                .inactive(new TenantRegisterResponse.SegmentSummary(inactiveCount, inactiveAmount, 0))
+                                .inactive(new TenantRegisterResponse.SegmentSummary(inactiveCount, 0))
+                                .booked(new TenantRegisterResponse.SegmentSummary(bookedCount, 0))
                                 .build();
 
                 Page<BookingsV1> bookingsPage = bookingsService
@@ -645,27 +661,25 @@ public class ReportService {
                         Long bedCount = sharingMap.get(b.getRoomId());
                         if (bedCount != null) {
                                 if (bedCount == 1)
-                                        sharing = "Single";
+                                        sharing = "Single Sharing";
                                 else if (bedCount == 2)
-                                        sharing = "Double";
+                                        sharing = "Two Sharing";
                                 else if (bedCount == 3)
-                                        sharing = "Triple";
+                                        sharing = "Three Sharing";
                                 else
                                         sharing = bedCount + " Sharing";
                         }
 
-                        LocalDate joinDate = b.getJoiningDate().toInstant()
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDate();
 
-                        LocalDate checkoutDate = (b.getCheckoutDate() != null
-                                        ? b.getCheckoutDate()
-                                        : new Date())
-                                        .toInstant()
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDate();
-
-                        long days = ChronoUnit.DAYS.between(joinDate, checkoutDate) + 1;
+                        long days = 0;
+                        if (b.getJoiningDate() != null) {
+                                if (b.getCheckoutDate() != null) {
+                                        days = Utils.findNumberOfDays(b.getJoiningDate(), b.getCheckoutDate());
+                                }
+                                else {
+                                        days = Utils.findNumberOfDays(b.getJoiningDate(),new Date());
+                                }
+                        }
 
                         String stayDuration = days + (days == 1 ? " day" : " days");
 
@@ -700,10 +714,11 @@ public class ReportService {
         private ResponseEntity<?> buildEmptyTenantResponse(Date startDate, Date endDate, int page, int size,
                         String hostelId, String parentId) {
                 TenantRegisterResponse.Summary summary = TenantRegisterResponse.Summary.builder().totalTenants(0)
-                                .activeTenants(new TenantRegisterResponse.SegmentSummary(0, 0.0, 0))
-                                .noticePeriod(new TenantRegisterResponse.SegmentSummary(0, 0.0, 0))
-                                .checkoutMTD(new TenantRegisterResponse.SegmentSummary(0, 0.0, 0))
-                                .inactive(new TenantRegisterResponse.SegmentSummary(0, 0.0, 0)).build();
+                                .activeTenants(new TenantRegisterResponse.SegmentSummary(0, 0))
+                                .noticePeriod(new TenantRegisterResponse.SegmentSummary(0, 0))
+                                .checkoutMTD(new TenantRegisterResponse.SegmentSummary(0, 0))
+                                .inactive(new TenantRegisterResponse.SegmentSummary(0, 0))
+                        .booked(new TenantRegisterResponse.SegmentSummary(0, 0)).build();
                 TenantRegisterResponse.Filters filtersData = buildTenantFilters(hostelId, parentId);
                 TenantRegisterResponse response = TenantRegisterResponse.builder().status(true)
                                 .message("Tenant register fetched successfully")
@@ -719,12 +734,67 @@ public class ReportService {
 
         private TenantRegisterResponse.Filters buildTenantFilters(String hostelId, String parentId) {
                 List<TenantRegisterResponse.FilterItem> statusList = Arrays.stream(BookingStatus.values())
-                                .map(s -> new TenantRegisterResponse.FilterItem(s.name(), Utils.capitalize(s.name())))
+                                .map(s -> {
+                                        if (s.name().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+                                                return new TenantRegisterResponse.FilterItem(s.name(), Utils.capitalize("Inactive"));
+                                        }
+                                        return new TenantRegisterResponse.FilterItem(s.name(), Utils.capitalize(s.name()));
+                                })
                                 .collect(Collectors.toList());
+                List<Rooms> rooms = roomsService.getAllRoomsByHostelId(hostelId);
+                List<TenantRegisterResponse.SharingTypeFilter> sharingType = new ArrayList<>();
+                HashMap<Integer, List<Integer>> floors = new HashMap<>();
+
+                rooms.forEach(item -> {
+                        if (floors.containsKey(item.getSharingType())) {
+                                List<Integer> existingFloorIds = floors.get(item.getSharingType());
+                                existingFloorIds.add(item.getFloorId());
+                                floors.put(item.getSharingType(), existingFloorIds);
+                        }
+                        else {
+                                List<Integer> existingFloorIds = new ArrayList<>();
+                                existingFloorIds.add(item.getFloorId());
+                                floors.put(item.getSharingType(), existingFloorIds);
+                        }
+                });
+
+                if (rooms != null) {
+                        sharingType = rooms
+                                .stream()
+                                .map(Rooms::getSharingType)
+                                .filter(Objects::nonNull)
+                                .filter(i -> i > 0)
+                                .sorted()
+                                .distinct()
+                                .map(i -> {
+                                        List<TenantRegisterResponse.FilterItem> filterItems = floors.get(i)
+                                                .stream()
+                                                .distinct()
+                                                .sorted(Comparator.reverseOrder())
+                                                .map(i2 -> new TenantRegisterResponse.FilterItem(i2, i2+""))
+                                                .toList();
+                                        if (i == 1) {
+                                              return new TenantRegisterResponse.SharingTypeFilter(1, Utils.SHARING_TYPE_SINGLE, filterItems);
+                                        }
+                                        else if (i == 2) {
+                                                return new TenantRegisterResponse.SharingTypeFilter(2, Utils.SHARING_TYPE_TWO, filterItems);
+                                        }
+                                        else if (i == 3) {
+                                                return new TenantRegisterResponse.SharingTypeFilter(3, Utils.SHARING_TYPE_THREE, filterItems);
+                                        }
+                                        else {
+                                                return new TenantRegisterResponse.SharingTypeFilter(i,  i + " Sharing", filterItems);
+                                        }
+                                })
+                                .toList();
+
+
+                }
 
                 List<TenantRegisterResponse.FilterItem> periodList = new ArrayList<>();
                 periodList.add(new TenantRegisterResponse.FilterItem("this_month", "This Month"));
                 periodList.add(new TenantRegisterResponse.FilterItem("last_month", "Last Month"));
+                periodList.add(new TenantRegisterResponse.FilterItem("last_3_month", "Last 3 Months"));
                 periodList.add(new TenantRegisterResponse.FilterItem("last_6_months", "Last 6 Months"));
 
                 List<TenantRegisterResponse.FilterItem> floorList = floorsService.getFloorByHostelID(hostelId, parentId)
@@ -733,13 +803,14 @@ public class ReportService {
                                                 Utils.capitalize(f.getFloorName())))
                                 .collect(Collectors.toList());
 
-                List<TenantRegisterResponse.FilterItem> roomList = roomsService.getAllRoomsByHostelId(hostelId).stream()
-                                .map(r -> new TenantRegisterResponse.FilterItem(r.getRoomId(),
-                                                Utils.capitalize(r.getRoomName())))
+                List<TenantRegisterResponse.RoomFilter> roomList = roomsService.getAllRoomsByHostelId(hostelId).stream()
+                                .map(r -> new TenantRegisterResponse.RoomFilter(r.getRoomId(),
+                                                Utils.capitalize(r.getRoomName()), r.getFloorId(), r.getSharingType()))
                                 .collect(Collectors.toList());
 
                 return TenantRegisterResponse.Filters.builder().tenantStatus(statusList).period(periodList)
                                 .floor(floorList)
+                                .sharingType(sharingType)
                                 .room(roomList).build();
         }
 

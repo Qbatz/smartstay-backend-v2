@@ -27,4 +27,9 @@ public class DashboardController {
     public ResponseEntity<?> getDashboardDate(@PathVariable("hostelId") String hostelId) {
         return dashboardService.getDashboardInfo(hostelId);
     }
+
+    @GetMapping("/new/{hostelId}")
+    public ResponseEntity<?> getDashboardDataNew(@PathVariable("hostelId") String hostelId) {
+        return dashboardService.getDashboardInfoNew(hostelId);
+    }
 }

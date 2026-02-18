@@ -230,6 +230,9 @@ public class Utils {
     public static final String FILES_ARE_REQUIRED_TO_UPLOAD = "Files cannot be empty";
     public static final String EXPENSE_COUNT_REQUIRED = "Expense count is required";
     public static final String INVALID_COUNT = "Invalid expense count";
+    public static final String SHARING_TYPE_SINGLE = "Single sharing";
+    public static final String SHARING_TYPE_TWO = "Two sharing";
+    public static final String SHARING_TYPE_THREE = "Three sharing";
 
     /**
      * Defining module Id's here
@@ -612,8 +615,7 @@ public class Utils {
         for (String word : words) {
             if (!word.isEmpty()) {
                 sb.append(Character.toUpperCase(word.charAt(0)))
-                        .append(word.substring(1).toLowerCase())
-                        .append(" ");
+                        .append(word.substring(1).toLowerCase());
             }
         }
         return sb.toString().trim();

@@ -512,15 +512,28 @@ public class TransactionService {
             }
 
             BillTemplateType templateType = null;
+            String templateColor = null;
             if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())
                     || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
                 templateType = hostelTemplates.getTemplateTypes().stream()
                         .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name())).toList()
                         .getFirst();
+                templateColor = templateType.getReceiptTemplateColor();
+
+                BillTemplateType templateType2 =  hostelTemplates.getTemplateTypes().stream()
+                        .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (templateType2 != null) {
+                    templateColor = templateType2.getReceiptTemplateColor();
+                }
+
             } else {
                 templateType = hostelTemplates.getTemplateTypes().stream()
                         .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).toList()
                         .getFirst();
+                templateColor = templateType.getReceiptTemplateColor();
             }
 
             if (!hostelTemplates.isSignatureCustomized()) {
@@ -535,7 +548,7 @@ public class TransactionService {
             }
 
             receiptConfigInfo = new ReceiptConfigInfo(templateType.getReceiptTermsAndCondition(), receiptSignatureUrl,
-                    hostelLogo, hostelFullAddress.toString(), templateType.getReceiptTemplateColor(),
+                    hostelLogo, hostelFullAddress.toString(), templateColor,
                     templateType.getReceiptNotes(), invoiceType);
         }
 

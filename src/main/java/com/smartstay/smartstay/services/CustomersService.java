@@ -847,6 +847,11 @@ public class CustomersService {
             if (updateInfo.lastName() != null && !updateInfo.lastName().equalsIgnoreCase("")) {
                 customers.setLastName(updateInfo.lastName());
             }
+            else {
+                if (customers.getLastName() != null) {
+                    customers.setLastName(null);
+                }
+            }
             if (updateInfo.mailId() != null && !updateInfo.mailId().equalsIgnoreCase("")) {
                 customers.setEmailId(updateInfo.mailId());
             }
@@ -888,8 +893,18 @@ public class CustomersService {
             if (updateInfo.city() != null && !updateInfo.city().equalsIgnoreCase("")) {
                 customers.setCity(updateInfo.city());
             }
+            else {
+                if (customers.getCity() != null) {
+                    customers.setCity(null);
+                }
+            }
             if (updateInfo.state() != null && !updateInfo.state().equalsIgnoreCase("")) {
                 customers.setState(updateInfo.state());
+            }
+            else {
+                if (customers.getState() != null) {
+                    customers.setState(null);
+                }
             }
 
             if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
@@ -2144,7 +2159,7 @@ public class CustomersService {
         }
 
 
-        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountIncludePreviousBed),
+        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
                 Utils.roundOfDouble(totalDeductions),
                 Utils.roundOfDouble(oldInvoiceBalanceAmount),
                 Utils.roundOfDouble(refundableRent),
@@ -2941,10 +2956,11 @@ public class CustomersService {
     }
 
     public List<Customers> getCustomerDetails(List<String> customerIds) {
+        List<Customers> listCustomers = new ArrayList<>();
         if (!customerIds.isEmpty()) {
-            return customersRepository.findByCustomerIdIn(customerIds);
+            listCustomers = customersRepository.findByCustomerIdIn(customerIds);
         }
-        return null;
+        return listCustomers;
     }
 
     public Double getAdvanceAmountFromAllCustomers(String hostelId) {

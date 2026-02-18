@@ -35,87 +35,35 @@ public class SmartstayApplication {
 		SpringApplication.run(SmartstayApplication.class, args);
 	}
 
-//	@Bean
-//	public CommandLineRunner mapSubscrions(SubscriptionRepository subscriptionRepository, HostelV1Repository hostelV1Repository, PlansRepository plansRepository) {
-//		return args -> {
-//			List<Subscription> listAllSubscriptions = subscriptionRepository.findAll();
-//			Plans trialPlans = plansRepository.findPlanByPlanType(PlanType.TRIAL.name());
-//			List<String> hostelIds = listAllSubscriptions.stream()
-//					.map(Subscription::getHostelId)
-//					.toList();
-//
-//			List<Subscription> listNewSubscriptions = hostelV1Repository.findAllHostelsNoIncludeIds(hostelIds)
-//					.stream()
-//					.map(i -> {
-//							Date endingDate =  Utils.addDaysToDate(i.getCreatedAt(), trialPlans.getDuration().intValue());
-//
-//							Subscription history = new Subscription();
-//							history.setHostelId(i.getHostelId());
-//							history.setPlanAmount(trialPlans.getPrice());
-//							history.setPaidAmount(0.0);
-//							history.setPlanCode(trialPlans.getPlanCode());
-//							history.setPlanName(trialPlans.getPlanName());
-//							history.setPlanStartsAt(i.getCreatedAt());
-//							history.setPlanEndsAt(endingDate);
-//							history.setActivatedAt(i.getCreatedAt());
-//							history.setCreatedAt(i.getCreatedAt());
-//						return history;
-//					})
-//					.toList();
-//
-//			subscriptionRepository.saveAll(listNewSubscriptions);
-//
-//		};
-//	}
+	/**
+	 * need to execute on production
+	 *
+	 *
+	 */
 
 //	@Bean
-//	CommandLineRunner findSubscriptionEndedHostels(HostelPlanRepository hostelPlanRepository, SubscriptionRepository subscriptionRepository) {
+//	CommandLineRunner addSharingType(RoomRepository roomRepository, BedsRepository bedsRepository) {
 //		return args -> {
-//			List<HostelPlan> listHostelPlan = hostelPlanRepository.findNotActiveHostels(new Date());
-//			List<Subscription> listSubscriptionWithNewDate = listHostelPlan
+//			List<Rooms> allRooms = roomRepository.findAll();
+//			List<Integer> roomId = allRooms
 //					.stream()
-//					.map(i -> {
-//						Date planStartDate = Utils.addDaysToDate(i.getCurrentPlanEndsAt(), 1);
-//						Date planEndDate = Utils.addDaysToDate(planStartDate, 30);
-//						Date nextBillingAt = Utils.addDaysToDate(planEndDate, 1);
-//
-//						Subscription subscription = new Subscription();
-//						subscription.setHostelId(i.getHostel().getHostelId());
-//						subscription.setPaidAmount(0.0);
-//						subscription.setPlanCode(i.getCurrentPlanCode());
-//						subscription.setPlanStartsAt(planStartDate);
-//						subscription.setPlanEndsAt(planEndDate);
-//						subscription.setActivatedAt(planStartDate);
-//						subscription.setPlanAmount(0.0);
-//						subscription.setDiscount(0.0);
-//						subscription.setDiscountAmount(0.0);
-//						subscription.setNextBillingAt(nextBillingAt);
-//						subscription.setCreatedAt(new Date());
-//						return subscription;
-//					})
+//					.map(Rooms::getRoomId)
 //					.toList();
+//			List<Beds> listBeds = bedsRepository.findByRoomIdIn(roomId);
 //
+//			List<Rooms> roomsWithSharing = new ArrayList<>();
+//			allRooms.forEach(item -> {
+//				long cout = listBeds
+//						.stream()
+//						.filter(i -> i.getRoomId().equals(item.getRoomId()))
+//						.count();
 //
-//			subscriptionRepository.saveAll(listSubscriptionWithNewDate);
+//				item.setSharingType(Integer.parseInt(String.valueOf(cout)));
+//				roomsWithSharing.add(item);
+//			});
 //
-//			List<HostelPlan> newPlans = listHostelPlan
-//					.stream()
-//					.map(i -> {
-//						Subscription currentSub = listSubscriptionWithNewDate
-//								.stream()
-//								.filter(j -> j.getHostelId().equalsIgnoreCase(i.getHostel().getHostelId()))
-//								.findFirst()
-//								.orElse(null);
+//				roomRepository.saveAll(roomsWithSharing);
 //
-//						if (currentSub != null) {
-//							i.setCurrentPlanStartsAt(currentSub.getPlanStartsAt());
-//							i.setCurrentPlanEndsAt(currentSub.getPlanEndsAt());
-//						}
-//						return i;
-//					})
-//					.toList();
-//
-//			hostelPlanRepository.saveAll(newPlans);
 //		};
 //	}
 

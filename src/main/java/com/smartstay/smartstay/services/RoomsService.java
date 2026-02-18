@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -265,5 +266,29 @@ public class RoomsService {
                     return new RoomInfoForEB(i.getFloorId(), i.getRoomId(), i.getRoomName(), i.getFloorName(), hostelId, 0l);
                 })
                 .toList();
+    }
+
+    public void updateSharingCount(int roomId) {
+        Rooms rooms = roomRepository.findByRoomId(roomId);
+        if (rooms != null) {
+            if (rooms.getSharingType() == null) {
+                rooms.setSharingType(1);
+            }
+            else {
+                rooms.setSharingType(rooms.getSharingType() + 1);
+            }
+        }
+    }
+
+    public List<Rooms> findByHostelId(String hostelId) {
+        return roomRepository.findByHostelId(hostelId);
+    }
+
+    public List<Rooms> findByHostelIdAndShareType(String hostelId, List<Integer> shareTypes) {
+        List<Rooms> listRooms = roomRepository.findByHostelIdAndSharingTypeIn(hostelId, shareTypes);
+        if (listRooms == null) {
+            listRooms = new ArrayList<>();
+        }
+        return listRooms;
     }
 }

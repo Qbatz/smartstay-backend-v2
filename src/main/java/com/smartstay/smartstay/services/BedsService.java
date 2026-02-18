@@ -464,6 +464,7 @@ public class BedsService {
         beds.setFreeFrom(null);
         beds.setRentAmount(addBed.amount());
         Beds bedsV1 = bedsRepository.save(beds);
+        roomsService.updateSharingCount(addBed.roomId());
         usersService.addUserLog(addBed.hostelId(), String.valueOf(bedsV1.getBedId()), ActivitySource.BEDS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
@@ -931,5 +932,13 @@ public class BedsService {
                 })
                 .toList();
         bedsRepository.saveAll(listBeds);
+    }
+
+    public List<Beds> findByHostelId(String hostelId) {
+        return bedsRepository.findByHostelIdAndIsDeletedFalse(hostelId);
+    }
+
+    public List<Beds> findFilledBeds(String hostelId) {
+        return bedsRepository.findFilledBeds(hostelId);
     }
 }

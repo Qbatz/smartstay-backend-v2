@@ -630,11 +630,11 @@ public class InvoiceV1Service {
         }
 
         List<ItemResponse> items = manualInvoice.items() != null ? manualInvoice.items() : Collections.emptyList();
-        Optional<ItemResponse> ebItem = items.stream()
-                .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.EB.name().equalsIgnoreCase(item.invoiceItem()))
-                .findFirst();
-
-        Double ebAmount = ebItem.map(ItemResponse::amount).orElse(0.0);
+//        Optional<ItemResponse> ebItem = items.stream()
+//                .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.EB.name().equalsIgnoreCase(item.invoiceItem()))
+//                .findFirst();
+//
+//        Double ebAmount123 = ebItem.map(ItemResponse::amount).orElse(0.0);
 
         Optional<ItemResponse> rentItem = items.stream()
                 .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.invoiceItem())
@@ -780,29 +780,29 @@ public class InvoiceV1Service {
         for (ItemResponse item : manualInvoice.items()) {
             InvoiceItems invoiceItem = new InvoiceItems();
             String itemName = item.invoiceItem().trim().toUpperCase();
-            if (itemName.equals("EB")) {
+            if (itemName.equalsIgnoreCase("EB")) {
                 invoiceItem.setAmount(item.amount());
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
-            } else if (itemName.equals("RENT") || itemName.equals("ROOM RENT")) {
+            } else if (itemName.equalsIgnoreCase("RENT") || itemName.equalsIgnoreCase("ROOM RENT")) {
                 invoiceItem.setAmount(invoiceAmount);
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
-            }else if (itemName.equals("AMENITY")) {
+            }else if (itemName.equalsIgnoreCase("AMENITY")) {
                 invoiceItem.setAmount(item.amount());
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
             }else {
                 invoiceItem.setAmount(item.amount());
                 invoiceItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
                 invoiceItem.setOtherItem(item.invoiceItem());
-                if (item.amount() != null) {
-                    totalAmount += item.amount();
-                }
+            }
+            if (item.amount() != null) {
+                totalAmount = totalAmount + item.amount();
             }
             invoiceItem.setInvoice(invoicesV1);
             listInvoicesItems.add(invoiceItem);
         }
-        totalAmount = totalAmount + invoiceAmount + ebAmount;
+
         invoicesV1.setInvoiceNumber(prefixSuffix.toString());
-        invoicesV1.setBasePrice(Utils.roundOfDouble(invoiceAmount));
+        invoicesV1.setBasePrice(Utils.roundOfDouble(totalAmount));
         invoicesV1.setCustomerId(customerId);
         invoicesV1.setHostelId(customers.getHostelId());
         invoicesV1.setInvoiceType(InvoiceType.RENT.name());
