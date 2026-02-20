@@ -116,7 +116,11 @@ public class TransactionsListMapper implements Function<TransactionV1, ReceiptsL
             else if(bank.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
                 if (bank.getAccountHolderName() != null) {
                     bankName.append("-");
-                    bankName.append(bank.getBankName());
+                    if (bank.getBankName() != null) {
+                        bankName.append(bank.getBankName());
+                    }
+                    bankName.append("Bank");
+
                 }
             }
             else if(bank.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {

@@ -170,7 +170,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                         @Param("paymentStatus") List<String> paymentStatus,
                         @Param("invoiceModes") List<String> invoiceModes,
                         @Param("invoiceTypes") List<String> invoiceTypes, @Param("createdBy") List<String> createdBy,
-                        Pageable pageable);
+                                               @Param("isCancelled") boolean isCancelled, Pageable pageable);
 
         @Query("SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND DATE(i.invoiceStartDate) >= DATE(:startDate) AND DATE(i.invoiceStartDate) <= DATE(:endDate)")
         int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
@@ -188,9 +188,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
         @Query("""
                         SELECT i FROM InvoicesV1 i
-                        WHERE i.hostelId = :hostelId
-                        AND i.invoiceType != 'SETTLEMENT'
-                        AND i.isCancelled = false
+                        WHERE i.hostelId = :hostelId 
+                        AND i.invoiceType != 'SETTLEMENT' 
+                        AND i.isCancelled in :isCancelled 
                         AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
                         AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
                         AND (:paymentStatus IS NULL OR i.paymentStatus IN :paymentStatus)
@@ -210,13 +210,13 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                         @Param("createdBy") List<String> createdBy, @Param("minPaidAmount") Double minPaidAmount,
                         @Param("maxPaidAmount") Double maxPaidAmount,
                         @Param("minOutstandingAmount") Double minOutstandingAmount,
-                        @Param("maxOutstandingAmount") Double maxOutstandingAmount, Pageable pageable);
+                        @Param("maxOutstandingAmount") Double maxOutstandingAmount, List<Boolean> isCancelled, Pageable pageable);
 
         @Query("""
                         SELECT i FROM InvoicesV1 i
-                        WHERE i.hostelId = :hostelId
-                        AND i.invoiceType != 'SETTLEMENT'
-                        AND i.isCancelled = false
+                        WHERE i.hostelId = :hostelId 
+                        AND  i.invoiceType != 'SETTLEMENT'  
+                        AND i.isCancelled in :isCancelled 
                         AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
                         AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
                         AND i.customerId IN :customerIds
@@ -239,72 +239,72 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                         @Param("createdBy") List<String> createdBy, @Param("minPaidAmount") Double minPaidAmount,
                         @Param("maxPaidAmount") Double maxPaidAmount,
                         @Param("minOutstandingAmount") Double minOutstandingAmount,
-                        @Param("maxOutstandingAmount") Double maxOutstandingAmount, Pageable pageable);
+                        @Param("maxOutstandingAmount") Double maxOutstandingAmount, List<Boolean> isCancelled, Pageable pageable);
 
-        @Query("""
-                        SELECT new com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto(
-                            COUNT(CASE WHEN i.invoiceType != 'REFUND' THEN 1 ELSE NULL END),
-                            SUM(CASE WHEN i.invoiceType != 'REFUND' THEN i.totalAmount ELSE 0.0 END),
-                            SUM(i.paidAmount),
-                            SUM(CASE WHEN i.invoiceType = 'REFUND' THEN i.totalAmount ELSE 0.0 END)
-                        )
-                        FROM InvoicesV1 i
-                        WHERE i.hostelId = :hostelId
-                        AND i.invoiceType != 'SETTLEMENT'
-                        AND i.isCancelled = false
-                        AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
-                        AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
-                        AND (:paymentStatus IS NULL OR i.paymentStatus IN :paymentStatus)
-                        AND (:invoiceModes IS NULL OR i.invoiceMode IN :invoiceModes)
-                        AND (:invoiceTypes IS NULL OR i.invoiceType IN :invoiceTypes)
-                        AND (:createdBy IS NULL OR i.createdBy IN :createdBy)
-                        AND (:minPaidAmount IS NULL OR i.paidAmount >= :minPaidAmount)
-                        AND (:maxPaidAmount IS NULL OR i.paidAmount <= :maxPaidAmount)
-                        AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)
-                        AND (:maxOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) <= :maxOutstandingAmount)
-                        """)
-        InvoiceAggregateDto findInvoiceAggregatesByFilters(@Param("hostelId") String hostelId,
-                        @Param("startDate") Date startDate, @Param("endDate") Date endDate,
-                        @Param("paymentStatus") List<String> paymentStatus,
-                        @Param("invoiceModes") List<String> invoiceModes,
-                        @Param("invoiceTypes") List<String> invoiceTypes, @Param("createdBy") List<String> createdBy,
-                        @Param("minPaidAmount") Double minPaidAmount, @Param("maxPaidAmount") Double maxPaidAmount,
-                        @Param("minOutstandingAmount") Double minOutstandingAmount,
-                        @Param("maxOutstandingAmount") Double maxOutstandingAmount);
+//        @Query("""
+//                        SELECT new com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto(
+//                            COUNT(CASE WHEN i.invoiceType != 'REFUND' THEN 1 ELSE NULL END),
+//                            SUM(CASE WHEN i.invoiceType != 'REFUND' THEN i.totalAmount ELSE 0.0 END),
+//                            SUM(i.paidAmount),
+//                            SUM(CASE WHEN i.invoiceType = 'REFUND' THEN i.totalAmount ELSE 0.0 END)
+//                        )
+//                        FROM InvoicesV1 i
+//                        WHERE i.hostelId = :hostelId
+//                        AND i.invoiceType != 'SETTLEMENT'
+//                        AND i.isCancelled = false
+//                        AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
+//                        AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
+//                        AND (:paymentStatus IS NULL OR i.paymentStatus IN :paymentStatus)
+//                        AND (:invoiceModes IS NULL OR i.invoiceMode IN :invoiceModes)
+//                        AND (:invoiceTypes IS NULL OR i.invoiceType IN :invoiceTypes)
+//                        AND (:createdBy IS NULL OR i.createdBy IN :createdBy)
+//                        AND (:minPaidAmount IS NULL OR i.paidAmount >= :minPaidAmount)
+//                        AND (:maxPaidAmount IS NULL OR i.paidAmount <= :maxPaidAmount)
+//                        AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)
+//                        AND (:maxOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) <= :maxOutstandingAmount)
+//                        """)
+//        InvoiceAggregateDto findInvoiceAggregatesByFilters(@Param("hostelId") String hostelId,
+//                        @Param("startDate") Date startDate, @Param("endDate") Date endDate,
+//                        @Param("paymentStatus") List<String> paymentStatus,
+//                        @Param("invoiceModes") List<String> invoiceModes,
+//                        @Param("invoiceTypes") List<String> invoiceTypes, @Param("createdBy") List<String> createdBy,
+//                        @Param("minPaidAmount") Double minPaidAmount, @Param("maxPaidAmount") Double maxPaidAmount,
+//                        @Param("minOutstandingAmount") Double minOutstandingAmount,
+//                        @Param("maxOutstandingAmount") Double maxOutstandingAmount);
 
-        @Query("""
-                        SELECT new com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto(
-                            COUNT(CASE WHEN i.invoiceType != 'REFUND' THEN 1 ELSE NULL END),
-                            SUM(CASE WHEN i.invoiceType != 'REFUND' THEN i.totalAmount ELSE 0.0 END),
-                            SUM(i.paidAmount),
-                            SUM(CASE WHEN i.invoiceType = 'REFUND' THEN i.totalAmount ELSE 0.0 END)
-                        )
-                        FROM InvoicesV1 i
-                        WHERE i.hostelId = :hostelId
-                        AND i.invoiceType != 'SETTLEMENT'
-                        AND i.isCancelled = false
-                        AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
-                        AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
-                        AND i.customerId IN :customerIds
-                        AND (:paymentStatus IS NULL OR i.paymentStatus IN :paymentStatus)
-                        AND (:invoiceModes IS NULL OR i.invoiceMode IN :invoiceModes)
-                        AND (:invoiceTypes IS NULL OR i.invoiceType IN :invoiceTypes)
-                        AND (:createdBy IS NULL OR i.createdBy IN :createdBy)
-                        AND (:minPaidAmount IS NULL OR i.paidAmount >= :minPaidAmount)
-                        AND (:maxPaidAmount IS NULL OR i.paidAmount <= :maxPaidAmount)
-                        AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)
-                        AND (:maxOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) <= :maxOutstandingAmount)
-                        """)
-        InvoiceAggregateDto findInvoiceAggregatesByFiltersWithCustomers(@Param("hostelId") String hostelId,
-                        @Param("startDate") Date startDate, @Param("endDate") Date endDate,
-                        @Param("customerIds") List<String> customerIds,
-                        @Param("paymentStatus") List<String> paymentStatus,
-                        @Param("invoiceModes") List<String> invoiceModes,
-                        @Param("invoiceTypes") List<String> invoiceTypes,
-                        @Param("createdBy") List<String> createdBy, @Param("minPaidAmount") Double minPaidAmount,
-                        @Param("maxPaidAmount") Double maxPaidAmount,
-                        @Param("minOutstandingAmount") Double minOutstandingAmount,
-                        @Param("maxOutstandingAmount") Double maxOutstandingAmount);
+//        @Query("""
+//                        SELECT new com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto(
+//                            COUNT(CASE WHEN i.invoiceType != 'REFUND' THEN 1 ELSE NULL END),
+//                            SUM(CASE WHEN i.invoiceType != 'REFUND' THEN i.totalAmount ELSE 0.0 END),
+//                            SUM(i.paidAmount),
+//                            SUM(CASE WHEN i.invoiceType = 'REFUND' THEN i.totalAmount ELSE 0.0 END)
+//                        )
+//                        FROM InvoicesV1 i
+//                        WHERE i.hostelId = :hostelId
+//                        AND i.invoiceType != 'SETTLEMENT'
+//                        AND i.isCancelled = false
+//                        AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
+//                        AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
+//                        AND i.customerId IN :customerIds
+//                        AND (:paymentStatus IS NULL OR i.paymentStatus IN :paymentStatus)
+//                        AND (:invoiceModes IS NULL OR i.invoiceMode IN :invoiceModes)
+//                        AND (:invoiceTypes IS NULL OR i.invoiceType IN :invoiceTypes)
+//                        AND (:createdBy IS NULL OR i.createdBy IN :createdBy)
+//                        AND (:minPaidAmount IS NULL OR i.paidAmount >= :minPaidAmount)
+//                        AND (:maxPaidAmount IS NULL OR i.paidAmount <= :maxPaidAmount)
+//                        AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)
+//                        AND (:maxOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) <= :maxOutstandingAmount)
+//                        """)
+//        InvoiceAggregateDto findInvoiceAggregatesByFiltersWithCustomers(@Param("hostelId") String hostelId,
+//                        @Param("startDate") Date startDate, @Param("endDate") Date endDate,
+//                        @Param("customerIds") List<String> customerIds,
+//                        @Param("paymentStatus") List<String> paymentStatus,
+//                        @Param("invoiceModes") List<String> invoiceModes,
+//                        @Param("invoiceTypes") List<String> invoiceTypes,
+//                        @Param("createdBy") List<String> createdBy, @Param("minPaidAmount") Double minPaidAmount,
+//                        @Param("maxPaidAmount") Double maxPaidAmount,
+//                        @Param("minOutstandingAmount") Double minOutstandingAmount,
+//                        @Param("maxOutstandingAmount") Double maxOutstandingAmount);
 
         @Query(value = """
                         SELECT DISTINCT created_by
@@ -336,4 +336,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
         @Query("SELECT i.invoiceId FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.invoiceType IN :invoiceTypes")
         List<String> findInvoiceIdsByHostelIdAndTypeIn(@Param("hostelId") String hostelId,
                         @Param("invoiceTypes") List<String> invoiceTypes);
+
+        @Query("""
+                SELECT invc FROM InvoicesV1 invc WHERE invc.invoiceType='BOOKING' AND invc.paymentStatus='CANCELLED'
+                """)
+        List<InvoicesV1> findBookingInvoiceWithCancelledPayment();
 }

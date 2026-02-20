@@ -90,11 +90,12 @@ public class ReportController {
                         @RequestParam(value = "period", required = false) String period,
                         @RequestParam(value = "startDate", required = false) String startDate,
                         @RequestParam(value = "endDate", required = false) String endDate,
+                        @RequestParam(value = "sharingType", required = false) List<String> sharingType,
                         @RequestParam(value = "page", defaultValue = "0") int page,
                         @RequestParam(value = "size", defaultValue = "10") int size) {
                 return reportService.getTenantRegister(hostelId, search, status, room, floor, period, startDate,
                                 endDate, page,
-                                size);
+                                size, sharingType);
         }
 
         @PostMapping("/complaints/{hostelId}")

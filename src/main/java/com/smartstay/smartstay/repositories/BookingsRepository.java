@@ -210,41 +210,44 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
         long countBookingsForTenantRegister(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
                         @Param("endDate") Date endDate);
 
-        @Query(value = "SELECT b FROM BookingsV1 b WHERE b.hostelId = :hostelId " +
-                        "AND (" +
-                        "  (cast(b.joiningDate as date) >= cast(:startDate as date) AND cast(b.joiningDate as date) <= cast(:endDate as date)) "
-                        +
-                        "  OR (cast(b.checkoutDate as date) >= cast(:startDate as date) AND cast(b.checkoutDate as date) <= cast(:endDate as date)) "
-                        +
-                        "  OR (cast(b.joiningDate as date) <= cast(:endDate as date) AND (b.checkoutDate IS NULL OR cast(b.checkoutDate as date) >= cast(:startDate as date))) "
-                        +
-                        ") " +
-                        "AND (:customerIds IS NULL OR b.customerId IN :customerIds) " +
-                        "AND (:statuses IS NULL OR b.currentStatus IN :statuses) " +
-                        "AND (:roomIds IS NULL OR b.roomId IN :roomIds) " +
-                        "AND (:floorIds IS NULL OR b.floorId IN :floorIds) " +
-                        "ORDER BY b.joiningDate DESC")
+        @Query(value = """
+                        SELECT b FROM BookingsV1 b WHERE b.hostelId = :hostelId 
+                        AND 
+                (b.joiningDate IS NOT NULL AND DATE(b.joiningDate) <= DATE(:endDate) 
+                OR 
+                (b.joiningDate IS NULL AND DATE(b.expectedJoiningDate) <= DATE(:endDate))) 
+                AND 
+                (b.currentStatus <> 'CANCELLED' OR (b.currentStatus = 'CANCELLED' AND DATE(b.cancelDate) >= DATE(:startDate) AND 
+                DATE(b.cancelDate) <= DATE(:endDate))) AND 
+                (b.checkoutDate IS NULL OR DATE(b.checkoutDate) >= DATE(:startDate)) 
+                        AND (:customerIds IS NULL OR b.customerId IN :customerIds) 
+                        AND (:statuses IS NULL OR b.currentStatus IN :statuses) 
+                        AND (:roomIds IS NULL OR b.roomId IN :roomIds) 
+                        AND (:floorIds IS NULL OR b.floorId IN :floorIds) ORDER BY b.joiningDate DESC""")
         org.springframework.data.domain.Page<BookingsV1> findBookingsWithFilters(@Param("hostelId") String hostelId,
                         @Param("startDate") Date startDate, @Param("endDate") Date endDate,
                         @Param("customerIds") List<String> customerIds, @Param("statuses") List<String> statuses,
                         @Param("roomIds") List<Integer> roomIds, @Param("floorIds") List<Integer> floorIds,
                         org.springframework.data.domain.Pageable pageable);
 
-        @Query(value = "SELECT b FROM BookingsV1 b WHERE b.hostelId = :hostelId " +
-                        "AND (" +
-                        "  (cast(b.joiningDate as date) >= cast(:startDate as date) AND cast(b.joiningDate as date) <= cast(:endDate as date)) "
-                        +
-                        "  OR (cast(b.checkoutDate as date) >= cast(:startDate as date) AND cast(b.checkoutDate as date) <= cast(:endDate as date)) "
-                        +
-                        "  OR (cast(b.joiningDate as date) <= cast(:endDate as date) AND (b.checkoutDate IS NULL OR cast(b.checkoutDate as date) >= cast(:startDate as date))) "
-                        +
-                        ") " +
-                        "AND (:customerIds IS NULL OR b.customerId IN :customerIds) " +
-                        "AND (:statuses IS NULL OR b.currentStatus IN :statuses) " +
-                        "AND (:roomIds IS NULL OR b.roomId IN :roomIds) " +
-                        "AND (:floorIds IS NULL OR b.floorId IN :floorIds)")
+        @Query(value = """
+                        SELECT b FROM BookingsV1 b WHERE b.hostelId = :hostelId 
+                        AND 
+                (b.joiningDate IS NOT NULL AND DATE(b.joiningDate) <= DATE(:endDate) 
+                OR 
+                (b.joiningDate IS NULL AND DATE(b.expectedJoiningDate) <= DATE(:endDate))) 
+                AND 
+                (b.currentStatus <> 'CANCELLED' OR (b.currentStatus = 'CANCELLED' AND DATE(b.cancelDate) >= DATE(:startDate) AND 
+                DATE(b.cancelDate) <= DATE(:endDate))) AND 
+                (b.checkoutDate IS NULL OR DATE(b.checkoutDate) >= DATE(:startDate)) 
+                        AND (:customerIds IS NULL OR b.customerId IN :customerIds) 
+                        AND (:statuses IS NULL OR b.currentStatus IN :statuses) 
+                        AND (:roomIds IS NULL OR b.roomId IN :roomIds) 
+                        AND (:floorIds IS NULL OR b.floorId IN :floorIds)""")
         List<BookingsV1> findAllBookingsWithFilters(@Param("hostelId") String hostelId,
                         @Param("startDate") Date startDate, @Param("endDate") Date endDate,
                         @Param("customerIds") List<String> customerIds, @Param("statuses") List<String> statuses,
                         @Param("roomIds") List<Integer> roomIds, @Param("floorIds") List<Integer> floorIds);
+
+
 }

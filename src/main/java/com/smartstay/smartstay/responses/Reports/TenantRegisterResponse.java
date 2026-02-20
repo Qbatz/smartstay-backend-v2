@@ -39,6 +39,7 @@ public class TenantRegisterResponse {
         private SegmentSummary noticePeriod;
         private SegmentSummary checkoutMTD;
         private SegmentSummary inactive;
+        private SegmentSummary booked;
     }
 
     @Data
@@ -47,7 +48,6 @@ public class TenantRegisterResponse {
     @Builder
     public static class SegmentSummary {
         private int count;
-        private double amount;
         private int trend;
     }
 
@@ -86,7 +86,8 @@ public class TenantRegisterResponse {
         private List<FilterItem> tenantStatus;
         private List<FilterItem> period;
         private List<FilterItem> floor;
-        private List<FilterItem> room;
+        private List<RoomFilter> room;
+        private List<SharingTypeFilter> sharingType;
     }
 
     @Data
@@ -97,4 +98,27 @@ public class TenantRegisterResponse {
         private Object id;
         private String label;
     }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class RoomFilter {
+        private Object id;
+        private String label;
+        private Integer floorId;
+        private Integer shareType;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class SharingTypeFilter {
+        private Object id;
+        private String label;
+        private List<FilterItem> floorIds;
+    }
+
+
 }

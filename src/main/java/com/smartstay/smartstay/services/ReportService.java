@@ -5,7 +5,6 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.RoomBedCount;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
-import com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto;
 import com.smartstay.smartstay.dto.reports.ComplaintsReportFilterRequest;
 import com.smartstay.smartstay.dto.reports.ComplaintsReportResponse;
 import com.smartstay.smartstay.dto.reports.ElectricityForReports;
@@ -24,10 +23,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Service
@@ -275,6 +272,48 @@ public class ReportService {
                         return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
 
+                AtomicBoolean requestedAll = new AtomicBoolean(false);
+                AtomicBoolean isCancelled = new AtomicBoolean(false);
+                if (paymentStatus != null) {
+
+                        paymentStatus.forEach(i -> {
+                           if (i.equalsIgnoreCase(PaymentStatus.CANCELLED.name())) {
+                                   isCancelled.set(true);
+                           }
+                           else if (i.equalsIgnoreCase("ALL")) {
+                                   requestedAll.set(true);
+                           }
+                        });
+
+                        if (isCancelled.get()) {
+                                paymentStatus = paymentStatus.stream()
+                                        .filter(i -> !i.equalsIgnoreCase(PaymentStatus.CANCELLED.name()))
+                                        .toList();
+                                if (paymentStatus.isEmpty()) {
+                                        paymentStatus = null;
+                                }
+                        }
+                }
+
+                List<Boolean> isCancelledList = new ArrayList<>();
+                if (isCancelled.get()) {
+                        isCancelledList.add(true);
+                }
+                if (paymentStatus == null && !isCancelled.get()) {
+                        isCancelledList.add(true);
+                        isCancelledList.add(false);
+                }else {
+                        if (paymentStatus != null && requestedAll.get()) {
+                                paymentStatus = null;
+                                isCancelledList.add(true);
+                                isCancelledList.add(false);
+                        }
+                        else if (paymentStatus != null && !requestedAll.get()) {
+                                isCancelledList.add(true);
+                                isCancelledList.add(false);
+                        }
+                }
+
                 BillingDates dates = calculateDateRange(period, hostelId);
                 Date startDate = dates.currentBillStartDate();
                 Date endDate = dates.currentBillEndDate();
@@ -289,16 +328,15 @@ public class ReportService {
                 Pageable pageable = PageRequest.of(page, size);
                 List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
                                 paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
-                                minOutstandingAmount, maxOutstandingAmount, pageable);
-                List<ReportDetailsResponse.InvoiceDetail> invoiceDetails = mapToInvoiceDetails(invoices);
+                                minOutstandingAmount, maxOutstandingAmount, isCancelledList, pageable);
+                List<ReportDetailsResponse.InvoiceDetail> invoiceDetails = mapToInvoiceDetails(invoices, isCancelled.get());
 
                 ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);
 
                 return buildReportResponse(hostelId, startDate, endDate, search, paymentStatus, invoiceModes,
                                 invoiceTypes,
                                 createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount,
-                                invoices,
-                                invoiceDetails, options, page, size);
+                                invoiceDetails, options, page, size,isCancelledList);
         }
 
         private BillingDates calculateDateRange(String period, String hostelId) {
@@ -306,36 +344,33 @@ public class ReportService {
                         return hostelService.getCurrentBillStartAndEndDates(hostelId);
                 }
 
-                Calendar calendar = Calendar.getInstance();
-                Date today = new Date();
-                calendar.setTime(today);
-                Date startDate = null;
-                Date endDate = null;
+                Calendar cal = Calendar.getInstance();
+                BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+                if (period.equalsIgnoreCase("this month") || period.equalsIgnoreCase("this_month")) {
+                       return billingDates;
+                } else if (period.equalsIgnoreCase("last month") || period.equalsIgnoreCase("last_month")) {
 
-                if (period.equalsIgnoreCase("this month")) {
-                        calendar.set(Calendar.DAY_OF_MONTH, 1);
-                        startDate = calendar.getTime();
-                        endDate = today;
-                } else if (period.equalsIgnoreCase("last month")) {
-                        calendar.add(Calendar.MONTH, -1);
-                        calendar.set(Calendar.DAY_OF_MONTH, 1);
-                        startDate = calendar.getTime();
-                        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
-                        endDate = calendar.getTime();
-                } else if (period.equalsIgnoreCase("last 3 month")) {
-                        calendar.add(Calendar.MONTH, -3);
-                        startDate = calendar.getTime();
-                        endDate = today;
-                } else if (period.equalsIgnoreCase("6 month")) {
-                        calendar.add(Calendar.MONTH, -6);
-                        startDate = calendar.getTime();
-                        endDate = today;
+                        cal.setTime(billingDates.currentBillStartDate());
+                        cal.add(Calendar.MONTH, -1);
+
+                        return hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                } else if (period.equalsIgnoreCase("last 3 month") || period.equalsIgnoreCase("last_3_month")) {
+                        cal.setTime(billingDates.currentBillStartDate());
+                        cal.add(Calendar.MONTH, -3);
+                        BillingDates bDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                        return new BillingDates(bDates.currentBillStartDate(), billingDates.currentBillEndDate(), bDates.dueDate(), bDates.dueDays());
+                } else if (period.equalsIgnoreCase("last 6 months") || period.equalsIgnoreCase("last_6_months")) {
+                        cal.setTime(billingDates.currentBillStartDate());
+                        cal.add(Calendar.MONTH, -6);
+                        BillingDates bDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                        return new BillingDates(bDates.currentBillStartDate(), billingDates.currentBillEndDate(), bDates.dueDate(), bDates.dueDays());
                 }
-                return new BillingDates(startDate, endDate, null, null);
+                return billingDates;
         }
 
-        private List<ReportDetailsResponse.InvoiceDetail> mapToInvoiceDetails(List<InvoicesV1> invoices) {
-                List<ReportDetailsResponse.InvoiceDetail> details = invoices.stream().map(this::convertToInvoiceDetail)
+        private List<ReportDetailsResponse.InvoiceDetail> mapToInvoiceDetails(List<InvoicesV1> invoices, boolean isCancelled) {
+                List<ReportDetailsResponse.InvoiceDetail> details = invoices.stream()
+                        .map(this::convertToInvoiceDetail)
                                 .collect(Collectors.toList());
 
                 populateCustomerDetails(details, invoices);
@@ -343,6 +378,13 @@ public class ReportService {
         }
 
         private ReportDetailsResponse.InvoiceDetail convertToInvoiceDetail(InvoicesV1 inv) {
+                String paymentStatus = null;
+                if (inv.isCancelled()) {
+                        paymentStatus = "Cancelled";
+                }
+                else {
+                        paymentStatus = inv.getPaymentStatus();
+                }
                 return ReportDetailsResponse.InvoiceDetail.builder().invoiceId(inv.getInvoiceId())
                                 .invoiceNumber(inv.getInvoiceNumber()).customerId(inv.getCustomerId())
                                 .invoiceAmount(inv.getTotalAmount()).baseAmount(inv.getBasePrice())
@@ -355,7 +397,7 @@ public class ReportService {
                                 .dueDate(Utils.dateToString(inv.getInvoiceDueDate()))
                                 .invoiceType(Utils.capitalize(inv.getInvoiceType()))
                                 .invoiceMode(Utils.capitalize(inv.getInvoiceMode()))
-                                .paymentStatus(Utils.capitalize(inv.getPaymentStatus()))
+                                .paymentStatus(Utils.capitalize(paymentStatus))
                                 .updatedAt(Utils.dateToString(inv.getUpdatedAt())).isCancelled(inv.isCancelled())
                                 .build();
         }
@@ -420,56 +462,156 @@ public class ReportService {
                 return ReportDetailsResponse.FilterOptions.builder()
                                 .paymentStatus(toFilterItems(PaymentStatus.values()))
                                 .invoiceModes(toFilterItems(InvoiceMode.values()))
-                                .invoiceTypes(toFilterItems(InvoiceType.values()))
+                                .invoiceTypes(toInvoiceTypeFilterItems(InvoiceType.values()))
                                 .createdBy(createdByOptions).periods(periods).build();
         }
 
         private <E extends Enum<E>> List<ReportDetailsResponse.FilterItem> toFilterItems(E[] values) {
                 return Arrays.stream(values)
+                        .filter(i -> !i.equals(PaymentStatus.ADVANCE_IN_HAND) && !i.equals(PaymentStatus.PARTIAL_REFUND)
+                        && !i.equals(PaymentStatus.REFUNDED))
                                 .map(e -> new ReportDetailsResponse.FilterItem(Utils.capitalize(e.name()), e.name()))
                                 .collect(Collectors.toList());
+        }
+
+        private <E extends Enum<E>> List<ReportDetailsResponse.FilterItem> toInvoiceTypeFilterItems(E[] values) {
+                return Arrays.stream(values)
+                        .filter(i -> !i.equals(InvoiceType.SETTLEMENT) && !i.equals(InvoiceType.OTHERS))
+                        .map(e -> new ReportDetailsResponse.FilterItem(Utils.capitalize(e.name()), e.name()))
+                        .collect(Collectors.toList());
         }
 
         private ResponseEntity<?> buildReportResponse(String hostelId, Date startDate, Date endDate, String search,
                         List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes,
                         List<String> createdBy,
                         Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount,
-                        Double maxOutstandingAmount,
-                        List<InvoicesV1> invoices, List<ReportDetailsResponse.InvoiceDetail> invoiceDetails,
-                        ReportDetailsResponse.FilterOptions options, int page, int size) {
+                        Double maxOutstandingAmount, List<ReportDetailsResponse.InvoiceDetail> invoiceDetails,
+                        ReportDetailsResponse.FilterOptions options, int page, int size, List<Boolean> isCancelled) {
 
-                InvoiceAggregateDto aggregates = invoiceV1Service.getInvoiceAggregatesForReport(hostelId, startDate,
-                                endDate,
-                                search, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount,
-                                maxPaidAmount,
-                                minOutstandingAmount, maxOutstandingAmount);
+                Pageable pageable = Pageable.unpaged();
+                List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
+                                paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
+                                minOutstandingAmount, maxOutstandingAmount, isCancelled, pageable);
+
 
                 int totalInvoices = 0;
                 Double totalAmount = 0.0;
                 Double paidAmount = 0.0;
+                Double outstandingAmount = 0.0;
+                Double cancelledAmount = 0.0;
+                Double returnInvoiceAmount = 0.0;
 
-                if (aggregates != null) {
-                        if (aggregates.getCount() != null)
-                                totalInvoices = aggregates.getCount().intValue();
-                        if (aggregates.getTotalAmount() != null)
-                                totalAmount = aggregates.getTotalAmount();
-                        if (aggregates.getPaidAmount() != null)
-                                paidAmount = aggregates.getPaidAmount();
-                }
-                Double refundAmount = 0.0;
-                if (aggregates != null && aggregates.getRefundAmount() != null) {
-                        refundAmount = aggregates.getRefundAmount();
-                }
-                Double profit = totalAmount - refundAmount;
-                Double outStandingAmount = totalAmount - paidAmount;
+                int cancelledInvoiceCount = 0;
+                int paidInvoiceCount = 0;
+                int outstandingInvoiceCount = 0;
+                int returnedInvoiceCount = 0;
+                double profit = 0.0;
+
+                totalInvoices = invoices.size();
+
+                totalAmount = invoices
+                        .stream()
+                        .mapToDouble(i -> {
+                                if (i.getTotalAmount() == null) {
+                                        return 0.0;
+                                }
+                                if (i.getTotalAmount() < 0) {
+                                        return i.getTotalAmount() * -1;
+                                }
+                                return i.getTotalAmount();
+                        })
+                        .sum();
+
+                paidInvoiceCount = (int) invoices
+                        .stream()
+                        .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                        .count();
+
+                paidAmount = invoices
+                        .stream()
+                        .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                        .mapToDouble(i -> {
+                                if (i.getPaidAmount() == null) {
+                                        return i.getTotalAmount();
+                                }
+                                return i.getPaidAmount();
+                        })
+                        .sum();
+
+                cancelledInvoiceCount = (int) invoices
+                        .stream()
+                        .filter(InvoicesV1::isCancelled)
+                        .count();
+                returnedInvoiceCount = (int) invoices
+                        .stream()
+                        .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()) && i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.CANCELLED.name()))
+                        .count();
+
+                returnInvoiceAmount = invoices
+                        .stream()
+                        .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()) && i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.CANCELLED.name()))
+                        .mapToDouble(i -> {
+                                if (i.getPaidAmount() != null) {
+                                        return i.getPaidAmount();
+                                }
+                                return i.getTotalAmount();
+                        })
+                        .sum();
+
+                cancelledAmount = invoices
+                        .stream()
+                        .filter(InvoicesV1::isCancelled)
+                        .mapToDouble(i -> {
+                                if (i.getPaidAmount() == null) {
+                                        return i.getTotalAmount();
+                                }
+                                return i.getTotalAmount() - i.getPaidAmount();
+                        })
+                        .sum();
+
+                outstandingAmount = invoices
+                        .stream()
+                        .filter(i -> !i.isCancelled())
+                        .mapToDouble(i -> {
+                                if (i.getPaidAmount() == null) {
+                                        return i.getTotalAmount();
+                                }
+                                return i.getTotalAmount() - i.getPaidAmount();
+                        })
+                        .sum();
+
+
+//                if (aggregates != null) {
+//                        if (aggregates.getCount() != null)
+//                                totalInvoices = aggregates.getCount().intValue();
+//                        if (aggregates.getTotalAmount() != null)
+//                                totalAmount = aggregates.getTotalAmount();
+//                        if (aggregates.getPaidAmount() != null)
+//                                paidAmount = aggregates.getPaidAmount();
+//                }
+//                Double refundAmount = 0.0;
+//                if (aggregates != null && aggregates.getRefundAmount() != null) {
+//                        refundAmount = aggregates.getRefundAmount();
+//                }
+//                outstandingAmount = totalAmount - paidAmount;
+                outstandingInvoiceCount = totalInvoices - paidInvoiceCount;
 
                 int totalPages = (int) Math.ceil((double) totalInvoices / size);
 
                 ReportDetailsResponse response = ReportDetailsResponse.builder().totalInvoices(totalInvoices)
                                 .currentPage(page)
-                                .totalPages(totalPages).totalAmount(totalAmount).refundAmount(refundAmount)
-                                .profit(profit).outStandingAmount(outStandingAmount)
-                                .paidAmount(paidAmount).startDate(Utils.dateToString(startDate))
+                                .totalPages(totalPages)
+                                .totalAmount(totalAmount)
+                                .refundAmount(returnInvoiceAmount)
+                                .profit(profit)
+                                .outStandingAmount(outstandingAmount)
+                                .cancelledAmount(cancelledAmount)
+                                .paidAmount(paidAmount)
+                        .paidInvoiceCount(paidInvoiceCount)
+                        .cancelledInvoiceCount(cancelledInvoiceCount)
+                        .outstandingInvoiceCount(outstandingInvoiceCount)
+                        .returnedInvoiceCount(returnedInvoiceCount)
+                                .startDate(Utils.dateToString(startDate))
                                 .endDate(Utils.dateToString(endDate))
                                 .filterOptions(options).invoiceList(invoiceDetails).build();
 
@@ -530,7 +672,7 @@ public class ReportService {
         public ResponseEntity<?> getTenantRegister(String hostelId, String search, List<String> status,
                         List<Integer> rooms,
                         List<Integer> floors, String period, String customStartDate, String customEndDate, int page,
-                        int size) {
+                        int size, List<String> sharingType) {
                 if (!authentication.isAuthenticated()) {
                         return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
                 }
@@ -540,6 +682,19 @@ public class ReportService {
                 }
                 if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
                         return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+                }
+
+                if (sharingType != null) {
+                        List<Integer> shareTypes = sharingType
+                                .stream()
+                                .map(Integer::parseInt)
+                                .toList();
+                        if (rooms == null) {
+                             rooms = roomsService.findByHostelIdAndShareType(hostelId, shareTypes)
+                                     .stream()
+                                     .map(Rooms::getRoomId)
+                                     .toList();
+                        }
                 }
 
                 Date startDate;
@@ -587,6 +742,7 @@ public class ReportService {
                 double checkoutAmount = 0;
                 int inactiveCount = 0;
                 double inactiveAmount = 0;
+                int bookedCount = 0;
 
                 for (BookingsV1 b : allBookings) {
                         uniqueTenants.add(b.getCustomerId());
@@ -607,15 +763,21 @@ public class ReportService {
                                 inactiveCount++;
                                 inactiveAmount += amount;
                         }
+                        else if (BookingStatus.BOOKED.name().equalsIgnoreCase(bookingStatus)) {
+                                bookedCount++;
+
+                        }
+
                 }
 
                 TenantRegisterResponse.Summary summary = TenantRegisterResponse.Summary.builder()
                                 .totalTenants(uniqueTenants.size())
-                                .activeTenants(new TenantRegisterResponse.SegmentSummary(activeCount, activeAmount, 0))
-                                .noticePeriod(new TenantRegisterResponse.SegmentSummary(noticeCount, noticeAmount, 0))
-                                .checkoutMTD(new TenantRegisterResponse.SegmentSummary(checkoutCount, checkoutAmount,
+                                .activeTenants(new TenantRegisterResponse.SegmentSummary(activeCount, 0))
+                                .noticePeriod(new TenantRegisterResponse.SegmentSummary(noticeCount, 0))
+                                .checkoutMTD(new TenantRegisterResponse.SegmentSummary(checkoutCount,
                                                 0))
-                                .inactive(new TenantRegisterResponse.SegmentSummary(inactiveCount, inactiveAmount, 0))
+                                .inactive(new TenantRegisterResponse.SegmentSummary(inactiveCount, 0))
+                                .booked(new TenantRegisterResponse.SegmentSummary(bookedCount, 0))
                                 .build();
 
                 Page<BookingsV1> bookingsPage = bookingsService
@@ -645,27 +807,25 @@ public class ReportService {
                         Long bedCount = sharingMap.get(b.getRoomId());
                         if (bedCount != null) {
                                 if (bedCount == 1)
-                                        sharing = "Single";
+                                        sharing = "Single Sharing";
                                 else if (bedCount == 2)
-                                        sharing = "Double";
+                                        sharing = "Two Sharing";
                                 else if (bedCount == 3)
-                                        sharing = "Triple";
+                                        sharing = "Three Sharing";
                                 else
                                         sharing = bedCount + " Sharing";
                         }
 
-                        LocalDate joinDate = b.getJoiningDate().toInstant()
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDate();
 
-                        LocalDate checkoutDate = (b.getCheckoutDate() != null
-                                        ? b.getCheckoutDate()
-                                        : new Date())
-                                        .toInstant()
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDate();
-
-                        long days = ChronoUnit.DAYS.between(joinDate, checkoutDate) + 1;
+                        long days = 0;
+                        if (b.getJoiningDate() != null) {
+                                if (b.getCheckoutDate() != null) {
+                                        days = Utils.findNumberOfDays(b.getJoiningDate(), b.getCheckoutDate());
+                                }
+                                else {
+                                        days = Utils.findNumberOfDays(b.getJoiningDate(),new Date());
+                                }
+                        }
 
                         String stayDuration = days + (days == 1 ? " day" : " days");
 
@@ -700,10 +860,11 @@ public class ReportService {
         private ResponseEntity<?> buildEmptyTenantResponse(Date startDate, Date endDate, int page, int size,
                         String hostelId, String parentId) {
                 TenantRegisterResponse.Summary summary = TenantRegisterResponse.Summary.builder().totalTenants(0)
-                                .activeTenants(new TenantRegisterResponse.SegmentSummary(0, 0.0, 0))
-                                .noticePeriod(new TenantRegisterResponse.SegmentSummary(0, 0.0, 0))
-                                .checkoutMTD(new TenantRegisterResponse.SegmentSummary(0, 0.0, 0))
-                                .inactive(new TenantRegisterResponse.SegmentSummary(0, 0.0, 0)).build();
+                                .activeTenants(new TenantRegisterResponse.SegmentSummary(0, 0))
+                                .noticePeriod(new TenantRegisterResponse.SegmentSummary(0, 0))
+                                .checkoutMTD(new TenantRegisterResponse.SegmentSummary(0, 0))
+                                .inactive(new TenantRegisterResponse.SegmentSummary(0, 0))
+                        .booked(new TenantRegisterResponse.SegmentSummary(0, 0)).build();
                 TenantRegisterResponse.Filters filtersData = buildTenantFilters(hostelId, parentId);
                 TenantRegisterResponse response = TenantRegisterResponse.builder().status(true)
                                 .message("Tenant register fetched successfully")
@@ -719,12 +880,67 @@ public class ReportService {
 
         private TenantRegisterResponse.Filters buildTenantFilters(String hostelId, String parentId) {
                 List<TenantRegisterResponse.FilterItem> statusList = Arrays.stream(BookingStatus.values())
-                                .map(s -> new TenantRegisterResponse.FilterItem(s.name(), Utils.capitalize(s.name())))
+                                .map(s -> {
+                                        if (s.name().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
+                                                return new TenantRegisterResponse.FilterItem(s.name(), Utils.capitalize("Inactive"));
+                                        }
+                                        return new TenantRegisterResponse.FilterItem(s.name(), Utils.capitalize(s.name()));
+                                })
                                 .collect(Collectors.toList());
+                List<Rooms> rooms = roomsService.getAllRoomsByHostelId(hostelId);
+                List<TenantRegisterResponse.SharingTypeFilter> sharingType = new ArrayList<>();
+                HashMap<Integer, List<Integer>> floors = new HashMap<>();
+
+                rooms.forEach(item -> {
+                        if (floors.containsKey(item.getSharingType())) {
+                                List<Integer> existingFloorIds = floors.get(item.getSharingType());
+                                existingFloorIds.add(item.getFloorId());
+                                floors.put(item.getSharingType(), existingFloorIds);
+                        }
+                        else {
+                                List<Integer> existingFloorIds = new ArrayList<>();
+                                existingFloorIds.add(item.getFloorId());
+                                floors.put(item.getSharingType(), existingFloorIds);
+                        }
+                });
+
+                if (rooms != null) {
+                        sharingType = rooms
+                                .stream()
+                                .map(Rooms::getSharingType)
+                                .filter(Objects::nonNull)
+                                .filter(i -> i > 0)
+                                .sorted()
+                                .distinct()
+                                .map(i -> {
+                                        List<TenantRegisterResponse.FilterItem> filterItems = floors.get(i)
+                                                .stream()
+                                                .distinct()
+                                                .sorted(Comparator.reverseOrder())
+                                                .map(i2 -> new TenantRegisterResponse.FilterItem(i2, i2+""))
+                                                .toList();
+                                        if (i == 1) {
+                                              return new TenantRegisterResponse.SharingTypeFilter(1, Utils.SHARING_TYPE_SINGLE, filterItems);
+                                        }
+                                        else if (i == 2) {
+                                                return new TenantRegisterResponse.SharingTypeFilter(2, Utils.SHARING_TYPE_TWO, filterItems);
+                                        }
+                                        else if (i == 3) {
+                                                return new TenantRegisterResponse.SharingTypeFilter(3, Utils.SHARING_TYPE_THREE, filterItems);
+                                        }
+                                        else {
+                                                return new TenantRegisterResponse.SharingTypeFilter(i,  i + " Sharing", filterItems);
+                                        }
+                                })
+                                .toList();
+
+
+                }
 
                 List<TenantRegisterResponse.FilterItem> periodList = new ArrayList<>();
                 periodList.add(new TenantRegisterResponse.FilterItem("this_month", "This Month"));
                 periodList.add(new TenantRegisterResponse.FilterItem("last_month", "Last Month"));
+                periodList.add(new TenantRegisterResponse.FilterItem("last_3_month", "Last 3 Months"));
                 periodList.add(new TenantRegisterResponse.FilterItem("last_6_months", "Last 6 Months"));
 
                 List<TenantRegisterResponse.FilterItem> floorList = floorsService.getFloorByHostelID(hostelId, parentId)
@@ -733,13 +949,14 @@ public class ReportService {
                                                 Utils.capitalize(f.getFloorName())))
                                 .collect(Collectors.toList());
 
-                List<TenantRegisterResponse.FilterItem> roomList = roomsService.getAllRoomsByHostelId(hostelId).stream()
-                                .map(r -> new TenantRegisterResponse.FilterItem(r.getRoomId(),
-                                                Utils.capitalize(r.getRoomName())))
+                List<TenantRegisterResponse.RoomFilter> roomList = roomsService.getAllRoomsByHostelId(hostelId).stream()
+                                .map(r -> new TenantRegisterResponse.RoomFilter(r.getRoomId(),
+                                                Utils.capitalize(r.getRoomName()), r.getFloorId(), r.getSharingType()))
                                 .collect(Collectors.toList());
 
                 return TenantRegisterResponse.Filters.builder().tenantStatus(statusList).period(periodList)
                                 .floor(floorList)
+                                .sharingType(sharingType)
                                 .room(roomList).build();
         }
 
