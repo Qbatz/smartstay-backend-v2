@@ -5,7 +5,6 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.RoomBedCount;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
-import com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto;
 import com.smartstay.smartstay.dto.reports.ComplaintsReportFilterRequest;
 import com.smartstay.smartstay.dto.reports.ComplaintsReportResponse;
 import com.smartstay.smartstay.dto.reports.ElectricityForReports;
@@ -24,10 +23,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Service
@@ -275,6 +272,48 @@ public class ReportService {
                         return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }
 
+                AtomicBoolean requestedAll = new AtomicBoolean(false);
+                AtomicBoolean isCancelled = new AtomicBoolean(false);
+                if (paymentStatus != null) {
+
+                        paymentStatus.forEach(i -> {
+                           if (i.equalsIgnoreCase(PaymentStatus.CANCELLED.name())) {
+                                   isCancelled.set(true);
+                           }
+                           else if (i.equalsIgnoreCase("ALL")) {
+                                   requestedAll.set(true);
+                           }
+                        });
+
+                        if (isCancelled.get()) {
+                                paymentStatus = paymentStatus.stream()
+                                        .filter(i -> !i.equalsIgnoreCase(PaymentStatus.CANCELLED.name()))
+                                        .toList();
+                                if (paymentStatus.isEmpty()) {
+                                        paymentStatus = null;
+                                }
+                        }
+                }
+
+                List<Boolean> isCancelledList = new ArrayList<>();
+                if (isCancelled.get()) {
+                        isCancelledList.add(true);
+                }
+                if (paymentStatus == null && !isCancelled.get()) {
+                        isCancelledList.add(true);
+                        isCancelledList.add(false);
+                }else {
+                        if (paymentStatus != null && requestedAll.get()) {
+                                paymentStatus = null;
+                                isCancelledList.add(true);
+                                isCancelledList.add(false);
+                        }
+                        else if (paymentStatus != null && !requestedAll.get()) {
+                                isCancelledList.add(true);
+                                isCancelledList.add(false);
+                        }
+                }
+
                 BillingDates dates = calculateDateRange(period, hostelId);
                 Date startDate = dates.currentBillStartDate();
                 Date endDate = dates.currentBillEndDate();
@@ -289,16 +328,15 @@ public class ReportService {
                 Pageable pageable = PageRequest.of(page, size);
                 List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
                                 paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
-                                minOutstandingAmount, maxOutstandingAmount, pageable);
-                List<ReportDetailsResponse.InvoiceDetail> invoiceDetails = mapToInvoiceDetails(invoices);
+                                minOutstandingAmount, maxOutstandingAmount, isCancelledList, pageable);
+                List<ReportDetailsResponse.InvoiceDetail> invoiceDetails = mapToInvoiceDetails(invoices, isCancelled.get());
 
                 ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);
 
                 return buildReportResponse(hostelId, startDate, endDate, search, paymentStatus, invoiceModes,
                                 invoiceTypes,
                                 createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount,
-                                invoices,
-                                invoiceDetails, options, page, size);
+                                invoiceDetails, options, page, size,isCancelledList);
         }
 
         private BillingDates calculateDateRange(String period, String hostelId) {
@@ -330,8 +368,9 @@ public class ReportService {
                 return billingDates;
         }
 
-        private List<ReportDetailsResponse.InvoiceDetail> mapToInvoiceDetails(List<InvoicesV1> invoices) {
-                List<ReportDetailsResponse.InvoiceDetail> details = invoices.stream().map(this::convertToInvoiceDetail)
+        private List<ReportDetailsResponse.InvoiceDetail> mapToInvoiceDetails(List<InvoicesV1> invoices, boolean isCancelled) {
+                List<ReportDetailsResponse.InvoiceDetail> details = invoices.stream()
+                        .map(this::convertToInvoiceDetail)
                                 .collect(Collectors.toList());
 
                 populateCustomerDetails(details, invoices);
@@ -339,6 +378,13 @@ public class ReportService {
         }
 
         private ReportDetailsResponse.InvoiceDetail convertToInvoiceDetail(InvoicesV1 inv) {
+                String paymentStatus = null;
+                if (inv.isCancelled()) {
+                        paymentStatus = "Cancelled";
+                }
+                else {
+                        paymentStatus = inv.getPaymentStatus();
+                }
                 return ReportDetailsResponse.InvoiceDetail.builder().invoiceId(inv.getInvoiceId())
                                 .invoiceNumber(inv.getInvoiceNumber()).customerId(inv.getCustomerId())
                                 .invoiceAmount(inv.getTotalAmount()).baseAmount(inv.getBasePrice())
@@ -351,7 +397,7 @@ public class ReportService {
                                 .dueDate(Utils.dateToString(inv.getInvoiceDueDate()))
                                 .invoiceType(Utils.capitalize(inv.getInvoiceType()))
                                 .invoiceMode(Utils.capitalize(inv.getInvoiceMode()))
-                                .paymentStatus(Utils.capitalize(inv.getPaymentStatus()))
+                                .paymentStatus(Utils.capitalize(paymentStatus))
                                 .updatedAt(Utils.dateToString(inv.getUpdatedAt())).isCancelled(inv.isCancelled())
                                 .build();
         }
@@ -416,56 +462,156 @@ public class ReportService {
                 return ReportDetailsResponse.FilterOptions.builder()
                                 .paymentStatus(toFilterItems(PaymentStatus.values()))
                                 .invoiceModes(toFilterItems(InvoiceMode.values()))
-                                .invoiceTypes(toFilterItems(InvoiceType.values()))
+                                .invoiceTypes(toInvoiceTypeFilterItems(InvoiceType.values()))
                                 .createdBy(createdByOptions).periods(periods).build();
         }
 
         private <E extends Enum<E>> List<ReportDetailsResponse.FilterItem> toFilterItems(E[] values) {
                 return Arrays.stream(values)
+                        .filter(i -> !i.equals(PaymentStatus.ADVANCE_IN_HAND) && !i.equals(PaymentStatus.PARTIAL_REFUND)
+                        && !i.equals(PaymentStatus.REFUNDED))
                                 .map(e -> new ReportDetailsResponse.FilterItem(Utils.capitalize(e.name()), e.name()))
                                 .collect(Collectors.toList());
+        }
+
+        private <E extends Enum<E>> List<ReportDetailsResponse.FilterItem> toInvoiceTypeFilterItems(E[] values) {
+                return Arrays.stream(values)
+                        .filter(i -> !i.equals(InvoiceType.SETTLEMENT) && !i.equals(InvoiceType.OTHERS))
+                        .map(e -> new ReportDetailsResponse.FilterItem(Utils.capitalize(e.name()), e.name()))
+                        .collect(Collectors.toList());
         }
 
         private ResponseEntity<?> buildReportResponse(String hostelId, Date startDate, Date endDate, String search,
                         List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes,
                         List<String> createdBy,
                         Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount,
-                        Double maxOutstandingAmount,
-                        List<InvoicesV1> invoices, List<ReportDetailsResponse.InvoiceDetail> invoiceDetails,
-                        ReportDetailsResponse.FilterOptions options, int page, int size) {
+                        Double maxOutstandingAmount, List<ReportDetailsResponse.InvoiceDetail> invoiceDetails,
+                        ReportDetailsResponse.FilterOptions options, int page, int size, List<Boolean> isCancelled) {
 
-                InvoiceAggregateDto aggregates = invoiceV1Service.getInvoiceAggregatesForReport(hostelId, startDate,
-                                endDate,
-                                search, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount,
-                                maxPaidAmount,
-                                minOutstandingAmount, maxOutstandingAmount);
+                Pageable pageable = Pageable.unpaged();
+                List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
+                                paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
+                                minOutstandingAmount, maxOutstandingAmount, isCancelled, pageable);
+
 
                 int totalInvoices = 0;
                 Double totalAmount = 0.0;
                 Double paidAmount = 0.0;
+                Double outstandingAmount = 0.0;
+                Double cancelledAmount = 0.0;
+                Double returnInvoiceAmount = 0.0;
 
-                if (aggregates != null) {
-                        if (aggregates.getCount() != null)
-                                totalInvoices = aggregates.getCount().intValue();
-                        if (aggregates.getTotalAmount() != null)
-                                totalAmount = aggregates.getTotalAmount();
-                        if (aggregates.getPaidAmount() != null)
-                                paidAmount = aggregates.getPaidAmount();
-                }
-                Double refundAmount = 0.0;
-                if (aggregates != null && aggregates.getRefundAmount() != null) {
-                        refundAmount = aggregates.getRefundAmount();
-                }
-                Double profit = totalAmount - refundAmount;
-                Double outStandingAmount = totalAmount - paidAmount;
+                int cancelledInvoiceCount = 0;
+                int paidInvoiceCount = 0;
+                int outstandingInvoiceCount = 0;
+                int returnedInvoiceCount = 0;
+                double profit = 0.0;
+
+                totalInvoices = invoices.size();
+
+                totalAmount = invoices
+                        .stream()
+                        .mapToDouble(i -> {
+                                if (i.getTotalAmount() == null) {
+                                        return 0.0;
+                                }
+                                if (i.getTotalAmount() < 0) {
+                                        return i.getTotalAmount() * -1;
+                                }
+                                return i.getTotalAmount();
+                        })
+                        .sum();
+
+                paidInvoiceCount = (int) invoices
+                        .stream()
+                        .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                        .count();
+
+                paidAmount = invoices
+                        .stream()
+                        .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                        .mapToDouble(i -> {
+                                if (i.getPaidAmount() == null) {
+                                        return i.getTotalAmount();
+                                }
+                                return i.getPaidAmount();
+                        })
+                        .sum();
+
+                cancelledInvoiceCount = (int) invoices
+                        .stream()
+                        .filter(InvoicesV1::isCancelled)
+                        .count();
+                returnedInvoiceCount = (int) invoices
+                        .stream()
+                        .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()) && i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.CANCELLED.name()))
+                        .count();
+
+                returnInvoiceAmount = invoices
+                        .stream()
+                        .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()) && i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.CANCELLED.name()))
+                        .mapToDouble(i -> {
+                                if (i.getPaidAmount() != null) {
+                                        return i.getPaidAmount();
+                                }
+                                return i.getTotalAmount();
+                        })
+                        .sum();
+
+                cancelledAmount = invoices
+                        .stream()
+                        .filter(InvoicesV1::isCancelled)
+                        .mapToDouble(i -> {
+                                if (i.getPaidAmount() == null) {
+                                        return i.getTotalAmount();
+                                }
+                                return i.getTotalAmount() - i.getPaidAmount();
+                        })
+                        .sum();
+
+                outstandingAmount = invoices
+                        .stream()
+                        .filter(i -> !i.isCancelled())
+                        .mapToDouble(i -> {
+                                if (i.getPaidAmount() == null) {
+                                        return i.getTotalAmount();
+                                }
+                                return i.getTotalAmount() - i.getPaidAmount();
+                        })
+                        .sum();
+
+
+//                if (aggregates != null) {
+//                        if (aggregates.getCount() != null)
+//                                totalInvoices = aggregates.getCount().intValue();
+//                        if (aggregates.getTotalAmount() != null)
+//                                totalAmount = aggregates.getTotalAmount();
+//                        if (aggregates.getPaidAmount() != null)
+//                                paidAmount = aggregates.getPaidAmount();
+//                }
+//                Double refundAmount = 0.0;
+//                if (aggregates != null && aggregates.getRefundAmount() != null) {
+//                        refundAmount = aggregates.getRefundAmount();
+//                }
+//                outstandingAmount = totalAmount - paidAmount;
+                outstandingInvoiceCount = totalInvoices - paidInvoiceCount;
 
                 int totalPages = (int) Math.ceil((double) totalInvoices / size);
 
                 ReportDetailsResponse response = ReportDetailsResponse.builder().totalInvoices(totalInvoices)
                                 .currentPage(page)
-                                .totalPages(totalPages).totalAmount(totalAmount).refundAmount(refundAmount)
-                                .profit(profit).outStandingAmount(outStandingAmount)
-                                .paidAmount(paidAmount).startDate(Utils.dateToString(startDate))
+                                .totalPages(totalPages)
+                                .totalAmount(totalAmount)
+                                .refundAmount(returnInvoiceAmount)
+                                .profit(profit)
+                                .outStandingAmount(outstandingAmount)
+                                .cancelledAmount(cancelledAmount)
+                                .paidAmount(paidAmount)
+                        .paidInvoiceCount(paidInvoiceCount)
+                        .cancelledInvoiceCount(cancelledInvoiceCount)
+                        .outstandingInvoiceCount(outstandingInvoiceCount)
+                        .returnedInvoiceCount(returnedInvoiceCount)
+                                .startDate(Utils.dateToString(startDate))
                                 .endDate(Utils.dateToString(endDate))
                                 .filterOptions(options).invoiceList(invoiceDetails).build();
 

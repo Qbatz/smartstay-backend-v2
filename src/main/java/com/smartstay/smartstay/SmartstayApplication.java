@@ -68,5 +68,20 @@ public class SmartstayApplication {
 //	}
 
 
+//	@Bean
+//	public CommandLineRunner cancelBookingInvoice(InvoicesV1Repository invoicesV1Repository) {
+//		return args -> {
+//			List<InvoicesV1> bookingCancelled = invoicesV1Repository.findBookingInvoiceWithCancelledPayment()
+//					.stream()
+//					.map(i -> {
+//						i.setCancelled(true);
+//						return i;
+//					})
+//					.toList();
+//
+//			invoicesV1Repository.saveAll(bookingCancelled);
+//		};
+//	}
+
 
 }

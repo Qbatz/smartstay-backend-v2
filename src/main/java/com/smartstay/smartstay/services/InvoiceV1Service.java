@@ -596,6 +596,7 @@ public class InvoiceV1Service {
 
     public void cancelBookingInvoice(InvoicesV1 invoicesV1) {
         invoicesV1.setPaymentStatus(PaymentStatus.CANCELLED.name());
+        invoicesV1.setCancelled(true);
         invoicesV1Repository.save(invoicesV1);
     }
 
@@ -2427,16 +2428,18 @@ public class InvoiceV1Service {
         if (search != null && !search.trim().isEmpty()) {
             List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
             if (customers == null || customers.isEmpty()) {
-                return new InvoiceAggregateDto(0L, 0.0, 0.0, 0.0);
+                return new InvoiceAggregateDto(0L, 0.0, 0.0, 0.0, 0.0, 0.0);
             }
             customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
         }
 
-        if (customerIds != null && !customerIds.isEmpty()) {
-            return invoicesV1Repository.findInvoiceAggregatesByFiltersWithCustomers(hostelId, startDate, endDate, customerIds, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount);
-        } else {
-            return invoicesV1Repository.findInvoiceAggregatesByFilters(hostelId, startDate, endDate, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount);
-        }
+//        if (customerIds != null && !customerIds.isEmpty()) {
+//            return invoicesV1Repository.findInvoiceAggregatesByFiltersWithCustomers(hostelId, startDate, endDate, customerIds, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount);
+//        } else {
+//            return invoicesV1Repository.findInvoiceAggregatesByFilters(hostelId, startDate, endDate, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount);
+//        }
+
+        return null;
     }
 
     public List<Object[]> getDistinctCreators(String hostelId) {
@@ -2448,7 +2451,7 @@ public class InvoiceV1Service {
         return users.stream().map(u -> new Object[]{u.getUserId(), u.getFirstName(), u.getLastName()}).collect(Collectors.toList());
     }
 
-    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, Pageable pageable) {
+    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, List<Boolean> isCancelled, Pageable pageable) {
         List<String> customerIds = null;
         if (search != null && !search.trim().isEmpty()) {
             List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
@@ -2459,9 +2462,9 @@ public class InvoiceV1Service {
         }
 
         if (customerIds != null && !customerIds.isEmpty()) {
-            return invoicesV1Repository.findInvoicesByFiltersWithCustomers(hostelId, startDate, endDate, customerIds, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageable);
+            return invoicesV1Repository.findInvoicesByFiltersWithCustomers(hostelId, startDate, endDate, customerIds, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, isCancelled, pageable);
         } else {
-            return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageable);
+            return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, isCancelled, pageable);
         }
     }
 

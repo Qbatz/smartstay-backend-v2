@@ -20,6 +20,12 @@ public class ReportDetailsResponse {
     private Double profit;
     private Double outStandingAmount;
     private Double paidAmount;
+    private Double cancelledAmount;
+    private Double refundedAmount;
+    private int paidInvoiceCount;
+    private int cancelledInvoiceCount;
+    private int outstandingInvoiceCount;
+    private int returnedInvoiceCount;
     private String startDate;
     private String endDate;
     private FilterOptions filterOptions;

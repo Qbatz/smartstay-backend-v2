@@ -212,7 +212,10 @@ public class DashboardService {
             shareType.add(sharingInfo1);
         }
 
-        RoomsAndBedInfo roomsAndBedInfo = new RoomsAndBedInfo(listRooms.size(), totallyFilledBeds.get(),shareType);
+        RoomsAndBedInfo roomsAndBedInfo = new RoomsAndBedInfo(listRooms.size(),
+                totallyFilledBeds.get(),
+                listBeds.size(),
+                shareType);
 
         dashboardNew = new DashboardNew(roomsAndBedInfo);
 

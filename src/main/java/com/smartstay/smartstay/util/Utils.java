@@ -616,6 +616,7 @@ public class Utils {
             if (!word.isEmpty()) {
                 sb.append(Character.toUpperCase(word.charAt(0)))
                         .append(word.substring(1).toLowerCase());
+                sb.append(" ");
             }
         }
         return sb.toString().trim();

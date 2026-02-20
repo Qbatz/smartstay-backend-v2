@@ -12,4 +12,6 @@ public class InvoiceAggregateDto {
     private Double totalAmount;
     private Double paidAmount;
     private Double refundAmount;
+    private Double cancelledAmount;
+    private Double refundedAmount;
 }
