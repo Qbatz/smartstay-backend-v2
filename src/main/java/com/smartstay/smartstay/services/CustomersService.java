@@ -538,7 +538,7 @@ public class CustomersService {
 
 //            Date startateOfCurrentCycle = cal.getTime();
 
-            //checking joining date is fall under todays date
+            //checking joining date is fall under current billing cycle
             if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
             }
