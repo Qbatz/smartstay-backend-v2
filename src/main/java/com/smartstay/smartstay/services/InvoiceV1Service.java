@@ -1219,15 +1219,11 @@ public class InvoiceV1Service {
                     }
                 }
                 long noOfDaysInOldInvoice = Utils.findNumberOfDays(billStartDate, latestInvoice.getInvoiceEndDate());
-                double rent = latestInvoice
-                        .getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT
-                                .name().equalsIgnoreCase(item.getInvoiceItem()))
-                        .mapToDouble(InvoiceItems::getAmount).sum();
+                double rent = latestInvoice.getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem())).mapToDouble(InvoiceItems::getAmount).sum();
 
                 double rentPerDay = rent / noOfDaysInOldInvoice;
                 if (Utils.compareWithTwoDates(dateJoiningDate, latestInvoice.getInvoiceStartDate()) == 0) {
-                    long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(),
-                            billingDates.currentBillEndDate());
+                    long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
                     double rentPerDayNew = newRent / noOfDaysInCurrentMonth;
                     long noOfDaysStaying = Utils.findNumberOfDays(dateJoiningDate, billingDates.currentBillEndDate());
                     double rentForNewInvoice = Math.round(noOfDaysStaying * rentPerDayNew);
@@ -1235,14 +1231,10 @@ public class InvoiceV1Service {
                     double currentPaid = latestInvoice.getPaidAmount() != null ? latestInvoice.getPaidAmount() : 0.0;
                     double newBalanceAmount = 0.0;
 
-                    latestInvoice.getInvoiceItems().stream()
-                            .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name()
-                                    .equalsIgnoreCase(item.getInvoiceItem()))
-                            .findFirst()
-                            .ifPresent(item -> {
-                                item.setAmount(rentForNewInvoice);
-                                invoiceItemService.updateInvoiceItems(item);
-                            });
+                    latestInvoice.getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem())).findFirst().ifPresent(item -> {
+                        item.setAmount(rentForNewInvoice);
+                        invoiceItemService.updateInvoiceItems(item);
+                    });
 
                     double totalAmountUpdate = (latestInvoice.getTotalAmount() - rent) + rentForNewInvoice;
                     latestInvoice.setTotalAmount(totalAmountUpdate);
@@ -1262,8 +1254,7 @@ public class InvoiceV1Service {
                     }
 
                     invoicesV1Repository.save(latestInvoice);
-                    return new ReassignRent(latestInvoice.getInvoiceId(), latestInvoice.getInvoiceId(),
-                            newBalanceAmount, latestInvoice.getInvoiceStartDate());
+                    return new ReassignRent(latestInvoice.getInvoiceId(), latestInvoice.getInvoiceId(), newBalanceAmount, latestInvoice.getInvoiceStartDate());
 
                 } else {
                     Calendar lastDayCal = Calendar.getInstance();
@@ -1271,8 +1262,7 @@ public class InvoiceV1Service {
                     lastDayCal.set(Calendar.DAY_OF_MONTH, lastDayCal.get(Calendar.DAY_OF_MONTH) - 1);
                     latestInvoice.setInvoiceEndDate(lastDayCal.getTime());
 
-                    long noOfDaysStayed = Utils.findNumberOfDays(latestInvoice.getInvoiceStartDate(),
-                            lastDayCal.getTime());
+                    long noOfDaysStayed = Utils.findNumberOfDays(latestInvoice.getInvoiceStartDate(), lastDayCal.getTime());
 
                     double balanceAmount = 0.0;
                     double rentForOldInvoice = Math.round(noOfDaysStayed * rentPerDay);
@@ -1281,8 +1271,7 @@ public class InvoiceV1Service {
                     if (latestInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
                         balanceAmount = latestInvoice.getTotalAmount() - totalAmountForOldInvoice;
                         latestInvoice.setPaidAmount(totalAmountForOldInvoice);
-                    } else if (latestInvoice.getPaymentStatus()
-                            .equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                    } else if (latestInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                         balanceAmount = latestInvoice.getPaidAmount() - totalAmountForOldInvoice;
 
                         if (latestInvoice.getPaidAmount() >= rentForOldInvoice) {
@@ -1302,13 +1291,10 @@ public class InvoiceV1Service {
 
                     latestInvoice.setTotalAmount(totalAmountForOldInvoice);
 
-                    latestInvoice.getInvoiceItems().stream()
-                            .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name()
-                                    .equalsIgnoreCase(item.getInvoiceItem()))
-                            .findFirst().map(item -> {
-                                item.setAmount(rentForOldInvoice);
-                                return item;
-                            }).ifPresent(modifiedRentItems -> invoiceItemService.updateInvoiceItems(modifiedRentItems));
+                    latestInvoice.getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem())).findFirst().map(item -> {
+                        item.setAmount(rentForOldInvoice);
+                        return item;
+                    }).ifPresent(modifiedRentItems -> invoiceItemService.updateInvoiceItems(modifiedRentItems));
 
                     invoicesV1Repository.save(latestInvoice);
 
