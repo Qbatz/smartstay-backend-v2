@@ -29,6 +29,8 @@ public class TransactionReportResponse {
         private String endDate;
         private Double totalInvoiceAmount;
         private Double receivedAmount;
+        private Double returnedAmount;
+        private Double totalTransactionAmount;
     }
 
     @Data

@@ -532,7 +532,11 @@ public class CustomersService {
 
             bookingsService.addCheckin(customers, payloads);
             customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
-            invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
+
+            if (payloads.advanceAmount() > 0) {
+                invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
+            }
+
 //            Calendar cal = Calendar.getInstance();
 //            cal.set(Calendar.DAY_OF_MONTH, day);
 
@@ -668,7 +672,10 @@ public class CustomersService {
 //                day = hostelV1.getElectricityConfig().getBillDate();
 //            }
 
-            invoiceService.addInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date, billingDates);
+            if (checkinRequest.advanceAmount() > 0) {
+                invoiceService.addInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date, billingDates);
+            }
+
 
             bedsService.addUserToBed(booking.getBedId(), date, savedCustomer.getCustomerId());
             customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
@@ -938,10 +945,14 @@ public class CustomersService {
                 customers.setMobile(updateInfo.mobile());
             }
 
-            customersRepository.save(customers);
             if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
-                ccs.updateCustomerMobile(updateInfo.mobile(), customers.getXuid());
+                CustomerCredentials cc = ccs.updateCustomerMobile(updateInfo.mobile(), customers.getXuid());
+                if (cc != null) {
+                    customers.setXuid(cc.getXuid());
+                }
             }
+
+            customersRepository.save(customers);
             userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.UPDATE, user);
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
