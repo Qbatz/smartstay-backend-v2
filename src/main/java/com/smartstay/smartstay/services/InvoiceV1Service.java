@@ -1016,7 +1016,7 @@ public class InvoiceV1Service {
             InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(), 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), totalDeductionAmount, listInvoiceItems, listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             List<InvoiceRefundHistory> listRefunds = transactionService.getRefundHistory(hostelId, invoiceId);
-            FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", InvoiceType.SETTLEMENT.name(), customers.getHostelId(), customerInfo, stayInfo, accountDetails, signatureInfo, invoiceSummaries, invoiceInfo, listRefunds);
+            FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", InvoiceType.SETTLEMENT.name(), customers.getHostelId(), customerInfo, stayInfo, accountDetails, signatureInfo, invoiceSummaries, invoiceInfo, listRefunds, listRefunds);
             return new ResponseEntity<>(finalSettlementResponse, HttpStatus.OK);
 
         }
@@ -1209,6 +1209,7 @@ public class InvoiceV1Service {
 //            List<InvoicesV1> listInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
             InvoicesV1 latestInvoice = invoicesV1Repository.findCurrentRunningInvoice(customers.getCustomerId(), billingDates.currentBillStartDate());
             if (latestInvoice != null) {
+
                 CustomersBedHistory latestHistory = customersBedHistoryService.getLatestCustomerBed(customers.getCustomerId());
 
                 Date billStartDate = latestInvoice.getInvoiceStartDate();
@@ -2243,17 +2244,16 @@ public class InvoiceV1Service {
             if (customer.getLastName() != null && !customer.getLastName().isEmpty()) {
                 customerName += " " + customer.getLastName();
             }
+
+            String mobileNumber = customer.getMobile();
+            if (mobileNumber == null) {
+                return new ResponseEntity<>("Customer mobile number not found", HttpStatus.BAD_REQUEST);
+            }
+
+            whatsappService.sendInvoiceNotification(mobileNumber, customerName, invoiceUrl.replace("https://smartstaydevs.s3.ap-south-1.amazonaws.com/", ""));
+
         }
 
-        String mobileNumber = invoicesV1.getCustomerMobile();
-        if (mobileNumber == null && customer != null) {
-            mobileNumber = customer.getMobile();
-        }
-
-        if (mobileNumber == null) {
-            return new ResponseEntity<>("Customer mobile number not found", HttpStatus.BAD_REQUEST);
-        }
-        whatsappService.sendInvoiceNotification(mobileNumber, customerName, invoiceUrl.replace("https://smartstaydevs.s3.ap-south-1.amazonaws.com/", ""));
 
         return new ResponseEntity<>(invoiceUrl, HttpStatus.OK);
 

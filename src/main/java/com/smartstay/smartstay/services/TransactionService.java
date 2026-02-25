@@ -871,29 +871,26 @@ public class TransactionService {
         } else {
             if (period != null) {
                 Calendar cal = Calendar.getInstance();
-                endDate = cal.getTime();
+                BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+                cal.setTime(billingDates.currentBillStartDate());
                 if ("this_month".equalsIgnoreCase(period)) {
-                    cal.set(Calendar.DAY_OF_MONTH, 1);
-                    startDate = cal.getTime();
+                    startDate = billingDates.currentBillStartDate();
+                    endDate = billingDates.currentBillEndDate();
                 } else if ("last_month".equalsIgnoreCase(period)) {
                     cal.add(Calendar.MONTH, -1);
-                    cal.set(Calendar.DAY_OF_MONTH, 1);
-                    startDate = cal.getTime();
-                    cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
-                    endDate = cal.getTime();
+                    BillingDates lastMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                    startDate = lastMonthBillingDates.currentBillStartDate();
+                    endDate = lastMonthBillingDates.currentBillEndDate();
                 } else if ("last_6_months".equalsIgnoreCase(period)) {
                     cal.add(Calendar.MONTH, -6);
-                    cal.set(Calendar.DAY_OF_MONTH, 1);
-                    startDate = cal.getTime();
-
-                    cal = Calendar.getInstance();
-                    endDate = cal.getTime();
-                } else {
-                    BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
-                    if (billingDates != null) {
-                        startDate = billingDates.currentBillStartDate();
-                        endDate = billingDates.currentBillEndDate();
-                    }
+                    BillingDates lastMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                    startDate = lastMonthBillingDates.currentBillStartDate();
+                    endDate = billingDates.currentBillEndDate();
+                } else if ("last_3_months".equalsIgnoreCase(period)) {
+                    cal.add(Calendar.MONTH, -3);
+                    BillingDates lastMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                    startDate = lastMonthBillingDates.currentBillStartDate();
+                    endDate =  billingDates.currentBillEndDate();
                 }
             } else {
                 BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
@@ -928,8 +925,30 @@ public class TransactionService {
                 endDate, bankIds, collectedBy, invoiceIds, pageable);
         long totalRecords = transactionRespository.countTransactionsByFiltersNew(hostelId, startDate, endDate, bankIds,
                 collectedBy, invoiceIds);
-        Double receivedAmount = transactionRespository.sumPaidAmountByFiltersNew(hostelId, startDate, endDate, bankIds,
+
+        Double receivedAmount = 0.0;
+        Double returnedAmount = 0.0;
+        Double totalTransactionAmount = 0.0;
+        List<TransactionV1> listTransactions =  transactionRespository.sumPaidAmountByFiltersNew(hostelId, startDate, endDate, bankIds,
                 collectedBy, invoiceIds);
+
+        receivedAmount = listTransactions
+                .stream()
+                .filter(i ->  i.getType() == null)
+                .mapToDouble(TransactionV1::getPaidAmount)
+                .sum();
+
+        returnedAmount = listTransactions
+                .stream()
+                .filter(i ->  i.getType() != null && i.getType().equalsIgnoreCase(TransactionType.REFUND.name()))
+                .mapToDouble(i -> {
+                    if (i.getPaidAmount() < 0) {
+                        return i.getPaidAmount() * -1;
+                    }
+                    return i.getPaidAmount();
+                })
+                .sum();
+        totalTransactionAmount = receivedAmount + returnedAmount;
 
         Double totalInvoiceAmount = invoiceService.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId,
                 "SETTLEMENT", startDate, endDate);
@@ -1004,7 +1023,9 @@ public class TransactionService {
                 .summary(TransactionReportResponse.Summary.builder().hostelId(hostelId)
                         .startDate(Utils.dateToString(startDate)).endDate(Utils.dateToString(endDate))
                         .totalInvoiceAmount(totalInvoiceAmount != null ? totalInvoiceAmount : 0.0)
-                        .receivedAmount(receivedAmount != null ? receivedAmount : 0.0).build())
+                        .receivedAmount(receivedAmount != null ? receivedAmount : 0.0)
+                        .returnedAmount(returnedAmount)
+                        .totalTransactionAmount(totalTransactionAmount).build())
                 .filters(TransactionReportResponse.Filters.builder().invoiceType(buildInvoiceTypeFilters())
                         .period(buildPeriodFilters()).paymentMode(buildPaymentModeFilters())
                         .collectedBy(buildCollectedByFilters(hostelId)).build())
@@ -1029,6 +1050,7 @@ public class TransactionService {
     private List<TransactionReportResponse.FilterOption> buildPeriodFilters() {
         return Arrays.asList(new TransactionReportResponse.FilterOption("this_month", "This Month"),
                 new TransactionReportResponse.FilterOption("last_month", "Last Month"),
+                new TransactionReportResponse.FilterOption("last_3_months", "Last 3 Months"),
                 new TransactionReportResponse.FilterOption("last_6_months", "Last 6 Months"));
     }
 
@@ -1085,31 +1107,31 @@ public class TransactionService {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-//
-//        Users users = usersService.findUserByUserId(authentication.getName());
-//        if (users == null) {
-//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-//        }
-//        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_READ)) {
-//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-//        }
-//        TransactionV1 transactionV1 = transactionRespository.findByHostelIdAndTransactionId(hostelId, transactionId);
-//        if (transactionV1 == null) {
-//            return new ResponseEntity<>(Utils.INVALID_TRANSACTION_ID, HttpStatus.BAD_REQUEST);
-//        }
-//        if (!transactionV1.getHostelId().equalsIgnoreCase(hostelId)) {
-//            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
-//        }
-//        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
-//            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-//        }
-//
-//        String endpoint = reportsUrl + "/v2/reports/receipts/"+ hostelId + "/" +  transactionId;
-//        String url = downloadService.downloadFromUrl(endpoint);
-//
-//        if (url == null) {
-//            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
-//        }
-        return new ResponseEntity<>("Not available", HttpStatus.BAD_REQUEST);
+
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        TransactionV1 transactionV1 = transactionRespository.findByHostelIdAndTransactionId(hostelId, transactionId);
+        if (transactionV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_TRANSACTION_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!transactionV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        String endpoint = reportsUrl + "/v2/reports/receipts/"+ hostelId + "/" +  transactionId;
+        String url = downloadService.downloadFromUrl(endpoint);
+
+        if (url == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(url, HttpStatus.OK);
     }
 }
