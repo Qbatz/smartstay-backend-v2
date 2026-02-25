@@ -20,6 +20,7 @@ public record FinalSettlementResponse(String invoiceNumber,
 
                                       List<InvoiceSummary> invoiceSummaries,
                                       InvoiceInfo invoiceInfo,
-                                      List<InvoiceRefundHistory> refundHistory
+                                      List<InvoiceRefundHistory> refundHistory,
+                                      List<InvoiceRefundHistory> paymentHistory
 ) {
 }
