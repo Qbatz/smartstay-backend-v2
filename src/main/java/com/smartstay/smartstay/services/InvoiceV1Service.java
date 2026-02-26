@@ -1015,8 +1015,9 @@ public class InvoiceV1Service {
 
             InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(), 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), totalDeductionAmount, listInvoiceItems, listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
-            List<InvoiceRefundHistory> listRefunds = transactionService.getRefundHistory(hostelId, invoiceId);
-            FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", InvoiceType.SETTLEMENT.name(), customers.getHostelId(), customerInfo, stayInfo, accountDetails, signatureInfo, invoiceSummaries, invoiceInfo, listRefunds, listRefunds);
+            Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
+                    invoiceSummaries);
+            FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", InvoiceType.SETTLEMENT.name(), customers.getHostelId(), customerInfo, stayInfo, accountDetails, signatureInfo, invoiceSummaries, invoiceInfo, historyMap.get("refundHistory"),  historyMap.get("paymentHistory"));
             return new ResponseEntity<>(finalSettlementResponse, HttpStatus.OK);
 
         }
@@ -1169,6 +1170,63 @@ public class InvoiceV1Service {
             usersService.finalSettlementGenetated(hostelId, invoicesV11.getInvoiceId(), ActivitySource.SETTLEMENT, ActivitySourceType.CREATE, customers.getCustomerId(), users);
             return invoicesV11;
         }
+    }
+
+    private Map<String, List<InvoiceRefundHistory>> getFinalSettlementHistoryList(InvoicesV1 settlementInvoice,
+                                                                                  List<InvoiceSummary> relatedInvoices) {
+        List<InvoiceRefundHistory> paymentHistory = new ArrayList<>();
+        List<InvoiceRefundHistory> refundHistory = new ArrayList<>();
+
+        if (relatedInvoices != null) {
+            for (InvoiceSummary summary : relatedInvoices) {
+                String type = summary.getInvoiceType();
+                if (type != null && (type.equalsIgnoreCase(InvoiceType.RENT.name()) ||
+                        type.equalsIgnoreCase(InvoiceType.ADVANCE.name()) ||
+                        type.equalsIgnoreCase(InvoiceType.BOOKING.name()))) {
+
+                    paymentHistory.add(new InvoiceRefundHistory(
+                            summary.getInvoiceNumber(),
+                            summary.getInvoiceStartDate(),
+                            "",
+                            "",
+                            summary.getTotalAmount() != null ? summary.getTotalAmount() : 0.0,
+                            "",
+                            ""));
+                }
+            }
+        }
+
+        if (settlementInvoice.getTotalAmount() != null) {
+            String invoiceDate = Utils.dateToString(settlementInvoice.getInvoiceStartDate());
+            String createdAtTime = Utils.dateToTime(settlementInvoice.getCreatedAt());
+            String createdBy = settlementInvoice.getCreatedBy() != null ? settlementInvoice.getCreatedBy() : "";
+            String mode = settlementInvoice.getInvoiceMode() != null ? settlementInvoice.getInvoiceMode() : "";
+
+            if (settlementInvoice.getTotalAmount() > 0) {
+                paymentHistory.add(new InvoiceRefundHistory(
+                        settlementInvoice.getInvoiceNumber(),
+                        invoiceDate,
+                        createdAtTime,
+                        mode,
+                        settlementInvoice.getTotalAmount(),
+                        createdBy,
+                        ""));
+            } else if (settlementInvoice.getTotalAmount() < 0) {
+                refundHistory.add(new InvoiceRefundHistory(
+                        settlementInvoice.getInvoiceNumber(),
+                        invoiceDate,
+                        createdAtTime,
+                        mode,
+                        Math.abs(settlementInvoice.getTotalAmount()),
+                        createdBy,
+                        ""));
+            }
+        }
+
+        Map<String, List<InvoiceRefundHistory>> history = new HashMap<>();
+        history.put("paymentHistory", paymentHistory);
+        history.put("refundHistory", refundHistory);
+        return history;
     }
 
     public String generateInvoiceNumber(String hostelId, String type) {
