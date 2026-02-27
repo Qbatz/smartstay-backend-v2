@@ -1128,6 +1128,9 @@ public class TransactionService {
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
+        if (transactionV1.getReceiptUrl() != null) {
+            return new ResponseEntity<>(transactionV1.getReceiptUrl(), HttpStatus.OK);
+        }
 
         String endpoint = reportsUrl + "/v2/reports/receipts/"+ hostelId + "/" +  transactionId;
         String url = downloadService.downloadFromUrl(endpoint);
@@ -1135,6 +1138,8 @@ public class TransactionService {
         if (url == null) {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
+        transactionV1.setReceiptUrl(url);
+        transactionRespository.save(transactionV1);
         return new ResponseEntity<>(url, HttpStatus.OK);
     }
 }
