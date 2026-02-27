@@ -26,9 +26,6 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
         @Query(value = "SELECT * FROM bookingsv1 where bed_id=:bedId ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
         BookingsV1 findLatestBooking(@Param("bedId") int bedId);
 
-        @Query(value = "SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('NOTICE', 'VACATED', 'TERMINATED', 'CANCELLED') ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
-        BookingsV1 findCheckingOutDetails(@Param("bedId") int bedId);
-
         @Query(value = """
                         SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('CHECKIN', 'NOTICE')
                         """, nativeQuery = true)

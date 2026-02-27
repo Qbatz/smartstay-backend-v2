@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -102,5 +103,10 @@ public class ReportController {
         public ResponseEntity<?> getComplaintsReport(@PathVariable("hostelId") String hostelId,
                         @RequestBody ComplaintsReportFilterRequest request) {
                 return reportService.getComplaintsReport(hostelId, request);
+        }
+
+        @GetMapping("/download/{hostelId}")
+        public ResponseEntity<?> downloadCustomerReports(@PathVariable("hostelId") String hostelId, @Param("startDate") String startDate, @Param("endDate") String endDate) {
+                return reportService.downloadCustomersReport(hostelId, startDate, endDate);
         }
 }
