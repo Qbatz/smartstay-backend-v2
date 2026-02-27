@@ -1172,63 +1172,6 @@ public class InvoiceV1Service {
         }
     }
 
-    private Map<String, List<InvoiceRefundHistory>> getFinalSettlementHistoryList(InvoicesV1 settlementInvoice,
-                                                                                  List<InvoiceSummary> relatedInvoices) {
-        List<InvoiceRefundHistory> paymentHistory = new ArrayList<>();
-        List<InvoiceRefundHistory> refundHistory = new ArrayList<>();
-
-        if (relatedInvoices != null) {
-            for (InvoiceSummary summary : relatedInvoices) {
-                String type = summary.getInvoiceType();
-                if (type != null && (type.equalsIgnoreCase(InvoiceType.RENT.name()) ||
-                        type.equalsIgnoreCase(InvoiceType.ADVANCE.name()) ||
-                        type.equalsIgnoreCase(InvoiceType.BOOKING.name()))) {
-
-                    paymentHistory.add(new InvoiceRefundHistory(
-                            summary.getInvoiceNumber(),
-                            summary.getInvoiceStartDate(),
-                            "",
-                            "",
-                            summary.getTotalAmount() != null ? summary.getTotalAmount() : 0.0,
-                            "",
-                            ""));
-                }
-            }
-        }
-
-        if (settlementInvoice.getTotalAmount() != null) {
-            String invoiceDate = Utils.dateToString(settlementInvoice.getInvoiceStartDate());
-            String createdAtTime = Utils.dateToTime(settlementInvoice.getCreatedAt());
-            String createdBy = settlementInvoice.getCreatedBy() != null ? settlementInvoice.getCreatedBy() : "";
-            String mode = settlementInvoice.getInvoiceMode() != null ? settlementInvoice.getInvoiceMode() : "";
-
-            if (settlementInvoice.getTotalAmount() > 0) {
-                paymentHistory.add(new InvoiceRefundHistory(
-                        settlementInvoice.getInvoiceNumber(),
-                        invoiceDate,
-                        createdAtTime,
-                        mode,
-                        settlementInvoice.getTotalAmount(),
-                        createdBy,
-                        ""));
-            } else if (settlementInvoice.getTotalAmount() < 0) {
-                refundHistory.add(new InvoiceRefundHistory(
-                        settlementInvoice.getInvoiceNumber(),
-                        invoiceDate,
-                        createdAtTime,
-                        mode,
-                        Math.abs(settlementInvoice.getTotalAmount()),
-                        createdBy,
-                        ""));
-            }
-        }
-
-        Map<String, List<InvoiceRefundHistory>> history = new HashMap<>();
-        history.put("paymentHistory", paymentHistory);
-        history.put("refundHistory", refundHistory);
-        return history;
-    }
-
     public String generateInvoiceNumber(String hostelId, String type) {
         StringBuilder invoiceNumber = new StringBuilder();
         BillTemplates templates = templateService.getBillTemplate(hostelId, type);
@@ -2348,6 +2291,102 @@ public class InvoiceV1Service {
 
         return new ResponseEntity<>(invoiceUrl, HttpStatus.OK);
 
+    }
+
+    private Map<String, List<InvoiceRefundHistory>> getFinalSettlementHistoryList(InvoicesV1 settlementInvoice,
+                                                                                  List<InvoiceSummary> relatedInvoices) {
+        List<InvoiceRefundHistory> paymentHistory = new ArrayList<>();
+        List<InvoiceRefundHistory> refundHistory = new ArrayList<>();
+
+        List<String> invoiceIds = new ArrayList<>();
+        if (relatedInvoices != null) {
+            invoiceIds.addAll(relatedInvoices.stream().map(InvoiceSummary::getInvoiceId).toList());
+        }
+        invoiceIds.add(settlementInvoice.getInvoiceId());
+
+        List<TransactionV1> transactions = transactionService.getTransactionsByInvoiceIds(invoiceIds);
+        Map<String, TransactionV1> transactionMap = transactions.stream()
+                .collect(Collectors.toMap(TransactionV1::getInvoiceId, t -> t, (t1, t2) -> t1));
+
+        Set<String> bankIds = transactions.stream().map(TransactionV1::getBankId).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<String, BankingV1> bankMap = new HashMap<>();
+        if (!bankIds.isEmpty()) {
+            List<BankingV1> banks = bankingService.findAllBanksById(bankIds);
+            if (banks != null) {
+                banks.forEach(b -> bankMap.put(b.getBankId(), b));
+            }
+        }
+
+        if (relatedInvoices != null) {
+            for (InvoiceSummary summary : relatedInvoices) {
+                String type = summary.getInvoiceType();
+                if (type != null && (type.equalsIgnoreCase(InvoiceType.RENT.name()) ||
+                        type.equalsIgnoreCase(InvoiceType.ADVANCE.name()) ||
+                        type.equalsIgnoreCase(InvoiceType.BOOKING.name()))) {
+
+                    String paymentMode = "";
+                    TransactionV1 transaction = transactionMap.get(summary.getInvoiceId());
+                    if (transaction != null && transaction.getBankId() != null) {
+                        BankingV1 bank = bankMap.get(transaction.getBankId());
+                        if (bank != null) {
+                            paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-"
+                                    + (bank.getAccountType() != null ? bank.getAccountType() : "");
+                        }
+                    }
+
+                    paymentHistory.add(new InvoiceRefundHistory(
+                            summary.getInvoiceNumber(),
+                            summary.getInvoiceStartDate(),
+                            "",
+                            paymentMode,
+                            summary.getTotalAmount() != null ? summary.getTotalAmount() : 0.0,
+                            "",
+                            ""));
+                }
+            }
+        }
+
+        if (settlementInvoice.getTotalAmount() != null) {
+            String invoiceDate = Utils.dateToString(settlementInvoice.getInvoiceStartDate());
+            String createdAtTime = Utils.dateToTime(settlementInvoice.getCreatedAt());
+            String createdBy = settlementInvoice.getCreatedBy() != null ? settlementInvoice.getCreatedBy() : "";
+
+            String paymentMode = "";
+            TransactionV1 settlementTransaction = transactionMap.get(settlementInvoice.getInvoiceId());
+            if (settlementTransaction != null && settlementTransaction.getBankId() != null) {
+                BankingV1 bank = bankMap.get(settlementTransaction.getBankId());
+                if (bank != null) {
+                    paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-"
+                            + (bank.getAccountType() != null ? bank.getAccountType() : "");
+                }
+            }
+
+            if (settlementInvoice.getTotalAmount() > 0) {
+                paymentHistory.add(new InvoiceRefundHistory(
+                        settlementInvoice.getInvoiceNumber(),
+                        invoiceDate,
+                        createdAtTime,
+                        paymentMode,
+                        settlementInvoice.getTotalAmount(),
+                        createdBy,
+                        ""));
+            } else if (settlementInvoice.getTotalAmount() < 0) {
+                refundHistory.add(new InvoiceRefundHistory(
+                        settlementInvoice.getInvoiceNumber(),
+                        invoiceDate,
+                        createdAtTime,
+                        paymentMode,
+                        Math.abs(settlementInvoice.getTotalAmount()),
+                        createdBy,
+                        ""));
+            }
+        }
+
+        Map<String, List<InvoiceRefundHistory>> history = new HashMap<>();
+        history.put("paymentHistory", paymentHistory);
+        history.put("refundHistory", refundHistory);
+        return history;
     }
 
 }
