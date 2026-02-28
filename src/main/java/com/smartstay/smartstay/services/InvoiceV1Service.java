@@ -564,10 +564,12 @@ public class InvoiceV1Service {
         return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.ADVANCE.name());
     }
 
-    public void cancelBookingInvoice(InvoicesV1 invoicesV1) {
+    public void cancelBookingInvoice(InvoicesV1 invoicesV1, String bankId, Date cancelledDate, String referenceNumber) {
         invoicesV1.setPaymentStatus(PaymentStatus.CANCELLED.name());
         invoicesV1.setCancelled(true);
         invoicesV1Repository.save(invoicesV1);
+
+        transactionService.cancelBooking(invoicesV1.getCustomerId(), invoicesV1.getInvoiceId(), invoicesV1.getHostelId(), invoicesV1.getTotalAmount(), bankId, cancelledDate, referenceNumber);
     }
 
     public ResponseEntity<?> generateManualInvoice(String customerId, ManualInvoice manualInvoice) {

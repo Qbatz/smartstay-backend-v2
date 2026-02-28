@@ -89,6 +89,8 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     @Query(value = "SELECT COUNT(t) FROM TransactionV1 t WHERE t.hostelId = :hostelId " + "AND (:startDate IS NULL OR t.paidAt >= :startDate) " + "AND (:endDate IS NULL OR t.paidAt <= :endDate) " + "AND (:bankIds IS NULL OR t.bankId IN :bankIds) " + "AND (:userIds IS NULL OR t.createdBy IN :userIds) " + "AND (:invoiceIds IS NULL OR t.invoiceId IN :invoiceIds)")
     long countTransactionsByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds);
 
-    @Query(value = "SELECT t FROM TransactionV1 t WHERE t.hostelId = :hostelId " + "AND (:startDate IS NULL OR t.paidAt >= :startDate) " + "AND (:endDate IS NULL OR t.paidAt <= :endDate) " + "AND (:bankIds IS NULL OR t.bankId IN :bankIds) " + "AND (:userIds IS NULL OR t.createdBy IN :userIds) " + "AND (:invoiceIds IS NULL OR t.invoiceId IN :invoiceIds)")
+    @Query(value = """
+    SELECT t FROM TransactionV1 t WHERE t.hostelId = :hostelId AND (:startDate IS NULL OR DATE(t.paymentDate) >= DATE(:startDate)) AND (:endDate IS NULL OR DATE(t.paymentDate) <= DATE(:endDate))  
+    AND (:bankIds IS NULL OR t.bankId IN :bankIds) AND (:userIds IS NULL OR t.createdBy IN :userIds) AND (:invoiceIds IS NULL OR t.invoiceId IN :invoiceIds)""")
     List<TransactionV1> sumPaidAmountByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds);
 }
