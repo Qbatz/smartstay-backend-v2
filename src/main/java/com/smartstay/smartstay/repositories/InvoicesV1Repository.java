@@ -346,4 +346,5 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                 SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='BOOKING' AND inv.paymentStatus='CANCELLED'
                 """)
         List<InvoicesV1> findCancelledBooking();
+
 }

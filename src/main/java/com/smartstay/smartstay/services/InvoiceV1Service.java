@@ -1017,8 +1017,9 @@ public class InvoiceV1Service {
 
             InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(), 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), totalDeductionAmount, listInvoiceItems, listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
-            List<InvoiceRefundHistory> listRefunds = transactionService.getRefundHistory(hostelId, invoiceId);
-            FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", InvoiceType.SETTLEMENT.name(), customers.getHostelId(), customerInfo, stayInfo, accountDetails, signatureInfo, invoiceSummaries, invoiceInfo, listRefunds, listRefunds);
+            Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
+                    invoiceSummaries);
+            FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", InvoiceType.SETTLEMENT.name(), customers.getHostelId(), customerInfo, stayInfo, accountDetails, signatureInfo, invoiceSummaries, invoiceInfo, historyMap.get("refundHistory"),  historyMap.get("paymentHistory"));
             return new ResponseEntity<>(finalSettlementResponse, HttpStatus.OK);
 
         }
@@ -1222,53 +1223,86 @@ public class InvoiceV1Service {
                 }
                 long noOfDaysInOldInvoice = Utils.findNumberOfDays(billStartDate, latestInvoice.getInvoiceEndDate());
                 double rent = latestInvoice.getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem())).mapToDouble(InvoiceItems::getAmount).sum();
-//                    double rent = latestHistory.getRentAmount();
+
                 double rentPerDay = rent / noOfDaysInOldInvoice;
-                Calendar lastDayCal = Calendar.getInstance();
-                lastDayCal.setTime(dateJoiningDate);
-                lastDayCal.set(Calendar.DAY_OF_MONTH, lastDayCal.get(Calendar.DAY_OF_MONTH) - 1);
-                latestInvoice.setInvoiceEndDate(lastDayCal.getTime());
+                if (Utils.compareWithTwoDates(dateJoiningDate, latestInvoice.getInvoiceStartDate()) == 0) {
+                    long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                    double rentPerDayNew = newRent / noOfDaysInCurrentMonth;
+                    long noOfDaysStaying = Utils.findNumberOfDays(dateJoiningDate, billingDates.currentBillEndDate());
+                    double rentForNewInvoice = Math.round(noOfDaysStaying * rentPerDayNew);
 
-                long noOfDaysStayed = Utils.findNumberOfDays(latestInvoice.getInvoiceStartDate(), lastDayCal.getTime());
+                    double currentPaid = latestInvoice.getPaidAmount() != null ? latestInvoice.getPaidAmount() : 0.0;
+                    double newBalanceAmount = 0.0;
 
-                double balanceAmount = 0.0;
-                double rentForOldInvoice = Math.round(noOfDaysStayed * rentPerDay);
-                double totalAmountForOldInvoice = (latestInvoice.getTotalAmount() - rent) + rentForOldInvoice;
+                    latestInvoice.getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem())).findFirst().ifPresent(item -> {
+                        item.setAmount(rentForNewInvoice);
+                        invoiceItemService.updateInvoiceItems(item);
+                    });
 
-                if (latestInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-                    balanceAmount = latestInvoice.getTotalAmount() - totalAmountForOldInvoice;
-                    latestInvoice.setPaidAmount(totalAmountForOldInvoice);
-                } else if (latestInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                    balanceAmount = latestInvoice.getPaidAmount() - totalAmountForOldInvoice;
+                    double totalAmountUpdate = (latestInvoice.getTotalAmount() - rent) + rentForNewInvoice;
+                    latestInvoice.setTotalAmount(totalAmountUpdate);
+                    latestInvoice.setBasePrice(totalAmountUpdate);
+                    latestInvoice.setInvoiceType(InvoiceType.REASSIGN_RENT.name());
 
-                    if (latestInvoice.getPaidAmount() >= rentForOldInvoice) {
+                    if (currentPaid >= totalAmountUpdate) {
                         latestInvoice.setPaymentStatus(PaymentStatus.PAID.name());
-                        latestInvoice.setPaidAmount(totalAmountForOldInvoice);
+                        latestInvoice.setPaidAmount(totalAmountUpdate);
+                        newBalanceAmount = currentPaid - totalAmountUpdate;
+                    } else if (currentPaid > 0) {
+                        latestInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+                        latestInvoice.setPaidAmount(currentPaid);
                     } else {
-                        if (latestInvoice.getPaidAmount() > 0) {
-                            double paidAmountForOldRent = latestInvoice.getPaidAmount() - rentForOldInvoice;
-                            latestInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
-                            latestInvoice.setPaidAmount(paidAmountForOldRent);
-                        }
+                        latestInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+                        latestInvoice.setPaidAmount(0.0);
                     }
 
+                    invoicesV1Repository.save(latestInvoice);
+                    return new ReassignRent(latestInvoice.getInvoiceId(), latestInvoice.getInvoiceId(), newBalanceAmount, latestInvoice.getInvoiceStartDate());
+
                 } else {
-                    balanceAmount = 0;
+                    Calendar lastDayCal = Calendar.getInstance();
+                    lastDayCal.setTime(dateJoiningDate);
+                    lastDayCal.set(Calendar.DAY_OF_MONTH, lastDayCal.get(Calendar.DAY_OF_MONTH) - 1);
+                    latestInvoice.setInvoiceEndDate(lastDayCal.getTime());
+
+                    long noOfDaysStayed = Utils.findNumberOfDays(latestInvoice.getInvoiceStartDate(), lastDayCal.getTime());
+
+                    double balanceAmount = 0.0;
+                    double rentForOldInvoice = Math.round(noOfDaysStayed * rentPerDay);
+                    double totalAmountForOldInvoice = (latestInvoice.getTotalAmount() - rent) + rentForOldInvoice;
+
+                    if (latestInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                        balanceAmount = latestInvoice.getTotalAmount() - totalAmountForOldInvoice;
+                        latestInvoice.setPaidAmount(totalAmountForOldInvoice);
+                    } else if (latestInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                        balanceAmount = latestInvoice.getPaidAmount() - totalAmountForOldInvoice;
+
+                        if (latestInvoice.getPaidAmount() >= rentForOldInvoice) {
+                            latestInvoice.setPaymentStatus(PaymentStatus.PAID.name());
+                            latestInvoice.setPaidAmount(totalAmountForOldInvoice);
+                        } else {
+                            if (latestInvoice.getPaidAmount() > 0) {
+                                double paidAmountForOldRent = latestInvoice.getPaidAmount() - rentForOldInvoice;
+                                latestInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+                                latestInvoice.setPaidAmount(paidAmountForOldRent);
+                            }
+                        }
+
+                    } else {
+                        balanceAmount = 0;
+                    }
+
+                    latestInvoice.setTotalAmount(totalAmountForOldInvoice);
+
+                    latestInvoice.getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem())).findFirst().map(item -> {
+                        item.setAmount(rentForOldInvoice);
+                        return item;
+                    }).ifPresent(modifiedRentItems -> invoiceItemService.updateInvoiceItems(modifiedRentItems));
+
+                    invoicesV1Repository.save(latestInvoice);
+
+                    return createNewInvoice(latestInvoice, joiningDate, newRent, billingDates, balanceAmount);
                 }
-
-                latestInvoice.setTotalAmount(totalAmountForOldInvoice);
-
-
-                latestInvoice.getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem())).findFirst().map(item -> {
-                    item.setAmount(rentForOldInvoice);
-                    return item;
-                }).ifPresent(modifiedRentItems -> invoiceItemService.updateInvoiceItems(modifiedRentItems));
-
-                invoicesV1Repository.save(latestInvoice);
-
-
-                return createNewInvoice(latestInvoice, joiningDate, newRent, billingDates, balanceAmount);
-
 
             }
         }
@@ -2259,6 +2293,102 @@ public class InvoiceV1Service {
 
         return new ResponseEntity<>(invoiceUrl, HttpStatus.OK);
 
+    }
+
+    private Map<String, List<InvoiceRefundHistory>> getFinalSettlementHistoryList(InvoicesV1 settlementInvoice,
+                                                                                  List<InvoiceSummary> relatedInvoices) {
+        List<InvoiceRefundHistory> paymentHistory = new ArrayList<>();
+        List<InvoiceRefundHistory> refundHistory = new ArrayList<>();
+
+        List<String> invoiceIds = new ArrayList<>();
+        if (relatedInvoices != null) {
+            invoiceIds.addAll(relatedInvoices.stream().map(InvoiceSummary::getInvoiceId).toList());
+        }
+        invoiceIds.add(settlementInvoice.getInvoiceId());
+
+        List<TransactionV1> transactions = transactionService.getTransactionsByInvoiceIds(invoiceIds);
+        Map<String, TransactionV1> transactionMap = transactions.stream()
+                .collect(Collectors.toMap(TransactionV1::getInvoiceId, t -> t, (t1, t2) -> t1));
+
+        Set<String> bankIds = transactions.stream().map(TransactionV1::getBankId).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<String, BankingV1> bankMap = new HashMap<>();
+        if (!bankIds.isEmpty()) {
+            List<BankingV1> banks = bankingService.findAllBanksById(bankIds);
+            if (banks != null) {
+                banks.forEach(b -> bankMap.put(b.getBankId(), b));
+            }
+        }
+
+        if (relatedInvoices != null) {
+            for (InvoiceSummary summary : relatedInvoices) {
+                String type = summary.getInvoiceType();
+                if (type != null && (type.equalsIgnoreCase(InvoiceType.RENT.name()) ||
+                        type.equalsIgnoreCase(InvoiceType.ADVANCE.name()) ||
+                        type.equalsIgnoreCase(InvoiceType.BOOKING.name()))) {
+
+                    String paymentMode = "";
+                    TransactionV1 transaction = transactionMap.get(summary.getInvoiceId());
+                    if (transaction != null && transaction.getBankId() != null) {
+                        BankingV1 bank = bankMap.get(transaction.getBankId());
+                        if (bank != null) {
+                            paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-"
+                                    + (bank.getAccountType() != null ? bank.getAccountType() : "");
+                        }
+                    }
+
+                    paymentHistory.add(new InvoiceRefundHistory(
+                            summary.getInvoiceNumber(),
+                            summary.getInvoiceStartDate(),
+                            "",
+                            paymentMode,
+                            summary.getTotalAmount() != null ? summary.getTotalAmount() : 0.0,
+                            "",
+                            ""));
+                }
+            }
+        }
+
+        if (settlementInvoice.getTotalAmount() != null) {
+            String invoiceDate = Utils.dateToString(settlementInvoice.getInvoiceStartDate());
+            String createdAtTime = Utils.dateToTime(settlementInvoice.getCreatedAt());
+            String createdBy = settlementInvoice.getCreatedBy() != null ? settlementInvoice.getCreatedBy() : "";
+
+            String paymentMode = "";
+            TransactionV1 settlementTransaction = transactionMap.get(settlementInvoice.getInvoiceId());
+            if (settlementTransaction != null && settlementTransaction.getBankId() != null) {
+                BankingV1 bank = bankMap.get(settlementTransaction.getBankId());
+                if (bank != null) {
+                    paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-"
+                            + (bank.getAccountType() != null ? bank.getAccountType() : "");
+                }
+            }
+
+            if (settlementInvoice.getTotalAmount() > 0) {
+                paymentHistory.add(new InvoiceRefundHistory(
+                        settlementInvoice.getInvoiceNumber(),
+                        invoiceDate,
+                        createdAtTime,
+                        paymentMode,
+                        settlementInvoice.getTotalAmount(),
+                        createdBy,
+                        ""));
+            } else if (settlementInvoice.getTotalAmount() < 0) {
+                refundHistory.add(new InvoiceRefundHistory(
+                        settlementInvoice.getInvoiceNumber(),
+                        invoiceDate,
+                        createdAtTime,
+                        paymentMode,
+                        Math.abs(settlementInvoice.getTotalAmount()),
+                        createdBy,
+                        ""));
+            }
+        }
+
+        Map<String, List<InvoiceRefundHistory>> history = new HashMap<>();
+        history.put("paymentHistory", paymentHistory);
+        history.put("refundHistory", refundHistory);
+        return history;
     }
 
 }

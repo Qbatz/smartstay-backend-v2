@@ -778,6 +778,9 @@ public class TransactionService {
     public TransactionV1 getReceiptByReceiptId(String receiptId) {
         return transactionRespository.findByTransactionId(receiptId);
     }
+    public List<TransactionV1> getTransactionsByInvoiceIds(List<String> invoiceIds) {
+        return transactionRespository.findByInvoiceIdIn(invoiceIds);
+    }
 
     public DeleteReceipts deleteReceipts(String receiptId) {
         TransactionV1 transactionV1 = transactionRespository.findByTransactionId(receiptId);
