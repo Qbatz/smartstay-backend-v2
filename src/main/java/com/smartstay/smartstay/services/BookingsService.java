@@ -503,14 +503,13 @@ public class BookingsService {
 
 
         if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-            invoiceService.cancelBookingInvoice(invoicesV1);
+            invoiceService.cancelBookingInvoice(invoicesV1, cancelBooking.bankId(), cancelDate, cancelBooking.referenceNumber());
             CancelBookingDto cancelBookingDto = new CancelBookingDto(cancelBooking.reason(), customerId, bookingsV1.getBookingAmount(), invoicesV1.getInvoiceId(), cancelBooking.bankId(), cancelBooking.referenceNumber());
 
             creditDebitNoteService.cancelBooking(cancelBookingDto);
 
 
             TransactionDto transactionDto = new TransactionDto(cancelBooking.bankId(), cancelBooking.referenceNumber(), bookingsV1.getBookingAmount(), BankTransactionType.DEBIT.name(), BankSource.INVOICE.name(), bookingsV1.getHostelId(), Utils.dateToString(cancelDate).replace("/", "-"), "");
-
             bankTransactionService.cancelBooking(transactionDto, invoicesV1.getInvoiceId());
         }
 

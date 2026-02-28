@@ -1205,4 +1205,62 @@ public class ReportService {
         return new ResponseEntity<>(pdfUrl, HttpStatus.OK);
 
     }
+
+    public ResponseEntity<?> downloadReceiptsReport(String hostelId, String startDate, String endDate) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        String sDate = null;
+        String eDate = null;
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+        if (startDate == null) {
+            sDate = Utils.dateToString(billingDates.currentBillStartDate()).replace("/", "-");
+        }
+        else {
+            Date d = Utils.stringToDate(startDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (d == null) {
+                sDate = Utils.dateToString(billingDates.currentBillStartDate()).replace("/", "-");
+            }
+            else {
+                sDate = Utils.dateToString(d).replace("/", "-");
+            }
+        }
+        if (endDate == null) {
+            eDate = Utils.dateToString(billingDates.currentBillEndDate()).replace("/", "-");
+        }
+        else {
+            Date d = Utils.stringToDate(endDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (d == null) {
+                eDate = Utils.dateToString(billingDates.currentBillEndDate()).replace("/", "-");
+            }
+            else {
+                eDate = Utils.dateToString(d).replace("/", "-");
+            }
+        }
+
+        String url =  reportsUrl + "/v2/reports/receipts/report/"+hostelId;
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
+                .queryParam("startDate", sDate)
+                .queryParam("endDate", eDate);
+
+        String pdfUrl = downloadService.downloadFromUrl(builder.toUriString());
+
+        if (pdfUrl == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(pdfUrl, HttpStatus.OK);
+
+    }
 }
