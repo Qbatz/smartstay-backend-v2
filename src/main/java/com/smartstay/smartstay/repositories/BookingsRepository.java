@@ -22,6 +22,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
                         + "cus.profile_pic FROM bookingsv1 bookings left outer join customers cus "
                         + "on cus.customer_id=bookings.customer_id where bookings.hostel_id=:hostelId", nativeQuery = true)
         List<Bookings> findAllByHostelId(@Param("hostelId") String hostelId);
+        List<BookingsV1> findByCustomerIdIn(List<String> customerIds);
 
         @Query(value = "SELECT * FROM bookingsv1 where bed_id=:bedId ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
         BookingsV1 findLatestBooking(@Param("bedId") int bedId);

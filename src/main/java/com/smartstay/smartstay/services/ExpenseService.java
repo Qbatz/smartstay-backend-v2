@@ -240,16 +240,29 @@ public class ExpenseService {
             endDate = Utils.stringToDate(customEndDate, Utils.USER_INPUT_DATE_FORMAT);
         } else {
             Calendar cal = Calendar.getInstance();
-            endDate = cal.getTime();
+            BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+            cal.setTime(billingDates.currentBillStartDate());
+
             if ("THIS_MONTH".equalsIgnoreCase(period)) {
-                cal.set(Calendar.DAY_OF_MONTH, 1);
-                startDate = cal.getTime();
-            } else if ("LAST_3_MONTHS".equalsIgnoreCase(period)) {
+                startDate = billingDates.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+            else if ("LAST_MONTH".equalsIgnoreCase(period)) {
+                cal.add(Calendar.MONTH, -1);
+                BillingDates lastMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                startDate = lastMonthBillingDates.currentBillStartDate();
+                endDate = lastMonthBillingDates.currentBillEndDate();
+            }
+            else if ("LAST_3_MONTHS".equalsIgnoreCase(period)) {
                 cal.add(Calendar.MONTH, -3);
-                startDate = cal.getTime();
+                BillingDates lastMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                startDate = lastMonthBillingDates.currentBillStartDate();
+                endDate =  billingDates.currentBillEndDate();
             } else if ("LAST_6_MONTHS".equalsIgnoreCase(period)) {
                 cal.add(Calendar.MONTH, -6);
-                startDate = cal.getTime();
+                BillingDates lastMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+                startDate = lastMonthBillingDates.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
             } else {
                 BillingDates bd = hostelService.getCurrentBillStartAndEndDates(hostelId);
                 startDate = bd.currentBillStartDate();
@@ -388,7 +401,8 @@ public class ExpenseService {
 
         List<ExpenseReportResponse.FilterItem> periodList = new ArrayList<>();
         periodList.add(new ExpenseReportResponse.FilterItem("THIS_MONTH", "This Month"));
-        periodList.add(new ExpenseReportResponse.FilterItem("LAST_3_MONTHS", "Last Month"));
+        periodList.add(new ExpenseReportResponse.FilterItem("LAST_MONTH", "Last Month"));
+        periodList.add(new ExpenseReportResponse.FilterItem("LAST_3_MONTHS", "Last 3 Months"));
         periodList.add(new ExpenseReportResponse.FilterItem("LAST_6_MONTHS", "Last 6 Months"));
 
 

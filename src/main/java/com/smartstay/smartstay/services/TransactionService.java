@@ -926,14 +926,16 @@ public class TransactionService {
         Pageable pageable = PageRequest.of(page, size);
         List<TransactionV1> transactions = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
                 endDate, bankIds, collectedBy, invoiceIds, pageable);
-        long totalRecords = transactionRespository.countTransactionsByFiltersNew(hostelId, startDate, endDate, bankIds,
-                collectedBy, invoiceIds);
+//        long totalRecords = transactionRespository.countTransactionsByFiltersNew(hostelId, startDate, endDate, bankIds,
+//                collectedBy, invoiceIds);
 
         Double receivedAmount = 0.0;
         Double returnedAmount = 0.0;
         Double totalTransactionAmount = 0.0;
         List<TransactionV1> listTransactions =  transactionRespository.sumPaidAmountByFiltersNew(hostelId, startDate, endDate, bankIds,
                 collectedBy, invoiceIds);
+
+        long totalRecords = listTransactions.size();
 
         receivedAmount = listTransactions
                 .stream()
@@ -1141,5 +1143,25 @@ public class TransactionService {
         transactionV1.setReceiptUrl(url);
         transactionRespository.save(transactionV1);
         return new ResponseEntity<>(url, HttpStatus.OK);
+    }
+
+    public void cancelBooking(String customerId, String invoiceId, String hostelId, Double totalAmount, String bankId, Date cancelledDate, String referenceNumber) {
+        TransactionV1 transactionV1 = new TransactionV1();
+        transactionV1.setType(TransactionType.REFUND.name());
+        transactionV1.setPaidAmount(totalAmount);
+        transactionV1.setCreatedBy(authentication.getName());
+        transactionV1.setCreatedAt(new Date());
+        transactionV1.setStatus(PaymentStatus.REFUNDED.name());
+        transactionV1.setInvoiceId(invoiceId);
+        transactionV1.setHostelId(hostelId);
+        // transactionV1.setIsInvoice(false);
+        transactionV1.setCustomerId(customerId);
+        transactionV1.setPaymentDate(Utils.convertToTimeStamp(cancelledDate));
+        transactionV1.setTransactionReferenceId(generateRandomNumber());
+        transactionV1.setBankId(bankId);
+        transactionV1.setReferenceNumber(referenceNumber);
+        transactionV1.setPaidAt(new Date());
+        transactionV1.setUpdatedBy(authentication.getName());
+        transactionRespository.save(transactionV1);
     }
 }
