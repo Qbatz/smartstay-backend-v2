@@ -87,6 +87,8 @@ public class TransactionService {
     private VendorService vendorService;
     @Autowired
     private DownloadService downloadService;
+    @Autowired
+    private WhatsAppService whatsappService;
 
     /**
      * not using it
@@ -263,7 +265,6 @@ public class TransactionService {
         if (invoicesV1.getPaidAmount() != null) {
             paidAmount = invoicesV1.getPaidAmount();
         }
-
 
         TransactionV1 transactionV1 = new TransactionV1();
         Double gstAmount = invoicesV1.getGst();
@@ -520,7 +521,7 @@ public class TransactionService {
                         .getFirst();
                 templateColor = templateType.getReceiptTemplateColor();
 
-                BillTemplateType templateType2 =  hostelTemplates.getTemplateTypes().stream()
+                BillTemplateType templateType2 = hostelTemplates.getTemplateTypes().stream()
                         .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
                         .findFirst()
                         .orElse(null);
@@ -778,6 +779,7 @@ public class TransactionService {
     public TransactionV1 getReceiptByReceiptId(String receiptId) {
         return transactionRespository.findByTransactionId(receiptId);
     }
+
     public List<TransactionV1> getTransactionsByInvoiceIds(List<String> invoiceIds) {
         return transactionRespository.findByInvoiceIdIn(invoiceIds);
     }
@@ -893,7 +895,7 @@ public class TransactionService {
                     cal.add(Calendar.MONTH, -3);
                     BillingDates lastMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
                     startDate = lastMonthBillingDates.currentBillStartDate();
-                    endDate =  billingDates.currentBillEndDate();
+                    endDate = billingDates.currentBillEndDate();
                 }
             } else {
                 BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
@@ -926,26 +928,29 @@ public class TransactionService {
         Pageable pageable = PageRequest.of(page, size);
         List<TransactionV1> transactions = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
                 endDate, bankIds, collectedBy, invoiceIds, pageable);
-//        long totalRecords = transactionRespository.countTransactionsByFiltersNew(hostelId, startDate, endDate, bankIds,
-//                collectedBy, invoiceIds);
+        // long totalRecords =
+        // transactionRespository.countTransactionsByFiltersNew(hostelId, startDate,
+        // endDate, bankIds,
+        // collectedBy, invoiceIds);
 
         Double receivedAmount = 0.0;
         Double returnedAmount = 0.0;
         Double totalTransactionAmount = 0.0;
-        List<TransactionV1> listTransactions =  transactionRespository.sumPaidAmountByFiltersNew(hostelId, startDate, endDate, bankIds,
+        List<TransactionV1> listTransactions = transactionRespository.sumPaidAmountByFiltersNew(hostelId, startDate,
+                endDate, bankIds,
                 collectedBy, invoiceIds);
 
         long totalRecords = listTransactions.size();
 
         receivedAmount = listTransactions
                 .stream()
-                .filter(i ->  i.getType() == null)
+                .filter(i -> i.getType() == null)
                 .mapToDouble(TransactionV1::getPaidAmount)
                 .sum();
 
         returnedAmount = listTransactions
                 .stream()
-                .filter(i ->  i.getType() != null && i.getType().equalsIgnoreCase(TransactionType.REFUND.name()))
+                .filter(i -> i.getType() != null && i.getType().equalsIgnoreCase(TransactionType.REFUND.name()))
                 .mapToDouble(i -> {
                     if (i.getPaidAmount() < 0) {
                         return i.getPaidAmount() * -1;
@@ -1134,7 +1139,7 @@ public class TransactionService {
             return new ResponseEntity<>(transactionV1.getReceiptUrl(), HttpStatus.OK);
         }
 
-        String endpoint = reportsUrl + "/v2/reports/receipts/"+ hostelId + "/" +  transactionId;
+        String endpoint = reportsUrl + "/v2/reports/receipts/" + hostelId + "/" + transactionId;
         String url = downloadService.downloadFromUrl(endpoint);
 
         if (url == null) {
@@ -1145,7 +1150,8 @@ public class TransactionService {
         return new ResponseEntity<>(url, HttpStatus.OK);
     }
 
-    public void cancelBooking(String customerId, String invoiceId, String hostelId, Double totalAmount, String bankId, Date cancelledDate, String referenceNumber) {
+    public void cancelBooking(String customerId, String invoiceId, String hostelId, Double totalAmount, String bankId,
+            Date cancelledDate, String referenceNumber) {
         TransactionV1 transactionV1 = new TransactionV1();
         transactionV1.setType(TransactionType.REFUND.name());
         transactionV1.setPaidAmount(totalAmount);
@@ -1163,5 +1169,64 @@ public class TransactionService {
         transactionV1.setPaidAt(new Date());
         transactionV1.setUpdatedBy(authentication.getName());
         transactionRespository.save(transactionV1);
+    }
+
+    public ResponseEntity<?> shareReceiptWhatsApp(String hostelId, String transactionId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        TransactionV1 transactionV1 = transactionRespository.findByHostelIdAndTransactionId(hostelId, transactionId);
+        if (transactionV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_TRANSACTION_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!transactionV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        String receiptUrl = null;
+        if (transactionV1.getReceiptUrl() != null) {
+            receiptUrl = transactionV1.getReceiptUrl();
+        } else {
+            String endpoint = reportsUrl + "/v2/reports/receipts/" + hostelId + "/" + transactionId;
+            receiptUrl = downloadService.downloadFromUrl(endpoint);
+            if (receiptUrl != null) {
+                transactionV1.setReceiptUrl(receiptUrl);
+                transactionRespository.save(transactionV1);
+            }
+        }
+
+        if (receiptUrl == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customer = customersService.getCustomerInformation(transactionV1.getCustomerId());
+        String customerName = "Guest";
+        if (customer != null) {
+            customerName = customer.getFirstName();
+            if (customer.getLastName() != null && !customer.getLastName().isEmpty()) {
+                customerName += " " + customer.getLastName();
+            }
+
+            System.out.println("receiptUrl---" + receiptUrl);
+
+            String mobileNumber = customer.getMobile();
+            if (mobileNumber != null) {
+                whatsappService.sendReceiptNotification(mobileNumber, customerName, receiptUrl);
+            } else {
+                return new ResponseEntity<>("Customer mobile number not found", HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        return new ResponseEntity<>(receiptUrl, HttpStatus.OK);
     }
 }
