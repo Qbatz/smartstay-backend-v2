@@ -46,7 +46,14 @@ public class TransactionController {
     }
 
     @GetMapping("/download/{hostelId}/{transactionId}")
-    public ResponseEntity<?> downloadRecipts(@PathVariable("hostelId") String hostelId, @PathVariable("transactionId") String transactionId) {
+    public ResponseEntity<?> downloadReceipts(@PathVariable("hostelId") String hostelId,
+                                              @PathVariable("transactionId") String transactionId) {
         return transactionService.downloadRecipt(hostelId, transactionId);
+    }
+
+    @GetMapping("/share/{hostelId}/{transactionId}")
+    public ResponseEntity<?> shareReceiptWhatsApp(@PathVariable("hostelId") String hostelId,
+                                                  @PathVariable("transactionId") String transactionId) {
+        return transactionService.shareReceiptWhatsApp(hostelId, transactionId);
     }
 }

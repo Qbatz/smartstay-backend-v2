@@ -2286,7 +2286,7 @@ public class InvoiceV1Service {
                 return new ResponseEntity<>("Customer mobile number not found", HttpStatus.BAD_REQUEST);
             }
 
-            whatsappService.sendInvoiceNotification(mobileNumber, customerName, invoiceUrl.replace("https://smartstaydevs.s3.ap-south-1.amazonaws.com/", ""));
+            whatsappService.sendInvoiceNotification(mobileNumber, customerName, invoiceUrl);
 
         }
 

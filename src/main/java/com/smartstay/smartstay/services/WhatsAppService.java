@@ -23,6 +23,12 @@ public class WhatsAppService {
     private String templateName;
     @Value("${WHATSAPP_INVOICE_TEMPLATE_NAME:invoice_notification}")
     private String invoiceTemplateName;
+    @Value("${WHATSAPP_RECEIPT_TEMPLATE_NAME:dev_receipt}")
+    private String receiptTemplateName;
+    @Value("${WHATSAPP_INVOICE_BASE_URL:https://smartstaydevs.s3.ap-south-1.amazonaws.com/}")
+    private String invoiceBaseUrl;
+    @Value("${WHATSAPP_RECEIPT_BASE_URL:https://smartstaydevs.s3.ap-south-1.amazonaws.com/receipts/}")
+    private String receiptBaseUrl;
 
     public WhatsAppService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
@@ -97,14 +103,12 @@ public class WhatsAppService {
         language.put("code", "en");
         template.put("language", language);
 
-
         Map<String, Object> bodyComponent = new HashMap<>();
         bodyComponent.put("type", "body");
         Map<String, String> bodyParameter = new HashMap<>();
         bodyParameter.put("type", "text");
         bodyParameter.put("text", customerName != null ? customerName : "Guest");
         bodyComponent.put("parameters", Collections.singletonList(bodyParameter));
-
 
         Map<String, Object> buttonComponent = new HashMap<>();
         buttonComponent.put("type", "button");
@@ -113,7 +117,8 @@ public class WhatsAppService {
         Map<String, String> buttonParameter = new HashMap<>();
         buttonParameter.put("type", "text");
 
-        buttonParameter.put("text", invoiceUrl);
+        String relativeUrl = invoiceUrl.replace(invoiceBaseUrl, "");
+        buttonParameter.put("text", relativeUrl);
         buttonComponent.put("parameters", Collections.singletonList(buttonParameter));
 
         template.put("components", java.util.Arrays.asList(bodyComponent, buttonComponent));
@@ -126,6 +131,60 @@ public class WhatsAppService {
             restTemplate.postForEntity(url, entity, String.class);
         } catch (Exception e) {
             System.err.println("Failed to send WhatsApp invoice message: " + e.getMessage());
+        }
+    }
+
+    public void sendReceiptNotification(String mobileNumber, String customerName, String receiptUrl) {
+        String url = "https://graph.facebook.com/v17.0/" + phoneNumberId + "/messages";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + accessToken);
+
+        String formattedMobile = mobileNumber.replaceAll("[^0-9]", "");
+        if (formattedMobile.length() == 10) {
+            formattedMobile = "91" + formattedMobile;
+        }
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("messaging_product", "whatsapp");
+        body.put("to", formattedMobile);
+        body.put("type", "template");
+
+        Map<String, Object> template = new HashMap<>();
+        template.put("name", receiptTemplateName);
+
+        Map<String, String> language = new HashMap<>();
+        language.put("code", "en");
+        template.put("language", language);
+
+        Map<String, Object> bodyComponent = new HashMap<>();
+        bodyComponent.put("type", "body");
+        Map<String, String> bodyParameter = new HashMap<>();
+        bodyParameter.put("type", "text");
+        bodyParameter.put("text", customerName != null ? customerName : "Guest");
+        bodyComponent.put("parameters", Collections.singletonList(bodyParameter));
+
+        Map<String, Object> buttonComponent = new HashMap<>();
+        buttonComponent.put("type", "button");
+        buttonComponent.put("sub_type", "url");
+        buttonComponent.put("index", "0");
+        Map<String, String> buttonParameter = new HashMap<>();
+        buttonParameter.put("type", "text");
+        String relativeUrl = receiptUrl.replace(receiptBaseUrl, "");
+        buttonParameter.put("text", relativeUrl);
+        buttonComponent.put("parameters", Collections.singletonList(buttonParameter));
+
+        template.put("components", java.util.Arrays.asList(bodyComponent, buttonComponent));
+
+        body.put("template", template);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+        try {
+            restTemplate.postForEntity(url, entity, String.class);
+        } catch (Exception e) {
+            System.err.println("Failed to send WhatsApp receipt message: " + e.getMessage());
         }
     }
 }
