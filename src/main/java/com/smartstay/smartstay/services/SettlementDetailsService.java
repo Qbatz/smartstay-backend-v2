@@ -35,7 +35,7 @@ public class SettlementDetailsService {
         }
     }
 
-    public SettlementDetails getSettlmentInfoForCustomer(String customerId) {
+    public SettlementDetails getSettlementInfoForCustomer(String customerId) {
         return settlementDetailsRepository.findByCustomerId(customerId);
     }
 }

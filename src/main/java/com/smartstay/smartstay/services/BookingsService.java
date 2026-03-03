@@ -67,6 +67,9 @@ public class BookingsService {
     private BankingService bankingService;
     @Autowired
     private CustomersBedHistoryService customersBedHistoryService;
+
+    @Autowired
+    private SettlementDetailsService settlementDetailsService;
     @Autowired
     private RentHistoryService rentHistoryService;
     private CustomersConfigService customersConfigService;
@@ -1059,8 +1062,17 @@ public class BookingsService {
         InvoicesV1 finalSettlementInvoice = invoiceService.getFinalSettlementStatus(customerId);
         boolean finalSettlementStatus = invoiceService.isFinalSettlementPaid(finalSettlementInvoice);
 
+        SettlementDetails settlementDetails = settlementDetailsService.getSettlementInfoForCustomer(customerId);
 
-        InitializeCheckout initializeCheckout = new InitializeCheckout(finalSettlementStatus, Utils.dateToString(bookingsV1.getLeavingDate()), Utils.dateToString(bookingsV1.getJoiningDate()));
+        Date leavingDate = settlementDetails != null
+                ? settlementDetails.getLeavingDate()
+                : null;
+
+        InitializeCheckout initializeCheckout = new InitializeCheckout(
+                finalSettlementStatus,
+                leavingDate != null ? Utils.dateToString(leavingDate) : null,
+                Utils.dateToString(bookingsV1.getJoiningDate())
+        );
 
         return new ResponseEntity<>(initializeCheckout, HttpStatus.OK);
     }

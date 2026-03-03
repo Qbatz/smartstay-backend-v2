@@ -2179,7 +2179,7 @@ public class CustomersService {
 
         BillingDates billDate = hostelService.getCurrentBillStartAndEndDates(customers.getHostelId());
         CustomersBedHistory cbh = bedHistory.getLatestCustomerBed(customerId);
-        SettlementDetails settlementDetails = settlementDetailsService.getSettlmentInfoForCustomer(customerId);
+        SettlementDetails settlementDetails = settlementDetailsService.getSettlementInfoForCustomer(customerId);
 
         if (settlementDetails == null) {
             return new ResponseEntity<>(Utils.SETTLEMENT_INFORMATION_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
