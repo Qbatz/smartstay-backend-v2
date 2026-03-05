@@ -117,7 +117,7 @@ public class ReportService {
                 InvoiceType.SETTLEMENT.name(), startDate, endDate);
         ReportResponse.InvoiceReport invoiceReport = ReportResponse.InvoiceReport.builder()
                 .noOfInvoices(invoiceCount)
-                .totalAmount(invoiceTotal).build();
+                .totalAmount(Utils.roundOffWithTwoDigit(invoiceTotal)).build();
 
         Double outstandingAmount = 0.0;
         if (invoiceTotal != null && paidTotal != null) {
@@ -130,13 +130,13 @@ public class ReportService {
                 endDate);
         ReportResponse.ReceiptReport receiptReport = ReportResponse.ReceiptReport.builder()
                 .totalReceipts(receiptCount)
-                .totalAmount(receiptTotal).build();
+                .totalAmount(Utils.roundOffWithTwoDigit(receiptTotal)).build();
 
         // Banking
         int bankTransCount = bankTransactionService.countByHostelIdAndDateRange(hostelId, startDate, endDate);
         Double bankBalance = bankingService.sumBalanceByHostelId(hostelId);
         ReportResponse.BankingReport bankingReport = ReportResponse.BankingReport.builder()
-                .totalTransactions(bankTransCount).totalAmount(bankBalance).build();
+                .totalTransactions(bankTransCount).totalAmount(Utils.roundOffWithTwoDigit(bankBalance)).build();
 
         // Tenants
         int filledBeds = bedsService.countOccupiedByHostelId(hostelId);
@@ -248,8 +248,8 @@ public class ReportService {
 
         ReportResponse response = ReportResponse.builder().hostelId(hostelId)
                 .startDate(Utils.dateToString(startDate))
-                .endDate(Utils.dateToString(endDate)).outStandingAmount(outstandingAmount)
-                .totalRevenue(totalRevenue)
+                .endDate(Utils.dateToString(endDate)).outStandingAmount(Utils.roundOffWithTwoDigit(outstandingAmount))
+                .totalRevenue(Utils.roundOffWithTwoDigit(totalRevenue))
                 .invoices(invoiceReport).receipts(receiptReport).banking(bankingReport)
                 .tenantInfo(tenantReport)
                 .expense(expenseReport).vendor(vendorReport).complaints(complaintReport)
@@ -1262,5 +1262,119 @@ public class ReportService {
         }
         return new ResponseEntity<>(pdfUrl, HttpStatus.OK);
 
+    }
+
+    public ResponseEntity<?> downloadExpenseReport(String hostelId, String startDate, String endDate) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        String sDate = null;
+        String eDate = null;
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+        if (startDate == null) {
+            sDate = Utils.dateToString(billingDates.currentBillStartDate()).replace("/", "-");
+        }
+        else {
+            Date d = Utils.stringToDate(startDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (d == null) {
+                sDate = Utils.dateToString(billingDates.currentBillStartDate()).replace("/", "-");
+            }
+            else {
+                sDate = Utils.dateToString(d).replace("/", "-");
+            }
+        }
+        if (endDate == null) {
+            eDate = Utils.dateToString(billingDates.currentBillEndDate()).replace("/", "-");
+        }
+        else {
+            Date d = Utils.stringToDate(endDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (d == null) {
+                eDate = Utils.dateToString(billingDates.currentBillEndDate()).replace("/", "-");
+            }
+            else {
+                eDate = Utils.dateToString(d).replace("/", "-");
+            }
+        }
+
+        String url =  reportsUrl + "/v2/expense/"+hostelId;
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
+                .queryParam("startDate", sDate)
+                .queryParam("endDate", eDate);
+
+        String pdfUrl = downloadService.downloadFromUrl(builder.toUriString());
+
+        if (pdfUrl == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(pdfUrl, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> downloadInvoiceReport(String hostelId, String startDate, String endDate) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        String sDate = null;
+        String eDate = null;
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+        if (startDate == null) {
+            sDate = Utils.dateToString(billingDates.currentBillStartDate()).replace("/", "-");
+        }
+        else {
+            Date d = Utils.stringToDate(startDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (d == null) {
+                sDate = Utils.dateToString(billingDates.currentBillStartDate()).replace("/", "-");
+            }
+            else {
+                sDate = Utils.dateToString(d).replace("/", "-");
+            }
+        }
+        if (endDate == null) {
+            eDate = Utils.dateToString(billingDates.currentBillEndDate()).replace("/", "-");
+        }
+        else {
+            Date d = Utils.stringToDate(endDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (d == null) {
+                eDate = Utils.dateToString(billingDates.currentBillEndDate()).replace("/", "-");
+            }
+            else {
+                eDate = Utils.dateToString(d).replace("/", "-");
+            }
+        }
+
+        String url =  reportsUrl + "/v2/reports/invoices/pdf/"+hostelId;
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
+                .queryParam("startDate", sDate)
+                .queryParam("endDate", eDate);
+
+        String pdfUrl = downloadService.downloadFromUrl(builder.toUriString());
+
+        if (pdfUrl == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(pdfUrl, HttpStatus.OK);
     }
 }

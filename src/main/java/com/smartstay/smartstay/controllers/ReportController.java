@@ -114,4 +114,14 @@ public class ReportController {
     public ResponseEntity<?> downloadReceiptReport(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate) {
         return reportService.downloadReceiptsReport(hostelId, startDate, endDate);
     }
+
+    @GetMapping("/download/expense/{hostelId}")
+    public ResponseEntity<?> downloadExpenseReport(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate) {
+        return reportService.downloadExpenseReport(hostelId, startDate, endDate);
+    }
+
+    @GetMapping("/download/invoice/{hostelId}")
+    public ResponseEntity<?> downloadInvoiceReport(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate) {
+        return reportService.downloadInvoiceReport(hostelId, startDate, endDate);
+    }
 }

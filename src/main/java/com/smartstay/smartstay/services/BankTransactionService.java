@@ -105,7 +105,7 @@ public class BankTransactionService {
      *
      * this is to refund the booking amount
      */
-    public void cancelBooking(TransactionDto transactionDto, String sourceId) {
+    public void cancelBooking(TransactionDto transactionDto, String sourceId, String transactionId) {
         if (authentication.isAuthenticated()) {
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
             BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
@@ -118,6 +118,7 @@ public class BankTransactionService {
                 transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
                 transactionsV1.setAmount(transactionDto.amount());
                 transactionsV1.setType(BankTransactionType.DEBIT.name());
+                transactionsV1.setTransactionNumber(transactionId);
                 transactionsV1.setSource(BankSource.BOOKING_REFUND.name());
                 transactionsV1.setSourceId(sourceId);
                 transactionsV1.setCreatedAt(new Date());
@@ -171,7 +172,8 @@ public class BankTransactionService {
         return false;
     }
 
-    public boolean refundInvoice(InvoicesV1 invoicesV1, RefundInvoice refundInvoice, String sourceId) {
+
+    public boolean refundInvoice(InvoicesV1 invoicesV1, RefundInvoice refundInvoice, String sourceId, String transactionId) {
         BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
 
         if (!bankingService.updateBalanceForExpense(refundInvoice.refundAmount(), BankTransactionType.DEBIT.name(), refundInvoice.bankId())) {
@@ -193,6 +195,7 @@ public class BankTransactionService {
         transactionsV1.setAmount(refundInvoice.refundAmount());
         transactionsV1.setType(BankTransactionType.DEBIT.name());
         transactionsV1.setSource(BankSource.INVOICE.name());
+        transactionsV1.setTransactionNumber(transactionId);
         transactionsV1.setSourceId(sourceId);
         transactionsV1.setHostelId(invoicesV1.getHostelId());
         transactionsV1.setCreatedAt(new Date());

@@ -564,12 +564,13 @@ public class InvoiceV1Service {
         return invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.ADVANCE.name());
     }
 
-    public void cancelBookingInvoice(InvoicesV1 invoicesV1, String bankId, Date cancelledDate, String referenceNumber) {
+    public String cancelBookingInvoice(InvoicesV1 invoicesV1, String bankId, Date cancelledDate, String referenceNumber) {
         invoicesV1.setPaymentStatus(PaymentStatus.CANCELLED.name());
         invoicesV1.setCancelled(true);
         invoicesV1Repository.save(invoicesV1);
 
-        transactionService.cancelBooking(invoicesV1.getCustomerId(), invoicesV1.getInvoiceId(), invoicesV1.getHostelId(), invoicesV1.getTotalAmount(), bankId, cancelledDate, referenceNumber);
+        TransactionV1 transactionV1 = transactionService.cancelBooking(invoicesV1.getCustomerId(), invoicesV1.getInvoiceId(), invoicesV1.getHostelId(), invoicesV1.getTotalAmount(), bankId, cancelledDate, referenceNumber);
+        return transactionV1.getTransactionId();
     }
 
     public ResponseEntity<?> generateManualInvoice(String customerId, ManualInvoice manualInvoice) {
@@ -2344,7 +2345,7 @@ public class InvoiceV1Service {
                             paymentMode,
                             summary.getTotalAmount() != null ? summary.getTotalAmount() : 0.0,
                             "",
-                            ""));
+                            paymentMode));
                 }
             }
         }
@@ -2356,6 +2357,7 @@ public class InvoiceV1Service {
 
             String paymentMode = "";
             TransactionV1 settlementTransaction = transactionMap.get(settlementInvoice.getInvoiceId());
+
             if (settlementTransaction != null && settlementTransaction.getBankId() != null) {
                 BankingV1 bank = bankMap.get(settlementTransaction.getBankId());
                 if (bank != null) {
@@ -2372,7 +2374,7 @@ public class InvoiceV1Service {
                         paymentMode,
                         settlementInvoice.getTotalAmount(),
                         createdBy,
-                        ""));
+                        paymentMode));
             } else if (settlementInvoice.getTotalAmount() < 0) {
                 refundHistory.add(new InvoiceRefundHistory(
                         settlementInvoice.getInvoiceNumber(),
@@ -2381,7 +2383,7 @@ public class InvoiceV1Service {
                         paymentMode,
                         Math.abs(settlementInvoice.getTotalAmount()),
                         createdBy,
-                        ""));
+                        paymentMode));
             }
         }
 

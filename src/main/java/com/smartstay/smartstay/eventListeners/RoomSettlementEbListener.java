@@ -42,7 +42,6 @@ public class RoomSettlementEbListener {
             if (!listBedHistory.isEmpty()) {
                 List<ElectricityReadings> electricityReadingsForInvoice = new ArrayList<>();
                 listBedHistory.forEach(item -> {
-                    System.out.println(ebEvents.getHostelId());
                     Date endDate = item.getEndDate();
                     if (item.getEndDate() == null) {
                         endDate = ebEvents.getEndDate();
