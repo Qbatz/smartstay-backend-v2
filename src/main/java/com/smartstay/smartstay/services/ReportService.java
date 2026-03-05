@@ -117,7 +117,7 @@ public class ReportService {
                 InvoiceType.SETTLEMENT.name(), startDate, endDate);
         ReportResponse.InvoiceReport invoiceReport = ReportResponse.InvoiceReport.builder()
                 .noOfInvoices(invoiceCount)
-                .totalAmount(invoiceTotal).build();
+                .totalAmount(Utils.roundOffWithTwoDigit(invoiceTotal)).build();
 
         Double outstandingAmount = 0.0;
         if (invoiceTotal != null && paidTotal != null) {
@@ -130,13 +130,13 @@ public class ReportService {
                 endDate);
         ReportResponse.ReceiptReport receiptReport = ReportResponse.ReceiptReport.builder()
                 .totalReceipts(receiptCount)
-                .totalAmount(receiptTotal).build();
+                .totalAmount(Utils.roundOffWithTwoDigit(receiptTotal)).build();
 
         // Banking
         int bankTransCount = bankTransactionService.countByHostelIdAndDateRange(hostelId, startDate, endDate);
         Double bankBalance = bankingService.sumBalanceByHostelId(hostelId);
         ReportResponse.BankingReport bankingReport = ReportResponse.BankingReport.builder()
-                .totalTransactions(bankTransCount).totalAmount(bankBalance).build();
+                .totalTransactions(bankTransCount).totalAmount(Utils.roundOffWithTwoDigit(bankBalance)).build();
 
         // Tenants
         int filledBeds = bedsService.countOccupiedByHostelId(hostelId);
@@ -248,8 +248,8 @@ public class ReportService {
 
         ReportResponse response = ReportResponse.builder().hostelId(hostelId)
                 .startDate(Utils.dateToString(startDate))
-                .endDate(Utils.dateToString(endDate)).outStandingAmount(outstandingAmount)
-                .totalRevenue(totalRevenue)
+                .endDate(Utils.dateToString(endDate)).outStandingAmount(Utils.roundOffWithTwoDigit(outstandingAmount))
+                .totalRevenue(Utils.roundOffWithTwoDigit(totalRevenue))
                 .invoices(invoiceReport).receipts(receiptReport).banking(bankingReport)
                 .tenantInfo(tenantReport)
                 .expense(expenseReport).vendor(vendorReport).complaints(complaintReport)

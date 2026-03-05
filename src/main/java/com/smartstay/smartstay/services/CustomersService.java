@@ -788,7 +788,7 @@ public class CustomersService {
         String mobileStatus = "";
         String emailStatus = "";
 
-        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.WALK_IN.getId(), Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
@@ -2239,21 +2239,22 @@ public class CustomersService {
                 .filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) >= 0)
                 .toList();
 
-        Calendar calStartDate = Calendar.getInstance();
-        calStartDate.setTime(billDate.currentBillStartDate());
+//        Calendar calStartDate = Calendar.getInstance();
+//        calStartDate.setTime();
 
-        Calendar calEndDate = Calendar.getInstance();
-        calEndDate.setTime(billDate.currentBillEndDate());
+//        Calendar calEndDate = Calendar.getInstance();
+//        calEndDate.setTime(billDate.currentBillEndDate());
 
-        Date dateStartDate = calStartDate.getTime();
+        Date dateStartDate = null;
 
-        if (Utils.findNumberOfDays(billDate.currentBillStartDate(), bookingDetails.getJoiningDate()) >= 0) {
+        long noOfd = Utils.compareWithTwoDates(billDate.currentBillStartDate(), bookingDetails.getJoiningDate());
+        if (Utils.compareWithTwoDates(billDate.currentBillStartDate(), bookingDetails.getJoiningDate()) <= 0) {
             dateStartDate = bookingDetails.getJoiningDate();
         } else {
             dateStartDate = billDate.currentBillStartDate();
         }
 
-        long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(calStartDate.getTime(), calEndDate.getTime());
+        long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(billDate.currentBillStartDate(), billDate.currentBillEndDate());
 
         noOfDaySatayed = Utils.findNumberOfDays(dateStartDate, settlementDetails.getLeavingDate());
 
@@ -2370,7 +2371,7 @@ public class CustomersService {
 
 //        List<PartialPaidInvoiceInfo> lisPartialPayments = transactionService.getTransactionInfo(partialPaymentInvoices);
 
-        partialPaidAmount = listUnpaidInvoices
+        partialPaidAmount = listUnpaidRentalInvoices
                 .stream()
                 .filter(i -> !i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
                 .mapToDouble(InvoicesV1::getPaidAmount)

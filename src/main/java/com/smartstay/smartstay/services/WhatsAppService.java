@@ -75,7 +75,7 @@ public class WhatsAppService {
         try {
             restTemplate.postForEntity(url, entity, String.class);
         } catch (Exception e) {
-            System.err.println("Failed to send WhatsApp message: " + e.getMessage());
+
         }
     }
 
@@ -130,7 +130,7 @@ public class WhatsAppService {
         try {
             restTemplate.postForEntity(url, entity, String.class);
         } catch (Exception e) {
-            System.err.println("Failed to send WhatsApp invoice message: " + e.getMessage());
+
         }
     }
 
