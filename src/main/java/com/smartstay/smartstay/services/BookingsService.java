@@ -63,8 +63,6 @@ public class BookingsService {
     @Autowired
     private BankTransactionService bankTransactionService;
     @Autowired
-    private SettlementDetailsService settlementDetailsService;
-    @Autowired
     private BankingService bankingService;
     @Autowired
     private CustomersBedHistoryService customersBedHistoryService;
@@ -616,18 +614,19 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_PAID, HttpStatus.BAD_REQUEST);
         }
 
-        Beds bed = bedsService.makeABedVacant(bookingsV1.getBedId());
+        SettlementDetails settlementDetails = settlementDetailsService.getSettlementInfoForCustomer(customerId);
+
+
+        Beds bed = bedsService.makeABedVacant(bookingsV1.getBedId(),settlementDetails);
         if (bed == null) {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
         customersService.markCustomerCheckedOut(customers);
         customersBedHistoryService.checkoutCustomer(customerId);
-        SettlementDetails details = settlementDetailsService.getSettlmentInfoForCustomer(customerId);
-        if (details != null) {
-            bookingsV1.setCheckoutDate(details.getLeavingDate());
+        if (settlementDetails != null && settlementDetails.getLeavingDate() !=null) {
+            bookingsV1.setCheckoutDate(settlementDetails.getLeavingDate());
         }
-
         bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
         bookingsRepository.save(bookingsV1);
         customersConfigService.disableRecurring(customerId);

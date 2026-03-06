@@ -8,6 +8,12 @@ import java.util.function.Function;
 public class RoomsMapper implements Function<Rooms, RoomsResponse> {
     @Override
     public RoomsResponse apply(Rooms rooms) {
-        return new RoomsResponse(rooms.getRoomId(), rooms.getRoomName(),rooms.getFloorId(), rooms.getHostelId(), rooms.getSharingType()+" - Sharing");
+       return new RoomsResponse(
+           rooms.getRoomId(),
+           rooms.getRoomName(),
+           rooms.getFloorId(),
+           rooms.getHostelId(),
+           (rooms.getSharingType() != null ? rooms.getSharingType() : "0") + " - Sharing"
+       );
     }
 }

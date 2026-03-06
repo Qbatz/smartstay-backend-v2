@@ -28,6 +28,7 @@ public class Utils {
     public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
     public static final String OUTPUT_MONTH_FORMAT = "MMM YYYY";
     public static final String OUTPUT_DATE_MONTH_FORMAT = "dd MMM";
+    public static final String OUTPUT_DATE_TIME_FORMAT = "dd/MM/yyyy hh:mm:ss a";
 
     public static final String DATE_FORMAT_YY = "yyyy/MM/dd";
     public static final String DATE_FORMAT_ZOHO = "yyyy-MM-dd";
@@ -322,6 +323,13 @@ public class Utils {
             return "";
         }
         return new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(date);
+    }
+
+    public static String dateToDateTime(Date date) {
+        if (date == null) {
+            return "";
+        }
+        return new SimpleDateFormat(OUTPUT_DATE_TIME_FORMAT).format(date);
     }
 
     public static String dateToDateMonth(Date date) {
