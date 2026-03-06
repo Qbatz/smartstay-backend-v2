@@ -276,7 +276,9 @@ public class UsersService {
                         usersDetails.two_step_verification_status(),
                         usersDetails.countryName(),
                         usersDetails.currency(),
-                        usersDetails.countryCode(), initials.toString());
+                        usersDetails.countryCode(), initials.toString(),
+                        usersDetails.profilePic(),
+                        usersDetails.lastUpdated() != null ? Utils.dateToDateTime(usersDetails.lastUpdated()) : null);
             } else {
                 details1 = new LoginUsersDetails(usersDetails.userId(),
                         usersDetails.firstName(),
@@ -291,7 +293,9 @@ public class UsersService {
                         usersDetails.two_step_verification_status(),
                         usersDetails.countryName(),
                         usersDetails.currency(),
-                        usersDetails.countryCode(), initials.toString());
+                        usersDetails.countryCode(), initials.toString(),
+                        usersDetails.profilePic(),
+                        usersDetails.lastUpdated() != null ? Utils.dateToDateTime(usersDetails.lastUpdated()) : null);
             }
             return new ResponseEntity<>(details1, HttpStatus.OK);
         }
@@ -309,7 +313,8 @@ public class UsersService {
             String encodedPassword = encoder.encode(password.password());
             user.setPassword(encodedPassword);
             userRepository.save(user);
-            userActivitiesService.addLogBasedOnProfile(ActivitySource.PROFILE.name(), ActivitySourceType.CHANGE_SELF_PASSWORD.name(), user);
+            userActivitiesService.addLogBasedOnProfile(ActivitySource.PROFILE.name(),
+                    ActivitySourceType.CHANGE_SELF_PASSWORD.name(), user);
             return new ResponseEntity<>(Utils.PASSWORD_CHANGED_SUCCESS, HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
@@ -414,7 +419,8 @@ public class UsersService {
         Users usersForUpdate = new ProfileUplodWrapper(user).apply(updateProfile);
 
         userRepository.save(usersForUpdate);
-        userActivitiesService.addLogBasedOnProfile(ActivitySource.PROFILE.name(), ActivitySourceType.UPDATE.name(), user);
+        userActivitiesService.addLogBasedOnProfile(ActivitySource.PROFILE.name(), ActivitySourceType.UPDATE.name(),
+                user);
         return new ResponseEntity<>("Updated Successfully", HttpStatus.OK);
     }
 
@@ -537,7 +543,8 @@ public class UsersService {
                     }
                     eventPublisher.publishEvent(new AddAdminEvents(this, users.getParentId(),
                             createdAccount.getUserId(), fullName.toString()));
-                    userActivitiesService.addLoginLog(null, null, createdAccount.getUserId(), ActivitySource.PROFILE.name(), ActivitySourceType.ADD_ADMIN.name(), users);
+                    userActivitiesService.addLoginLog(null, null, createdAccount.getUserId(),
+                            ActivitySource.PROFILE.name(), ActivitySourceType.ADD_ADMIN.name(), users);
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             } else {
@@ -616,7 +623,8 @@ public class UsersService {
                     }
                     eventPublisher.publishEvent(new AddUserEvents(this, user.getUserId(), hostelId, fullName.toString(),
                             user.getParentId()));
-                    userActivitiesService.addLoginLog(hostelId, null, user.getUserId(), ActivitySource.PROFILE.name(), ActivitySourceType.ADD_USER.name(), users);
+                    userActivitiesService.addLoginLog(hostelId, null, user.getUserId(), ActivitySource.PROFILE.name(),
+                            ActivitySourceType.ADD_USER.name(), users);
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             } else {
@@ -636,7 +644,8 @@ public class UsersService {
             user.setTwoStepVerificationStatus(verificationStatus.isStatus());
             user.setLastUpdate(new Date());
             userRepository.save(user);
-            userActivitiesService.addLogBasedOnProfile(ActivitySource.PROFILE.name(), ActivitySourceType.UPDATE.name(), user);
+            userActivitiesService.addLogBasedOnProfile(ActivitySource.PROFILE.name(), ActivitySourceType.UPDATE.name(),
+                    user);
             return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -662,7 +671,8 @@ public class UsersService {
                     inputUser.setActive(false);
                     userRepository.save(inputUser);
 
-                    userActivitiesService.addLoginLog(hostelId, null, ActivitySource.PROFILE.name(), ActivitySourceType.DELETE.name(), inputUser.getUserId(), users);
+                    userActivitiesService.addLoginLog(hostelId, null, ActivitySource.PROFILE.name(),
+                            ActivitySourceType.DELETE.name(), inputUser.getUserId(), users);
                 }
 
                 return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
@@ -693,7 +703,8 @@ public class UsersService {
                 inputUser.setDeleted(true);
                 inputUser.setActive(false);
                 userRepository.save(inputUser);
-                userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(), ActivitySourceType.DELETE_ADMIN_USER.name(), inputUser.getUserId(), users);
+                userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
+                        ActivitySourceType.DELETE_ADMIN_USER.name(), inputUser.getUserId(), users);
                 return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
 
             } else {
@@ -807,7 +818,8 @@ public class UsersService {
                 adminUser.setLastUpdate(new Date());
 
                 userRepository.save(adminUser);
-                userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(), ActivitySourceType.CHANGE_ADMIN_PASSWORD.name(), adminUser.getUserId(), user);
+                userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
+                        ActivitySourceType.CHANGE_ADMIN_PASSWORD.name(), adminUser.getUserId(), user);
                 return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -871,11 +883,11 @@ public class UsersService {
         userToUpdate.setLastUpdate(new Date());
 
         userRepository.save(userToUpdate);
-        userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(), ActivitySourceType.UPDATE_ADMIN_PROFILE.name(), userToUpdate.getUserId(), users);
+        userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
+                ActivitySourceType.UPDATE_ADMIN_PROFILE.name(), userToUpdate.getUserId(), users);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
-
 
     public List<Users> findByListOfUserIds(List<String> assignes) {
         return userRepository.findAllById(assignes);
@@ -1037,7 +1049,8 @@ public class UsersService {
             } else if (logout.source().equalsIgnoreCase("MOBILE")) {
                 usersConfig.setFcmToken(null);
             }
-            userActivitiesService.addLogBasedOnProfile(ActivitySource.PROFILE.name(), ActivitySourceType.LOGOUT.name(), users);
+            userActivitiesService.addLogBasedOnProfile(ActivitySource.PROFILE.name(), ActivitySourceType.LOGOUT.name(),
+                    users);
             usersConfigRepository.save(usersConfig);
         }
 
