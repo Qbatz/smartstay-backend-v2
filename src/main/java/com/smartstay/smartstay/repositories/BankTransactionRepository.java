@@ -28,4 +28,9 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
 
+    @Query("""
+            SELECT btv FROM BankTransactionsV1 btv WHERE btv.type='DEBIT'
+            """)
+    List<BankTransactionsV1> findByTransactionType();
+
 }

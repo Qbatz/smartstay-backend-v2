@@ -41,7 +41,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
         @Query(value = "SELECT * FROM invoicesv1 WHERE customer_id = :customerId ORDER BY invoice_start_date DESC LIMIT 1", nativeQuery = true)
         InvoicesV1 findLatestInvoiceByCustomerId(@Param("customerId") String customerId);
 
-        @Query(value = "SELECT * FROM invoicesv1 WHERE customer_id = :customerId and invoice_type='RENT' ORDER BY invoice_start_date DESC LIMIT 1", nativeQuery = true)
+        @Query(value = "SELECT * FROM invoicesv1 WHERE customer_id = :customerId and (invoice_type='RENT' OR invoice_type='REASSIGN_RENT') ORDER BY invoice_start_date DESC LIMIT 1", nativeQuery = true)
         InvoicesV1 findLatestRentInvoiceByCustomerId(@Param("customerId") String customerId);
 
         @Query(value = """

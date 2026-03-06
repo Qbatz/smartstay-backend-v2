@@ -514,6 +514,7 @@ public class TransactionService {
 
             BillTemplateType templateType = null;
             String templateColor = null;
+            String termsAndCondition = null;
             if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())
                     || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
                 templateType = hostelTemplates.getTemplateTypes().stream()
@@ -528,6 +529,7 @@ public class TransactionService {
 
                 if (templateType2 != null) {
                     templateColor = templateType2.getReceiptTemplateColor();
+                    termsAndCondition = templateType2.getReceiptTermsAndCondition();
                 }
 
             } else {
@@ -535,6 +537,7 @@ public class TransactionService {
                         .filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).toList()
                         .getFirst();
                 templateColor = templateType.getReceiptTemplateColor();
+                termsAndCondition = templateType.getReceiptTermsAndCondition();
             }
 
             if (!hostelTemplates.isSignatureCustomized()) {
@@ -548,7 +551,7 @@ public class TransactionService {
                 hostelLogo = templateType.getReceiptLogoUrl();
             }
 
-            receiptConfigInfo = new ReceiptConfigInfo(templateType.getReceiptTermsAndCondition(), receiptSignatureUrl,
+            receiptConfigInfo = new ReceiptConfigInfo(termsAndCondition, receiptSignatureUrl,
                     hostelLogo, hostelFullAddress.toString(), templateColor,
                     templateType.getReceiptNotes(), invoiceType);
         }
@@ -719,12 +722,6 @@ public class TransactionService {
             }
         }
 
-        if (bankTransactionService.refundInvoice(invoicesV1, refundInvoice, invoiceId)) {
-            creditDebitNoteService.refunInvoice(invoiceId, invoicesV1, refundInvoice);
-        } else {
-            return new ResponseEntity<>(Utils.INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);
-        }
-
         if ((refundedAmount + refundInvoice.refundAmount()) == refundableAmount) {
             invoicesV1.setPaymentStatus(PaymentStatus.REFUNDED.name());
             paymentStatus = PaymentStatus.REFUNDED.name();
@@ -758,7 +755,11 @@ public class TransactionService {
         transactionV1.setReferenceNumber(refundInvoice.referenceNumber());
         transactionV1.setPaidAt(Utils.convertToTimeStamp(transactionDate));
         transactionV1.setUpdatedBy(authentication.getName());
-        transactionRespository.save(transactionV1);
+        TransactionV1 transactionV11 = transactionRespository.save(transactionV1);
+
+        bankTransactionService.refundInvoice(invoicesV1, refundInvoice, invoiceId, transactionV11.getTransactionId());
+        creditDebitNoteService.refunInvoice(invoiceId, invoicesV1, refundInvoice);
+
 
         return new ResponseEntity<>(Utils.REFUND_PROCESSED_SUCCESSFULLY, HttpStatus.OK);
     }
@@ -1150,7 +1151,7 @@ public class TransactionService {
         return new ResponseEntity<>(url, HttpStatus.OK);
     }
 
-    public void cancelBooking(String customerId, String invoiceId, String hostelId, Double totalAmount, String bankId,
+    public TransactionV1 cancelBooking(String customerId, String invoiceId, String hostelId, Double totalAmount, String bankId,
             Date cancelledDate, String referenceNumber) {
         TransactionV1 transactionV1 = new TransactionV1();
         transactionV1.setType(TransactionType.REFUND.name());
@@ -1168,7 +1169,7 @@ public class TransactionService {
         transactionV1.setReferenceNumber(referenceNumber);
         transactionV1.setPaidAt(new Date());
         transactionV1.setUpdatedBy(authentication.getName());
-        transactionRespository.save(transactionV1);
+        return transactionRespository.save(transactionV1);
     }
 
     public ResponseEntity<?> shareReceiptWhatsApp(String hostelId, String transactionId) {
@@ -1216,8 +1217,6 @@ public class TransactionService {
             if (customer.getLastName() != null && !customer.getLastName().isEmpty()) {
                 customerName += " " + customer.getLastName();
             }
-
-            System.out.println("receiptUrl---" + receiptUrl);
 
             String mobileNumber = customer.getMobile();
             if (mobileNumber != null) {

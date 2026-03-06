@@ -846,13 +846,18 @@ public class BedsService {
         return bedsRepository.findRoomAndFloorByBedIdAndHostelId(bedId, hostelId);
     }
 
-    public Beds makeABedVacant(int bedId, Date leavingDate) {
+    public Beds makeABedVacant(int bedId, SettlementDetails settlementDetails) {
         Beds bed = bedsRepository.findById(bedId).orElse(null);
         if (bed == null) {
             return null;
         }
         bed.setCurrentStatus(BedStatus.VACANT.name());
-        bed.setFreeFrom(leavingDate);
+        if (settlementDetails != null && settlementDetails.getLeavingDate() != null) {
+            bed.setFreeFrom(settlementDetails.getLeavingDate());
+        }
+        else {
+            bed.setFreeFrom(null);
+        }
         return bedsRepository.save(bed);
     }
 
