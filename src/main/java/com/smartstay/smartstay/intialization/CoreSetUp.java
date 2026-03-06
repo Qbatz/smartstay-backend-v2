@@ -214,7 +214,7 @@ public class CoreSetUp {
 				modules5.setModuleName("Customers");
 				modulesRepository.save(modules5);
 			}
-			Modules modules6 = modulesRepository.findByModuleName("Customers");
+			Modules modules6 = modulesRepository.findByModuleName("Booking");
 			if (modules6 == null) {
 				modules6 = new Modules();
 				modules6.setModuleName("Booking");

@@ -2431,7 +2431,7 @@ public class CustomersService {
 
         totalAmountToBePaid = totalAmountToBePaid + ebAmount;
         invoiceService.cancelActiveInvoice(unpaidUpdated);
-        if (invAdvanceInvoice != null) {
+//        if (invAdvanceInvoice != null) {
             InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
 
 
@@ -2452,7 +2452,7 @@ public class CustomersService {
                     eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customerId, settlementDetails.getLeavingDate(), authentication.getName()));
                 }
             }
-        }
+//        }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
@@ -2646,7 +2646,7 @@ public class CustomersService {
         }
 
 
-        if (advaceInvoice != null) {
+//        if (advaceInvoice != null) {
             InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(totalAmountToBePaid), cancellInvoices, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
 
             if (cw != null) {
@@ -2667,7 +2667,7 @@ public class CustomersService {
                 }
             }
 
-        }
+//        }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }

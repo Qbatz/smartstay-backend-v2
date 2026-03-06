@@ -2297,17 +2297,17 @@ public class InvoiceV1Service {
     }
 
     private Map<String, List<InvoiceRefundHistory>> getFinalSettlementHistoryList(InvoicesV1 settlementInvoice,
-                                                                                  List<InvoiceSummary> relatedInvoices) {
+                                                                                  List<InvoiceSummary> relatedInvoices123) {
         List<InvoiceRefundHistory> paymentHistory = new ArrayList<>();
         List<InvoiceRefundHistory> refundHistory = new ArrayList<>();
 
-        List<String> invoiceIds = new ArrayList<>();
-        if (relatedInvoices != null) {
-            invoiceIds.addAll(relatedInvoices.stream().map(InvoiceSummary::getInvoiceId).toList());
-        }
-        invoiceIds.add(settlementInvoice.getInvoiceId());
+//        List<String> invoiceIds = new ArrayList<>();
+//        if (relatedInvoices != null) {
+//            invoiceIds.addAll(relatedInvoices.stream().map(InvoiceSummary::getInvoiceId).toList());
+//        }
+//        invoiceIds.add(settlementInvoice.getInvoiceId());
 
-        List<TransactionV1> transactions = transactionService.getTransactionsByInvoiceIds(invoiceIds);
+        List<TransactionV1> transactions = transactionService.getTransactionsByInvoiceId(settlementInvoice.getInvoiceId());
         Map<String, TransactionV1> transactionMap = transactions.stream()
                 .collect(Collectors.toMap(TransactionV1::getInvoiceId, t -> t, (t1, t2) -> t1));
 
@@ -2321,33 +2321,41 @@ public class InvoiceV1Service {
             }
         }
 
-        if (relatedInvoices != null) {
-            for (InvoiceSummary summary : relatedInvoices) {
-                String type = summary.getInvoiceType();
-                if (type != null && (type.equalsIgnoreCase(InvoiceType.RENT.name()) ||
-                        type.equalsIgnoreCase(InvoiceType.ADVANCE.name()) ||
-                        type.equalsIgnoreCase(InvoiceType.BOOKING.name()))) {
-
-                    String paymentMode = "";
-                    TransactionV1 transaction = transactionMap.get(summary.getInvoiceId());
-                    if (transaction != null && transaction.getBankId() != null) {
-                        BankingV1 bank = bankMap.get(transaction.getBankId());
-                        if (bank != null) {
-                            paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-"
-                                    + (bank.getAccountType() != null ? bank.getAccountType() : "");
-                        }
+        if (transactions != null) {
+            transactions.forEach(item -> {
+                String paymentMode = null;
+                if (item != null && item.getBankId() != null) {
+                    BankingV1 bank = bankMap.get(item.getBankId());
+                    if (bank != null) {
+                        paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-"
+                                + (bank.getAccountType() != null ? bank.getAccountType() : "");
                     }
+                }
 
-                    paymentHistory.add(new InvoiceRefundHistory(
-                            summary.getInvoiceNumber(),
-                            summary.getInvoiceStartDate(),
-                            "",
+                if (settlementInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name()) ||
+                        settlementInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
+                    refundHistory.add(new InvoiceRefundHistory(
+                            settlementInvoice.getInvoiceNumber(),
+                            Utils.dateToString(item.getPaymentDate()),
+                            Utils.dateToTime(item.getPaymentDate()),
                             paymentMode,
-                            summary.getTotalAmount() != null ? summary.getTotalAmount() : 0.0,
-                            "",
+                            item.getPaidAmount() != null ? item.getPaidAmount() : 0.0,
+                            paymentMode,
                             paymentMode));
                 }
-            }
+                else {
+                    paymentHistory.add(new InvoiceRefundHistory(
+                            settlementInvoice.getInvoiceNumber(),
+                            Utils.dateToString(item.getPaymentDate()),
+                            Utils.dateToTime(item.getPaymentDate()),
+                            paymentMode,
+                            item.getPaidAmount() != null ? item.getPaidAmount() : 0.0,
+                            paymentMode,
+                            paymentMode));
+                }
+
+
+            });
         }
 
         if (settlementInvoice.getTotalAmount() != null) {
@@ -2364,26 +2372,6 @@ public class InvoiceV1Service {
                     paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-"
                             + (bank.getAccountType() != null ? bank.getAccountType() : "");
                 }
-            }
-
-            if (settlementInvoice.getTotalAmount() > 0) {
-                paymentHistory.add(new InvoiceRefundHistory(
-                        settlementInvoice.getInvoiceNumber(),
-                        invoiceDate,
-                        createdAtTime,
-                        paymentMode,
-                        settlementInvoice.getTotalAmount(),
-                        createdBy,
-                        paymentMode));
-            } else if (settlementInvoice.getTotalAmount() < 0) {
-                refundHistory.add(new InvoiceRefundHistory(
-                        settlementInvoice.getInvoiceNumber(),
-                        invoiceDate,
-                        createdAtTime,
-                        paymentMode,
-                        Math.abs(settlementInvoice.getTotalAmount()),
-                        createdBy,
-                        paymentMode));
             }
         }
 

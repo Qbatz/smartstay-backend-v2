@@ -111,8 +111,12 @@ public class BankTransactionService {
             BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
 
             if (v1 != null) {
+                double accountBalance = 0.0;
+                if (v1.getAccountBalance() != null) {
+                    accountBalance = v1.getAccountBalance();
+                }
                 transactionsV1.setTransactionDate(Utils.stringToDate(transactionDto.transactionDate(), Utils.USER_INPUT_DATE_FORMAT));
-                transactionsV1.setAccountBalance(v1.getAccountBalance() - transactionDto.amount());
+                transactionsV1.setAccountBalance(accountBalance - transactionDto.amount());
                 transactionsV1.setBankId(transactionDto.bankId());
                 transactionsV1.setHostelId(transactionDto.hostelId());
                 transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
