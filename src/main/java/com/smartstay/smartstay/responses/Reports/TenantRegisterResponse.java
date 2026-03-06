@@ -65,6 +65,8 @@ public class TenantRegisterResponse {
         private double checkInAmount;
         private double checkOutAmount;
         private String stayDuration;
+        private String initials;
+        private String profilePic;
     }
 
     @Data
@@ -119,6 +121,5 @@ public class TenantRegisterResponse {
         private String label;
         private List<FilterItem> floorIds;
     }
-
 
 }

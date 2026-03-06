@@ -838,6 +838,8 @@ public class ReportService {
                     .checkInAmount(b.getRentAmount() != null ? b.getRentAmount() : 0)
                     .checkOutAmount(b.getRentAmount() != null ? b.getRentAmount() : 0)
                     .stayDuration(stayDuration)
+                    .initials(getInitials(c != null ? c.getFirstName() : null, c != null ? c.getLastName() : null))
+                    .profilePic(c != null ? c.getProfilePic() : null)
                     .build());
         }
 

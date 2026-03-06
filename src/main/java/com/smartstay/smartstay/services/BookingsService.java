@@ -615,14 +615,17 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_PAID, HttpStatus.BAD_REQUEST);
         }
 
-        Beds bed = bedsService.makeABedVacant(bookingsV1.getBedId());
+        SettlementDetails settlementDetails = settlementDetailsService.getSettlementInfoForCustomer(customerId);
+
+
+        Beds bed = bedsService.makeABedVacant(bookingsV1.getBedId(),settlementDetails.getLeavingDate());
         if (bed == null) {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
         customersService.markCustomerCheckedOut(customers);
         customersBedHistoryService.checkoutCustomer(customerId);
-        bookingsV1.setCheckoutDate(new Date());
+        bookingsV1.setCheckoutDate(settlementDetails.getLeavingDate());
         bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
         bookingsRepository.save(bookingsV1);
         customersConfigService.disableRecurring(customerId);

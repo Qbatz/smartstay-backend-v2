@@ -846,13 +846,13 @@ public class BedsService {
         return bedsRepository.findRoomAndFloorByBedIdAndHostelId(bedId, hostelId);
     }
 
-    public Beds makeABedVacant(int bedId) {
+    public Beds makeABedVacant(int bedId, Date leavingDate) {
         Beds bed = bedsRepository.findById(bedId).orElse(null);
         if (bed == null) {
             return null;
         }
         bed.setCurrentStatus(BedStatus.VACANT.name());
-        bed.setFreeFrom(new Date());
+        bed.setFreeFrom(leavingDate);
         return bedsRepository.save(bed);
     }
 
