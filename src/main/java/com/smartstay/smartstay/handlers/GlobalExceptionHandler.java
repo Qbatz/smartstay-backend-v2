@@ -2,6 +2,7 @@ package com.smartstay.smartstay.handlers;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.smartstay.smartstay.Exceptions.SmartStayException;
+import com.smartstay.smartstay.Exceptions.SubscriptionExpiredException;
 import io.jsonwebtoken.security.SignatureException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
@@ -26,17 +27,18 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
     }
 
-//    @ExceptionHandler(IllegalArgumentException.class)
-//    public ResponseEntity<?> handleIllegalException(IllegalArgumentException ex) {
-//        return new ResponseEntity<>("Something went wrong", HttpStatus.BAD_REQUEST);
-//    }
-//
-//
-//    @ExceptionHandler(RuntimeException.class)
-//    public ResponseEntity<?> handleRuntimeException(RuntimeException ex) {
-//
-//        return new ResponseEntity<>("Something went wrong", HttpStatus.BAD_REQUEST);
-//    }
+    // @ExceptionHandler(IllegalArgumentException.class)
+    // public ResponseEntity<?> handleIllegalException(IllegalArgumentException ex)
+    // {
+    // return new ResponseEntity<>("Something went wrong", HttpStatus.BAD_REQUEST);
+    // }
+    //
+    //
+    // @ExceptionHandler(RuntimeException.class)
+    // public ResponseEntity<?> handleRuntimeException(RuntimeException ex) {
+    //
+    // return new ResponseEntity<>("Something went wrong", HttpStatus.BAD_REQUEST);
+    // }
 
     @ExceptionHandler(SignatureException.class)
     public ResponseEntity<?> handleSignatureMismatchException(SignatureException se) {
@@ -51,5 +53,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(JsonMappingException.class)
     public ResponseEntity<?> handleBooleanExceptions(JsonMappingException notReadable) {
         return new ResponseEntity<>("Allowed only boolean", HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(SubscriptionExpiredException.class)
+    public ResponseEntity<?> handleSubscriptionExpiredException(SubscriptionExpiredException see) {
+        return new ResponseEntity<>(see.getMessage(), HttpStatus.PAYMENT_REQUIRED);
     }
 }
