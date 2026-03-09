@@ -1056,6 +1056,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
+        StringBuilder fullName = new StringBuilder();
         StringBuilder initials = new StringBuilder();
         initials.append(customers.getFirstName().toUpperCase().charAt(0));
         if (customers.getLastName() != null && !customers.getLastName().equalsIgnoreCase("")) {
@@ -1063,7 +1064,16 @@ public class CustomersService {
         } else {
             initials.append(customers.getFirstName().toUpperCase().charAt(1));
         }
-        String fullName = customers.getFirstName() + " " + customers.getLastName();
+        if (customers.getFirstName() != null) {
+            fullName.append(customers.getFirstName());
+        }
+        if (customers.getLastName() != null && !customers.getLastName().isEmpty()) {
+            if (customers.getFirstName() != null) {
+                fullName.append(" ");
+            }
+            fullName.append(customers.getLastName());
+        }
+//        String fullName = customers.getFirstName() + " " + customers.getLastName();
 
         CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
         List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
@@ -1218,7 +1228,7 @@ public class CustomersService {
                 customers.getHostelId(),
                 customers.getFirstName(),
                 customers.getLastName(),
-                fullName,
+                fullName.toString(),
                 customers.getEmailId(),
                 customers.getMobile(),
                 "91",

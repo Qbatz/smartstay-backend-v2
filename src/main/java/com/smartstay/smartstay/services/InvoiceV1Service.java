@@ -1063,7 +1063,7 @@ public class InvoiceV1Service {
     public List<InvoiceResponse> getInvoiceResponseList(String customerId) {
         List<InvoicesV1> invoices = invoicesV1Repository.findByCustomerId(customerId);
 
-        return invoices.stream().map(invoice -> InvoiceMapper.toResponse(invoice, invoicesV1Repository)).toList();
+        return invoices.stream().map(InvoiceMapper::toResponse).toList();
 
     }
 

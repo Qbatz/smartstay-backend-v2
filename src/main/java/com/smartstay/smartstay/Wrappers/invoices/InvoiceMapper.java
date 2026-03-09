@@ -14,8 +14,11 @@ public class InvoiceMapper {
 
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
 
-    public static InvoiceResponse toResponse(InvoicesV1 invoice, InvoicesV1Repository invoicesV1Repository) {
-        Double paidAmount = invoicesV1Repository.findTotalPaidAmountByInvoiceId(invoice.getInvoiceId());
+    public static InvoiceResponse toResponse(InvoicesV1 invoice) {
+        Double paidAmount = 0.0;
+        if (invoice.getPaidAmount() != null) {
+            paidAmount = invoice.getPaidAmount();
+        }
         String paymentStatus = null;
         if (invoice.getPaymentStatus() != null) {
             paymentStatus = Utils.capitalize(PaymentStatus.valueOf(invoice.getPaymentStatus()).getDisplayName());

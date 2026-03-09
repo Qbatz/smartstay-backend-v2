@@ -142,7 +142,6 @@ public class BankTransactionService {
                 return false;
             }
 
-            Calendar calendar = Calendar.getInstance();
             Date dt = null;
             if (transactionDto.transactionDate() != null) {
                 dt = Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -150,15 +149,8 @@ public class BankTransactionService {
             else {
                 dt = new Date();
             }
-            calendar.setTime(dt);
-            if (calendar.get(Calendar.MINUTE) == 0 && calendar.get(Calendar.HOUR) == 0) {
-                Calendar cal2 = Calendar.getInstance();
-                calendar.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
-                calendar.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
-                calendar.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
-            }
 
-            transactionsV1.setTransactionDate(calendar.getTime());
+            transactionsV1.setTransactionDate(Utils.convertToTimeStamp(dt));
             transactionsV1.setBankId(transactionDto.bankId());
             transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
             transactionsV1.setAmount(transactionDto.amount());

@@ -655,9 +655,13 @@ public class BankingService {
 
     public boolean updateBalanceForExpense(double amount, String transactionType, String bankId) {
         BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        double bankBalance = 0.0;
+        if (bankingV1.getBalance() != null) {
+            bankBalance = bankingV1.getBalance();
+        }
 
         if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
-            bankingV1.setBalance(bankingV1.getBalance() - amount);
+            bankingV1.setBalance(bankBalance - amount);
         }
 
         bankingV1.setUpdatedBy(authentication.getName());

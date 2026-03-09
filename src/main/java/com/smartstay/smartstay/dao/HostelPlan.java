@@ -17,6 +17,7 @@ public class HostelPlan {
     private Long hostelPlanId;
     private String currentPlanCode;
     private String currentPlanName;
+    private String subscriptionNumber;
     private Date currentPlanStartsAt;
     private Date currentPlanEndsAt;
     private Double currentPlanPrice;
