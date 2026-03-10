@@ -63,7 +63,6 @@ public class SubscriptionService {
 
     }
 
-
     public ResponseEntity<?> getCurrentPlan(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -72,7 +71,7 @@ public class SubscriptionService {
         if (users == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        if (!userHostelService.checkHostelAccess(users.getUserId(),hostelId)) {
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
         }
 
@@ -83,7 +82,7 @@ public class SubscriptionService {
 
         List<com.smartstay.smartstay.responses.subscriptions.Subscription> listSubscriptionResponse = subscription
                 .stream()
-                .map(i ->  new com.smartstay.smartstay.responses.subscriptions.Subscription(
+                .map(i -> new com.smartstay.smartstay.responses.subscriptions.Subscription(
                         i.getSubscriptionId(),
                         Utils.dateToString(i.getPlanStartsAt()),
                         Utils.dateToString(i.getPlanEndsAt()),
@@ -117,7 +116,7 @@ public class SubscriptionService {
             }
             if (isValid) {
                 long numberOfDays = Utils.findNumberOfDays(new Date(), subscriptionToday.getPlanEndsAt());
-                planEndsIn =  (int) numberOfDays;
+                planEndsIn = (int) numberOfDays;
             }
             subscriptionDto = new SubscriptionDto(subscriptionToday.getPlanStartsAt(),
                     subscriptionToday.getPlanEndsAt(),
@@ -127,6 +126,11 @@ public class SubscriptionService {
         }
 
         return subscriptionDto;
+    }
+
+    public boolean validateSubscription(String hostelId) {
+        SubscriptionDto subscriptionDto = getCurrentSubscriptionDetails(hostelId);
+        return subscriptionDto != null && subscriptionDto.isValid();
     }
 
     public ResponseEntity<?> subscribeSingleHostel(String hostelId) {
@@ -173,8 +177,7 @@ public class SubscriptionService {
                 newSubscription.setPlanEndsAt(endDate);
                 newSubscription.setNextBillingAt(endDate);
                 newSubscription.setActivatedAt(endDate);
-            }
-            else {
+            } else {
                 Date startDate = Utils.addDaysToDate(latestSubscription.getPlanEndsAt(), 1);
                 newSubscription.setPlanStartsAt(startDate);
                 Date endDate = Utils.addDaysToDate(startDate, 30);
@@ -186,7 +189,7 @@ public class SubscriptionService {
 
         subscriptionRepository.save(newSubscription);
 
-        if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) <=0 ){
+        if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) <= 0) {
             HostelPlan hostelPlan = hostelV1.getHostelPlan();
             if (hostelPlan == null) {
                 hostelPlan = new HostelPlan();

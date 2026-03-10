@@ -58,6 +58,8 @@ public class Utils {
     public static final String SERIAL_NUMBER_ALREADY_EXISTS = "Serial number already exists";
     public static final String PASSWORD_RESET_SUCCESS = "Password reset successfully.";
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
+    public static final String PASSWORD_MISMATCH = "New password and confirm password is not matching";
+    public static final String INCORRECT_PASSWORD = "Incorrect password";
     public static final String TEMPLATE_TYPE_NOT_FOUND = "Template type not found for given templateTypeId!";
     public static final String INVALID_JOINING_DATE = "Invalid Joining Date";
     public static final String ELECTRICITY_CONFIG_NOT_SET_UP = "Electricity configuration is not setup";
@@ -99,6 +101,7 @@ public class Utils {
     public static final String INVALID_BOOKING_ID = "Invalid booking id";
     public static final String PAYLOADS_REQUIRED = "Payloads required";
     public static final String TRY_AGAIN = "Try Again";
+    public static final String SUBSCRIPTION_EXPIRED = "Subscription has expired. Please renew to continue.";
     public static final String INVALID_BED_ID = "Invalid bed id passed";
     public static final String INVALID_DOCUMENT_ID = "Invalid document id";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";

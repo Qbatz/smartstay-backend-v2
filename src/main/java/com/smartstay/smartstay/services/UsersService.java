@@ -16,6 +16,7 @@ import com.smartstay.smartstay.events.AddUserEvents;
 import com.smartstay.smartstay.payloads.*;
 import com.smartstay.smartstay.payloads.account.*;
 import com.smartstay.smartstay.payloads.profile.Logout;
+import com.smartstay.smartstay.payloads.profile.ResetPassword;
 import com.smartstay.smartstay.payloads.profile.UpdateFCMToken;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
 import com.smartstay.smartstay.payloads.user.SetupPin;
@@ -124,7 +125,7 @@ public class UsersService {
 
         if (!createAccount.password().equalsIgnoreCase(createAccount.confirmPassword())) {
             return new ResponseEntity<>(
-                    new AdminUserResponse("", "", "Password and confirm password is not matching"),
+                    new AdminUserResponse("", "", Utils.PASSWORD_MISMATCH),
                     HttpStatus.BAD_REQUEST);
         }
 
@@ -318,6 +319,33 @@ public class UsersService {
             return new ResponseEntity<>(Utils.PASSWORD_CHANGED_SUCCESS, HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
+    }
+
+    public ResponseEntity<Object> resetPasswordInProfile(ResetPassword resetPassword) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = userRepository.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+
+        if (!encoder.matches(resetPassword.currentPassword(), user.getPassword())) {
+            return new ResponseEntity<>(Utils.INCORRECT_PASSWORD, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!resetPassword.newPassword().equalsIgnoreCase(resetPassword.confirmPassword())) {
+            return new ResponseEntity<>(Utils.PASSWORD_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+
+        user.setPassword(encoder.encode(resetPassword.newPassword()));
+        userRepository.save(user);
+
+        userActivitiesService.addLogBasedOnProfile(ActivitySource.PROFILE.name(),
+                ActivitySourceType.CHANGE_SELF_PASSWORD.name(), user);
+
+        return new ResponseEntity<>(Utils.PASSWORD_CHANGED_SUCCESS, HttpStatus.OK);
     }
 
     public ResponseEntity<Object> requestPasswordReset(String email) {

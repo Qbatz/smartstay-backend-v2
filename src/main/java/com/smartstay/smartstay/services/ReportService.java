@@ -357,7 +357,7 @@ public class ReportService {
             cal.add(Calendar.MONTH, -1);
 
             return hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
-        } else if (period.equalsIgnoreCase("last 3 month") || period.equalsIgnoreCase("last_3_month")) {
+        } else if (period.equalsIgnoreCase("last 3 months") || period.equalsIgnoreCase("last_3_months")) {
             cal.setTime(billingDates.currentBillStartDate());
             cal.add(Calendar.MONTH, -3);
             BillingDates bDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());

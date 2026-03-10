@@ -15,12 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("v2/bank")
-@SecurityScheme(
-        name = "Authorization",
-        type = SecuritySchemeType.HTTP,
-        bearerFormat = "JWT",
-        scheme = "bearer"
-)
+@SecurityScheme(name = "Authorization", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @SecurityRequirement(name = "Authorization")
 @CrossOrigin("*")
 public class BankingController {
@@ -29,7 +24,8 @@ public class BankingController {
     BankingService bankingService;
 
     @PostMapping("/{hostelId}")
-    public ResponseEntity<?> addBankAccount(@PathVariable("hostelId") String hostelId, @Valid @RequestBody AddBank addBank) {
+    public ResponseEntity<?> addBankAccount(@PathVariable("hostelId") String hostelId,
+            @Valid @RequestBody AddBank addBank) {
         return bankingService.addNewBankAccount(hostelId, addBank);
     }
 
@@ -39,23 +35,26 @@ public class BankingController {
     }
 
     @PutMapping("/{hostelId}/{bankId}")
-    public ResponseEntity<?> updateBanking(@PathVariable(value = "hostelId") String hostelId, @PathVariable("bankId") String bankId, @RequestBody(required = false) UpdateBank payloads) {
+    public ResponseEntity<?> updateBanking(@PathVariable(value = "hostelId") String hostelId,
+            @PathVariable("bankId") String bankId, @RequestBody(required = false) UpdateBank payloads) {
         return bankingService.updateBankAccount(hostelId, bankId, payloads);
     }
 
-
-//    @PutMapping("/balance/{hostelId}")
-//    public ResponseEntity<?> addBankBalance(@PathVariable(value = "hostelId") String hostelId, @RequestBody(required = false) UpdateBankBalance payloads) {
-//        return bankingService.updateBankBalance(hostelId, payloads);
-//    }
+    // @PutMapping("/balance/{hostelId}")
+    // public ResponseEntity<?> addBankBalance(@PathVariable(value = "hostelId")
+    // String hostelId, @RequestBody(required = false) UpdateBankBalance payloads) {
+    // return bankingService.updateBankBalance(hostelId, payloads);
+    // }
 
     @PutMapping("/money/{hostelId}")
-    public ResponseEntity<?> addMoney(@PathVariable(value = "hostelId") String hostelId, @RequestBody(required = false) UpdateBankBalance payloads) {
+    public ResponseEntity<?> addMoney(@PathVariable(value = "hostelId") String hostelId,
+            @RequestBody(required = false) UpdateBankBalance payloads) {
         return bankingService.addMoney(hostelId, payloads);
     }
 
     @PutMapping("/transfer/{hostelId}")
-    public ResponseEntity<?> selfTransfer(@PathVariable(value = "hostelId") String hostelId, @RequestBody(required = false) SelfTransfer payloads) {
+    public ResponseEntity<?> selfTransfer(@PathVariable(value = "hostelId") String hostelId,
+            @RequestBody(required = false) SelfTransfer payloads) {
         return bankingService.selfTransfer(hostelId, payloads);
     }
 
