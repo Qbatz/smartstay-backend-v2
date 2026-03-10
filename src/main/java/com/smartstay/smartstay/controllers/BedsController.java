@@ -43,15 +43,19 @@ public class BedsController {
     }
 
     @PutMapping("/rent/{bedId}")
-    public ResponseEntity<?> updateRentAmount(@PathVariable("bedId") Integer bedId, @Valid @RequestBody EditBedRent bedRent) {
+    public ResponseEntity<?> updateRentAmount(@PathVariable("bedId") Integer bedId,
+            @Valid @RequestBody EditBedRent bedRent) {
         return bedsService.updateRentAmount(bedId, bedRent);
     }
+
     @DeleteMapping("/{bedId}")
     public ResponseEntity<?> deleteBedById(@PathVariable("bedId") int bedId) {
         return bedsService.deleteBedById(bedId);
     }
+
     @GetMapping("/initialize/{hostelId}")
-    public ResponseEntity<?> initializeBooking(@PathVariable("hostelId") String hostelId, @RequestParam("joiningDate") String joiningDate) {
+    public ResponseEntity<?> initializeBooking(@PathVariable("hostelId") String hostelId,
+            @RequestParam("joiningDate") String joiningDate) {
         return bedsService.initializeBooking(hostelId, joiningDate);
     }
 

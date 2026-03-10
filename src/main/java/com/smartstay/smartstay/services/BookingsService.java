@@ -72,6 +72,8 @@ public class BookingsService {
     @Autowired
     private RentHistoryService rentHistoryService;
     private CustomersConfigService customersConfigService;
+    @Autowired
+    private SubscriptionService subscriptionService;
     private HostelService hostelService;
 
     @Autowired
@@ -115,7 +117,6 @@ public class BookingsService {
 
     }
 
-
     public ResponseEntity<?> getAllCheckInCustomers(String hostelId) {
         if (authentication.isAuthenticated()) {
 
@@ -131,7 +132,8 @@ public class BookingsService {
             }
 
             List<Bookings> allCheckInList = bookingsRepository.findAllByHostelId(hostelId);
-            List<com.smartstay.smartstay.responses.bookings.Bookings> responseBookings = allCheckInList.stream().map(item -> new BookingsMapper().apply(item)).toList();
+            List<com.smartstay.smartstay.responses.bookings.Bookings> responseBookings = allCheckInList.stream()
+                    .map(item -> new BookingsMapper().apply(item)).toList();
             return new ResponseEntity<>(responseBookings, HttpStatus.OK);
         }
 
@@ -145,7 +147,8 @@ public class BookingsService {
         return bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
     }
 
-    public List<BookingsV1> getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(List<String> customerIds, String hostelId) {
+    public List<BookingsV1> getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(List<String> customerIds,
+            String hostelId) {
         return bookingsRepository.findBookingsByListOfCustomersAndHostelId(customerIds, hostelId);
     }
 
@@ -169,17 +172,18 @@ public class BookingsService {
         return bookingsRepository.findOccupiedDetails(bedId);
     }
 
-//    public BookingsV1 saveBooking(BookingsV1 bookingsV1) {
-//
-//        return bookingsRepository.save(bookingsV1);
-//    }
+    // public BookingsV1 saveBooking(BookingsV1 bookingsV1) {
+    //
+    // return bookingsRepository.save(bookingsV1);
+    // }
 
     public BookingsV1 getBookingsByCustomerId(String customerId) {
         return bookingsRepository.findByCustomerId(customerId);
     }
 
     public int getBedIdFromBooking(String customerId, String hostelId) {
-        if (customerId != null && !customerId.equalsIgnoreCase("") && hostelId != null && !hostelId.equalsIgnoreCase("")) {
+        if (customerId != null && !customerId.equalsIgnoreCase("") && hostelId != null
+                && !hostelId.equalsIgnoreCase("")) {
             BookingsV1 bookingsV1 = bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
             if (bookingsV1 == null) {
                 return 0;
@@ -235,7 +239,8 @@ public class BookingsService {
         bookingv1.setBookingAmount(0.0);
         bookingv1.setAdvanceAmount(request.advanceAmount());
         bookingv1.setUpdatedAt(new Date());
-        bookingv1.setBookingDate(Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        bookingv1.setBookingDate(
+                Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
         bookingv1.setUpdatedBy(authentication.getName());
         bookingv1.setBedId(request.bedId());
         bookingv1.setFloorId(request.floorId());
@@ -247,7 +252,8 @@ public class BookingsService {
         bookingv1.setUpdatedBy(authentication.getName());
         bookingv1.setUpdatedAt(new Date());
 
-        bookingv1.setJoiningDate(Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        bookingv1.setJoiningDate(
+                Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
 
         CustomersBedHistory cbh = new CustomersBedHistory();
         cbh.setRoomId(bookingv1.getRoomId());
@@ -265,12 +271,11 @@ public class BookingsService {
 
         customersBedHistoryService.saveCheckInHistory(cbh);
 
-
-//        List<RentHistory> rentHistoryList = new ArrayList<>();
-//        RentHistory rentHistory = rentHistoryService.addInitialRent(bookingv1);
-//        rentHistoryList.add(rentHistory);
-//
-//        bookingv1.setRentHistory(rentHistoryList);
+        // List<RentHistory> rentHistoryList = new ArrayList<>();
+        // RentHistory rentHistory = rentHistoryService.addInitialRent(bookingv1);
+        // rentHistoryList.add(rentHistory);
+        //
+        // bookingv1.setRentHistory(rentHistoryList);
 
         return bookingsRepository.save(bookingv1);
 
@@ -278,6 +283,9 @@ public class BookingsService {
 
     public BookingsV1 addBooking(String hostelId, BookingRequest payload) {
         if (authentication.isAuthenticated()) {
+            if (!subscriptionService.validateSubscription(hostelId)) {
+                return null;
+            }
             BookingsV1 bookingsV1 = new BookingsV1();
             bookingsV1.setHostelId(hostelId);
             bookingsV1.setIsBooked(true);
@@ -289,10 +297,12 @@ public class BookingsService {
             bookingsV1.setCreatedBy(authentication.getName());
             bookingsV1.setUpdatedAt(new Date());
             bookingsV1.setBookingAmount(payload.bookingAmount());
-            bookingsV1.setBookingDate(Utils.stringToDate(payload.bookingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+            bookingsV1.setBookingDate(
+                    Utils.stringToDate(payload.bookingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
             bookingsV1.setUpdatedBy(authentication.getName());
             bookingsV1.setLeavingDate(null);
-            bookingsV1.setExpectedJoiningDate(Utils.stringToDate(payload.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+            bookingsV1.setExpectedJoiningDate(
+                    Utils.stringToDate(payload.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
 
             bookingsV1.setCurrentStatus(BedStatus.BOOKED.name());
 
@@ -341,7 +351,7 @@ public class BookingsService {
             cbh.setChangedBy(authentication.getName());
             cbh.setType(CustomersBedType.CHECK_IN.name());
             cbh.setRentAmount(payloads.rentalAmount());
-//            cbh.setReason("Initial check in");
+            // cbh.setReason("Initial check in");
             cbh.setActive(true);
             cbh.setCreatedAt(new Date());
 
@@ -386,11 +396,11 @@ public class BookingsService {
             cbh.setCreatedAt(new Date());
 
             customersBedHistoryService.saveCheckInHistory(cbh);
-//            List<RentHistory> listRentHistory = new ArrayList<>();
-//            RentHistory rentHistory = rentHistoryService.addInitialRent(bookingsV1);
-//            listRentHistory.add(rentHistory);
-//
-//            bookingsV1.setRentHistory(listRentHistory);
+            // List<RentHistory> listRentHistory = new ArrayList<>();
+            // RentHistory rentHistory = rentHistoryService.addInitialRent(bookingsV1);
+            // listRentHistory.add(rentHistory);
+            //
+            // bookingsV1.setRentHistory(listRentHistory);
 
             bookingsRepository.save(bookingsV1);
             rentHistoryService.addInitialRent(bookingsV1);
@@ -423,6 +433,9 @@ public class BookingsService {
     public ResponseEntity<?> initializeCheckIn(String hostelId, String customerId) {
         Double bookingAmount = 0.0;
         boolean canCheckIn = true;
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         BookingsV1 bookingsV1 = bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
         if (bookingsV1 != null) {
             Beds bed = bedsService.isBedAvailabeForCheckIn(bookingsV1.getBedId(), bookingsV1.getExpectedJoiningDate());
@@ -475,6 +488,9 @@ public class BookingsService {
         if (!bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
             return new ResponseEntity<>(Utils.CANNOT_INACTIVE_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);
         }
+        if (!subscriptionService.validateSubscription(bookingsV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         Customers customers = customersService.getCustomerInformation(customerId);
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_INACTIVE_ERROR, HttpStatus.BAD_REQUEST);
@@ -482,7 +498,6 @@ public class BookingsService {
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
-
 
         Date cancelDate = null;
         if (cancelBooking.cancelDate() != null) {
@@ -587,9 +602,14 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
 
+        if (!subscriptionService.validateSubscription(bookingsV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CANCELLED.name())) {
             return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_INACTIVE_ERROR, HttpStatus.BAD_REQUEST);
         }
+
 
         Customers customers = customersService.getCustomerInformation(customerId);
         if (customers == null) {
@@ -744,7 +764,6 @@ public class BookingsService {
             return false;
         }
 
-
         Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
         return Utils.compareWithTwoDates(dateJoiningDate, currenlyCheckIn.getLeavingDate()) >= 0;
@@ -831,6 +850,10 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.INVALID_BOOKING_ID, HttpStatus.BAD_REQUEST);
         }
 
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         Customers customers = customersService.getCustomerInformation(bookingsV1.getCustomerId());
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
@@ -900,7 +923,6 @@ public class BookingsService {
 
                 rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), startDate, currentRentEndDate);
 
-
                 RentHistory rentHistory = new RentHistory();
                 rentHistory.setRent(updateInfo.newRent());
                 rentHistory.setStartsFrom(startDate);
@@ -954,6 +976,10 @@ public class BookingsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         BookingsV1 bookingsV1 = bookingsRepository.findById(bookingId).orElse(null);
         if (bookingsV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_BOOKING_ID, HttpStatus.BAD_REQUEST);
@@ -979,6 +1005,8 @@ public class BookingsService {
         if (updateAdvance.advanceAmount().equals(0.0)) {
             return new ResponseEntity<>(Utils.ADVANCE_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
         }
+
+
 
         InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), hostelId);
         if (advanceInvoice.isCancelled()) {
@@ -1055,6 +1083,9 @@ public class BookingsService {
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         if (!customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
             return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_NOT_GENERATED, HttpStatus.BAD_REQUEST);
