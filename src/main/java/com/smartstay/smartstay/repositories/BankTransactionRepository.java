@@ -14,7 +14,7 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     List<BankTransactionsV1> findByBankIdIn(List<String> listBankIds);
 
-    List<BankTransactionsV1> findByHostelId(String hostelId);
+    List<BankTransactionsV1> findByHostelIdAndIsDeletedFalse(String hostelId);
 
     BankTransactionsV1 findTopByBankIdOrderByTransactionDateDesc(String bankId);
 
@@ -32,5 +32,7 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             SELECT btv FROM BankTransactionsV1 btv WHERE btv.type='DEBIT'
             """)
     List<BankTransactionsV1> findByTransactionType();
+
+    BankTransactionsV1 findByHostelIdAndSourceId(String hostelId, String sourceId);
 
 }

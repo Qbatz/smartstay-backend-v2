@@ -16,4 +16,5 @@ public interface ExpenseSubCategoryRepository extends JpaRepository<ExpenseSubCa
             esc.hostelId=:hostelId AND esc.subCategoryId !=:id
             """)
     List<ExpenseSubCategory> findBySUbCatNameAndId(String hostelId, String subCateName, Long id);
+
 }

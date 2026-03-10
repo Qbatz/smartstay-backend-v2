@@ -35,6 +35,11 @@ public class SmartstayApplication {
 		SpringApplication.run(SmartstayApplication.class, args);
 	}
 
+	/**
+	 *
+	 * need to execute in production
+	 *
+	 */
 //	@Bean
 //	CommandLineRunner mapSourceIdTotransactionNumber(BankTransactionRepository bankTransactionRepository) {
 //		return args -> {
@@ -71,6 +76,23 @@ public class SmartstayApplication {
 //					}
 //				});
 //			}
+//		};
+//	}
+
+//	@Bean
+//	CommandLineRunner markTransactionIsDeletedFalse(BankTransactionRepository bankTransactionRepository) {
+//		return args -> {
+//			List<BankTransactionsV1> listBankResponses = bankTransactionRepository
+//					.findAll()
+//					.stream()
+//					.filter(i -> i.getIsDeleted() == null)
+//					.map(i -> {
+//						i.setIsDeleted(false);
+//						return i;
+//					})
+//					.toList();
+//
+//			bankTransactionRepository.saveAll(listBankResponses);
 //		};
 //	}
 

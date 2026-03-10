@@ -34,6 +34,9 @@ public class BankTransactionsV1 {
     //transactionId from transaction v1 table
     private String transactionNumber;
     private Date transactionDate;
+    private Boolean isDeleted;
     private Date createdAt;
     private String createdBy;
+    private Date updatedAt;
+    private String updatedBy;
 }

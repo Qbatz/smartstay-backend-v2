@@ -209,6 +209,7 @@ public class BankingService {
                                 item.source(),
                                 item.createdBy(),
                                 item.createdAt(),
+                                item.transactionDate(),
                                 item.isCredit(),
                                 item.bankId(),
                                 accountHolder);
@@ -725,5 +726,36 @@ public class BankingService {
 
     public List<String> findBankIdsByAccountHolderNames(String hostelId, List<String> names) {
         return bankingV1Repository.findBankIdsByAccountHolderNames(hostelId, names);
+    }
+
+    public void updateBankBalanceForUpdateExpense(String bankId, double priceDifference) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        if (bankingV1 != null) {
+            if (priceDifference < 0) {
+                bankingV1.setBalance(bankingV1.getBalance() + priceDifference);
+            }
+            else {
+                bankingV1.setBalance(bankingV1.getBalance() + priceDifference);
+            }
+
+            bankingV1Repository.save(bankingV1);
+        }
+    }
+
+    public void updateAccountBalanceByDeleteExpense(String hostelId, String bankId, Double amount) {
+        BankingV1 bankingV1 = bankingV1Repository.findByHostelIdAndBankId(hostelId, bankId);
+        if (bankingV1 != null) {
+            double expAmount = 0.0;
+            if (amount != null) {
+                expAmount = amount;
+            }
+            double balanceAmount = 0.0;
+            if (bankingV1.getBalance() != null) {
+                balanceAmount = bankingV1.getBalance();
+            }
+            bankingV1.setBalance(balanceAmount + expAmount);
+
+            bankingV1Repository.save(bankingV1);
+        }
     }
 }

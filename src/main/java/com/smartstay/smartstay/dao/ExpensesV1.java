@@ -48,6 +48,7 @@ public class ExpensesV1 {
     private Date createdAt;
     private Date updatedAt;
     private String createdBy;
+    private String updatedBy;
     private boolean isActive;
     private String description;
 }
