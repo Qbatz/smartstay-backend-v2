@@ -49,9 +49,10 @@ public class BankingService {
     @Autowired
     private BankingRepository bankingV1Repository;
 
-
     @Autowired
     private BankTransactionService transactionService;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     public ResponseEntity<?> addNewBankAccount(String hostelId, AddBank addBank) {
         if (!authentication.isAuthenticated()) {
@@ -66,6 +67,10 @@ public class BankingService {
         }
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         String accountType = null;
@@ -237,6 +242,10 @@ public class BankingService {
 
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         BankingV1 bankingV1 = bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId, bankId);
@@ -459,6 +468,10 @@ public class BankingService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         BankingV1 bankingV1 = bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId, balance.bankId());
         if (bankingV1 == null) {
             return new ResponseEntity<>(Utils.NO_ACCOUNT_NO_FOUND, HttpStatus.BAD_REQUEST);
@@ -505,7 +518,7 @@ public class BankingService {
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
-    public ResponseEntity<?>  selfTransfer(String hostelId, SelfTransfer selfTransfer) {
+    public ResponseEntity<?>  selfTransfer(String hostelId, SelfTransfer selfTransfer)  {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -523,7 +536,12 @@ public class BankingService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        BankingV1 bankingV1 = bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId, selfTransfer.fromBankId());
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        BankingV1 bankingV1 = bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId,
+                selfTransfer.fromBankId());
         if (bankingV1 == null) {
             return new ResponseEntity<>(Utils.NO_FROM_ACCOUNT_NO_FOUND, HttpStatus.BAD_REQUEST);
         }

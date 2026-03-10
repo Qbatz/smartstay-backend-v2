@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.annotations.RequiresActiveSubscription;
 import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.beds.EditBedRent;
@@ -33,19 +32,16 @@ public class BedsController {
         return bedsService.getBedByIdNew(bedId);
     }
 
-    @RequiresActiveSubscription
     @PostMapping("")
     public ResponseEntity<?> addBed(@Valid @RequestBody AddBed bedDto) {
         return bedsService.addBed(bedDto);
     }
 
-    @RequiresActiveSubscription
     @PutMapping("/{bedId}")
     public ResponseEntity<?> updateBedById(@PathVariable("bedId") int bedId, @RequestBody UpdateBed updateBed) {
         return bedsService.updateBedById(bedId, updateBed);
     }
 
-    @RequiresActiveSubscription
     @PutMapping("/rent/{bedId}")
     public ResponseEntity<?> updateRentAmount(@PathVariable("bedId") Integer bedId,
             @Valid @RequestBody EditBedRent bedRent) {

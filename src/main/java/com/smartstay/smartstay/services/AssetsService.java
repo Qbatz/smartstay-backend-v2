@@ -54,6 +54,8 @@ public class AssetsService {
     private UserHostelService userHostelService;
     @Autowired
     private BankTransactionService bankTransactionService;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     public ResponseEntity<?> getAllAssets(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -73,8 +75,7 @@ public class AssetsService {
         return new ResponseEntity<>(listAssets, HttpStatus.OK);
     }
 
-
-    public ResponseEntity<?> addAsset(AssetRequest request,String hostelId) {
+    public ResponseEntity<?> addAsset(AssetRequest request, String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
@@ -86,6 +87,9 @@ public class AssetsService {
         boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
         if (!hostelV1) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         AssetsV1 asset = new AssetsV1();
         if (request.vendorId() != null && request.vendorId() != 0) {
@@ -158,6 +162,10 @@ public class AssetsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         AssetsV1 asset = assetsRepository.findByAssetId(assetId);
         if (asset == null) {
             return new ResponseEntity<>(Utils.INVALID_ASSET, HttpStatus.NOT_FOUND);
@@ -213,8 +221,6 @@ public class AssetsService {
         );
     }
 
-
-
     public ResponseEntity<?> getAssetById(Integer id) {
         if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
@@ -255,6 +261,10 @@ public class AssetsService {
         RolesV1 role = rolesRepository.findByRoleId(user.getRoleId());
         if (role == null || !rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(request.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         AssetsV1 asset = assetsRepository.findByAssetIdAndHostelId(assetId, request.hostelId());
@@ -309,16 +319,17 @@ public class AssetsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         AssetsV1 existingAsset = assetsRepository.findByAssetId(assetId);
-        if (existingAsset != null) {
-            existingAsset.setIsDeleted(true);
-            existingAsset.setUpdatedAt(new Date());
-            assetsRepository.save(existingAsset);
-            return new ResponseEntity<>("Deleted", HttpStatus.OK);
+        if (existingAsset == null) {
+            return new ResponseEntity<>("No Asset found", HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>("No Asset found", HttpStatus.BAD_REQUEST);
-
+        if (!subscriptionService.validateSubscription(existingAsset.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+        existingAsset.setIsDeleted(true);
+        existingAsset.setUpdatedAt(new Date());
+        assetsRepository.save(existingAsset);
+        return new ResponseEntity<>("Deleted", HttpStatus.OK);
     }
-
 
     private Rooms validateRoom(AssignAsset request, Users user) {
         Rooms room = roomRepository.findByRoomIdAndParentIdAndHostelId(

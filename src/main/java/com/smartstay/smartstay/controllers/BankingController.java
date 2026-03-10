@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.annotations.RequiresActiveSubscription;
 import com.smartstay.smartstay.payloads.banking.AddBank;
 import com.smartstay.smartstay.payloads.banking.SelfTransfer;
 import com.smartstay.smartstay.payloads.banking.UpdateBank;
@@ -24,7 +23,6 @@ public class BankingController {
     @Autowired
     BankingService bankingService;
 
-    @RequiresActiveSubscription
     @PostMapping("/{hostelId}")
     public ResponseEntity<?> addBankAccount(@PathVariable("hostelId") String hostelId,
             @Valid @RequestBody AddBank addBank) {
@@ -36,7 +34,6 @@ public class BankingController {
         return bankingService.getAllBankAccounts(hostelId);
     }
 
-    @RequiresActiveSubscription
     @PutMapping("/{hostelId}/{bankId}")
     public ResponseEntity<?> updateBanking(@PathVariable(value = "hostelId") String hostelId,
             @PathVariable("bankId") String bankId, @RequestBody(required = false) UpdateBank payloads) {
@@ -49,14 +46,12 @@ public class BankingController {
     // return bankingService.updateBankBalance(hostelId, payloads);
     // }
 
-    @RequiresActiveSubscription
     @PutMapping("/money/{hostelId}")
     public ResponseEntity<?> addMoney(@PathVariable(value = "hostelId") String hostelId,
             @RequestBody(required = false) UpdateBankBalance payloads) {
         return bankingService.addMoney(hostelId, payloads);
     }
 
-    @RequiresActiveSubscription
     @PutMapping("/transfer/{hostelId}")
     public ResponseEntity<?> selfTransfer(@PathVariable(value = "hostelId") String hostelId,
             @RequestBody(required = false) SelfTransfer payloads) {

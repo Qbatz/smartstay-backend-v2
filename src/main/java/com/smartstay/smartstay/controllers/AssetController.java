@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.annotations.RequiresActiveSubscription;
 import com.smartstay.smartstay.payloads.asset.AssetRequest;
 import com.smartstay.smartstay.payloads.asset.AssignAsset;
 import com.smartstay.smartstay.payloads.asset.UpdateAsset;
@@ -29,7 +28,6 @@ public class AssetController {
         return assetsService.getAllAssets(hostelId);
     }
 
-    @RequiresActiveSubscription
     @PostMapping("/{hostelId}")
     public ResponseEntity<?> addAsset(@Valid @RequestBody AssetRequest request,
             @PathVariable("hostelId") String hostelId) {
@@ -41,14 +39,12 @@ public class AssetController {
         return assetsService.getAssetById(assetId);
     }
 
-    @RequiresActiveSubscription
     @PutMapping("/{hostelId}/{assetId}")
     public ResponseEntity<?> updateAsset(@RequestBody UpdateAsset updateAsset, @PathVariable("assetId") int assetId,
             @PathVariable("hostelId") String hostelId) {
         return assetsService.updateAsset(updateAsset, assetId, hostelId);
     }
 
-    @RequiresActiveSubscription
     @PutMapping("/assign/{assetId}")
     public ResponseEntity<?> assignAsset(@PathVariable("assetId") int assetId,
             @Valid @RequestBody AssignAsset request) {

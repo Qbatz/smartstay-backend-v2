@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.annotations.RequiresActiveSubscription;
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
 import com.smartstay.smartstay.payloads.amenity.AssignCustomer;
 import com.smartstay.smartstay.payloads.amenity.AssignRequest;
@@ -35,42 +34,36 @@ public class AmentityController {
         return amenitiesService.getAmenitiesById(hostelId, amenityId);
     }
 
-    @RequiresActiveSubscription
     @PostMapping("/{hostelId}")
     public ResponseEntity<?> addAmenity(@Valid @RequestBody AmenityRequest request,
             @PathVariable("hostelId") String hostelId) {
         return amenitiesService.addAmenity(request, hostelId);
     }
 
-    @RequiresActiveSubscription
     @PutMapping("/{hostelId}/{amenityId}")
     public ResponseEntity<?> updateAmenity(@RequestBody AmenityRequest request,
             @PathVariable("amenityId") String amenityId, @PathVariable("hostelId") String hostelId) {
         return amenitiesService.updateAmenity(request, amenityId, hostelId);
     }
 
-    @RequiresActiveSubscription
     @PutMapping("/assign/{hostelId}/{amenityId}")
     public ResponseEntity<?> assign(@RequestBody AssignRequest request, @PathVariable("amenityId") String amenityId,
             @PathVariable("hostelId") String hostelId) {
         return amenitiesService.assign(request, amenityId, hostelId);
     }
 
-    @RequiresActiveSubscription
     @PutMapping("/assign/customer/{hostelId}")
     public ResponseEntity<?> assignToCustomer(@PathVariable("hostelId") String hostelId,
             @RequestBody @Valid AssignCustomer assignCustomer) {
         return amenitiesService.assignToCustomer(hostelId, assignCustomer);
     }
 
-    @RequiresActiveSubscription
     @PutMapping("/unAssign/{hostelId}/{amenityId}")
     public ResponseEntity<?> unAssign(@RequestBody UnAssignRequest request, @PathVariable("amenityId") String amenityId,
             @PathVariable("hostelId") String hostelId) {
         return amenitiesService.unAssign(request, amenityId, hostelId);
     }
 
-    @RequiresActiveSubscription
     @DeleteMapping("/{amenityId}/{hostelId}")
     public ResponseEntity<?> deleteAmenityById(@PathVariable("amenityId") String amenityId,
             @PathVariable("hostelId") String hostelId) {

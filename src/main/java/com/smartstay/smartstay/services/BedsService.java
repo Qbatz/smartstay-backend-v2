@@ -64,6 +64,8 @@ public class BedsService {
     private BankingService bankingService;
     @Autowired
     private InvoiceV1Service invoiceService;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     @Autowired
     public void setCustomersService(@Lazy CustomersService customersService) {
@@ -393,6 +395,10 @@ public class BedsService {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
 
+        if (!subscriptionService.validateSubscription(existingBed.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         if (updateBed == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
@@ -434,7 +440,16 @@ public class BedsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        boolean exists = roomRepository.checkRoomExistInTable(addBed.roomId(), user.getParentId(), addBed.hostelId()) == 1;
+        if (!userHostelService.checkHostelAccess(user.getUserId(), addBed.hostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(addBed.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        boolean exists = roomRepository.checkRoomExistInTable(addBed.roomId(), user.getParentId(),
+                addBed.hostelId()) == 1;
         if (!exists) {
             return new ResponseEntity<>("Room Doesn't exist for this hostel", HttpStatus.BAD_REQUEST);
         }
@@ -487,10 +502,13 @@ public class BedsService {
             return new ResponseEntity<>(Utils.NO_BED_FOUND_ERROR, HttpStatus.BAD_REQUEST);
         }
 
+        if (!subscriptionService.validateSubscription(existingBed.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         bedsRepository.delete(existingBed);
         usersService.addUserLog(existingBed.getHostelId(), String.valueOf(existingBed.getBedId()), ActivitySource.BEDS, ActivitySourceType.DELETE, users);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-
 
     }
 
@@ -907,6 +925,10 @@ public class BedsService {
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), beds.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(beds.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         beds.setRentAmount(bedRent.newRent());

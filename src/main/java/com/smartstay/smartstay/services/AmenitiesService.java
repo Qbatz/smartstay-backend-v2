@@ -49,6 +49,8 @@ public class AmenitiesService {
     @Autowired
     private HostelService hostelService;
     @Autowired
+    private SubscriptionService subscriptionService;
+    @Autowired
     private BedsService bedsService;
 
     public ResponseEntity<?> getAllAmenities(String hostelId) {
@@ -79,7 +81,6 @@ public class AmenitiesService {
         }
         return new ResponseEntity<>(Utils.NO_RECORDS_FOUND, HttpStatus.BAD_REQUEST);
     }
-
 
     public ResponseEntity<?> getAmenitiesById(String hostelId, String amenitiesId) {
         if (!authentication.isAuthenticated()) {
@@ -135,6 +136,10 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         boolean exists = amentityRepository.existsByAmenityNameAndHostelIdAndIsActiveTrueAndIsDeletedFalse(request.amenityName(), hostelId);
         if (exists) {
             return new ResponseEntity<>(Utils.AMENITY_ALREADY_EXIST, HttpStatus.FORBIDDEN);
@@ -161,7 +166,6 @@ public class AmenitiesService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 
-
     public ResponseEntity<?> updateAmenity(AmenityRequest request, String amenityId, String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
@@ -183,7 +187,12 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        AmenitiesV1 amenitiesV1 = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId, hostelId, user.getParentId());
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        AmenitiesV1 amenitiesV1 = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId,
+                hostelId, user.getParentId());
         if (amenitiesV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.NOT_FOUND);
         }
@@ -248,7 +257,12 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        AmenitiesV1 existingAmenity = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId, hostelId, users.getParentId());
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        AmenitiesV1 existingAmenity = amentityRepository
+                .findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId, hostelId, users.getParentId());
         if (existingAmenity != null) {
             //check is amenity is currently assigned
             List<CustomersAmenity> listAmenityAssignedAndActive = customerAmenityRepository.checkAmenityAssignedAndActive(amenityId, new Date());
@@ -284,7 +298,12 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        AmenitiesV1 amenitiesV1 = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId, hostelId, user.getParentId());
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        AmenitiesV1 amenitiesV1 = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId,
+                hostelId, user.getParentId());
         if (amenitiesV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.NOT_FOUND);
         }
@@ -307,8 +326,6 @@ public class AmenitiesService {
                 usersService.addUserLog(hostelId, amenityId, ActivitySource.AMENITY, ActivitySourceType.ASSIGN, user, customerIds);
             }
         }
-
-
 
         return new ResponseEntity<>(
                 Utils.UPDATED,
@@ -335,7 +352,12 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        AmenitiesV1 amenitiesV1 = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId, hostelId, user.getParentId());
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        AmenitiesV1 amenitiesV1 = amentityRepository.findByAmenityIdAndHostelIdAndParentIdAndIsDeletedFalse(amenityId,
+                hostelId, user.getParentId());
         if (amenitiesV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_AMENITY, HttpStatus.NOT_FOUND);
         }
@@ -370,7 +392,6 @@ public class AmenitiesService {
         );
     }
 
-
     public List<CustomersAmenity> getAllAmenitiesByCustomerId(String customerId) {
         return customerAmenityRepository.findByCustomerId(customerId);
     }
@@ -402,6 +423,10 @@ public class AmenitiesService {
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         if (!Utils.checkNullOrEmpty(assignCustomer.customerId())) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
@@ -486,7 +511,6 @@ public class AmenitiesService {
                             else {
                                 customersAmenity.setStartDate(billingDates.currentBillStartDate());
                             }
-
 
                         }
 
