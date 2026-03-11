@@ -64,6 +64,8 @@ public class ElectricityService {
     private BedsService bedsService;
     @Autowired
     private EbCalculationService ebCalculationService;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     /**
      *
@@ -96,6 +98,10 @@ public class ElectricityService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         Date date = null;
         if (readings.readingDate() != null) {
             date = Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -115,7 +121,6 @@ public class ElectricityService {
         if (date == null) {
             date = new Date();
         }
-
 
         Date billStartDate = new Date();
         Date billEndDate = new Date();
@@ -182,9 +187,7 @@ public class ElectricityService {
             return addMeterReadingForHostelBasedNew(hostelId, readings, electricityConfig1, billingDates);
         }
 
-
     }
-
 
     public ResponseEntity<?> addMeterReading(String hostelId, AddReading readings) {
         if (!authentication.isAuthenticated()) {
@@ -205,6 +208,10 @@ public class ElectricityService {
 
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         Date date = null;
@@ -500,7 +507,6 @@ public class ElectricityService {
 
             List<CustomerIdRoomIdUnits> listCustomerIdRoomId = new ArrayList<>();
 
-
             int totalDays = listBeds.stream()
                     .mapToInt(item -> {
                         if (Utils.compareWithTwoDates(item.startDate(), finalStartDate) <= 0) {
@@ -780,12 +786,10 @@ public class ElectricityService {
                 Double lReading = latestReading.getCurrentReading();
                 if (lReading != null) {
                     lastReading = Utils.roundOfDouble(lReading);
-                }
-                else {
+                } else {
                     lastReading = 0.0;
                 }
             }
-
 
             listHostelReadings = hostelReadingsService.getLastReading(latestReading);
 
@@ -806,7 +810,7 @@ public class ElectricityService {
 
         List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings, hostelId);
         if (!listBedForEb.isEmpty()) {
-            List<ElectricityUsage> usages =  listBedForEb.stream()
+            List<ElectricityUsage> usages = listBedForEb.stream()
                     .map(item -> new ElectricityUsageMapper(null, null).apply(item))
                     .toList();
 
@@ -817,8 +821,7 @@ public class ElectricityService {
             ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
 
             return new ResponseEntity<>(list, HttpStatus.OK);
-        }
-        else {
+        } else {
             StringBuilder hostelName = new StringBuilder();
             String hostelImage = null;
             StringBuilder initials = new StringBuilder();
@@ -836,8 +839,7 @@ public class ElectricityService {
                     initials.append(arrHostelName[0].toUpperCase().charAt(0));
                     if (arrHostelName.length > 1) {
                         initials.append(arrHostelName[arrHostelName.length - 1].toUpperCase().charAt(0));
-                    }
-                    else {
+                    } else {
                         if (arrHostelName[0].length() > 1) {
                             initials.append(arrHostelName[0].toUpperCase().charAt(1));
                         }
@@ -848,7 +850,6 @@ public class ElectricityService {
             long noOfTenants = bookingsService.getAllCheckedInCustomersCount(hostelId);
             com.smartstay.smartstay.dao.HostelReadings readings = hostelReadingsService.getLatestReading(hostelId);
 
-
             if (readings != null) {
                 currentConsumption = readings.getConsumption();
                 if (!readings.isFirstEntry()) {
@@ -856,7 +857,6 @@ public class ElectricityService {
                     previousEntry = readings.getPreviousReading();
                     billingMonth = Utils.dateToMonth(readings.getBillStartDate());
                 }
-
 
             }
             HostelInfo hostelInfo = new HostelInfo(hostelName.toString(),
@@ -877,8 +877,6 @@ public class ElectricityService {
 
             return new ResponseEntity<>(list, HttpStatus.OK);
         }
-
-
 
     }
 
@@ -1130,6 +1128,10 @@ public class ElectricityService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         if (!Utils.checkNullOrEmpty(hostelId)) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
@@ -1161,12 +1163,14 @@ public class ElectricityService {
             if (currentReading.getBillStatus().equalsIgnoreCase(ElectricityBillStatus.INVOICE_GENERATED.name())) {
                 return new ResponseEntity<>(Utils.EB_ENTRY_CANNOT_CHANGE_INVOICE_GENERATED, HttpStatus.BAD_REQUEST);
             }
-            ElectricityReadings previousReading = electricityReadingRepository.getPreviousEntry(currentReading.getRoomId(), id);
+            ElectricityReadings previousReading = electricityReadingRepository
+                    .getPreviousEntry(currentReading.getRoomId(), id);
             if (previousReading != null) {
                 if (updateElectricity.reading() != null) {
                     double consumption = 0.0;
                     if (updateElectricity.reading() <= previousReading.getCurrentReading()) {
-                        return new ResponseEntity<>(Utils.PREVIOUS_CURRENT_READING_NOT_MATCHING, HttpStatus.BAD_REQUEST);
+                        return new ResponseEntity<>(Utils.PREVIOUS_CURRENT_READING_NOT_MATCHING,
+                                HttpStatus.BAD_REQUEST);
                     }
                     consumption = updateElectricity.reading() - previousReading.getCurrentReading();
                     currentReading.setCurrentReading(updateElectricity.reading());
@@ -1226,6 +1230,10 @@ public class ElectricityService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         if (!Utils.checkNullOrEmpty(hostelId)) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
@@ -1268,7 +1276,6 @@ public class ElectricityService {
 
     }
 
-
     public List<ElectricityReadings> findAllInvoiceNotGenertedReadings(String hostelId) {
         if (hostelId != null) {
             return electricityReadingRepository.getNotInvoiceGeneratedInvoices(hostelId);
@@ -1297,6 +1304,11 @@ public class ElectricityService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
         if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
             List<ElectricityReadings> listElectricityReading = findAllInvoiceNotGenertedReadings(hostelId);
@@ -1340,6 +1352,22 @@ public class ElectricityService {
     public ResponseEntity<?> deleteReadingAll(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
@@ -1498,7 +1526,6 @@ public class ElectricityService {
                         .toList());
             }
 
-
             if (listReadings != null && !listReadings.isEmpty()) {
                 ElectricityReadings readings = listReadings.get(0);
 
@@ -1655,10 +1682,8 @@ public class ElectricityService {
 
                 }
 
-
-
             } else {
-                //may goes to missed
+                // may goes to missed
                 bedHistories.forEach(item -> {
                    ElectricityReadings latestReadingOfIndividualRoom = latestReadingOfRooms
                            .stream()
@@ -1677,7 +1702,6 @@ public class ElectricityService {
                    }
 
                 });
-
 
             }
 

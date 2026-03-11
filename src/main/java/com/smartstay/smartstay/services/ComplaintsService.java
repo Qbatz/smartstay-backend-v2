@@ -65,6 +65,8 @@ public class ComplaintsService {
     private CustomerNotificationService customerNotificationService;
     @Autowired
     private ComplaintCommentsRepository complaintCommentsRepository;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     public ResponseEntity<?> addComplaints(@RequestBody AddComplaints request) {
         if (!authentication.isAuthenticated()) {
@@ -85,6 +87,10 @@ public class ComplaintsService {
         HostelV1 hostelV1 = hostelV1Repository.findByHostelIdAndParentId(request.hostelId(), user.getParentId());
         if (hostelV1 == null) {
             return new ResponseEntity<>("Hostel not found.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!subscriptionService.validateSubscription(request.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         ComplaintsV1 complaint = new ComplaintsV1();
         Floors floors = null;
@@ -168,7 +174,6 @@ public class ComplaintsService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
-
     public ResponseEntity<?> addComplaintComments(@RequestBody AddComplaintComment request, int complaintId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -187,6 +192,10 @@ public class ComplaintsService {
         ComplaintsV1 complaintExist = complaintRepository.findByComplaintIdAndParentId(complaintId, user.getParentId());
         if (complaintExist == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!subscriptionService.validateSubscription(complaintExist.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         ComplaintComments complaintComments = new ComplaintComments();
@@ -233,6 +242,10 @@ public class ComplaintsService {
             return new ResponseEntity<>(Utils.COMPLAINT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
+        if (!subscriptionService.validateSubscription(complaint.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         updateComplaint(complaint, request);
         usersService.addUserLog(complaint.getHostelId(), String.valueOf(complaintId), ActivitySource.COMPLAINTS, ActivitySourceType.UPDATE, user);
 
@@ -259,6 +272,10 @@ public class ComplaintsService {
         ComplaintsV1 complaint = complaintRepository.findByComplaintIdAndParentId(complaintId, user.getParentId());
         if (complaint == null) {
             return new ResponseEntity<>("Complaint not found.", HttpStatus.NOT_FOUND);
+        }
+
+        if (!subscriptionService.validateSubscription(complaint.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         StringBuilder fullName = new StringBuilder();
@@ -510,6 +527,10 @@ public class ComplaintsService {
         if (complaint == null) {
             return new ResponseEntity<>(Utils.COMPLAINT_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
+
+        if (!subscriptionService.validateSubscription(complaint.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         Customers customers = customersService.getCustomerInformation(complaint.getCustomerId());
         ComplaintTypeV1 complaintTypeV1 = complaintTypeService.getComplaintType(complaint.getComplaintTypeId());
         String complaintTypeName = null;
@@ -578,6 +599,10 @@ public class ComplaintsService {
         if (complaint == null) {
             return new ResponseEntity<>("Complaint not found.", HttpStatus.NOT_FOUND);
         }
+
+        if (!subscriptionService.validateSubscription(complaint.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         complaint.setUpdatedAt(new Date());
         complaint.setIsDeleted(true);
         complaint.setIsActive(false);
@@ -598,7 +623,6 @@ public class ComplaintsService {
 
         return complaintRepository.save(existingComplaint);
     }
-
 
     public ResponseEntity<?> getComplaintUpdates(String hostelId, Integer complaintId) {
         if (!authentication.isAuthenticated()) {
@@ -625,7 +649,6 @@ public class ComplaintsService {
 
         List<Integer> complaintType = new ArrayList<>();
         complaintType.add(complaintsV1.getComplaintTypeId());
-
 
         List<ComplaintTypeV1> complaintTypeV1s = complaintTypeService.getComplaintTypesById(complaintType);
         String complaintTypeStr;

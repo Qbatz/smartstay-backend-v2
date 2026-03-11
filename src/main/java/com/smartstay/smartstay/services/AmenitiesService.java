@@ -49,7 +49,7 @@ public class AmenitiesService {
     @Autowired
     private HostelService hostelService;
     @Autowired
-    private SubscriptionService subscriptionService;
+    private SubscriptionValidationService subscriptionValidationService;
     @Autowired
     private BedsService bedsService;
 
@@ -136,7 +136,7 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        if (!subscriptionService.validateSubscription(hostelId)) {
+        if (!subscriptionValidationService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
@@ -187,7 +187,7 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        if (!subscriptionService.validateSubscription(hostelId)) {
+        if (!subscriptionValidationService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
@@ -257,7 +257,7 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        if (!subscriptionService.validateSubscription(hostelId)) {
+        if (!subscriptionValidationService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
@@ -298,7 +298,7 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        if (!subscriptionService.validateSubscription(hostelId)) {
+        if (!subscriptionValidationService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
@@ -352,7 +352,7 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        if (!subscriptionService.validateSubscription(hostelId)) {
+        if (!subscriptionValidationService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
@@ -425,7 +425,7 @@ public class AmenitiesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        if (!subscriptionService.validateSubscription(hostelId)) {
+        if (!subscriptionValidationService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         if (!Utils.checkNullOrEmpty(assignCustomer.customerId())) {

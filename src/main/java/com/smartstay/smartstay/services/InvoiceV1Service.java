@@ -93,6 +93,9 @@ public class InvoiceV1Service {
     private HostelService hostelService;
     private BedsService bedService;
 
+    @Autowired
+    private SubscriptionService subscriptionService;
+
     public InvoiceV1Service(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
         restTemplate.setInterceptors(Collections.singletonList(new RestTemplateLoggingInterceptor()));
@@ -601,6 +604,9 @@ public class InvoiceV1Service {
         }
         if (!Utils.checkNullOrEmpty(manualInvoice.invoiceDate())) {
             return new ResponseEntity<>(Utils.INVALID_INVOICE_DATE, HttpStatus.BAD_REQUEST);
+        }
+        if (!subscriptionService.validateSubscription(hostelV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         List<ItemResponse> items = manualInvoice.items() != null ? manualInvoice.items() : Collections.emptyList();
@@ -1981,6 +1987,11 @@ public class InvoiceV1Service {
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         if (!invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name())) {
             return new ResponseEntity<>(Utils.EDIT_ALLOWED_ONLY_RECURRING_INVOICE, HttpStatus.BAD_REQUEST);
         }

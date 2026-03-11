@@ -42,7 +42,8 @@ public class ComplaintTypeService {
     private UsersService usersService;
     @Autowired
     private RolesService rolesService;
-
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     public ResponseEntity<?> addComplaintType(AddComplaintType request) {
         if (!authentication.isAuthenticated()) {
@@ -65,7 +66,12 @@ public class ComplaintTypeService {
             return new ResponseEntity<>("Hostel not found.", HttpStatus.BAD_REQUEST);
         }
 
-        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentId(request.complaintTypeName(), request.hostelId(), user.getParentId());
+        if (!subscriptionService.validateSubscription(request.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentId(
+                request.complaintTypeName(), request.hostelId(), user.getParentId());
         if (complaintType != null) {
             return new ResponseEntity<>("Complaint type already exist", HttpStatus.BAD_REQUEST);
         }
@@ -110,7 +116,13 @@ public class ComplaintTypeService {
             return new ResponseEntity<>("Hostel not found.", HttpStatus.BAD_REQUEST);
         }
 
-        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentIdAndComplaintTypeIdNot(request.complaintTypeName(), request.hostelId(), user.getParentId(), complaintTypeId);
+        if (!subscriptionService.validateSubscription(complaintTypeV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        ComplaintTypeV1 complaintType = complaintTypeV1Repository
+                .findByComplaintTypeNameAndHostelIdAndParentIdAndComplaintTypeIdNot(request.complaintTypeName(),
+                        request.hostelId(), user.getParentId(), complaintTypeId);
         if (complaintType != null) {
             return new ResponseEntity<>("Complaint type already exist", HttpStatus.BAD_REQUEST);
         }
@@ -157,6 +169,10 @@ public class ComplaintTypeService {
 
         if (complaintTypeV1 == null || !complaintTypeV1.getParentId().equals(user.getParentId())) {
             return new ResponseEntity<>("Complaint type not found.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!subscriptionService.validateSubscription(complaintTypeV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         complaintTypeV1Repository.delete(complaintTypeV1);

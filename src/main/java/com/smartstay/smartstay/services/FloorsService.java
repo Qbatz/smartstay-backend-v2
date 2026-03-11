@@ -44,6 +44,9 @@ public class FloorsService {
     @Autowired
     private UsersService usersService;
 
+    @Autowired
+    private SubscriptionService subscriptionService;
+
     public ResponseEntity<?> getAllFloors(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
@@ -107,9 +110,13 @@ public class FloorsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
         Floors existingFloor = floorRepository.findByFloorIdAndParentId(floorId,user.getParentId());
         if (existingFloor == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
+        }
+        if (!subscriptionService.validateSubscription(existingFloor.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         if (updateFloor.floorName() != null && !updateFloor.floorName().isEmpty()) {
@@ -148,6 +155,9 @@ public class FloorsService {
         if (hostelV1==null){
             return new ResponseEntity<>("Hostel Doesn't found", HttpStatus.BAD_REQUEST);
         }
+        if (!subscriptionService.validateSubscription(hostelV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         int duplicateCount = floorRepository.countByFloorNameAndRoomAndHostelAndParent(
                 addFloors.floorName(),
                 addFloors.hostelId(),
@@ -181,6 +191,9 @@ public class FloorsService {
         }
         Floors existingFloor = floorRepository.findByFloorIdAndParentId(floorId,users.getParentId());
         if (existingFloor != null) {
+            if (!subscriptionService.validateSubscription(existingFloor.getHostelId())) {
+                return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+            }
             boolean customerExist = floorRepository.existsActiveBookingForFloor(existingFloor.getHostelId(),floorId ,
                     List.of(BookingStatus.CHECKIN.name(), BookingStatus.NOTICE.name(), BookingStatus.BOOKED.name()));
             if (customerExist) {

@@ -41,6 +41,9 @@ public class ExpenseCategoryService {
     @Autowired
     private ExpenseSubCategoryService expenseSubCategory;
 
+    @Autowired
+    private SubscriptionService subscriptionService;
+
     public ResponseEntity<?> createExpenseCategory(ExpenseCategory category, String hostelId) {
 
         if (category == null) {
@@ -61,6 +64,10 @@ public class ExpenseCategoryService {
         }
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         if (!Utils.checkNullOrEmpty(category.categoryId()) && !Utils.checkNullOrEmpty(category.categoryName())) {
@@ -222,6 +229,9 @@ public class ExpenseCategoryService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         if (expenseCategory == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
@@ -279,6 +289,9 @@ public class ExpenseCategoryService {
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         return expenseSubCategory.updateSubCategry(hostelId, subCategoryId, subCategory);
