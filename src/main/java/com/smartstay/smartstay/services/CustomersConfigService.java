@@ -39,6 +39,8 @@ public class CustomersConfigService {
     @Autowired
     private HostelService hostelService;
     private CustomersService customersService;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     @Autowired
     private void setCustomersService(@Lazy CustomersService customersService) {
@@ -96,6 +98,10 @@ public class CustomersConfigService {
         }
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         CustomersConfig customersConfig = customersConfigRepository.findByCustomerId(customerId);

@@ -3,6 +3,7 @@ package com.smartstay.smartstay.controllers;
 import com.smartstay.smartstay.payloads.floor.AddFloors;
 import com.smartstay.smartstay.payloads.floor.UpdateFloor;
 import com.smartstay.smartstay.services.FloorsService;
+import com.smartstay.smartstay.services.SubscriptionService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;

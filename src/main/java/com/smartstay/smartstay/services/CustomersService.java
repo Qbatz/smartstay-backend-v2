@@ -102,6 +102,8 @@ public class CustomersService {
     private AmenityRequestService amenityRequestService;
     private AmenitiesService amenitiesService;
     private CustomerDocumentsService customerDocumentsService;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     public static AdvanceInfo toAdvanceInfoResponse(Advance advance, InvoiceResponse invoicesV1, double bookingAmount) {
         if (advance == null) return null;
@@ -214,6 +216,10 @@ public class CustomersService {
 
             if (customers == null) {
                 return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+            }
+
+            if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+                return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
             }
 
             customers.setCurrentStatus(CustomerStatus.ACTIVE.name());
@@ -388,6 +394,10 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
 
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         if (!floorsService.checkFloorExistForHostel(payloads.floorId(), hostelId)) {
             return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.BAD_REQUEST);
         }
@@ -466,6 +476,10 @@ public class CustomersService {
 
         if (!userHostelService.checkHostelAccess(user.getUserId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         if (!floorsService.checkFloorExistForHostel(payloads.floorId(), customers.getHostelId())) {
@@ -590,6 +604,10 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
 
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         if (!floorsService.checkFloorExistForHostel(booking.getFloorId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.BAD_REQUEST);
         }
@@ -709,6 +727,10 @@ public class CustomersService {
                 return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
             }
 
+            if (!subscriptionService.validateSubscription(hostelId)) {
+                return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+            }
+
             String mobileStatus = "";
             String emailStatus = "";
 
@@ -796,7 +818,12 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        if (customersRepository.existsByMobileAndHostelIdAndStatusesNotIn(customerInfo.mobile(), hostelId, List.of("VACATED"))) {
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (customersRepository.existsByMobileAndHostelIdAndStatusesNotIn(customerInfo.mobile(), hostelId,
+                List.of("VACATED"))) {
             mobileStatus = Utils.MOBILE_NO_EXISTS;
 //            return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
         }
@@ -860,6 +887,10 @@ public class CustomersService {
 
         if (!userHostelService.checkHostelAccess(loginId, customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         if (updateInfo != null) {
 //            if (updateInfo.mobile() != null && !updateInfo.mobile().equalsIgnoreCase("")) {
@@ -976,6 +1007,10 @@ public class CustomersService {
         }
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_CHECKOUT, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
@@ -1243,7 +1278,6 @@ public class CustomersService {
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
 
-
     public void calculateRentAndCreateRentalInvoice(Customers customers, CheckInRequest payloads) {
         HostelV1 hostelV1 = hostelService.getHostelInfo(customers.getHostelId());
         if (hostelV1 != null) {
@@ -1286,7 +1320,6 @@ public class CustomersService {
             invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
 
         }
-
 
     }
 
@@ -1371,7 +1404,8 @@ public class CustomersService {
     }
 
     /**
-     * this is the common function to calculate settlement amount with EB calculations.
+     * this is the common function to calculate settlement amount with EB
+     * calculations.
      *
      *
      * @param customerId
@@ -1562,7 +1596,7 @@ public class CustomersService {
             }
         } else {
             InvoicesV1 currentRunningInvoice = invoiceService.findRunningInvoice(customers.getCustomerId(), billDate);
-            //current month invoice is paid Rent
+            // current month invoice is paid Rent
             List<InvoicesV1> listCurrentInvoicesPaid = invoiceService.getAllCurrentMonthRentInvoices(customerId)
                     .stream()
                     .filter(i -> i.getInvoiceId().equalsIgnoreCase(currentRunningInvoice.getInvoiceId()))
@@ -2161,6 +2195,10 @@ public class CustomersService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         BookingsV1 bookingDetails = bookingsService.getBookingsByCustomerId(customerId);
         if (bookingDetails == null) {
             return new ResponseEntity<>(Utils.NO_BOOKING_INFORMATION_FOUND, HttpStatus.BAD_REQUEST);
@@ -2311,11 +2349,7 @@ public class CustomersService {
                         .sum();
             }
 
-
         }
-
-
-
 
         double rentPerDay = bookingDetails.getRentAmount() / findNoOfDaysInCurrentMonth;
         if (Utils.compareWithTwoDates(bookingDetails.getJoiningDate(), billDate.currentBillStartDate()) >= 0) {
@@ -2323,7 +2357,6 @@ public class CustomersService {
         }
         currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay);
         currentMonthTotalPayableAmount = currentMonthPayableRent + currentMonthOtherPayableAmount;
-
 
         List<InvoicesV1> advanceInvoice = listUnpaidInvoices
                 .stream()
@@ -2693,6 +2726,10 @@ public class CustomersService {
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
         }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         if (!bedsService.checkIsBedExsits(request.bedId(), user.getParentId(), hostelId)) {
             return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
         }
@@ -2765,6 +2802,10 @@ public class CustomersService {
         }
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         Customers customers = customersRepository.findById(customerId).orElse(null);
         if (customers == null) {
@@ -2906,6 +2947,10 @@ public class CustomersService {
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         if (!customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
             return new ResponseEntity<>(Utils.CANNOT_DELETE_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);

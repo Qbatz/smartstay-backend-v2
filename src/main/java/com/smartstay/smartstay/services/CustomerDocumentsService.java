@@ -43,8 +43,11 @@ public class CustomerDocumentsService {
     private UploadFileToS3 uploadFileToS3;
     @Autowired
     private CustomerDocumentsRepositories customerDocumentsRepositories;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
-    public ResponseEntity<?> addFiles(String hostelId, String customerId, List<MultipartFile> listFiles, UploadDocuments uploadDocuments) {
+    public ResponseEntity<?> addFiles(String hostelId, String customerId, List<MultipartFile> listFiles,
+            UploadDocuments uploadDocuments) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -65,6 +68,10 @@ public class CustomerDocumentsService {
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         if (listFiles == null) {
@@ -208,6 +215,10 @@ public class CustomerDocumentsService {
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         if (documentId == null) {
             return new ResponseEntity<>(Utils.INVALID_DOCUMENT_ID, HttpStatus.BAD_REQUEST);

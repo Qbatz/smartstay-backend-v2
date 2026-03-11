@@ -31,6 +31,9 @@ public class NotificationService {
     private CustomersService customersService;
 
     @Autowired
+    private SubscriptionService subscriptionService;
+
+    @Autowired
     public void setHostelService(@Lazy HostelService hostelService) {
         this.hostelService = hostelService;
     }
@@ -115,6 +118,9 @@ public class NotificationService {
         HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
         if (hostelV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         List<AdminNotifications> listUnreadNotifications = notificationV1Repository.findUnReadNotifications(hostelId);

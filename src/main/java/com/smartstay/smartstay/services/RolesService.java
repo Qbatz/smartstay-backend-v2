@@ -43,6 +43,9 @@ public class RolesService {
     private UsersService usersService;
 
     @Autowired
+    private SubscriptionValidationService subscriptionValidationService;
+
+    @Autowired
     public void setUsersService(@Lazy  UsersService usersService) {
         this.usersService = usersService;
     }
@@ -122,6 +125,10 @@ public class RolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        if (!subscriptionValidationService.validateSubscription(existingRole.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
 
         if (updatedRole.roleName() != null && !updatedRole.roleName().isEmpty()) {
             if (rolesRepository.existsByParentIdAndRole(roleId,updatedRole.roleName(), user.getParentId()) > 0) {
@@ -167,6 +174,9 @@ public class RolesService {
         if (hostelV1Repository.findByHostelIdAndParentId(roleData.hostelId(),user.getParentId()) == null){
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        if (!subscriptionValidationService.validateSubscription(roleData.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
 
         RolesV1 role = new RolesV1();
         List<RolesPermission> rolesPermissions = permissionInsertion(roleData.permissionList());
@@ -200,6 +210,9 @@ public class RolesService {
         }
         RolesV1 existingRole = rolesRepository.findByRoleIdAndParentId(roleId,users.getParentId());
         if (existingRole != null) {
+            if (!subscriptionValidationService.validateSubscription(existingRole.getHostelId())) {
+                return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+            }
             rolesRepository.delete(existingRole);
             usersService.addUserLog(existingRole.getHostelId(), String.valueOf(existingRole.getRoleId()), ActivitySource.ROLE, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);

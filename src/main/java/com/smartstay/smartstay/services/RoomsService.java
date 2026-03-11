@@ -47,6 +47,9 @@ public class RoomsService {
     private BedsService bedsService;
 
     @Autowired
+    private SubscriptionService subscriptionService;
+
+    @Autowired
     public void setBedsService(@Lazy BedsService bedsService) {
         this.bedsService = bedsService;
     }
@@ -110,6 +113,11 @@ public class RoomsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         Rooms existingRoom = roomRepository.findByRoomIdAndParentIdAndHostelId(roomId,user.getParentId(),hostelId);
         if (existingRoom == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
@@ -146,6 +154,11 @@ public class RoomsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionService.validateSubscription(addRoom.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         Floors floors = floorRepository.findByFloorIdAndParentId(addRoom.floorId(),user.getParentId());
         if (floors==null){
             return new ResponseEntity<>("Floor Doesn't exist", HttpStatus.BAD_REQUEST);
@@ -189,8 +202,12 @@ public class RoomsService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
         Rooms existingRoom = roomRepository.findByRoomIdAndParentId(roomId,users.getParentId());
         if (existingRoom != null) {
+            if (!subscriptionService.validateSubscription(existingRoom.getHostelId())) {
+                return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+            }
             boolean customerExist = floorRepository.existsActiveBookingForRoom(existingRoom.getHostelId(),roomId ,
                     List.of(BookingStatus.NOTICE.name(),BookingStatus.CHECKIN.name(), BookingStatus.BOOKED.name()));
             if (customerExist) {

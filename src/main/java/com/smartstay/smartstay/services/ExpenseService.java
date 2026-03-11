@@ -52,6 +52,9 @@ public class ExpenseService {
     @Autowired
     private HostelService hostelService;
 
+    @Autowired
+    private SubscriptionService subscriptionService;
+
     public ResponseEntity<?> initializeToAddExpense(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -99,6 +102,10 @@ public class ExpenseService {
         if (!bankingService.checkBankExist(expense.bankId())) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
 
         if (expense.count() == null) {
             return new ResponseEntity<>(Utils.EXPENSE_COUNT_REQUIRED, HttpStatus.BAD_REQUEST);
