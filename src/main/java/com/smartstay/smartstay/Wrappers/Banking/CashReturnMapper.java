@@ -15,6 +15,7 @@ public class CashReturnMapper implements Function<BankingV1, DebitsBank> {
         else {
             bankName = bankingV1.getBankName();
         }
+
         return new DebitsBank(bankingV1.getBankId(),
                 bankName,
                 bankingV1.getAccountHolderName());

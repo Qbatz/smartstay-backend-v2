@@ -295,6 +295,12 @@ public class ActivityLogUtils {
         if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
             return "New expense has been added";
         }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Expense has been updated";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Expense has been deleted";
+        }
         return null;
     }
 

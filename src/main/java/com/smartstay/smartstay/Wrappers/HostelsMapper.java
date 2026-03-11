@@ -55,7 +55,7 @@ public class HostelsMapper implements Function<HostelV1, Hostels> {
         if (subscriptionDto != null) {
             subscriptionEndDate = Utils.dateToString(subscriptionDto.endDate());
             isSubscriptionValid = subscriptionDto.isValid();
-            if (subscriptionDto.endsIn() < 28 && subscriptionDto.endsIn() > 0) {
+            if (subscriptionDto.endsIn() < 30 && subscriptionDto.endsIn() > 0) {
                 message = Utils.formMessageWithDate(subscriptionDto.endDate(), "Your subscription will ends in");
             }
             else if (subscriptionDto.endsIn() < 10 && subscriptionDto.endsIn() >= 0) {

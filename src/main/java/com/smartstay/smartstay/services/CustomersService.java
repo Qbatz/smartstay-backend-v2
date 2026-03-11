@@ -107,6 +107,7 @@ public class CustomersService {
 
     public static AdvanceInfo toAdvanceInfoResponse(Advance advance, InvoiceResponse invoicesV1, double bookingAmount) {
         if (advance == null) return null;
+        boolean canEditAdvance = false;
         double maintenanceAmount = 0.0;
         double otherDeductionsAmount = 0.0;
         double invoicePaidAmount = 0.0;
@@ -118,6 +119,10 @@ public class CustomersService {
             dueDate = invoicesV1.dueDate();
             paymentStatus = invoicesV1.paymentStatus();
             paidAmount = invoicesV1.paidAmount();
+        }
+
+        if (advance.getAdvanceAmount() > 0) {
+            canEditAdvance = true;
         }
 
         if (advance.getDeductions() != null && !advance.getDeductions().isEmpty()) {
@@ -135,7 +140,7 @@ public class CustomersService {
 
         double dueAmount = (advance.getAdvanceAmount() != 0) ? advance.getAdvanceAmount() - invoicePaidAmount : 0.0;
 
-        return new AdvanceInfo(advance.getInvoiceDate() != null ? Utils.dateToString(advance.getInvoiceDate()) : null, dueDate, dueAmount, advance.getAdvanceAmount(), bookingAmount, paymentStatus, maintenanceAmount, otherDeductionsAmount, paidAmount);
+        return new AdvanceInfo(advance.getInvoiceDate() != null ? Utils.dateToString(advance.getInvoiceDate()) : null, dueDate, dueAmount, advance.getAdvanceAmount(), bookingAmount, paymentStatus, maintenanceAmount, otherDeductionsAmount, paidAmount, canEditAdvance);
     }
 
     @Autowired
@@ -1091,6 +1096,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
+        StringBuilder fullName = new StringBuilder();
         StringBuilder initials = new StringBuilder();
         initials.append(customers.getFirstName().toUpperCase().charAt(0));
         if (customers.getLastName() != null && !customers.getLastName().equalsIgnoreCase("")) {
@@ -1098,7 +1104,16 @@ public class CustomersService {
         } else {
             initials.append(customers.getFirstName().toUpperCase().charAt(1));
         }
-        String fullName = customers.getFirstName() + " " + customers.getLastName();
+        if (customers.getFirstName() != null) {
+            fullName.append(customers.getFirstName());
+        }
+        if (customers.getLastName() != null && !customers.getLastName().isEmpty()) {
+            if (customers.getFirstName() != null) {
+                fullName.append(" ");
+            }
+            fullName.append(customers.getLastName());
+        }
+//        String fullName = customers.getFirstName() + " " + customers.getLastName();
 
         CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
         List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
@@ -1253,7 +1268,7 @@ public class CustomersService {
                 customers.getHostelId(),
                 customers.getFirstName(),
                 customers.getLastName(),
-                fullName,
+                fullName.toString(),
                 customers.getEmailId(),
                 customers.getMobile(),
                 "91",
@@ -2464,7 +2479,7 @@ public class CustomersService {
 
         totalAmountToBePaid = totalAmountToBePaid + ebAmount;
         invoiceService.cancelActiveInvoice(unpaidUpdated);
-        if (invAdvanceInvoice != null) {
+//        if (invAdvanceInvoice != null) {
             InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
 
 
@@ -2485,7 +2500,7 @@ public class CustomersService {
                     eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customerId, settlementDetails.getLeavingDate(), authentication.getName()));
                 }
             }
-        }
+//        }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
@@ -2679,7 +2694,7 @@ public class CustomersService {
         }
 
 
-        if (advaceInvoice != null) {
+//        if (advaceInvoice != null) {
             InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(totalAmountToBePaid), cancellInvoices, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
 
             if (cw != null) {
@@ -2700,7 +2715,7 @@ public class CustomersService {
                 }
             }
 
-        }
+//        }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }

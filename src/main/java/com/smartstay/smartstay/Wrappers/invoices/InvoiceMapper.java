@@ -14,24 +14,17 @@ public class InvoiceMapper {
 
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
 
-    public static InvoiceResponse toResponse(InvoicesV1 invoice, InvoicesV1Repository invoicesV1Repository) {
+    public static InvoiceResponse toResponse(InvoicesV1 invoice) {
         Double paidAmount = 0.0;
         if (invoice.getPaidAmount() != null) {
             paidAmount = invoice.getPaidAmount();
         }
         String paymentStatus = null;
-        Double dueAmount = 0.0;
         if (invoice.getPaymentStatus() != null) {
             paymentStatus = Utils.capitalize(PaymentStatus.valueOf(invoice.getPaymentStatus()).getDisplayName());
         }
         if (invoice.isCancelled()) {
             paymentStatus = "Cancelled";
-        }
-
-        if (invoice.getTotalAmount() < 0) {
-            dueAmount = invoice.getTotalAmount() + paidAmount;
-        } else {
-            dueAmount = invoice.getTotalAmount() - paidAmount;
         }
 
         return new InvoiceResponse(
@@ -40,7 +33,7 @@ public class InvoiceMapper {
                 Utils.capitalize(invoice.getInvoiceType()),
                 paymentStatus,
                 Utils.roundOfDouble(invoice.getTotalAmount()),
-                Utils.roundOfDouble(dueAmount),
+                Utils.roundOfDouble(invoice.getTotalAmount() - paidAmount),
                 Utils.roundOfDouble(paidAmount),
                 invoice.getInvoiceDueDate() != null
                         ? dateFormat.format(invoice.getInvoiceDueDate())

@@ -194,6 +194,15 @@ public class BankingService {
 
         List<Bank> listBankings = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId)
                 .stream()
+                .filter(i -> {
+                    if (i.isDeleted()) {
+                        if (i.getBalance() != null) {
+                            return true;
+                        }
+                        return false;
+                    }
+                    return true;
+                })
                 .map(i -> new BankingListMapper().apply(i))
                 .collect(Collectors.toList());
 
@@ -214,6 +223,7 @@ public class BankingService {
                                 item.source(),
                                 item.createdBy(),
                                 item.createdAt(),
+                                item.transactionDate(),
                                 item.isCredit(),
                                 item.bankId(),
                                 accountHolder);
@@ -673,9 +683,13 @@ public class BankingService {
 
     public boolean updateBalanceForExpense(double amount, String transactionType, String bankId) {
         BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        double bankBalance = 0.0;
+        if (bankingV1.getBalance() != null) {
+            bankBalance = bankingV1.getBalance();
+        }
 
         if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
-            bankingV1.setBalance(bankingV1.getBalance() - amount);
+            bankingV1.setBalance(bankBalance - amount);
         }
 
         bankingV1.setUpdatedBy(authentication.getName());
@@ -739,5 +753,36 @@ public class BankingService {
 
     public List<String> findBankIdsByAccountHolderNames(String hostelId, List<String> names) {
         return bankingV1Repository.findBankIdsByAccountHolderNames(hostelId, names);
+    }
+
+    public void updateBankBalanceForUpdateExpense(String bankId, double priceDifference) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        if (bankingV1 != null) {
+            if (priceDifference < 0) {
+                bankingV1.setBalance(bankingV1.getBalance() + priceDifference);
+            }
+            else {
+                bankingV1.setBalance(bankingV1.getBalance() + priceDifference);
+            }
+
+            bankingV1Repository.save(bankingV1);
+        }
+    }
+
+    public void updateAccountBalanceByDeleteExpense(String hostelId, String bankId, Double amount) {
+        BankingV1 bankingV1 = bankingV1Repository.findByHostelIdAndBankId(hostelId, bankId);
+        if (bankingV1 != null) {
+            double expAmount = 0.0;
+            if (amount != null) {
+                expAmount = amount;
+            }
+            double balanceAmount = 0.0;
+            if (bankingV1.getBalance() != null) {
+                balanceAmount = bankingV1.getBalance();
+            }
+            bankingV1.setBalance(balanceAmount + expAmount);
+
+            bankingV1Repository.save(bankingV1);
+        }
     }
 }

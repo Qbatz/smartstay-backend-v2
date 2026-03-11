@@ -1240,4 +1240,27 @@ public class TransactionService {
 
         return new ResponseEntity<>(receiptUrl, HttpStatus.OK);
     }
+
+    public List<InvoiceRefundHistory> findByInvoiceId(String invoiceId) {
+        List<TransactionV1> listTransactions = transactionRespository.findByInvoiceId(invoiceId);
+        Set<String> bankIds = listTransactions
+                .stream()
+                .map(TransactionV1::getBankId)
+                .distinct()
+                .collect(Collectors.toSet());
+        List<String> userIds = listTransactions
+                .stream()
+                .map(TransactionV1::getCreatedBy)
+                .distinct()
+                .toList();
+        List<BankingV1> listBanks = bankingService.findAllBanksById(bankIds);
+        List<Users> listUsers = usersService.findAllUsersFromUserId(userIds);
+
+        List<InvoiceRefundHistory> listPayments = listTransactions
+                .stream()
+                .map(i -> new InvoiceRefundMapper(listUsers, listBanks).apply(i))
+                .toList();
+
+        return  listPayments;
+    }
 }

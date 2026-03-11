@@ -32,6 +32,11 @@ public class ProfileUplodWrapper implements Function<UpdateUserProfilePayloads, 
         if (updateUserProfilePayloads.lastName() != null && !updateUserProfilePayloads.lastName().equalsIgnoreCase("")) {
             users.setLastName(updateUserProfilePayloads.lastName());
         }
+        else {
+            if (users.getLastName() != null) {
+                users.setLastName(null);
+            }
+         }
 
         if (updateUserProfilePayloads.emailId() != null && !updateUserProfilePayloads.emailId().equalsIgnoreCase("")) {
             users.setEmailId(updateUserProfilePayloads.emailId());

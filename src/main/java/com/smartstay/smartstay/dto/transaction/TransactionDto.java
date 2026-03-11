@@ -7,6 +7,7 @@ public record TransactionDto(Integer transactionId,
                              String source,
                              String createdBy,
                              String createdAt,
+                             String transactionDate,
                              boolean isCredit,
                              String bankId,
                              String accountHolder) {

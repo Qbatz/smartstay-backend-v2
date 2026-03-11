@@ -11,6 +11,7 @@ import com.smartstay.smartstay.dto.expenses.ExpensesCategory;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.expense.Expense;
+import com.smartstay.smartstay.payloads.expense.UpdateExpense;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
@@ -465,5 +466,166 @@ public class ExpenseService {
                         .build())
                 .expenseLists(new ArrayList<>())
                 .build();
+    }
+
+    public ResponseEntity<?> updateExpense(String hostelId, String expenseId, UpdateExpense updateExpense) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        ExpensesV1 expensesV1 = expensesRepository.findById(expenseId).orElse(null);
+        if (expensesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_EXPENSE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        double priceDifference = 0.0;
+        boolean totalAmountModified = false;
+
+        if (!expensesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!expensesV1.isActive()) {
+            return new ResponseEntity<>(Utils.EXPENSE_ALREADY_DELETED, HttpStatus.BAD_REQUEST);
+        }
+        if (updateExpense == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (updateExpense.categoryId() != null && updateExpense.categoryId() != 0) {
+
+            boolean isValidCategory = expenseCategoryService.checkCategoryIdValid(hostelId, updateExpense.categoryId());
+            if (!isValidCategory) {
+                return new ResponseEntity<>(Utils.INVALID_CATEGORY_ID, HttpStatus.BAD_REQUEST);
+            }
+
+            boolean hasSubCategory = expenseCategoryService.checkCategoryHavingSubCategory(hostelId, updateExpense.categoryId());
+            if (hasSubCategory) {
+                if (!Utils.checkNullOrEmpty(updateExpense.subCategoryId())) {
+                    return new ResponseEntity<>(Utils.SUB_CATEGORY_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
+            }
+            else {
+                if (expensesV1.getCategoryId().equals(updateExpense.categoryId())) {
+                    if (expensesV1.getSubCategoryId() != null) {
+                        expensesV1.setSubCategoryId(null);
+                    }
+                }
+            }
+
+            if (updateExpense.subCategoryId() != null && updateExpense.subCategoryId() != 0) {
+               boolean isValidSubCategory = expenseCategoryService.checkSubCategoryValid(hostelId, updateExpense.categoryId(), updateExpense.subCategoryId());
+               if (!isValidSubCategory) {
+                   return new ResponseEntity<>(Utils.INVALID_SUB_CATEGORY_ID, HttpStatus.BAD_REQUEST);
+               }
+               expensesV1.setSubCategoryId(updateExpense.subCategoryId());
+            }
+            expensesV1.setUpdatedBy(authentication.getName());
+            expensesV1.setUpdatedAt(new Date());
+            expensesV1.setCategoryId(updateExpense.categoryId());
+        }
+        else {
+            if (updateExpense.subCategoryId() != null && updateExpense.subCategoryId() != 0) {
+                boolean isValidSubCategory = expenseCategoryService.checkSubCategoryValid(hostelId, expensesV1.getCategoryId(), updateExpense.subCategoryId());
+                if (!isValidSubCategory) {
+                    return new ResponseEntity<>(Utils.INVALID_SUB_CATEGORY_ID, HttpStatus.BAD_REQUEST);
+                }
+                expensesV1.setUpdatedBy(authentication.getName());
+                expensesV1.setUpdatedAt(new Date());
+                expensesV1.setSubCategoryId(updateExpense.subCategoryId());
+            }
+        }
+
+        if (updateExpense.purchaseDate() != null && !updateExpense.purchaseDate().trim().isBlank()) {
+            Date purchaseDate = Utils.stringToDate(updateExpense.purchaseDate().replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            expensesV1.setTransactionDate(purchaseDate);
+            expensesV1.setUpdatedBy(authentication.getName());
+            expensesV1.setUpdatedAt(new Date());
+        }
+        if (updateExpense.count() != null && updateExpense.count() != 0) {
+            expensesV1.setUnitCount(updateExpense.count());
+            expensesV1.setUpdatedBy(authentication.getName());
+            expensesV1.setUpdatedAt(new Date());
+            if (updateExpense.totalAmount() != null && updateExpense.totalAmount() != 0) {
+                double unitPrice = updateExpense.totalAmount()/ updateExpense.count();
+                expensesV1.setUnitPrice(unitPrice);
+            }
+            else {
+                double unitPrice = expensesV1.getTotalPrice()/ updateExpense.count();
+                expensesV1.setUnitPrice(unitPrice);
+            }
+        }
+
+        if (updateExpense.totalAmount() != null && updateExpense.totalAmount() != 0) {
+            totalAmountModified = true;
+            priceDifference = expensesV1.getTotalPrice() - updateExpense.totalAmount();
+            double unitPrice = updateExpense.totalAmount()/ expensesV1.getUnitCount();
+            expensesV1.setUnitPrice(unitPrice);
+            expensesV1.setTotalPrice(updateExpense.totalAmount());
+            expensesV1.setUpdatedBy(authentication.getName());
+            expensesV1.setUpdatedAt(new Date());
+
+        }
+        if (updateExpense.description() != null) {
+            expensesV1.setDescription(updateExpense.description());
+            expensesV1.setUpdatedBy(authentication.getName());
+            expensesV1.setUpdatedAt(new Date());
+        }
+
+        if (totalAmountModified) {
+            bankTransactionService.updateExpenseTransactions(hostelId, expenseId, updateExpense.totalAmount(), priceDifference, updateExpense.purchaseDate());
+        }
+
+        usersService.addUserLog(hostelId, expenseId, ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
+    }
+
+    public ResponseEntity<?> deleteExpense(String hostelId, String expenseId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        ExpensesV1 expensesV1 = expensesRepository.findById(expenseId).orElse(null);
+        if (expensesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_EXPENSE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!expensesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        if (bankTransactionService.deleteExpnese(hostelId, expenseId)) {
+            expensesV1.setActive(false);
+            expensesV1.setUpdatedBy(authentication.getName());
+            expensesV1.setUpdatedAt(new Date());
+            expensesRepository.save(expensesV1);
+
+            usersService.addUserLog(hostelId, expensesV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.DELETE, users);
+
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        else {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+
     }
 }

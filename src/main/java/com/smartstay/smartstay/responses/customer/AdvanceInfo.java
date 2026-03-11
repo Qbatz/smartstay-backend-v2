@@ -9,6 +9,7 @@ public record AdvanceInfo(
         String paymentStatus,
         Double maintenanceAmount,
         Double deductionsAmount,
-        Double paidAmount
+        Double paidAmount,
+        boolean canEditAdvance
 ) {
 }

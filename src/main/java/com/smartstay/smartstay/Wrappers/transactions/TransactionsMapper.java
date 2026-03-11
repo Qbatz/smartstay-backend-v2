@@ -20,7 +20,8 @@ public class TransactionsMapper implements Function<BankTransactionsV1, Transact
                 transactionV1.getType(),
                 transactionV1.getSource(),
                 transactionV1.getCreatedBy(),
-                Utils.dateToString(transactionV1.getCreatedAt()),
+                Utils.dateToString(transactionV1.getTransactionDate()),
+                Utils.dateToString(transactionV1.getTransactionDate()),
                 isCredit,
                 transactionV1.getBankId(),
                 null);

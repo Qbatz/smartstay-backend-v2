@@ -43,6 +43,7 @@ public class Utils {
     public static final String INVALID_ASSET = "Invalid Asset";
     public static final String INVALID_TEMPLATE_ID = "Invalid template id";
     public static final String INVALID_TEMPLAYE_TYPE_ID = "Invalid template type id";
+    public static final String INVALID_EXPENSE_ID = "Invalid expense id";
 
     public static final String INVALID_AMENITY = "Invalid Amenity";
     public static final String AMENITY_ALREADY_DELETED = "Amenity already deleted";
@@ -234,6 +235,7 @@ public class Utils {
     public static final String FILES_ARE_REQUIRED_TO_UPLOAD = "Files cannot be empty";
     public static final String EXPENSE_COUNT_REQUIRED = "Expense count is required";
     public static final String INVALID_COUNT = "Invalid expense count";
+    public static final String EXPENSE_ALREADY_DELETED = "Expense is already deleted";
     public static final String SHARING_TYPE_SINGLE = "Single sharing";
     public static final String SHARING_TYPE_TWO = "Two sharing";
     public static final String SHARING_TYPE_THREE = "Three sharing";

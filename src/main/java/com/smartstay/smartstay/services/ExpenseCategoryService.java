@@ -300,4 +300,35 @@ public class ExpenseCategoryService {
     public com.smartstay.smartstay.dao.ExpenseCategory getExpenseCategoryById(Long id) {
         return expensesCategoryRepository.findByCategoryId(id);
     }
+
+    public boolean checkSubCategoryValid(String hostelId, Long categoryId, Long subCategoryId) {
+        com.smartstay.smartstay.dao.ExpenseCategory expenseCategory = expensesCategoryRepository.findByHostelIdAndCategoryId(hostelId, categoryId);
+        if (expenseCategory == null) {
+            return false;
+        }
+
+        List<ExpenseSubCategory> liseExpenseSubCategory = expenseCategory
+                .getListSubCategories();
+        if (liseExpenseSubCategory == null || liseExpenseSubCategory.isEmpty()) {
+            return false;
+        }
+
+        ExpenseSubCategory expenseSubCategory1 = liseExpenseSubCategory
+                .stream()
+                .filter(i -> i.getSubCategoryId().equals(subCategoryId))
+                .findFirst()
+                .orElse(null);
+        if (expenseSubCategory1 == null) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkCategoryIdValid(String hostelId, Long categoryId) {
+        com.smartstay.smartstay.dao.ExpenseCategory expenseCategory = expensesCategoryRepository.findByHostelIdAndCategoryId(hostelId, categoryId);
+        if (expenseCategory == null) {
+            return false;
+        }
+        return true;
+    }
 }

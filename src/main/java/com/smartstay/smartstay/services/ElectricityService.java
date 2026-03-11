@@ -747,7 +747,13 @@ public class ElectricityService {
         }
 
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        List<Rooms> listRooms = roomsService.findByHostelId(hostelId);
+        List<Rooms> deletedRooms = listRooms
+                .stream()
+                .filter(i -> i.getIsDeleted() != null && i.getIsDeleted().equals(Boolean.TRUE))
+                .toList();
         List<ElectricityReadings> latestReadings = electricityReadingRepository.getLatestReadingOfAllRooms(hostelId);
+
 
         List<BedHistoryByRoomId> listBeds = null;
         HashMap<Integer, Integer> occupantsCounts;
