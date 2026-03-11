@@ -194,6 +194,15 @@ public class BankingService {
 
         List<Bank> listBankings = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId)
                 .stream()
+                .filter(i -> {
+                    if (i.isDeleted()) {
+                        if (i.getBalance() != null) {
+                            return true;
+                        }
+                        return false;
+                    }
+                    return true;
+                })
                 .map(i -> new BankingListMapper().apply(i))
                 .collect(Collectors.toList());
 

@@ -1051,7 +1051,7 @@ public class InvoiceV1Service {
 
             listInvoiceItems.add(responseItem);
         }
-        List<PaymentHistoryProjection> paymentHistoryList = transactionService.getPaymentHistoryByInvoiceId(invoiceId);
+        List<InvoiceRefundHistory> paymentHistoryList = transactionService.findByInvoiceId(invoiceId);
 
         InvoiceInfo invoiceInfo = new InvoiceInfo(subTotal, 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), 0.0, listInvoiceItems, null);
 

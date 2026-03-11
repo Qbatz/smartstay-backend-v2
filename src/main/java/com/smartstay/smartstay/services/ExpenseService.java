@@ -500,9 +500,17 @@ public class ExpenseService {
                 return new ResponseEntity<>(Utils.INVALID_CATEGORY_ID, HttpStatus.BAD_REQUEST);
             }
 
-            if (!expensesV1.getCategoryId().equals(updateExpense.categoryId())) {
-                if (updateExpense.subCategoryId() == null || updateExpense.subCategoryId() == 0) {
+            boolean hasSubCategory = expenseCategoryService.checkCategoryHavingSubCategory(hostelId, updateExpense.categoryId());
+            if (hasSubCategory) {
+                if (!Utils.checkNullOrEmpty(updateExpense.subCategoryId())) {
                     return new ResponseEntity<>(Utils.SUB_CATEGORY_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
+            }
+            else {
+                if (expensesV1.getCategoryId().equals(updateExpense.categoryId())) {
+                    if (expensesV1.getSubCategoryId() != null) {
+                        expensesV1.setSubCategoryId(null);
+                    }
                 }
             }
 

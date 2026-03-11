@@ -105,6 +105,7 @@ public class CustomersService {
 
     public static AdvanceInfo toAdvanceInfoResponse(Advance advance, InvoiceResponse invoicesV1, double bookingAmount) {
         if (advance == null) return null;
+        boolean canEditAdvance = false;
         double maintenanceAmount = 0.0;
         double otherDeductionsAmount = 0.0;
         double invoicePaidAmount = 0.0;
@@ -116,6 +117,10 @@ public class CustomersService {
             dueDate = invoicesV1.dueDate();
             paymentStatus = invoicesV1.paymentStatus();
             paidAmount = invoicesV1.paidAmount();
+        }
+
+        if (advance.getAdvanceAmount() > 0) {
+            canEditAdvance = true;
         }
 
         if (advance.getDeductions() != null && !advance.getDeductions().isEmpty()) {
@@ -133,7 +138,7 @@ public class CustomersService {
 
         double dueAmount = (advance.getAdvanceAmount() != 0) ? advance.getAdvanceAmount() - invoicePaidAmount : 0.0;
 
-        return new AdvanceInfo(advance.getInvoiceDate() != null ? Utils.dateToString(advance.getInvoiceDate()) : null, dueDate, dueAmount, advance.getAdvanceAmount(), bookingAmount, paymentStatus, maintenanceAmount, otherDeductionsAmount, paidAmount);
+        return new AdvanceInfo(advance.getInvoiceDate() != null ? Utils.dateToString(advance.getInvoiceDate()) : null, dueDate, dueAmount, advance.getAdvanceAmount(), bookingAmount, paymentStatus, maintenanceAmount, otherDeductionsAmount, paidAmount, canEditAdvance);
     }
 
     @Autowired

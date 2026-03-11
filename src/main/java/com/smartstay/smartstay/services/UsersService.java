@@ -444,6 +444,29 @@ public class UsersService {
             user.setProfileUrl(profilePic);
         }
 
+        String mobileStatus = "";
+        String emailStatus = "";
+
+        if (updateProfile.emailId() != null && !updateProfile.emailId().isBlank()) {
+           List<Users> listUsers = userRepository.findByEmailForUpdateUser(updateProfile.emailId(), authentication.getName());
+           if (!listUsers.isEmpty()) {
+              emailStatus = Utils.EMAIL_ID_EXISTS;
+           }
+        }
+
+        if (updateProfile.mobile() != null && !updateProfile.mobile().isBlank()) {
+            List<Users> listUsers = userRepository.findByMobileForUpdateUser(updateProfile.mobile(), authentication.getName());
+            if (!listUsers.isEmpty()) {
+                mobileStatus = Utils.MOBILE_NO_EXISTS;
+            }
+        }
+
+        if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
+            return new ResponseEntity<>(
+                    new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
+                    HttpStatus.BAD_REQUEST);
+        }
+
         Users usersForUpdate = new ProfileUplodWrapper(user).apply(updateProfile);
 
         userRepository.save(usersForUpdate);

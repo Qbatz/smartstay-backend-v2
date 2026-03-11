@@ -19,6 +19,15 @@ public interface UserRepository extends JpaRepository<Users, String> {
         Users findUserByUserIdAndParentId(String userId, String parentId);
 
         Users findUserByParentId(String parentId);
+        @Query("""
+                SELECT usr FROM Users usr WHERE usr.emailId=:emailId AND usr.userId !=:userId
+                """)
+        List<Users> findByEmailForUpdateUser(String emailId, String userId);
+
+        @Query("""
+                SELECT usr FROM Users usr WHERE usr.mobileNo=:mobile AND usr.userId !=:userId
+                """)
+        List<Users> findByMobileForUpdateUser(String mobile, String userId);
 
         List<Users> findAllByParentId(String parentId);
 
