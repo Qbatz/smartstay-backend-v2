@@ -59,6 +59,11 @@ public class TemplatesService {
     @Autowired
     private BankingRepository bankingRepository;
 
+    @Autowired
+    private SubscriptionService subscriptionService;
+
+
+
 
     public int initialTemplateSetup(com.smartstay.smartstay.payloads.templates.BillTemplates tmpl) {
 
@@ -248,6 +253,10 @@ public class TemplatesService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         BillTemplates templates = templateRepository.getByHostelId(hostelId);
         if (templates == null) {
             return new ResponseEntity<>(Utils.TEMPLATE_NOT_AVAILABLE, HttpStatus.NO_CONTENT);
@@ -311,6 +320,10 @@ public class TemplatesService {
 
         if (!userHostelService.checkHostelAccess(loginId, hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         Optional<BillingRules> optionalBillingRule =
@@ -570,6 +583,10 @@ public class TemplatesService {
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         Integer finalTtId = ttId;

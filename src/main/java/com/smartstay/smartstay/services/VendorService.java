@@ -38,6 +38,9 @@ public class VendorService {
     @Autowired
     private UploadFileToS3 uploadToS3;
 
+    @Autowired
+    private SubscriptionService subscriptionService;
+
     public ResponseEntity<?> getAllVendors(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -96,6 +99,11 @@ public class VendorService {
         if (existingVendor == null) {
             return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.NO_CONTENT);
         }
+
+        if (!subscriptionService.validateSubscription(existingVendor.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         String profileImage = null;
         if (file != null) {
             profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "Vendor/Logo");
@@ -163,6 +171,10 @@ public class VendorService {
             return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
+        if (!subscriptionService.validateSubscription(payloads.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         String profileImage = null;
         if (file != null) {
             profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "Vendor/Logo");
@@ -206,6 +218,9 @@ public class VendorService {
         }
         VendorV1 existingVendor = vendorRepository.findByVendorId(vendorId);
         if (existingVendor != null) {
+            if (!subscriptionService.validateSubscription(existingVendor.getHostelId())) {
+                return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+            }
             vendorRepository.delete(existingVendor);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
