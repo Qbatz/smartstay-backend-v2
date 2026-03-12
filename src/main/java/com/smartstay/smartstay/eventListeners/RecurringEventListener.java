@@ -45,6 +45,8 @@ public class RecurringEventListener {
     private CustomersConfigService customersConfigService;
     @Autowired
     private CustomerWalletHistoryService customerWalletHistoryService;
+    @Autowired
+    private RecurringTrackerService recurringTrackerService;
 
     @Async
     @EventListener
@@ -277,7 +279,9 @@ public class RecurringEventListener {
                 })
                 .toList();
 
+
         electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
+        recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId());
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
 
     }

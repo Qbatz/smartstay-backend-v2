@@ -6,5 +6,5 @@ public record InvoiceRefundHistory(String referenceNumber,
                                    String paymentMode,
                                    double amount,
                                    String paidBy,
-                                   String returnedFrom) {
+                                   String bankAccount) {
 }

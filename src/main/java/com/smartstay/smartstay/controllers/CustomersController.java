@@ -36,6 +36,11 @@ public class CustomersController {
     public ResponseEntity<?> createCustomer(@PathVariable("customerId") String customerId, @Valid @RequestBody CheckInRequest payloads) {
         return customersService.addCheckIn(customerId, payloads);
     }
+
+    @PostMapping("/new/check-in/{customerId}")
+    public ResponseEntity<?> createCustomerNew(@PathVariable("customerId") String customerId, @Valid @RequestBody CheckInRequest payloads) {
+        return customersService.addCheckIn(customerId, payloads);
+    }
     @PostMapping("/save/{hostelId}")
     public ResponseEntity<?> addCustomer(@PathVariable("hostelId") String hostelId, @Valid @RequestPart(value = "payloads") AddCustomerPartialInfo customerInfo, @RequestPart(value = "profilePic", required = false) MultipartFile file) {
         return customersService.addCustomerPartialInfo(hostelId, customerInfo, file);

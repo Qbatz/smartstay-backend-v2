@@ -881,6 +881,9 @@ public class BedsService {
 
     public BedsStatus getBedCountsForDashboard(String hostelId) {
         List<Beds> listBeds = bedsRepository.findByHostelIdAndIsDeletedFalse(hostelId);
+        List<Integer> roomIds = listBeds.stream()
+                .map(Beds::getRoomId)
+                .toList();
         Integer totalBeds = listBeds.size();
         long occupiedBeds = listBeds
                 .stream()
@@ -967,5 +970,18 @@ public class BedsService {
 
     public List<Beds> findFilledBeds(String hostelId) {
         return bedsRepository.findFilledBeds(hostelId);
+    }
+
+    public void deleteBedsForFloorDeletion(List<Integer> roomIds, String hostelId) {
+        List<Beds> listBeds = bedsRepository.findByHostelIdAndRoomIdIn(hostelId, roomIds);
+        List<Beds> deletableBeds = listBeds
+                .stream()
+                .map(i -> {
+                    i.setIsDeleted(true);
+                    return i;
+                })
+                .toList();
+
+        bedsRepository.saveAll(deletableBeds);
     }
 }

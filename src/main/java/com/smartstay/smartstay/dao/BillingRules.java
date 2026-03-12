@@ -17,6 +17,10 @@ public class BillingRules {
     private Integer billDueDays;
     private Integer noticePeriod;
     private boolean isInitial;
+    private boolean hasGracePeriod;
+    private Integer gracePeriodDays;
+    //From billing type enum
+    private String typeOfBilling;
     private Date startFrom;
     private Date endTill;
     private Date createdAt;
