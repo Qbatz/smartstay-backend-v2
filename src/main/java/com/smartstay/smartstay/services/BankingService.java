@@ -501,6 +501,7 @@ public class BankingService {
         BankTransactionsV1 bankTransactionsV11 = new BankTransactionsV1();
         bankTransactionsV11.setBankId(balance.bankId());
         bankTransactionsV11.setHostelId(hostelId);
+
         bankTransactionsV11.setType("CREDIT");
         bankTransactionsV11.setSource(BankSource.DEPOSIT.name());
         if (bankTransactionsV1 != null && bankTransactionsV1.getAccountBalance() != null) {
@@ -511,6 +512,7 @@ public class BankingService {
         bankTransactionsV11.setAmount(balance.balance());
         bankTransactionsV11.setTransactionDate(new Date());
         bankTransactionsV11.setCreatedAt(new Date());
+        bankTransactionsV11.setIsDeleted(false);
         bankTransactionsV11.setCreatedBy(authentication.getName());
         transactionService.saveTransaction(bankTransactionsV11);
 
@@ -593,7 +595,7 @@ public class BankingService {
         BankTransactionsV1 bankTransactionsV11 = new BankTransactionsV1();
         bankTransactionsV11.setBankId(selfTransfer.fromBankId());
         bankTransactionsV11.setHostelId(hostelId);
-        bankTransactionsV11.setType("DEBIT");
+        bankTransactionsV11.setType(BankTransactionType.DEBIT.name());
         bankTransactionsV11.setSource(BankSource.SELF_TRANSFER.name());
         if (fromAccountTransaction != null && fromAccountTransaction.getAccountBalance() != null) {
             bankTransactionsV11.setAccountBalance(fromAccountTransaction.getAccountBalance() - selfTransfer.balance());
@@ -602,6 +604,7 @@ public class BankingService {
         }
         bankTransactionsV11.setAmount(selfTransfer.balance());
         bankTransactionsV11.setTransactionDate(new Date());
+        bankTransactionsV11.setIsDeleted(false);
         bankTransactionsV11.setCreatedAt(new Date());
         bankTransactionsV11.setCreatedBy(authentication.getName());
         transactionService.saveTransaction(bankTransactionsV11);
@@ -610,7 +613,8 @@ public class BankingService {
         BankTransactionsV1 toBankTransactions = new BankTransactionsV1();
         toBankTransactions.setBankId(selfTransfer.toBankId());
         toBankTransactions.setHostelId(hostelId);
-        toBankTransactions.setType("CREDIT");
+        bankTransactionsV11.setIsDeleted(false);
+        toBankTransactions.setType(BankTransactionType.CREDIT.name());
         toBankTransactions.setSource(BankSource.SELF_TRANSFER.name());
         if (toAccountTransaction != null && toAccountTransaction.getAccountBalance() != null) {
             toBankTransactions.setAccountBalance(toAccountTransaction.getAccountBalance() + selfTransfer.balance());

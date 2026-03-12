@@ -160,6 +160,9 @@ public class Utils {
     public static final String CHANGE_BED_SAME_DAY_ERROR = "Cannot change the bed on the same day customer is joined";
     public static final String CUSTOMER_VERIFIED_KYC = "Customer is already verified";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
+    public static final String INVALID_DUE_DYS = "Invalid due days";
+    public static final String INVALID_NOTICE_DAYS = "Invalid notice days";
+    public static final String INVALID_GRACE_PERIOD = "Invalid grace period.";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
     public static final String PERMISSION_UPDATE = "UPDATE";

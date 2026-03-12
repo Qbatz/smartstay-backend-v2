@@ -18,7 +18,6 @@ public class RecurringTrackerService {
 
     public void markAsInvoiceGenerated(String hostelId) {
         Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DAY_OF_MONTH, 1);
 
         int billingDay = Utils.findDateFromDate(calendar.getTime());
         RecurringTracker rt = new RecurringTracker();

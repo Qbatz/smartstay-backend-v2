@@ -449,20 +449,20 @@ public class UsersService {
         String emailStatus = "";
 
         if (updateProfile.emailId() != null && !updateProfile.emailId().isBlank()) {
-           int userCount = userRepository.getUsersCountByEmail(updateProfile.emailId(), authentication.getName());
+           int userCount = userRepository.getUsersCountByEmail(authentication.getName(), updateProfile.emailId());
            if (userCount > 0) {
               emailStatus = Utils.EMAIL_ID_EXISTS;
            }
         }
 
         if (updateProfile.mobile() != null && !updateProfile.mobile().isBlank()) {
-            int userCount = userRepository.getUsersCountByMobile(updateProfile.mobile(), authentication.getName());
+            int userCount = userRepository.getUsersCountByMobile(authentication.getName(), updateProfile.mobile());
             if (userCount > 0) {
                 mobileStatus = Utils.MOBILE_NO_EXISTS;
             }
         }
 
-        if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
+        if (!mobileStatus.isBlank() || !emailStatus.isBlank()) {
             return new ResponseEntity<>(
                     new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
                     HttpStatus.BAD_REQUEST);

@@ -321,6 +321,12 @@ public class HostelService {
             isSubscriptionActive = subscriptionDto.isValid();
         }
         int notificationCount = notificationService.getUnreadNotificationCount(hostelId);
+        List<BookingsV1> bookingsV1 = bookingsService.checkAllByHostelId(hostelId);
+        boolean canModifyBilling = true;
+        if (bookingsV1 != null && !bookingsV1.isEmpty()) {
+            canModifyBilling = false;
+        }
+
         HostelDetails details = new HostelDetails(hostel.getHostelId(),
                 hostel.getMainImage(),
                 hostel.getCity(),
@@ -334,7 +340,10 @@ public class HostelService {
                 hostel.getState(),
                 hostel.getStreet(),
                 Utils.dateToString(hostel.getUpdatedAt()),
-                isSubscriptionActive, nextBillingDate, remainingDays, floorDetails.size(), floorDetails,notificationCount);
+                isSubscriptionActive, nextBillingDate,
+                remainingDays, floorDetails.size(),
+                floorDetails,notificationCount,
+                canModifyBilling);
 
         return ResponseEntity.ok(details);
     }
@@ -621,12 +630,19 @@ public class HostelService {
             }
         }
 
+        String errorMessage = checkAndReturnAnyPayloadError(billRules);
+        if (errorMessage == null) {
+            return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
+        }
+
+
 
         BillingDates billDates = getBillingRuleOnDate(hostelId, new Date());
 
         BillingRules currentBillingRules = hostelConfigService.getCurrentBillingRule(hostel.getHostelId());
         BillingRules newBillingRules =  new BillingRules();
         newBillingRules.setTypeOfBilling(currentBillingRules.getTypeOfBilling());
+
         if (billRules.calculationType() != null) {
             if (billRules.calculationType().equalsIgnoreCase("Fixed")) {
                 newBillingRules.setTypeOfBilling(BillingTypeEnum.FIXED_DATE.name());
@@ -704,6 +720,68 @@ public class HostelService {
 
         return new ResponseEntity<>(HttpStatus.OK);
 
+    }
+
+    private String checkAndReturnAnyPayloadError(BillRules billRules) {
+        String errorMessage = null;
+
+        if (billRules != null && billRules.startDate() != null) {
+            int sDate = 0;
+            try {
+                sDate = Integer.parseInt(String.valueOf(billRules.startDate()));
+            }
+            catch (Exception e) {
+                sDate = 0;
+            }
+
+            if (sDate == 0 || sDate > 28) {
+                errorMessage = Utils.INVALID_STARTING_DATE;
+            }
+        }
+
+        if (billRules != null && billRules.dueDate() != null) {
+            int dueDays = 0;
+            try {
+                dueDays = Integer.parseInt(String.valueOf(billRules.startDate()));
+            }
+            catch (Exception e) {
+                dueDays = 0;
+            }
+
+            if (dueDays == 0 || dueDays > 28) {
+                errorMessage = Utils.INVALID_DUE_DYS;
+            }
+        }
+
+        if (billRules != null && billRules.noticeDays() != null) {
+            int noticeDays = 0;
+            try {
+                noticeDays = Integer.parseInt(String.valueOf(billRules.startDate()));
+            }
+            catch (Exception e) {
+                noticeDays = 0;
+            }
+
+            if (noticeDays == 0 || noticeDays > 28) {
+                errorMessage = Utils.INVALID_NOTICE_DAYS;
+            }
+        }
+
+        if (billRules != null && billRules.gracePeriodDays() != null) {
+            int gracePeriodDays = 0;
+            try {
+                gracePeriodDays = Integer.parseInt(String.valueOf(billRules.startDate()));
+            }
+            catch (Exception e) {
+                gracePeriodDays = 0;
+            }
+
+            if (gracePeriodDays == 0 || gracePeriodDays > 28) {
+                errorMessage = Utils.INVALID_GRACE_PERIOD;
+            }
+        }
+
+        return errorMessage;
     }
 
     public BillingDates getBillingRuleOnDate(String hostelId, Date date) {
