@@ -1297,43 +1297,45 @@ public class CustomersService {
         HostelV1 hostelV1 = hostelService.getHostelInfo(customers.getHostelId());
         if (hostelV1 != null) {
 
-//            int lastRulingBillDate = 1;
-//            if (!hostelV1.getBillingRulesList().isEmpty()) {
-//                lastRulingBillDate  = hostelV1.getBillingRulesList().get(0).getBillingStartDate();
-//            }
-
-
             Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
             BillingDates billingDates = hostelService.getBillingRuleOnDate(customers.getHostelId(), joiningDate);
-
-//            Date lastDate = null;
-//            Date startDate = null;
-//            if (billingDates != null) {
-//                lastDate = billingDates.currentBillEndDate();
-//                startDate = billingDates.currentBillStartDate();
-//            } else {
-//                Calendar calendar = Calendar.getInstance();
-//                calendar.set(Calendar.DAY_OF_MONTH, 1);
-//                startDate = calendar.getTime();
-//                lastDate = Utils.findLastDate(1, new Date());
-//            }
 
 
             Calendar c = Calendar.getInstance();
             c.setTime(joiningDate);
 
+            if (billingDates.hasGracePeriod()) {
+                Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
+                if (Utils.compareWithTwoDates(joiningDate, gracePeriodEndingDate) <= 0) {
+                    double finalRent = payloads.rentalAmount();
+                    invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
+                }
+                else {
+                    long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                    long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
+                    double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+                    double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                    if (finalRent > payloads.rentalAmount()) {
+                        finalRent = payloads.rentalAmount();
+                    }
 
-            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
-            long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
-            double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
-            double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
-            if (finalRent > payloads.rentalAmount()) {
-                finalRent = payloads.rentalAmount();
+                    invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
+
+                }
             }
+            else {
+                long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
+                double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+                double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                if (finalRent > payloads.rentalAmount()) {
+                    finalRent = payloads.rentalAmount();
+                }
 
-            invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
+                invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
 
+            }
         }
 
     }

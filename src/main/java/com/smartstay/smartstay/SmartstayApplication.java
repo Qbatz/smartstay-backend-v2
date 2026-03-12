@@ -96,4 +96,65 @@ public class SmartstayApplication {
 //		};
 //	}
 
+//	@Bean
+//	CommandLineRunner deleteRoomForDeletedFloors(FloorRepository floorRepository, RoomRepository roomRepository, BedsRepository bedsRepository) {
+//		return args -> {
+//			List<Floors> listFloors = floorRepository.findByIsDeletedIsTrue();
+//			if (listFloors != null && !listFloors.isEmpty()) {
+//				List<Integer> floorIds = listFloors
+//						.stream()
+//						.map(Floors::getFloorId)
+//						.distinct()
+//						.toList();
+//
+//				List<Rooms> listRooms = roomRepository.findAllByFloorIdIn(floorIds);
+//				if (!listRooms.isEmpty()) {
+//					List<Integer> roomIds = listRooms
+//							.stream()
+//							.map(Rooms::getRoomId)
+//							.toList();
+//
+//					List<Rooms> deletableRooms = listRooms
+//							.stream()
+//							.map(i -> {
+//								i.setIsDeleted(true);
+//								return i;
+//							})
+//							.toList();
+//					roomRepository.saveAll(deletableRooms);
+//
+//					List<Beds> listBeds = bedsRepository.findByRoomIdIn(roomIds);
+//					if (!listBeds.isEmpty()) {
+//						List<Beds> deletableBeds = listBeds
+//								.stream()
+//								.map(i -> {
+//									i.setIsDeleted(true);
+//									return i;
+//								})
+//								.toList();
+//
+//						bedsRepository.saveAll(deletableBeds);
+//					}
+//				}
+//			}
+//		};
+//	}
+
+//	@Bean
+//	CommandLineRunner updateBillingRule(BillingRuleRepository billingRuleRepository) {
+//		return args -> {
+//			List<BillingRules> listBillRules = billingRuleRepository.findAll()
+//					.stream()
+//					.map(i -> {
+//						i.setHasGracePeriod(false);
+//						i.setGracePeriodDays(0);
+//						i.setTypeOfBilling(BillingTypeEnum.FIXED_DATE.name());
+//						return i;
+//					})
+//					.toList();
+//
+//			billingRuleRepository.saveAll(listBillRules);
+//		};
+//	}
+
 }

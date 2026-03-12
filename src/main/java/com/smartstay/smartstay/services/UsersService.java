@@ -29,6 +29,7 @@ import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
 import com.smartstay.smartstay.responses.user.MobileLogin;
 import com.smartstay.smartstay.responses.user.OtpResponse;
+import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -448,15 +449,15 @@ public class UsersService {
         String emailStatus = "";
 
         if (updateProfile.emailId() != null && !updateProfile.emailId().isBlank()) {
-           List<Users> listUsers = userRepository.findByEmailForUpdateUser(updateProfile.emailId(), authentication.getName());
-           if (!listUsers.isEmpty()) {
+           int userCount = userRepository.getUsersCountByEmail(updateProfile.emailId(), authentication.getName());
+           if (userCount > 0) {
               emailStatus = Utils.EMAIL_ID_EXISTS;
            }
         }
 
         if (updateProfile.mobile() != null && !updateProfile.mobile().isBlank()) {
-            List<Users> listUsers = userRepository.findByMobileForUpdateUser(updateProfile.mobile(), authentication.getName());
-            if (!listUsers.isEmpty()) {
+            int userCount = userRepository.getUsersCountByMobile(updateProfile.mobile(), authentication.getName());
+            if (userCount > 0) {
                 mobileStatus = Utils.MOBILE_NO_EXISTS;
             }
         }
@@ -751,6 +752,14 @@ public class UsersService {
                     return new ResponseEntity<>("This user cannot be deleted", HttpStatus.FORBIDDEN);
                 }
 
+                List<UserHostel> listHostelAccess = userHostelService.listAllUserHostel(users.getParentId(), userId);
+                List<String> listHostelIds = listHostelAccess
+                        .stream()
+                                .map(UserHostel::getHostelId)
+                                        .toList();
+
+                bankingService.deleteBankForUser(inputUser.getUserId(), listHostelIds);
+
                 inputUser.setDeleted(true);
                 inputUser.setActive(false);
                 userRepository.save(inputUser);
@@ -788,10 +797,15 @@ public class UsersService {
                 if (payloads == null) {
                     return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
                 }
+
+                String mobileStatus = "";
+                String emailStatus = "";
+                boolean isNameModified = false;
+
                 if (payloads.mobile() != null) {
                     int isMobileExsists = userRepository.getUsersCountByMobile(adminId, payloads.mobile());
                     if (isMobileExsists > 0) {
-                        return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
+                        mobileStatus = Utils.MOBILE_NO_EXISTS;
                     }
                 }
 
@@ -807,9 +821,15 @@ public class UsersService {
                 }
                 if (payloads.mailId() != null && !payloads.mailId().equalsIgnoreCase("")) {
                     if (userRepository.getUsersCountByEmail(adminId, adminUser.getEmailId()) > 0) {
-                        return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);
+                        emailStatus = Utils.EMAIL_ID_EXISTS;
                     }
                     adminUser.setEmailId(payloads.mailId());
+                }
+
+                if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
+                    return new ResponseEntity<>(
+                            new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
+                            HttpStatus.BAD_REQUEST);
                 }
 
                 String pic = null;
@@ -822,14 +842,17 @@ public class UsersService {
                 }
 
                 if (payloads.firstName() != null && !payloads.firstName().equalsIgnoreCase("")) {
+                    isNameModified = true;
                     adminUser.setFirstName(payloads.firstName());
                 }
 
                 if (payloads.lastName() != null && !payloads.lastName().equalsIgnoreCase("")) {
                     adminUser.setLastName(payloads.lastName());
+                    isNameModified = true;
                 } else {
                     if (adminUser.getLastName() != null) {
                         adminUser.setLastName(null);
+                        isNameModified = true;
                     }
                 }
                 if (payloads.mobile() != null && !payloads.mobile().equalsIgnoreCase("")) {
@@ -869,6 +892,15 @@ public class UsersService {
                 adminUser.setLastUpdate(new Date());
 
                 userRepository.save(adminUser);
+                if (isNameModified) {
+                    String name = NameUtils.getFullName(adminUser.getFirstName(), adminUser.getLastName());
+                    List<String> hostelIdsThatAdminHasAccess = userHostelService.findByUserId(adminUser.getUserId())
+                            .stream()
+                            .map(UserHostel::getHostelId)
+                            .toList();
+
+                    bankingService.updateCashAccountNames(hostelIdsThatAdminHasAccess, adminUser.getUserId(), name);
+                }
                 userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
                         ActivitySourceType.CHANGE_ADMIN_PASSWORD.name(), adminUser.getUserId(), user);
                 return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
@@ -897,16 +929,38 @@ public class UsersService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        String mobileStatus = "";
+        String emailStatus = "";
+        boolean isNameModified = false;
+
         Users userToUpdate = userRepository.findUserByUserId(userId);
         if (userToUpdate == null) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
         }
         if (Utils.checkNullOrEmpty(payloads.emailId())) {
             if (userRepository.getUsersCountByEmail(userToUpdate.getUserId(), payloads.emailId()) > 0) {
-                return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);
+//                return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);\
+                emailStatus = Utils.EMAIL_ID_EXISTS;
             }
             userToUpdate.setEmailId(payloads.emailId());
         }
+
+        if (Utils.checkNullOrEmpty(payloads.mobile())) {
+            if (userRepository.getUsersCountByMobile(userToUpdate.getUserId(), payloads.mobile()) > 0) {
+//                return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);\
+                mobileStatus = Utils.MOBILE_NO_EXISTS;
+            }
+            userToUpdate.setEmailId(payloads.emailId());
+        }
+
+
+
+        if (!mobileStatus.isEmpty() || !emailStatus.isEmpty()) {
+            return new ResponseEntity<>(
+                    new AdminUserResponse(mobileStatus, emailStatus, "Validation failed"),
+                    HttpStatus.BAD_REQUEST);
+        }
+
         if (Utils.checkNullOrEmpty(payloads.role())) {
             if (!rolesService.checkRoleIdExistForHostel(payloads.role(), hostelId)) {
                 return new ResponseEntity<>(Utils.INVALID_ROLE, HttpStatus.BAD_REQUEST);
@@ -915,6 +969,7 @@ public class UsersService {
         }
 
         if (Utils.checkNullOrEmpty(payloads.name())) {
+            isNameModified = true;
             String[] names = payloads.name().split(" ");
             userToUpdate.setFirstName(names[0]);
             if (names.length > 1) {
@@ -934,6 +989,10 @@ public class UsersService {
         userToUpdate.setLastUpdate(new Date());
 
         userRepository.save(userToUpdate);
+        if (isNameModified) {
+            bankingService.updateBankAccountName(payloads.name(), userId, hostelId);
+        }
+
         userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
                 ActivitySourceType.UPDATE_ADMIN_PROFILE.name(), userToUpdate.getUserId(), users);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);

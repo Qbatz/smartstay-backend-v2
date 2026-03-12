@@ -71,6 +71,7 @@ public class BankTransactionService {
             transactionsV1.setType(transactionDto.type());
             transactionsV1.setSource(transactionDto.source());
             transactionsV1.setSourceId(sourceId);
+            transactionsV1.setIsDeleted(false);
             transactionsV1.setHostelId(transactionDto.hostelId());
             transactionsV1.setCreatedAt(new Date());
             transactionsV1.setCreatedBy(authentication.getName());
@@ -125,6 +126,7 @@ public class BankTransactionService {
                 transactionsV1.setTransactionNumber(transactionId);
                 transactionsV1.setSource(BankSource.BOOKING_REFUND.name());
                 transactionsV1.setSourceId(sourceId);
+                transactionsV1.setIsDeleted(false);
                 transactionsV1.setCreatedAt(new Date());
                 transactionsV1.setCreatedBy(authentication.getName());
 
@@ -194,6 +196,7 @@ public class BankTransactionService {
         transactionsV1.setSource(BankSource.INVOICE.name());
         transactionsV1.setTransactionNumber(transactionId);
         transactionsV1.setSourceId(sourceId);
+        transactionsV1.setIsDeleted(false);
         transactionsV1.setHostelId(invoicesV1.getHostelId());
         transactionsV1.setCreatedAt(new Date());
         transactionsV1.setCreatedBy(authentication.getName());
@@ -235,6 +238,7 @@ public class BankTransactionService {
         transactionsV1.setSource(BankSource.ASSETS.name());
         transactionsV1.setSourceId(String.valueOf(assetId));
         transactionsV1.setHostelId(hostelId);
+        transactionsV1.setIsDeleted(false);
         transactionsV1.setCreatedAt(new Date());
         transactionsV1.setCreatedBy(authentication.getName());
 

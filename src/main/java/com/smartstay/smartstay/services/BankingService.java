@@ -743,6 +743,7 @@ public class BankingService {
         return true;
     }
 
+
     public Double sumBalanceByHostelId(String hostelId) {
         return bankingV1Repository.sumBalanceByHostelId(hostelId);
     }
@@ -783,6 +784,67 @@ public class BankingService {
             bankingV1.setBalance(balanceAmount + expAmount);
 
             bankingV1Repository.save(bankingV1);
+        }
+    }
+
+    public void deleteBankForUser(String userId, List<String> listHostelIds) {
+        List<BankingV1> listBankAccounts = bankingV1Repository
+                .findByUserIdAndHostelIdIn(userId, listHostelIds);
+
+        if (listBankAccounts != null && !listBankAccounts.isEmpty()) {
+            List<BankingV1> deletableBankings = listBankAccounts
+                    .stream()
+                    .map(i -> {
+                        i.setDeleted(true);
+                        i.setActive(false);
+                        return i;
+                    })
+                    .toList();
+
+            bankingV1Repository.saveAll(deletableBankings);
+        }
+    }
+
+    public void updateBankAccountName(String name, String userId, String hostelId) {
+        List<BankingV1> userAccounts = bankingV1Repository.findByUserIdAndHostelId(userId, hostelId);
+        if (!userAccounts.isEmpty()) {
+            List<BankingV1> cashAccounts = userAccounts
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()))
+                    .toList();
+            if (cashAccounts != null && !cashAccounts.isEmpty()) {
+                List<BankingV1> modifiedBankAccount = cashAccounts
+                        .stream()
+                        .map(i -> {
+                            i.setAccountHolderName(name);
+                            return i;
+                        })
+                        .toList();
+
+                bankingV1Repository.saveAll(modifiedBankAccount);
+            }
+        }
+    }
+
+    public void updateCashAccountNames(List<String> hostelIdsThatAdminHasAccess, String userId, String name) {
+        List<BankingV1> listBankings = bankingV1Repository.findByUserIdAndHostelIdIn(userId, hostelIdsThatAdminHasAccess);
+        if (listBankings != null && !listBankings.isEmpty()) {
+            List<BankingV1> cashAccounts = listBankings
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()))
+                    .toList();
+
+            if (cashAccounts != null && !cashAccounts.isEmpty()) {
+                List<BankingV1> modifiedBankAccount = cashAccounts
+                        .stream()
+                        .map(i -> {
+                            i.setAccountHolderName(name);
+                            return i;
+                        })
+                        .toList();
+
+                bankingV1Repository.saveAll(modifiedBankAccount);
+            }
         }
     }
 }

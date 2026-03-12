@@ -77,7 +77,7 @@ public class ExpenseService {
         List<ExpensesCategory> listExpensesCategory = expenseCategoryService.getAllActiveCategories(hostelId);
         List<DebitsBank> listBanks = bankingService.getAllBankForReturn(hostelId);
 
-        InitializeExpenses initializeExpenses = new InitializeExpenses(listExpensesCategory, listBanks);
+        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks);
 
         return new ResponseEntity<>(initializeExpenses, HttpStatus.OK);
 

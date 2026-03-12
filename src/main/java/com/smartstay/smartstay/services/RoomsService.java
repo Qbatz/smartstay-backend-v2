@@ -308,4 +308,25 @@ public class RoomsService {
         }
         return listRooms;
     }
+
+    public void deleteRoomByFloorId(Integer floorId, String hostelId) {
+        List<Rooms> listRooms = roomRepository.findByHostelIdAndFloorId(hostelId, floorId);
+        List<Integer> roomIds = listRooms
+                .stream()
+                .map(Rooms::getRoomId)
+                .distinct()
+                .toList();
+        List<Rooms> deletableRooms = listRooms
+                .stream()
+                .map(i -> {
+                    i.setIsDeleted(true);
+
+                    return i;
+                })
+                .toList();
+
+        roomRepository.saveAll(deletableRooms);
+
+        bedsService.deleteBedsForFloorDeletion(roomIds, hostelId);
+    }
 }

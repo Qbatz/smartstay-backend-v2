@@ -69,6 +69,7 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
 
     BankingV1 findByBankId(String bankId);
     BankingV1 findByHostelIdAndBankId(String hostelId, String bankId);
+    List<BankingV1> findByUserIdAndHostelIdIn(String userId, List<String> hostelId);
 
     @Query("SELECT COUNT(b) > 0 " +
            "FROM BankingV1 b " +

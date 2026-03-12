@@ -8,10 +8,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
-import com.smartstay.smartstay.ennum.ActivitySource;
-import com.smartstay.smartstay.ennum.ActivitySourceType;
-import com.smartstay.smartstay.ennum.BedStatus;
-import com.smartstay.smartstay.ennum.EBReadingType;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.HostelEvents;
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
@@ -376,7 +373,7 @@ public class HostelService {
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate);
+        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate, billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(), billingRules.getTypeOfBilling());
     }
 
     public BillingDates getBillStartAndEndDateBasedOnDate(String hostelId, Date date) {
@@ -396,7 +393,7 @@ public class HostelService {
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate);
+        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate, billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(), billingRules.getTypeOfBilling());
     }
 
 
@@ -617,15 +614,43 @@ public class HostelService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        List<BookingsV1> bookingsV1 = bookingsService.checkAllByHostelId(hostelId);
-        if (bookingsV1 != null && !bookingsV1.isEmpty()) {
-            return new ResponseEntity<>(Utils.CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR, HttpStatus.BAD_REQUEST);
+        if (billRules.startDate() != null || (billRules.calculationType() != null && !billRules.calculationType().isEmpty())) {
+            List<BookingsV1> bookingsV1 = bookingsService.checkAllByHostelId(hostelId);
+            if (bookingsV1 != null && !bookingsV1.isEmpty()) {
+                return new ResponseEntity<>(Utils.CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR, HttpStatus.BAD_REQUEST);
+            }
         }
+
 
         BillingDates billDates = getBillingRuleOnDate(hostelId, new Date());
 
         BillingRules currentBillingRules = hostelConfigService.getCurrentBillingRule(hostel.getHostelId());
         BillingRules newBillingRules =  new BillingRules();
+        newBillingRules.setTypeOfBilling(currentBillingRules.getTypeOfBilling());
+        if (billRules.calculationType() != null) {
+            if (billRules.calculationType().equalsIgnoreCase("Fixed")) {
+                newBillingRules.setTypeOfBilling(BillingTypeEnum.FIXED_DATE.name());
+            }
+            else {
+                newBillingRules.setTypeOfBilling(BillingTypeEnum.JOINING_DATE_BASED.name());
+            }
+        }
+
+        if (billRules.gracePeriodDays() != null) {
+            int gracePeriodDays = 0;
+            try {
+                gracePeriodDays = Integer.parseInt(String.valueOf(billRules.gracePeriodDays()));
+            }
+            catch (Exception e) {
+                gracePeriodDays = 0;
+            }
+
+            if (gracePeriodDays > 0) {
+                newBillingRules.setHasGracePeriod(true);
+                newBillingRules.setGracePeriodDays(gracePeriodDays);
+            }
+        }
+
 
 
         if (Utils.checkNullOrEmpty(billRules.startDate())) {

@@ -12,6 +12,7 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
 
 
     List<Floors> findAllByHostelId(String hostelId);
+    List<Floors> findByIsDeletedIsTrue();
 
     List<Floors> findAllByHostelIdAndParentIdAndIsDeletedFalse(String hostelId, String parentId);
 
