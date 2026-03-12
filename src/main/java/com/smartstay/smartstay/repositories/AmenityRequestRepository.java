@@ -22,6 +22,28 @@ public interface AmenityRequestRepository extends JpaRepository<AmenityRequest, 
         @Query("SELECT COUNT(ar) FROM AmenityRequest ar WHERE ar.hostelId = :hostelId AND ar.currentStatus IN :statuses AND DATE(ar.createdAt) >= DATE(:startDate) AND DATE(ar.createdAt) <= DATE(:endDate)")
         int countActiveByHostelIdAndDateRange(@Param("hostelId") String hostelId,
                         @Param("statuses") List<String> statuses,
-                        @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+                        @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate);
 
+        @Query("""
+                        SELECT COUNT(ar) as total,
+                        SUM(CASE WHEN ar.currentStatus IN ('PENDING', 'OPEN', 'IN_PROGRESS') THEN 1 ELSE 0 END) as pending,
+                        SUM(CASE WHEN ar.currentStatus = 'RESOLVED' THEN 1 ELSE 0 END) as resolved
+                        FROM AmenityRequest ar
+                        WHERE ar.hostelId = :hostelId
+                        AND (:startDate IS NULL OR DATE(ar.createdAt) >= DATE(:startDate))
+                        AND (:endDate IS NULL OR DATE(ar.createdAt) <= DATE(:endDate))
+                        """)
+        java.util.Map<String, Object> getRequestStatusSummary(@Param("hostelId") String hostelId,
+                        @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate);
+
+        @Query(value = """
+                        SELECT ar.amenity_request_id as requestId, CONCAT(cus.first_name, ' ', cus.last_name) as customerName, cus.profile_pic as profilePic, am.amenity_name as type, ar.current_status as status, ar.created_at as date
+                        FROM amenity_request ar
+                        LEFT JOIN customers cus ON ar.customer_id = cus.customer_id
+                        LEFT JOIN amenitiesv1 am ON ar.amenity_id = am.amenity_id
+                        WHERE ar.hostel_id = :hostelId
+                        ORDER BY ar.created_at DESC
+                        """, nativeQuery = true)
+        List<java.util.Map<String, Object>> findLatestRequests(@Param("hostelId") String hostelId,
+                        org.springframework.data.domain.Pageable pageable);
 }

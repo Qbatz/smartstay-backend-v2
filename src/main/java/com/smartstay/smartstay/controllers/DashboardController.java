@@ -10,12 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/v2/dashboard")
-@SecurityScheme(
-        name = "Authorization",
-        type = SecuritySchemeType.HTTP,
-        bearerFormat = "JWT",
-        scheme = "bearer"
-)
+@SecurityScheme(name = "Authorization", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @SecurityRequirement(name = "Authorization")
 @CrossOrigin("*")
 public class DashboardController {
@@ -29,7 +24,12 @@ public class DashboardController {
     }
 
     @GetMapping("/new/{hostelId}")
-    public ResponseEntity<?> getDashboardDataNew(@PathVariable("hostelId") String hostelId) {
-        return dashboardService.getDashboardInfoNew(hostelId);
+    public ResponseEntity<?> getDashboardDataNew(@PathVariable("hostelId") String hostelId,
+            @RequestParam(value = "billingFilter", defaultValue = "This Month") String billingFilter,
+            @RequestParam(value = "complaintRequestFilter", defaultValue = "This Month") String complaintRequestFilter,
+            @RequestParam(value = "financeFilter", defaultValue = "This Month") String financeFilter,
+            @RequestParam(value = "occupancyFilter", defaultValue = "This Month") String occupancyFilter) {
+        return dashboardService.getDashboardInfoNew(hostelId, billingFilter, complaintRequestFilter, financeFilter,
+                occupancyFilter);
     }
 }
