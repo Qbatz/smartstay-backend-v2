@@ -876,6 +876,10 @@ public class BookingsService {
             //trying to modify the joining date.
             Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+                if (!isBedAvailableForJoiningDateChange(bookingsV1.getBedId(), bookingsV1.getCustomerId(), joinigDate)) {
+                    return new ResponseEntity<>(Utils.BED_OCCUPIED_ON_DATE, HttpStatus.BAD_REQUEST);
+                }
+
                 if (invoiceService.updateJoiningDate(customers, joinigDate, hostelId, customers.getJoiningDate(), bookingsV1.getRentAmount())) {
                     rentHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
                     customersBedHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
@@ -959,6 +963,50 @@ public class BookingsService {
 
         return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
 
+    }
+
+    /**
+     * Validates whether the bed is available for the new joining date.
+     * This checks if the previous customer on the same bed has vacated before the new joining date.
+     *
+     * @param bedId            the bed id to check
+     * @param currentCustomerId the current customer's id (to exclude from the search)
+     * @param newJoiningDate   the new joining date being set
+     * @return true if the bed is available, false if it was occupied by another tenant
+     */
+    private boolean isBedAvailableForJoiningDateChange(int bedId, String currentCustomerId, Date newJoiningDate) {
+        // Step 1: Find the previous customer on the same bed from bed history
+        CustomersBedHistory previousBedRecord = customersBedHistoryService
+                .getPreviousCustomerBedHistory(bedId, currentCustomerId);
+
+        if (previousBedRecord == null) {
+            // No previous tenant on this bed, safe to change
+            return true;
+        }
+
+        // Step 2: Get the previous customer's booking to check checkout/leaving date
+        BookingsV1 previousBooking = bookingsRepository.findByCustomerId(previousBedRecord.getCustomerId());
+
+        if (previousBooking == null) {
+            return true;
+        }
+
+        // Step 3: Determine the boundary date (when the previous customer left/will leave)
+        Date boundaryDate = null;
+
+        if (previousBooking.getCheckoutDate() != null) {
+            // Previous customer has already checked out
+            boundaryDate = previousBooking.getCheckoutDate();
+        } else if (previousBooking.getLeavingDate() != null) {
+            // Previous customer is on notice, use leaving date as boundary
+            boundaryDate = previousBooking.getLeavingDate();
+        } else {
+            // Previous customer is still checked in with no notice — bed is occupied
+            return false;
+        }
+
+        // If new joining date is before the boundary date, the bed was still in use
+        return Utils.compareWithTwoDates(newJoiningDate, boundaryDate) >= 0;
     }
 
     public ResponseEntity<?> updateAdvanceAmount(String hostelId, String bookingId, UpdateAdvance updateAdvance) {
