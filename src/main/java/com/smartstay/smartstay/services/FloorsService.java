@@ -48,8 +48,6 @@ public class FloorsService {
     @Autowired
     private SubscriptionService subscriptionService;
 
-    @Autowired
-    private SubscriptionService subscriptionService;
 
     public ResponseEntity<?> getAllFloors(String hostelId) {
         if (!authentication.isAuthenticated()) {

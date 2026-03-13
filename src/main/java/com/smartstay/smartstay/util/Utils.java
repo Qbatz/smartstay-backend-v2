@@ -75,6 +75,10 @@ public class Utils {
     public static final String DELETED = "Deleted Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
+    public static final String MOBILE_NO_REQUIRED = "Mobile number required";
+    public static final String NAME_REQUIRED = "Name required";
+    public static final String CITY_REQUIRED = "City required";
+    public static final String DATE_REQUIRED = "Date required";
     public static final String INVALID_ROLE = "Invalid role";
     public static final String INVALID_ROOM_ID = "Invalid Room Id";
     public static final String ROLE_NAME_EXISTS = "Role name already exists";

@@ -61,6 +61,8 @@ public class HostelEventsListeners {
         billingRules.setCreatedBy(events.getUserId());
         billingRules.setTypeOfBilling(BillingTypeEnum.FIXED_DATE.name());
         billingRules.setHasGracePeriod(false);
+        billingRules.setReminderDays(new ArrayList<>());
+        billingRules.setShouldNotify(false);
         billingRules.setGracePeriodDays(0);
         billingRules.setHostel(hostelV1);
         List<BillingRules> listBillings = new ArrayList<>();

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Data
@@ -21,6 +22,8 @@ public class BillingRules {
     private Integer gracePeriodDays;
     //From billing type enum
     private String typeOfBilling;
+    private List<Integer> reminderDays;
+    private boolean shouldNotify;
     private Date startFrom;
     private Date endTill;
     private Date createdAt;

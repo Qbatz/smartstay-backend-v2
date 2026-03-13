@@ -30,6 +30,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -588,12 +589,28 @@ public class HostelService {
         BillingRules billingRules = null;
         if (hostel.getBillingRulesList() != null && !hostel.getBillingRulesList().isEmpty()) {
             billingRules = hostel.getBillingRulesList().get(hostel.getBillingRulesList().size()-1);
+            String typeOfBilling = null;
+            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.FIXED_DATE.name())) {
+                typeOfBilling = "Fixed";
+            }
+            else if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                typeOfBilling = "Joining Date Based";
+            }
+            Integer gracePeriod = 0;
+            if (billingRules.isHasGracePeriod()) {
+                if (billingRules.getGracePeriodDays() != null) {
+                    gracePeriod = billingRules.getGracePeriodDays();
+                }
+            }
 
             com.smartstay.smartstay.responses.hostelConfig.BillingRules rules = new com.smartstay.smartstay.responses.hostelConfig.BillingRules(
                     billingRules.getBillingStartDate(),
                     billingRules.getBillDueDays(),
                     billingRules.getNoticePeriod(),
-                    Utils.dateToString(billingRules.getStartFrom()));
+                    typeOfBilling,
+                    gracePeriod,
+                    billingRules.isHasGracePeriod(),
+                    billingRules.getReminderDays());
 
             return new ResponseEntity<>(rules, HttpStatus.OK);
         }
@@ -631,7 +648,7 @@ public class HostelService {
         }
 
         String errorMessage = checkAndReturnAnyPayloadError(billRules);
-        if (errorMessage == null) {
+        if (errorMessage != null) {
             return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
         }
 
@@ -664,6 +681,10 @@ public class HostelService {
             if (gracePeriodDays > 0) {
                 newBillingRules.setHasGracePeriod(true);
                 newBillingRules.setGracePeriodDays(gracePeriodDays);
+            }
+            else {
+                newBillingRules.setHasGracePeriod(currentBillingRules.isHasGracePeriod());
+                newBillingRules.setGracePeriodDays(currentBillingRules.getGracePeriodDays());
             }
         }
 
@@ -703,6 +724,17 @@ public class HostelService {
             }
         }
 
+        if (billRules.reminderDays() != null) {
+            if (!billRules.reminderDays().isEmpty()) {
+                newBillingRules.setShouldNotify(true);
+            }
+            newBillingRules.setReminderDays(billRules.reminderDays());
+        }
+        else {
+            newBillingRules.setShouldNotify(currentBillingRules.isShouldNotify());
+            newBillingRules.setReminderDays(currentBillingRules.getReminderDays());
+        }
+
         newBillingRules.setHostel(hostel);
         newBillingRules.setInitial(false);
         newBillingRules.setCreatedAt(new Date());
@@ -726,57 +758,57 @@ public class HostelService {
         String errorMessage = null;
 
         if (billRules != null && billRules.startDate() != null) {
-            int sDate = 0;
+            int sDate = -1;
             try {
                 sDate = Integer.parseInt(String.valueOf(billRules.startDate()));
             }
             catch (Exception e) {
-                sDate = 0;
+                sDate = -1;
             }
 
-            if (sDate == 0 || sDate > 28) {
+            if (sDate == -1 || sDate > 28) {
                 errorMessage = Utils.INVALID_STARTING_DATE;
             }
         }
 
         if (billRules != null && billRules.dueDate() != null) {
-            int dueDays = 0;
+            int dueDays = -1;
             try {
-                dueDays = Integer.parseInt(String.valueOf(billRules.startDate()));
+                dueDays = Integer.parseInt(String.valueOf(billRules.dueDate()));
             }
             catch (Exception e) {
-                dueDays = 0;
+                dueDays = -1;
             }
 
-            if (dueDays == 0 || dueDays > 28) {
+            if (dueDays == -1 || dueDays > 28) {
                 errorMessage = Utils.INVALID_DUE_DYS;
             }
         }
 
         if (billRules != null && billRules.noticeDays() != null) {
-            int noticeDays = 0;
+            int noticeDays = -1;
             try {
-                noticeDays = Integer.parseInt(String.valueOf(billRules.startDate()));
+                noticeDays = Integer.parseInt(String.valueOf(billRules.noticeDays()));
             }
             catch (Exception e) {
-                noticeDays = 0;
+                noticeDays = -1;
             }
 
-            if (noticeDays == 0 || noticeDays > 28) {
+            if (noticeDays == -1 || noticeDays > 28) {
                 errorMessage = Utils.INVALID_NOTICE_DAYS;
             }
         }
 
         if (billRules != null && billRules.gracePeriodDays() != null) {
-            int gracePeriodDays = 0;
+            int gracePeriodDays = -1;
             try {
-                gracePeriodDays = Integer.parseInt(String.valueOf(billRules.startDate()));
+                gracePeriodDays = Integer.parseInt(String.valueOf(billRules.gracePeriodDays()));
             }
             catch (Exception e) {
-                gracePeriodDays = 0;
+                gracePeriodDays = -1;
             }
 
-            if (gracePeriodDays == 0 || gracePeriodDays > 28) {
+            if (gracePeriodDays == -1 || gracePeriodDays > 28) {
                 errorMessage = Utils.INVALID_GRACE_PERIOD;
             }
         }
