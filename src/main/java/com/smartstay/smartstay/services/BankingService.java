@@ -501,6 +501,7 @@ public class BankingService {
         BankTransactionsV1 bankTransactionsV11 = new BankTransactionsV1();
         bankTransactionsV11.setBankId(balance.bankId());
         bankTransactionsV11.setHostelId(hostelId);
+
         bankTransactionsV11.setType("CREDIT");
         bankTransactionsV11.setSource(BankSource.DEPOSIT.name());
         if (bankTransactionsV1 != null && bankTransactionsV1.getAccountBalance() != null) {
@@ -511,6 +512,7 @@ public class BankingService {
         bankTransactionsV11.setAmount(balance.balance());
         bankTransactionsV11.setTransactionDate(new Date());
         bankTransactionsV11.setCreatedAt(new Date());
+        bankTransactionsV11.setIsDeleted(false);
         bankTransactionsV11.setCreatedBy(authentication.getName());
         transactionService.saveTransaction(bankTransactionsV11);
 
@@ -593,7 +595,7 @@ public class BankingService {
         BankTransactionsV1 bankTransactionsV11 = new BankTransactionsV1();
         bankTransactionsV11.setBankId(selfTransfer.fromBankId());
         bankTransactionsV11.setHostelId(hostelId);
-        bankTransactionsV11.setType("DEBIT");
+        bankTransactionsV11.setType(BankTransactionType.DEBIT.name());
         bankTransactionsV11.setSource(BankSource.SELF_TRANSFER.name());
         if (fromAccountTransaction != null && fromAccountTransaction.getAccountBalance() != null) {
             bankTransactionsV11.setAccountBalance(fromAccountTransaction.getAccountBalance() - selfTransfer.balance());
@@ -602,6 +604,7 @@ public class BankingService {
         }
         bankTransactionsV11.setAmount(selfTransfer.balance());
         bankTransactionsV11.setTransactionDate(new Date());
+        bankTransactionsV11.setIsDeleted(false);
         bankTransactionsV11.setCreatedAt(new Date());
         bankTransactionsV11.setCreatedBy(authentication.getName());
         transactionService.saveTransaction(bankTransactionsV11);
@@ -610,7 +613,8 @@ public class BankingService {
         BankTransactionsV1 toBankTransactions = new BankTransactionsV1();
         toBankTransactions.setBankId(selfTransfer.toBankId());
         toBankTransactions.setHostelId(hostelId);
-        toBankTransactions.setType("CREDIT");
+        bankTransactionsV11.setIsDeleted(false);
+        toBankTransactions.setType(BankTransactionType.CREDIT.name());
         toBankTransactions.setSource(BankSource.SELF_TRANSFER.name());
         if (toAccountTransaction != null && toAccountTransaction.getAccountBalance() != null) {
             toBankTransactions.setAccountBalance(toAccountTransaction.getAccountBalance() + selfTransfer.balance());
@@ -743,6 +747,7 @@ public class BankingService {
         return true;
     }
 
+
     public Double sumBalanceByHostelId(String hostelId) {
         return bankingV1Repository.sumBalanceByHostelId(hostelId);
     }
@@ -783,6 +788,67 @@ public class BankingService {
             bankingV1.setBalance(balanceAmount + expAmount);
 
             bankingV1Repository.save(bankingV1);
+        }
+    }
+
+    public void deleteBankForUser(String userId, List<String> listHostelIds) {
+        List<BankingV1> listBankAccounts = bankingV1Repository
+                .findByUserIdAndHostelIdIn(userId, listHostelIds);
+
+        if (listBankAccounts != null && !listBankAccounts.isEmpty()) {
+            List<BankingV1> deletableBankings = listBankAccounts
+                    .stream()
+                    .map(i -> {
+                        i.setDeleted(true);
+                        i.setActive(false);
+                        return i;
+                    })
+                    .toList();
+
+            bankingV1Repository.saveAll(deletableBankings);
+        }
+    }
+
+    public void updateBankAccountName(String name, String userId, String hostelId) {
+        List<BankingV1> userAccounts = bankingV1Repository.findByUserIdAndHostelId(userId, hostelId);
+        if (!userAccounts.isEmpty()) {
+            List<BankingV1> cashAccounts = userAccounts
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()))
+                    .toList();
+            if (cashAccounts != null && !cashAccounts.isEmpty()) {
+                List<BankingV1> modifiedBankAccount = cashAccounts
+                        .stream()
+                        .map(i -> {
+                            i.setAccountHolderName(name);
+                            return i;
+                        })
+                        .toList();
+
+                bankingV1Repository.saveAll(modifiedBankAccount);
+            }
+        }
+    }
+
+    public void updateCashAccountNames(List<String> hostelIdsThatAdminHasAccess, String userId, String name) {
+        List<BankingV1> listBankings = bankingV1Repository.findByUserIdAndHostelIdIn(userId, hostelIdsThatAdminHasAccess);
+        if (listBankings != null && !listBankings.isEmpty()) {
+            List<BankingV1> cashAccounts = listBankings
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()))
+                    .toList();
+
+            if (cashAccounts != null && !cashAccounts.isEmpty()) {
+                List<BankingV1> modifiedBankAccount = cashAccounts
+                        .stream()
+                        .map(i -> {
+                            i.setAccountHolderName(name);
+                            return i;
+                        })
+                        .toList();
+
+                bankingV1Repository.saveAll(modifiedBankAccount);
+            }
         }
     }
 }

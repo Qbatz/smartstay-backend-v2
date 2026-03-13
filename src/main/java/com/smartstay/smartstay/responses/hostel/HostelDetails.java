@@ -6,5 +6,5 @@ public record HostelDetails(String hostelId, String mainImage, String city, Stri
                             String houseNo, String landmark, String mobile, int pinCode, String state, String street,
                             String lastUpdate, boolean isSubscriptionActive, String nextBillingDate,
                             int remainingDaysLeft, int numberOfFloors, List<FloorDetails> floorDetails,
-                            int unreadNotificationCount) {
+                            int unreadNotificationCount, boolean canModifyBilling) {
 }

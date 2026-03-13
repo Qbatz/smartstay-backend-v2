@@ -43,6 +43,10 @@ public class FloorsService {
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private RoomsService roomsService;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     @Autowired
     private SubscriptionService subscriptionService;
@@ -201,6 +205,8 @@ public class FloorsService {
             }
             existingFloor.setIsDeleted(true);
             floorRepository.save(existingFloor);
+
+            roomsService.deleteRoomByFloorId(existingFloor.getFloorId(), existingFloor.getHostelId());
             usersService.addUserLog(existingFloor.getHostelId(), String.valueOf(existingFloor.getHostelId()), ActivitySource.FLOORS, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }

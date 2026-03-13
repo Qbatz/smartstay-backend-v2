@@ -5,6 +5,7 @@ import com.smartstay.smartstay.responses.banking.DebitsBank;
 
 import java.util.List;
 
-public record InitializeExpenses(List<ExpensesCategory> listExpenses,
+public record InitializeExpenses(String hostelId,
+                                 List<ExpensesCategory> listExpenses,
                                  List<DebitsBank> banks) {
 }

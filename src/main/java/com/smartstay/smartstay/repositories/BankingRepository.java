@@ -69,6 +69,7 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
 
     BankingV1 findByBankId(String bankId);
     BankingV1 findByHostelIdAndBankId(String hostelId, String bankId);
+    List<BankingV1> findByUserIdAndHostelIdIn(String userId, List<String> hostelId);
 
     @Query("SELECT COUNT(b) > 0 " +
            "FROM BankingV1 b " +
@@ -88,7 +89,7 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
     List<BankingV1> findByBankIdInAndActiveAccount(List<String> bankIds);
 
     @Query(value = """
-            SELECT * FROM bankingv1 banking where is_active=true and transaction_type in ('BOTH', 'DEBIT') and 
+            SELECT * FROM bankingv1 banking where is_active=true and is_deleted=false and transaction_type in ('BOTH', 'DEBIT') and 
             hostel_id=:hostelId
             """, nativeQuery = true)
     List<BankingV1> findByBankIdInAndActiveAccountDebit(@Param("hostelId")  String hostelId);
