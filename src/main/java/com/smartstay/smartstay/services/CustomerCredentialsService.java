@@ -5,7 +5,9 @@ import com.smartstay.smartstay.repositories.CustomerCredentialsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class CustomerCredentialsService {
@@ -40,5 +42,13 @@ public class CustomerCredentialsService {
         }
 
         return null;
+    }
+
+    public List<CustomerCredentials> findByXuids(List<String> xuid) {
+        List<CustomerCredentials> listCredentials = customerCredentialsRepository.findAllById(xuid);
+        if (listCredentials == null) {
+            listCredentials = new ArrayList<>();
+        }
+        return listCredentials;
     }
 }

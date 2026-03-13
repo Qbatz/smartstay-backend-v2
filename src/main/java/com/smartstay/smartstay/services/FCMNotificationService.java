@@ -6,8 +6,11 @@ import com.google.firebase.messaging.Message;
 import com.smartstay.smartstay.Exceptions.SmartStayException;
 import com.smartstay.smartstay.dao.ComplaintsV1;
 import com.smartstay.smartstay.dao.CustomerCredentials;
+import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.CustomersConfig;
+import com.smartstay.smartstay.dto.reminders.DueReminders;
 import com.smartstay.smartstay.ennum.NotificationMessage;
+import com.smartstay.smartstay.util.NameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 
 @Service
 public class FCMNotificationService {
@@ -89,5 +93,55 @@ public class FCMNotificationService {
                 }
             }
         }
+    }
+
+    public void sendReminderNotification(List<Customers> listCustomers, HashMap<String, DueReminders> customerReminders) {
+        List<String> xuid = listCustomers
+                .stream()
+                .map(Customers::getXuid)
+                .toList();
+        if (xuid != null && !xuid.isEmpty()) {
+            List<CustomerCredentials> listCustomerCredentials = customerCredentialsService.findByXuids(xuid);
+            if (!listCustomerCredentials.isEmpty()) {
+                listCustomerCredentials.forEach(item -> {
+                    Customers customer = listCustomers
+                            .stream()
+                            .filter(i -> i.getXuid().equalsIgnoreCase(item.getXuid()))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (customer != null) {
+                        DueReminders dueReminders = customerReminders.get(customer.getCustomerId());
+                        String amount = null;
+                        String invoiceNumber = null;
+                        if (dueReminders != null) {
+                            amount = String.valueOf(Math.round(dueReminders.dueAmount()));
+                            invoiceNumber = dueReminders.invoiceNumber();
+                        }
+                        String name = NameUtils.getFullName(customer.getFirstName(), customer.getLastName());
+                        if (item.getFcmToken() != null) {
+                            HashMap<String, String> payloads = new HashMap<>();
+                            payloads.put("title", "Payment due reminders");
+                            payloads.put("type", NotificationMessage.DUE_REMINDERS.name());
+                            payloads.put("description", "Hi "+ name + ", You have the pending amount ₹" + amount + " for " + invoiceNumber);
+
+                            Message message = Message.builder()
+                                    .setToken(item.getFcmToken())
+                                    .putAllData(payloads)
+                                    .build();
+
+                            try {
+                                tenantMessaging.send(message);
+                            } catch (FirebaseMessagingException e) {
+//                    throw new SmartStayException("Unable to send messages");
+                            }
+                        }
+                    }
+
+
+                });
+            }
+        }
+
     }
 }

@@ -27,4 +27,9 @@ public class NotificationController {
         return notificationService.updateNotificationsAsRead(hostelId);
     }
 
+    @PostMapping("/due-reminder/all")
+    public ResponseEntity<?> notifyAllHostelReminders() {
+        return notificationService.notifyAllDueToAllHostels();
+    }
+
 }
