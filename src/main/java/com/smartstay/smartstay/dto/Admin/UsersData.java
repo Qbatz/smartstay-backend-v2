@@ -3,6 +3,7 @@ package com.smartstay.smartstay.dto.Admin;
 public record UsersData(String userId,
                              String firstName,
                              String lastName,
+                             String fullName,
                              String mobileNo,
                              String mailId, Integer roleId,
                              String roleName,
