@@ -1,4 +1,16 @@
 package com.smartstay.smartstay.responses.dashboard;
 
-public record DashboardNew(RoomsAndBedInfo roomAndBeds) {
+import java.util.List;
+
+public record DashboardNew(RoomsAndBedInfo roomsBeds,
+                List<OccupancyPoint> occupancyTrend,
+                BillingSummary billingSummary,
+                StatusSummary tenantComplaints,
+                StatusSummary tenantRequests,
+                FinanceSummary finance,
+                List<RecentCheckin> checkins,
+                List<OverdueInvoice> overdueInvoices,
+                List<RecentComplaint> complaints,
+                List<RecentRequest> request,
+                List<String> filters) {
 }
