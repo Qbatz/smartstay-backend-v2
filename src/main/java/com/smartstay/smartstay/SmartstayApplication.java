@@ -148,12 +148,39 @@ public class SmartstayApplication {
 //					.map(i -> {
 //						i.setHasGracePeriod(false);
 //						i.setGracePeriodDays(0);
+//						i.setShouldNotify(false);
+//						i.setReminderDays(new ArrayList<>());
 //						i.setTypeOfBilling(BillingTypeEnum.FIXED_DATE.name());
 //						return i;
 //					})
 //					.toList();
 //
 //			billingRuleRepository.saveAll(listBillRules);
+//		};
+//	}
+
+	/**
+	 *
+	 * no need production
+	 *
+	 */
+//	@Bean
+//	CommandLineRunner modifyBillingRuleShouldNotify(BillingRuleRepository billingRuleRepository) {
+//		return args -> {
+//			List<BillingRules> listBillingRules = billingRuleRepository.findAll()
+//					.stream()
+//					.map(i -> {
+//						if (i.getReminderDays() != null && !i.getReminderDays().isEmpty()) {
+//							i.setShouldNotify(true);
+//						}
+//						else {
+//							i.setShouldNotify(false);
+//						}
+//						return i;
+//					})
+//					.toList();
+//
+//			billingRuleRepository.saveAll(listBillingRules);
 //		};
 //	}
 

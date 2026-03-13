@@ -192,7 +192,8 @@ public class BankingService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<Bank> listBankings = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId)
+        List<BankingV1> bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
+        List<Bank> listBankings = bankingList
                 .stream()
                 .filter(i -> {
                     if (i.isDeleted()) {
@@ -205,17 +206,26 @@ public class BankingService {
                 })
                 .map(i -> new BankingListMapper().apply(i))
                 .collect(Collectors.toList());
+        List<String> bankIds = listBankings
+                .stream()
+                .map(Bank::bankingId)
+                .toList();
 
-        List<TransactionDto> transactions =  transactionService.getAllTransactions(hostelId);
+        List<TransactionDto> transactions =  transactionService.getAllTransactions(hostelId, bankIds);
         List<TransactionDto> listTransactions = new ArrayList<>();
         if (!transactions.isEmpty()) {
             listTransactions = transactions.stream()
                     .map(item -> {
-                        Bank accountHolderBank = listBankings
+                        BankingV1 accountHolderBank = bankingList
                                 .stream()
-                                .filter(i -> i.bankingId().equalsIgnoreCase(item.bankId()))
-                                .toList().get(0);
-                        String accountHolder = accountHolderBank.accountHolderName() + "-" + accountHolderBank.accountType();
+                                .filter(i -> i.getBankId().equalsIgnoreCase(item.bankId()))
+                                .findFirst()
+                                .orElse(null);
+                        String accountHolder = null;
+                        if (accountHolderBank != null) {
+                            accountHolder = accountHolderBank.getAccountHolderName() + "-" + accountHolderBank.getAccountType();
+                        }
+
                         return new TransactionDto(item.transactionId(),
                                 item.referenceNumber(),
                                 item.amount(),

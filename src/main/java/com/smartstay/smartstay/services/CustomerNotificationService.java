@@ -3,6 +3,8 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.ComplaintsV1;
 import com.smartstay.smartstay.dao.CustomerNotifications;
+import com.smartstay.smartstay.dao.Customers;
+import com.smartstay.smartstay.dto.reminders.DueReminders;
 import com.smartstay.smartstay.ennum.ComplaintStatus;
 import com.smartstay.smartstay.ennum.NotificationType;
 import com.smartstay.smartstay.ennum.UserType;
@@ -11,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
 @Service
 public class CustomerNotificationService {
@@ -65,5 +69,43 @@ public class CustomerNotificationService {
 
     public void sendNotifications(String xuid, ComplaintsV1 complaintsV1, String comment, String name) {
         fcmNotificationService.addCommentNotification(xuid, complaintsV1, comment, name);
+    }
+
+    public void notifyReminders(List<Customers> listCustomers, HashMap<String, DueReminders> customerReminders) {
+        List<CustomerNotifications> listCustomerNotifications = listCustomers
+                .stream()
+                .map(i -> {
+                    String description = "";
+                    String titleMessage = "";
+                    String sourceId = null;
+                    DueReminders dueReminders = customerReminders.get(i.getCustomerId());
+                    if (dueReminders != null) {
+                        sourceId = dueReminders.customerId();
+                        titleMessage = "Payment due reminders";
+                        description = "Your payment is due soon. Please complete the payment before due.";
+                    }
+                    CustomerNotifications cn = new CustomerNotifications();
+                    cn.setActive(true);
+                    cn.setNotificationType(NotificationType.DUE_REMINDERS.name());
+                    cn.setUserId(i.getCustomerId());
+                    cn.setHostelId(i.getHostelId());
+                    cn.setDescription(description);
+                    cn.setSourceId(sourceId);
+                    cn.setTitle(titleMessage);
+                    cn.setUserType(UserType.TENANT.name());
+                    cn.setCreatedAt(new Date());
+                    cn.setActive(true);
+                    cn.setDeleted(false);
+                    cn.setRead(false);
+
+                    return cn;
+                })
+                .toList();
+
+        customerNotificationRepository.saveAll(listCustomerNotifications);
+
+        fcmNotificationService.sendReminderNotification(listCustomers, customerReminders);
+
+
     }
 }

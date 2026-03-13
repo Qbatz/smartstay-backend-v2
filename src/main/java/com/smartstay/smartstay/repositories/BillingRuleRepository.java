@@ -56,4 +56,10 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
             """, nativeQuery = true)
     List<BillingRules> findAllHostelsHavingTodaysRecurring(@Param("day") Integer day);
 
+    @Query(value = """
+            SELECT * FROM billing_rules br WHERE br.created_at=(SELECT MAX(br2.created_at) from billing_rules br2 WHERE br2.hostel_id=br.hostel_id)  
+            AND br.should_notify=true
+            """, nativeQuery = true)
+    List<BillingRules> findAllHostelsHavingReminders();
+
 }

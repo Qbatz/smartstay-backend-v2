@@ -83,8 +83,8 @@ public class BankTransactionService {
     }
 
 
-    public List<com.smartstay.smartstay.dto.transaction.TransactionDto> getAllTransactions(String hostelId) {
-        return bankRepository.findByHostelIdAndIsDeletedFalse(hostelId)
+    public List<com.smartstay.smartstay.dto.transaction.TransactionDto> getAllTransactions(String hostelId, List<String> bankIds) {
+        return bankRepository.findByHostelIdAndBankIdInAndIsDeletedFalseOrderByTransactionDateDesc(hostelId, bankIds)
                 .stream()
                 .map(item -> new TransactionsMapper().apply(item))
                 .toList();
