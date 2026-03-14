@@ -166,6 +166,10 @@ public class CustomersBedHistoryService {
         return occupantsCountsByRoomId;
     }
 
+    public CustomersBedHistory getPreviousCustomerBedHistory(int bedId, String currentCustomerId) {
+        return customerBedHistoryRepository.findPreviousCustomerOnBed(bedId, currentCustomerId);
+    }
+
     public List<CustomersBedHistory> getCustomersByRoomIdAndDates(Integer roomId, Date startDate, Date endDate) {
         return customerBedHistoryRepository.findByRoomIdStartAndEndDate(roomId, startDate, endDate);
     }
