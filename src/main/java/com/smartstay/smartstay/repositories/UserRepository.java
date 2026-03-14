@@ -12,116 +12,117 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<Users, String> {
 
-        Users findByEmailIdAndIsDeletedFalse(String emailId);
+    Users findByEmailIdAndIsDeletedFalse(String emailId);
 
-        Users findUserByUserId(String userId);
+    Users findUserByUserId(String userId);
 
-        Users findUserByUserIdAndParentId(String userId, String parentId);
+    Users findUserByUserIdAndParentId(String userId, String parentId);
 
-        Users findUserByParentId(String parentId);
-        @Query("""
-                SELECT usr FROM Users usr WHERE usr.emailId=:emailId AND usr.userId !=:userId
-                """)
-        List<Users> findByEmailForUpdateUser(String emailId, String userId);
+    Users findUserByParentId(String parentId);
 
-        @Query("""
-                SELECT usr FROM Users usr WHERE usr.mobileNo=:mobile AND usr.userId !=:userId
-                """)
-        List<Users> findByMobileForUpdateUser(String mobile, String userId);
+    @Query("""
+            SELECT usr FROM Users usr WHERE usr.emailId=:emailId AND usr.userId !=:userId
+            """)
+    List<Users> findByEmailForUpdateUser(String emailId, String userId);
 
-        List<Users> findAllByParentId(String parentId);
+    @Query("""
+            SELECT usr FROM Users usr WHERE usr.mobileNo=:mobile AND usr.userId !=:userId
+            """)
+    List<Users> findByMobileForUpdateUser(String mobile, String userId);
 
-        Optional<Users> findByEmailIdOrMobileNo(String emailId, String mobileNo);
+    List<Users> findAllByParentId(String parentId);
 
-        boolean existsByEmailIdAndIsDeletedFalse(String emailId);
+    Optional<Users> findByEmailIdOrMobileNo(String emailId, String mobileNo);
 
-        boolean existsByMobileNoAndIsDeletedFalse(String mobileNo);
+    boolean existsByEmailIdAndIsDeletedFalse(String emailId);
 
-        @Query(value = """
-                        select * from users where role_id=:roleId and is_active=true and is_deleted=false
-                        """, nativeQuery = true)
-        Optional<Users> findUsersByActiveRoles(@Param("roleId") int roleId);
+    boolean existsByMobileNoAndIsDeletedFalse(String mobileNo);
 
-        List<Users> findByRoleIdAndIsActiveTrueAndIsDeletedFalse(int roleId);
+    @Query(value = """
+            select * from users where role_id=:roleId and is_active=true and is_deleted=false
+            """, nativeQuery = true)
+    Optional<Users> findUsersByActiveRoles(@Param("roleId") int roleId);
 
-        @Query(value = """
-                            SELECT
-                                usr.user_id AS userId,
-                                usr.first_name AS firstName,
-                                usr.last_name AS lastName,
-                                usr.mobile_no AS mobileNo,
-                                usr.email_id AS mailId,
-                                usr.role_id AS roleId,
-                                roles.role_name AS roleName,
-                                country.country_id AS countryId,
-                                usr.email_authentication_status AS email_authentication_status,
-                                usr.sms_authentication_status AS sms_authentication_status,
-                                usr.two_step_verification_status AS two_step_verification_status,
-                                country.country_name AS countryName,
-                                country.currency AS currency,
-                                country.country_code AS countryCode,
-                                ad.pincode, ad.city, ad.house_no as houseNo, ad.land_mark as landmark, ad.state, ad.street,
-                                                    usr.profile_url as profilePic, usr.description
-                            FROM users usr
-                            LEFT OUTER JOIN rolesv1 roles ON roles.role_id = usr.role_id
-                            LEFT OUTER JOIN countries country ON country.country_id = usr.country
-                            LEFT OUTER JOIN address ad on ad.user_id=usr.user_id
-                            WHERE usr.role_id = :roleId and usr.parent_id =:parentId and usr.is_deleted=0 and usr.is_active=1 and usr.user_id !=:userId
-                        """, nativeQuery = true)
-        List<UsersData> getAdminUserList(@Param("roleId") int roleId, @Param("parentId") String parentId,
-                        @Param("userId") String userId);
+    List<Users> findByRoleIdAndIsActiveTrueAndIsDeletedFalse(int roleId);
 
-        @Query(value = """
-                           SELECT usr.user_id AS userId, usr.first_name AS firstName,
-                                                                      usr.last_name AS lastName,
-                                                                      CONCAT_WS(' ', usr.first_name, usr.last_name) AS fullName,
-                                                                      usr.mobile_no AS mobileNo,
-                                                                      usr.email_id AS mailId,
-                                                                      usr.role_id AS roleId,
-                                                                      roles.role_name AS roleName,
-                                                                      country.country_id AS countryId,
-                                                                      usr.email_authentication_status AS email_authentication_status,
-                                                                      usr.sms_authentication_status AS sms_authentication_status,
-                                                                      usr.two_step_verification_status AS two_step_verification_status,
-                                                                      country.country_name AS countryName,
-                                                                      country.currency AS currency,
-                                                                      country.country_code AS countryCode,
-                                                                      ad.pincode AS pincode,
-                                                                      ad.city AS city,
-                                                                      ad.house_no AS houseNo,
-                                                                      ad.land_mark AS landmark,
-                                                                      ad.state AS state,
-                                                                      ad.street AS street,
-                                                                      usr.profile_url AS profilePic,
-                                                                      usr.description
-                                                                  FROM users usr
-                                                                  LEFT JOIN rolesv1 roles ON roles.role_id = usr.role_id
-                                                                  LEFT JOIN address ad ON ad.user_id = usr.user_id
-                                                                  LEFT JOIN countries country ON country.country_id = usr.country
-                                                                  LEFT JOIN user_hostel uh on uh.user_id=usr.user_id
-                                                                  WHERE uh.hostel_id=:hostelId AND usr.role_id NOT IN (1,2) and usr.is_active=1 and usr.is_deleted = 0 and usr.user_id !=:userId
-                        """, nativeQuery = true)
-        List<UsersData> getUserList(@Param("hostelId") String hostelId, @Param("userId") String userId);
+    @Query(value = """
+                SELECT
+                    usr.user_id AS userId,
+                    usr.first_name AS firstName,
+                    usr.last_name AS lastName,
+                    CONCAT_WS(' ', usr.first_name, usr.last_name) AS fullName,
+                    usr.mobile_no AS mobileNo,
+                    usr.email_id AS mailId,
+                    usr.role_id AS roleId,
+                    roles.role_name AS roleName,
+                    country.country_id AS countryId,
+                    usr.email_authentication_status AS email_authentication_status,
+                    usr.sms_authentication_status AS sms_authentication_status,
+                    usr.two_step_verification_status AS two_step_verification_status,
+                    country.country_name AS countryName,
+                    country.currency AS currency,
+                    country.country_code AS countryCode,
+                    ad.pincode, ad.city, ad.house_no as houseNo, ad.land_mark as landmark, ad.state, ad.street,
+                                        usr.profile_url as profilePic, usr.description
+                FROM users usr
+                LEFT OUTER JOIN rolesv1 roles ON roles.role_id = usr.role_id
+                LEFT OUTER JOIN countries country ON country.country_id = usr.country
+                LEFT OUTER JOIN address ad on ad.user_id=usr.user_id
+                WHERE usr.role_id = :roleId and usr.parent_id =:parentId and usr.is_deleted=0 and usr.is_active=1 and usr.user_id !=:userId
+            """, nativeQuery = true)
+    List<UsersData> getAdminUserList(@Param("roleId") int roleId, @Param("parentId") String parentId, @Param("userId") String userId);
 
-        @Query("SELECT count(u) FROM Users u where u.emailId=:emailId and u.userId !=:userId")
-        int getUsersCountByEmail(String userId, String emailId);
+    @Query(value = """
+               SELECT usr.user_id AS userId, usr.first_name AS firstName,
+                                                          usr.last_name AS lastName,
+                                                          CONCAT_WS(' ', usr.first_name, usr.last_name) AS fullName,
+                                                          usr.mobile_no AS mobileNo,
+                                                          usr.email_id AS mailId,
+                                                          usr.role_id AS roleId,
+                                                          roles.role_name AS roleName,
+                                                          country.country_id AS countryId,
+                                                          usr.email_authentication_status AS email_authentication_status,
+                                                          usr.sms_authentication_status AS sms_authentication_status,
+                                                          usr.two_step_verification_status AS two_step_verification_status,
+                                                          country.country_name AS countryName,
+                                                          country.currency AS currency,
+                                                          country.country_code AS countryCode,
+                                                          ad.pincode AS pincode,
+                                                          ad.city AS city,
+                                                          ad.house_no AS houseNo,
+                                                          ad.land_mark AS landmark,
+                                                          ad.state AS state,
+                                                          ad.street AS street,
+                                                          usr.profile_url AS profilePic,
+                                                          usr.description
+                                                      FROM users usr
+                                                      LEFT JOIN rolesv1 roles ON roles.role_id = usr.role_id
+                                                      LEFT JOIN address ad ON ad.user_id = usr.user_id
+                                                      LEFT JOIN countries country ON country.country_id = usr.country
+                                                      LEFT JOIN user_hostel uh on uh.user_id=usr.user_id
+                                                      WHERE uh.hostel_id=:hostelId AND usr.role_id NOT IN (1,2) and usr.is_active=1 and usr.is_deleted = 0 and usr.user_id !=:userId
+            """, nativeQuery = true)
+    List<UsersData> getUserList(@Param("hostelId") String hostelId, @Param("userId") String userId);
 
-        @Query("""
-                        SELECT count(u) FROM Users u where u.mobileNo=:mobile and u.userId !=:userId
-                        """)
-        int getUsersCountByMobile(@Param("userId") String userId, @Param("mobile") String mobile);
+    @Query("SELECT count(u) FROM Users u where u.emailId=:emailId and u.userId !=:userId")
+    int getUsersCountByEmail(String userId, String emailId);
 
-        Users findByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(String userId, String parentId);
+    @Query("""
+            SELECT count(u) FROM Users u where u.mobileNo=:mobile and u.userId !=:userId
+            """)
+    int getUsersCountByMobile(@Param("userId") String userId, @Param("mobile") String mobile);
 
-        @Query("""
-                        SELECT u FROM Users u WHERE u.userId IN (:listUsers) AND (u.roleId=1 OR u.roleId=2)
-                        """)
-        List<Users> findAdminUsersBasedOnHostelIdFromListUsers(List<String> listUsers);
+    Users findByUserIdAndIsActiveTrueAndIsDeletedFalseAndParentId(String userId, String parentId);
+
+    @Query("""
+            SELECT u FROM Users u WHERE u.userId IN (:listUsers) AND (u.roleId=1 OR u.roleId=2)
+            """)
+    List<Users> findAdminUsersBasedOnHostelIdFromListUsers(List<String> listUsers);
 
 
-        Users findByEmailIdAndPasswordAndIsDeletedFalse(String emailId, String password);
+    Users findByEmailIdAndPasswordAndIsDeletedFalse(String emailId, String password);
 
-        List<Users> findAllByUserIdIn(List<String> userIds);
+    List<Users> findAllByUserIdIn(List<String> userIds);
 
     @Query(value = """
                 SELECT

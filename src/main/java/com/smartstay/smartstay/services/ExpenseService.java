@@ -235,6 +235,14 @@ public class ExpenseService {
         return expensesRepository.sumAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
     }
 
+    public List<ExpensesV1> findByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return expensesRepository.findByHostelIdAndDateRange(hostelId, startDate, endDate);
+    }
+
+    public List<ExpensesV1> findByHostelIdAndIsActiveTrue(String hostelId) {
+        return expensesRepository.findByHostelIdAndIsActiveTrue(hostelId);
+    }
+
     public ExpenseReportResponse getExpenseReportDetails(String hostelId, String period, String customStartDate,
             String customEndDate, List<Long> categoryIds, List<Long> subCategoryIds,
             List<String> paymentModes, List<String> paidTo, List<String> createdBy,

@@ -248,17 +248,9 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
                         @Param("customerIds") List<String> customerIds, @Param("statuses") List<String> statuses,
                         @Param("roomIds") List<Integer> roomIds, @Param("floorIds") List<Integer> floorIds);
 
-        @Query(value = """
-                        SELECT CONCAT(cus.first_name, ' ', cus.last_name) as customerName, cus.profile_pic as profilePic, rm.room_name as roomName, b.bed_name as bedName, bk.joining_date as joiningDate, bk.current_status as status
-                        FROM bookingsv1 bk
-                        LEFT JOIN customers cus ON bk.customer_id = cus.customer_id
-                        LEFT JOIN rooms rm ON bk.room_id = rm.room_id
-                        LEFT JOIN beds b ON bk.bed_id = b.bed_id
-                        WHERE bk.hostel_id = :hostelId AND bk.current_status IN ('BOOKED', 'CHECKIN')
-                        ORDER BY bk.created_at DESC
-                        """, nativeQuery = true)
-        List<java.util.Map<String, Object>> findLatestCheckins(@Param("hostelId") String hostelId,
-                        org.springframework.data.domain.Pageable pageable);
+        @Query("SELECT b FROM BookingsV1 b WHERE b.hostelId = :hostelId AND b.currentStatus IN ('BOOKED', 'CHECKIN') ORDER BY b.createdAt DESC")
+        List<BookingsV1> findTopCheckins(@Param("hostelId") String hostelId, org.springframework.data.domain.Pageable pageable);
+
 
         @Query("SELECT COUNT(b) FROM BookingsV1 b WHERE b.hostelId = :hostelId AND b.currentStatus = :status AND DATE(b.joiningDate) <= DATE(:date) AND (b.checkoutDate IS NULL OR DATE(b.checkoutDate) >= DATE(:date))")
         int countByStatusAndDate(@Param("hostelId") String hostelId, @Param("status") String status,
@@ -266,4 +258,9 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
         @Query("SELECT COUNT(b) FROM BookingsV1 b WHERE b.hostelId = :hostelId AND b.currentStatus = 'BOOKED' AND DATE(b.expectedJoiningDate) <= DATE(:date) AND b.joiningDate IS NULL")
         int countBookedByDate(@Param("hostelId") String hostelId, @Param("date") java.util.Date date);
+
+        int countByHostelIdAndCurrentStatus(String hostelId, String currentStatus);
+
+        @Query(value = "SELECT MIN(leaving_date) FROM bookingsv1 WHERE hostel_id = :hostelId AND current_status = 'NOTICE' AND leaving_date >= DATE(:now)", nativeQuery = true)
+        Date findEarliestLeavingDate(@Param("hostelId") String hostelId, @Param("now") Date now);
 }

@@ -1307,12 +1307,7 @@ public class CustomersService {
 
             if (billingDates.hasGracePeriod()) {
                 Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
-                if (Utils.compareWithTwoDates(joiningDate, gracePeriodEndingDate) <= 0) {
-
-                    double finalRent = payloads.rentalAmount();
-                    invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
-                }
-                else {
+                if (payloads.proRate() != null && payloads.proRate()) {
                     long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
                     long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
                     double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
@@ -1322,10 +1317,23 @@ public class CustomersService {
                     }
 
                     invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
+                } else {
+                    if (Utils.compareWithTwoDates(joiningDate, gracePeriodEndingDate) <= 0) {
+                        double finalRent = payloads.rentalAmount();
+                        invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
+                    } else {
+                        long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                        long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
+                        double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+                        double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                        if (finalRent > payloads.rentalAmount()) {
+                            finalRent = payloads.rentalAmount();
+                        }
+                        invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
 
+                    }
                 }
-            }
-            else {
+            } else {
                 long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
                 long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
                 double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;

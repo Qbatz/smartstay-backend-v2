@@ -28,6 +28,8 @@ public record CheckInRequest(
         String stayType,
 
         @Valid
-        List<NonRefundable> deductions
+        List<NonRefundable> deductions,
+
+        Boolean proRate
 ) { }
 

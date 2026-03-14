@@ -9,7 +9,6 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
@@ -229,13 +228,12 @@ public class InvoiceV1Service {
             PaymentSummary summary = new PaymentSummary(hostelId, customerId, invoiceNumber.toString(), amount, customerMailId, customerMobile, status);
             paymentSummaryService.addInvoice(summary);
         }
-
-
     }
 
     /**
      * this is used only for booking purpose. Do not use it any where
      */
+
     public String addBookingInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String bankId, String referenceNumber, Date bookingDate) {
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
@@ -2392,4 +2390,15 @@ public class InvoiceV1Service {
         return history;
     }
 
+    public Map<String, Object> getBillingSummary(String hostelId, Date startDate, Date endDate) {
+        return invoicesV1Repository.getBillingSummary(hostelId, startDate, endDate);
+    }
+
+    public List<InvoicesV1> findTopOverdueInvoices(String hostelId, org.springframework.data.domain.Pageable pageable) {
+        return invoicesV1Repository.findTopOverdueInvoices(hostelId, pageable);
+    }
+
+    public Double getTotalPaidAmount(String hostelId, Date startDate, Date endDate) {
+        return invoicesV1Repository.getTotalPaidAmount(hostelId, startDate, endDate);
+    }
 }
