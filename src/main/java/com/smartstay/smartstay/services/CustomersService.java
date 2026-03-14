@@ -1308,6 +1308,7 @@ public class CustomersService {
             if (billingDates.hasGracePeriod()) {
                 Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
                 if (Utils.compareWithTwoDates(joiningDate, gracePeriodEndingDate) <= 0) {
+
                     double finalRent = payloads.rentalAmount();
                     invoiceService.addInvoice(customers.getCustomerId(), finalRent, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates);
                 }

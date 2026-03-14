@@ -89,6 +89,12 @@ public class BankTransactionService {
                 .map(item -> new TransactionsMapper().apply(item))
                 .toList();
     }
+    public List<com.smartstay.smartstay.dto.transaction.TransactionDto> getAllTransactionsByHostelId(String hostelId) {
+        return bankRepository.findByHostelIdAndIsDeletedFalseOrderByTransactionDateDesc(hostelId)
+                .stream()
+                .map(item -> new TransactionsMapper().apply(item))
+                .toList();
+    }
 
     public BankTransactionsV1 getTransaction(String bankId,String hostelId) {
         return bankRepository.findByBankIdAndHostelId(bankId,hostelId);
