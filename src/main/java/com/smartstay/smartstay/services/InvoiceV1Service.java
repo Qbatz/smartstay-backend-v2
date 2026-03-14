@@ -2401,4 +2401,55 @@ public class InvoiceV1Service {
     public Double getTotalPaidAmount(String hostelId, Date startDate, Date endDate) {
         return invoicesV1Repository.getTotalPaidAmount(hostelId, startDate, endDate);
     }
+
+    public ResponseEntity<?> markInvoiceUnpaid(String hostelId, String invoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL, HttpStatus.BAD_REQUEST);
+        }
+       if (!invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
+           return new ResponseEntity<>(Utils.CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL, HttpStatus.BAD_REQUEST);
+       }
+
+       List<TransactionV1> listTransactions = transactionService.getTransactionsByInvoiceId(invoiceId);
+       if (!listTransactions.isEmpty()) {
+           return new ResponseEntity<>(Utils.REEIPTS_EXISTS_CANNOT_MARK_UNPAID, HttpStatus.BAD_REQUEST);
+       }
+
+       invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+       invoicesV1.setPaidAmount(0.0);
+       invoicesV1.setUpdatedAt(new Date());
+       invoicesV1.setUpdatedBy(authentication.getName());
+
+       transactionService.markInvoiceUnpaid(invoicesV1.getCustomerId(), invoicesV1.getTotalAmount(), invoiceId);
+
+       invoicesV1Repository.save(invoicesV1);
+       usersService.addUserLog(hostelId, invoicesV1.getInvoiceId(), ActivitySource.INVOICE, ActivitySourceType.MARK_UNPAID, users);
+
+       return new ResponseEntity<>(HttpStatus.OK);
+    }
 }

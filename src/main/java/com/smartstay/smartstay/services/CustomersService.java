@@ -679,7 +679,8 @@ public class CustomersService {
                     checkinRequest.advanceAmount(),
                     checkinRequest.rentalAmount(),
                     checkinRequest.stayType(),
-                    checkinRequest.deductions()
+                    checkinRequest.deductions(),
+                    checkinRequest.proRate()
             );
 
             bookingsService.checkInBookedCustomer(customers, request);
