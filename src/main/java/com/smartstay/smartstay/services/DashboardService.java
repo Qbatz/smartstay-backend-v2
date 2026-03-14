@@ -198,7 +198,7 @@ public class DashboardService {
                         Collectors.summingDouble(e -> e.getTotalPrice() != null ? e.getTotalPrice() : 0.0)));
 
         Double totalAmount = grouped.values().stream().mapToDouble(Double::doubleValue).sum();
-        final Double total = totalAmount; // For use in lambda
+        final Double total = totalAmount;
 
         List<ExpenseBreakdown> breakdown = grouped.entrySet().stream()
                 .map(e -> {
@@ -213,8 +213,8 @@ public class DashboardService {
     }
 
     private RoomsAndBedInfo buildRoomsAndBedInfo(String hostelId) {
-        int totalRooms = roomsService.getRoomCount(hostelId);
-        int totalBeds = bedsService.countAllByHostelId(hostelId);
+        int totalRoomsCount = roomsService.getRoomCount(hostelId);
+        int totalBedsCount = bedsService.countAllByHostelId(hostelId);
 
         List<Rooms> rooms = roomsService.findByHostelId(hostelId);
         List<RoomBedCount> totalBedsByRoom = bedsService.countBedsByRoomForHostel(hostelId);
@@ -226,38 +226,57 @@ public class DashboardService {
                 .collect(Collectors.toMap(RoomBedCount::getRoomId, RoomBedCount::getBedCount));
 
         int filledRooms = 0;
-        Map<Integer, Long> bedsByType = new HashMap<>();
-        Map<Integer, Long> filledBedsByType = new HashMap<>();
+        int occupiedBedsTotal = 0;
+
+        // shareType -> stats
+        Map<Integer, Integer> typeTotalRooms = new HashMap<>();
+        Map<Integer, Integer> typeAvailableRooms = new HashMap<>();
+        Map<Integer, Long> typeTotalBeds = new HashMap<>();
+        Map<Integer, Long> typeOccupiedBeds = new HashMap<>();
 
         for (Rooms r : rooms) {
             int rId = r.getRoomId();
             Integer st = r.getSharingType();
-            if (st == null)
-                continue;
+            if (st == null) st = 0;
 
             long tBeds = totalBedsMap.getOrDefault(rId, 0L);
             long oBeds = occupiedBedsMap.getOrDefault(rId, 0L);
 
-            if (tBeds > 0 && tBeds == oBeds) {
-                filledRooms++;
-            }
+            typeTotalRooms.put(st, typeTotalRooms.getOrDefault(st, 0) + 1);
+            typeTotalBeds.put(st, typeTotalBeds.getOrDefault(st, 0L) + tBeds);
+            typeOccupiedBeds.put(st, typeOccupiedBeds.getOrDefault(st, 0L) + oBeds);
+            occupiedBedsTotal += (int) oBeds;
 
-            bedsByType.put(st, bedsByType.getOrDefault(st, 0L) + tBeds);
-            filledBedsByType.put(st, filledBedsByType.getOrDefault(st, 0L) + oBeds);
+            if (tBeds > 0) {
+                if (tBeds == oBeds) {
+                    filledRooms++;
+                } else {
+                    typeAvailableRooms.put(st, typeAvailableRooms.getOrDefault(st, 0) + 1);
+                }
+            }
         }
 
         List<SharingInfo> sharingInfoList = new ArrayList<>();
-        for (Map.Entry<Integer, Long> entry : bedsByType.entrySet()) {
-            Integer type = entry.getKey();
-            long typeTotalBeds = entry.getValue();
-            long typeFilledBeds = filledBedsByType.getOrDefault(type, 0L);
-            String typeName = Utils.capitalize((type == 1 ? "SINGLE" : type) + " SHARING");
-            double occupancy = typeTotalBeds > 0 ? ((double) typeFilledBeds / typeTotalBeds) * 100 : 0.0;
-            sharingInfoList.add(new SharingInfo(typeName, (int) typeTotalBeds, (int) typeFilledBeds,
+        List<Integer> sortedTypes = typeTotalRooms.keySet().stream().sorted().collect(Collectors.toList());
+
+        for (Integer type : sortedTypes) {
+            int tRooms = typeTotalRooms.getOrDefault(type, 0);
+            int aRooms = typeAvailableRooms.getOrDefault(type, 0);
+            long tBeds = typeTotalBeds.getOrDefault(type, 0L);
+            long oBeds = typeOccupiedBeds.getOrDefault(type, 0L);
+            long aBeds = Math.max(0L, tBeds - oBeds);
+
+            String typeName = Utils.capitalize((type == 0 ? "0" : (type == 1 ? "Single" : type)) + " Sharing");
+            double occupancy = tBeds > 0 ? ((double) oBeds / tBeds) * 100 : 0.0;
+
+            sharingInfoList.add(new SharingInfo(typeName, tRooms, aRooms, (int) tBeds, (int) oBeds, (int) aBeds,
                     Utils.roundOffWithTwoDigit(occupancy)));
         }
 
-        return new RoomsAndBedInfo(totalRooms, filledRooms, totalBeds, sharingInfoList);
+        int availableRooms = totalRoomsCount - filledRooms;
+        int availableBeds = totalBedsCount - occupiedBedsTotal;
+
+        return new RoomsAndBedInfo(totalRoomsCount, filledRooms, availableRooms, totalBedsCount, occupiedBedsTotal, availableBeds, sharingInfoList);
     }
 
     private List<OccupancyPoint> buildOccupancyTrend(String hostelId, String filter) {
@@ -279,7 +298,7 @@ public class DashboardService {
             trend.add(new OccupancyPoint(sdf.format(date), booked, occupied, vacant));
             cal.add(Calendar.DATE, 1);
             if (trend.size() > 90)
-                break; // Maximum 90 days
+                break;
         }
         return trend;
     }
@@ -438,7 +457,8 @@ public class DashboardService {
             if (customerName != null) customerName = Utils.capitalize(customerName);
             
             String profilePic = c != null ? c.getProfilePic() : null;
-            
+            String tenantId = c != null ? c.getCustomerId() : null;
+
             String roomName = r != null ? r.getRoomName() : null;
             if (roomName != null) roomName = Utils.capitalize(roomName);
             
@@ -450,7 +470,7 @@ public class DashboardService {
             String joiningDate = b.getJoiningDate() != null ? sdf.format(b.getJoiningDate()) : null;
             String status = b.getCurrentStatus() != null ? Utils.capitalize(b.getCurrentStatus()) : null;
 
-            return new RecentCheckin(customerName, profilePic, roomName, sharingType, bedName, joiningDate, status);
+            return new RecentCheckin(tenantId,customerName, profilePic, roomName, sharingType, bedName, joiningDate, status);
         }).collect(Collectors.toList());
     }
 
@@ -464,12 +484,15 @@ public class DashboardService {
             String customerName = c != null ? (c.getFirstName() + (c.getLastName() != null ? " " + c.getLastName() : "")) : null;
             if (customerName != null) customerName = Utils.capitalize(customerName);
             
+            String profilePic = c != null ? c.getProfilePic() : null;
+            String initials = c != null ? Utils.getInitials(c.getFirstName(), c.getLastName()) : null;
+            
             Double paidAmount = inv.getPaidAmount() != null ? inv.getPaidAmount() : 0.0;
             Double totalAmount = inv.getTotalAmount() != null ? inv.getTotalAmount() : 0.0;
             String dueDate = inv.getInvoiceDueDate() != null ? sdf.format(inv.getInvoiceDueDate()) : null;
             String status = inv.getPaymentStatus() != null ? Utils.capitalize(inv.getPaymentStatus()) : null;
 
-            return new OverdueInvoice(inv.getInvoiceId(), inv.getInvoiceNumber(), customerName, totalAmount, paidAmount, dueDate,
+            return new OverdueInvoice(inv.getInvoiceId(), inv.getInvoiceNumber(), customerName, profilePic, initials, totalAmount, paidAmount, dueDate,
                     status);
         }).collect(Collectors.toList());
     }
@@ -485,6 +508,12 @@ public class DashboardService {
             if (customerName != null) customerName = Utils.capitalize(customerName);
             
             String profilePic = c != null ? c.getProfilePic() : null;
+            
+            BookingsV1 b = bookingsService.findBookingsByCustomerIdAndHostelId(comp.getCustomerId(), hostelId);
+            Rooms r = (b != null && b.getRoomId() > 0) ? roomsService.findRoomByRoomId(b.getRoomId()) : null;
+            String roomName = r != null ? r.getRoomName() : null;
+            if (roomName != null) roomName = Utils.capitalize(roomName);
+
             String complaintType = Utils.capitalize("COMPLAINT");
             String status = comp.getStatus() != null ? Utils.capitalize(comp.getStatus()) : null;
             String date = comp.getCreatedAt() != null ? sdf.format(comp.getCreatedAt()) : null;
@@ -493,6 +522,7 @@ public class DashboardService {
                     comp.getComplaintId(),
                     customerName,
                     profilePic,
+                    roomName,
                     complaintType,
                     status,
                     date,
