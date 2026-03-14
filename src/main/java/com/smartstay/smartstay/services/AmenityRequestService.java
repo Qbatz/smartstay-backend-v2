@@ -58,6 +58,15 @@ public class AmenityRequestService {
         return amenityRequestRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
     }
 
+    public java.util.Map<String, Object> getRequestStatusSummary(String hostelId, Date startDate, Date endDate) {
+         return amenityRequestRepository.getRequestStatusSummary(hostelId, startDate, endDate);
+    }
+
+    public List<AmenityRequest> findTopRequests(String hostelId, org.springframework.data.domain.Pageable pageable) {
+         return amenityRequestRepository.findTopRequests(hostelId, pageable);
+    }
+
+
     public int countActiveByHostelIdAndDateRange(String hostelId, List<String> statuses, Date startDate, Date endDate) {
         return amenityRequestRepository.countActiveByHostelIdAndDateRange(hostelId, statuses, startDate, endDate);
     }

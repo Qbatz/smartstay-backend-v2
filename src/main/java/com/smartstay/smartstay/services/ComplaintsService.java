@@ -683,6 +683,15 @@ public class ComplaintsService {
         return complaintRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
     }
 
+    public Map<String, Object> getComplaintStatusSummary(String hostelId, Date startDate, Date endDate) {
+        return complaintRepository.getComplaintStatusSummary(hostelId, startDate, endDate);
+    }
+
+    public List<ComplaintsV1> findTopComplaints(String hostelId, Pageable pageable) {
+        return complaintRepository.findTopComplaints(hostelId, pageable);
+    }
+
+
     public int countActiveByHostelIdAndDateRange(String hostelId, List<String> statuses, Date startDate, Date endDate) {
         return complaintRepository.countActiveByHostelIdAndDateRange(hostelId, statuses, startDate, endDate);
     }

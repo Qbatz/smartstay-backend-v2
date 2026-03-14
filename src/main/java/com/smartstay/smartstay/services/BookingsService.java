@@ -193,6 +193,18 @@ public class BookingsService {
         return 0;
     }
 
+    public List<BookingsV1> findTopCheckins(String hostelId, org.springframework.data.domain.Pageable pageable) {
+        return bookingsRepository.findTopCheckins(hostelId, pageable);
+    }
+
+    public int countByStatusAndDate(String hostelId, String status, Date date) {
+        return bookingsRepository.countByStatusAndDate(hostelId, status, date);
+    }
+
+    public int countBookedByDate(String hostelId, Date date) {
+        return bookingsRepository.countBookedByDate(hostelId, date);
+    }
+
     public BookingsV1 findBookingsByCustomerIdAndHostelId(String customerId, String hostelId) {
         return bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
     }
@@ -1204,5 +1216,13 @@ public class BookingsService {
 
     public List<BookingsV1> findAllBookingsWithFilters(String hostelId, Date startDate, Date endDate, List<String> customerIds, List<String> statuses, List<Integer> roomIds, List<Integer> floorIds) {
         return bookingsRepository.findAllBookingsWithFilters(hostelId, startDate, endDate, (customerIds != null && !customerIds.isEmpty()) ? customerIds : null, (statuses != null && !statuses.isEmpty()) ? statuses : null, (roomIds != null && !roomIds.isEmpty()) ? roomIds : null, (floorIds != null && !floorIds.isEmpty()) ? floorIds : null);
+    }
+
+    public int countByHostelIdAndCurrentStatus(String hostelId, String status) {
+        return bookingsRepository.countByHostelIdAndCurrentStatus(hostelId, status);
+    }
+
+    public Date findEarliestLeavingDate(String hostelId, Date now) {
+        return bookingsRepository.findEarliestLeavingDate(hostelId, now);
     }
 }

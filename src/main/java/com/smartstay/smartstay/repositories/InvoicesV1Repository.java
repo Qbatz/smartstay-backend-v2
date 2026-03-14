@@ -259,6 +259,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """, nativeQuery = true)
     List<java.util.Map<String, Object>> findOverdueInvoices(@Param("hostelId") String hostelId, org.springframework.data.domain.Pageable pageable);
 
+    @Query("SELECT i FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND i.isCancelled = false ORDER BY i.invoiceDueDate ASC")
+    List<InvoicesV1> findTopOverdueInvoices(@Param("hostelId") String hostelId, org.springframework.data.domain.Pageable pageable);
+
+
     @Query("""
             SELECT SUM(i.paidAmount)
             FROM InvoicesV1 i

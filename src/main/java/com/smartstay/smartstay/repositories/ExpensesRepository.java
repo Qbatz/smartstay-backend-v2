@@ -76,4 +76,9 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
                 @Param("startDate") Date startDate,
                 @Param("endDate") Date endDate);
 
+        List<ExpensesV1> findByHostelIdAndIsActiveTrue(String hostelId);
+
+    @Query("SELECT e FROM ExpensesV1 e WHERE e.hostelId = :hostelId AND e.isActive = true AND DATE(e.transactionDate) >= DATE(:startDate) AND DATE(e.transactionDate) <= DATE(:endDate)")
+    List<ExpensesV1> findByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
 }
