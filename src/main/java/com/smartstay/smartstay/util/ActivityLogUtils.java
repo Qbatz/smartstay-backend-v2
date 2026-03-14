@@ -350,6 +350,9 @@ public class ActivityLogUtils {
         if (operation.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
             return "Updated invoice";
         }
+        if (operation.equalsIgnoreCase(ActivitySourceType.MARK_UNPAID.name())) {
+            return "Invoice has beed marked to unpaid";
+        }
         return null;
     }
 

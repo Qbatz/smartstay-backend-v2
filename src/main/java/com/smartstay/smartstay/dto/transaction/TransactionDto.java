@@ -10,5 +10,6 @@ public record TransactionDto(Integer transactionId,
                              String transactionDate,
                              boolean isCredit,
                              String bankId,
-                             String accountHolder) {
+                             String accountHolder,
+                             boolean isDeleted) {
 }
