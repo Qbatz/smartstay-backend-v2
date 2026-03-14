@@ -36,14 +36,6 @@ public interface AmenityRequestRepository extends JpaRepository<AmenityRequest, 
         java.util.Map<String, Object> getRequestStatusSummary(@Param("hostelId") String hostelId,
                         @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate);
 
-        @Query(value = """
-                        SELECT ar.amenity_request_id as requestId, CONCAT(cus.first_name, ' ', cus.last_name) as customerName, cus.profile_pic as profilePic, am.amenity_name as type, ar.current_status as status, ar.created_at as date
-                        FROM amenity_request ar
-                        LEFT JOIN customers cus ON ar.customer_id = cus.customer_id
-                        LEFT JOIN amenitiesv1 am ON ar.amenity_id = am.amenity_id
-                        WHERE ar.hostel_id = :hostelId
-                        ORDER BY ar.created_at DESC
-                        """, nativeQuery = true)
-        List<java.util.Map<String, Object>> findLatestRequests(@Param("hostelId") String hostelId,
-                        org.springframework.data.domain.Pageable pageable);
+        @Query("SELECT ar FROM AmenityRequest ar WHERE ar.hostelId = :hostelId ORDER BY ar.createdAt DESC")
+        List<AmenityRequest> findTopRequests(@Param("hostelId") String hostelId, org.springframework.data.domain.Pageable pageable);
 }

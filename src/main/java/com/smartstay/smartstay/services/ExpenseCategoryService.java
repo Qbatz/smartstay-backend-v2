@@ -331,4 +331,8 @@ public class ExpenseCategoryService {
         }
         return true;
     }
+
+    public List<com.smartstay.smartstay.dao.ExpenseCategory> findAllByHostelIdAndIsActiveTrue(String hostelId) {
+        return expensesCategoryRepository.findAllByHostelIdAndIsActiveTrue(hostelId);
+    }
 }

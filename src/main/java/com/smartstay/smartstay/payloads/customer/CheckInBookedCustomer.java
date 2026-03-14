@@ -27,5 +27,6 @@ public record CheckInBookedCustomer(
 
                                     @Valid
                                     List<NonRefundable> deductions,
-                                    boolean isAdvanceIncludedInBooking) {
+                                    boolean isAdvanceIncludedInBooking,
+                                    Boolean proRate) {
 }

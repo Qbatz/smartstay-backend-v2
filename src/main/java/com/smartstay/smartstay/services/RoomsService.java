@@ -141,6 +141,10 @@ public class RoomsService {
 
     }
 
+    public com.smartstay.smartstay.dao.Rooms findRoomByRoomId(int roomId) {
+        return roomRepository.findById(roomId).orElse(null);
+    }
+
     public ResponseEntity<?> addRoom(AddRoom addRoom) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);

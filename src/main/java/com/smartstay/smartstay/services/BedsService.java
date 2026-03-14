@@ -953,6 +953,14 @@ public class BedsService {
         return bedsRepository.countBedsByRoomForHostel(hostelId);
     }
 
+    public List<RoomBedCount> countOccupiedBedsByRoomForHostel(String hostelId) {
+        return bedsRepository.countOccupiedBedsByRoomForHostel(hostelId);
+    }
+
+    public Beds findBedById(int bedId) {
+        return bedsRepository.findById(bedId).orElse(null);
+    }
+
     public void deleteBedsByRoomId(Integer roomId, String parentId) {
         List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId, parentId)
                 .stream()
