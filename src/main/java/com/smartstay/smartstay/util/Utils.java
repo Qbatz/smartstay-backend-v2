@@ -645,4 +645,22 @@ public class Utils {
         return sb.toString().trim();
     }
 
+    public static String getInitials(String firstName, String lastName) {
+        if (firstName == null || firstName.isEmpty()) {
+            if (lastName != null && lastName.length() >= 2) {
+                return lastName.substring(0, 2).toUpperCase();
+            }
+            return lastName != null ? lastName.toUpperCase() : "";
+        }
+
+        if (lastName == null || lastName.isEmpty()) {
+            if (firstName.length() >= 2) {
+                return firstName.substring(0, 2).toUpperCase();
+            }
+            return firstName.toUpperCase();
+        }
+
+        return (String.valueOf(firstName.charAt(0)) + String.valueOf(lastName.charAt(0))).toUpperCase();
+    }
+
 }
