@@ -199,6 +199,12 @@ public class BankingService {
                 .distinct()
                 .toList();
         List<BankingV1> bankingList = bankingV1Repository.findByBankIdIn(bankId);
+        if (transactions != null && transactions.isEmpty()) {
+            bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
+        }
+        else if (transactions == null) {
+            bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
+        }
 
 //        List<BankingV1> bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
         List<Bank> listBankings = bankingList
@@ -208,9 +214,10 @@ public class BankingService {
 
         List<TransactionDto> listTransactions = new ArrayList<>();
         if (!transactions.isEmpty()) {
+            List<BankingV1> finalBankingList = bankingList;
             listTransactions = transactions.stream()
                     .map(item -> {
-                        BankingV1 accountHolderBank = bankingList
+                        BankingV1 accountHolderBank = finalBankingList
                                 .stream()
                                 .filter(i -> i.getBankId().equalsIgnoreCase(item.bankId()))
                                 .findFirst()

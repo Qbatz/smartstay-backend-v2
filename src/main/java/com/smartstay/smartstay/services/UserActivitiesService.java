@@ -58,6 +58,7 @@ public class UserActivitiesService {
         userActivities.setSourceId(users.getUserId());
         userActivities.setActivityType(operation);
         userActivities.setHostelId(null);
+        userActivities.setPlatform(authentication.getSource());
 
         userActivitiesRepositories.save(userActivities);
 
@@ -79,6 +80,7 @@ public class UserActivitiesService {
         userActivities.setSourceId(sourceId);
         userActivities.setActivityType(operation);
         userActivities.setHostelId(hostelId);
+        userActivities.setPlatform(authentication.getSource());
 
         userActivitiesRepositories.save(userActivities);
 
@@ -100,6 +102,7 @@ public class UserActivitiesService {
         userActivities.setSourceId(sourceId);
         userActivities.setActivityType(operation);
         userActivities.setHostelId(hostelId);
+        userActivities.setPlatform(authentication.getSource());
 
         if (customerIds != null && !customerIds.isEmpty()) {
             userActivities.setTenantIds(customerIds);

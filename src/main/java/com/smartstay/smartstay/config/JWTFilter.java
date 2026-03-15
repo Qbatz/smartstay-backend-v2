@@ -2,6 +2,7 @@ package com.smartstay.smartstay.config;
 
 import com.smartstay.smartstay.services.JWTService;
 import com.smartstay.smartstay.services.MyUserDetailService;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,6 +19,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Objects;
 
 @Configuration
 public class JWTFilter extends OncePerRequestFilter {
@@ -50,7 +53,7 @@ public class JWTFilter extends OncePerRequestFilter {
                         userDetailService.loadUserByUsername(userName);
 
                 if (jwtService.validateToken(token, userDetails)) {
-
+                    Claims claims = jwtService.extractAllClaims(token);
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
@@ -58,10 +61,12 @@ public class JWTFilter extends OncePerRequestFilter {
                                     userDetails.getAuthorities()
                             );
 
-                    authentication.setDetails(
-                            new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
-                    );
+//                    authentication.setDetails(
+//                            new WebAuthenticationDetailsSource()
+//                                    .buildDetails(request)
+//                    );
+
+                    authentication.setDetails(claims);
 
                     SecurityContextHolder.getContext()
                             .setAuthentication(authentication);
