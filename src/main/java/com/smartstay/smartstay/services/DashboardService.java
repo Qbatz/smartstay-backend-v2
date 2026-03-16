@@ -525,8 +525,19 @@ public class DashboardService {
             Double totalAmount = inv.getTotalAmount() != null ? inv.getTotalAmount() : 0.0;
             String dueDate = inv.getInvoiceDueDate() != null ? sdf.format(inv.getInvoiceDueDate()) : null;
             String status = inv.getPaymentStatus() != null ? Utils.capitalize(inv.getPaymentStatus()) : null;
+            double balanceDue = totalAmount - paidAmount;
 
-            return new OverdueInvoice(inv.getInvoiceId(), inv.getInvoiceNumber(), customerName, profilePic, initials, totalAmount, paidAmount, dueDate,
+            return new OverdueInvoice(inv.getInvoiceId(),
+                    inv.getInvoiceNumber(),
+                    customerName,
+                    inv.getCustomerId(),
+                    profilePic,
+                    initials,
+                    totalAmount,
+                    paidAmount,
+                    dueDate,
+                    Utils.dateToString(inv.getInvoiceStartDate()),
+                    balanceDue,
                     status);
         }).collect(Collectors.toList());
     }

@@ -5,22 +5,22 @@ import jakarta.validation.constraints.NotNull;
 
 public record DemoRequest(
         String countryCode,
-        @NotNull(message = "Mobile cannot empty")
-        @NotEmpty(message = "Mobile cannot empty")
+        @NotNull(message = "Mobile cannot be empty")
+        @NotEmpty(message = "Mobile cannot be empty")
         String mobile,
-        @NotNull(message = "Name cannot empty")
-        @NotEmpty(message = "Name cannot empty")
+        @NotNull(message = "Name cannot be empty")
+        @NotEmpty(message = "Name cannot be empty")
         String name,
         String emailId,
         String organization,
         Integer noOfProperties,
         Integer noOfTenants,
-        @NotNull(message = "City cannot empty")
-        @NotEmpty(message = "City cannot empty")
+        @NotNull(message = "City cannot be empty")
+        @NotEmpty(message = "City cannot be empty")
         String city,
         String state,
-        @NotNull(message = "Date cannot empty")
-        @NotEmpty(message = "Date cannot empty")
+        @NotNull(message = "Date cannot be empty")
+        @NotEmpty(message = "Date cannot be empty")
         String requestedDate,
         String requestedTime) {
 }
