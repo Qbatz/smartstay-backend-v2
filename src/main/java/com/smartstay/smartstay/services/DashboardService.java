@@ -178,7 +178,7 @@ public class DashboardService {
         Integer checkInTenants = bookingsService.countByHostelIdAndCurrentStatus(hostelId, "CHECKIN");
         Integer noticePeriod = bookingsService.countByHostelIdAndCurrentStatus(hostelId, "NOTICE");
         Date nextCheckoutDate = bookingsService.findEarliestLeavingDate(hostelId, new Date());
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
         String nextCheckout = nextCheckoutDate != null ? sdf.format(nextCheckoutDate) : null;
         return new TenantsSummary(totalTenants, checkInTenants, noticePeriod, nextCheckout);
     }
@@ -301,7 +301,7 @@ public class DashboardService {
         cal.setTime(dates.startDate());
 
         int totalBeds = bedsService.countAllByHostelId(hostelId);
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM");
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM");
 
         while (!cal.getTime().after(dates.endDate())) {
             Date date = cal.getTime();
@@ -365,12 +365,34 @@ public class DashboardService {
 
     private StatusSummary buildTenantRequests(String hostelId, String filter) {
         DashboardDateRange dates = getDateRange(filter, hostelId);
-        Map<String, Object> summary = amenityRequestService.getRequestStatusSummary(hostelId, dates.startDate(),
-                dates.endDate());
-        Integer total = summary != null && summary.get("total") != null ? ((Number) summary.get("total")).intValue() : 0;
-        Integer pending = summary != null && summary.get("pending") != null ? ((Number) summary.get("pending")).intValue() : 0;
-        Integer resolved = summary != null && summary.get("resolved") != null ? ((Number) summary.get("resolved")).intValue() : 0;
-        return new StatusSummary(total, 0, pending, resolved);
+        
+        Map<String, Object> amenitySummary = amenityRequestService.getRequestStatusSummary(hostelId, dates.startDate(), dates.endDate());
+        Map<String, Object> complaintSummary = complaintsService.getComplaintStatusSummary(hostelId, dates.startDate(), dates.endDate());
+        Map<String, Object> bedChangeSummary = bedChangeRequestRepository.getRequestStatusSummary(hostelId, dates.startDate(), dates.endDate());
+        
+        int total = 0, pending = 0, resolved = 0, inProgress = 0;
+        
+        if (amenitySummary != null) {
+            total += amenitySummary.get("total") != null ? ((Number) amenitySummary.get("total")).intValue() : 0;
+            pending += amenitySummary.get("pending") != null ? ((Number) amenitySummary.get("pending")).intValue() : 0;
+            resolved += amenitySummary.get("resolved") != null ? ((Number) amenitySummary.get("resolved")).intValue() : 0;
+            inProgress += amenitySummary.get("inProgress") != null ? ((Number) amenitySummary.get("inProgress")).intValue() : 0;
+        }
+        
+        if (complaintSummary != null) {
+            total += complaintSummary.get("total") != null ? ((Number) complaintSummary.get("total")).intValue() : 0;
+            pending += complaintSummary.get("pending") != null ? ((Number) complaintSummary.get("pending")).intValue() : 0;
+            resolved += complaintSummary.get("resolved") != null ? ((Number) complaintSummary.get("resolved")).intValue() : 0;
+            inProgress += complaintSummary.get("inProgress") != null ? ((Number) complaintSummary.get("inProgress")).intValue() : 0;
+        }
+        
+        if (bedChangeSummary != null) {
+            total += bedChangeSummary.get("total") != null ? ((Number) bedChangeSummary.get("total")).intValue() : 0;
+            pending += bedChangeSummary.get("pending") != null ? ((Number) bedChangeSummary.get("pending")).intValue() : 0;
+            resolved += bedChangeSummary.get("resolved") != null ? ((Number) bedChangeSummary.get("resolved")).intValue() : 0;
+        }
+        
+        return new StatusSummary(total, inProgress, pending, resolved);
     }
 
     private FinanceSummary buildFinanceSummary(String hostelId, String filter) {
@@ -391,8 +413,11 @@ public class DashboardService {
 
         Integer incomeTrend = calculateTrend(income, prevIncome);
         Integer expenseTrend = calculateTrend(expense, prevExpense);
+        Double netProfit = Utils.roundOffWithTwoDigit(income - expense);
+        Double prevNetProfit = prevIncome - prevExpense;
+        Integer profitTrend = calculateTrend(netProfit, prevNetProfit);
 
-        return new FinanceSummary(income, incomeTrend, expense, expenseTrend, Utils.roundOffWithTwoDigit(income - expense));
+        return new FinanceSummary(income, incomeTrend, expense, expenseTrend, netProfit, profitTrend);
     }
 
     private RevenueSummary buildRevenueSummary(String hostelId, String filter) {
@@ -480,7 +505,7 @@ public class DashboardService {
 
     private List<RecentCheckin> buildRecentCheckins(String hostelId) {
         List<BookingsV1> bookings = bookingsService.findTopCheckins(hostelId, PageRequest.of(0, 5));
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
 
         return bookings.stream().map(b -> {
             Customers c = customersService.getCustomerInformation(b.getCustomerId());
@@ -492,6 +517,7 @@ public class DashboardService {
             
             String profilePic = c != null ? c.getProfilePic() : null;
             String tenantId = c != null ? c.getCustomerId() : null;
+            String initials = c != null ? Utils.getInitials(c.getFirstName(), c.getLastName()) : null;
 
             String roomName = r != null ? r.getRoomName() : null;
             if (roomName != null) roomName = Utils.capitalize(roomName);
@@ -504,14 +530,14 @@ public class DashboardService {
             String joiningDate = b.getJoiningDate() != null ? sdf.format(b.getJoiningDate()) : null;
             String status = b.getCurrentStatus() != null ? Utils.capitalize(b.getCurrentStatus()) : null;
 
-            return new RecentCheckin(tenantId,customerName, profilePic, roomName, sharingType, bedName, joiningDate, status);
+            return new RecentCheckin(tenantId,initials,customerName, profilePic, roomName, sharingType, bedName, joiningDate, status);
         }).collect(Collectors.toList());
     }
 
     private List<OverdueInvoice> buildOverdueInvoices(String hostelId) {
         List<InvoicesV1> invoices = invoiceV1Service.findTopOverdueInvoices(hostelId,
                 PageRequest.of(0, 5));
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
 
         return invoices.stream().map(inv -> {
             Customers c = customersService.getCustomerInformation(inv.getCustomerId());
@@ -550,14 +576,19 @@ public class DashboardService {
         List<ComplaintsV1> complaints = complaintsService.findTopComplaints(hostelId, PageRequest.of(0, 5));
         for (ComplaintsV1 c : complaints) {
             Customers cus = customersService.getCustomerInformation(c.getCustomerId());
+            Rooms rm = (c.getRoomId() != null && c.getRoomId() > 0) ? roomsService.findRoomByRoomId(c.getRoomId()) : null;
+            String roomName = (rm != null) ? rm.getRoomName() : null;
+            
             activities.add(new DashboardRequest(
                 (long) c.getComplaintId(),
                 cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown",
+                cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null,
                 cus != null ? cus.getProfilePic() : null,
                 "Complaint",
                 c.getStatus(),
                 c.getCreatedAt() != null ? sdf.format(c.getCreatedAt()) : null,
-                c.getDescription()
+                c.getDescription(),
+                roomName
             ));
         }
 
@@ -565,14 +596,20 @@ public class DashboardService {
         List<AmenityRequest> requests = amenityRequestService.findTopRequests(hostelId, PageRequest.of(0, 5));
         for (AmenityRequest r : requests) {
             Customers cus = customersService.getCustomerInformation(r.getCustomerId());
+            BookingsV1 booking = (cus != null) ? bookingsService.getBookingsByCustomerId(cus.getCustomerId()) : null;
+            Rooms rm = (booking != null && booking.getRoomId() > 0) ? roomsService.findRoomByRoomId(booking.getRoomId()) : null;
+            String roomName = (rm != null) ? rm.getRoomName() : null;
+
             activities.add(new DashboardRequest(
                 r.getAmenityRequestId(),
                 cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown",
+                cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null,
                 cus != null ? cus.getProfilePic() : null,
                 "Amenity Request",
                 r.getCurrentStatus(),
                 r.getCreatedAt() != null ? sdf.format(r.getCreatedAt()) : null,
-                r.getDescription()
+                r.getDescription(),
+                roomName
             ));
         }
 
@@ -580,14 +617,19 @@ public class DashboardService {
         List<BedChangeRequest> bedChanges = bedChangeRequestRepository.findTopRequests(hostelId, PageRequest.of(0, 5));
         for (BedChangeRequest b : bedChanges) {
             Customers cus = customersService.getCustomerInformation(b.getCustomerId());
+            Rooms rm = (b.getRoomId() != null && b.getRoomId() > 0) ? roomsService.findRoomByRoomId(b.getRoomId()) : null;
+            String roomName = (rm != null) ? rm.getRoomName() : null;
+
             activities.add(new DashboardRequest(
                 b.getId(),
                 cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown",
+                cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null,
                 cus != null ? cus.getProfilePic() : null,
                 "Bed Change",
                 b.getCurrentStatus(),
                 b.getCreatedAt() != null ? sdf.format(b.getCreatedAt()) : null,
-                b.getReason()
+                b.getReason(),
+                roomName
             ));
         }
 

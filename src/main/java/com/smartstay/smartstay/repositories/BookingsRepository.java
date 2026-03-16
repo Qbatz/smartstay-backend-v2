@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -248,8 +249,8 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
                         @Param("customerIds") List<String> customerIds, @Param("statuses") List<String> statuses,
                         @Param("roomIds") List<Integer> roomIds, @Param("floorIds") List<Integer> floorIds);
 
-        @Query("SELECT b FROM BookingsV1 b WHERE b.hostelId = :hostelId AND b.currentStatus IN ('BOOKED', 'CHECKIN') ORDER BY b.createdAt DESC")
-        List<BookingsV1> findTopCheckins(@Param("hostelId") String hostelId, org.springframework.data.domain.Pageable pageable);
+        @Query("SELECT b FROM BookingsV1 b WHERE b.hostelId = :hostelId AND b.currentStatus IN ('BOOKED') ORDER BY b.createdAt DESC")
+        List<BookingsV1> findTopCheckins(@Param("hostelId") String hostelId, Pageable pageable);
 
 
         @Query("SELECT COUNT(b) FROM BookingsV1 b WHERE b.hostelId = :hostelId AND b.currentStatus = :status AND DATE(b.joiningDate) <= DATE(:date) AND (b.checkoutDate IS NULL OR DATE(b.checkoutDate) >= DATE(:date))")
