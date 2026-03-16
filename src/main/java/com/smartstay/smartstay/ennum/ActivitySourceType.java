@@ -34,6 +34,7 @@ public enum ActivitySourceType {
     CHANGE_ADMIN_PASSWORD,
     UPDATE_ADMIN_PROFILE,
     DELETE_ADMIN_USER,
-    LOGOUT
+    LOGOUT,
+    MARK_UNPAID
 
 }

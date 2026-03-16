@@ -132,4 +132,28 @@ public class PaymentSummaryService {
     }
 
 
+    public void markInvoiceUnpaid(String customerId, Double totalAmount, String invoiceId) {
+        com.smartstay.smartstay.dao.PaymentSummary paymentSummary = paymentSummaryRepository.findByCustomerId(customerId);
+        if (paymentSummary == null) {
+            paymentSummary = new com.smartstay.smartstay.dao.PaymentSummary();
+            paymentSummary.setCustomerId(customerId);
+            paymentSummary.setCustomerStatus(paymentSummary.getCustomerStatus());
+            paymentSummary.setCustomerMailId(paymentSummary.getCustomerMailId());
+            paymentSummary.setCustomerMobile(paymentSummary.getCustomerMobile());
+            paymentSummary.setHostelId(paymentSummary.getHostelId());
+            paymentSummary.setDebitAmount(totalAmount);
+            paymentSummary.setBalance((totalAmount * -1));
+            paymentSummary.setLastInvoice(invoiceId);
+            paymentSummary.setLastUpdate(new Date());
+        }
+        else {
+            paymentSummary.setLastInvoice(invoiceId);
+            paymentSummary.setDebitAmount(paymentSummary.getDebitAmount() + totalAmount);
+            paymentSummary.setBalance(paymentSummary.getBalance() - totalAmount);
+
+            paymentSummary.setLastUpdate(new Date());
+        }
+
+        paymentSummaryRepository.save(paymentSummary);
+    }
 }

@@ -216,6 +216,7 @@ public class UsersService {
                 HashMap<String, Object> claims = new HashMap<>();
                 claims.put("userId", users.getUserId());
                 claims.put("role", rolesService.findById(users.getRoleId()));
+                claims.put("source", "web");
                 loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.WEB.name(), "");
                 userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
                         ActivitySourceType.LOGGED_IN.name(), users.getUserId(), users);
@@ -235,8 +236,9 @@ public class UsersService {
             HashMap<String, Object> claims = new HashMap<>();
             claims.put("userId", users.getUsers().getUserId());
             claims.put("role", rolesService.findById(users.getUsers().getRoleId()));
+            claims.put("source", "web");
             loginHistoryService.login(users.getUsers().getUserId(), users.getUsers().getParentId(),
-                    AppSource.WEB.name(), "");
+                    AppSource.MOBILE.name(), "");
 
             return new ResponseEntity<>(jwtService.generateToken(users.getUsers().getEmailId(), claims), HttpStatus.OK);
         } else if (users != null && users.getOtpValidity().before(new Date())) {
@@ -1085,6 +1087,7 @@ public class UsersService {
         HashMap<String, Object> claims = new HashMap<>();
         claims.put("userId", users.getUserId());
         claims.put("role", rolesService.findById(users.getRoleId()));
+        claims.put("source", "android");
 
         Long validity = System.currentTimeMillis() + (1000L * 60 * 60 * 24 * 15);
         loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.MOBILE.name(), "Android");

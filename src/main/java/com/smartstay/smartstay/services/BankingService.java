@@ -192,38 +192,43 @@ public class BankingService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<BankingV1> bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
+        List<TransactionDto> transactions =  transactionService.getAllTransactionsByHostelId(hostelId);
+        List<String> bankId = transactions
+                .stream()
+                .map(TransactionDto::bankId)
+                .distinct()
+                .toList();
+        List<BankingV1> bankingList = bankingV1Repository.findByBankIdIn(bankId);
+        if (transactions != null && transactions.isEmpty()) {
+            bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
+        }
+        else if (transactions == null) {
+            bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
+        }
+
+//        List<BankingV1> bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
         List<Bank> listBankings = bankingList
                 .stream()
-                .filter(i -> {
-                    if (i.isDeleted()) {
-                        if (i.getBalance() != null) {
-                            return true;
-                        }
-                        return false;
-                    }
-                    return true;
-                })
                 .map(i -> new BankingListMapper().apply(i))
                 .collect(Collectors.toList());
-        List<String> bankIds = listBankings
-                .stream()
-                .map(Bank::bankingId)
-                .toList();
 
-        List<TransactionDto> transactions =  transactionService.getAllTransactions(hostelId, bankIds);
         List<TransactionDto> listTransactions = new ArrayList<>();
         if (!transactions.isEmpty()) {
+            List<BankingV1> finalBankingList = bankingList;
             listTransactions = transactions.stream()
                     .map(item -> {
-                        BankingV1 accountHolderBank = bankingList
+                        BankingV1 accountHolderBank = finalBankingList
                                 .stream()
                                 .filter(i -> i.getBankId().equalsIgnoreCase(item.bankId()))
                                 .findFirst()
                                 .orElse(null);
                         String accountHolder = null;
+                        boolean isDeleted = false;
                         if (accountHolderBank != null) {
                             accountHolder = accountHolderBank.getAccountHolderName() + "-" + accountHolderBank.getAccountType();
+                        }
+                        if (accountHolderBank != null) {
+                            isDeleted = accountHolderBank.isDeleted();
                         }
 
                         return new TransactionDto(item.transactionId(),
@@ -236,7 +241,8 @@ public class BankingService {
                                 item.transactionDate(),
                                 item.isCredit(),
                                 item.bankId(),
-                                accountHolder);
+                                accountHolder,
+                                isDeleted);
                     })
                     .toList();
         }

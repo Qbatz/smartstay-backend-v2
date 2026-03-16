@@ -1263,4 +1263,8 @@ public class TransactionService {
 
         return  listPayments;
     }
+
+    public void markInvoiceUnpaid(String customerId, Double totalAmount, String invoiceId) {
+        paymentSummaryService.markInvoiceUnpaid(customerId, totalAmount, invoiceId);
+    }
 }

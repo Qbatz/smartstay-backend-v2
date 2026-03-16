@@ -73,4 +73,8 @@ public class InvoiceController {
         return invoiceV1Service.shareInvoiceWhatsApp(hostelId, invoiceId);
     }
 
+    @PutMapping("/unpaid/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> markInvoiceUnpaid(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.markInvoiceUnpaid(hostelId, invoiceId);
+    }
 }

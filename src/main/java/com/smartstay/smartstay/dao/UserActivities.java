@@ -29,6 +29,7 @@ public class UserActivities {
 //    from activity type enum
     private String activityType;
     private String hostelId;
+    private String platform;
     @Convert(converter = StringListConverter.class)
     @Column(columnDefinition = "TEXT")
     private List<String> tenantIds;

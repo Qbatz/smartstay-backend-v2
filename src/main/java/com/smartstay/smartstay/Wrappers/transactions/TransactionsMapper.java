@@ -24,6 +24,7 @@ public class TransactionsMapper implements Function<BankTransactionsV1, Transact
                 Utils.dateToString(transactionV1.getTransactionDate()),
                 isCredit,
                 transactionV1.getBankId(),
-                null);
+                null,
+                false);
     }
 }
