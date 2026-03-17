@@ -37,8 +37,23 @@ public class TransactionController {
     }
 
     @PostMapping("/refund/{hostelId}/{invoiceId}")
-    public ResponseEntity<?> refunInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody @Valid RefundInvoice refundInvoice) {
+    public ResponseEntity<?> refundInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody @Valid RefundInvoice refundInvoice) {
         return transactionService.refundForInvoice(hostelId, invoiceId, refundInvoice);
     }
+    @DeleteMapping("/receipts/{hostelId}/{transactionId}")
+    public ResponseEntity<?> deleteReceipt(@PathVariable("hostelId") String hostelId, @PathVariable("transactionId") String receiptId) {
+        return transactionService.deleteReceipt(hostelId, receiptId);
+    }
 
+    @GetMapping("/download/{hostelId}/{transactionId}")
+    public ResponseEntity<?> downloadReceipts(@PathVariable("hostelId") String hostelId,
+                                              @PathVariable("transactionId") String transactionId) {
+        return transactionService.downloadRecipt(hostelId, transactionId);
+    }
+
+    @GetMapping("/share/{hostelId}/{transactionId}")
+    public ResponseEntity<?> shareReceiptWhatsApp(@PathVariable("hostelId") String hostelId,
+                                                  @PathVariable("transactionId") String transactionId) {
+        return transactionService.shareReceiptWhatsApp(hostelId, transactionId);
+    }
 }

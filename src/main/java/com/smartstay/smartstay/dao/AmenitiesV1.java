@@ -21,6 +21,8 @@ public class AmenitiesV1 {
     String amenityId;
     String amenityName;
     Double amenityAmount;
+    String description;
+    String termsAndCondition;
     Boolean isActive;
     Boolean isDeleted;
     Boolean isProRate;

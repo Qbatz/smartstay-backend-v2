@@ -41,7 +41,6 @@ public class ComplaintsController {
         return complaintsService.assignUser(complaintId, request);
     }
 
-
     @PutMapping("/update-status/{complaintId}")
     public ResponseEntity<?> updateComplaintStatus(@PathVariable("complaintId") int complaintId, @Valid @RequestBody UpdateStatus request) {
         return complaintsService.updateComplaintStatus(complaintId, request);
@@ -60,6 +59,11 @@ public class ComplaintsController {
     @DeleteMapping("/delete-complaint/{complaintId}")
     public ResponseEntity<?> deleteComplaint(@PathVariable("complaintId") Integer complaintId) {
         return complaintsService.deleteComplaint(complaintId);
+    }
+
+    @GetMapping("/updates/{hostelId}/{complaintId}")
+    public ResponseEntity<?> getComplaintUpdates(@PathVariable("hostelId") String hostelId, @PathVariable("complaintId") Integer complaintId) {
+        return complaintsService.getComplaintUpdates(hostelId, complaintId);
     }
 
 

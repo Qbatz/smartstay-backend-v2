@@ -10,5 +10,7 @@ public record CommentResponse(
         String commentText,
         String commentedBy,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = OUTPUT_DATE_FORMAT, timezone = "Asia/Kolkata")
-        java.util.Date commentedAt
+        java.util.Date commentedAt,
+        String initials,
+        String profilePic
 ) {}

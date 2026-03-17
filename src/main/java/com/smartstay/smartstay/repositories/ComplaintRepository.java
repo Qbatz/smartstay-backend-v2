@@ -3,7 +3,9 @@ package com.smartstay.smartstay.repositories;
 import com.smartstay.smartstay.dao.ComplaintComments;
 import com.smartstay.smartstay.dao.ComplaintsV1;
 import com.smartstay.smartstay.responses.complaint.ComplaintResponse;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,7 +15,9 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String> {
+public interface ComplaintRepository
+        extends JpaRepository<ComplaintsV1, String>,
+        JpaSpecificationExecutor<ComplaintsV1> {
 
 
     ComplaintsV1 findByComplaintIdAndParentId(int complaintId, String parentId);
@@ -84,7 +88,7 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
                      c.bed_id, b.bed_name, c.complaint_date, c.description,
                      c.assignee_id, usr.first_name, usr.last_name,
                      ct.complaint_type_id, ct.complaint_type_name, c.status 
-            ORDER BY c.complaint_id DESC;
+            ORDER BY c.complaint_id DESC
             """, nativeQuery = true)
     List<Map<String, Object>> getAllComplaintsRaw(@Param("hostelId") String hostelId, @Param("parentId") String parentId,
                                                   @Param("customerName") String customerName,
@@ -173,4 +177,32 @@ public interface ComplaintRepository extends JpaRepository<ComplaintsV1, String>
             @Param("hostelId") String hostelId,
             @Param("parentId") String parentId
     );
+
+    List<ComplaintsV1> findByHostelIdOrderByComplaintDateDesc(String hostelId);
+    @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false AND DATE(c.complaintDate) >= DATE(:startDate) AND DATE(c.complaintDate) <= DATE(:endDate)")
+    int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+                                    @Param("endDate") Date endDate);
+
+    @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.status IN :statuses AND c.isActive = true AND c.isDeleted = false AND DATE(c.complaintDate) >= DATE(:startDate) AND DATE(c.complaintDate) <= DATE(:endDate)")
+    int countActiveByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("statuses") List<String> statuses,
+                                          @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+    @Query("SELECT DISTINCT c.customerId FROM ComplaintsV1 c WHERE c.hostelId = :hostelId")
+    List<String> findDistinctCustomerIdsByHostelId(@Param("hostelId") String hostelId);
+
+    @Query("""
+            SELECT COUNT(c) as total,
+            SUM(CASE WHEN c.status IN ('PENDING', 'OPEN') THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN c.status IN ('IN_PROGRESS') THEN 1 ELSE 0 END) as inProgress,
+            SUM(CASE WHEN c.status = 'RESOLVED' THEN 1 ELSE 0 END) as resolved
+            FROM ComplaintsV1 c
+            WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false
+            AND (:startDate IS NULL OR DATE(c.complaintDate) >= DATE(:startDate))
+            AND (:endDate IS NULL OR DATE(c.complaintDate) <= DATE(:endDate))
+            """)
+    Map<String, Object> getComplaintStatusSummary(@Param("hostelId") String hostelId,
+                                                  @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+        @Query("SELECT c FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false ORDER BY c.complaintDate DESC")
+        List<ComplaintsV1> findTopComplaints(@Param("hostelId") String hostelId, Pageable pageable);
 }

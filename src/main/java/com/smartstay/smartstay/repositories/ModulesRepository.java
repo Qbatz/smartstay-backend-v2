@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ModulesRepository extends JpaRepository<Modules, Integer> {
+    Modules findByModuleName(String moduleName);
 }

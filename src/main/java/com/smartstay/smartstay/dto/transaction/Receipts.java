@@ -21,4 +21,5 @@ public interface Receipts {
     String getProfilePic();
     String getAccountType();
     String getTransactionType();
+    String getTransactionNo();
 }

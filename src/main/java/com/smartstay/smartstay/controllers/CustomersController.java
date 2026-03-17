@@ -36,6 +36,11 @@ public class CustomersController {
     public ResponseEntity<?> createCustomer(@PathVariable("customerId") String customerId, @Valid @RequestBody CheckInRequest payloads) {
         return customersService.addCheckIn(customerId, payloads);
     }
+
+    @PostMapping("/new/check-in/{customerId}")
+    public ResponseEntity<?> createCustomerNew(@PathVariable("customerId") String customerId, @Valid @RequestBody CheckInRequest payloads) {
+        return customersService.addCheckIn(customerId, payloads);
+    }
     @PostMapping("/save/{hostelId}")
     public ResponseEntity<?> addCustomer(@PathVariable("hostelId") String hostelId, @Valid @RequestPart(value = "payloads") AddCustomerPartialInfo customerInfo, @RequestPart(value = "profilePic", required = false) MultipartFile file) {
         return customersService.addCustomerPartialInfo(hostelId, customerInfo, file);
@@ -44,12 +49,10 @@ public class CustomersController {
     public ResponseEntity<?> updateCustomerInfo(@PathVariable("customerId") String customerId, @RequestPart(value = "payloads", required = false) UpdateCustomerInfo updateInfo, @RequestPart(value = "profilePic", required = false) MultipartFile file) {
         return customersService.updateCustomerInfo(customerId, updateInfo, file);
     }
-
     @PostMapping("/assign-bed")
     public ResponseEntity<?> assignBed(@Valid @RequestBody AssignBed assignBed) {
         return customersService.assignBed(assignBed);
     }
-
     @PostMapping("/{hostelId}")
     public ResponseEntity<?> addCustomer(@PathVariable("hostelId") String hostelId, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic, @Valid @RequestPart AddCustomer customerInfo) {
         return customersService.addCustomer(hostelId, profilePic, customerInfo);
@@ -88,10 +91,14 @@ public class CustomersController {
     public ResponseEntity<?> getCustomerDetails(@PathVariable("customerId") String customerId) {
         return customersService.getCustomerDetails(customerId);
     }
-
     @GetMapping("/settlement/{customerId}")
-    public ResponseEntity<?> getFinalSettlementInfo(@PathVariable("customerId") String customerId) {
-        return customersService.getInformationForFinalSettlement(customerId);
+    public ResponseEntity<?> getFinalSettlementInfo(@PathVariable("customerId") String customerId, @RequestParam(value = "leavingDate", required = false) String leavingDate) {
+        return customersService.getInformationForFinalSettlement(customerId, leavingDate);
+    }
+
+    @GetMapping("/new/settlement/{customerId}")
+    public ResponseEntity<?> getFinalSettlementInfoNew(@PathVariable("customerId") String customerId, @RequestParam(value = "leavingDate", required = false) String leavingDate) {
+        return customersService.getInformationForFinalSettlementNew(customerId, leavingDate);
     }
     @PostMapping("/settlement/{customerId}")
     public ResponseEntity<?> generateFinalSettlement(@PathVariable("customerId") String customerId, @RequestBody List<Settlement> deductions) {
@@ -105,8 +112,17 @@ public class CustomersController {
     public ResponseEntity<?> cancelCheckOut(@PathVariable("customerId") String customerId,@PathVariable("hostelId") String hostelId,@Valid @RequestBody CancelCheckout request) {
         return customersService.cancelCheckOut(hostelId, customerId, request);
     }
+
+    @GetMapping("/cancel-checkout/initialize/{hostelId}/{customerId}")
+    public ResponseEntity<?> initializeCancelCheckout(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
+        return customersService.initializeCancelCheckout(hostelId, customerId);
+    }
     @GetMapping("/checkout/{hostelId}")
     public ResponseEntity<?> checkoutCustomers(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required = false) String name) {
         return customersService.getCheckoutCustomers(hostelId, name);
+    }
+    @DeleteMapping("/{hostelId}/{customerId}")
+    public ResponseEntity<?> deleteCustomers(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
+        return customersService.deleteCustomer(hostelId, customerId);
     }
  }

@@ -4,10 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
-@Getter
-@Setter
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,11 +15,19 @@ public class BillingRules {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     private Integer billingStartDate;
-    private Integer billingDueDate;
+    private Integer billDueDays;
     private Integer noticePeriod;
     private boolean isInitial;
+    private boolean hasGracePeriod;
+    private Integer gracePeriodDays;
+    //From billing type enum
+    private String typeOfBilling;
+    private List<Integer> reminderDays;
+    private boolean shouldNotify;
     private Date startFrom;
     private Date endTill;
+    private Date createdAt;
+    private String createdBy;
 
     @ManyToOne
     @JoinColumn(name = "hostel_id")

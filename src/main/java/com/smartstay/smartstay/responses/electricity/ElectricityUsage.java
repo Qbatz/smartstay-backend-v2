@@ -12,5 +12,7 @@ public record ElectricityUsage(String hostelId,
                                Double previousReading,
                                Double currentReading,
                                Double totalPrice,
-                               Integer noOfTenants) {
+                               Integer noOfTenants,
+                               String startDate,
+                               String endDate) {
 }

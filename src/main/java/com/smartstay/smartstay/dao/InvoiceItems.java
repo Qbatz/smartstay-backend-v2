@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,6 +18,8 @@ public class InvoiceItems {
     private String invoiceItem;
     private String otherItem;
     private Double amount;
+    private Date fromDate;
+    private Date toDate;
 
     @ManyToOne
     @JoinColumn(name = "invoice_id")

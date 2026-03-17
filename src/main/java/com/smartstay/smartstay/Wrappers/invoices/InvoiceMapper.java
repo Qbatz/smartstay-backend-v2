@@ -14,11 +14,17 @@ public class InvoiceMapper {
 
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
 
-    public static InvoiceResponse toResponse(InvoicesV1 invoice, InvoicesV1Repository invoicesV1Repository) {
-        Double paidAmount = invoicesV1Repository.findTotalPaidAmountByInvoiceId(invoice.getInvoiceId());
+    public static InvoiceResponse toResponse(InvoicesV1 invoice) {
+        Double paidAmount = 0.0;
+        if (invoice.getPaidAmount() != null) {
+            paidAmount = invoice.getPaidAmount();
+        }
         String paymentStatus = null;
         if (invoice.getPaymentStatus() != null) {
             paymentStatus = Utils.capitalize(PaymentStatus.valueOf(invoice.getPaymentStatus()).getDisplayName());
+        }
+        if (invoice.isCancelled()) {
+            paymentStatus = "Cancelled";
         }
 
         return new InvoiceResponse(
@@ -26,14 +32,14 @@ public class InvoiceMapper {
                 invoice.getInvoiceNumber(),
                 Utils.capitalize(invoice.getInvoiceType()),
                 paymentStatus,
-                invoice.getTotalAmount(),
-                invoice.getTotalAmount() - paidAmount,
-                paidAmount,
+                Utils.roundOfDouble(invoice.getTotalAmount()),
+                Utils.roundOfDouble(invoice.getTotalAmount() - paidAmount),
+                Utils.roundOfDouble(paidAmount),
                 invoice.getInvoiceDueDate() != null
                         ? dateFormat.format(invoice.getInvoiceDueDate())
                         : null,
-                invoice.getInvoiceGeneratedDate() != null
-                        ? dateFormat.format(invoice.getInvoiceGeneratedDate())
+                invoice.getInvoiceStartDate()!= null
+                        ? dateFormat.format(invoice.getInvoiceStartDate())
                         : null,
                 invoice.getInvoiceItems() != null
                         ? invoice.getInvoiceItems().stream()

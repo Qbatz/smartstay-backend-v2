@@ -5,9 +5,10 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
-import com.smartstay.smartstay.ennum.BedStatus;
-import com.smartstay.smartstay.ennum.EBReadingType;
+import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.HostelEvents;
 import com.smartstay.smartstay.payloads.AddHostelPayloads;
 import com.smartstay.smartstay.payloads.RemoveUserFromHostel;
@@ -15,6 +16,7 @@ import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.payloads.electricity.UpdateEBConfigs;
 import com.smartstay.smartstay.payloads.hostel.BillRules;
 import com.smartstay.smartstay.payloads.hostel.UpdateElectricityPrice;
+import com.smartstay.smartstay.payloads.hostel.UpdatePg;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.responses.Hostels;
 import com.smartstay.smartstay.responses.beds.BedsStatusCount;
@@ -28,6 +30,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -72,24 +75,25 @@ public class HostelService {
 
     @Autowired
     private UsersService usersService;
-
-//    @Autowired
-//    private TemplatesService hostelTemplates;
-
+    @Autowired
+    private SubscriptionService subscriptionService;
     @Autowired
     private BankingService bankingService;
-
+    @Autowired
+    private BookingsService bookingsService;
     @Autowired
     private ApplicationEventPublisher eventPublisher;
     @Autowired
     private HostelConfigService hostelConfigService;
+    @Autowired
+    private NotificationService notificationService;
 
 
     public ResponseEntity<?> addHostel(MultipartFile mainImage, List<MultipartFile> additionalImages, AddHostelPayloads payloads) {
 
 //        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
 
@@ -106,11 +110,7 @@ public class HostelService {
             emailId = usersService.findUserByUserId(userId).getEmailId();
         }
 
-        ZohoSubscriptionRequest request = formSubscription(payloads, emailId);
-
-        String hostelID = hostelIdGenerator();
         HostelV1 hostelV1 = new HostelV1();
-        hostelV1.setHostelId(hostelID);
         hostelV1.setCreatedBy(userId);
         hostelV1.setParentId(users.getParentId());
         hostelV1.setHostelType(1);
@@ -130,25 +130,6 @@ public class HostelService {
         hostelV1.setDeleted(false);
 
 
-
-
-        //Create a CashAccount for the hostel
-//        BankingV1 bankingV1 = new BankingV1();
-//        bankingV1.setActive(true);
-//        bankingV1.setDeleted(false);
-//        bankingV1.setCreatedBy(users.getUserId());
-//        bankingV1.setCreatedAt(new Date());
-//        bankingV1.setAccountType(BankAccountType.CASH.name());
-//        bankingV1.setTransactionType(BankPurpose.BOTH.name());
-//        bankingV1.setDefaultAccount(true);
-//        BankingV1 v1 = bankingService.saveBankingData(bankingV1);
-
-
-
-//        hostelBankingMapper.addBankToHostel(hostelID, v1.getBankId());
-
-
-
         if (mainImage != null) {
             String mainImageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(mainImage), "Hostel-Images");
             hostelV1.setMainImage(mainImageUrl);
@@ -161,19 +142,19 @@ public class HostelService {
         }
 
         if (!listImageUrls.isEmpty()) {
-            List<HostelImages> listHostelImages = listImageUrls.stream().map(item -> {
+            List<HostelImages> listHostelImages = new ArrayList<>(listImageUrls.stream().map(item -> {
                 HostelImages hostelImg = new HostelImages();
                 hostelImg.setCreatedBy(userId);
                 hostelImg.setImageUrl(item);
                 hostelImg.setHostel(hostelV1);
                 return hostelImg;
-            }).toList();
+            }).toList());
 
             hostelV1.setAdditionalImages(listHostelImages);
         }
 
-        hostelV1Repository.save(hostelV1);
-//            mapUserHostel(userId, hostelV1.getHostelId(), users.getParentId());
+        HostelV1 hostelV11 = hostelV1Repository.save(hostelV1);
+
 
         int result = userHostelService.addHostelToExistingUsers(users.getParentId(), hostelV1.getHostelId());
 
@@ -183,22 +164,23 @@ public class HostelService {
                 userHostelService.addHostelToExistingUsers(users.getParentId(), listUsers, hostelV1.getHostelId());
             }
         }
-        eventPublisher.publishEvent(new HostelEvents(this, hostelID, authentication.getName(), users.getParentId()));
+        eventPublisher.publishEvent(new HostelEvents(this, hostelV11.getHostelId(), authentication.getName(), users.getParentId()));
+        usersService.addUserLog(null, hostelV11.getHostelId(), ActivitySource.HOSTEL, ActivitySourceType.CREATE, users);
         return new ResponseEntity<>("Created successfully", HttpStatus.CREATED);
     }
 
     public void updateHostelFromEvents(HostelV1 hostelV1) {
         hostelV1Repository.save(hostelV1);
     }
-    public String hostelIdGenerator() {
-        UUID uuid = UUID.randomUUID();
-        String uuidString = uuid.toString();
-        HostelV1 v1 = hostelV1Repository.findById(uuidString).orElse(null);
-        if (v1 == null) {
-            return uuidString;
-        }
-        return hostelIdGenerator();
-    }
+//    public String hostelIdGenerator() {
+//        UUID uuid = UUID.randomUUID();
+//        String uuidString = uuid.toString();
+//        HostelV1 v1 = hostelV1Repository.findById(uuidString).orElse(null);
+//        if (v1 == null) {
+//            return uuidString;
+//        }
+//        return hostelIdGenerator();
+//    }
 
     protected ZohoSubscriptionRequest formSubscription(AddHostelPayloads payloads, String emailId) {
 
@@ -224,14 +206,6 @@ public class HostelService {
         return request;
     }
 
-    public ResponseEntity<?> getAllHostels() {
-        List<HostelV1> listHotels = hostelV1Repository.findAll();
-
-        List<Hostels> list = listHotels.stream().map(hostelV1 -> new HostelsMapper(0, 0, 0,0, 0).apply(hostelV1)).toList();
-
-        return new ResponseEntity<>(list, HttpStatus.OK);
-    }
-
     public List<HostelV1> getAllHostelsForRecuringInvoice() {
         return hostelV1Repository.findAll();
     }
@@ -239,7 +213,7 @@ public class HostelService {
 
     public ResponseEntity<?> fetchAllHostels() {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user", HttpStatus.OK);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.OK);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
@@ -266,7 +240,8 @@ public class HostelService {
             });
             noOfFloors = floorsService.getFloorCounts(item.getHostelId());
             noOfRooms = roomsService.getRoomCount(item.getHostelId());
-            return new HostelsMapper(noOfFloors, noOfRooms, noOfBeds[0], noOfOccupiedBeds.get(), Integer.parseInt(String.valueOf(noOfAvailableBeds[0]))).apply(Objects.requireNonNull(hostelV1Repository.findByHostelIdAndIsDeletedFalse(item.getHostelId())));
+            SubscriptionDto subscriptionDto = subscriptionService.getCurrentSubscriptionDetails(item.getHostelId());
+            return new HostelsMapper(noOfFloors, noOfRooms, noOfBeds[0], noOfOccupiedBeds.get(), Integer.parseInt(String.valueOf(noOfAvailableBeds[0])), subscriptionDto).apply(Objects.requireNonNull(hostelV1Repository.findByHostelIdAndIsDeletedFalse(item.getHostelId())));
         }).toList();
 
         return new ResponseEntity<>(listOfHostels, HttpStatus.OK);
@@ -284,6 +259,7 @@ public class HostelService {
         }
 
         userHostelService.deleteUserFromHostel(removeUserPayload.userId(), removeUserPayload.hostelId());
+        usersService.addUserLog(removeUserPayload.hostelId(), removeUserPayload.userId(), ActivitySource.HOSTEL, ActivitySourceType.REMOVE_USER, users);
         return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
     }
 
@@ -312,6 +288,7 @@ public class HostelService {
         hostelV1Repository.save(hostelV1);
 
         userHostelService.deleteAllHostels(hostelId);
+        usersService.addUserLog(hostelId, hostelId, ActivitySource.HOSTEL, ActivitySourceType.DELETE, users);
         return new ResponseEntity<>("Hostel Deleted", HttpStatus.OK);
     }
     public ResponseEntity<?> getHostelDetails(String hostelId) {
@@ -335,9 +312,21 @@ public class HostelService {
 
         List<FloorDetails> floorDetails = floors.stream().map(floor -> new FloorDetails(floor.getFloorId(), floor.getFloorName())).toList();
 
-//        String nextBillingDate = Utils.dateToString(subscription.getNextBillingAt());
-//        boolean isSubscriptionActive = Utils.compareWithTodayDate(subscription.getNextBillingAt());
-//        int remainingDays = Utils.calculateRemainingDays(subscription.getNextBillingAt());
+        SubscriptionDto subscriptionDto = subscriptionService.getCurrentSubscriptionDetails(hostelId);
+        String nextBillingDate = null;
+        boolean isSubscriptionActive = false;
+        int remainingDays = 0;
+        if (subscriptionDto != null) {
+            nextBillingDate = Utils.dateToString(subscriptionDto.nextBillingDate());
+            remainingDays = subscriptionDto.endsIn();
+            isSubscriptionActive = subscriptionDto.isValid();
+        }
+        int notificationCount = notificationService.getUnreadNotificationCount(hostelId);
+        List<BookingsV1> bookingsV1 = bookingsService.checkAllByHostelId(hostelId);
+        boolean canModifyBilling = true;
+        if (bookingsV1 != null && !bookingsV1.isEmpty()) {
+            canModifyBilling = false;
+        }
 
         HostelDetails details = new HostelDetails(hostel.getHostelId(),
                 hostel.getMainImage(),
@@ -352,7 +341,10 @@ public class HostelService {
                 hostel.getState(),
                 hostel.getStreet(),
                 Utils.dateToString(hostel.getUpdatedAt()),
-                true, null, 28, floorDetails.size(), floorDetails);
+                isSubscriptionActive, nextBillingDate,
+                remainingDays, floorDetails.size(),
+                floorDetails,notificationCount,
+                canModifyBilling);
 
         return ResponseEntity.ok(details);
     }
@@ -370,43 +362,48 @@ public class HostelService {
     public BillingDates getCurrentBillStartAndEndDates(String hostelId) {
         BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
         int billStartDate = 1;
-        int billingRuleDate = 5;
+        int billingRuleDueDate = 5;
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
-            billingRuleDate = billingRules.getBillingDueDate();
+            billingRuleDueDate = billingRules.getBillDueDays();
         }
 
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
-        Calendar calendarDueDate = Calendar.getInstance();
-        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
+        Calendar cal = Calendar.getInstance();
+        if (cal.get(Calendar.DAY_OF_MONTH) < billStartDate) {
+            calendar.add(Calendar.MONTH, -1);
+        }
 
+//        Calendar calendarDueDate = Calendar.getInstance();
+//        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
+
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate, calendarDueDate.getTime());
+        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate, billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(), billingRules.getTypeOfBilling());
     }
 
-    public BillingDates getBillStartDate(String hostelId, Date date) {
+    public BillingDates getBillStartAndEndDateBasedOnDate(String hostelId, Date date) {
         BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
         int billStartDate = 1;
-        int billingRuleDate = 5;
+        int billingRuleDueDate = 5;
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
-            billingRuleDate = billingRules.getBillingDueDate();
+            billingRuleDueDate = billingRules.getBillDueDays();
         }
-
-        Calendar calendarDueDate = Calendar.getInstance();
-        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
+
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate, calendarDueDate.getTime());
+        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate, billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(), billingRules.getTypeOfBilling());
     }
 
 
@@ -454,6 +451,7 @@ public class HostelService {
         hostel.setElectricityConfig(config);
 
         hostelV1Repository.save(hostel);
+        usersService.addUserLog(hostelId, String.valueOf(config.getId()), ActivitySource.HOSTEL, ActivitySourceType.UPDATE_EB_AMOUNT, users);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -562,7 +560,7 @@ public class HostelService {
         ebConfig.setHostel(hostel);
 
         hostelV1Repository.save(hostel);
-
+        usersService.addUserLog(hostelId, String.valueOf(ebConfig.getId()), ActivitySource.HOSTEL, ActivitySourceType.UPDATE_EB_CONFIG, users);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -591,12 +589,32 @@ public class HostelService {
         BillingRules billingRules = null;
         if (hostel.getBillingRulesList() != null && !hostel.getBillingRulesList().isEmpty()) {
             billingRules = hostel.getBillingRulesList().get(hostel.getBillingRulesList().size()-1);
+            String typeOfBilling = null;
+            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.FIXED_DATE.name())) {
+                typeOfBilling = "Fixed";
+            }
+            else if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                typeOfBilling = "Joining Date Based";
+            }
+            Integer gracePeriod = 0;
+            if (billingRules.isHasGracePeriod()) {
+                if (billingRules.getGracePeriodDays() != null) {
+                    gracePeriod = billingRules.getGracePeriodDays();
+                }
+            }
+
+            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                updateEbConfigForJoiningBased(hostel);
+            }
 
             com.smartstay.smartstay.responses.hostelConfig.BillingRules rules = new com.smartstay.smartstay.responses.hostelConfig.BillingRules(
                     billingRules.getBillingStartDate(),
-                    billingRules.getBillingDueDate(),
+                    billingRules.getBillDueDays(),
                     billingRules.getNoticePeriod(),
-                    Utils.dateToString(billingRules.getStartFrom()));
+                    typeOfBilling,
+                    gracePeriod,
+                    billingRules.isHasGracePeriod(),
+                    billingRules.getReminderDays());
 
             return new ResponseEntity<>(rules, HttpStatus.OK);
         }
@@ -604,6 +622,10 @@ public class HostelService {
         else {
             return new ResponseEntity<>(Utils.BILLING_RULE_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private void updateEbConfigForJoiningBased(HostelV1 hostelV1) {
+        ElectricityConfig ebConfig = hostelV1.getElectricityConfig();
     }
 
     public ResponseEntity<?> updateBillingRules(String hostelId, BillRules billRules) {
@@ -626,105 +648,322 @@ public class HostelService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        BillingDates billDates = getBillingRuleOnDate(hostelId, new Date());
+        if (billRules.startDate() != null || (billRules.calculationType() != null && !billRules.calculationType().isEmpty())) {
+            List<BookingsV1> bookingsV1 = bookingsService.checkAllByHostelId(hostelId);
+            if (bookingsV1 != null && !bookingsV1.isEmpty()) {
+                return new ResponseEntity<>(Utils.CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR, HttpStatus.BAD_REQUEST);
+            }
+        }
 
-        BillingRules currentBillingRules = hostelConfigService.getLatestBillRuleByHostelIdAndStartDate(hostelId, new Date());
-        BillingRules newBillingRules = hostelConfigService.getNewBillRuleByHostelIdAndStartDate(hostelId, new Date());
-
-        //if new  billing rule is created
-        if (newBillingRules == null) {
-            newBillingRules = new BillingRules();
+        String errorMessage = checkAndReturnAnyPayloadError(billRules);
+        if (errorMessage != null) {
+            return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
         }
 
 
-        Date startDate = null;
-        Date previousEndDate = null;
 
-        if (Utils.checkNullOrEmpty(billRules.startDate())) {
-            Calendar cal = Calendar.getInstance();
-            cal.set(Calendar.DAY_OF_MONTH, billRules.startDate());
+        BillingDates billDates = getBillingRuleOnDate(hostelId, new Date());
 
-            if (!currentBillingRules.isInitial()) {
-                if (Utils.compareWithTwoDates(billDates.currentBillStartDate(), new Date()) <= 0) {
-                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
-                }
+        BillingRules currentBillingRules = hostelConfigService.getCurrentBillingRule(hostel.getHostelId());
+        BillingRules newBillingRules =  new BillingRules();
+        newBillingRules.setTypeOfBilling(currentBillingRules.getTypeOfBilling());
+
+        if (billRules.calculationType() != null) {
+            if (billRules.calculationType().equalsIgnoreCase("Fixed")) {
+                newBillingRules.setTypeOfBilling(BillingTypeEnum.FIXED_DATE.name());
             }
             else {
-                cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                newBillingRules.setTypeOfBilling(BillingTypeEnum.JOINING_DATE_BASED.name());
+            }
+        }
+
+        if (billRules.gracePeriodDays() != null) {
+            int gracePeriodDays = 0;
+            try {
+                gracePeriodDays = Integer.parseInt(String.valueOf(billRules.gracePeriodDays()));
+            }
+            catch (Exception e) {
+                gracePeriodDays = 0;
             }
 
-            startDate = cal.getTime();
+            if (gracePeriodDays > 0) {
+                newBillingRules.setHasGracePeriod(true);
+                newBillingRules.setGracePeriodDays(gracePeriodDays);
+            }
+            else {
+                newBillingRules.setHasGracePeriod(currentBillingRules.isHasGracePeriod());
+                newBillingRules.setGracePeriodDays(currentBillingRules.getGracePeriodDays());
+            }
+        }
 
-            Calendar calendarCurrentBillingEnd = Calendar.getInstance();
-            calendarCurrentBillingEnd.setTime(startDate);
-            calendarCurrentBillingEnd.set(Calendar.DAY_OF_MONTH, calendarCurrentBillingEnd.get(Calendar.DAY_OF_MONTH) - 1);
-            previousEndDate = calendarCurrentBillingEnd.getTime();
 
-            currentBillingRules.setEndTill(previousEndDate);
 
-            newBillingRules.setStartFrom(startDate);
+        if (Utils.checkNullOrEmpty(billRules.startDate())) {
             newBillingRules.setBillingStartDate(billRules.startDate());
 
         }
         else {
-            Calendar cal = Calendar.getInstance();
-
-            if (!currentBillingRules.isInitial()) {
-                if (Utils.compareWithTwoDates(billDates.currentBillStartDate(), new Date()) <= 0) {
-                    cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
-                }
+            if (currentBillingRules != null) {
+                newBillingRules.setBillingStartDate(currentBillingRules.getBillingStartDate());
             }
             else {
-                cal.set(Calendar.MONTH, cal.get(Calendar.MONTH) + 1);
+                newBillingRules.setBillingStartDate(1);
             }
-
-            startDate = cal.getTime();
-
-            newBillingRules.setBillingStartDate(currentBillingRules.getBillingStartDate());
-
         }
         if (Utils.checkNullOrEmpty(billRules.dueDate())) {
-            newBillingRules.setBillingDueDate(billRules.dueDate());
+            newBillingRules.setBillDueDays(billRules.dueDate());
         }
         else {
-            if (newBillingRules.getBillingDueDate() == null) {
-                newBillingRules.setBillingDueDate(currentBillingRules.getBillingDueDate());
+            if (currentBillingRules != null) {
+                newBillingRules.setBillDueDays(currentBillingRules.getBillDueDays());
+            }
+            else {
+                newBillingRules.setBillDueDays(10);
             }
         }
         if (Utils.checkNullOrEmpty(billRules.noticeDays())) {
             newBillingRules.setNoticePeriod(billRules.noticeDays());
         }
         else {
-            if (newBillingRules.getNoticePeriod() == null) {
+            if (currentBillingRules != null) {
                 newBillingRules.setNoticePeriod(currentBillingRules.getNoticePeriod());
+            }else {
+                newBillingRules.setNoticePeriod(10);
             }
         }
 
-        Calendar calendarCurrentBillingEnd = Calendar.getInstance();
-        calendarCurrentBillingEnd.setTime(startDate);
-        calendarCurrentBillingEnd.set(Calendar.DAY_OF_MONTH, calendarCurrentBillingEnd.get(Calendar.DAY_OF_MONTH) - 1);
-        previousEndDate = calendarCurrentBillingEnd.getTime();
-        currentBillingRules.setEndTill(previousEndDate);
+        if (billRules.reminderDays() != null) {
+            if (!billRules.reminderDays().isEmpty()) {
+                newBillingRules.setShouldNotify(true);
+            }
+            newBillingRules.setReminderDays(billRules.reminderDays());
+        }
+        else {
+            newBillingRules.setShouldNotify(currentBillingRules.isShouldNotify());
+            newBillingRules.setReminderDays(currentBillingRules.getReminderDays());
+        }
 
         newBillingRules.setHostel(hostel);
         newBillingRules.setInitial(false);
-
-        hostelConfigService.updateExistingBillRule(currentBillingRules);
+        newBillingRules.setCreatedAt(new Date());
+        newBillingRules.setCreatedBy(authentication.getName());
 
         List<BillingRules> listBillingRules = hostel.getBillingRulesList();
         listBillingRules.add(newBillingRules);
 
         hostel.setBillingRulesList(listBillingRules);
-        hostelV1Repository.save(hostel);
+        HostelV1 hostelV1 = hostelV1Repository.save(hostel);
+        List<BillingRules> billingRules = hostelV1.getBillingRulesList();
+        BillingRules br = billingRules.getLast();
 
-        String message = Utils.formMessageWithDate(startDate, "Your changes will be applied from ");
+        usersService.addUserLog(hostelId, String.valueOf(br.getId()), ActivitySource.HOSTEL, ActivitySourceType.UPDATE_BILLING_CONFIG, users);
 
-        return new ResponseEntity<>(message, HttpStatus.CREATED);
+        return new ResponseEntity<>(HttpStatus.OK);
 
+    }
+
+    private String checkAndReturnAnyPayloadError(BillRules billRules) {
+        String errorMessage = null;
+
+        if (billRules != null && billRules.startDate() != null) {
+            int sDate = -1;
+            try {
+                sDate = Integer.parseInt(String.valueOf(billRules.startDate()));
+            }
+            catch (Exception e) {
+                sDate = -1;
+            }
+
+            if (sDate == -1 || sDate > 28) {
+                errorMessage = Utils.INVALID_STARTING_DATE;
+            }
+        }
+
+        if (billRules != null && billRules.dueDate() != null) {
+            int dueDays = -1;
+            try {
+                dueDays = Integer.parseInt(String.valueOf(billRules.dueDate()));
+            }
+            catch (Exception e) {
+                dueDays = -1;
+            }
+
+            if (dueDays == -1 || dueDays > 28) {
+                errorMessage = Utils.INVALID_DUE_DYS;
+            }
+        }
+
+        if (billRules != null && billRules.noticeDays() != null) {
+            int noticeDays = -1;
+            try {
+                noticeDays = Integer.parseInt(String.valueOf(billRules.noticeDays()));
+            }
+            catch (Exception e) {
+                noticeDays = -1;
+            }
+
+            if (noticeDays == -1 || noticeDays > 28) {
+                errorMessage = Utils.INVALID_NOTICE_DAYS;
+            }
+        }
+
+        if (billRules != null && billRules.gracePeriodDays() != null) {
+            int gracePeriodDays = -1;
+            try {
+                gracePeriodDays = Integer.parseInt(String.valueOf(billRules.gracePeriodDays()));
+            }
+            catch (Exception e) {
+                gracePeriodDays = -1;
+            }
+
+            if (gracePeriodDays == -1 || gracePeriodDays > 28) {
+                errorMessage = Utils.INVALID_GRACE_PERIOD;
+            }
+        }
+
+        return errorMessage;
     }
 
     public BillingDates getBillingRuleOnDate(String hostelId, Date date) {
         return hostelConfigService.getBillingRuleByDateAndHostelId(hostelId, date);
+    }
+
+    public ResponseEntity<?> updatePgInformation(String hostelId, UpdatePg updatePg, MultipartFile mainImage, List<MultipartFile> additionalImages) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostelV1 = hostelV1Repository.findByHostelId(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (updatePg == null && mainImage == null && additionalImages == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (mainImage != null) {
+            String mainImageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(mainImage), "Hostel-Images");
+            hostelV1.setMainImage(mainImageUrl);
+        }
+
+        List<String> listImageUrls = new ArrayList<>();
+        if (additionalImages != null && !additionalImages.isEmpty()) {
+            listImageUrls = additionalImages.stream().map(multipartFile -> uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(multipartFile), "Hostel-Images")).collect(Collectors.toList());
+        }
+
+        if (!listImageUrls.isEmpty()) {
+            List<HostelImages> listImg = hostelV1.getAdditionalImages();
+            if (listImg == null) {
+                listImg = new ArrayList<>();
+            }
+
+            if (hostelV1.getAdditionalImages() != null) {
+                listImageUrls.forEach(item -> {
+                    HostelImages hostelImg = new HostelImages();
+                    hostelImg.setCreatedBy(authentication.getName());
+                    hostelImg.setImageUrl(item);
+                    hostelImg.setHostel(hostelV1);
+
+
+                    hostelV1.getAdditionalImages().add(hostelImg);
+                });
+            }
+
+            else {
+                listImg.addAll(listImageUrls.stream().map(item -> {
+                    HostelImages hostelImg = new HostelImages();
+                    hostelImg.setCreatedBy(authentication.getName());
+                    hostelImg.setImageUrl(item);
+                    hostelImg.setHostel(hostelV1);
+                    return hostelImg;
+                }).toList());
+
+                hostelV1.setAdditionalImages(listImg);
+            }
+
+
+
+//            hostelV1.setAdditionalImages(new ArrayList<>(listImg));
+        }
+
+        if (updatePg != null) {
+            if (updatePg.city() != null) {
+                hostelV1.setCity(updatePg.city());
+            }
+
+            if (updatePg.street() != null) {
+                hostelV1.setStreet(updatePg.street());
+            }
+            else if (hostelV1.getStreet() != null) {
+                hostelV1.setStreet(null);
+            }
+
+            if (updatePg.landmark() != null) {
+                hostelV1.setLandmark(updatePg.landmark());
+            }
+            else if (hostelV1.getLandmark() != null) {
+                hostelV1.setLandmark(null);
+            }
+
+            if (updatePg.city() != null) {
+                hostelV1.setCity(updatePg.city());
+            }
+
+            if (updatePg.pincode() != null) {
+                if (updatePg.pincode() != 0) {
+                    hostelV1.setPincode(updatePg.pincode());
+                }
+            }
+            if (updatePg.state() != null) {
+                hostelV1.setState(updatePg.state());
+            }
+            if (updatePg.hostelName() != null && !updatePg.hostelName().isEmpty()) {
+                hostelV1.setHostelName(updatePg.hostelName());
+            }
+            if (updatePg.mobile() != null && !updatePg.mobile().isEmpty()) {
+                hostelV1.setMobile(updatePg.mobile());
+            }
+
+            if (updatePg.houseNo() != null) {
+                hostelV1.setHouseNo(updatePg.houseNo());
+            }
+
+            if (updatePg.emailId() != null) {
+                hostelV1.setEmailId(updatePg.emailId());
+            }
+        }
+
+        hostelV1Repository.save(hostelV1);
+        usersService.addUserLog(hostelId, hostelId, ActivitySource.HOSTEL, ActivitySourceType.UPDATE, users);
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
+    }
+
+    public BillingDates getNextBillingDates(String hostelId) {
+        return hostelConfigService.getNextMonthBillingDates(hostelId);
+    }
+
+    public List<BillingRules> findAllHostelsHavingBillingToday() {
+        return hostelConfigService.findAllHostelsHavingBillingToday();
+    }
+
+    public List<HostelV1> findAHostelsHavingBillingRuleEndingToday() {
+        return hostelConfigService.findAHostelsHavingBillingRuleEndingToday();
+    }
+
+    public void updateHostel(HostelV1 hostelV1) {
+        hostelV1Repository.save(hostelV1);
     }
 }
 

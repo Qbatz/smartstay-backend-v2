@@ -2,16 +2,21 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.BankTransactionsV1;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
-public interface BankTransactionRepository extends JpaRepository<BankTransactionsV1, Integer>  {
+public interface BankTransactionRepository extends JpaRepository<BankTransactionsV1, Integer> {
 
     List<BankTransactionsV1> findByBankIdIn(List<String> listBankIds);
 
-    List<BankTransactionsV1> findByHostelId(String hostelId);
+    List<BankTransactionsV1> findByHostelIdAndIsDeletedFalseOrderByTransactionDateDesc(String hostelId);
+
+    List<BankTransactionsV1> findByHostelIdAndBankIdInAndIsDeletedFalseOrderByTransactionDateDesc(String hostelId, List<String> bankIds);
 
     BankTransactionsV1 findTopByBankIdOrderByTransactionDateDesc(String bankId);
 
@@ -19,6 +24,17 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     BankTransactionsV1 findTopByBankIdAndHostelIdOrderByCreatedAtDesc(String bankId, String hostelId);
 
+    BankTransactionsV1 findByTransactionNumber(String transactionNumber);
 
+    @Query("SELECT COUNT(bt) FROM BankTransactionsV1 bt WHERE bt.hostelId = :hostelId AND DATE(bt.transactionDate) >= DATE(:startDate) AND DATE(bt.transactionDate) <= DATE(:endDate)")
+    int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
+            @Param("endDate") Date endDate);
+
+    @Query("""
+            SELECT btv FROM BankTransactionsV1 btv WHERE btv.type='DEBIT'
+            """)
+    List<BankTransactionsV1> findByTransactionType();
+
+    BankTransactionsV1 findByHostelIdAndSourceId(String hostelId, String sourceId);
 
 }

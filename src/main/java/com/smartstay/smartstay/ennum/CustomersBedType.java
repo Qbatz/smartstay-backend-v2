@@ -4,5 +4,6 @@ public enum CustomersBedType {
     BOOKED,
     CHECK_IN,
     REASSIGNED,
-    MAINTENANCE
+    MAINTENANCE,
+    RENT_REVISION
 }

@@ -21,9 +21,11 @@ public class CustomersAmenity {
     String id;
     String amenityId;
     String customerId;
+    Double amenityPrice;
     Date createdAt;
     Date updatedAt;
     String updatedBy;
+    String createdBy;
     Date startDate;
     Date endDate;
 }

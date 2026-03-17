@@ -13,8 +13,45 @@ import java.util.function.Function;
  *
  */
 public class ElectricityUsageMapper implements Function<RoomInfoForEB, ElectricityUsage> {
+
+    private String startDate = null;
+    private String endDate = null;
+
+    public ElectricityUsageMapper(String startDate, String endDate) {
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
+
     @Override
     public ElectricityUsage apply(RoomInfoForEB roomInfoForEB) {
+        String startDateStr = "NA";
+        String endDateStr = "NA";
+        if (startDate != null) {
+            String[] sDateArr = startDate.split("-");
+            StringBuilder sDate = new StringBuilder();
+
+            for (int i = sDateArr.length; i>0; i-- ) {
+                sDate.append(sDateArr[i - 1]);
+                if ((i - 1) != 0) {
+                    sDate.append("/");
+                }
+            }
+            startDateStr = sDate.toString();
+        }
+
+        if (endDate != null) {
+            String[] eDateArr = endDate.split("-");
+            StringBuilder eDate = new StringBuilder();
+
+            for (int i = eDateArr.length; i>0; i-- ) {
+                eDate.append(eDateArr[i - 1]);
+                if ((i - 1) != 0) {
+                    eDate.append("/");
+                }
+
+            }
+            endDateStr = eDate.toString();
+        }
 
         return new ElectricityUsage(roomInfoForEB.hostelId(),
                 0,
@@ -28,6 +65,8 @@ public class ElectricityUsageMapper implements Function<RoomInfoForEB, Electrici
                 0.0,
                 0.0,
                 0.0,
-                roomInfoForEB.noOfTenants().intValue());
+                roomInfoForEB.noOfTenants().intValue(),
+                startDateStr,
+                endDateStr);
     }
 }

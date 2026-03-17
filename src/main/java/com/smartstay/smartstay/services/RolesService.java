@@ -6,6 +6,8 @@ import com.smartstay.smartstay.dao.Modules;
 import com.smartstay.smartstay.dao.RolesPermission;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.roles.AddRoles;
 import com.smartstay.smartstay.payloads.roles.Permission;
@@ -41,6 +43,9 @@ public class RolesService {
     private UsersService usersService;
 
     @Autowired
+    private SubscriptionValidationService subscriptionValidationService;
+
+    @Autowired
     public void setUsersService(@Lazy  UsersService usersService) {
         this.usersService = usersService;
     }
@@ -67,7 +72,6 @@ public class RolesService {
     }
 
     public ResponseEntity<?> getRoleById(Integer id) {
-        System.out.println(id);
         if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
@@ -121,6 +125,10 @@ public class RolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        if (!subscriptionValidationService.validateSubscription(existingRole.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
 
         if (updatedRole.roleName() != null && !updatedRole.roleName().isEmpty()) {
             if (rolesRepository.existsByParentIdAndRole(roleId,updatedRole.roleName(), user.getParentId()) > 0) {
@@ -140,13 +148,14 @@ public class RolesService {
         }
         existingRole.setUpdatedAt(new Date());
         rolesRepository.save(existingRole);
+        usersService.addUserLog(rolesV1.getHostelId(), String.valueOf(existingRole.getRoleId()), ActivitySource.ROLE, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
 
     public ResponseEntity<?> addRole(AddRoles roleData) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
@@ -158,12 +167,15 @@ public class RolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        if (rolesRepository.existsByParentIdAndRoleName(roleData.roleName(), user.getParentId()) > 0) {
+        if (rolesRepository.existsByParentIdAndRoleName(roleData.roleName(), roleData.hostelId()) > 0) {
             return new ResponseEntity<>(Utils.ROLE_NAME_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
         if (hostelV1Repository.findByHostelIdAndParentId(roleData.hostelId(),user.getParentId()) == null){
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionValidationService.validateSubscription(roleData.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         RolesV1 role = new RolesV1();
@@ -177,7 +189,10 @@ public class RolesService {
         role.setParentId(user.getParentId());
         role.setHostelId(roleData.hostelId());
         role.setPermissions(rolesPermissions);
-        rolesRepository.save(role);
+        RolesV1 roleV1 = rolesRepository.save(role);
+
+        usersService.addUserLog(roleData.hostelId(), String.valueOf(roleV1.getRoleId()), ActivitySource.ROLE, ActivitySourceType.CREATE, user);
+
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -195,7 +210,11 @@ public class RolesService {
         }
         RolesV1 existingRole = rolesRepository.findByRoleIdAndParentId(roleId,users.getParentId());
         if (existingRole != null) {
+            if (!subscriptionValidationService.validateSubscription(existingRole.getHostelId())) {
+                return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+            }
             rolesRepository.delete(existingRole);
+            usersService.addUserLog(existingRole.getHostelId(), String.valueOf(existingRole.getRoleId()), ActivitySource.ROLE, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>("Deleted", HttpStatus.NO_CONTENT);
         }
         return new ResponseEntity<>("No Roles found", HttpStatus.BAD_REQUEST);

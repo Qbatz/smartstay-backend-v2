@@ -39,7 +39,7 @@ public class BankTransactionService {
     }
 
 
-    public int addTransaction(TransactionDto transactionDto) {
+    public int addTransaction(TransactionDto transactionDto, String sourceId) {
         if (authentication.isAuthenticated()) {
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
             BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
@@ -65,10 +65,13 @@ public class BankTransactionService {
             }
             transactionsV1.setTransactionDate(Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
             transactionsV1.setBankId(transactionDto.bankId());
+            transactionsV1.setTransactionNumber(transactionDto.transactionId());
             transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
             transactionsV1.setAmount(transactionDto.amount());
             transactionsV1.setType(transactionDto.type());
             transactionsV1.setSource(transactionDto.source());
+            transactionsV1.setSourceId(sourceId);
+            transactionsV1.setIsDeleted(false);
             transactionsV1.setHostelId(transactionDto.hostelId());
             transactionsV1.setCreatedAt(new Date());
             transactionsV1.setCreatedBy(authentication.getName());
@@ -80,8 +83,14 @@ public class BankTransactionService {
     }
 
 
-    public List<com.smartstay.smartstay.dto.transaction.TransactionDto> getAllTransactions(String hostelId) {
-        return bankRepository.findByHostelId(hostelId)
+    public List<com.smartstay.smartstay.dto.transaction.TransactionDto> getAllTransactions(String hostelId, List<String> bankIds) {
+        return bankRepository.findByHostelIdAndBankIdInAndIsDeletedFalseOrderByTransactionDateDesc(hostelId, bankIds)
+                .stream()
+                .map(item -> new TransactionsMapper().apply(item))
+                .toList();
+    }
+    public List<com.smartstay.smartstay.dto.transaction.TransactionDto> getAllTransactionsByHostelId(String hostelId) {
+        return bankRepository.findByHostelIdAndIsDeletedFalseOrderByTransactionDateDesc(hostelId)
                 .stream()
                 .map(item -> new TransactionsMapper().apply(item))
                 .toList();
@@ -95,28 +104,35 @@ public class BankTransactionService {
         return bankRepository.findTopByBankIdAndHostelIdOrderByCreatedAtDesc(bankId,hostelId);
     }
 
-    public void saveTransaction(BankTransactionsV1 transaction) {
-        bankRepository.save(transaction);
+    public BankTransactionsV1 saveTransaction(BankTransactionsV1 transaction) {
+        return bankRepository.save(transaction);
     }
 
     /**
      *
      * this is to refund the booking amount
      */
-    public void cancelBooking(TransactionDto transactionDto) {
+    public void cancelBooking(TransactionDto transactionDto, String sourceId, String transactionId) {
         if (authentication.isAuthenticated()) {
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
             BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
 
             if (v1 != null) {
+                double accountBalance = 0.0;
+                if (v1.getAccountBalance() != null) {
+                    accountBalance = v1.getAccountBalance();
+                }
                 transactionsV1.setTransactionDate(Utils.stringToDate(transactionDto.transactionDate(), Utils.USER_INPUT_DATE_FORMAT));
-                transactionsV1.setAccountBalance(v1.getAccountBalance() - transactionDto.amount());
+                transactionsV1.setAccountBalance(accountBalance - transactionDto.amount());
                 transactionsV1.setBankId(transactionDto.bankId());
                 transactionsV1.setHostelId(transactionDto.hostelId());
                 transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
                 transactionsV1.setAmount(transactionDto.amount());
                 transactionsV1.setType(BankTransactionType.DEBIT.name());
+                transactionsV1.setTransactionNumber(transactionId);
                 transactionsV1.setSource(BankSource.BOOKING_REFUND.name());
+                transactionsV1.setSourceId(sourceId);
+                transactionsV1.setIsDeleted(false);
                 transactionsV1.setCreatedAt(new Date());
                 transactionsV1.setCreatedBy(authentication.getName());
 
@@ -125,16 +141,15 @@ public class BankTransactionService {
         }
     }
 
-    public boolean addExpenseTransaction(TransactionDto transactionDto) {
+    public boolean addExpenseTransaction(TransactionDto transactionDto, String sourceId) {
         if (authentication.isAuthenticated()) {
 
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
 
-            if (!bankingService.updateBalanceForExpense(transactionDto.amount(), BankTransactionType.DEBIT.name(), transactionDto.bankId(), transactionDto.transactionDate())) {
+            if (!bankingService.updateBalanceForExpense(transactionDto.amount(), BankTransactionType.DEBIT.name(), transactionDto.bankId())) {
                 return false;
             }
 
-            Calendar calendar = Calendar.getInstance();
             Date dt = null;
             if (transactionDto.transactionDate() != null) {
                 dt = Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -142,22 +157,17 @@ public class BankTransactionService {
             else {
                 dt = new Date();
             }
-            calendar.setTime(dt);
-            if (calendar.get(Calendar.MINUTE) == 0 && calendar.get(Calendar.HOUR) == 0) {
-                Calendar cal2 = Calendar.getInstance();
-                calendar.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
-                calendar.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
-                calendar.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
-            }
 
-            transactionsV1.setTransactionDate(calendar.getTime());
+            transactionsV1.setTransactionDate(Utils.convertToTimeStamp(dt));
             transactionsV1.setBankId(transactionDto.bankId());
             transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
             transactionsV1.setAmount(transactionDto.amount());
             transactionsV1.setType(transactionDto.type());
             transactionsV1.setSource(transactionDto.source());
+            transactionsV1.setSourceId(sourceId);
             transactionsV1.setHostelId(transactionDto.hostelId());
             transactionsV1.setCreatedAt(new Date());
+            transactionsV1.setIsDeleted(false);
             transactionsV1.setCreatedBy(authentication.getName());
 
             bankRepository.save(transactionsV1);
@@ -167,19 +177,14 @@ public class BankTransactionService {
         return false;
     }
 
-    public boolean refundInvoice(InvoicesV1 invoicesV1, RefundInvoice refundInvoice) {
+
+    public boolean refundInvoice(InvoicesV1 invoicesV1, RefundInvoice refundInvoice, String sourceId, String transactionId) {
         BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
 
-        String transactionDate = refundInvoice.refundDate();
-        if (!Utils.checkNullOrEmpty(refundInvoice.refundDate())) {
-            transactionDate = Utils.dateToString(new Date());
-        }
-
-        if (!bankingService.updateBalanceForExpense(refundInvoice.refundAmount(), BankTransactionType.DEBIT.name(), refundInvoice.bankId(), transactionDate)) {
+        if (!bankingService.updateBalanceForExpense(refundInvoice.refundAmount(), BankTransactionType.DEBIT.name(), refundInvoice.bankId())) {
             return false;
         }
 
-        Calendar calendar = Calendar.getInstance();
         Date dt = null;
         if (refundInvoice.refundDate() != null) {
             dt = Utils.stringToDate(refundInvoice.refundDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -187,20 +192,17 @@ public class BankTransactionService {
         else {
             dt = new Date();
         }
-        calendar.setTime(dt);
-        if (calendar.get(Calendar.MINUTE) == 0 && calendar.get(Calendar.HOUR) == 0) {
-            Calendar cal2 = Calendar.getInstance();
-            calendar.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
-            calendar.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
-            calendar.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
-        }
 
-        transactionsV1.setTransactionDate(calendar.getTime());
+
+        transactionsV1.setTransactionDate(Utils.convertToTimeStamp(dt));
         transactionsV1.setBankId(refundInvoice.bankId());
         transactionsV1.setReferenceNumber(refundInvoice.referenceNumber());
         transactionsV1.setAmount(refundInvoice.refundAmount());
         transactionsV1.setType(BankTransactionType.DEBIT.name());
         transactionsV1.setSource(BankSource.INVOICE.name());
+        transactionsV1.setTransactionNumber(transactionId);
+        transactionsV1.setSourceId(sourceId);
+        transactionsV1.setIsDeleted(false);
         transactionsV1.setHostelId(invoicesV1.getHostelId());
         transactionsV1.setCreatedAt(new Date());
         transactionsV1.setCreatedBy(authentication.getName());
@@ -209,5 +211,88 @@ public class BankTransactionService {
 
         return true;
 
+    }
+
+    public void deleteReceipt(TransactionDto transaction) {
+        if (transaction != null) {
+            BankTransactionsV1 transactionsV1 = bankRepository.findByTransactionNumber(transaction.transactionId());
+            if (transactionsV1 != null) {
+                bankRepository.delete(transactionsV1);
+            }
+        }
+    }
+
+    public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
+        return bankRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
+    }
+
+    public boolean addAssetsTransaction(Long assetId, Double price, Date transactionDate, String bankId, String hostelId, String referenceNumber) {
+        if (!authentication.isAuthenticated()){
+            return false;
+        }
+
+        if (!bankingService.updateBalanceForAssets(price, BankTransactionType.DEBIT.name(), bankId)) {
+            return false;
+        }
+
+        BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
+        transactionsV1.setTransactionDate(Utils.convertToTimeStamp(transactionDate));
+        transactionsV1.setBankId(bankId);
+        transactionsV1.setReferenceNumber(referenceNumber);
+        transactionsV1.setAmount(price);
+        transactionsV1.setType(BankTransactionType.DEBIT.name());
+        transactionsV1.setSource(BankSource.ASSETS.name());
+        transactionsV1.setSourceId(String.valueOf(assetId));
+        transactionsV1.setHostelId(hostelId);
+        transactionsV1.setIsDeleted(false);
+        transactionsV1.setCreatedAt(new Date());
+        transactionsV1.setCreatedBy(authentication.getName());
+
+        bankRepository.save(transactionsV1);
+
+        return true;
+    }
+
+    public void updateExpenseTransactions(String hostelId, String expenseId, Double totalAmount, double priceDifference, String transactionDate) {
+        BankTransactionsV1 bankTransactionsV1 = bankRepository.findByHostelIdAndSourceId(hostelId, expenseId);
+        if (bankTransactionsV1 != null) {
+            bankTransactionsV1.setAmount(totalAmount);
+            if (priceDifference < 0) {
+                double accountBalance = 0.0;
+                if (bankTransactionsV1.getAccountBalance() != null) {
+                    accountBalance = bankTransactionsV1.getAccountBalance();
+                }
+                bankTransactionsV1.setAccountBalance(accountBalance + (priceDifference));
+            }
+            else {
+                double accountBalance = 0.0;
+                if (bankTransactionsV1.getAccountBalance() != null) {
+                    accountBalance = bankTransactionsV1.getAccountBalance();
+                }
+                bankTransactionsV1.setAccountBalance(accountBalance - priceDifference);
+            }
+
+            if (transactionDate != null ) {
+                Date tDate = Utils.stringToDate(transactionDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                bankTransactionsV1.setTransactionDate(tDate);
+            }
+            bankRepository.save(bankTransactionsV1);
+            bankingService.updateBankBalanceForUpdateExpense(bankTransactionsV1.getBankId(), priceDifference);
+        }
+
+
+    }
+
+    public boolean deleteExpnese(String hostelId, String expenseId) {
+        BankTransactionsV1 bankTransactionsV1 = bankRepository.findByHostelIdAndSourceId(hostelId, expenseId);
+        if (bankTransactionsV1 != null) {
+            bankTransactionsV1.setIsDeleted(true);
+            bankTransactionsV1.setUpdatedAt(new Date());
+            bankTransactionsV1.setUpdatedBy(authentication.getName());
+
+            bankingService.updateAccountBalanceByDeleteExpense(hostelId, bankTransactionsV1.getBankId(), bankTransactionsV1.getAmount());
+            return true;
+        }
+        return false;
     }
 }

@@ -48,6 +48,18 @@ public class JWTService {
 
     }
 
+    public String generateMobileToken(String username, Map<String, Object> claims, Long validity) {
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(username)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(validity))
+                .signWith(getKey(), SignatureAlgorithm.HS256).compact();
+
+    }
+
+
+
     private Key getKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
@@ -83,6 +95,9 @@ public class JWTService {
 
     public boolean validateToken(String token, UserDetails userDetails) {
         final String userName = extractUserName(token);
+        if (userDetails == null) {
+            return false;
+        }
         return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 

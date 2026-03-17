@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.responses.customer;
 
 public record CustomerData(String firstName,
+                           String lastName,
+                           String fullName,
                            String city,
                            String state,
                            String country,

@@ -18,14 +18,15 @@ public class BedHistoryMapper implements Function<com.smartstay.smartstay.dto.cu
         if (bedHistory.getEndDate() == null) {
             endDate = "Till date";
         }
+        else {
+            endDate = Utils.dateToString(bedHistory.getEndDate());
+        }
 
         if (bedHistory.getStartDate() != null) {
             startDate = Utils.dateToString(bedHistory.getStartDate());
         }
 
-        else {
-            endDate = Utils.dateToString(bedHistory.getEndDate());
-        }
+
         if (bedHistory.getType().equalsIgnoreCase(CustomersBedType.BOOKED.name())) {
             type = "Booked";
             endDate = "NA";
@@ -42,6 +43,7 @@ public class BedHistoryMapper implements Function<com.smartstay.smartstay.dto.cu
 
         return new BedHistory(bedHistory.getHistoryId(),
                 bedHistory.getBedId(),
+                bedHistory.getRoomId(),
                 bedHistory.getBedName(),
                 bedHistory.getRoomName(),
                 startDate,

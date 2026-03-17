@@ -7,6 +7,9 @@ public interface CustomersBookingDetails {
     Integer getRoomId();
     Integer getFloorId();
     Double getRentAmount();
+    Double getBookingAmount();
+    Date getCheckoutDate();
+    Date getRequestedCheckoutDate();
     Date getLeavingDate();
     Date getNoticeDate();
     String getBookingId();
@@ -19,4 +22,5 @@ public interface CustomersBookingDetails {
     String getRoomName();
     String getFloorName();
     String getBedName();
+    Boolean getIsBooked();
 }

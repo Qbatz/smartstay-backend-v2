@@ -1,23 +1,29 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Electricity.*;
+import com.smartstay.smartstay.Wrappers.reports.ReportsEbMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.ElectricityReadings;
-import com.smartstay.smartstay.dto.booking.BookedCustomer;
+import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.electricity.*;
+import com.smartstay.smartstay.dto.electricity.HostelReadings;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.reports.ElectricityForReports;
 import com.smartstay.smartstay.dto.room.RoomInfo;
-import com.smartstay.smartstay.ennum.EBReadingType;
-import com.smartstay.smartstay.ennum.ElectricityBillStatus;
-import com.smartstay.smartstay.ennum.KycStatus;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.AddEbEvents;
+import com.smartstay.smartstay.events.HostelReadingEbEvents;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
+import com.smartstay.smartstay.payloads.electricity.UpdateElectricity;
 import com.smartstay.smartstay.repositories.ElectricityReadingRepository;
+import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.electricity.*;
 import com.smartstay.smartstay.responses.electricity.RoomElectricityCustomersList;
 import com.smartstay.smartstay.responses.rooms.RoomInfoForEB;
 import com.smartstay.smartstay.rooms.EBReadingRoomsInfo;
 import com.smartstay.smartstay.util.Utils;
+import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
@@ -25,9 +31,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static java.util.stream.Collectors.toList;
 
 @Service
 public class ElectricityService {
@@ -52,7 +55,139 @@ public class ElectricityService {
     @Autowired
     private CustomersService customerService;
     @Autowired
+    private CustomersBedHistoryService bedHistoryService;
+    @Autowired
     private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private HostelReadingsService hostelReadingsService;
+    @Autowired
+    private BedsService bedsService;
+    @Autowired
+    private EbCalculationService ebCalculationService;
+    @Autowired
+    private SubscriptionService subscriptionService;
+
+    /**
+     *
+     * this is old way of generating invoices
+     *
+     * @param hostelId
+     * @param readings
+     * @return
+     */
+
+    @Deprecated
+    public ResponseEntity<?> addMeterReadingNew(String hostelId, AddReading readings) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        Date date = null;
+        if (readings.readingDate() != null) {
+            date = Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (Utils.compareWithTwoDates(new Date(), date) < 0) {
+                return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, date);
+
+        ElectricityConfig electricityConfig1 = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig1 == null) {
+            return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        Double previousReading = 0.0;
+        if (date == null) {
+            date = new Date();
+        }
+
+        Date billStartDate = new Date();
+        Date billEndDate = new Date();
+
+        if (billingDates != null ) {
+
+            billStartDate = billingDates.currentBillStartDate();
+            billEndDate = date;
+
+        }
+
+        if (electricityConfig1.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            if (!Utils.checkNullOrEmpty(readings.roomId())) {
+                return new ResponseEntity<>(Utils.INVALID_ROOM_ID, HttpStatus.BAD_REQUEST);
+            }
+
+            com.smartstay.smartstay.dao.ElectricityReadings electricityReadings = findLastEntryByRoomId(readings.roomId(), hostelId);
+            boolean isFirstEntry = false;
+            if (electricityReadings != null) {
+                if (Utils.compareWithTwoDates(Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), electricityReadings.getEntryDate()) <=0) {
+                    return new ResponseEntity<>(Utils.ALREADY_READING_TAKEN_THIS_DATE, HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            if (electricityReadings == null) {
+                isFirstEntry = true;
+                previousReading = 0.0;
+            }
+            else {
+                previousReading = electricityReadings.getCurrentReading();
+                billStartDate = Utils.addDaysToDate(electricityReadings.getEntryDate(), 1);
+            }
+
+            if (readings.reading() <= previousReading) {
+                return new ResponseEntity<>(Utils.PREVIOUS_CURRENT_READING_NOT_MATCHING, HttpStatus.BAD_REQUEST);
+            }
+
+            com.smartstay.smartstay.dao.ElectricityReadings newReadings = new com.smartstay.smartstay.dao.ElectricityReadings();
+            newReadings.setPreviousReading(previousReading);
+            newReadings.setCurrentReading(readings.reading());
+            newReadings.setHostelId(hostelId);
+            newReadings.setRoomId(readings.roomId());
+            newReadings.setCurrentUnitPrice(electricityConfig1.getCharge());
+            newReadings.setEntryDate(date);
+            newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
+            newReadings.setFloorId(readings.floorId());
+            newReadings.setConsumption(readings.reading() - previousReading);
+            newReadings.setMissedEntry(false);
+            newReadings.setFirstEntry(isFirstEntry);
+            newReadings.setCreatedAt(new Date());
+            newReadings.setUpdatedAt(new Date());
+            newReadings.setCreatedBy(users.getUserId());
+            newReadings.setUpdatedBy(users.getUserId());
+            newReadings.setBillStartDate(billStartDate);
+            newReadings.setBillEndDate(billEndDate);
+
+            com.smartstay.smartstay.dao.ElectricityReadings newReading = electricityReadingRepository.save(newReadings);
+            if (!isFirstEntry) {
+//                eventPublisher.publishEvent(new AddEbEvents(this, hostelId, readings.roomId(), readings.reading(), electricityConfig1.getCharge(), date, users.getUserId(), newReading.getId()));
+            }
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        }
+        else {
+            return addMeterReadingForHostelBasedNew(hostelId, readings, electricityConfig1, billingDates);
+        }
+
+    }
 
     public ResponseEntity<?> addMeterReading(String hostelId, AddReading readings) {
         if (!authentication.isAuthenticated()) {
@@ -74,6 +209,11 @@ public class ElectricityService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         Date date = null;
         if (readings.readingDate() != null) {
             date = Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -82,8 +222,10 @@ public class ElectricityService {
             }
         }
 
-        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
-        if (electricityConfig == null) {
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, date);
+
+        ElectricityConfig electricityConfig1 = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig1 == null) {
             return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
@@ -96,24 +238,20 @@ public class ElectricityService {
         Date billStartDate = new Date();
         Date billEndDate = new Date();
 
-        if (electricityConfig != null && electricityConfig.getBillDate() != null) {
-            Calendar cal = Calendar.getInstance();
+        if (billingDates != null ) {
 
-            cal.setTime(date);
-            cal.set(Calendar.DAY_OF_MONTH, electricityConfig.getBillDate());
-
-            billStartDate = cal.getTime();
-            billEndDate = Utils.findLastDate(electricityConfig.getBillDate(), date);
+            billStartDate = billingDates.currentBillStartDate();
+            billEndDate = date;
 
         }
 
-        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+        if (electricityConfig1.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
             if (!Utils.checkNullOrEmpty(readings.roomId())) {
                 return new ResponseEntity<>(Utils.INVALID_ROOM_ID, HttpStatus.BAD_REQUEST);
             }
 
             com.smartstay.smartstay.dao.ElectricityReadings electricityReadings = findLastEntryByRoomId(readings.roomId(), hostelId);
-
+            boolean isFirstEntry = false;
             if (electricityReadings != null) {
                 if (Utils.compareWithTwoDates(Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), electricityReadings.getEntryDate()) <=0) {
                     return new ResponseEntity<>(Utils.ALREADY_READING_TAKEN_THIS_DATE, HttpStatus.BAD_REQUEST);
@@ -121,13 +259,15 @@ public class ElectricityService {
             }
 
             if (electricityReadings == null) {
+                isFirstEntry = true;
                 previousReading = 0.0;
             }
             else {
                 previousReading = electricityReadings.getCurrentReading();
+                billStartDate = Utils.addDaysToDate(electricityReadings.getEntryDate(), 1);
             }
 
-            if (readings.reading() < previousReading) {
+            if (readings.reading() <= previousReading) {
                 return new ResponseEntity<>(Utils.PREVIOUS_CURRENT_READING_NOT_MATCHING, HttpStatus.BAD_REQUEST);
             }
 
@@ -136,12 +276,13 @@ public class ElectricityService {
             newReadings.setCurrentReading(readings.reading());
             newReadings.setHostelId(hostelId);
             newReadings.setRoomId(readings.roomId());
-            newReadings.setCurrentUnitPrice(electricityConfig.getCharge());
+            newReadings.setCurrentUnitPrice(electricityConfig1.getCharge());
             newReadings.setEntryDate(date);
             newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
             newReadings.setFloorId(readings.floorId());
             newReadings.setConsumption(readings.reading() - previousReading);
             newReadings.setMissedEntry(false);
+            newReadings.setFirstEntry(isFirstEntry);
             newReadings.setCreatedAt(new Date());
             newReadings.setUpdatedAt(new Date());
             newReadings.setCreatedBy(users.getUserId());
@@ -149,27 +290,37 @@ public class ElectricityService {
             newReadings.setBillStartDate(billStartDate);
             newReadings.setBillEndDate(billEndDate);
 
-            com.smartstay.smartstay.dao.ElectricityReadings newReading = electricityReadingRepository.save(newReadings);
-            eventPublisher.publishEvent(new AddEbEvents(this, hostelId, readings.roomId(), readings.reading(), electricityConfig.getCharge(), date, users.getUserId(), electricityReadings, newReading.getId()));
+            ElectricityReadings nr = electricityReadingRepository.save(newReadings);
+
+            usersService.addUserLog(hostelId, String.valueOf(nr.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.CREATE, users);
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
         else {
-            return addMeterReadingForHostelBased(hostelId, readings, electricityConfig);
+            return hostelReadingsService.addEbReadings(hostelId, readings, billStartDate, billEndDate, electricityConfig1, users);
         }
-
-
     }
 
-    public ResponseEntity<?> addMeterReadingForHostelBased(String hostelId, AddReading readings, ElectricityConfig electricityConfig) {
+    public ResponseEntity<?> addMeterReadingForHostelBasedNew(String hostelId, AddReading readings, ElectricityConfig electricityConfig, BillingDates billingDates) {
 
         Date date = null;
         Date billStartDate = new Date();
         Date billEndDate = new Date();
         boolean isProRate = true;
         double totalBillAmount = 0.0;
+        boolean isFirstEntry = false;
 
         CurrentReadings currentReadings = electricityReadingRepository.getCurrentReadings(hostelId);
-        List<ElectricityRoomIdFromPreviousEntry> previousEntries = new ArrayList<>();
+        List<CurrentReadings> listCurrentReadings = electricityReadingRepository.getAllCurrentReadings(hostelId);
+        if (listCurrentReadings != null) {
+            double sumOfPreviousReadings = listCurrentReadings
+                    .stream()
+                    .mapToDouble(CurrentReadings::currentReading)
+                    .sum();
+            if (currentReadings != null && currentReadings.entryDate() != null) {
+                Date entryDate = currentReadings.entryDate();
+                currentReadings = new CurrentReadings(sumOfPreviousReadings, entryDate);
+            }
+        }
 
         if (readings.readingDate() != null) {
             date = Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -177,28 +328,23 @@ public class ElectricityService {
                 return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
             }
             if (currentReadings != null) {
-                if (Utils.compareWithTwoDates(Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), currentReadings.getEntryDate()) <=0) {
+                if (Utils.compareWithTwoDates(Utils.stringToDate(readings.readingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT), currentReadings.entryDate()) <=0) {
                     return new ResponseEntity<>(Utils.ALREADY_READING_TAKEN_THIS_DATE, HttpStatus.BAD_REQUEST);
                 }
 
                 Calendar calBillStart = Calendar.getInstance();
-                calBillStart.setTime(currentReadings.getEntryDate());
-                calBillStart.set(Calendar.DAY_OF_MONTH, calBillStart.get(Calendar.DAY_OF_MONTH) + 1);
+                calBillStart.setTime(currentReadings.entryDate());
+                calBillStart.add(Calendar.DAY_OF_MONTH, 1);
 
                 billStartDate = calBillStart.getTime();
 
             }
 
-            if (electricityConfig != null && electricityConfig.getBillDate() != null) {
+            if (billingDates != null) {
 
                 if (currentReadings == null) {
-                    Calendar startDate = Calendar.getInstance();
 
-                    startDate.setTime(date);
-                    startDate.set(Calendar.DAY_OF_MONTH, startDate.get(Calendar.DAY_OF_MONTH) - 1);
-                    startDate.set(Calendar.DAY_OF_MONTH, electricityConfig.getBillDate());
-
-                    billStartDate = startDate.getTime();
+                    billStartDate = billingDates.currentBillStartDate();
                 }
 
                 billEndDate = date;
@@ -212,16 +358,13 @@ public class ElectricityService {
             date = new Date();
         }
 
-//        com.smartstay.smartstay.dao.ElectricityReadings electricityReadings = findLatestEntryByHostelId(hostelId);
-
-
 
         if (currentReadings == null) {
+            isFirstEntry = true;
             previousReading = 0.0;
         }
         else {
-            previousReading = currentReadings.getCurrentReading();
-            previousEntries = electricityReadingRepository.getRoomIdsFromPreviousEntry(hostelId, currentReadings.getEntryDate());
+            previousReading = currentReadings.currentReading();
         }
 
         if (readings.reading() <= previousReading) {
@@ -250,11 +393,11 @@ public class ElectricityService {
                 com.smartstay.smartstay.dao.ElectricityReadings roomPreviousReadings = electricityReadingRepository.getRoomCurrentReading(key);
                 if (roomPreviousReadings == null) {
                     newReadings.setPreviousReading(0.0);
-                    newReadings.setCurrentReading((unitPerPerson * personCountPerRoom.get(key)));
+                    newReadings.setCurrentReading(Utils.roundOffWithTwoDigit((unitPerPerson * personCountPerRoom.get(key))));
                 }
                 else {
                     newReadings.setPreviousReading(roomPreviousReadings.getCurrentReading());
-                    newReadings.setCurrentReading((unitPerPerson * personCountPerRoom.get(key)) + roomPreviousReadings.getCurrentReading());
+                    newReadings.setCurrentReading(Utils.roundOffWithTwoDigit((unitPerPerson * personCountPerRoom.get(key)) + roomPreviousReadings.getCurrentReading()));
                 }
                 newReadings.setHostelId(hostelId);
                 newReadings.setRoomId(key);
@@ -266,6 +409,7 @@ public class ElectricityService {
                 newReadings.setMissedEntry(false);
                 newReadings.setCreatedAt(new Date());
                 newReadings.setUpdatedAt(new Date());
+                newReadings.setFirstEntry(isFirstEntry);
                 newReadings.setCreatedBy(authentication.getName());
                 newReadings.setUpdatedBy(authentication.getName());
                 newReadings.setBillStartDate(billStartDate);
@@ -281,44 +425,44 @@ public class ElectricityService {
             listReadingsAfterSaving.forEach(item -> {
 
 
-                        List<CustomerBedsList> listCusId = listBeds
-                                .stream()
-                                .filter(i -> Objects.equals(i.roomId(), item.getRoomId()))
-                                .toList();
+                List<CustomerBedsList> listCusId = listBeds
+                        .stream()
+                        .filter(i -> Objects.equals(i.roomId(), item.getRoomId()))
+                        .toList();
 
-                        List<CustomersEbHistory> customerEbHistory = listCusId
-                                .stream()
-                                .map(i -> {
-                                    CustomersEbHistory ebHistory = new CustomersEbHistory();
-                                    ebHistory.setReadingId(item.getId());
-                                    ebHistory.setCustomerId(i.customerId());
-                                    ebHistory.setRoomId(item.getRoomId());
-                                    ebHistory.setFloorId(item.getFloorId());
-                                    ebHistory.setBedId(i.bedId());
-                                    ebHistory.setUnits(unitPerPerson);
-                                    ebHistory.setAmount(unitPerPerson * electricityConfig.getCharge());
-                                    ebHistory.setStartDate(finalBillStartDate);
-                                    if (i.endDate() == null) {
-                                        ebHistory.setEndDate(finalBillEndDate);
-                                    }
-                                    else {
-                                        if (Utils.compareWithTwoDates(finalBillEndDate, i.endDate()) <= 0) {
-                                            ebHistory.setEndDate(finalBillEndDate);
-                                        }
-                                        else {
-                                            ebHistory.setEndDate(i.endDate());
-                                        }
-                                    }
+                List<CustomersEbHistory> customerEbHistory = listCusId
+                        .stream()
+                        .map(i -> {
+                            CustomersEbHistory ebHistory = new CustomersEbHistory();
+                            ebHistory.setReadingId(item.getId());
+                            ebHistory.setCustomerId(i.customerId());
+                            ebHistory.setRoomId(item.getRoomId());
+                            ebHistory.setFloorId(item.getFloorId());
+                            ebHistory.setBedId(i.bedId());
+                            ebHistory.setUnits(unitPerPerson);
+                            ebHistory.setAmount(unitPerPerson * electricityConfig.getCharge());
+                            ebHistory.setStartDate(finalBillStartDate);
+                            if (i.endDate() == null) {
+                                ebHistory.setEndDate(finalBillEndDate);
+                            }
+                            else {
+                                if (Utils.compareWithTwoDates(finalBillEndDate, i.endDate()) <= 0) {
+                                    ebHistory.setEndDate(finalBillEndDate);
+                                }
+                                else {
+                                    ebHistory.setEndDate(i.endDate());
+                                }
+                            }
 
-                                    ebHistory.setCreatedAt(new Date());
-                                    ebHistory.setCreatedBy(ebHistory.getCreatedBy());
+                            ebHistory.setCreatedAt(new Date());
+                            ebHistory.setCreatedBy(ebHistory.getCreatedBy());
 
-                                    return ebHistory;
-                                })
-                                .toList();
+                            return ebHistory;
+                        })
+                        .toList();
 
-                        ebHistoryService.saveCustomerEb(customerEbHistory);
-                    });
+                ebHistoryService.saveCustomerEb(customerEbHistory);
+            });
 
         }
         else {
@@ -334,18 +478,20 @@ public class ElectricityService {
                 readingDate = new Date();
             }
             if (currentReadings != null) {
-
+                isFirstEntry = false;
                 Calendar cal = Calendar.getInstance();
-                cal.setTime(currentReadings.getEntryDate());
-                cal.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH));
+                cal.setTime(currentReadings.entryDate());
+                cal.add(Calendar.DAY_OF_MONTH, 1);
 
                 startDate = cal.getTime();
             }
             else {
+                isFirstEntry = true;
                 Calendar cal = Calendar.getInstance();
                 cal.setTime(readingDate);
                 assert electricityConfig != null;
                 cal.set(Calendar.DAY_OF_MONTH, electricityConfig.getBillDate());
+                cal.add(Calendar.DAY_OF_MONTH, 1);
 
                 startDate = cal.getTime();
 
@@ -359,9 +505,10 @@ public class ElectricityService {
             Date finalStartDate = startDate;
             Date finalReadingDate = endDate;
 
+            List<CustomerIdRoomIdUnits> listCustomerIdRoomId = new ArrayList<>();
+
             int totalDays = listBeds.stream()
                     .mapToInt(item -> {
-                        assert currentReadings != null;
                         if (Utils.compareWithTwoDates(item.startDate(), finalStartDate) <= 0) {
                             if (item.endDate() == null) {
                                 return Math.toIntExact(Utils.findNumberOfDays(finalStartDate, finalReadingDate));
@@ -395,12 +542,12 @@ public class ElectricityService {
                 consumption = readings.reading();
             }
             else {
-                consumption =  readings.reading() - currentReadings.getCurrentReading();
+                consumption =  readings.reading() - currentReadings.currentReading();
             }
 
             double unitsPerDay = consumption / totalDays;
 
-            List<CustomerIdRoomIdUnits> listCustomerIdRoomId = new ArrayList<>();
+
             listBeds.forEach(item -> {
                 Date bedStartDate = null;
                 Date bedEndDate = null;
@@ -468,11 +615,11 @@ public class ElectricityService {
                 com.smartstay.smartstay.dao.ElectricityReadings roomPreviousReadings = electricityReadingRepository.getRoomCurrentReading(key);
                 if (roomPreviousReadings != null) {
                     newReadings.setPreviousReading(roomPreviousReadings.getCurrentReading());
-                    newReadings.setCurrentReading(roomPreviousReadings.getCurrentReading() + totalUnits.get(key));
+                    newReadings.setCurrentReading(Utils.roundOffWithTwoDigit(roomPreviousReadings.getCurrentReading() + totalUnits.get(key)));
                 }
                 else {
                     newReadings.setPreviousReading(0.0);
-                    newReadings.setCurrentReading( totalUnits.get(key));
+                    newReadings.setCurrentReading(Utils.roundOffWithTwoDigit(totalUnits.get(key)));
                 }
                 newReadings.setHostelId(hostelId);
                 newReadings.setRoomId(key);
@@ -480,7 +627,7 @@ public class ElectricityService {
                 newReadings.setEntryDate(date);
                 newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
                 newReadings.setFloorId(readings.floorId());
-                newReadings.setConsumption(totalUnits.get(key));
+                newReadings.setConsumption(Utils.roundOffWithTwoDigit(totalUnits.get(key)));
                 newReadings.setMissedEntry(false);
                 newReadings.setCreatedAt(new Date());
                 newReadings.setUpdatedAt(new Date());
@@ -488,37 +635,84 @@ public class ElectricityService {
                 newReadings.setUpdatedBy(authentication.getName());
                 newReadings.setBillStartDate(billStartDate);
                 newReadings.setBillEndDate(billEndDate);
-
+                newReadings.setFirstEntry(isFirstEntry);
                 listNewElectricityReading.add(newReadings);
             }
+            List<com.smartstay.smartstay.dao.ElectricityReadings> listAddedReadingsAfterSavings = new ArrayList<>();
+            if (!totalUnits.isEmpty()) {
+                listAddedReadingsAfterSavings = electricityReadingRepository.saveAll(listNewElectricityReading);
+            }
+            else {
+                List<Rooms> listRooms = roomsService.getAllRoomsByHostelId(hostelId);
 
-            List<com.smartstay.smartstay.dao.ElectricityReadings> listAddedReadingsAfterSavings = electricityReadingRepository.saveAll(listNewElectricityReading);
+                Double currentReadingForNoOccupants = (readings.reading() - previousReading) / listRooms.size();
 
-            listAddedReadingsAfterSavings.forEach(item -> {
+                Date finalDate = date;
+                Date finalBillStartDate1 = billStartDate;
+                Date finalBillEndDate1 = billEndDate;
+                boolean finalIsFirstEntry = isFirstEntry;
+                listRooms.forEach(item -> {
+                    com.smartstay.smartstay.dao.ElectricityReadings newReadings = new com.smartstay.smartstay.dao.ElectricityReadings();
+                    com.smartstay.smartstay.dao.ElectricityReadings roomPreviousReadings = electricityReadingRepository.getRoomCurrentReading(item.getRoomId());
+                    if (roomPreviousReadings != null) {
+                        newReadings.setPreviousReading(Utils.roundOffWithTwoDigit(roomPreviousReadings.getCurrentReading()));
+                        newReadings.setCurrentReading(Utils.roundOffWithTwoDigit(roomPreviousReadings.getCurrentReading() + currentReadingForNoOccupants));
+                    }
+                    else {
+                        newReadings.setPreviousReading(0.0);
+                        newReadings.setCurrentReading(currentReadingForNoOccupants);
+                    }
 
-             List<CustomersEbHistory> listEbHistory = listCustomerIdRoomId
-                        .stream()
-                        .filter(i -> i.roomId() == item.getRoomId())
-                        .map(i -> {
-                            CustomersEbHistory ebHistory = new CustomersEbHistory();
-                            ebHistory.setReadingId(item.getId());
-                            ebHistory.setCustomerId(i.customerId());
-                            ebHistory.setRoomId(item.getRoomId());
-                            ebHistory.setFloorId(item.getFloorId());
-                            ebHistory.setBedId(i.bedId());
-                            ebHistory.setUnits(i.units());
-                            ebHistory.setAmount((i.units() * electricityConfig.getCharge()));
-                            ebHistory.setStartDate(i.startDate());
-                            ebHistory.setEndDate(i.endDate());
-                            ebHistory.setCreatedAt(new Date());
-                            ebHistory.setCreatedBy(ebHistory.getCreatedBy());
+                    newReadings.setHostelId(hostelId);
+                    newReadings.setRoomId(item.getRoomId());
+                    newReadings.setCurrentUnitPrice(electricityConfig.getCharge());
+                    newReadings.setEntryDate(finalDate);
+                    newReadings.setBillStatus(ElectricityBillStatus.INVOICE_NOT_GENERATED.name());
+                    newReadings.setFloorId(readings.floorId());
+                    newReadings.setConsumption(currentReadingForNoOccupants);
+                    newReadings.setMissedEntry(false);
+                    newReadings.setCreatedAt(new Date());
+                    newReadings.setUpdatedAt(new Date());
+                    newReadings.setCreatedBy(authentication.getName());
+                    newReadings.setUpdatedBy(authentication.getName());
+                    newReadings.setBillStartDate(finalBillStartDate1);
+                    newReadings.setBillEndDate(finalBillEndDate1);
+                    newReadings.setFirstEntry(finalIsFirstEntry);
+                    listNewElectricityReading.add(newReadings);
+                });
 
-                            return ebHistory;
-                        })
-                        .toList();
+                electricityReadingRepository.saveAll(listNewElectricityReading);
+            }
 
-                ebHistoryService.saveCustomerEb(listEbHistory);
-            });
+
+            if (!isFirstEntry) {
+                listAddedReadingsAfterSavings.forEach(item -> {
+
+                    List<CustomersEbHistory> listEbHistory = listCustomerIdRoomId
+                            .stream()
+                            .filter(i -> Objects.equals(i.roomId(), item.getRoomId()))
+                            .map(i -> {
+                                CustomersEbHistory ebHistory = new CustomersEbHistory();
+                                ebHistory.setReadingId(item.getId());
+                                ebHistory.setCustomerId(i.customerId());
+                                ebHistory.setRoomId(item.getRoomId());
+                                ebHistory.setFloorId(item.getFloorId());
+                                ebHistory.setBedId(i.bedId());
+                                ebHistory.setUnits(i.units());
+                                ebHistory.setAmount((i.units() * electricityConfig.getCharge()));
+                                ebHistory.setStartDate(i.startDate());
+                                ebHistory.setEndDate(i.endDate());
+                                ebHistory.setCreatedAt(new Date());
+                                ebHistory.setCreatedBy(ebHistory.getCreatedBy());
+
+                                return ebHistory;
+                            })
+                            .toList();
+
+                    ebHistoryService.saveCustomerEb(listEbHistory);
+                });
+            }
+
 
         }
 
@@ -534,8 +728,7 @@ public class ElectricityService {
     private com.smartstay.smartstay.dao.ElectricityReadings findLatestEntryByHostelId(String hostelId) {
         return electricityReadingRepository.findTopByHostelIdOrderByEntryDateDesc(hostelId);
     }
-
-    public ResponseEntity<?> getEBReadings(String hostelId) {
+    public ResponseEntity<?> getEbReadings(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -549,54 +742,141 @@ public class ElectricityService {
         if (!userHostelService.checkHostelAccess(users.getUserId(),hostelId)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
-
-            String startDate = "";
-            String endDate = "";
-            com.smartstay.smartstay.dao.ElectricityReadings ebReading = electricityReadingRepository.findTopByHostelIdOrderByEntryDateDesc(hostelId);
-            if (ebReading != null) {
-                Calendar calendar = Calendar.getInstance();
-                calendar.setTime(ebReading.getBillEndDate());
-
-                startDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + electricityConfig.getBillDate();
-                endDate = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.DAY_OF_MONTH);
-            }
-            List<com.smartstay.smartstay.dto.electricity.ElectricityReadings> listElectricity = electricityReadingRepository.getElectricity(hostelId, startDate, endDate);
-            List<Integer> listRoomsInMeterReadings = new ArrayList<>();
+        List<Rooms> listRooms = roomsService.findByHostelId(hostelId);
+        List<Rooms> deletedRooms = listRooms
+                .stream()
+                .filter(i -> i.getIsDeleted() != null && i.getIsDeleted().equals(Boolean.TRUE))
+                .toList();
+        List<ElectricityReadings> latestReadings = electricityReadingRepository.getLatestReadingOfAllRooms(hostelId);
 
 
-            List<ElectricityUsage> listUsages = new ArrayList<>(listElectricity
+        List<BedHistoryByRoomId> listBeds = null;
+        HashMap<Integer, Integer> occupantsCounts;
+        List<RoomInfo> listRoomDetails = new ArrayList<>();
+        List<HostelReadings> listHostelReadings = null;
+        boolean isHostelBased = false;
+
+        if (latestReadings != null) {
+            listBeds = latestReadings
                     .stream()
-                    .map(item -> {
-                        listRoomsInMeterReadings.add(item.getRoomId());
-                        return new ListReadingMapper().apply(item);
-                    })
-                    .toList());
+                    .map(i -> new BedHistoryByRoomId(i.getRoomId(), i.getBillStartDate(), i.getBillEndDate()))
+                    .toList();
+            List<Integer> roomIds = latestReadings.stream()
+                    .map(ElectricityReadings::getRoomId)
+                    .toList();
+            listRoomDetails = roomsService.getRoom(roomIds);
+        }
 
-            List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings, hostelId);
-            if (!listBedForEb.isEmpty()) {
-                List<ElectricityUsage> usages =  listBedForEb.stream()
-                        .map(item -> new ElectricityUsageMapper().apply(item))
-                        .toList();
+        if (listBeds != null) {
+            occupantsCounts = bedHistoryService.findByStartAndEndDateAndRoomIds(listBeds);
+        } else {
+            occupantsCounts = null;
+        }
 
-                listUsages.addAll(usages);
-
+        Double lastReading = 0.0;
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.HOSTEL_READING.name())) {
+            isHostelBased = true;
+            com.smartstay.smartstay.dao.HostelReadings latestReading = hostelReadingsService.getLatestReading(hostelId);
+            if (latestReading != null) {
+                Double lReading = latestReading.getCurrentReading();
+                if (lReading != null) {
+                    lastReading = Utils.roundOfDouble(lReading);
+                } else {
+                    lastReading = 0.0;
+                }
             }
 
-            boolean isHostelBased = false;
-            if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.HOSTEL_READING.name())) {
-                isHostelBased = true;
-            }
+            listHostelReadings = hostelReadingsService.getLastReading(latestReading);
 
-            ElectricityList list = new ElectricityList(isHostelBased, listUsages);
+        }
+
+        List<Integer> listRoomsInMeterReadings = latestReadings
+                .stream()
+                .map(ElectricityReadings::getRoomId)
+                .toList();
+        List<RoomInfo> listRoomInfo = roomsService.getRoom(listRoomsInMeterReadings);
+
+        List<ElectricityUsage> listUsages = new ArrayList<>(latestReadings
+                .stream()
+                .map(item -> {
+                    return new ElectricityUsgeMapper(occupantsCounts, listRoomInfo).apply(item);
+                })
+                .toList());
+
+        List<RoomInfoForEB> listBedForEb = roomsService.getBedsNotRegisteredOnEB(listRoomsInMeterReadings, hostelId);
+        if (!listBedForEb.isEmpty()) {
+            List<ElectricityUsage> usages = listBedForEb.stream()
+                    .map(item -> new ElectricityUsageMapper(null, null).apply(item))
+                    .toList();
+
+            listUsages.addAll(usages);
+
+        }
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
 
             return new ResponseEntity<>(list, HttpStatus.OK);
+        } else {
+            StringBuilder hostelName = new StringBuilder();
+            String hostelImage = null;
+            StringBuilder initials = new StringBuilder();
+            String billingMonth = null;
+            Double previousEntry = 0.0;
+            Double currentConsumption = 0.0;
+            Double totalAmount = 0.0;
 
+            HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+            if (hostelV1 != null) {
+                hostelName.append(hostelV1.getHostelName());
+                hostelImage = hostelV1.getMainImage();
+                String[] arrHostelName = hostelV1.getHostelName().split(" ");
+                if (arrHostelName != null) {
+                    initials.append(arrHostelName[0].toUpperCase().charAt(0));
+                    if (arrHostelName.length > 1) {
+                        initials.append(arrHostelName[arrHostelName.length - 1].toUpperCase().charAt(0));
+                    } else {
+                        if (arrHostelName[0].length() > 1) {
+                            initials.append(arrHostelName[0].toUpperCase().charAt(1));
+                        }
+                    }
+                }
+
+            }
+            long noOfTenants = bookingsService.getAllCheckedInCustomersCount(hostelId);
+            com.smartstay.smartstay.dao.HostelReadings readings = hostelReadingsService.getLatestReading(hostelId);
+
+            if (readings != null) {
+                currentConsumption = readings.getConsumption();
+                if (!readings.isFirstEntry()) {
+                    totalAmount = currentConsumption * electricityConfig.getCharge();
+                    previousEntry = readings.getPreviousReading();
+                    billingMonth = Utils.dateToMonth(readings.getBillStartDate());
+                }
+
+            }
+            HostelInfo hostelInfo = new HostelInfo(hostelName.toString(),
+                    hostelImage,
+                    initials.toString(),
+                    noOfTenants,
+                    billingMonth,
+                    previousEntry,
+                    currentConsumption,
+                    totalAmount);
+//            ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
+            ElectricityListHostelReadings list = new ElectricityListHostelReadings(hostelId,
+                    lastReading,
+                    isHostelBased,
+                    hostelInfo,
+                    listUsages,
+                    listHostelReadings);
+
+            return new ResponseEntity<>(list, HttpStatus.OK);
+        }
 
     }
 
@@ -657,7 +937,7 @@ public class ElectricityService {
         }
 
         RoomInfo roomsDetails = roomsService.getRoom(roomId);
-        List<ElectricityReadingForRoom> listElectricities = electricityReadingRepository.getRoomReading(roomId);
+        List<ElectricityReadings> listElectricities = electricityReadingRepository.getRoomReading(roomId);
 
         EBReadingRoomsInfo roomInfo = null;
 
@@ -681,16 +961,10 @@ public class ElectricityService {
                 }
             }
 
-            Calendar calendar = Calendar.getInstance();
-            calendar.set(Calendar.DAY_OF_MONTH, 1);
-            calendar.set(Calendar.MONTH, 1);
-
             listCustomers = ebHistoryService.getCustomerEbListForRoom(roomId);
         }
 
-
-
-        RoomUsages roomUsages = new RoomUsages(roomInfo, roomList, listCustomers);
+        RoomUsages roomUsages = new RoomUsages(roomInfo, hostelId, roomList, listCustomers);
 
         return new ResponseEntity<>(roomUsages, HttpStatus.OK);
     }
@@ -799,5 +1073,839 @@ public class ElectricityService {
 
         return new ResponseEntity<>(singleCustomers, HttpStatus.OK);
 
+    }
+
+    public List<ElectricityReadings> getAllElectricityReadingForRecurring(String hostelId, Date startDate, Date endDate) {
+        return electricityReadingRepository.listAllReadingsForGenerateInvoice(hostelId, startDate, endDate);
+    }
+
+    public void markAsInvoiceGenerated(List<ElectricityReadings> listReadingForMakingInvoiceGenerated) {
+        electricityReadingRepository.saveAll(listReadingForMakingInvoiceGenerated);
+    }
+
+    public Double getPreviousMonthEbAmount(String hostelId) {
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        if (billingDates != null) {
+            Calendar calStartDate = Calendar.getInstance();
+            calStartDate.setTime(billingDates.currentBillStartDate());
+            calStartDate.add(Calendar.MONTH, -1);
+
+
+            Calendar calEndDate = Calendar.getInstance();
+            calEndDate.setTime(billingDates.currentBillEndDate());
+            calEndDate.add(Calendar.MONTH, -1);
+
+            List<ElectricityReadings> listReadings = electricityReadingRepository.findByBetweenDates(hostelId, calStartDate.getTime(), calEndDate.getTime());
+
+            return listReadings
+                    .stream()
+                    .mapToDouble(i -> {
+                        Double consumption = i.getConsumption();
+                        double currentPrice = i.getCurrentUnitPrice();
+
+                        if (i.isFirstEntry()) {
+                            consumption = 0.0;
+                        }
+
+                        return Math.round(consumption*currentPrice);
+                    })
+                    .sum();
+
+        }
+        else {
+            return 0.0;
+        }
+    }
+
+    public ResponseEntity<?> updateEBReadings(String hostelId, String readingId, UpdateElectricity updateElectricity) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (updateElectricity == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (updateElectricity.reading() == null && updateElectricity.entryDate() == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (updateElectricity.entryDate() != null) {
+            Date entryDate = Utils.stringToDate(updateElectricity.entryDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (Utils.compareWithTwoDates(entryDate, new Date()) > 0) {
+                return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig == null) {
+            return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            Integer id = Integer.parseInt(readingId);
+
+            ElectricityReadings currentReading = electricityReadingRepository.getReferenceById(id);
+            if (currentReading == null) {
+                return new ResponseEntity<>(Utils.EB_ENTRY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+            if (currentReading.getBillStatus().equalsIgnoreCase(ElectricityBillStatus.INVOICE_GENERATED.name())) {
+                return new ResponseEntity<>(Utils.EB_ENTRY_CANNOT_CHANGE_INVOICE_GENERATED, HttpStatus.BAD_REQUEST);
+            }
+            ElectricityReadings previousReading = electricityReadingRepository
+                    .getPreviousEntry(currentReading.getRoomId(), id);
+            if (previousReading != null) {
+                if (updateElectricity.reading() != null) {
+                    double consumption = 0.0;
+                    if (updateElectricity.reading() <= previousReading.getCurrentReading()) {
+                        return new ResponseEntity<>(Utils.PREVIOUS_CURRENT_READING_NOT_MATCHING,
+                                HttpStatus.BAD_REQUEST);
+                    }
+                    consumption = updateElectricity.reading() - previousReading.getCurrentReading();
+                    currentReading.setCurrentReading(updateElectricity.reading());
+                    currentReading.setConsumption(consumption);
+                }
+                if (updateElectricity.entryDate() != null) {
+                    Date entryDate = Utils.stringToDate(updateElectricity.entryDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                    if (Utils.compareWithTwoDates(entryDate, previousReading.getEntryDate()) <= 0) {
+                        return new ResponseEntity<>(Utils.ALREADY_READING_TAKEN_THIS_DATE, HttpStatus.BAD_REQUEST);
+                    }
+                    currentReading.setEntryDate(entryDate);
+                    currentReading.setBillEndDate(entryDate);
+                }
+                currentReading.setUpdatedBy(authentication.getName());
+                currentReading.setUpdatedAt(new Date());
+                electricityReadingRepository.save(currentReading);
+
+                usersService.addUserLog(hostelId, String.valueOf(currentReading.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.UPDATE_READING, users);
+            }
+            else {
+                if (updateElectricity.reading() != null) {
+                    currentReading.setCurrentReading(updateElectricity.reading());
+                    currentReading.setConsumption(updateElectricity.reading());
+                }
+                if (updateElectricity.entryDate() != null) {
+                    Date entryDate = Utils.stringToDate(updateElectricity.entryDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                    BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, entryDate);
+                    if (billingDates != null) {
+                        currentReading.setBillStartDate(billingDates.currentBillStartDate());
+                    }
+                    currentReading.setEntryDate(entryDate);
+                    currentReading.setBillEndDate(entryDate);
+
+                }
+                currentReading.setUpdatedAt(new Date());
+                currentReading.setUpdatedBy(authentication.getName());
+                electricityReadingRepository.save(currentReading);
+                usersService.addUserLog(hostelId, String.valueOf(currentReading.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.UPDATE, users);
+            }
+            return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+        }
+        else {
+            return hostelReadingsService.updateEbReading(hostelId, readingId, updateElectricity, users);
+        }
+
+    }
+
+    public ResponseEntity<?> deleteReading(String hostelId, String readingId) {
+        int id = 0;
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        try {
+            id = Integer.parseInt(readingId);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(Utils.INVALID_READING_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!Utils.checkNullOrEmpty(id)) {
+            return new ResponseEntity<>(Utils.INVALID_READING_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig == null) {
+            return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            ElectricityReadings er = electricityReadingRepository.findById(id).orElse(null);
+            if (er == null) {
+                return new ResponseEntity<>(Utils.INVALID_READING_ID, HttpStatus.BAD_REQUEST);
+            }
+            ElectricityReadings latestEntry = electricityReadingRepository.findTopByRoomIdAndHostelIdOrderByEntryDateDesc(er.getRoomId(), hostelId);
+            if (!latestEntry.getId().equals(er.getId())) {
+                return new ResponseEntity<>(Utils.DELETE_AVAILABLE_ONLY_FOR_LAST_ENTRY, HttpStatus.BAD_REQUEST);
+            }
+            if (er.getBillStatus().equalsIgnoreCase(ElectricityBillStatus.INVOICE_GENERATED.name())) {
+                return new ResponseEntity<>(Utils.EB_ENTRY_CANNOT_DELETE_INVOICE_GENERATED, HttpStatus.BAD_REQUEST);
+            }
+            electricityReadingRepository.delete(er);
+            usersService.addUserLog(hostelId, String.valueOf(er.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.DELETE, users);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        else {
+            return hostelReadingsService.deleteLatestEntry(hostelId, readingId, users);
+        }
+
+    }
+
+    public List<ElectricityReadings> findAllInvoiceNotGenertedReadings(String hostelId) {
+        if (hostelId != null) {
+            return electricityReadingRepository.getNotInvoiceGeneratedInvoices(hostelId);
+        }
+
+        return null;
+    }
+
+    public ResponseEntity<?> calculateEbAmountForCustomers(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            List<ElectricityReadings> listElectricityReading = findAllInvoiceNotGenertedReadings(hostelId);
+            if (listElectricityReading != null) {
+                listElectricityReading.forEach(item -> {
+                    if (!item.isFirstEntry()) {
+                        eventPublisher.publishEvent(new AddEbEvents(this, hostelId, item.getRoomId(), item ));
+                    }
+                });
+                return new ResponseEntity<>(HttpStatus.OK);
+            }
+        }
+        else {
+            List<com.smartstay.smartstay.dao.HostelReadings> listHostelReading = hostelReadingsService.findAllInvoiceNotGeneratedReadingsForHostel(hostelId);
+            if (listHostelReading != null) {
+                listHostelReading.forEach(item -> {
+                    if (!item.isFirstEntry()) {
+                        eventPublisher.publishEvent(new HostelReadingEbEvents(this, item));
+                    }
+                });
+                return new ResponseEntity<>(HttpStatus.OK);
+            }
+        }
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
+    }
+
+    public List<com.smartstay.smartstay.dao.HostelReadings> findAllInvoiceNotGeneratedReadingsForHostel(String hostelId) {
+        return hostelReadingsService.findAllInvoiceNotGeneratedReadingsForHostel(hostelId);
+    }
+
+    public ElectricityReadings getRoomCurrentReading(Integer key) {
+        return electricityReadingRepository.getRoomCurrentReading(key);
+    }
+
+    public List<ElectricityReadings> saveAll(List<ElectricityReadings> listNewElectricityReading) {
+        return electricityReadingRepository.saveAll(listNewElectricityReading);
+    }
+
+    public ResponseEntity<?> deleteReadingAll(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        List<ElectricityReadings> listReading = electricityReadingRepository.findByHostelId(hostelId);
+        if (listReading != null) {
+            List<Integer> readingIds = listReading.stream()
+                    .map(ElectricityReadings::getId)
+                    .toList();
+            boolean isDeleted = ebHistoryService.deleteEntriesByIds(readingIds);
+            if (isDeleted) {
+                electricityReadingRepository.deleteAll(listReading);
+                if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.HOSTEL_READING.name())) {
+                    hostelReadingsService.deleteReadings(hostelId);
+                }
+            }
+        }
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    public EBInfo getEbInfoForFinalSettlement(Customers customers, String hostelId, List<Integer> roomIds, Date leavingDate) {
+        if (!authentication.isAuthenticated()) {
+            return null;
+        }
+        boolean canAdd = false;
+        double pendingEbAmount = 0.0;
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            EBInfo ebInfo = null;
+            List<CustomersBedHistory> listBeds = bedHistoryService.getCheckedInReassignedHistory(customers.getCustomerId());
+
+            List<ElectricityReadings> pendingHistoryAmount = new ArrayList<>();
+            List<ElectricityReadings> listReadings = electricityReadingRepository.findLatestEntriesByHostelIdAndListRooms(hostelId, roomIds);
+            List<Integer> listReadingIds = new ArrayList<>();
+            if (listReadings != null && !listReadings.isEmpty()) {
+                listReadingIds.addAll(listReadings
+                        .stream()
+                        .map(ElectricityReadings::getId)
+                        .toList());
+            }
+            List<CustomersEbHistory> customerEbHistory;
+            if (listReadings != null && !listReadings.isEmpty()) {
+                List<CustomersEbHistory> latestCustomerEbHistories = ebHistoryService.findHistoryByCustomerIdAndReadingId(customers.getCustomerId(), listReadingIds);
+                customerEbHistory = latestCustomerEbHistories;
+
+            } else {
+                customerEbHistory = new ArrayList<>();
+            }
+
+            List<Integer> ids = listBeds
+                    .stream()
+                    .map(CustomersBedHistory::getBedId)
+                    .toList();
+            List<BedDetails> bedDetails = bedsService.getBedDetails(ids);
+
+            List<ElectricityReadings> listLatestReadingsByHistory = new ArrayList<>();
+            List<MissedEbRooms> missedEbForRoom = new ArrayList<>();
+            List<PendingEbForSettlement> pendingEb = new ArrayList<>();
+
+            if (listBeds != null && !listBeds.isEmpty()) {
+                listBeds.forEach(ite -> {
+                    Date endDate = new Date();
+                    if (ite.getEndDate() != null) {
+                        endDate = ite.getEndDate();
+                    }
+                    List<ElectricityReadings> pElectricity = electricityReadingRepository.findPendingElectricitiesBetweenDates(ite.getHostelId(), ite.getRoomId(), ite.getStartDate(), endDate);
+                    if (pElectricity != null && !pElectricity.isEmpty()) {
+                        listLatestReadingsByHistory.addAll(pElectricity);
+                    }
+                });
+
+                List<ElectricityReadings> latestReadingOfRooms = electricityReadingRepository.findLatestEntriesByHostelIdAndListRooms(hostelId, roomIds);
+                if (latestReadingOfRooms != null && !latestReadingOfRooms.isEmpty()) {
+                    if (listBeds.size() != latestReadingOfRooms.size()) {
+                        List<MissedEbRooms> missedRoomsNotRegisteredOnEb = new ArrayList<>();
+                        listBeds.forEach(item -> {
+                            ElectricityReadings readings = latestReadingOfRooms
+                                    .stream()
+                                    .filter(i -> i.getRoomId().equals(item.getRoomId()))
+                                    .findFirst()
+                                    .orElse(null);
+                            if (readings == null) {
+                                MissedEbRooms missedEbRooms = findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, leavingDate);
+                                if (missedEbRooms != null) {
+                                    missedRoomsNotRegisteredOnEb.add(missedEbRooms);
+                                }
+                            }
+                        });
+                       if (!missedRoomsNotRegisteredOnEb.isEmpty()) {
+                           missedEbForRoom.addAll(missedRoomsNotRegisteredOnEb);
+                       }
+                    }
+                }
+                missedEbForRoom.addAll(findMissedEB(latestReadingOfRooms, listBeds, bedDetails, leavingDate));
+            }
+
+
+            if (listLatestReadingsByHistory != null && !listLatestReadingsByHistory.isEmpty()) {
+
+                if (customerEbHistory != null && !customerEbHistory.isEmpty()) {
+                    listLatestReadingsByHistory.forEach(item -> {
+                        CustomersEbHistory customersEbHistory = customerEbHistory
+                                .stream()
+                                .filter(i -> item.getRoomId().equals(i.getRoomId()))
+                                .findFirst()
+                                .orElse(null);
+                        if (customersEbHistory == null) {
+                            pendingHistoryAmount.add(item);
+                        }
+                    });
+
+                    if (pendingHistoryAmount != null && !pendingHistoryAmount.isEmpty()) {
+                        List<Integer> previousIds = pendingHistoryAmount
+                                .stream()
+                                .map(ElectricityReadings::getId)
+                                .toList();
+                        List<CustomersEbHistory> listPreviousEbHistory = ebHistoryService.findHistoryByCustomerIdAndReadingId(customers.getCustomerId(), previousIds);
+                        customerEbHistory.addAll(listPreviousEbHistory);
+                    }
+
+
+                    List<PendingEbForSettlement> listPending = customerEbHistory
+                            .stream()
+                            .map(i -> new PendingEbMapper(listBeds, bedDetails, leavingDate).apply(i))
+                            .toList();
+                    pendingEb.addAll(listPending);
+                    pendingEbAmount = listPending
+                            .stream()
+                            .mapToDouble(PendingEbForSettlement::amount)
+                            .sum();
+                }
+                else {
+                    pendingHistoryAmount.addAll(listLatestReadingsByHistory);
+
+                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), pendingHistoryAmount, bedDetails, leavingDate);
+                    if (listEbRooms != null && !listEbRooms.isEmpty()) {
+                        pendingEbAmount = listEbRooms
+                                .stream()
+                                .mapToDouble(i -> {
+                                    if (i.amount() != null) {
+                                        return i.amount();
+                                    }
+                                    return 0.0;
+                                })
+                                .sum();
+                        pendingEb.addAll(listEbRooms);
+                    }
+
+                }
+            }
+            else {
+                missedEbForRoom.addAll(listBeds
+                        .stream()
+                        .map(i -> new ElectricityRoomEbMapper(bedDetails, leavingDate).apply(i))
+                        .toList());
+            }
+
+            if (listReadings != null && !listReadings.isEmpty()) {
+                ElectricityReadings readings = listReadings.get(0);
+
+                if (Utils.compareWithTwoDates(leavingDate, readings.getEntryDate()) <= 0) {
+                }
+                else {
+                    canAdd = true;
+                }
+                ebInfo = new EBInfo(readings.getCurrentReading(),
+                        electricityConfig.getCharge(),
+                        Utils.dateToString(readings.getEntryDate()),
+                        electricityConfig.getTypeOfReading(),
+                        pendingEbAmount,
+                        false,
+                        canAdd,
+                        missedEbForRoom,
+                        pendingEb);
+            }
+            else {
+                ebInfo = new EBInfo(0.0,
+                        electricityConfig.getCharge(),
+                        "NA",
+                        electricityConfig.getTypeOfReading(),
+                        pendingEbAmount,
+                        false,
+                        canAdd,
+                        missedEbForRoom,
+                        pendingEb);
+            }
+
+            return ebInfo;
+        }
+        else {
+            return hostelReadingsService.getEbInfoForFinalSettlement(hostelId, leavingDate, electricityConfig.getCharge());
+        }
+    }
+
+    public EBInfo getEbInfoForSettlement(Customers customers, String hostelId, Date leavingDate) {
+        if (!authentication.isAuthenticated()) {
+            return null;
+        }
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            List<CustomersBedHistory> bedHistories = bedHistoryService.getCustomersBedHistoryList(customers.getCustomerId());
+            List<ElectricityReadings> listElectricityReadings = new ArrayList<>();
+            List<PendingEbForSettlement> pendingEb = new ArrayList<>();
+            List<Integer> roomIds = bedHistories
+                    .stream()
+                    .map(CustomersBedHistory::getRoomId)
+                    .toList();
+            List<Integer> bedIds = bedHistories
+                    .stream()
+                    .map(CustomersBedHistory::getBedId)
+                    .toList();
+            List<BedDetails> bedDetails = bedsService.getBedDetails(bedIds);
+            List<ElectricityReadings> latestReadingOfRooms = electricityReadingRepository.findLatestEntriesByHostelIdAndListRooms(hostelId, roomIds);
+
+            List<Integer> entryIdsNotInCustomerEbHistory = new ArrayList<>();
+            List<MissedEbRooms> missedEbForRoom = new ArrayList<>();
+
+            bedHistories.forEach(item -> {
+                Date endDate = item.getEndDate();
+                if (item.getEndDate() == null) {
+                    endDate = leavingDate;
+                }
+                List<ElectricityReadings> readings = electricityReadingRepository.findPendingElectricitiesBetweenDates(hostelId, item.getRoomId(), item.getStartDate(), endDate);
+                if (readings != null && !readings.isEmpty()) {
+                    listElectricityReadings.addAll(readings);
+                }
+            });
+
+            if (!listElectricityReadings.isEmpty()) {
+                List<Integer> entryIds = listElectricityReadings
+                        .stream()
+                        .map(ElectricityReadings::getId)
+                        .toList();
+
+                List<CustomersEbHistory> customersEbHistories = ebHistoryService.findHistoryByCustomerIdAndReadingId(customers.getCustomerId(), entryIds);
+                if (!customersEbHistories.isEmpty()) {
+                    List<PendingEbForSettlement> listPendingEbs = customersEbHistories
+                            .stream()
+                            .map(i -> new PendingEbMapper(bedHistories, bedDetails, leavingDate).apply(i))
+                            .toList();
+                    pendingEb.addAll(listPendingEbs);
+
+                    entryIds.forEach(i -> {
+                        //checking the entries not in customer history table.
+                        //so it should be equal not a not equl
+                        CustomersEbHistory ebHistory = customersEbHistories
+                                .stream()
+                                .filter(i1 -> i1.getReadingId().equals(i))
+                                .findFirst()
+                                .orElse(null);
+                        if (ebHistory == null) {
+                            entryIdsNotInCustomerEbHistory.add(i);
+                        }
+                    });
+
+                    if (!entryIdsNotInCustomerEbHistory.isEmpty()) {
+                        List<ElectricityReadings> listReadings = new ArrayList<>();
+                        entryIdsNotInCustomerEbHistory.forEach(item -> {
+                            ElectricityReadings electricityReadings = listElectricityReadings
+                                    .stream()
+                                    .filter(e -> e.getId().equals(item))
+                                    .findFirst()
+                                    .orElse(null);
+                            if (electricityReadings != null) {
+                                listReadings.add(electricityReadings);
+                            }
+                        });
+                        List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), listReadings, bedDetails, leavingDate);
+                        pendingEb.addAll(listEbRooms);
+                    }
+
+                    bedHistories.forEach(item -> {
+                        ElectricityReadings electricityReadings = latestReadingOfRooms
+                                .stream()
+                                        .filter(i -> i.getRoomId().equals(item.getRoomId()))
+                                                .findFirst()
+                                                        .orElse(null);
+                        if (electricityReadings != null) {
+                            Date endDate = leavingDate;
+                            if (item.getEndDate() != null) {
+                                endDate = item.getEndDate();
+                            }
+                            if (Utils.compareWithTwoDates(endDate, electricityReadings.getBillEndDate()) > 0) {
+                                missedEbForRoom.add(findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, endDate));
+                            }
+                        }
+                        else {
+                            missedEbForRoom.add(findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, leavingDate));
+                        }
+                    });
+
+
+                }
+                else  {
+                    List<ElectricityReadings> pendingHistoryAmount = new ArrayList<>();
+                    entryIds.forEach(item -> {
+                        ElectricityReadings electricityReadings = listElectricityReadings
+                                .stream()
+                                .filter(i -> i.getId().equals(item))
+                                .findFirst()
+                                .orElse(null);
+                        if (electricityReadings != null) {
+                            pendingHistoryAmount.add(electricityReadings);
+                        }
+                    });
+
+                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customers.getCustomerId(), pendingHistoryAmount, bedDetails, leavingDate);
+                    pendingEb.addAll(listEbRooms);
+
+                    missedEbForRoom.addAll(findMissedEB(latestReadingOfRooms, bedHistories, bedDetails, leavingDate));
+
+                }
+
+            } else {
+                // may goes to missed
+                bedHistories.forEach(item -> {
+                   ElectricityReadings latestReadingOfIndividualRoom = latestReadingOfRooms
+                           .stream()
+                                   .filter(i -> i.getRoomId().equals(item.getRoomId()))
+                                           .findFirst()
+                                                   .orElse(null);
+                   Date endDate = item.getEndDate();
+                   if (item.getEndDate() == null) {
+                       endDate = leavingDate;
+                   }
+                   if (latestReadingOfIndividualRoom == null) {
+                       missedEbForRoom.add(findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, leavingDate));
+                   }
+                   else if (Utils.compareWithTwoDates(latestReadingOfIndividualRoom.getEntryDate(), endDate) < 0) {
+                       missedEbForRoom.add(findMissedEbForRoomNotRegisteredOnEB(latestReadingOfRooms, item, bedDetails, leavingDate));
+                   }
+
+                });
+
+            }
+
+            double pendingEbAmount = 0.0;
+            if (!pendingEb.isEmpty()) {
+                pendingEbAmount = pendingEb.stream()
+                        .mapToDouble(PendingEbForSettlement::amount)
+                        .sum();
+            }
+
+            EBInfo ebInfo = new EBInfo(0.0,
+                    electricityConfig.getCharge(),
+                    "NA",
+                    electricityConfig.getTypeOfReading(),
+                    pendingEbAmount,
+                    false,
+                    true,
+                    missedEbForRoom,
+                    pendingEb);
+
+            return ebInfo;
+        }
+        return null;
+
+    }
+
+    private List<MissedEbRooms> findMissedEB(List<ElectricityReadings> latestReadingOfRooms, List<CustomersBedHistory> listBeds, List<BedDetails> bedDetails, Date leavingDate) {
+        List<MissedEbRooms> listMissedEbRooms = new ArrayList<>();
+        listBeds.forEach(item -> {
+            ElectricityReadings latestReadingOfRoom = latestReadingOfRooms
+                    .stream()
+                    .filter(i -> i.getRoomId().equals(item.getRoomId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (latestReadingOfRoom != null) {
+//                if (item.getEndDate() != null) {
+//                    if (Utils.compareWithTwoDates(item.getEndDate(), latestReadingOfRoom.getEntryDate()) < 0) {
+//
+//                    }
+//                }
+
+                if (item.getEndDate() != null && Utils.compareWithTwoDates(item.getEndDate(), latestReadingOfRoom.getEntryDate()) > 0) {
+                    listMissedEbRooms.add(new ElectricityRoomIdEbMapper(bedDetails, listBeds, item.getEndDate()).apply(latestReadingOfRoom));
+                }
+                else if (item.getEndDate() == null) {
+                    if (Utils.compareWithTwoDates(leavingDate, latestReadingOfRoom.getEntryDate()) > 0) {
+                        listMissedEbRooms.add(new ElectricityRoomIdEbMapper(bedDetails, listBeds, leavingDate).apply(latestReadingOfRoom));
+                    }
+                }
+
+            }
+            else {
+                Date endDate = item.getEndDate();
+                if (item.getEndDate() == null) {
+                    endDate = leavingDate;
+                }
+                listMissedEbRooms.add(new ElectricityRoomEbMapper(bedDetails, endDate).apply(item));
+            }
+        });
+
+        return listMissedEbRooms;
+    }
+
+    /**
+     * case when eb is not started
+     *
+     * @param bed
+     * @param listBedDetails
+     * @param leavingDate
+     * @return
+     */
+
+    private MissedEbRooms findMissedEbForRoomNotRegisteredOnEB(List<ElectricityReadings> listElectricityByRoom, CustomersBedHistory bed, List<BedDetails> listBedDetails, Date leavingDate) {
+        if (listBedDetails != null && !listBedDetails.isEmpty()) {
+            String roomName = null;
+            String bedName = null;
+            String floorName = null;
+            String fromDate = null;
+            String toDate = null;
+            String entryDate = null;
+            Double lastReading = 0.0;
+            BedDetails bedDetails = listBedDetails
+                    .stream()
+                    .filter(i -> i.getRoomId().equals(bed.getRoomId()))
+                    .findFirst()
+                    .orElse(null);
+            if (bedDetails != null) {
+                roomName = bedDetails.getRoomName();
+                bedName = bedDetails.getBedName();
+                floorName = bedDetails.getFloorName();
+            }
+
+            fromDate = Utils.dateToString(bed.getStartDate());
+            if (bed.getEndDate() == null) {
+                toDate = Utils.dateToString(leavingDate);
+            }
+            else {
+                toDate = Utils.dateToString(bed.getEndDate());
+            }
+
+            ElectricityReadings electricityReadings = listElectricityByRoom
+                    .stream()
+                    .filter(i -> i.getRoomId().equals(bed.getRoomId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (electricityReadings != null) {
+                entryDate = Utils.dateToString(electricityReadings.getEntryDate());
+                lastReading = electricityReadings.getCurrentReading();
+                if (Utils.compareWithTwoDates(electricityReadings.getEntryDate(), bed.getStartDate()) > 0) {
+                    fromDate = Utils.dateToString(Utils.addDaysToDate(electricityReadings.getEntryDate(), 1));
+                }
+            }
+
+
+            return new MissedEbRooms(bed.getRoomId(),
+                    roomName,
+                    bedName,
+                    floorName,
+                    fromDate,
+                    toDate,
+                    lastReading,
+                    entryDate);
+        }
+        return null;
+    }
+
+    public Double getEbAmountForSettlement(String customerId, String hostelId, Date leavingDate) {
+        if (!authentication.isAuthenticated()) {
+            return null;
+        }
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
+        if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+            List<CustomersBedHistory> bedHistories = bedHistoryService.getCustomersBedHistoryList(customerId);
+            List<ElectricityReadings> listElectricityReadings = new ArrayList<>();
+
+            if (!bedHistories.isEmpty()) {
+                bedHistories.forEach(item -> {
+                    Date endDate = item.getEndDate();
+                    if (item.getEndDate() == null) {
+                        endDate = leavingDate;
+                    }
+                    List<ElectricityReadings> readings = electricityReadingRepository.findPendingElectricitiesBetweenDates(hostelId, item.getRoomId(), item.getStartDate(), endDate);
+                    if (readings != null && !readings.isEmpty()) {
+                        listElectricityReadings.addAll(readings);
+                    }
+                });
+
+                if (!listElectricityReadings.isEmpty()) {
+                    List<Integer> bedIds = bedHistories
+                            .stream()
+                            .map(CustomersBedHistory::getBedId)
+                            .toList();
+                    List<BedDetails> bedDetails = bedsService.getBedDetails(bedIds);
+                    List<PendingEbForSettlement> listEbRooms = ebCalculationService.calculateEbAmountAndUnit(hostelId, customerId, listElectricityReadings, bedDetails, leavingDate);
+                    double ebAmount = 0.0;
+                    if (!listEbRooms.isEmpty()) {
+                        ebAmount = listEbRooms
+                                .stream()
+                                .mapToDouble(PendingEbForSettlement::amount)
+                                .sum();
+                        return ebAmount;
+                    }
+                }
+            }
+        }
+        return 0.0;
+    }
+
+    public List<ElectricityReadings> getAllEbReadingByEndDate(String hostelId, Integer roomId, Date endDate) {
+        return electricityReadingRepository.findAllInvoiceNotGeneratedEntriesBasedOnEndDate(hostelId, roomId, endDate);
+    }
+
+    public List<ElectricityReadings> getAllByIds(List<Integer> missingReadingIds) {
+        return electricityReadingRepository.findAllById(missingReadingIds);
+    }
+
+    public ElectricityForReports getPreviousMonthEbAmount(String hostelId, Date startDate, Date endDate) {
+        ElectricityConfig ebConfig = hostelService.getElectricityConfig(hostelId);
+        if (ebConfig != null) {
+            if (ebConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+                List<ElectricityReadings> listEbReadings = electricityReadingRepository.findByHostelIdStartDateAndEndDate(hostelId, startDate, endDate);
+                List<ElectricityForReports> ebReportsList = listEbReadings
+                        .stream()
+                        .map(i -> new ReportsEbMapper().apply(i))
+                        .toList();
+
+                double totalUnits = ebReportsList
+                        .stream()
+                        .mapToDouble(ElectricityForReports::totalUnits)
+                        .sum();
+                double totalAmount = ebReportsList
+                        .stream()
+                        .mapToDouble(ElectricityForReports::totalAmount)
+                        .sum();
+
+                return new ElectricityForReports(Utils.roundOffWithTwoDigit(totalUnits), Utils.roundOffWithTwoDigit(totalAmount), ebReportsList.size());
+            }
+            else {
+                return hostelReadingsService.findByHostelIdAndDate(hostelId, startDate, endDate);
+            }
+        }
+
+        return new ElectricityForReports(0.0, 0.0, 0);
     }
 }

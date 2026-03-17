@@ -34,7 +34,8 @@ public class SecurityConfig {
         httpSecurity.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("/v2/users/**", "/swagger-ui/**", "/v3/api-docs/**")
+                        .requestMatchers("/v2/users/**", "/v2/demo/request",
+                                "/v2/mobile/**" , "/swagger-ui/**", "/v3/api-docs/**")
                         .permitAll()
                         .anyRequest()
                         .authenticated())
@@ -47,8 +48,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authProvider() {
-        DaoAuthenticationProvider daoAuthProvider = new DaoAuthenticationProvider();
-        daoAuthProvider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider daoAuthProvider = new DaoAuthenticationProvider(userDetailsService);
         daoAuthProvider.setPasswordEncoder(new BCryptPasswordEncoder(10));
 
         return daoAuthProvider;

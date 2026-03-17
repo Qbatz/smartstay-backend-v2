@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.util;
 
+import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.*;
@@ -12,6 +13,7 @@ import java.util.regex.Pattern;
 
 public class Utils {
 
+    public static final String COUNTRY_CODE = "91";
     private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final Random RANDOM = new Random();
@@ -23,9 +25,10 @@ public class Utils {
     public static final String USER_INPUT_DATE_FORMAT = "dd-MM-yyyy";
 
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
-    public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss aa";
+    public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
     public static final String OUTPUT_MONTH_FORMAT = "MMM YYYY";
     public static final String OUTPUT_DATE_MONTH_FORMAT = "dd MMM";
+    public static final String OUTPUT_DATE_TIME_FORMAT = "dd/MM/yyyy hh:mm:ss a";
 
     public static final String DATE_FORMAT_YY = "yyyy/MM/dd";
     public static final String DATE_FORMAT_ZOHO = "yyyy-MM-dd";
@@ -38,19 +41,26 @@ public class Utils {
     public static final String INVALID_BANKING = "Invalid Banking";
     public static final String INVALID_BANKING_DETAILS = "Bank details not found. Please add bank details first.";
     public static final String INVALID_ASSET = "Invalid Asset";
+    public static final String INVALID_TEMPLATE_ID = "Invalid template id";
+    public static final String INVALID_TEMPLAYE_TYPE_ID = "Invalid template type id";
+    public static final String INVALID_EXPENSE_ID = "Invalid expense id";
 
     public static final String INVALID_AMENITY = "Invalid Amenity";
     public static final String AMENITY_ALREADY_DELETED = "Amenity already deleted";
-
+    public static final String DOCUMENT_ALREADY_DELETED = "Document is already deleted";
+    public static final String CANNOT_DELETE_ASSIGNED_AMENITIES = "Amenities that are currently assigned cannot be deleted.";
 
     public static final String INVALID_FLOOR = "Invalid Floor";
     public static final String INVALID_USER = "Invalid User";
+    public static final String INVALID_USER_NAME_PASSWORD = "Invalid username/password";
     public static final String INVALID_OTP = "Invalid Otp";
     public static final String OTP_EXPIRED = "Otp Expired";
     public static final String ASSET_NAME_ALREADY_EXISTS = "Asset name already exists";
     public static final String SERIAL_NUMBER_ALREADY_EXISTS = "Serial number already exists";
     public static final String PASSWORD_RESET_SUCCESS = "Password reset successfully.";
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
+    public static final String PASSWORD_MISMATCH = "New password and confirm password is not matching";
+    public static final String INCORRECT_PASSWORD = "Incorrect password";
     public static final String TEMPLATE_TYPE_NOT_FOUND = "Template type not found for given templateTypeId!";
     public static final String INVALID_JOINING_DATE = "Invalid Joining Date";
     public static final String ELECTRICITY_CONFIG_NOT_SET_UP = "Electricity configuration is not setup";
@@ -65,15 +75,21 @@ public class Utils {
     public static final String DELETED = "Deleted Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
+    public static final String MOBILE_NO_REQUIRED = "Mobile number required";
+    public static final String NAME_REQUIRED = "Name required";
+    public static final String CITY_REQUIRED = "City required";
+    public static final String DATE_REQUIRED = "Date required";
     public static final String INVALID_ROLE = "Invalid role";
     public static final String INVALID_ROOM_ID = "Invalid Room Id";
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
     public static final String ACTIVE_USERS_FOUND = "Active users found";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
+    public static final String INVALID_READING_ID = "Invalid Reading Id";
     public static final String INVALID_TRANSACTION_ID = "Invalid transaction id";
     public static final String INVALID_INVOICE_ID = "Invalid invoice id";
     public static final String INVALID_INVOICE_DATE = "Invalid invoice date";
+    public static final String INVALID_SUBSCRIPTION = "Invalid subscription";
     public static final String PAYMENT_SUCCESS = "Payment Success";
     public static final String CUSTOMER_ON_NOTICE = "Customer is already on notice";
     public static final String CUSTOMER_BOOKING_NOT_FOUND = "Booking not found for this customer";
@@ -90,7 +106,9 @@ public class Utils {
     public static final String INVALID_BOOKING_ID = "Invalid booking id";
     public static final String PAYLOADS_REQUIRED = "Payloads required";
     public static final String TRY_AGAIN = "Try Again";
+    public static final String SUBSCRIPTION_EXPIRED = "Subscription has expired. Please renew to continue.";
     public static final String INVALID_BED_ID = "Invalid bed id passed";
+    public static final String INVALID_DOCUMENT_ID = "Invalid document id";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
     public static final String FUTURE_DATES_NOT_ALLOWED = "Future Dates are not allowed";
@@ -112,6 +130,7 @@ public class Utils {
     public static final String TEMPLATE_NOT_AVAILABLE = "Template not available for this hostel";
     public static final String BILLING_RULE_NOT_AVAILABLE = "Billing Rule not found";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";
+    public static final String CUSTOMER_ALREADY_CHECKED_OUT = "Customer is already checked out";
     public static final String CUSTOMER_ALREADY_BOOKED = "Customer is already Booked";
     public static final String ELECTICITY_PRICE_REQUIRED = "Electricity Price Required";
     public static final String CUSTOMER_CHECKED_IN_INACTIVE_STATUS = "Cannot changed status to inactive for checked in customers";
@@ -130,8 +149,11 @@ public class Utils {
     public static final String SUB_CATEGORY_NAME_ALREADY_REGISTERED = "Subcategory name is already exists";
     public static final String INSUFFICIENT_FUND_ERROR = "Insufficient funds";
     public static final String INVALID_CATEGORY_ID = "Invalid category id";
+    public static final String INVALID_SUB_CATEGORY_ID = "Invalid Subcategory id";
+    public static final String INVALID_COMPLAINT_ID_PASSED = "Invalid complaint id passed";
     public static final String SUB_CATEGORY_NAME_REQUIRED = "Sub category name required";
     public static final String SUB_CATEGORY_ID_REQUIRED = "Sub category id required";
+    public static final String ADVANCE_AMOUNT_REQUIRED = "Advance amount required";
     public static final String NO_BOOKING_INFORMATION_FOUND = "No booking information found";
     public static final String YOU_CANNOT_TRANSFER = "You cannot transfer funds to the same UPI account.";
     public static final String FINAL_SETTLEMENT_GENERATED = "Final settlement is already generated";
@@ -142,6 +164,9 @@ public class Utils {
     public static final String CHANGE_BED_SAME_DAY_ERROR = "Cannot change the bed on the same day customer is joined";
     public static final String CUSTOMER_VERIFIED_KYC = "Customer is already verified";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
+    public static final String INVALID_DUE_DYS = "Invalid due days";
+    public static final String INVALID_NOTICE_DAYS = "Invalid notice days";
+    public static final String INVALID_GRACE_PERIOD = "Invalid grace period.";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
     public static final String PERMISSION_UPDATE = "UPDATE";
@@ -154,36 +179,83 @@ public class Utils {
     public static final String PENDING = "PENDING";
     public static final String RESOLVED = "RESOLVED";
     public static final String NO_RECORDS_FOUND = "No records found";
-    public static final String CUSTOMER_NOT_CHECKED_IN = "Start date cannot be before joining date";
+    public static final String CUSTOMER_NOT_CHECKED_IN = "Customer is not checked in";
     public static final String REFUND_COMPLETED = "Refund already completed";
     public static final String CANNOT_REFUND_CANCELLED_INVOICE = "Cannot refund for cancelled invoices";
     public static final String CANNOT_REFUND_FOR_OLD_INVOICES = "Cannot refund for old invoices";
     public static final String CANNOT_REFUND_FOR_UNPAID_INVOICES = "Cannot refund for unpaid invoices";
     public static final String CANNOT_INITIATE_REFUND = "Cannot initiate refund";
     public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund processed successfully";
+    public static final String CANNOT_CREATE_INVOICE_CHECKOUT_CUSTOMERS = "Cannot create manual invoice for checkout customers";
+    public static final String CANNOT_CREATE_INVOICE_SETTLEMET_CREATED_CUSTOMERS = "Settlement is created";
+    public static final String OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED = "Settlement cannot be generated for old months";
 
-
-    //Date validation messages
+    // Date validation messages
     public static final String REQUEST_DATE_MUST_AFTER_JOINING_DATE = "Request date must be after joining date.";
     public static final String CHECKOUT_DATE_MUST_AFTER_REQUEST_DATE = "Checkout date must be after request date.";
 
     public static final String REQUEST_DATE_MUST_AFTER_BILLING_START_DATE = "Request date must be after current billing cycle start date: ";
     public static final String CHECKOUT_DATE_MUST_AFTER_JOINING_DATE = "Checkout date must be after joining date.";
-
-
-
-
-
+    public static final String ATLEAST_ONE_AMENITY_REQUIRED = "Atleast one amenity required";
 
     public static final String AMENITY_ALREADY_EXIST = "Amenity with the same name already exists in this hostel.";
-
+    public static final String AMENITY_CNNOT_ADD_BOOKED_ERROR = "Amenity cannot be added for booked customers";
+    public static final String AMENITY_CANNOT_ADD_SETTLEMENT_GENERATED_CUSTOMERS = "Amenity cannot be added for settlement generated customers";
+    public static final String CANNOT_CHANGE_JOINING_DATE_VACATED_CUSTOMERS = "Cannot change joining date for the vacated customers";
+    public static final String CANNOT_CHANGE_JOINING_DATE_SETTLEMENT_CUSTOMERS = "Cannot change joining date for the settlement generated customers";
+    public static final String CANNOT_CHANGE_JOINING_DATE_CANCELLED_CUSTOMERS = "Cannot change joining date for the cancelled customers";
+    public static final String CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES = "Cannot change the joining date. Already invoices are available for this customers";
+    public static final String CANNOT_CHANGE_JOINING_DATE_CUSTOMER_NOT_CHECKEDIN = "Cannot change the joining date, seems customer is not checked-In";
+    public static final String BED_OCCUPIED_ON_DATE = "Cannot change joining date. The bed was occupied by another tenant during the selected period.";
+    public static final String RENT_AMOUNT_REQUIRED_TO_UPDATE_RENT = "Rent amount required";
+    public static final String CANNOT_CHANGE_RENT_FOR_OLD_DATES = "Cannot change rent for old dates";
+    public static final String CANNOT_CHANGE_ADVANCE_VACATED_CUSTOMERS = "Cannot change advance for vacated customers";
+    public static final String CANNOT_CHANGE_ADVANCE_PAID_INVOICE = "Cannot change advance for paid advances";
+    public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_CUSTOMERS = "Cannot change advance for cancelled customers";
+    public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_INVOICE = "Cannot change advance for cancelled invoices";
+    public static final String RENT_AMOUNT_REQUIRED = "Rent amount is required";
+    public static final String CANNOT_EDIT_PAID_INVOICES = "Cannot edit paid invoices";
+    public static final String COMPLAINT_NOT_FOUND = "Complaint not found";
+    public static final String JOINING_DATE_CANNOT_BEFORE_BOOKING = "Check-in cannot be earlier than the booking date";
+    public static final String CANNOT_DELETE_ACTIVE_CUSTOMERS = "Cannot delete active customers";
+    public static final String INVALID_RECEIPT_ID_PASSED = "Invalid receipt id passed";
+    public static final String INVALID_REQUEST = "Invalid request";
+    public static final String INVOICE_NOT_FOUND_TRANSACTION = "Invoice is not found for this transaction";
+    public static final String CANNOT_DELETE_OTHER_MODE_RECEIPTS = "Delete can be possible only for manually generated receipts";
+    public static final String NO_BED_FOUND_ERROR = "No bed found";
+    public static final String CANNOT_DELETE_OCCUPIED_BEDS = "Cannot delete the occupied beds";
+    public static final String DATE_VALIDATION_ERROR_CANCEL_BOOKING = "Cancel date cannot be earlier than the booking date";
+    public static final String CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR = "Cannot modify the billing rules. Tenant already exists.";
+    public static final String CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED = "Cannot delete receipts for settlement generated customers";
+    public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
+    public static final String CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL = "Only manual invoices are allowed to mark unpaid";
+    public static final String REEIPTS_EXISTS_CANNOT_MARK_UNPAID = "Cannot mark unpaid, Please delete the receipts";
+    public static final String EB_ENTRY_NOT_FOUND = "EB entry not found";
+    public static final String EB_ENTRY_CANNOT_CHANGE_INVOICE_GENERATED = "Cannot modify invoice generated readings";
+    public static final String EB_ENTRY_CANNOT_DELETE_INVOICE_GENERATED = "Cannot delete invoice generated readings";
+    public static final String DELETE_AVAILABLE_ONLY_FOR_LAST_ENTRY = "Delete is available only for latest entries";
+    public static final String PIN_REQUIRED = "Pin is required";
+    public static final String PIN_ALREADY_SETUP = "Pin is added for this account";
+    public static final String INVALID_PIN = "Invalid Pin";
+    public static final String TOKEN_REQUIRED = "FCM token is required";
+    public static final String REFUNDING_DATE_OLDER_THAN_INVOICE = "Refund date cannot be before the invoice date";
+    public static final String SETTLEMENT_INFORMATION_NOT_AVAILABLE = "Settlement information is not available";
+    public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_PREVIOUS_HISTORY_EXISTS = "The final settlement can only be generated after the joining date or a bed switch.";
+    public static final String CANNOT_GENERATE_FINAL_SETTLEMENT_INVALID_NOTICE_DATE = "The final settlement date must be after the notice date.";
+    public static final String FILES_ARE_REQUIRED_TO_UPLOAD = "Files cannot be empty";
+    public static final String EXPENSE_COUNT_REQUIRED = "Expense count is required";
+    public static final String INVALID_COUNT = "Invalid expense count";
+    public static final String EXPENSE_ALREADY_DELETED = "Expense is already deleted";
+    public static final String SHARING_TYPE_SINGLE = "Single sharing";
+    public static final String SHARING_TYPE_TWO = "Two sharing";
+    public static final String SHARING_TYPE_THREE = "Three sharing";
 
     /**
-     *  Defining module Id's here
+     * Defining module Id's here
      *
-     *  while doing so correct on smartstayApplication.java file aswell.
+     * while doing so correct on smartstayApplication.java file aswell.
      *
-     *   This always linked to the db
+     * This always linked to the db
      */
 
     public static int MODULE_ID_DASHBOARD = 1;
@@ -213,9 +285,11 @@ public class Utils {
     public static int MODULE_ID_AGREEMENT = 24;
     public static int MODULE_ID_SUBSCRIPTION = 25;
     public static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+
     public static int generateOtp() {
-        return (int)(Math.random() * 900000) + 100000;
+        return (int) (Math.random() * 900000) + 100000;
     }
+
     public static boolean verifyEmail(String email) {
         return EMAIL_PATTERN.matcher(email).matches();
     }
@@ -228,8 +302,7 @@ public class Utils {
         }
     }
 
-
-    //this accepts only dd-MM-yyyy format
+    // this accepts only dd-MM-yyyy format
     public static String stringToDateFormat(String inputDate) {
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat("dd-MM-yyyy");
@@ -241,9 +314,14 @@ public class Utils {
         }
     }
 
+    public static Double roundOffDecimal(double origionalNumber) {
+        DecimalFormat df = new DecimalFormat("#.##");
+        return Double.parseDouble(df.format(origionalNumber));
+    }
 
     public static Date convertStringToDate(String dateStr) {
-        if (dateStr == null || dateStr.trim().isEmpty()) return null;
+        if (dateStr == null || dateStr.trim().isEmpty())
+            return null;
 
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
@@ -260,6 +338,13 @@ public class Utils {
             return "";
         }
         return new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(date);
+    }
+
+    public static String dateToDateTime(Date date) {
+        if (date == null) {
+            return "";
+        }
+        return new SimpleDateFormat(OUTPUT_DATE_TIME_FORMAT).format(date);
     }
 
     public static String dateToDateMonth(Date date) {
@@ -283,7 +368,6 @@ public class Utils {
         return new SimpleDateFormat(OUTPUT_TIME_FORMAT).format(date);
     }
 
-
     public static boolean compareWithTodayDate(Date date2) {
         String dateString = new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(new Date());
         Date today;
@@ -296,14 +380,19 @@ public class Utils {
         return today.before(date2) || today.compareTo(date2) <= 0;
     }
 
+    public static final String getDayFromDate(Date date) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd");
+        return dateFormat.format(date);
+    }
+
     public static String generateRandomUUID() {
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
     }
 
-
     public static int calculateRemainingDays(Date nextBillingAt) {
-        if (nextBillingAt == null) return 0;
+        if (nextBillingAt == null)
+            return 0;
 
         LocalDate billingDate = nextBillingAt.toInstant()
                 .atZone(ZoneId.systemDefault())
@@ -313,7 +402,6 @@ public class Utils {
         return (int) Math.max(0, remainingDays);
 
     }
-
 
     public static int compareWithTwoDates(Date date1, Date date2) {
         LocalDate localDate1 = date1.toInstant()
@@ -331,7 +419,7 @@ public class Utils {
             return false;
         }
         if (data instanceof String) {
-            if (((String)data).equalsIgnoreCase("")) {
+            if (((String) data).equalsIgnoreCase("")) {
                 return false;
             }
         }
@@ -351,7 +439,7 @@ public class Utils {
 
     public static long findNumberOfDays(Date date1, Date date2) {
         LocalDate start = date1.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        LocalDate end   = date2.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate end = date2.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
         return ChronoUnit.DAYS.between(start, end) + 1;
     }
@@ -397,7 +485,8 @@ public class Utils {
     public static final Date findLastDate(Integer cycleStartDay, Date date) {
         LocalDate today = date.toInstant()
                 .atZone(ZoneId.systemDefault())
-                .toLocalDate();;
+                .toLocalDate();
+        ;
         LocalDate startDate = LocalDate.of(today.getYear(), today.getMonth(), cycleStartDay);
 
         LocalDate cycleEnd;
@@ -419,7 +508,6 @@ public class Utils {
         return Date.from(cycleEnd.atStartOfDay(ZoneId.systemDefault()).toInstant());
 
     }
-
 
     public static int generateExpenseNumber() {
         Random random = new Random();
@@ -482,7 +570,11 @@ public class Utils {
     }
 
     public static Double roundOfDouble(double number) {
-        return Math.round(number * 100.0)/100.0;
+        return (double) Math.round(number);
+    }
+
+    public static Double roundOffWithTwoDigit(double number) {
+        return Math.round(number * 100.0) / 100.0;
     }
 
     public static Date convertToTimeStamp(Date date) {
@@ -492,8 +584,12 @@ public class Utils {
                 .toLocalDate();
         LocalTime currentTime = LocalTime.now();
 
+        LocalDateTime dateTime = LocalDateTime.of(
+                localDate,
+                LocalTime.now(ZoneId.systemDefault()));
+
         // Combine both
-        LocalDateTime dateTime = LocalDateTime.of(localDate, currentTime);
+        // LocalDateTime dateTime = LocalDateTime.of(localDate, currentTime);
         return Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 
@@ -503,25 +599,23 @@ public class Utils {
         if (invoicePrefixSuffix.length > 0) {
             prefixSuffix.append(invoicePrefixSuffix[0]);
             if (invoicePrefixSuffix.length > 1) {
-               if (invoicePrefixSuffix.length > 2) {
-                   for (int i=0; i<invoicePrefixSuffix.length-2; i++) {
-                       prefixSuffix.append("-");
-                       prefixSuffix.append(invoicePrefixSuffix[i]);
-                   }
-               }
-               prefixSuffix.append("-");
-               int lastNumber = Integer.parseInt(invoicePrefixSuffix[invoicePrefixSuffix.length - 1]) + 1;
-               if (lastNumber < 10) {
-                   prefixSuffix.append("00");
-                   prefixSuffix.append(lastNumber);
-               }
-               else if (lastNumber < 100) {
+                if (invoicePrefixSuffix.length > 2) {
+                    for (int i = 0; i < invoicePrefixSuffix.length - 2; i++) {
+                        prefixSuffix.append("-");
+                        prefixSuffix.append(invoicePrefixSuffix[i]);
+                    }
+                }
+                prefixSuffix.append("-");
+                int lastNumber = Integer.parseInt(invoicePrefixSuffix[invoicePrefixSuffix.length - 1]) + 1;
+                if (lastNumber < 10) {
+                    prefixSuffix.append("00");
+                    prefixSuffix.append(lastNumber);
+                } else if (lastNumber < 100) {
                     prefixSuffix.append("0");
                     prefixSuffix.append(lastNumber);
+                } else {
+                    prefixSuffix.append(lastNumber);
                 }
-                else {
-                   prefixSuffix.append(lastNumber);
-               }
             }
         }
 
@@ -537,8 +631,36 @@ public class Utils {
     }
 
     public static String capitalize(String value) {
-        if (value == null || value.isEmpty()) return value;
-        return value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase();
+        if (value == null || value.isEmpty())
+            return value;
+        String[] words = value.split("[\\s_]+");
+        StringBuilder sb = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                sb.append(Character.toUpperCase(word.charAt(0)))
+                        .append(word.substring(1).toLowerCase());
+                sb.append(" ");
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    public static String getInitials(String firstName, String lastName) {
+        if (firstName == null || firstName.isEmpty()) {
+            if (lastName != null && lastName.length() >= 2) {
+                return lastName.substring(0, 2).toUpperCase();
+            }
+            return lastName != null ? lastName.toUpperCase() : "";
+        }
+
+        if (lastName == null || lastName.isEmpty()) {
+            if (firstName.length() >= 2) {
+                return firstName.substring(0, 2).toUpperCase();
+            }
+            return firstName.toUpperCase();
+        }
+
+        return (String.valueOf(firstName.charAt(0)) + String.valueOf(lastName.charAt(0))).toUpperCase();
     }
 
 }

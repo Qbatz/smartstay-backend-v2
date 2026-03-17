@@ -21,17 +21,14 @@ public class RoomsController {
     @Autowired
     private RoomsService roomsService;
 
-
     @GetMapping("/all-rooms/{floorId}")
     public ResponseEntity<?> getAllRooms(@PathVariable("floorId") int floorId) {
         return roomsService.getAllRooms(floorId);
     }
-
     @GetMapping("/{roomId}")
     public ResponseEntity<?> getRoomById(@PathVariable("roomId") int roomId) {
         return roomsService.getRoomById(roomId);
     }
-
     @PostMapping("")
     public ResponseEntity<?> addRoom(@Valid @RequestBody AddRoom roomDto) {
         return roomsService.addRoom(roomDto);

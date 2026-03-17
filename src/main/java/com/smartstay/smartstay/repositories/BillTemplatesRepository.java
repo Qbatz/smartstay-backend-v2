@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository;
 public interface BillTemplatesRepository extends JpaRepository<BillTemplates, Integer> {
 
     BillTemplates getByHostelId(String hostelId);
+    BillTemplates findByHostelIdAndTemplateId(String hostelId, Integer templateId);
 }

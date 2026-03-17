@@ -24,6 +24,7 @@ public class CreditDebitNotes {
     private String source;
     private String invoiceId;
     private String bookingId;
+    private String hostelId;
     private String reason;
     private String customerId;
     private String assetId;

@@ -6,6 +6,9 @@ import com.smartstay.smartstay.dao.Floors;
 import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.floor.AddFloors;
 import com.smartstay.smartstay.payloads.floor.UpdateFloor;
@@ -40,6 +43,11 @@ public class FloorsService {
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private RoomsService roomsService;
+    @Autowired
+    private SubscriptionService subscriptionService;
+
 
     public ResponseEntity<?> getAllFloors(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -104,9 +112,13 @@ public class FloorsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
         Floors existingFloor = floorRepository.findByFloorIdAndParentId(floorId,user.getParentId());
         if (existingFloor == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
+        }
+        if (!subscriptionService.validateSubscription(existingFloor.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         if (updateFloor.floorName() != null && !updateFloor.floorName().isEmpty()) {
@@ -123,6 +135,7 @@ public class FloorsService {
         }
         existingFloor.setUpdatedAt(new Date());
         floorRepository.save(existingFloor);
+        usersService.addUserLog(existingFloor.getHostelId(), String.valueOf(existingFloor.getFloorId()), ActivitySource.FLOORS, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -144,6 +157,9 @@ public class FloorsService {
         if (hostelV1==null){
             return new ResponseEntity<>("Hostel Doesn't found", HttpStatus.BAD_REQUEST);
         }
+        if (!subscriptionService.validateSubscription(hostelV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         int duplicateCount = floorRepository.countByFloorNameAndRoomAndHostelAndParent(
                 addFloors.floorName(),
                 addFloors.hostelId(),
@@ -161,13 +177,14 @@ public class FloorsService {
         floors.setIsDeleted(false);
         floors.setFloorName(addFloors.floorName());
         floors.setHostelId(addFloors.hostelId());
-        floorRepository.save(floors);
+        Floors flrs = floorRepository.save(floors);
+        usersService.addUserLog(hostelV1.getHostelId(), String.valueOf(flrs.getFloorId()), ActivitySource.FLOORS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
     public ResponseEntity<?> deleteFloorById(int floorId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
@@ -176,13 +193,19 @@ public class FloorsService {
         }
         Floors existingFloor = floorRepository.findByFloorIdAndParentId(floorId,users.getParentId());
         if (existingFloor != null) {
+            if (!subscriptionService.validateSubscription(existingFloor.getHostelId())) {
+                return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+            }
             boolean customerExist = floorRepository.existsActiveBookingForFloor(existingFloor.getHostelId(),floorId ,
-                    List.of(CustomerStatus.NOTICE.name(),CustomerStatus.CHECK_IN.name(), CustomerStatus.BOOKED.name()));
+                    List.of(BookingStatus.CHECKIN.name(), BookingStatus.NOTICE.name(), BookingStatus.BOOKED.name()));
             if (customerExist) {
-                return new ResponseEntity<>("Cannot delete floor — active bookings exist.", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Cannot delete floor — active tenant founds.", HttpStatus.BAD_REQUEST);
             }
             existingFloor.setIsDeleted(true);
             floorRepository.save(existingFloor);
+
+            roomsService.deleteRoomByFloorId(existingFloor.getFloorId(), existingFloor.getHostelId());
+            usersService.addUserLog(existingFloor.getHostelId(), String.valueOf(existingFloor.getHostelId()), ActivitySource.FLOORS, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>("No Floor found", HttpStatus.BAD_REQUEST);

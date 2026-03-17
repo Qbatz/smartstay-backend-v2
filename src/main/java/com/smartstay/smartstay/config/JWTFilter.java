@@ -2,6 +2,7 @@ package com.smartstay.smartstay.config;
 
 import com.smartstay.smartstay.services.JWTService;
 import com.smartstay.smartstay.services.MyUserDetailService;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -12,52 +13,79 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.parameters.P;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Objects;
 
 @Configuration
 public class JWTFilter extends OncePerRequestFilter {
 
     @Autowired
-    JWTService jwtService;
+    private JWTService jwtService;
 
     @Autowired
-    ApplicationContext context;
+    private MyUserDetailService userDetailService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
 
-        try {
-            String authHeader = request.getHeader("Authorization");
-            String token = null;
-            String userName = null;
+        String authHeader = request.getHeader("Authorization");
+        String token = null;
+        String userName = null;
 
-            if (authHeader != null && authHeader.startsWith("Bearer")) {
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 token = authHeader.substring(7);
                 userName = jwtService.extractUserName(token);
-
             }
 
-            if (userName != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails details = context.getBean(MyUserDetailService.class).loadUserByUsername(userName);
+            if (userName != null &&
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                if (jwtService.validateToken(token, details)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
+                UserDetails userDetails =
+                        userDetailService.loadUserByUsername(userName);
 
-//                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    authToken.setDetails(jwtService.extractAllClaims(token));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                if (jwtService.validateToken(token, userDetails)) {
+                    Claims claims = jwtService.extractAllClaims(token);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+
+//                    authentication.setDetails(
+//                            new WebAuthenticationDetailsSource()
+//                                    .buildDetails(request)
+//                    );
+
+                    authentication.setDetails(claims);
+
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(authentication);
+
+                    filterChain.doFilter(request, response);
+                }
+                else {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"Please login again\"}");
                 }
             }
+            else {
+                filterChain.doFilter(request, response);
+            }
 
-            filterChain.doFilter(request, response);
-        }
-        catch (SignatureException se) {
-            throw new SignatureException("Please login again");
-        }
+
+
 
     }
 }
+

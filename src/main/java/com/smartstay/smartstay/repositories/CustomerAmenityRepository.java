@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Date;
 import java.util.List;
 
 public interface CustomerAmenityRepository extends JpaRepository<CustomersAmenity, String> {
@@ -52,12 +53,22 @@ public interface CustomerAmenityRepository extends JpaRepository<CustomersAmenit
             """, nativeQuery = true)
     List<CustomerData> findCustomersWithAmenityStatus(@Param("amenityId") String amenityId, @Param("hostelId") String hostelId);
 
+    List<CustomersAmenity> findByCustomerId(String customerId);
 
+    @Query("""
+            SELECT ca FROM CustomersAmenity ca WHERE ca.customerId=:customerId AND ca.amenityId in (:amenityIds) AND 
+            ca.endDate IS NULL
+            """)
+    List<CustomersAmenity> checkAmenitiesAlreadyAssigned(String customerId, List<String> amenityIds);
 
+    @Query(value = """
+            SELECT * FROM customers_amenity WHERE amenity_id=:amenityId AND (end_date IS NULL OR DATE(end_date) >= DATE(:todaysDate));
+            """, nativeQuery = true)
+    List<CustomersAmenity> checkAmenityAssignedAndActive(String amenityId, Date todaysDate);
 
-
-
-
-
+    @Query(value = """
+            SELECT * FROM customers_amenity WHERE customer_id=:customerId AND (end_date IS NULL OR DATE(end_date) >= DATE(:date))
+            """, nativeQuery = true)
+    List<CustomersAmenity> getAllCustomersAmenityByCustomerIdAndEndDate(@Param("customerId") String customerId, @Param("date") Date date);
 
 }

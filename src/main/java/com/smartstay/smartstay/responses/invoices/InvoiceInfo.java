@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.responses.invoices;
 
+import com.smartstay.smartstay.dto.customer.Deductions;
+
 import java.util.List;
 
 public record InvoiceInfo(Double subTotal,
@@ -10,5 +12,9 @@ public record InvoiceInfo(Double subTotal,
                           Double balanceAmount,
                           String invoicePeriod,
                           String invoiceMonth,
-                          List<InvoiceItems> invoiceItems) {
+                          String paymentStatus,
+                          boolean isCancelled,
+                          double totalDeduction,
+                          List<InvoiceItems> invoiceItems,
+                          List<Deductions> listDeductions) {
 }

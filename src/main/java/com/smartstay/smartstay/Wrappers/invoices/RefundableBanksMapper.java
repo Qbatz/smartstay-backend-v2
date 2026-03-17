@@ -10,13 +10,10 @@ public class RefundableBanksMapper implements Function<BankingV1, RefundableBank
     @Override
     public RefundableBanks apply(BankingV1 bankingV1) {
         StringBuilder bankName = new StringBuilder();
-        if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name()) ||
-                bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()) ||
-                bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
-            bankName.append(bankingV1.getAccountHolderName());
-            bankName.append("-");
-            bankName.append(bankingV1.getAccountType());
-        }
+
+        bankName.append(bankingV1.getAccountHolderName());
+        bankName.append("-");
+        bankName.append(bankingV1.getAccountType());
 
         return new RefundableBanks(bankingV1.getBankId(),
                 bankName.toString(),

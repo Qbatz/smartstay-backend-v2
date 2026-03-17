@@ -5,9 +5,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.invoices.Invoices;
+import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
+import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.List;
@@ -22,6 +24,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         fullNameBuilder.append(invoices.getFirstName());
         fullNameBuilder.append(" ");
         fullNameBuilder.append(invoices.getLastName());
+        String invoiceMode = null;
 
         StringBuilder initials = new StringBuilder();
         if (invoices.getFirstName() != null) {
@@ -45,27 +48,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         String invoiceType = null;
         String paymentStatus = null;
         if (invoices.getPaymentStatus() != null) {
-            if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-                paymentStatus = "Paid";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
-                paymentStatus = "Pending";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                paymentStatus = "Partial Payment";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.ADVANCE_IN_HAND.name())) {
-                paymentStatus = "Over pay";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
-                paymentStatus = "Refunded";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
-                paymentStatus = "Pending Refund";
-            }
-            else if (invoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
-                paymentStatus = "Partially Refunded";
-            }
+           paymentStatus = InvoiceUtils.getInvoicePaymentStatusByStatus(invoices.getPaymentStatus());
         }
 
 
@@ -92,6 +75,17 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
         }
         else if (invoices.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
             invoiceType = "Reassign-Rent";
+        }
+
+
+        if (invoices.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name())) {
+            invoiceMode = "Recurring";
+        }
+        else if (invoices.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
+            invoiceMode = "Manual";
+        }
+        else if (invoices.getInvoiceMode().equalsIgnoreCase(InvoiceMode.AUTOMATIC.name())) {
+            invoiceMode = "Automatic";
         }
 
         ObjectMapper mapper = new ObjectMapper();
@@ -133,11 +127,11 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 initials.toString(),
                 invoices.getProfilePic(),
                 isRefundable,
-                Math.ceil(totalAmount),
-                Math.ceil(invoices.getTotalAmount()),
+                Utils.roundOfDouble(totalAmount),
+                Utils.roundOfDouble(invoices.getTotalAmount()),
                 invoices.getInvoiceId(),
-                Math.round(paidAmount),
-                Utils.roundOfMax(dueAmount),
+                Utils.roundOfDouble(paidAmount),
+                Utils.roundOfDouble(dueAmount),
                 invoices.getCgst(),
                 invoices.getSgst(),
                 gstAmount,
@@ -147,6 +141,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 Utils.dateToString(invoices.getInvoiceStartDate()),
                 Utils.dateToString(invoices.getInvoiceDueDate()),
                 invoiceType,
+                invoiceMode,
                 paymentStatus,
                 Utils.dateToString(invoices.getUpdatedAt()),
                 invoices.getInvoiceNumber(),

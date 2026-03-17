@@ -45,6 +45,9 @@ public class KycServices {
     @Autowired
     private RolesService rolesService;
 
+    @Autowired
+    private SubscriptionService subscriptionService;
+
     private final RestTemplate restTemplate;
 
     public KycServices(RestTemplate restTemplate) {
@@ -66,6 +69,9 @@ public class KycServices {
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);

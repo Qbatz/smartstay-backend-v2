@@ -20,7 +20,6 @@ public class HostelEventsListeners {
 
     @Autowired
     private HostelService hostelService;
-
     @Autowired
     private TemplatesService hostelTemplates;
     @Autowired
@@ -55,9 +54,16 @@ public class HostelEventsListeners {
 
         BillingRules billingRules = new BillingRules();
         billingRules.setBillingStartDate(1);
-        billingRules.setBillingDueDate(10);
+        billingRules.setBillDueDays(10);
         billingRules.setNoticePeriod(30);
         billingRules.setInitial(true);
+        billingRules.setCreatedAt(new Date());
+        billingRules.setCreatedBy(events.getUserId());
+        billingRules.setTypeOfBilling(BillingTypeEnum.FIXED_DATE.name());
+        billingRules.setHasGracePeriod(false);
+        billingRules.setReminderDays(new ArrayList<>());
+        billingRules.setShouldNotify(false);
+        billingRules.setGracePeriodDays(0);
         billingRules.setHostel(hostelV1);
         List<BillingRules> listBillings = new ArrayList<>();
         listBillings.add(billingRules);
@@ -88,7 +94,7 @@ public class HostelEventsListeners {
 
         hostelService.updateHostelFromEvents(hostelV1);
 
-        List<String> users = userHostelService.listAllUsersFromParentId(events.getParentId());
+        List<String> users = userHostelService.listAllUsersFromHostelId(events.getHostelId());
 
         List<Users> listUsers =  usersService.findAllUsersFromUserId(users);
 

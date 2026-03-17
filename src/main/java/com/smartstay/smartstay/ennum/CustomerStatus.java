@@ -9,6 +9,7 @@ public enum CustomerStatus {
     CHECK_IN("Checked in"),
     WALKED_IN("walk in"),
     CANCELLED_BOOKING("Cancelled"),
+    DELETED("DELETED"),
     SETTLEMENT_GENERATED("Settlement Generated");
     CustomerStatus(String active) {
     }

@@ -28,8 +28,10 @@ public class TransactionV1 {
     private String isInvoice;
     private String customerId;
     private Date paymentDate;
+    private String transactionMode;
     //auto generated
     private String transactionReferenceId;
+    private String receiptUrl;
     //card/gpay or cash or bank
     private String bankId;
     //entered by customer

@@ -49,9 +49,10 @@ public class BankingService {
     @Autowired
     private BankingRepository bankingV1Repository;
 
-
     @Autowired
     private BankTransactionService transactionService;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     public ResponseEntity<?> addNewBankAccount(String hostelId, AddBank addBank) {
         if (!authentication.isAuthenticated()) {
@@ -66,6 +67,10 @@ public class BankingService {
         }
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         String accountType = null;
@@ -162,6 +167,8 @@ public class BankingService {
 
         BankingV1 v1 = bankingV1Repository.save(bankingV1);
 
+        usersService.addUserLog(hostelId, v1.getBankId(), ActivitySource.BANKING, ActivitySourceType.CREATE, users);
+
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -185,21 +192,45 @@ public class BankingService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<Bank> listBankings = bankingV1Repository.findByHostelId(hostelId)
+        List<TransactionDto> transactions =  transactionService.getAllTransactionsByHostelId(hostelId);
+        List<String> bankId = transactions
+                .stream()
+                .map(TransactionDto::bankId)
+                .distinct()
+                .toList();
+        List<BankingV1> bankingList = bankingV1Repository.findByBankIdIn(bankId);
+        if (transactions != null && transactions.isEmpty()) {
+            bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
+        }
+        else if (transactions == null) {
+            bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
+        }
+
+//        List<BankingV1> bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
+        List<Bank> listBankings = bankingList
                 .stream()
                 .map(i -> new BankingListMapper().apply(i))
                 .collect(Collectors.toList());
 
-        List<TransactionDto> transactions =  transactionService.getAllTransactions(hostelId);
         List<TransactionDto> listTransactions = new ArrayList<>();
         if (!transactions.isEmpty()) {
+            List<BankingV1> finalBankingList = bankingList;
             listTransactions = transactions.stream()
                     .map(item -> {
-                        Bank accountHolderBank = listBankings
+                        BankingV1 accountHolderBank = finalBankingList
                                 .stream()
-                                .filter(i -> i.bankingId().equalsIgnoreCase(item.bankId()))
-                                .toList().get(0);
-                        String accountHolder = accountHolderBank.accountHolderName() + "-" + accountHolderBank.accountType();
+                                .filter(i -> i.getBankId().equalsIgnoreCase(item.bankId()))
+                                .findFirst()
+                                .orElse(null);
+                        String accountHolder = null;
+                        boolean isDeleted = false;
+                        if (accountHolderBank != null) {
+                            accountHolder = accountHolderBank.getAccountHolderName() + "-" + accountHolderBank.getAccountType();
+                        }
+                        if (accountHolderBank != null) {
+                            isDeleted = accountHolderBank.isDeleted();
+                        }
+
                         return new TransactionDto(item.transactionId(),
                                 item.referenceNumber(),
                                 item.amount(),
@@ -207,9 +238,11 @@ public class BankingService {
                                 item.source(),
                                 item.createdBy(),
                                 item.createdAt(),
+                                item.transactionDate(),
                                 item.isCredit(),
                                 item.bankId(),
-                                accountHolder);
+                                accountHolder,
+                                isDeleted);
                     })
                     .toList();
         }
@@ -233,8 +266,12 @@ public class BankingService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         BankingV1 bankingV1 = bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId, bankId);
@@ -276,6 +313,7 @@ public class BankingService {
 
         bankingV1.setUpdatedAt(new Date());
         bankingV1Repository.save(bankingV1);
+        usersService.addUserLog(hostelId, bankingV1.getBankId(), ActivitySource.BANKING, ActivitySourceType.UPDATE, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -397,7 +435,7 @@ public class BankingService {
     }
 
     public List<BookingBankInfo> getAllAccounts(String hostelId) {
-        List<BankingV1> listBankAccounts = bankingV1Repository.findByHostelId(hostelId);
+        List<BankingV1> listBankAccounts = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
 
         List<BookingBankInfo> listBanks = listBankAccounts.stream()
                 .map(item -> new BookingBankMapper().apply(item))
@@ -438,7 +476,7 @@ public class BankingService {
         return bankingV1Repository.findByBankIdIn(bankLists.stream().toList());
     }
 
-    public ResponseEntity<?>  addMoney(String hostelId, UpdateBankBalance balance) {
+    public ResponseEntity<?> addMoney(String hostelId, UpdateBankBalance balance) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -454,6 +492,10 @@ public class BankingService {
 
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         BankingV1 bankingV1 = bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId, balance.bankId());
@@ -466,7 +508,7 @@ public class BankingService {
             return new ResponseEntity<>(Utils.INVALID_ACCOUNT_TYPE, HttpStatus.BAD_REQUEST);
         }
 
-        if (bankingV1.getTransactionType().equalsIgnoreCase(BankPurpose.DEBIT.name())){
+        if (bankingV1.getTransactionType().equalsIgnoreCase(BankPurpose.DEBIT.name())) {
             return new ResponseEntity<>(Utils.INVALID_TRANSACTION_TYPE, HttpStatus.BAD_REQUEST);
         }
 
@@ -475,9 +517,10 @@ public class BankingService {
         BankTransactionsV1 bankTransactionsV11 = new BankTransactionsV1();
         bankTransactionsV11.setBankId(balance.bankId());
         bankTransactionsV11.setHostelId(hostelId);
+
         bankTransactionsV11.setType("CREDIT");
         bankTransactionsV11.setSource(BankSource.DEPOSIT.name());
-        if (bankTransactionsV1 != null && bankTransactionsV1.getAccountBalance() != null){
+        if (bankTransactionsV1 != null && bankTransactionsV1.getAccountBalance() != null) {
             bankTransactionsV11.setAccountBalance(bankTransactionsV1.getAccountBalance() + balance.balance());
         } else {
             bankTransactionsV11.setAccountBalance(balance.balance());
@@ -485,9 +528,9 @@ public class BankingService {
         bankTransactionsV11.setAmount(balance.balance());
         bankTransactionsV11.setTransactionDate(new Date());
         bankTransactionsV11.setCreatedAt(new Date());
+        bankTransactionsV11.setIsDeleted(false);
         bankTransactionsV11.setCreatedBy(authentication.getName());
         transactionService.saveTransaction(bankTransactionsV11);
-
 
         Double oldBalance = 0.0;
         if (bankingV1.getBalance() != null) {
@@ -498,11 +541,12 @@ public class BankingService {
         bankingV1.setUpdatedBy(authentication.getName());
         bankingV1Repository.save(bankingV1);
 
+        usersService.addUserLog(hostelId, bankingV1.getBankId(), ActivitySource.BANKING, ActivitySourceType.ADD_MONEY, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
-    public ResponseEntity<?>  selfTransfer(String hostelId, SelfTransfer selfTransfer) {
+    public ResponseEntity<?>  selfTransfer(String hostelId, SelfTransfer selfTransfer)  {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -520,7 +564,12 @@ public class BankingService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        BankingV1 bankingV1 = bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId, selfTransfer.fromBankId());
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        BankingV1 bankingV1 = bankingV1Repository.findBankingRecordByHostelIdAndBankId(hostelId,
+                selfTransfer.fromBankId());
         if (bankingV1 == null) {
             return new ResponseEntity<>(Utils.NO_FROM_ACCOUNT_NO_FOUND, HttpStatus.BAD_REQUEST);
         }
@@ -562,15 +611,16 @@ public class BankingService {
         BankTransactionsV1 bankTransactionsV11 = new BankTransactionsV1();
         bankTransactionsV11.setBankId(selfTransfer.fromBankId());
         bankTransactionsV11.setHostelId(hostelId);
-        bankTransactionsV11.setType("DEBIT");
+        bankTransactionsV11.setType(BankTransactionType.DEBIT.name());
         bankTransactionsV11.setSource(BankSource.SELF_TRANSFER.name());
-        if (fromAccountTransaction != null && fromAccountTransaction.getAccountBalance() != null){
+        if (fromAccountTransaction != null && fromAccountTransaction.getAccountBalance() != null) {
             bankTransactionsV11.setAccountBalance(fromAccountTransaction.getAccountBalance() - selfTransfer.balance());
         } else {
             bankTransactionsV11.setAccountBalance(selfTransfer.balance());
         }
         bankTransactionsV11.setAmount(selfTransfer.balance());
         bankTransactionsV11.setTransactionDate(new Date());
+        bankTransactionsV11.setIsDeleted(false);
         bankTransactionsV11.setCreatedAt(new Date());
         bankTransactionsV11.setCreatedBy(authentication.getName());
         transactionService.saveTransaction(bankTransactionsV11);
@@ -579,9 +629,10 @@ public class BankingService {
         BankTransactionsV1 toBankTransactions = new BankTransactionsV1();
         toBankTransactions.setBankId(selfTransfer.toBankId());
         toBankTransactions.setHostelId(hostelId);
-        toBankTransactions.setType("CREDIT");
+        bankTransactionsV11.setIsDeleted(false);
+        toBankTransactions.setType(BankTransactionType.CREDIT.name());
         toBankTransactions.setSource(BankSource.SELF_TRANSFER.name());
-        if (toAccountTransaction != null && toAccountTransaction.getAccountBalance() != null){
+        if (toAccountTransaction != null && toAccountTransaction.getAccountBalance() != null) {
             toBankTransactions.setAccountBalance(toAccountTransaction.getAccountBalance() + selfTransfer.balance());
         } else {
             toBankTransactions.setAccountBalance(selfTransfer.balance());
@@ -590,7 +641,9 @@ public class BankingService {
         toBankTransactions.setTransactionDate(new Date());
         toBankTransactions.setCreatedAt(new Date());
         toBankTransactions.setCreatedBy(authentication.getName());
-        transactionService.saveTransaction(toBankTransactions);
+        BankTransactionsV1 bankTransactionsV1 = transactionService.saveTransaction(toBankTransactions);
+
+        usersService.addUserLog(hostelId, bankTransactionsV1.getBankId(), ActivitySource.BANKING, ActivitySourceType.TRANSFER, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
@@ -630,32 +683,54 @@ public class BankingService {
         bankingV1Repository.save(bankingV1);
     }
 
-    public boolean updateBalanceForExpense(double amount, String transactionType, String bankId, String transactionDate) {
+    public void deleteReceipt(double amount, String transactionType, String bankId) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+            if (bankingV1.getBalance() == null) {
+                bankingV1.setBalance(-1 * amount);
+            }
+            else {
+                bankingV1.setBalance(bankingV1.getBalance() - amount);
+            }
+        }
+
+        bankingV1.setUpdatedBy(authentication.getName());
+        bankingV1.setUpdatedAt(new Date());
+
+        bankingV1Repository.save(bankingV1);
+    }
+
+
+    public boolean updateBalanceForExpense(double amount, String transactionType, String bankId) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        double bankBalance = 0.0;
+        if (bankingV1.getBalance() != null) {
+            bankBalance = bankingV1.getBalance();
+        }
+
+        if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+            bankingV1.setBalance(bankBalance - amount);
+        }
+
+        bankingV1.setUpdatedBy(authentication.getName());
+        bankingV1.setUpdatedAt(new Date());
+
+        bankingV1Repository.save(bankingV1);
+
+        return true;
+    }
+
+    public boolean updateBalanceForAssets(double amount, String transactionType, String bankId) {
         BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
         if (bankingV1 == null) {
             return false;
         }
+        Double balance = bankingV1.getBalance();
         if (bankingV1.getBalance() == null) {
-            return false;
+            balance = 0.0;
         }
-        if (bankingV1.getBalance() == 0) {
-            return false;
-        }
-        if (bankingV1.getBalance() < amount) {
-            return false;
-        }
-         if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
-                bankingV1.setBalance(bankingV1.getBalance() - amount);
-        }
-
-        Calendar cal = Calendar.getInstance();
-        Date dt = Utils.stringToDate(transactionDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        cal.setTime(dt);
-        if (cal.get(Calendar.MINUTE) == 0 && cal.get(Calendar.HOUR) == 0) {
-            Calendar cal2 = Calendar.getInstance();
-            cal.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
-            cal.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
-            cal.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
+        if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+            bankingV1.setBalance(balance - amount);
         }
 
         bankingV1.setUpdatedBy(authentication.getName());
@@ -667,10 +742,129 @@ public class BankingService {
     }
 
     public List<RefundableBanks> initializeRefund(String hostelId) {
-        return bankingV1Repository.findByHostelId(hostelId)
+        return bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId)
                 .stream()
-                .filter(item -> item.getBalance() >= 0)
+                .filter(item -> item.getBalance() != null && item.getBalance() >= 0)
                 .map(item -> new RefundableBanksMapper().apply(item))
                 .toList();
+    }
+
+    public boolean deleteBankForUser(String userId, String hostelId) {
+        List<BankingV1> listBankings = bankingV1Repository.findByUserIdAndHostelId(userId, hostelId)
+                .stream()
+                .map(i -> {
+                    i.setDeleted(true);
+                    return i;
+                })
+                .toList();
+
+        bankingV1Repository.saveAll(listBankings);
+
+        return true;
+    }
+
+
+    public Double sumBalanceByHostelId(String hostelId) {
+        return bankingV1Repository.sumBalanceByHostelId(hostelId);
+    }
+
+    public List<String> findBankIdsByAccountTypes(String hostelId, List<String> accountTypes) {
+        return bankingV1Repository.findBankIdsByAccountTypes(hostelId, accountTypes);
+    }
+
+    public List<String> findBankIdsByAccountHolderNames(String hostelId, List<String> names) {
+        return bankingV1Repository.findBankIdsByAccountHolderNames(hostelId, names);
+    }
+
+    public void updateBankBalanceForUpdateExpense(String bankId, double priceDifference) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        if (bankingV1 != null) {
+            if (priceDifference < 0) {
+                bankingV1.setBalance(bankingV1.getBalance() + priceDifference);
+            }
+            else {
+                bankingV1.setBalance(bankingV1.getBalance() + priceDifference);
+            }
+
+            bankingV1Repository.save(bankingV1);
+        }
+    }
+
+    public void updateAccountBalanceByDeleteExpense(String hostelId, String bankId, Double amount) {
+        BankingV1 bankingV1 = bankingV1Repository.findByHostelIdAndBankId(hostelId, bankId);
+        if (bankingV1 != null) {
+            double expAmount = 0.0;
+            if (amount != null) {
+                expAmount = amount;
+            }
+            double balanceAmount = 0.0;
+            if (bankingV1.getBalance() != null) {
+                balanceAmount = bankingV1.getBalance();
+            }
+            bankingV1.setBalance(balanceAmount + expAmount);
+
+            bankingV1Repository.save(bankingV1);
+        }
+    }
+
+    public void deleteBankForUser(String userId, List<String> listHostelIds) {
+        List<BankingV1> listBankAccounts = bankingV1Repository
+                .findByUserIdAndHostelIdIn(userId, listHostelIds);
+
+        if (listBankAccounts != null && !listBankAccounts.isEmpty()) {
+            List<BankingV1> deletableBankings = listBankAccounts
+                    .stream()
+                    .map(i -> {
+                        i.setDeleted(true);
+                        i.setActive(false);
+                        return i;
+                    })
+                    .toList();
+
+            bankingV1Repository.saveAll(deletableBankings);
+        }
+    }
+
+    public void updateBankAccountName(String name, String userId, String hostelId) {
+        List<BankingV1> userAccounts = bankingV1Repository.findByUserIdAndHostelId(userId, hostelId);
+        if (!userAccounts.isEmpty()) {
+            List<BankingV1> cashAccounts = userAccounts
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()))
+                    .toList();
+            if (cashAccounts != null && !cashAccounts.isEmpty()) {
+                List<BankingV1> modifiedBankAccount = cashAccounts
+                        .stream()
+                        .map(i -> {
+                            i.setAccountHolderName(name);
+                            return i;
+                        })
+                        .toList();
+
+                bankingV1Repository.saveAll(modifiedBankAccount);
+            }
+        }
+    }
+
+    public void updateCashAccountNames(List<String> hostelIdsThatAdminHasAccess, String userId, String name) {
+        List<BankingV1> listBankings = bankingV1Repository.findByUserIdAndHostelIdIn(userId, hostelIdsThatAdminHasAccess);
+        if (listBankings != null && !listBankings.isEmpty()) {
+            List<BankingV1> cashAccounts = listBankings
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()))
+                    .toList();
+
+            if (cashAccounts != null && !cashAccounts.isEmpty()) {
+                List<BankingV1> modifiedBankAccount = cashAccounts
+                        .stream()
+                        .map(i -> {
+                            i.setAccountHolderName(name);
+                            return i;
+                        })
+                        .toList();
+
+                bankingV1Repository.saveAll(modifiedBankAccount);
+            }
+        }
     }
 }

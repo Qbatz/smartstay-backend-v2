@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.booking.CancelBooking;
+import com.smartstay.smartstay.payloads.booking.UpdateAdvance;
+import com.smartstay.smartstay.payloads.booking.UpdateBookingDetails;
 import com.smartstay.smartstay.services.BookingsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -8,6 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,6 +48,26 @@ public class BookingsController {
     @PostMapping("/checkout/{customerId}")
     public ResponseEntity<?> initializeCheckout(@PathVariable("customerId") String customerId) {
         return bookingService.checkoutCustomer(customerId);
+    }
+
+    @PutMapping("/rent/{hostelId}/{bookingId}")
+    public ResponseEntity<?> updateBookingInformations(@PathVariable("hostelId") String hostelId, @PathVariable("bookingId") String bookingId, UpdateBookingDetails updateInfo) {
+        return bookingService.updateBookingInfo(hostelId, bookingId, updateInfo);
+    }
+
+    @PutMapping("/{hostelId}/{bookingId}")
+    public ResponseEntity<?> updateBookingInformationsNew(@PathVariable("hostelId") String hostelId, @PathVariable("bookingId") String bookingId, UpdateBookingDetails updateInfo) {
+        return bookingService.updateBookingInfo(hostelId, bookingId, updateInfo);
+    }
+
+    @PutMapping("/advance/{hostelId}/{bookingId}")
+    public ResponseEntity<?> updateAdvance(@PathVariable("hostelId") String hostelId, @PathVariable("bookingId") String bookingId, @Valid @RequestBody UpdateAdvance updateAdvance) {
+        return bookingService.updateAdvanceAmount(hostelId, bookingId, updateAdvance);
+    }
+
+    @PostMapping("/initialize/checkout/{hostelId}/{customerId}")
+    public ResponseEntity<?> initializeCheckout(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
+        return bookingService.initializeCheckout(hostelId, customerId);
     }
 
 }

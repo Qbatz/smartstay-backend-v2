@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -17,6 +18,7 @@ import java.util.List;
 public class HostelV1 {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String hostelId;
     private int hostelType;
     private String hostelName;
@@ -46,7 +48,7 @@ public class HostelV1 {
     @OneToMany(mappedBy = "hostel", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<BillingRules> billingRulesList;
 
-    @OneToOne(mappedBy = "hostel", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "hostel", cascade = CascadeType.ALL, orphanRemoval = true)
     private ElectricityConfig electricityConfig;
 
 }

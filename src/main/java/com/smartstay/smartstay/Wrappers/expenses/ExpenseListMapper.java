@@ -42,7 +42,7 @@ public class ExpenseListMapper implements Function<ExpenseList, com.smartstay.sm
                 expenseList.getBankId(),
                 expenseList.getTotalAmount(),
                 Utils.dateToString(expenseList.getTransactionDate()),
-                expenseList.getUnitPrice(),
+                Utils.roundOffWithTwoDigit(expenseList.getUnitPrice()),
                 expenseList.getVendorId(),
                 expenseList.getReferenceNumber(),
                 expenseList.getHolderName(),

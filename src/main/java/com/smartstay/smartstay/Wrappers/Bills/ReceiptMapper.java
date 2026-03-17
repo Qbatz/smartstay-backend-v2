@@ -34,15 +34,9 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
             }
 
         }
-        if (receipts.getHolderName() != null) {
-            bankName.append(receipts.getHolderName());
-        }
-        if (receipts.getBankName() != null) {
-            if (receipts.getHolderName() != null) {
-                bankName.append("-");
-            }
-            bankName.append(receipts.getBankName());
-        }
+
+        bankName.append(receipts.getHolderName());
+
         if (receipts.getBankName() == null) {
             if (receipts.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
                 if (receipts.getHolderName() != null) {
@@ -50,7 +44,30 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
                 }
                 bankName.append(receipts.getAccountType());
             }
+            else if (receipts.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+                if (receipts.getHolderName() != null) {
+                    bankName.append("-");
+                }
+                bankName.append(receipts.getAccountType());
+            }
+            else if (receipts.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+                if (receipts.getHolderName() != null) {
+                    bankName.append("-");
+                }
+                bankName.append(receipts.getAccountType());
+            }
         }
+        else {
+            if (receipts.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+                if (receipts.getHolderName() != null) {
+                    bankName.append("-");
+                }
+                bankName.append(receipts.getBankName());
+            }
+        }
+
+
+
 
         String type = switch (receipts.getInvoiceType()) {
             case "ADVANCE" -> "Advance";
@@ -62,7 +79,7 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
                     yield  "Refund";
                 }
                 else {
-                    yield "Rent";
+                    yield "Settlement";
                 }
             }
             default -> "Others";
@@ -83,6 +100,7 @@ public class ReceiptMapper implements Function<Receipts, ReceiptsList> {
                 fullName.toString(),
                 receipts.getTransactionId(),
                 receipts.getReferenceNumber(),
+                receipts.getTransactionNo(),
                 receipts.getInvoiceNumber(),
                 "PAID",
                 Utils.dateToString(receipts.getPaidAt()),

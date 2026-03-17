@@ -4,6 +4,9 @@ import com.smartstay.smartstay.Wrappers.RoomsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.room.RoomInfo;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.rooms.AddRoom;
 import com.smartstay.smartstay.payloads.rooms.UpdateRoom;
@@ -15,10 +18,12 @@ import com.smartstay.smartstay.responses.rooms.RoomInfoForEB;
 import com.smartstay.smartstay.responses.rooms.RoomsResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -39,6 +44,15 @@ public class RoomsService {
     private Authentication authentication;
     @Autowired
     private UsersService usersService;
+    private BedsService bedsService;
+
+    @Autowired
+    private SubscriptionService subscriptionService;
+
+    @Autowired
+    public void setBedsService(@Lazy BedsService bedsService) {
+        this.bedsService = bedsService;
+    }
 
     public ResponseEntity<?> getAllRooms(int floorId) {
         if (!authentication.isAuthenticated()) {
@@ -99,6 +113,11 @@ public class RoomsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         Rooms existingRoom = roomRepository.findByRoomIdAndParentIdAndHostelId(roomId,user.getParentId(),hostelId);
         if (existingRoom == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
@@ -117,8 +136,13 @@ public class RoomsService {
         }
         existingRoom.setUpdatedAt(new Date());
         roomRepository.save(existingRoom);
+        usersService.addUserLog(hostelId, String.valueOf(existingRoom.getRoomId()), ActivitySource.ROOMS, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
+    }
+
+    public com.smartstay.smartstay.dao.Rooms findRoomByRoomId(int roomId) {
+        return roomRepository.findById(roomId).orElse(null);
     }
 
     public ResponseEntity<?> addRoom(AddRoom addRoom) {
@@ -134,6 +158,11 @@ public class RoomsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionService.validateSubscription(addRoom.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         Floors floors = floorRepository.findByFloorIdAndParentId(addRoom.floorId(),user.getParentId());
         if (floors==null){
             return new ResponseEntity<>("Floor Doesn't exist", HttpStatus.BAD_REQUEST);
@@ -163,29 +192,36 @@ public class RoomsService {
         room.setParentId(user.getParentId());
         room.setFloorId(addRoom.floorId());
         room.setHostelId(addRoom.hostelId());
-        roomRepository.save(room);
+        Rooms roms = roomRepository.save(room);
+        usersService.addUserLog(addRoom.hostelId(), String.valueOf(roms.getRoomId()), ActivitySource.ROOMS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
     public ResponseEntity<?> deleteRoomById(int roomId) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Users users = usersService.findUserByUserId(userId);
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
         Rooms existingRoom = roomRepository.findByRoomIdAndParentId(roomId,users.getParentId());
         if (existingRoom != null) {
+            if (!subscriptionService.validateSubscription(existingRoom.getHostelId())) {
+                return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+            }
             boolean customerExist = floorRepository.existsActiveBookingForRoom(existingRoom.getHostelId(),roomId ,
-                    List.of(CustomerStatus.NOTICE.name(),CustomerStatus.CHECK_IN.name(), CustomerStatus.BOOKED.name()));
+                    List.of(BookingStatus.NOTICE.name(),BookingStatus.CHECKIN.name(), BookingStatus.BOOKED.name()));
             if (customerExist) {
-                return new ResponseEntity<>("Cannot delete room — active bookings exist.", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Cannot delete room — active tenants exist.", HttpStatus.BAD_REQUEST);
             }
             existingRoom.setUpdatedAt(new Date());
             existingRoom.setIsDeleted(true);
             roomRepository.save(existingRoom);
+            bedsService.deleteBedsByRoomId(existingRoom.getRoomId(), existingRoom.getParentId());
+            usersService.addUserLog(existingRoom.getHostelId(), String.valueOf(existingRoom.getRoomId()), ActivitySource.ROOMS, ActivitySourceType.DELETE, users);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
@@ -204,19 +240,97 @@ public class RoomsService {
         return roomRepository.getRoomInfo(roomId);
     }
 
+    public List<RoomInfo> getRoom(List<Integer> roomIds) {
+        return roomRepository.getRoomInfo(roomIds);
+    }
+
 
     public int getRoomCount(String hostelId) {
         return roomRepository.getCountOfRoomsBasedOnHostel(hostelId);
+    }
+
+    public List<RoomInfoForEB> getBedsNotRegisteredOnEB(List<Integer> listRoomsInMeterReadings, String hostelId, String startDate, String endDate) {
+        if (listRoomsInMeterReadings.isEmpty()) {
+            return roomRepository.getAllRoomsForEb(hostelId);
+        }
+        return roomRepository.getAllRoomsNotInEb(listRoomsInMeterReadings, hostelId, startDate, endDate);
+    }
+
+    public List<RoomInfoForEB> findAllRoomsByHostelId(String hostelId) {
+        return roomRepository.getAllRoomsByHostelForEB(hostelId);
+    }
+
+    public List<Rooms> getAllRoomsByHostelId(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return null;
+        }
+        else {
+            Users users = usersService.findUserByUserId(authentication.getName());
+
+            return roomRepository.findByHostelIdAndParentId(hostelId, users.getParentId());
+        }
+    }
+
+    public List<Rooms> getAllRoomsByHostelIdForListener(String hostelId) {
+            return roomRepository.findByHostelId(hostelId);
     }
 
     public List<RoomInfoForEB> getBedsNotRegisteredOnEB(List<Integer> listRoomsInMeterReadings, String hostelId) {
         if (listRoomsInMeterReadings.isEmpty()) {
             return roomRepository.getAllRoomsForEb(hostelId);
         }
-        return roomRepository.getAllRoomsNotInEb(listRoomsInMeterReadings, hostelId);
+
+        List<RoomInfo> listRoomInfo = roomRepository.getAllRoomsForEb(hostelId, listRoomsInMeterReadings);
+        return listRoomInfo
+                .stream()
+                .map(i -> {
+                    return new RoomInfoForEB(i.getFloorId(), i.getRoomId(), i.getRoomName(), i.getFloorName(), hostelId, 0l);
+                })
+                .toList();
     }
 
-    public List<RoomInfoForEB> findAllRoomsByHostelId(String hostelId) {
-        return roomRepository.getAllRoomsByHostelForEB(hostelId);
+    public void updateSharingCount(int roomId) {
+        Rooms rooms = roomRepository.findByRoomId(roomId);
+        if (rooms != null) {
+            if (rooms.getSharingType() == null) {
+                rooms.setSharingType(1);
+            }
+            else {
+                rooms.setSharingType(rooms.getSharingType() + 1);
+            }
+        }
+    }
+
+    public List<Rooms> findByHostelId(String hostelId) {
+        return roomRepository.findByHostelId(hostelId);
+    }
+
+    public List<Rooms> findByHostelIdAndShareType(String hostelId, List<Integer> shareTypes) {
+        List<Rooms> listRooms = roomRepository.findByHostelIdAndSharingTypeIn(hostelId, shareTypes);
+        if (listRooms == null) {
+            listRooms = new ArrayList<>();
+        }
+        return listRooms;
+    }
+
+    public void deleteRoomByFloorId(Integer floorId, String hostelId) {
+        List<Rooms> listRooms = roomRepository.findByHostelIdAndFloorId(hostelId, floorId);
+        List<Integer> roomIds = listRooms
+                .stream()
+                .map(Rooms::getRoomId)
+                .distinct()
+                .toList();
+        List<Rooms> deletableRooms = listRooms
+                .stream()
+                .map(i -> {
+                    i.setIsDeleted(true);
+
+                    return i;
+                })
+                .toList();
+
+        roomRepository.saveAll(deletableRooms);
+
+        bedsService.deleteBedsForFloorDeletion(roomIds, hostelId);
     }
 }

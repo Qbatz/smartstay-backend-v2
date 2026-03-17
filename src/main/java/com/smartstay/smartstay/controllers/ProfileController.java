@@ -3,6 +3,9 @@ package com.smartstay.smartstay.controllers;
 import com.smartstay.smartstay.payloads.Password;
 import com.smartstay.smartstay.payloads.account.*;
 import com.smartstay.smartstay.payloads.UpdateUserProfilePayloads;
+import com.smartstay.smartstay.payloads.profile.Logout;
+import com.smartstay.smartstay.payloads.profile.ResetPassword;
+import com.smartstay.smartstay.payloads.profile.UpdateFCMToken;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -15,12 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("v2/profile")
-@SecurityScheme(
-        name = "Authorization",
-        type = SecuritySchemeType.HTTP,
-        bearerFormat = "JWT",
-        scheme = "bearer"
-)
+@SecurityScheme(name = "Authorization", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @SecurityRequirement(name = "Authorization")
 @CrossOrigin("*")
 public class ProfileController {
@@ -33,20 +31,21 @@ public class ProfileController {
         return usersService.getProfileInformation();
     }
 
-
-
     @PutMapping("")
-    public ResponseEntity<?> updateProfileInformation(@RequestPart("updateProfile") UpdateUserProfilePayloads updateProfile, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
+    public ResponseEntity<?> updateProfileInformation(@RequestPart("payloads") UpdateUserProfilePayloads updateProfile,
+            @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.updateProfileInformations(updateProfile, profilePic);
     }
 
     @PostMapping("/add-admin")
-    public ResponseEntity<?> addAdminUser(@Valid @RequestPart("accountInfo") AddAdminPayload createAccount, @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
+    public ResponseEntity<?> addAdminUser(@Valid @RequestPart("accountInfo") AddAdminPayload createAccount,
+            @RequestPart(value = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.createAdmin(createAccount, profilePic);
     }
 
     @PostMapping("/add-user/{hostelId}")
-    public ResponseEntity<?> addUser(@Valid @RequestBody AddAdminUser adminUser, @PathVariable("hostelId") String hostelId) {
+    public ResponseEntity<?> addUser(@Valid @RequestBody AddAdminUser adminUser,
+            @PathVariable("hostelId") String hostelId) {
         return usersService.createAdminUser(adminUser, hostelId);
     }
 
@@ -66,28 +65,46 @@ public class ProfileController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<Object> changePassword(@RequestBody Password password) {
+    public ResponseEntity<Object> changePassword(@Valid @RequestBody Password password) {
         return usersService.changePassword(password);
     }
 
+    @PostMapping("/reset-password")
+    public ResponseEntity<Object> resetPasswordInProfile(@Valid @RequestBody ResetPassword resetPassword) {
+        return usersService.resetPasswordInProfile(resetPassword);
+    }
+
     @PutMapping("/admin/{adminId}")
-    public ResponseEntity<?> updateUdminInformation(@PathVariable(value = "adminId") String adminId, @RequestPart(name = "payload", required = false) EditAdmin payloads, @RequestPart(name = "profilePic", required = false) MultipartFile profilePic) {
+    public ResponseEntity<?> updateUdminInformation(@PathVariable(value = "adminId") String adminId,
+            @RequestPart(name = "payload", required = false) EditAdmin payloads,
+            @RequestPart(name = "profilePic", required = false) MultipartFile profilePic) {
         return usersService.updateAdminProfile(adminId, payloads, profilePic);
     }
 
     @PutMapping("/users/{hostelId}/{userId}")
-    public ResponseEntity<?> updateUserInformations(@PathVariable(value = "userId") String userId, @PathVariable("hostelId") String hostelId, @RequestBody(required = false) EditUsers payloads) {
+    public ResponseEntity<?> updateUserInformations(@PathVariable(value = "userId") String userId,
+            @PathVariable("hostelId") String hostelId, @RequestBody(required = false) EditUsers payloads) {
         return usersService.updateUsersProfile(hostelId, userId, payloads);
     }
 
-    @DeleteMapping("/delete-user/{userId}")
-    public ResponseEntity<?> deleteUser(@PathVariable("userId") String userId) {
-        return usersService.deleteUser(userId);
+    @DeleteMapping("/delete-user/{hostelId}/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable("hostelId") String hostelId,
+            @PathVariable("userId") String userId) {
+        return usersService.deleteUser(hostelId, userId);
     }
-
 
     @DeleteMapping("/delete-admin/{userId}")
     public ResponseEntity<?> deleteAdminUser(@PathVariable("userId") String userId) {
         return usersService.deleteAdminUser(userId);
+    }
+
+    @PutMapping("/fcm")
+    public ResponseEntity<?> updateFCMToken(@RequestBody @Valid UpdateFCMToken updateFCMToken) {
+        return usersService.addFCMToken(updateFCMToken);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutFromApp(@Valid @RequestBody Logout logout) {
+        return usersService.logout(logout);
     }
 }

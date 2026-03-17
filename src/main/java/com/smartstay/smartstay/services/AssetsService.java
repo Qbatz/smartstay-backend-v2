@@ -3,6 +3,8 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.assets.AssetAssignmentResponse;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.payloads.asset.AssetRequest;
 import com.smartstay.smartstay.payloads.asset.AssignAsset;
 import com.smartstay.smartstay.payloads.asset.UpdateAsset;
@@ -13,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -47,9 +50,12 @@ public class AssetsService {
     private UsersService usersService;
     @Autowired
     private RolesService rolesService;
-
     @Autowired
     private UserHostelService userHostelService;
+    @Autowired
+    private BankTransactionService bankTransactionService;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     public ResponseEntity<?> getAllAssets(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -69,8 +75,7 @@ public class AssetsService {
         return new ResponseEntity<>(listAssets, HttpStatus.OK);
     }
 
-
-    public ResponseEntity<?> addAsset(AssetRequest request,String hostelId) {
+    public ResponseEntity<?> addAsset(AssetRequest request, String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
         }
@@ -82,6 +87,9 @@ public class AssetsService {
         boolean hostelV1 = userHostelService.checkHostelAccess(user.getUserId(), hostelId);
         if (!hostelV1) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         AssetsV1 asset = new AssetsV1();
         if (request.vendorId() != null && request.vendorId() != 0) {
@@ -95,6 +103,7 @@ public class AssetsService {
         if (!bankingV1) {
             return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
         }
+
 
         boolean assetNameExists = assetsRepository.existsByAssetNameAndIsDeletedFalseAndHostelId(request.assetName(),hostelId);
         if (assetNameExists) {
@@ -113,19 +122,24 @@ public class AssetsService {
 
         asset.setBrandName(request.brandName());
         asset.setSerialNumber(request.serialNumber());
+        Date purchaseDate = new Date();
         if (request.purchaseDate() != null) {
             String formattedDate = request.purchaseDate().replace("/", "-");
-            asset.setPurchaseDate(Utils.stringToDate(formattedDate, Utils.USER_INPUT_DATE_FORMAT));
+            purchaseDate = Utils.stringToDate(formattedDate, Utils.USER_INPUT_DATE_FORMAT);
+            asset.setPurchaseDate(purchaseDate);
         }
         asset.setPrice(request.price());
         asset.setBankId(request.bankingId());
         asset.setCreatedBy(user.getUserId());
-        asset.setCreatedAt(new java.util.Date());
+        asset.setCreatedAt(new Date());
         asset.setIsActive(true);
         asset.setIsDeleted(false);
         asset.setHostelId(hostelId);
         asset.setParentId(user.getParentId());
-        assetsRepository.save(asset);
+        AssetsV1 av1 = assetsRepository.save(asset);
+
+        bankTransactionService.addAssetsTransaction(av1.getAssetId(), request.price(), purchaseDate, request.bankingId(), hostelId, request.serialNumber());
+        usersService.addUserLog(hostelId, String.valueOf(av1.getAssetId()), ActivitySource.ASSETS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 
@@ -146,6 +160,10 @@ public class AssetsService {
 
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         AssetsV1 asset = assetsRepository.findByAssetId(assetId);
@@ -195,13 +213,13 @@ public class AssetsService {
         asset.setUpdatedAt(new java.util.Date());
         assetsRepository.save(asset);
 
+        usersService.addUserLog(hostelId, String.valueOf(assetId), ActivitySource.ASSETS, ActivitySourceType.UPDATE, user);
+
         return new ResponseEntity<>(
                 Utils.UPDATED,
                 HttpStatus.OK
         );
     }
-
-
 
     public ResponseEntity<?> getAssetById(Integer id) {
         if (id == null || id == 0) {
@@ -243,6 +261,10 @@ public class AssetsService {
         RolesV1 role = rolesRepository.findByRoleId(user.getRoleId());
         if (role == null || !rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(request.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         AssetsV1 asset = assetsRepository.findByAssetIdAndHostelId(assetId, request.hostelId());
@@ -297,16 +319,17 @@ public class AssetsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         AssetsV1 existingAsset = assetsRepository.findByAssetId(assetId);
-        if (existingAsset != null) {
-            existingAsset.setIsDeleted(true);
-            existingAsset.setUpdatedAt(new Date());
-            assetsRepository.save(existingAsset);
-            return new ResponseEntity<>("Deleted", HttpStatus.OK);
+        if (existingAsset == null) {
+            return new ResponseEntity<>("No Asset found", HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>("No Asset found", HttpStatus.BAD_REQUEST);
-
+        if (!subscriptionService.validateSubscription(existingAsset.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+        existingAsset.setIsDeleted(true);
+        existingAsset.setUpdatedAt(new Date());
+        assetsRepository.save(existingAsset);
+        return new ResponseEntity<>("Deleted", HttpStatus.OK);
     }
-
 
     private Rooms validateRoom(AssignAsset request, Users user) {
         Rooms room = roomRepository.findByRoomIdAndParentIdAndHostelId(
@@ -336,4 +359,13 @@ public class AssetsService {
         return bed;
     }
 
+    public Double getAllAssetsValue(String hostelId) {
+        List<AssetsV1> listAsstes = assetsRepository.findAllByHostelId(hostelId);
+        double assetValue = listAsstes
+                .stream()
+                .mapToDouble(AssetsV1::getPrice)
+                .sum();
+
+        return Utils.roundOfDouble(assetValue);
+    }
 }

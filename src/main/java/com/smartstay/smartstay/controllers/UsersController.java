@@ -6,14 +6,18 @@ import com.smartstay.smartstay.payloads.account.CreateAccount;
 import com.smartstay.smartstay.payloads.account.Login;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
+import com.smartstay.smartstay.services.FCMNotificationService;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.ZonedDateTime;
 
 @RestController
 @RequestMapping("v2/users")
@@ -22,6 +26,8 @@ public class UsersController {
 
     @Autowired
     UsersService userService;
+    @Autowired
+    FCMNotificationService fcmNotificationService;
 
     @PostMapping("")
     public ResponseEntity<AdminUserResponse> createAccount(@Valid @RequestBody CreateAccount createAccount) {
@@ -43,8 +49,6 @@ public class UsersController {
     public ResponseEntity<Object> verifyPassword(@RequestBody Password password) {
         return userService.verifyPassword(password);
     }
-
-
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
         return userService.verifyOtpAndResetPassword(request);
@@ -55,6 +59,10 @@ public class UsersController {
         return userService.requestPasswordReset(emailId);
     }
 
-
+    @GetMapping("/time/zone")
+    public ResponseEntity<?> getTimezone() {
+        ZonedDateTime now = ZonedDateTime.now();
+        return new ResponseEntity<>(now, HttpStatus.OK);
+    }
 
 }

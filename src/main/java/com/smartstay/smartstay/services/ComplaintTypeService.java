@@ -1,7 +1,12 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.ComplaintTypeV1;
+import com.smartstay.smartstay.dao.HostelV1;
+import com.smartstay.smartstay.dao.RolesV1;
+import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.payloads.complaints.AddComplaintType;
 import com.smartstay.smartstay.payloads.complaints.UpdateComplaintType;
 import com.smartstay.smartstay.repositories.ComplaintRepository;
@@ -37,7 +42,8 @@ public class ComplaintTypeService {
     private UsersService usersService;
     @Autowired
     private RolesService rolesService;
-
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     public ResponseEntity<?> addComplaintType(AddComplaintType request) {
         if (!authentication.isAuthenticated()) {
@@ -60,7 +66,12 @@ public class ComplaintTypeService {
             return new ResponseEntity<>("Hostel not found.", HttpStatus.BAD_REQUEST);
         }
 
-        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentId(request.complaintTypeName(), request.hostelId(), user.getParentId());
+        if (!subscriptionService.validateSubscription(request.hostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentId(
+                request.complaintTypeName(), request.hostelId(), user.getParentId());
         if (complaintType != null) {
             return new ResponseEntity<>("Complaint type already exist", HttpStatus.BAD_REQUEST);
         }
@@ -74,8 +85,8 @@ public class ComplaintTypeService {
         complaintTypeV1.setHostelId(request.hostelId());
         complaintTypeV1.setIsActive(true);
 
-        complaintTypeV1Repository.save(complaintTypeV1);
-
+        ComplaintTypeV1 cmpType = complaintTypeV1Repository.save(complaintTypeV1);
+        usersService.addUserLog(request.hostelId(), String.valueOf(cmpType.getComplaintTypeId()), ActivitySource.COMPLAINT_TYPE, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -105,7 +116,13 @@ public class ComplaintTypeService {
             return new ResponseEntity<>("Hostel not found.", HttpStatus.BAD_REQUEST);
         }
 
-        ComplaintTypeV1 complaintType = complaintTypeV1Repository.findByComplaintTypeNameAndHostelIdAndParentIdAndComplaintTypeIdNot(request.complaintTypeName(), request.hostelId(), user.getParentId(), complaintTypeId);
+        if (!subscriptionService.validateSubscription(complaintTypeV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        ComplaintTypeV1 complaintType = complaintTypeV1Repository
+                .findByComplaintTypeNameAndHostelIdAndParentIdAndComplaintTypeIdNot(request.complaintTypeName(),
+                        request.hostelId(), user.getParentId(), complaintTypeId);
         if (complaintType != null) {
             return new ResponseEntity<>("Complaint type already exist", HttpStatus.BAD_REQUEST);
         }
@@ -120,7 +137,7 @@ public class ComplaintTypeService {
         complaintTypeV1.setUpdatedAt(new Date());
 
         complaintTypeV1Repository.save(complaintTypeV1);
-
+        usersService.addUserLog(request.hostelId(), String.valueOf(complaintTypeV1.getComplaintTypeId()), ActivitySource.COMPLAINT_TYPE, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
@@ -142,12 +159,9 @@ public class ComplaintTypeService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        boolean exist = complaintRepository.existsByComplaintTypeIdAndIsActive(complaintTypeId,true);
+        boolean exist = complaintRepository.existsByComplaintTypeIdAndIsActive(complaintTypeId, true);
         if (exist) {
-            return new ResponseEntity<>(
-                    "Complaint exists for this ComplaintType so it can't be deleted",
-                    HttpStatus.BAD_REQUEST
-            );
+            return new ResponseEntity<>("Complaint exists for this ComplaintType so it can't be deleted", HttpStatus.BAD_REQUEST);
         }
 
 
@@ -157,7 +171,12 @@ public class ComplaintTypeService {
             return new ResponseEntity<>("Complaint type not found.", HttpStatus.BAD_REQUEST);
         }
 
+        if (!subscriptionService.validateSubscription(complaintTypeV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
         complaintTypeV1Repository.delete(complaintTypeV1);
+        usersService.addUserLog(complaintTypeV1.getHostelId(), String.valueOf(complaintTypeV1.getComplaintTypeId()), ActivitySource.COMPLAINT_TYPE, ActivitySourceType.DELETE, user);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
@@ -178,5 +197,17 @@ public class ComplaintTypeService {
         }
         List<ComplaintTypeResponse> complaintTypeResponses = complaintTypeV1Repository.getAllComplaintsType(hostelId);
         return new ResponseEntity<>(complaintTypeResponses, HttpStatus.OK);
+    }
+
+    public List<ComplaintTypeV1> getComplaintTypesById(List<Integer> complaintTypeIds) {
+        return complaintTypeV1Repository.findAllById(complaintTypeIds);
+    }
+
+    public ComplaintTypeV1 getComplaintType(Integer complaintTypeId) {
+        return complaintTypeV1Repository.findById(complaintTypeId).orElse(null);
+    }
+
+    public List<ComplaintTypeResponse> getComplaintTypesByHostelId(String hostelId) {
+        return complaintTypeV1Repository.getAllComplaintsType(hostelId);
     }
 }

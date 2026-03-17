@@ -9,9 +9,7 @@ import java.util.List;
 @Repository
 public interface ComplaintCommentsRepository extends JpaRepository<ComplaintComments, String> {
 
-
-    List<ComplaintComments> findByComplaint_ComplaintIdAndIsActiveTrue(Integer complaintId);
-
+    List<ComplaintComments> findByComplaint_ComplaintId(Integer complaintId);
 
 
 }

@@ -4,6 +4,8 @@ import io.jsonwebtoken.Claims;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.HashMap;
+
 @Configuration
 public class Authentication {
 
@@ -26,6 +28,24 @@ public class Authentication {
         if (authentication.isAuthenticated()) {
             return (Claims) authentication.getDetails();
         }
+
+        return null;
+    }
+
+    public String getSource() {
+        org.springframework.security.core.Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication.isAuthenticated()) {
+
+            Object details = authentication.getDetails();
+
+            if (details instanceof Claims claims) {
+                String source = claims.get("source", String.class);
+                return source;
+            }
+//            Claims claims = (Claims) authentication.getDetails();
+//            return claims.get("source", String.class);
+        }
+
 
         return null;
     }

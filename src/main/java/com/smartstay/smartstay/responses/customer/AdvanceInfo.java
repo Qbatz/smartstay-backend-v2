@@ -5,9 +5,11 @@ public record AdvanceInfo(
         String dueDate,
         Double dueAmount,
         Double advanceAmount,
+        Double bookingAmount,
         String paymentStatus,
         Double maintenanceAmount,
         Double deductionsAmount,
-        Double paidAmount
+        Double paidAmount,
+        boolean canEditAdvance
 ) {
 }

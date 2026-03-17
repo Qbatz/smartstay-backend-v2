@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .container {
+            width: 100%;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f1a1a1;
+            padding-bottom: 10px;
+        }
+
+        .logo img {
+            height: 40px;
+        }
+
+        .company {
+            text-align: right;
+        }
+
+        .title {
+            text-align: center;
+            color: red;
+            font-size: 20px;
+            margin: 20px 0;
+        }
+
+        .flex {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .box {
+            width: 48%;
+        }
+
+        .label {
+            color: #777;
+            width: 120px;
+            display: inline-block;
+        }
+
+        .value {
+            font-weight: bold;
+        }
+
+        .section-title {
+            color: red;
+            margin: 20px 0 10px;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #f9f9f9;
+        }
+
+        .summary {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .paid {
+            color: green;
+            font-weight: bold;
+        }
+
+        .due {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="company">
+            <div><strong>Happy Living</strong></div>
+            <div>Jalahalli, Bangalore</div>
+            <div>Karnataka - 560057</div>
+        </div>
+    </div>
+
+    <div class="title">
+        <span th="${invoice.configurations.invoiceType}"></span>
+    </div>
+
+    <!-- BILL DETAILS -->
+    <div class="flex">
+        <div class="box">
+            <p><strong>Bill to:</strong></p>
+            <p><span th:text="${invoice.invoiceNumber}"></span></p>
+            <p><span th:text="7022736579"></span></p>
+            <p><span th:text="B1"></span></p>
+        </div>
+
+        <div class="box">
+            <p><span class="label">Invoice :</span> <span class="value" th:text="ABCD1234"></span></p>
+            <p><span class="label">Invoice Date :</span> <span th:text="${invoice.customerInfo.joiningDate}"></span></p>
+            <p><span class="label">Due Date :</span> <span th:text="20/09/2025"></span></p>
+            <p><span class="label">Joining Date :</span> <span th:text="01/02/2025"></span></p>
+            <p><span class="label">Rental Period :</span> <span th:text="B2"></span></p>
+        </div>
+    </div>
+
+    <!-- PAYMENT SUMMARY -->
+    <div class="section-title">Payment Summary</div>
+
+    <table>
+        <thead>
+        <tr>
+            <th>INV NO</th>
+            <th>DESCRIPTION</th>
+            <th style="text-align:right">AMOUNT / INR</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td th:text="ABCD1234"></td>
+            <td>Rent</td>
+            <td style="text-align:right">₹ <span th:text="ABCD1234"></span></td>
+        </tr>
+        <tr>
+            <td colspan="2"><strong>Total</strong></td>
+            <td style="text-align:right"><strong>₹ <span th:text="500"></span></strong></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- TOTALS -->
+    <div class="summary">
+        <div class="summary-row">
+            <span>Grand Total</span>
+            <span>₹ <span th:text="100"></span></span>
+        </div>
+        <div class="summary-row">
+            <span>Payment Made</span>
+            <span class="paid">₹ <span th:text="200"></span></span>
+        </div>
+        <div class="summary-row">
+            <span>Balance Due</span>
+            <span class="due">₹ <span th:text="300"></span></span>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

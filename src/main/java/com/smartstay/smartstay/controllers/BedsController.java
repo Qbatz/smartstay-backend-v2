@@ -2,6 +2,7 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
+import com.smartstay.smartstay.payloads.beds.EditBedRent;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.services.BedsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -41,12 +42,20 @@ public class BedsController {
         return bedsService.updateBedById(bedId, updateBed);
     }
 
+    @PutMapping("/rent/{bedId}")
+    public ResponseEntity<?> updateRentAmount(@PathVariable("bedId") Integer bedId,
+            @Valid @RequestBody EditBedRent bedRent) {
+        return bedsService.updateRentAmount(bedId, bedRent);
+    }
+
     @DeleteMapping("/{bedId}")
     public ResponseEntity<?> deleteBedById(@PathVariable("bedId") int bedId) {
         return bedsService.deleteBedById(bedId);
     }
+
     @GetMapping("/initialize/{hostelId}")
-    public ResponseEntity<?> initializeBooking(@PathVariable("hostelId") String hostelId, @RequestParam("joiningDate") String joiningDate) {
+    public ResponseEntity<?> initializeBooking(@PathVariable("hostelId") String hostelId,
+            @RequestParam("joiningDate") String joiningDate) {
         return bedsService.initializeBooking(hostelId, joiningDate);
     }
 

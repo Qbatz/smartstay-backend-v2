@@ -16,6 +16,7 @@ public class Customers {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String customerId;
+    private String xuid;
     private String firstName;
     private String lastName;
     private String mobile;
@@ -31,13 +32,18 @@ public class Customers {
     private String customerBedStatus;
     private Date joiningDate;
     private Date expJoiningDate;
+    private Date dateOfBirth;
+    //from custmoer status enum
     private String currentStatus;
+    private String gender;
     private String kycStatus;
     private String createdBy;
     private String hostelId;
     private Date createdAt;
     private Date lastUpdatedAt;
     private String updatedBy;
+    private String mobSerialNo;
+
 
     @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)
     private Advance advance;

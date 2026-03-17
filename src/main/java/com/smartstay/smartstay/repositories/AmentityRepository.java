@@ -37,4 +37,12 @@ public interface AmentityRepository extends JpaRepository<AmenitiesV1, String> {
             """, nativeQuery = true)
     AmenityInfoProjection findAmenityInfoByHostelIdByAmenityId(@Param("hostelId") String hostelId, @Param("parentId") String parentId, @Param("amenityId") String amenityId);
 
+    List<AmenitiesV1> findByHostelIdAndAmenityIdInAndIsDeletedFalse(String hostelId, List<String> amenityIds);
+
+    @Query("""
+            SELECT amenity FROM AmenitiesV1 amenity WHERE LOWER(amenity.amenityName)= LOWER(:amenityName) AND 
+            amenity.hostelId=:hostelId AND amenity.amenityId <> :amenityId
+            """)
+    List<AmenitiesV1> findByAmenityNameAndHostelId(String hostelId, String amenityId, String amenityName);
+
 }

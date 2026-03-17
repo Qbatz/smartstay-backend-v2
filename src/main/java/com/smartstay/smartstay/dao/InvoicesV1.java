@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.dao;
 
+import com.smartstay.smartstay.handlers.StringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -7,8 +8,6 @@ import java.util.Date;
 import java.util.List;
 
 @Data
-@Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -37,7 +36,10 @@ public class InvoicesV1 {
     //Mode will be manual and automatic
     String invoiceMode;
     boolean isCancelled;
+    @Convert(converter = StringListConverter.class)
+    @Column(columnDefinition = "TEXT")
     List<String> cancelledInvoices;
+    String invoiceUrl;
     String createdBy;
     String updatedBy;
     Date invoiceGeneratedDate;

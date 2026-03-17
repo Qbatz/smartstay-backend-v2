@@ -52,4 +52,6 @@ public interface AssetsRepository extends JpaRepository<AssetsV1, Long> {
            "WHERE a.isDeleted = false AND a.isActive = true " +
            "AND a.assetId = :assetId ORDER BY a.createdAt DESC")
     AssetAssignmentResponse findAssetAssignmentDetailsById(@Param("assetId") Integer assetId);
+
+    List<AssetsV1> findByHostelId(String hostelId);
 }

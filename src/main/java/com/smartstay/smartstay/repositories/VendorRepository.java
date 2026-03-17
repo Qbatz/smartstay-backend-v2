@@ -38,6 +38,9 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "WHERE v.vendorId = :vendorId")
     VendorResponse getVendor(@Param("vendorId") int vendorId);
 
+        @Query("SELECT COUNT(v) FROM VendorV1 v WHERE v.hostelId = :hostelId")
+        int countByHostelId(@Param("hostelId") String hostelId);
+
 
 
 }
