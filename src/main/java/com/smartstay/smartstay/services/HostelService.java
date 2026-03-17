@@ -603,6 +603,10 @@ public class HostelService {
                 }
             }
 
+            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                updateEbConfigForJoiningBased(hostel);
+            }
+
             com.smartstay.smartstay.responses.hostelConfig.BillingRules rules = new com.smartstay.smartstay.responses.hostelConfig.BillingRules(
                     billingRules.getBillingStartDate(),
                     billingRules.getBillDueDays(),
@@ -618,6 +622,10 @@ public class HostelService {
         else {
             return new ResponseEntity<>(Utils.BILLING_RULE_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private void updateEbConfigForJoiningBased(HostelV1 hostelV1) {
+        ElectricityConfig ebConfig = hostelV1.getElectricityConfig();
     }
 
     public ResponseEntity<?> updateBillingRules(String hostelId, BillRules billRules) {
