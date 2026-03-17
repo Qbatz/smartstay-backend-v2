@@ -31,6 +31,7 @@ import com.smartstay.smartstay.responses.bookings.InitializeCheckout;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -193,7 +194,7 @@ public class BookingsService {
         return 0;
     }
 
-    public List<BookingsV1> findTopCheckins(String hostelId, org.springframework.data.domain.Pageable pageable) {
+    public List<BookingsV1> findTopCheckins(String hostelId, Pageable pageable) {
         return bookingsRepository.findTopCheckins(hostelId, pageable);
     }
 
