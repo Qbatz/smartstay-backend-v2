@@ -449,6 +449,7 @@ public class UsersService {
 
         String mobileStatus = "";
         String emailStatus = "";
+        boolean isNameModified = false;
 
         if (updateProfile.emailId() != null && !updateProfile.emailId().isBlank()) {
            int userCount = userRepository.getUsersCountByEmail(authentication.getName(), updateProfile.emailId());
@@ -471,6 +472,28 @@ public class UsersService {
         }
 
         Users usersForUpdate = new ProfileUplodWrapper(user).apply(updateProfile);
+
+        if (updateProfile.firstName() != null && !updateProfile.firstName().equalsIgnoreCase("")) {
+            isNameModified = true;
+        }
+
+        if (updateProfile.lastName() != null && !updateProfile.lastName().equalsIgnoreCase("")) {
+            isNameModified = true;
+        } else {
+            if (usersForUpdate.getLastName() != null) {
+                isNameModified = true;
+            }
+        }
+
+        if (isNameModified) {
+            String name = NameUtils.getFullName(usersForUpdate.getFirstName(), usersForUpdate.getLastName());
+            List<String> hostelIdsThatAdminHasAccess = userHostelService.findByUserId(usersForUpdate.getUserId())
+                    .stream()
+                    .map(UserHostel::getHostelId)
+                    .toList();
+
+            bankingService.updateCashAccountNames(hostelIdsThatAdminHasAccess, usersForUpdate.getUserId(), name);
+        }
 
         userRepository.save(usersForUpdate);
         userActivitiesService.addLogBasedOnProfile(ActivitySource.PROFILE.name(), ActivitySourceType.UPDATE.name(),
