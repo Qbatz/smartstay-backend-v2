@@ -1071,7 +1071,7 @@ public class UsersService {
         return generateToken(usersConfig);
     }
 
-    public ResponseEntity<?> generateToken(UsersConfig usersConfig) {
+    public ResponseEntity<?>generateToken(UsersConfig usersConfig) {
         Users users = usersConfig.getUser();
         UserDetails userDetails = myUserDetailService.loadUserByUsername(users.getUserId());
 
@@ -1090,7 +1090,7 @@ public class UsersService {
         claims.put("source", "android");
 
         Long validity = System.currentTimeMillis() + (1000L * 60 * 60 * 24 * 15);
-        loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.MOBILE.name(), "Android");
+        loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.MOBILE.name(), "android");
         String token = jwtService.generateMobileToken(authentication.getName(), claims, validity);
         com.smartstay.smartstay.responses.user.VerifyPin vPin = new com.smartstay.smartstay.responses.user.VerifyPin(
                 validity, token);
