@@ -198,7 +198,11 @@ public class BankingService {
                 .map(TransactionDto::bankId)
                 .distinct()
                 .toList();
-        List<BankingV1> bankingList = bankingV1Repository.findByBankIdIn(bankId);
+        List<BankingV1> bankingListWithTranactions = bankingV1Repository.findByBankIdIn(bankId);
+        List<BankingV1> bankingWithoutTransactions = bankingV1Repository.findByBankIdNotInAndIsDeletedFalse(bankId, hostelId);
+        List<BankingV1> bankingList = bankingListWithTranactions;
+        bankingList.addAll(bankingWithoutTransactions);
+
         if (transactions != null && transactions.isEmpty()) {
             bankingList = bankingV1Repository.findByHostelIdAndIsDeletedFalse(hostelId);
         }

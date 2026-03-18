@@ -5,6 +5,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.RoomBedCount;
 import com.smartstay.smartstay.dto.dashboard.BedsStatus;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.repositories.BedChangeRequestRepository;
 import com.smartstay.smartstay.responses.dashboard.*;
 import com.smartstay.smartstay.util.Utils;
@@ -529,6 +530,10 @@ public class DashboardService {
             
             String joiningDate = b.getJoiningDate() != null ? sdf.format(b.getJoiningDate()) : null;
             String status = b.getCurrentStatus() != null ? Utils.capitalize(b.getCurrentStatus()) : null;
+
+            if (b.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
+                joiningDate = sdf.format(b.getExpectedJoiningDate());
+            }
 
             return new RecentCheckin(tenantId,initials,customerName, profilePic, roomName, sharingType, bedName, joiningDate, status);
         }).collect(Collectors.toList());

@@ -95,7 +95,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     List<TransactionV1> sumPaidAmountByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds);
 
     @Query(value = """
-            SELECT * FROM smart_stay.transactionv1 where hostel_id=:hostelId and bank_id=:bankId and type ='REFUND' and created_by=:createdBy and paid_amount=:paidAmount;
+            SELECT * FROM transactionv1 where hostel_id=:hostelId and bank_id=:bankId and type ='REFUND' and created_by=:createdBy and paid_amount=:paidAmount;
             """, nativeQuery = true)
     List<TransactionV1> mapTransactionV1WithBankTransactions(@Param("hostelId") String hostelId, @Param("bankId") String bankId, @Param("type") String type, @Param("createdBy") String createdBy, @Param("paidAmount") String paidAmount);
 }
