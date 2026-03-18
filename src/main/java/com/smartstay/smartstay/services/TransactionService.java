@@ -342,6 +342,8 @@ public class TransactionService {
 
             bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId());
 
+            usersService.addUserLog(hostelId, trnsV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.CREATE, user);
+
             return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
         }
 
@@ -769,6 +771,7 @@ public class TransactionService {
         bankTransactionService.refundInvoice(invoicesV1, refundInvoice, invoiceId, transactionV11.getTransactionId());
         creditDebitNoteService.refunInvoice(invoiceId, invoicesV1, refundInvoice);
 
+        usersService.addUserLog(hostelId, transactionV11.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.UPDATE, users);
 
         return new ResponseEntity<>(Utils.REFUND_PROCESSED_SUCCESSFULLY, HttpStatus.OK);
     }
@@ -864,6 +867,7 @@ public class TransactionService {
         }
 
         transactionRespository.delete(transactionV1);
+        usersService.addUserLogWithType(hostelId, transactionV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.DELETE, users, transactionV1.getInvoiceId());
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
@@ -1160,6 +1164,7 @@ public class TransactionService {
         }
         transactionV1.setReceiptUrl(url);
         transactionRespository.save(transactionV1);
+        usersService.addUserLog(hostelId, transactionId, ActivitySource.TRANSACTIONS, ActivitySourceType.DOWNLOAD, users);
         return new ResponseEntity<>(url, HttpStatus.OK);
     }
 
@@ -1238,6 +1243,7 @@ public class TransactionService {
             }
         }
 
+        usersService.addUserLog(hostelId, transactionId, ActivitySource.TRANSACTIONS, ActivitySourceType.WHATSAPP, users);
         return new ResponseEntity<>(receiptUrl, HttpStatus.OK);
     }
 

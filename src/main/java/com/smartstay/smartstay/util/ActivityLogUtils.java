@@ -121,7 +121,24 @@ public class ActivityLogUtils {
         if (activitySource.equalsIgnoreCase(ActivitySource.ROOMS.name())) {
             return getRoomsOperation(operationType);
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.SUBSCRIPTION.name())) {
+            return getSubscriptionOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.TEMPLATES.name())) {
+            return getTemplateOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.TRANSACTIONS.name())) {
+            return getTransactionOperations(operationType, null);
+        }
 
+        return null;
+    }
+
+
+    public static String getActivityDescriptionWithType(String activitySource, String operationType, String type) {
+        if (activitySource.equalsIgnoreCase(ActivitySource.TEMPLATES.name())) {
+            return getTemplateOperationsWithType(operationType, type);
+        }
         return null;
     }
 
@@ -377,6 +394,47 @@ public class ActivityLogUtils {
         }
         if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
             return "Deleted a room";
+        }
+        return null;
+    }
+
+    private static String getSubscriptionOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Subscription is extended";
+        }
+        return null;
+    }
+
+    private static String getTemplateOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Hostel template has been updated";
+        }
+        return null;
+    }
+
+
+    private static String getTemplateOperationsWithType(String operationName, String type) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return type + " has been removed";
+        }
+        return null;
+    }
+
+    private static String getTransactionOperations(String operationName, String type) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Received payment for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.REFUND.name())) {
+            return "Refunded payment for";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Deleted receipt for invoice" + type;
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DOWNLOAD.name())) {
+            return "Downloaded receipt pdf";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.WHATSAPP.name())) {
+            return "Share receipts through whatsapp";
         }
         return null;
     }

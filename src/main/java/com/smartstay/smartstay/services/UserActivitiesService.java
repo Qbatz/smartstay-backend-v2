@@ -86,6 +86,28 @@ public class UserActivitiesService {
 
     }
 
+    public void addLoginLogWithType(String hostelId, String date, String source, String operation, String sourceId, Users users, String type) {
+        Date loggedAt = new Date();
+        if (date != null && !date.trim().equalsIgnoreCase("")) {
+            loggedAt = Utils.stringToDate(date.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+
+        UserActivities userActivities = new UserActivities();
+        userActivities.setDescription(ActivityLogUtils.getActivityDescriptionWithType(source, operation, type));
+        userActivities.setUserId(users.getUserId());
+        userActivities.setLoggedAt(loggedAt);
+        userActivities.setCreatedAt(new Date());
+        userActivities.setParentId(users.getParentId());
+        userActivities.setSource(source);
+        userActivities.setSourceId(sourceId);
+        userActivities.setActivityType(operation);
+        userActivities.setHostelId(hostelId);
+        userActivities.setPlatform(authentication.getSource());
+
+        userActivitiesRepositories.save(userActivities);
+
+    }
+
     public void addLoginLog(String hostelId, String date, String source, String operation, String sourceId, Users users, List<String> customerIds) {
         Date loggedAt = new Date();
         if (date != null && !date.trim().equalsIgnoreCase("")) {

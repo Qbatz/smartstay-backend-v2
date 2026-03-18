@@ -125,4 +125,9 @@ public class CustomersController {
     public ResponseEntity<?> deleteCustomers(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
         return customersService.deleteCustomer(hostelId, customerId);
     }
+
+    @PutMapping("/additional-contacts/{hostelId}/{customerId}")
+    public ResponseEntity<?> addAdditionalContacts(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @Valid @RequestBody CustomerAdditionalContacts additionalContacts) {
+        return customersService.addAdditionalContacts(hostelId, customerId, additionalContacts);
+    }
  }

@@ -4,6 +4,8 @@ import com.smartstay.smartstay.Wrappers.plans.PlanListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.PlanType;
 import com.smartstay.smartstay.repositories.SubscriptionRepository;
 import com.smartstay.smartstay.responses.plans.PlansList;
@@ -187,7 +189,7 @@ public class SubscriptionService {
             }
         }
 
-        subscriptionRepository.save(newSubscription);
+        Subscription sub = subscriptionRepository.save(newSubscription);
 
         if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) <= 0) {
             HostelPlan hostelPlan = hostelV1.getHostelPlan();
@@ -206,6 +208,8 @@ public class SubscriptionService {
 
             hostelService.updateHostel(hostelV1);
         }
+
+        usersService.addUserLog(hostelId,String.valueOf(sub.getSubscriptionId()), ActivitySource.SUBSCRIPTION, ActivitySourceType.CREATE, users);
 
         return new ResponseEntity<>(HttpStatus.OK);
 
