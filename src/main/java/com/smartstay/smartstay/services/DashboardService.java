@@ -59,6 +59,8 @@ public class DashboardService {
     private AmenityRequestService amenityRequestService;
     @Autowired
     private BedChangeRequestRepository bedChangeRequestRepository;
+    @Autowired
+    private ComplaintTypeService complaintTypeService;
 
     private static final List<String> DASHBOARD_FILTERS = Arrays.asList("Today", "This Week", "This Month",
             "Last Month", "Last 3 Months");
@@ -160,6 +162,7 @@ public class DashboardService {
                 buildRecentCheckins(hostelId),
                 buildOverdueInvoices(hostelId),
                 buildRecentActivities(hostelId),
+                buildTenantComplaintList(hostelId),
                 DASHBOARD_FILTERS);
 
         return new ResponseEntity<>(dashboardNew, HttpStatus.OK);
@@ -528,7 +531,7 @@ public class DashboardService {
             String bedName = bed != null ? bed.getBedName() : null;
             if (bedName != null) bedName = Utils.capitalize(bedName);
             
-            String joiningDate = b.getJoiningDate() != null ? sdf.format(b.getJoiningDate()) : null;
+            String joiningDate = b.getExpectedJoiningDate() != null ? sdf.format(b.getExpectedJoiningDate()) : null;
             String status = b.getCurrentStatus() != null ? Utils.capitalize(b.getCurrentStatus()) : null;
 
             if (b.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
@@ -691,5 +694,35 @@ public class DashboardService {
                 break;
         }
         return new DashboardDateRange(startDate, endDate);
+    }
+
+    private List<TenantComplaint> buildTenantComplaintList(String hostelId) {
+        List<ComplaintsV1> complaints = complaintsService.findTopComplaints(hostelId, PageRequest.of(0, 5));
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+
+        return complaints.stream().map(c -> {
+            Customers cus = customersService.getCustomerInformation(c.getCustomerId());
+            Rooms rm = (c.getRoomId() != null && c.getRoomId() > 0) ? roomsService.findRoomByRoomId(c.getRoomId()) : null;
+            ComplaintTypeV1 ct = (c.getComplaintTypeId() != null) ? complaintTypeService.getComplaintType(c.getComplaintTypeId()) : null;
+
+            String fullName = cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown";
+            String initials = cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null;
+            String profilePic = cus != null ? cus.getProfilePic() : null;
+            String roomName = (rm != null) ? rm.getRoomName() : null;
+            String complaintTypeName = (ct != null) ? ct.getComplaintTypeName() : null;
+            String formattedDate = (c.getCreatedAt() != null) ? sdf.format(c.getCreatedAt()) : null;
+
+            return new TenantComplaint(
+                    c.getCustomerId(),
+                    complaintTypeName,
+                    roomName,
+                    c.getDescription(),
+                    fullName,
+                    initials,
+                    profilePic,
+                    formattedDate,
+                    complaintTypeName
+            );
+        }).collect(Collectors.toList());
     }
 }
