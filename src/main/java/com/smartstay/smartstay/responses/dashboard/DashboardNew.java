@@ -17,5 +17,6 @@ public record DashboardNew(RoomsAndBedInfo roomsBeds,
                 List<RecentCheckin> checkins,
                 List<OverdueInvoice> overdueInvoices,
                 List<DashboardRequest> dashboardRequests,
+                List<TenantComplaint> tenantcomplaint,
                 List<String> filters) {
 }
