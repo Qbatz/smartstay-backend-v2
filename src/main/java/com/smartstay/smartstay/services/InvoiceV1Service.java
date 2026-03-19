@@ -1680,16 +1680,26 @@ public class InvoiceV1Service {
             } else {
 
                 double rentAmount = rentHistoryService.findRent(customerId, invoicesV1.getInvoiceStartDate());
-                long noOfDaysInTheMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
-
-                double rentPerDay = rentAmount / noOfDaysInTheMonth;
-
-                long noDaysStayingBasedOnNewJoiningDate = Utils.findNumberOfDays(newJoiningDate, invoicesV1.getInvoiceEndDate());
-                if (noDaysStayingBasedOnNewJoiningDate < 0) {
-                    noDaysStayingBasedOnNewJoiningDate = -1 * noDaysStayingBasedOnNewJoiningDate;
+                double newRent = 0.0;
+                if (billingDates.hasGracePeriod()) {
+                    Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
+                    if (Utils.compareWithTwoDates(newJoiningDate, gracePeriodEndingDate) <= 0) {
+                        newRent = rentAmount;
+                    }
                 }
 
-                double newRent = Math.round(noDaysStayingBasedOnNewJoiningDate * rentPerDay);
+                if (newRent == 0.0) {
+                    long noOfDaysInTheMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+
+                    double rentPerDay = rentAmount / noOfDaysInTheMonth;
+
+                    long noDaysStayingBasedOnNewJoiningDate = Utils.findNumberOfDays(newJoiningDate, invoicesV1.getInvoiceEndDate());
+                    if (noDaysStayingBasedOnNewJoiningDate < 0) {
+                        noDaysStayingBasedOnNewJoiningDate = -1 * noDaysStayingBasedOnNewJoiningDate;
+                    }
+
+                    newRent = Math.round(noDaysStayingBasedOnNewJoiningDate * rentPerDay);
+                }
                 Date dueDate = Utils.addDaysToDate(newJoiningDate, billingDates.dueDays());
 
                 Double totalAmount = invoicesV1.getTotalAmount();
@@ -1707,8 +1717,9 @@ public class InvoiceV1Service {
 
                 invoicesV1Repository.save(invoicesV1);
 
+                double finalNewRent = newRent;
                 List<InvoiceItems> invoiceItems = invoicesV1.getInvoiceItems().stream().filter(i -> i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())).map(i -> {
-                    i.setAmount(newRent);
+                    i.setAmount(finalNewRent);
                     return i;
                 }).toList();
                 if (!invoiceItems.isEmpty()) {
@@ -1764,11 +1775,21 @@ public class InvoiceV1Service {
     }
 
     private void createNewInvoiceAfterForCurrentBillingCycle(Customers customer, Date joinigDate, String hostelId, Double rent, BillingDates billingDates) {
-        long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
-        long finNoOfDysGoingToStay = Utils.findNumberOfDays(joinigDate, billingDates.currentBillEndDate());
-        double rentPerDay = rent / findNoOfDaysInCurrentMonth;
+        double totalRentForCurrentMonth = 0.0;
+        if (billingDates.hasGracePeriod()) {
+            Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
+            if (Utils.compareWithTwoDates(joinigDate, gracePeriodEndingDate) <= 0) {
+                totalRentForCurrentMonth = rent;
+            }
+        }
 
-        double totalRentForCurrentMonth = Math.round(rentPerDay * finNoOfDysGoingToStay);
+        if (totalRentForCurrentMonth == 0.0) {
+            long findNoOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+            long finNoOfDysGoingToStay = Utils.findNumberOfDays(joinigDate, billingDates.currentBillEndDate());
+            double rentPerDay = rent / findNoOfDaysInCurrentMonth;
+
+            totalRentForCurrentMonth = Math.round(rentPerDay * finNoOfDysGoingToStay);
+        }
 
         InvoicesV1 invoicesV1 = new InvoicesV1();
         invoicesV1.setBasePrice(totalRentForCurrentMonth);
@@ -1852,11 +1873,21 @@ public class InvoiceV1Service {
             return false;
         }
 
-        long findNoOfDaysInJoiningMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
-        double rentPerDay = newRentalAmount / findNoOfDaysInJoiningMonth;
-        long findNoOfDaysStayedInTheMonth = Utils.findNumberOfDays(joiningDate, billingDates.currentBillEndDate());
+        double totalRentForCurrentMonth = 0.0;
+        if (billingDates.hasGracePeriod()) {
+            Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
+            if (Utils.compareWithTwoDates(joiningDate, gracePeriodEndingDate) <= 0) {
+                totalRentForCurrentMonth = newRentalAmount;
+            }
+        }
 
-        double totalRentForCurrentMonth = Math.round(findNoOfDaysStayedInTheMonth * rentPerDay);
+        if (totalRentForCurrentMonth == 0.0) {
+            long findNoOfDaysInJoiningMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+            double rentPerDay = newRentalAmount / findNoOfDaysInJoiningMonth;
+            long findNoOfDaysStayedInTheMonth = Utils.findNumberOfDays(joiningDate, billingDates.currentBillEndDate());
+
+            totalRentForCurrentMonth = Math.round(findNoOfDaysStayedInTheMonth * rentPerDay);
+        }
 
         InvoicesV1 invoicesV1 = invoicesV1Repository.findLatestRentInvoiceByCustomerId(customers.getCustomerId());
         if (invoicesV1 != null) {
@@ -1885,8 +1916,9 @@ public class InvoiceV1Service {
             invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
             invoicesV1.setHostelId(customers.getHostelId());
 
+            double finalTotalRentForCurrentMonth = totalRentForCurrentMonth;
             invoicesV1.getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem())).findFirst().map(item -> {
-                item.setAmount(totalRentForCurrentMonth);
+                item.setAmount(finalTotalRentForCurrentMonth);
                 return item;
             }).ifPresent(modifiedRentItems -> invoiceItemService.updateInvoiceItems(modifiedRentItems));
 
