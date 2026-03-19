@@ -24,10 +24,7 @@ import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
-import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
-import com.smartstay.smartstay.payloads.invoice.ItemResponse;
-import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
-import com.smartstay.smartstay.payloads.invoice.UpdateRecurringInvoice;
+import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.*;
@@ -752,7 +749,12 @@ public class InvoiceV1Service {
                 invoiceItem.setOtherItem(item.invoiceItem());
             }
             if (item.amount() != null) {
-                totalAmount = totalAmount + item.amount();
+                if (itemName.equalsIgnoreCase("RENT") || itemName.equalsIgnoreCase("ROOM RENT")) {
+                    totalAmount = totalAmount + invoiceAmount;
+                }
+                else {
+                    totalAmount = totalAmount + item.amount();
+                }
             }
             invoiceItem.setInvoice(invoicesV1);
             listInvoicesItems.add(invoiceItem);
@@ -1051,7 +1053,7 @@ public class InvoiceV1Service {
                 case "OTHERS" -> description = item.getOtherItem() != null ? item.getOtherItem() : "Others";
                 default -> description = Utils.capitalize(item.getInvoiceItem());
             }
-            com.smartstay.smartstay.responses.invoices.InvoiceItems responseItem = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), description, item.getAmount());
+            com.smartstay.smartstay.responses.invoices.InvoiceItems responseItem = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), description, Utils.roundOffWithTwoDigit(item.getAmount()));
 
             listInvoiceItems.add(responseItem);
         }
@@ -2451,5 +2453,9 @@ public class InvoiceV1Service {
        usersService.addUserLog(hostelId, invoicesV1.getInvoiceId(), ActivitySource.INVOICE, ActivitySourceType.MARK_UNPAID, users);
 
        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> applyinvoiceDiscount(String hostelId, String invoiceId, ApplyDiscount discount) {
+        return null;
     }
 }

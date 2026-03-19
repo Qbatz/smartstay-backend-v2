@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.invoice.ApplyDiscount;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.payloads.invoice.UpdateRecurringInvoice;
 import com.smartstay.smartstay.services.InvoiceV1Service;
@@ -76,5 +77,10 @@ public class InvoiceController {
     @PutMapping("/unpaid/{hostelId}/{invoiceId}")
     public ResponseEntity<?> markInvoiceUnpaid(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return invoiceV1Service.markInvoiceUnpaid(hostelId, invoiceId);
+    }
+
+    @PostMapping("/discount/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> applyDiscountForInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody @Valid ApplyDiscount discount) {
+        return invoiceV1Service.applyinvoiceDiscount(hostelId, invoiceId, discount);
     }
 }
