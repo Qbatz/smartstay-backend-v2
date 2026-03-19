@@ -1266,6 +1266,7 @@ public class CustomersService {
 
         WalletInfo walletInfo = new WalletInfo(walletAmount, walletTransactions);
         CustomerFiles customerFiles = customerDocumentsService.getCustomerFiles(customerId);
+        AdditionalContacts additionalContacts = additionalContactService.getAdditionalContact(customers.getHostelId(), customerId);
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getHostelId(),
@@ -1291,7 +1292,8 @@ public class CustomersService {
                 amenities,
                 listRequestedAmenities,
                 walletInfo,
-                customerFiles);
+                customerFiles,
+                additionalContacts);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }

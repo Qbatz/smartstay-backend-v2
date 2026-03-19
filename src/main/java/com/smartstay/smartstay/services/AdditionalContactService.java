@@ -4,6 +4,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.payloads.customer.CustomerAdditionalContacts;
 import com.smartstay.smartstay.repositories.CustomerAdditionalContactsRepositories;
+import com.smartstay.smartstay.responses.customer.AdditionalContacts;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +23,7 @@ public class AdditionalContactService {
         ac.setName(additionalContacts.fullName());
         ac.setRelationship(additionalContacts.relationship());
         ac.setOccupation(additionalContacts.occupation());
-        ac.setMobileNo(additionalContacts.mobile());
+        ac.setMobile(additionalContacts.mobile());
         ac.setCustomerId(customerId);
         ac.setHostelId(hostelId);
         ac.setCountryCode("91");
@@ -34,5 +35,18 @@ public class AdditionalContactService {
         customerAdditionalContactsRepositories.save(ac);
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public AdditionalContacts getAdditionalContact(String hostelId, String customerId) {
+        com.smartstay.smartstay.dao.CustomerAdditionalContacts cac = customerAdditionalContactsRepositories.findByCustomerIdAndHostelId(hostelId, customerId);
+        if (cac == null) {
+            return null;
+        }
+        return new AdditionalContacts(cac.getName(),
+                cac.getMobile(),
+                cac.getCountryCode(),
+                cac.getRelationship(),
+                cac.getOccupation(),
+                cac.getContactId());
     }
 }

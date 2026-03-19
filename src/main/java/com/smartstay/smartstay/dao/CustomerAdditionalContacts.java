@@ -21,7 +21,7 @@ public class CustomerAdditionalContacts {
     private String name;
     private String relationship;
     private String occupation;
-    private String mobileNo;
+    private String mobile;
     private String fullAddress;
     private String customerId;
     private String hostelId;

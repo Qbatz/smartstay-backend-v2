@@ -178,7 +178,7 @@ public interface ComplaintRepository
             @Param("parentId") String parentId
     );
 
-    List<ComplaintsV1> findByHostelIdOrderByComplaintDateDesc(String hostelId);
+    List<ComplaintsV1> findByHostelIdAndIsDeletedFalseOrderByComplaintDateDesc(String hostelId);
     @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false AND DATE(c.complaintDate) >= DATE(:startDate) AND DATE(c.complaintDate) <= DATE(:endDate)")
     int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
                                     @Param("endDate") Date endDate);
