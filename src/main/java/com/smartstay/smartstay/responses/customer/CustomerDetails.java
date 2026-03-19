@@ -34,5 +34,5 @@ public record CustomerDetails(String customerId,
                               List<AmenityRequestDTO> requestedAmenities,
                               WalletInfo walletInfo,
                               CustomerFiles files,
-                              AdditionalContacts additionalContacts) {
+                              List<AdditionalContacts> additionalContacts) {
 }

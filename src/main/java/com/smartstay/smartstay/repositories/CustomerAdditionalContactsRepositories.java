@@ -12,7 +12,7 @@ import java.util.List;
 public interface CustomerAdditionalContactsRepositories extends JpaRepository<CustomerAdditionalContacts, Long> {
     @Query(value = """
             SELECT * FROM customer_additional_contacts cac WHERE cac.hostel_id=:hostelId AND cac.customer_id=:customerId 
-            AND cac.is_deleted=false limit 1
+            AND cac.is_deleted=false
             """, nativeQuery = true)
-    CustomerAdditionalContacts findByCustomerIdAndHostelId(@Param("hostelId") String hostelId, @Param("customerId") String customerId);
+    List<CustomerAdditionalContacts> findByCustomerIdAndHostelId(@Param("hostelId") String hostelId, @Param("customerId") String customerId);
 }

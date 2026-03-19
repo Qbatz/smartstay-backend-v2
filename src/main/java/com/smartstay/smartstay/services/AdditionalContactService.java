@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class AdditionalContactService {
@@ -37,16 +38,20 @@ public class AdditionalContactService {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    public AdditionalContacts getAdditionalContact(String hostelId, String customerId) {
-        com.smartstay.smartstay.dao.CustomerAdditionalContacts cac = customerAdditionalContactsRepositories.findByCustomerIdAndHostelId(hostelId, customerId);
+    public List<AdditionalContacts> getAdditionalContact(String hostelId, String customerId) {
+        List<com.smartstay.smartstay.dao.CustomerAdditionalContacts> cac = customerAdditionalContactsRepositories.findByCustomerIdAndHostelId(hostelId, customerId);
         if (cac == null) {
             return null;
         }
-        return new AdditionalContacts(cac.getName(),
-                cac.getMobile(),
-                cac.getCountryCode(),
-                cac.getRelationship(),
-                cac.getOccupation(),
-                cac.getContactId());
+
+        return cac
+                .stream()
+                .map(i -> new AdditionalContacts(i.getName(),
+                        i.getMobile(),
+                        i.getCountryCode(),
+                        i.getRelationship(),
+                        i.getOccupation(),
+                        i.getContactId()))
+                .toList();
     }
 }
