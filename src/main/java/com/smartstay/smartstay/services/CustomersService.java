@@ -28,6 +28,7 @@ import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.CancelCheckout;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.customer.*;
+import com.smartstay.smartstay.payloads.customer.CustomerAdditionalContacts;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.CustomersRepository;
@@ -96,7 +97,8 @@ public class CustomersService {
     private ApplicationEventPublisher eventPublisher;
     @Autowired
     private CustomerWalletHistoryService customerWalletHistoryService;
-
+    @Autowired
+    private AdditionalContactService additionalContactService;
     private ElectricityService electricityService;
 
     private AmenityRequestService amenityRequestService;
@@ -1268,6 +1270,7 @@ public class CustomersService {
 
         WalletInfo walletInfo = new WalletInfo(walletAmount, walletTransactions);
         CustomerFiles customerFiles = customerDocumentsService.getCustomerFiles(customerId);
+        List<AdditionalContacts> additionalContacts = additionalContactService.getAdditionalContact(customers.getHostelId(), customerId);
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getHostelId(),
@@ -1293,7 +1296,8 @@ public class CustomersService {
                 amenities,
                 listRequestedAmenities,
                 walletInfo,
-                customerFiles);
+                customerFiles,
+                additionalContacts);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -3075,5 +3079,41 @@ public class CustomersService {
     public List<String> findCustomerIdsByName(String hostelId, String name) {
         List<Customers> customers = customersRepository.findByHostelIdAndFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(hostelId, name, name);
         return customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+    }
+
+    public ResponseEntity<?> addAdditionalContacts(String hostelId, String customerId, CustomerAdditionalContacts additionalContacts) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!customers.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (additionalContacts == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (additionalContacts.fullName() == null || additionalContacts.fullName().equalsIgnoreCase("")) {
+            return new ResponseEntity<>(Utils.FULL_NAME_REQUIRES, HttpStatus.BAD_REQUEST);
+        }
+        if (additionalContacts.mobile() == null || additionalContacts.mobile().equalsIgnoreCase("")) {
+            return new ResponseEntity<>(Utils.MOBILE_NO_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        return additionalContactService.addAdditionalContacts(hostelId, customerId, additionalContacts);
+
     }
 }

@@ -27,6 +27,8 @@ public class Utils {
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
     public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
     public static final String OUTPUT_MONTH_FORMAT = "MMM YYYY";
+    public static final String OUTPUT_MONTH_ALONE_FORMAT = "MM";
+    public static final String OUTPUT_YEAR_FORMAT = "YYYY";
     public static final String OUTPUT_DATE_MONTH_FORMAT = "dd MMM";
     public static final String OUTPUT_DATE_TIME_FORMAT = "dd/MM/yyyy hh:mm:ss a";
 
@@ -166,6 +168,8 @@ public class Utils {
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String INVALID_DUE_DYS = "Invalid due days";
     public static final String INVALID_NOTICE_DAYS = "Invalid notice days";
+    public static final String FULL_NAME_REQUIRES = "Full name is required";
+
     public static final String INVALID_GRACE_PERIOD = "Invalid grace period.";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
@@ -359,6 +363,21 @@ public class Utils {
             return "";
         }
         return new SimpleDateFormat(OUTPUT_MONTH_FORMAT).format(date);
+    }
+
+    public static Integer dateToMonthAlone(Date date) {
+        if (date == null) {
+            return null;
+        }
+        String month = new SimpleDateFormat(OUTPUT_MONTH_ALONE_FORMAT).format(date);
+        return Integer.parseInt(month);
+    }
+    public static Integer dateToYear(Date date) {
+        if (date == null) {
+            return null;
+        }
+        String year = new SimpleDateFormat(OUTPUT_YEAR_FORMAT).format(date);
+        return Integer.parseInt(year);
     }
 
     public static String dateToTime(Date date) {

@@ -346,7 +346,7 @@ public class ComplaintsService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
         }
 
-        List<ComplaintsV1> listComplaints = complaintRepository.findByHostelIdOrderByComplaintDateDesc(hostelId);
+        List<ComplaintsV1> listComplaints = complaintRepository.findByHostelIdAndIsDeletedFalseOrderByComplaintDateDesc(hostelId);
         List<String> customerIds = listComplaints.stream().map(ComplaintsV1::getCustomerId).toList();
         List<String> assignes = listComplaints.stream().map(ComplaintsV1::getAssigneeId).toList();
         List<Integer> roomIds = listComplaints.stream().filter(i -> i.getRoomId() != null).map(ComplaintsV1::getRoomId).toList();

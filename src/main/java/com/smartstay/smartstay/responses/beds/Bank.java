@@ -17,6 +17,7 @@ public record Bank(String bankingId,
                    boolean isDefault,
                    String description,
                    String cardType,
+                   boolean isDeleted,
                    BigDecimal accountBalance) {
 
 }

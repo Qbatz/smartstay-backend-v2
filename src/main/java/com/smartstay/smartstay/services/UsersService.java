@@ -1199,6 +1199,12 @@ public class UsersService {
                 users);
     }
 
+    public void addUserLogWithType(String hostelId, String sourceId, ActivitySource activitySource,
+                           ActivitySourceType activitySourceType, Users users, String type) {
+        userActivitiesService.addLoginLogWithType(hostelId, null, activitySource.name(), activitySourceType.name(), sourceId,
+                users, type);
+    }
+
     public void addUserLog(String hostelId, String sourceId, ActivitySource activitySource,
             ActivitySourceType activitySourceType, Users user, List<String> customerIds) {
         userActivitiesService.addLoginLog(hostelId, null, activitySource.name(), activitySourceType.name(), sourceId,
