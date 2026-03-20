@@ -351,7 +351,10 @@ public class ActivityLogUtils {
             return "Updated invoice";
         }
         if (operation.equalsIgnoreCase(ActivitySourceType.MARK_UNPAID.name())) {
-            return "Invoice has beed marked to unpaid";
+            return "Invoice has been marked to unpaid";
+        }
+        if (operation.equalsIgnoreCase(ActivitySourceType.DISCOUNT.name())) {
+            return "Applied discount for an invoice ";
         }
         return null;
     }

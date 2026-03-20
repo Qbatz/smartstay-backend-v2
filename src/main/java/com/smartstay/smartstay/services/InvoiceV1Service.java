@@ -83,6 +83,8 @@ public class InvoiceV1Service {
     private WhatsAppService whatsappService;
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
+    @Autowired
+    private InvoiceDiscountService invoiceDiscountService;
     private TransactionService transactionService;
 
     private BookingsService bookingsService;
@@ -2488,6 +2490,67 @@ public class InvoiceV1Service {
     }
 
     public ResponseEntity<?> applyinvoiceDiscount(String hostelId, String invoiceId, ApplyDiscount discount) {
-        return null;
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (discount == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (discount.discountAmount() == null) {
+            return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.isDiscounted()) {
+            return new ResponseEntity<>(Utils.DISCOUNT_ALREADY_APPLIED, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_DISCOUNT_PAID_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_DISCOUNT_REFUNDING, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.isCancelled()) {
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_DISCOUNT_CANCELLED, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_DISCOUNT_ADVANCE, HttpStatus.BAD_REQUEST);
+        }
+        if (discount.discountAmount() < 1) {
+            return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (discount.discountAmount() >= invoicesV1.getTotalAmount()) {
+            return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_VALIDATION, HttpStatus.BAD_REQUEST);
+        }
+
+        double totalAmount = invoicesV1.getTotalAmount() - discount.discountAmount();
+        invoicesV1.setTotalAmount(totalAmount);
+        invoicesV1.setDiscounted(true);
+        invoicesV1Repository.save(invoicesV1);
+
+        invoiceDiscountService.applyDiscount(hostelId, invoiceId,  invoicesV1.getCustomerId(), discount, invoicesV1.getTotalAmount());
+        paymentSummaryService.applyDiscount(invoicesV1.getCustomerId(), discount.discountAmount());
+        usersService.addUserLog(hostelId, invoiceId, ActivitySource.INVOICE, ActivitySourceType.DISCOUNT, users);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }
