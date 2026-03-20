@@ -6,9 +6,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.ennum.BillConfigTypes;
-import com.smartstay.smartstay.ennum.InvoiceType;
-import com.smartstay.smartstay.ennum.ModuleId;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillTemplate;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillingRule;
 import com.smartstay.smartstay.payloads.templates.DeleteUrls;
@@ -301,6 +299,7 @@ public class TemplatesService {
         templates.setUpdatedBy(loginId);
         templateRepository.save(templates);
 
+        userService.addUserLog(hostelId, templates.getHostelId(), ActivitySource.TEMPLATES, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
@@ -589,6 +588,7 @@ public class TemplatesService {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
+        String type = null;
         Integer finalTtId = ttId;
         BillTemplateType templateType = billTemplateType
                 .getTemplateTypes()
@@ -602,23 +602,28 @@ public class TemplatesService {
 
         //QRCO
        if (deleteUrls.type().equalsIgnoreCase("QRCODE")) {
+           type = "QRCODE";
            templateType.setQrCode(null);
        }
        else if (deleteUrls.type().equalsIgnoreCase("invoice-logo")) {
            templateType.setInvoiceLogoUrl(null);
+           type = "invoice-logo";
        }
        else if (deleteUrls.type().equalsIgnoreCase("receipt-logo")) {
            templateType.setReceiptLogoUrl(null);
+           type = "receipt-logo";
        }
        else if (deleteUrls.type().equalsIgnoreCase("invoice-signature")) {
            templateType.setInvoiceSignatureUrl(null);
+           type = "invoice-signature";
        }
        else if (deleteUrls.type().equalsIgnoreCase("receipt-signature")) {
             templateType.setReceiptSignatureUrl(null);
+            type = "receipt-signature";
        }
 
        billTemplateTypeRepository.save(templateType);
-
+       userService.addUserLogWithType(hostelId, templateId, ActivitySource.TEMPLATES, ActivitySourceType.DELETE, users, type);
        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 
     }

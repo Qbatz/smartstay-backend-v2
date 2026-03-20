@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> {
@@ -248,7 +249,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
             """)
-    java.util.Map<String, Object> getBillingSummary(@Param("hostelId") String hostelId, @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate);
+    Map<String, Object> getBillingSummary(@Param("hostelId") String hostelId, @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate);
 
     @Query(value = """
             SELECT i.invoice_id as invoiceId, i.invoice_number as invoiceNumber, CONCAT(cus.first_name, ' ', cus.last_name) as customerName, i.total_amount as totalAmount, i.paid_amount as paidAmount, i.invoice_due_date as dueDate, i.payment_status as status
@@ -278,4 +279,38 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND DATE(inv.invoiceDueDate) > DATE(:todaysDate)
             """)
     List<InvoicesV1> findInvoicesHavingDueDate(Date todaysDate);
+
+    @Query("""
+            SELECT SUM(i.totalAmount)
+            FROM InvoicesV1 i
+            WHERE i.hostelId = :hostelId AND i.invoiceType = 'ADVANCE' AND i.isCancelled = false
+            """)
+    Double getTotalAdvanceAmount(@Param("hostelId") String hostelId);
+
+    @Query("""
+            SELECT SUM(i.paidAmount)
+            FROM InvoicesV1 i
+            WHERE i.hostelId = :hostelId AND i.invoiceType = 'ADVANCE' AND i.isCancelled = false
+            AND i.paymentStatus IN ('PAID', 'PARTIAL_PAYMENT')
+            """)
+    Double getAdvanceHoldingAmount(@Param("hostelId") String hostelId);
+
+    @Query("""
+            SELECT SUM(i.paidAmount)
+            FROM InvoicesV1 i
+            WHERE i.hostelId = :hostelId AND i.isCancelled = false
+            AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
+            AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
+            AND i.paymentStatus IN ('PAID', 'PARTIAL_PAYMENT')
+            """)
+    Double getTotalPaidAmountIncludePartial(@Param("hostelId") String hostelId, @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate);
+
+    @Query("""
+            SELECT SUM(i.paidAmount)
+            FROM InvoicesV1 i
+            WHERE i.hostelId = :hostelId AND i.invoiceType = 'SETTLEMENT' AND i.paymentStatus = 'REFUNDED'
+            AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
+            AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
+            """)
+    Double getRefundedAmount(@Param("hostelId") String hostelId, @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate);
 }

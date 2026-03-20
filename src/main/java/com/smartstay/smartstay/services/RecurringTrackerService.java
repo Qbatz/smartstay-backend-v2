@@ -25,6 +25,8 @@ public class RecurringTrackerService {
         rt.setMode(RecurringModeEnum.AUTOMATIC.name());
         rt.setHostelId(hostelId);
         rt.setCreationDay(billingDay);
+        rt.setCreationYear(Utils.dateToYear(calendar.getTime()));
+        rt.setCreationMonth(Utils.dateToYear(calendar.getTime()));
 
         recurringTrackerRepository.save(rt);
 

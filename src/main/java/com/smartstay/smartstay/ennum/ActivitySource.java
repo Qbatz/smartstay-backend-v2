@@ -22,5 +22,8 @@ public enum ActivitySource {
     FLOORS,
     HOSTEL,
     ROLE,
-    ROOMS
+    ROOMS,
+    SUBSCRIPTION,
+    TEMPLATES,
+    TRANSACTIONS
 }

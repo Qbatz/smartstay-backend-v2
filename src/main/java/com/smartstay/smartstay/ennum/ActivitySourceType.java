@@ -36,6 +36,9 @@ public enum ActivitySourceType {
     DELETE_ADMIN_USER,
     LOGOUT,
     MARK_UNPAID,
-    DISCOUNT
+    DISCOUNT,
+    REFUND,
+    DOWNLOAD,
+    WHATSAPP
 
 }

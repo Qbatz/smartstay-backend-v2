@@ -26,7 +26,8 @@ public interface AmenityRequestRepository extends JpaRepository<AmenityRequest, 
 
         @Query("""
                         SELECT COUNT(ar) as total,
-                        SUM(CASE WHEN ar.currentStatus IN ('PENDING', 'OPEN', 'IN_PROGRESS') THEN 1 ELSE 0 END) as pending,
+                        SUM(CASE WHEN ar.currentStatus IN ('PENDING', 'OPEN') THEN 1 ELSE 0 END) as pending,
+                        SUM(CASE WHEN ar.currentStatus IN ('IN_PROGRESS') THEN 1 ELSE 0 END) as inProgress,
                         SUM(CASE WHEN ar.currentStatus = 'RESOLVED' THEN 1 ELSE 0 END) as resolved
                         FROM AmenityRequest ar
                         WHERE ar.hostelId = :hostelId
@@ -38,4 +39,10 @@ public interface AmenityRequestRepository extends JpaRepository<AmenityRequest, 
 
         @Query("SELECT ar FROM AmenityRequest ar WHERE ar.hostelId = :hostelId ORDER BY ar.createdAt DESC")
         List<AmenityRequest> findTopRequests(@Param("hostelId") String hostelId, org.springframework.data.domain.Pageable pageable);
+
+        @Query("SELECT ar FROM AmenityRequest ar WHERE ar.hostelId = :hostelId " +
+               "AND (:startDate IS NULL OR DATE(ar.createdAt) >= DATE(:startDate)) " +
+               "AND (:endDate IS NULL OR DATE(ar.createdAt) <= DATE(:endDate)) " +
+               "ORDER BY ar.createdAt DESC")
+        List<AmenityRequest> findTopRequestsByDate(@Param("hostelId") String hostelId, @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate, org.springframework.data.domain.Pageable pageable);
 }

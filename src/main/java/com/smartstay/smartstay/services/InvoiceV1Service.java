@@ -2557,4 +2557,20 @@ public class InvoiceV1Service {
         usersService.addUserLog(hostelId, invoiceId, ActivitySource.INVOICE, ActivitySourceType.DISCOUNT, users);
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    public Double getTotalAdvanceAmount(String hostelId) {
+        return invoicesV1Repository.getTotalAdvanceAmount(hostelId);
+    }
+
+    public Double getAdvanceHoldingAmount(String hostelId) {
+        return invoicesV1Repository.getAdvanceHoldingAmount(hostelId);
+    }
+
+    public Double getRefundedAmount(String hostelId, java.util.Date startDate, java.util.Date endDate) {
+        return invoicesV1Repository.getRefundedAmount(hostelId, startDate, endDate);
+    }
+
+    public Double getTotalPaidAmountIncludePartial(String hostelId, Date startDate, Date endDate) {
+        return invoicesV1Repository.getTotalPaidAmountIncludePartial(hostelId, startDate, endDate);
+    }
 }

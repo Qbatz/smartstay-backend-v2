@@ -3,8 +3,10 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.RoomBedCount;
+import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.dashboard.BedsStatus;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.repositories.BedChangeRequestRepository;
 import com.smartstay.smartstay.responses.dashboard.*;
 import com.smartstay.smartstay.util.Utils;
@@ -160,7 +162,7 @@ public class DashboardService {
                 buildRevenueTrend(hostelId),
                 buildRecentCheckins(hostelId),
                 buildOverdueInvoices(hostelId),
-                buildRecentActivities(hostelId),
+                buildRecentActivities(hostelId, complaintRequestFilter),
                 buildTenantComplaintList(hostelId),
                 DASHBOARD_FILTERS);
 
@@ -187,8 +189,30 @@ public class DashboardService {
     }
 
     private AdvanceSummary buildAdvanceSummary(String hostelId) {
-        Double totalAdvance = customersService.getAdvanceAmountFromAllCustomers(hostelId);
-        return new AdvanceSummary(totalAdvance != null ? totalAdvance : 0.0, 0.0, 0.0);
+
+        Double totalAdvance = invoiceV1Service.getTotalAdvanceAmount(hostelId);
+        if (totalAdvance == null) totalAdvance = 0.0;
+
+
+        Double advanceHolding = invoiceV1Service.getAdvanceHoldingAmount(hostelId);
+        if (advanceHolding == null) advanceHolding = 0.0;
+
+
+        List<Advance> advances = customersService.getAdvancesForHostel(hostelId);
+        double otherDeduction = 0.0;
+        if (advances != null) {
+            for (Advance adv : advances) {
+                if (adv.getDeductions() != null) {
+                    for (Deductions d : adv.getDeductions()) {
+                        if (d.getAmount() != null) {
+                            otherDeduction += d.getAmount();
+                        }
+                    }
+                }
+            }
+        }
+
+        return new AdvanceSummary(totalAdvance, advanceHolding, otherDeduction);
     }
 
     private ExpenseSummary buildExpenseSummary(String hostelId, String filter) {
@@ -331,7 +355,8 @@ public class DashboardService {
         Double totalInvoiced = summary.get("totalInvoiced") != null
                 ? ((Number) summary.get("totalInvoiced")).doubleValue()
                 : 0.0;
-        Double totalPaid = summary.get("totalPaid") != null ? ((Number) summary.get("totalPaid")).doubleValue() : 0.0;
+        Double totalPaid = invoiceV1Service.getTotalPaidAmountIncludePartial(hostelId, dates.startDate(), dates.endDate());
+        if (totalPaid == null) totalPaid = 0.0;
         Double totalPending = totalInvoiced - totalPaid;
 
         String collectionRate = totalInvoiced > 0 
@@ -368,56 +393,55 @@ public class DashboardService {
 
     private StatusSummary buildTenantRequests(String hostelId, String filter) {
         DashboardDateRange dates = getDateRange(filter, hostelId);
-        
+
         Map<String, Object> amenitySummary = amenityRequestService.getRequestStatusSummary(hostelId, dates.startDate(), dates.endDate());
-        Map<String, Object> complaintSummary = complaintsService.getComplaintStatusSummary(hostelId, dates.startDate(), dates.endDate());
         Map<String, Object> bedChangeSummary = bedChangeRequestRepository.getRequestStatusSummary(hostelId, dates.startDate(), dates.endDate());
-        
+
         int total = 0, pending = 0, resolved = 0, inProgress = 0;
-        
+
         if (amenitySummary != null) {
             total += amenitySummary.get("total") != null ? ((Number) amenitySummary.get("total")).intValue() : 0;
             pending += amenitySummary.get("pending") != null ? ((Number) amenitySummary.get("pending")).intValue() : 0;
             resolved += amenitySummary.get("resolved") != null ? ((Number) amenitySummary.get("resolved")).intValue() : 0;
             inProgress += amenitySummary.get("inProgress") != null ? ((Number) amenitySummary.get("inProgress")).intValue() : 0;
         }
-        
-        if (complaintSummary != null) {
-            total += complaintSummary.get("total") != null ? ((Number) complaintSummary.get("total")).intValue() : 0;
-            pending += complaintSummary.get("pending") != null ? ((Number) complaintSummary.get("pending")).intValue() : 0;
-            resolved += complaintSummary.get("resolved") != null ? ((Number) complaintSummary.get("resolved")).intValue() : 0;
-            inProgress += complaintSummary.get("inProgress") != null ? ((Number) complaintSummary.get("inProgress")).intValue() : 0;
-        }
-        
+
         if (bedChangeSummary != null) {
             total += bedChangeSummary.get("total") != null ? ((Number) bedChangeSummary.get("total")).intValue() : 0;
             pending += bedChangeSummary.get("pending") != null ? ((Number) bedChangeSummary.get("pending")).intValue() : 0;
             resolved += bedChangeSummary.get("resolved") != null ? ((Number) bedChangeSummary.get("resolved")).intValue() : 0;
+            inProgress += bedChangeSummary.get("inProgress") != null ? ((Number) bedChangeSummary.get("inProgress")).intValue() : 0;
         }
-        
+
         return new StatusSummary(total, inProgress, pending, resolved);
     }
 
     private FinanceSummary buildFinanceSummary(String hostelId, String filter) {
         DashboardDateRange dates = getDateRange(filter, hostelId);
-        Double income = invoiceV1Service.getTotalPaidAmount(hostelId, dates.startDate(), dates.endDate());
+        Double income = invoiceV1Service.getTotalPaidAmountIncludePartial(hostelId, dates.startDate(), dates.endDate());
         Double expense = expenseService.sumAmountByHostelIdAndDateRange(hostelId, dates.startDate(),
                 dates.endDate());
         income = income != null ? income : 0.0;
         expense = expense != null ? expense : 0.0;
 
+        Double refunded = invoiceV1Service.getRefundedAmount(hostelId, dates.startDate(), dates.endDate());
+        if (refunded == null) refunded = 0.0;
+
         // Trending
         DashboardDateRange prevDates = getPreviousDateRange(dates, filter);
-        Double prevIncome = invoiceV1Service.getTotalPaidAmount(hostelId, prevDates.startDate(), prevDates.endDate());
+        Double prevIncome = invoiceV1Service.getTotalPaidAmountIncludePartial(hostelId, prevDates.startDate(), prevDates.endDate());
         Double prevExpense = expenseService.sumAmountByHostelIdAndDateRange(hostelId, prevDates.startDate(),
                 prevDates.endDate());
         prevIncome = prevIncome != null ? prevIncome : 0.0;
         prevExpense = prevExpense != null ? prevExpense : 0.0;
 
+        Double prevRefunded = invoiceV1Service.getRefundedAmount(hostelId, prevDates.startDate(), prevDates.endDate());
+        if (prevRefunded == null) prevRefunded = 0.0;
+
         Integer incomeTrend = calculateTrend(income, prevIncome);
         Integer expenseTrend = calculateTrend(expense, prevExpense);
-        Double netProfit = Utils.roundOffWithTwoDigit(income - expense);
-        Double prevNetProfit = prevIncome - prevExpense;
+        Double netProfit = Utils.roundOffWithTwoDigit(income - expense - refunded);
+        Double prevNetProfit = prevIncome - prevExpense - prevRefunded;
         Integer profitTrend = calculateTrend(netProfit, prevNetProfit);
 
         return new FinanceSummary(income, incomeTrend, expense, expenseTrend, netProfit, profitTrend);
@@ -426,19 +450,23 @@ public class DashboardService {
     private RevenueSummary buildRevenueSummary(String hostelId, String filter) {
         DashboardDateRange dates = getDateRange(filter, hostelId);
         Map<String, Object> summary = invoiceV1Service.getBillingSummary(hostelId, dates.startDate(), dates.endDate());
-        Double collected = summary.get("totalPaid") != null ? ((Number) summary.get("totalPaid")).doubleValue() : 0.0;
+
+        Double collected = invoiceV1Service.getTotalPaidAmountIncludePartial(hostelId, dates.startDate(), dates.endDate());
+        if (collected == null) collected = 0.0;
         Double totalInvoiced = summary.get("totalInvoiced") != null ? ((Number) summary.get("totalInvoiced")).doubleValue() : 0.0;
         Double outstanding = Math.max(0.0, totalInvoiced - collected);
 
         DashboardDateRange prevDates = getPreviousDateRange(dates, filter);
         Map<String, Object> prevSummary = invoiceV1Service.getBillingSummary(hostelId, prevDates.startDate(), prevDates.endDate());
-        Double prevCollected = prevSummary.get("totalPaid") != null ? ((Number) prevSummary.get("totalPaid")).doubleValue() : 0.0;
+
+        Double prevCollected = invoiceV1Service.getTotalPaidAmountIncludePartial(hostelId, prevDates.startDate(), prevDates.endDate());
+        if (prevCollected == null) prevCollected = 0.0;
         Double prevTotalInvoiced = prevSummary.get("totalInvoiced") != null ? ((Number) prevSummary.get("totalInvoiced")).doubleValue() : 0.0;
         Double prevOutstanding = Math.max(0.0, prevTotalInvoiced - prevCollected);
 
         return new RevenueSummary(
-                new TrendValue(collected, -8),
-                new TrendValue(outstanding, 12));
+                new TrendValue(collected, calculateTrend(collected, prevCollected)),
+                new TrendValue(outstanding, calculateTrend(outstanding, prevOutstanding)));
     }
 
     private List<RevenueTrendPoint> buildRevenueTrend(String hostelId) {
@@ -454,7 +482,9 @@ public class DashboardService {
             Date end = mCal.getTime();
 
             Map<String, Object> summary = invoiceV1Service.getBillingSummary(hostelId, start, end);
-            Double collected = summary.get("totalPaid") != null ? ((Number) summary.get("totalPaid")).doubleValue() : 0.0;
+
+            Double collected = invoiceV1Service.getTotalPaidAmountIncludePartial(hostelId, start, end);
+            if (collected == null) collected = 0.0;
             Double totalInvoiced = summary.get("totalInvoiced") != null ? ((Number) summary.get("totalInvoiced")).doubleValue() : 0.0;
             Double outstanding = Math.max(0.0, totalInvoiced - collected);
 
@@ -533,6 +563,10 @@ public class DashboardService {
             String joiningDate = b.getExpectedJoiningDate() != null ? sdf.format(b.getExpectedJoiningDate()) : null;
             String status = b.getCurrentStatus() != null ? Utils.capitalize(b.getCurrentStatus()) : null;
 
+            if (b.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
+                joiningDate = sdf.format(b.getExpectedJoiningDate());
+            }
+
             return new RecentCheckin(tenantId,initials,customerName, profilePic, roomName, sharingType, bedName, joiningDate, status);
         }).collect(Collectors.toList());
     }
@@ -571,32 +605,13 @@ public class DashboardService {
         }).collect(Collectors.toList());
     }
 
-    private List<DashboardRequest> buildRecentActivities(String hostelId) {
+    private List<DashboardRequest> buildRecentActivities(String hostelId, String filter) {
+        DashboardDateRange dates = getDateRange(filter, hostelId);
         List<DashboardRequest> activities = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
 
-        // Fetch Complaints
-        List<ComplaintsV1> complaints = complaintsService.findTopComplaints(hostelId, PageRequest.of(0, 5));
-        for (ComplaintsV1 c : complaints) {
-            Customers cus = customersService.getCustomerInformation(c.getCustomerId());
-            Rooms rm = (c.getRoomId() != null && c.getRoomId() > 0) ? roomsService.findRoomByRoomId(c.getRoomId()) : null;
-            String roomName = (rm != null) ? rm.getRoomName() : null;
-            
-            activities.add(new DashboardRequest(
-                (long) c.getComplaintId(),
-                cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown",
-                cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null,
-                cus != null ? cus.getProfilePic() : null,
-                "Complaint",
-                c.getStatus(),
-                c.getCreatedAt() != null ? sdf.format(c.getCreatedAt()) : null,
-                c.getDescription(),
-                roomName
-            ));
-        }
-
         // Fetch Amenity Requests
-        List<AmenityRequest> requests = amenityRequestService.findTopRequests(hostelId, PageRequest.of(0, 5));
+        List<AmenityRequest> requests = amenityRequestService.findTopRequestsByDate(hostelId, dates.startDate(), dates.endDate(), PageRequest.of(0, 5));
         for (AmenityRequest r : requests) {
             Customers cus = customersService.getCustomerInformation(r.getCustomerId());
             BookingsV1 booking = (cus != null) ? bookingsService.getBookingsByCustomerId(cus.getCustomerId()) : null;
@@ -617,7 +632,7 @@ public class DashboardService {
         }
 
         // Fetch Bed Change Requests
-        List<BedChangeRequest> bedChanges = bedChangeRequestRepository.findTopRequests(hostelId, PageRequest.of(0, 5));
+        List<BedChangeRequest> bedChanges = bedChangeRequestRepository.findTopRequestsByDate(hostelId, dates.startDate(), dates.endDate(), PageRequest.of(0, 5));
         for (BedChangeRequest b : bedChanges) {
             Customers cus = customersService.getCustomerInformation(b.getCustomerId());
             Rooms rm = (b.getRoomId() != null && b.getRoomId() > 0) ? roomsService.findRoomByRoomId(b.getRoomId()) : null;

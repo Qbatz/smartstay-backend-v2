@@ -38,6 +38,7 @@ public class BankingListMapper implements Function<BankingV1, Bank>{
                 bankingV1.isDefaultAccount(),
                 bankingV1.getDescription(),
                 cardType,
+                 bankingV1.isDeleted(),
                  balance);
     }
 }
