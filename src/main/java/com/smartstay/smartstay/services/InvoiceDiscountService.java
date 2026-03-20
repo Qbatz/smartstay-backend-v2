@@ -31,4 +31,16 @@ public class InvoiceDiscountService {
 
         invoiceDiscountRepository.save(invoiceDiscounts);
     }
+
+    public com.smartstay.smartstay.dto.invoices.InvoiceDiscounts getInvoiceDiscounts(String hostelId, String invoiceId) {
+        InvoiceDiscounts discounts = invoiceDiscountRepository.findByHostelIdAndInvoiceId(hostelId, invoiceId);
+        if (discounts != null) {
+            com.smartstay.smartstay.dto.invoices.InvoiceDiscounts invoiceDiscounts = new com.smartstay.smartstay.dto.invoices.InvoiceDiscounts(discounts.getDiscountReason(),
+                    discounts.getDiscountPercentage(),
+                    discounts.getDiscountAmount());
+            return invoiceDiscounts;
+        }
+
+        return null;
+    }
 }

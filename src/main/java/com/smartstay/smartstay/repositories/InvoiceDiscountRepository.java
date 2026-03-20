@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface InvoiceDiscountRepository extends JpaRepository<InvoiceDiscounts, Long> {
+    InvoiceDiscounts findByHostelIdAndInvoiceId(String hostelId, String invoiceId);
 }

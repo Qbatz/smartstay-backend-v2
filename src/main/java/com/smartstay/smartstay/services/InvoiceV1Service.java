@@ -18,6 +18,7 @@ import com.smartstay.smartstay.dto.customer.ReassignRent;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
+import com.smartstay.smartstay.dto.invoices.InvoiceDiscounts;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
@@ -1023,8 +1024,18 @@ public class InvoiceV1Service {
 
             double totalDeductionAmount = invoicesV1.getInvoiceItems().stream().mapToDouble(InvoiceItems::getAmount).sum();
 
+            double discountedAmount = 0.0;
+            double discountedPercentage = 0.0;
+            if (invoicesV1.isDiscounted()) {
+                InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, invoiceId);
+                if (invoiceDiscounts != null) {
+                    discountedAmount = invoiceDiscounts.discountAmount();
+                    discountedPercentage = invoiceDiscounts.discountPercentage();
+                }
+            }
 
-            InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(), 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount, 0.0, 0.0, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), totalDeductionAmount, listInvoiceItems, listDeductions);
+            InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(), 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount,
+                    discountedAmount, discountedPercentage, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), totalDeductionAmount, listInvoiceItems, listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1060,10 +1071,18 @@ public class InvoiceV1Service {
             listInvoiceItems.add(responseItem);
         }
         List<InvoiceRefundHistory> paymentHistoryList = transactionService.findByInvoiceId(invoiceId);
-
+        double discountedAmount = 0.0;
+        double discountedPercentage = 0.0;
+        if (invoicesV1.isDiscounted()) {
+            InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, invoiceId);
+            if (invoiceDiscounts != null) {
+                discountedAmount = invoiceDiscounts.discountAmount();
+                discountedPercentage = invoiceDiscounts.discountPercentage();
+            }
+        }
         InvoiceInfo invoiceInfo = new InvoiceInfo(subTotal, 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount,
-                0.0,
-                0.0,
+                discountedAmount,
+                discountedPercentage,
                 invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), 0.0, listInvoiceItems, null);
 
 
