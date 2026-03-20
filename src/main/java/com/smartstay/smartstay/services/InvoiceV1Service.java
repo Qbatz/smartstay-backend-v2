@@ -30,6 +30,7 @@ import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.util.InvoiceUtils;
+import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -984,7 +985,16 @@ public class InvoiceV1Service {
                 fullAddress.append(customers.getPincode());
             }
 
-            customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(), customers.getCustomerId(), customers.getMobile(), "91", fullAddress.toString(), Utils.dateToString(customers.getJoiningDate()));
+            customerInfo = new CustomerInfo(customers.getFirstName(),
+                    customers.getLastName(),
+                    fullName.toString(),
+                    customers.getProfilePic(),
+                    NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
+                    customers.getCustomerId(),
+                    customers.getMobile(),
+                    "91",
+                    fullAddress.toString(),
+                    Utils.dateToString(customers.getJoiningDate()));
         }
 
         StayInfo stayInfo = null;
@@ -1035,7 +1045,7 @@ public class InvoiceV1Service {
             }
 
             InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(), 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount,
-                    discountedAmount, discountedPercentage, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), totalDeductionAmount, listInvoiceItems, listDeductions);
+                    discountedAmount, discountedPercentage, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(), totalDeductionAmount, listInvoiceItems, listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1083,7 +1093,8 @@ public class InvoiceV1Service {
         InvoiceInfo invoiceInfo = new InvoiceInfo(subTotal, 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount,
                 discountedAmount,
                 discountedPercentage,
-                invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), 0.0, listInvoiceItems, null);
+                invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
+                0.0, listInvoiceItems, null);
 
 
         InvoiceDetails details = new InvoiceDetails(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", customers.getHostelId(), customerInfo, stayInfo, invoiceInfo, accountDetails, paymentHistoryList, signatureInfo);

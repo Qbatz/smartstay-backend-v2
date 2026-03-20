@@ -16,6 +16,7 @@ public record InvoiceInfo(Double subTotal,
                           String invoiceMonth,
                           String paymentStatus,
                           boolean isCancelled,
+                          boolean isDiscounted,
                           double totalDeduction,
                           List<InvoiceItems> invoiceItems,
                           List<Deductions> listDeductions) {

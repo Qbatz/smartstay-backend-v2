@@ -27,6 +27,7 @@ import com.smartstay.smartstay.responses.receipt.ReceiptConfigInfo;
 import com.smartstay.smartstay.responses.receipt.ReceiptDetails;
 import com.smartstay.smartstay.responses.receipt.ReceiptInfo;
 import com.smartstay.smartstay.responses.transaction.TransactionReportResponse;
+import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -598,6 +599,8 @@ public class TransactionService {
             }
 
             customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(),
+                    customers.getProfilePic(),
+                    NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
                     customers.getCustomerId(), customers.getMobile(), "91", fullAddress.toString(),
                     Utils.dateToString(customers.getJoiningDate()));
         }

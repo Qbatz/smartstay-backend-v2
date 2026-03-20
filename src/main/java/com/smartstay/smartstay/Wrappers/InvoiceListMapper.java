@@ -132,6 +132,7 @@ public class InvoiceListMapper implements Function<Invoices, InvoicesList> {
                 invoices.getInvoiceId(),
                 Utils.roundOfDouble(paidAmount),
                 Utils.roundOfDouble(dueAmount),
+                false,
                 invoices.getCgst(),
                 invoices.getSgst(),
                 gstAmount,

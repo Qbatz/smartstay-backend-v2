@@ -29,5 +29,6 @@ public interface Invoices {
     String getProfilePic();
     Boolean getCancelled();
     String getInvoiceMode();
+    Boolean getDiscounted();
 
 }
