@@ -124,5 +124,8 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
         @Query("SELECT c FROM Customers c WHERE c.hostelId = :hostelId AND c.currentStatus IN :statuses")
         List<Customers> findCustomerByHostelId(@Param("hostelId") String hostelId, @Param("statuses") List<String> statuses);
 
+        @Query("SELECT c.advance FROM Customers c WHERE c.hostelId = :hostelId AND c.advance IS NOT NULL")
+        List<com.smartstay.smartstay.dao.Advance> findAdvancesByHostelId(@Param("hostelId") String hostelId);
+
 
 }
