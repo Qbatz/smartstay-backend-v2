@@ -887,7 +887,11 @@ public class BedsService {
         Integer totalBeds = listBeds.size();
         long occupiedBeds = listBeds
                 .stream()
-                .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) ||  i.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name()))
+                .filter(i ->
+                        i.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) ||
+                                i.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name()) ||
+                                Boolean.TRUE.equals(i.isBooked())
+                )
                 .count();
         Integer freeBeds = totalBeds - (int) occupiedBeds;
         Integer bookedBedCount = bookingService.getBookedBedCount(hostelId);

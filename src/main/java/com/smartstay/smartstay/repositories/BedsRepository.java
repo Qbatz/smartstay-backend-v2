@@ -157,6 +157,9 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
             """, nativeQuery = true)
     List<com.smartstay.smartstay.dao.Beds> findFilledBeds(String hostelId);
 
-    @Query("SELECT b.roomId as roomId, COUNT(b) as bedCount FROM Beds b WHERE b.hostelId = :hostelId AND b.currentStatus = 'OCCUPIED' AND b.isDeleted = false GROUP BY b.roomId")
+    @Query("SELECT b.roomId as roomId, COUNT(b) as bedCount FROM Beds b WHERE b.hostelId = :hostelId AND (\n" +
+            "    b.currentStatus IN ('OCCUPIED','NOTICE') \n" +
+            "    OR b.isBooked = true\n" +
+            ") AND b.isDeleted = false GROUP BY b.roomId")
     List<RoomBedCount> countOccupiedBedsByRoomForHostel(@Param("hostelId") String hostelId);
 }

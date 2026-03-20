@@ -275,6 +275,10 @@ public class CustomersService {
         return bookingsService.getAllCheckInCustomers(hostelId);
     }
 
+    public List<Advance> getAdvancesForHostel(String hostelId) {
+        return customersRepository.findAdvancesByHostelId(hostelId);
+    }
+
     public List<CustomerData> searchAndGetCustomers(String hostelId, String name, String type) {
         List<String> typeArray = new ArrayList<>();
         if (type == null || (type != null && type.trim().equalsIgnoreCase(""))) {

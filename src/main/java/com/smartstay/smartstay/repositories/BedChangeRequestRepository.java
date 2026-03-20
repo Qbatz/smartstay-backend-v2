@@ -16,6 +16,12 @@ public interface BedChangeRequestRepository extends JpaRepository<BedChangeReque
     @Query("SELECT bcr FROM BedChangeRequest bcr WHERE bcr.hostelId = :hostelId AND bcr.isActive = true AND bcr.isDeleted = false ORDER BY bcr.createdAt DESC")
     List<BedChangeRequest> findTopRequests(@Param("hostelId") String hostelId, Pageable pageable);
 
+    @Query("SELECT bcr FROM BedChangeRequest bcr WHERE bcr.hostelId = :hostelId AND bcr.isActive = true AND bcr.isDeleted = false " +
+           "AND (:startDate IS NULL OR DATE(bcr.createdAt) >= DATE(:startDate)) " +
+           "AND (:endDate IS NULL OR DATE(bcr.createdAt) <= DATE(:endDate)) " +
+           "ORDER BY bcr.createdAt DESC")
+    List<BedChangeRequest> findTopRequestsByDate(@Param("hostelId") String hostelId, @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate, Pageable pageable);
+
     @Query("""
             SELECT COUNT(bcr) as total,
             SUM(CASE WHEN bcr.currentStatus IN ('PENDING', 'OPEN') THEN 1 ELSE 0 END) as pending,

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class AmenityRequestService {
@@ -58,12 +59,16 @@ public class AmenityRequestService {
         return amenityRequestRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
     }
 
-    public java.util.Map<String, Object> getRequestStatusSummary(String hostelId, Date startDate, Date endDate) {
+    public Map<String, Object> getRequestStatusSummary(String hostelId, Date startDate, Date endDate) {
          return amenityRequestRepository.getRequestStatusSummary(hostelId, startDate, endDate);
     }
 
     public List<AmenityRequest> findTopRequests(String hostelId, org.springframework.data.domain.Pageable pageable) {
          return amenityRequestRepository.findTopRequests(hostelId, pageable);
+    }
+
+    public List<AmenityRequest> findTopRequestsByDate(String hostelId, Date startDate, Date endDate, org.springframework.data.domain.Pageable pageable) {
+         return amenityRequestRepository.findTopRequestsByDate(hostelId, startDate, endDate, pageable);
     }
 
 
