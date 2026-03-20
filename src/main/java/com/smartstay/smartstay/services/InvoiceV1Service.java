@@ -1024,7 +1024,7 @@ public class InvoiceV1Service {
             double totalDeductionAmount = invoicesV1.getInvoiceItems().stream().mapToDouble(InvoiceItems::getAmount).sum();
 
 
-            InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(), 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), totalDeductionAmount, listInvoiceItems, listDeductions);
+            InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(), 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount, 0.0, 0.0, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), totalDeductionAmount, listInvoiceItems, listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1061,7 +1061,11 @@ public class InvoiceV1Service {
         }
         List<InvoiceRefundHistory> paymentHistoryList = transactionService.findByInvoiceId(invoiceId);
 
-        InvoiceInfo invoiceInfo = new InvoiceInfo(subTotal, 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), 0.0, listInvoiceItems, null);
+        InvoiceInfo invoiceInfo = new InvoiceInfo(subTotal, 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount,
+                0.0,
+                0.0,
+                invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), 0.0, listInvoiceItems, null);
+
 
         InvoiceDetails details = new InvoiceDetails(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", customers.getHostelId(), customerInfo, stayInfo, invoiceInfo, accountDetails, paymentHistoryList, signatureInfo);
         return new ResponseEntity<>(details, HttpStatus.OK);
