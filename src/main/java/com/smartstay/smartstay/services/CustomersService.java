@@ -2913,20 +2913,13 @@ public class CustomersService {
         }
 
         List<CheckoutCustomers> listCustomers = customersRepository.getCheckedOutCustomerData(hostelId, name).stream().map(item -> {
-            StringBuilder initials = new StringBuilder();
-            String[] nameArray = item.getFirstName().split(" ");
-            initials.append(nameArray[0].toUpperCase().charAt(0));
-            if (nameArray.length > 1) {
-                initials.append(nameArray[nameArray.length - 1].toUpperCase().charAt(0));
-            } else {
-                initials.append(nameArray[0].toUpperCase().charAt(1));
-            }
+            String initials = Utils.getInitials(item.getFirstName(), item.getLastName());
+            String fullName = Utils.fullName(item.getFirstName(), item.getLastName());
             String currentStatus = null;
             if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
                 currentStatus = "Vacated";
             }
-
-            return new CheckoutCustomers(item.getFirstName(), item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), item.getProfilePic(), item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName(), Utils.dateToString(item.getCheckoutDate()));
+            return new CheckoutCustomers(item.getFirstName(), item.getLastName(), fullName, item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), item.getProfilePic(), item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials, Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName(), Utils.dateToString(item.getCheckoutDate()));
         }).toList();
 
         CheckoutList checkoutList = new CheckoutList(hostelId, listCustomers.size(), null, listCustomers);

@@ -4,6 +4,7 @@ import java.util.Date;
 
 public interface CheckoutCustomers {
     String getFirstName();
+    String getLastName();
     String getCity();
     String getState();
     String getCountry();
