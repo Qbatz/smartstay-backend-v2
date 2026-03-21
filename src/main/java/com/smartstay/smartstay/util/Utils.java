@@ -682,4 +682,11 @@ public class Utils {
         return (String.valueOf(firstName.charAt(0)) + String.valueOf(lastName.charAt(0))).toUpperCase();
     }
 
+    public static String fullName(String firstName, String lastName) {
+        String fName = firstName != null ? firstName.trim() : "";
+        String lName = lastName != null ? lastName.trim() : "";
+
+        return (fName + " " + lName).trim();
+    }
+
 }
