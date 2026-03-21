@@ -156,4 +156,15 @@ public class PaymentSummaryService {
 
         paymentSummaryRepository.save(paymentSummary);
     }
+
+    public void applyDiscount(String customerId, double discountAmount) {
+        com.smartstay.smartstay.dao.PaymentSummary paymentSummary = paymentSummaryRepository.findByCustomerId(customerId);
+        if (paymentSummary != null) {
+            paymentSummary.setDebitAmount(paymentSummary.getDebitAmount() - discountAmount);
+            paymentSummary.setBalance(paymentSummary.getBalance() - discountAmount);
+            paymentSummary.setLastUpdate(new Date());
+
+            paymentSummaryRepository.save(paymentSummary);
+        }
+    }
 }

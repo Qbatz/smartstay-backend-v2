@@ -62,7 +62,7 @@ public class ElectricityRoomIdEbMapper implements Function<ElectricityReadings, 
             CustomersBedHistory bedHistory = listBedHistory
                     .stream()
                     .filter(i -> electricityReadings.getRoomId().equals(i.getRoomId()))
-                    .max(Comparator.comparing(CustomersBedHistory::getEndDate))
+                    .max(Comparator.comparing( c -> c.getEndDate() != null ? c.getEndDate() : leavingDate))
                     .orElse(null);
             if (bedHistory != null) {
                 if (Utils.compareWithTwoDates(electricityReadings.getEntryDate(), bedHistory.getStartDate()) >= 0) {
