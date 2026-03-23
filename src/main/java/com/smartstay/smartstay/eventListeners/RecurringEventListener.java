@@ -54,11 +54,6 @@ public class RecurringEventListener {
 
         HostelV1 hostelV1 = hostelService.getHostelInfo(recurringEvents.getHostelId());
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(recurringEvents.getHostelId());
-        Calendar calendarPreviousBillsStartDate = Calendar.getInstance();
-        calendarPreviousBillsStartDate.setTime(billingDates.currentBillStartDate());
-        calendarPreviousBillsStartDate.add(Calendar.MONTH, -1);
-
-        Date calendarPreviousBillsEndDate = Utils.findLastDate(calendarPreviousBillsStartDate.get(Calendar.DAY_OF_MONTH), calendarPreviousBillsStartDate.getTime());
 
         List<CustomersConfig> listCustomerConfig = customersConfigService.getAllActiveAndEnabledRecurringCustomers(recurringEvents.getHostelId());
 
@@ -75,9 +70,7 @@ public class RecurringEventListener {
         List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getWalletListForRecurring(customerIds);
 
         List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
-        List<ElectricityReadings> listElectricityForAHostel = electricityService.getAllElectricityReadingForRecurring(recurringEvents.getHostelId(),
-                calendarPreviousBillsStartDate.getTime(),
-                calendarPreviousBillsEndDate);
+        List<ElectricityReadings> listElectricityForAHostel = electricityService.getAllElectricityReadingForRecurring(recurringEvents.getHostelId());
 
         customersList
                 .forEach(item -> {
@@ -264,8 +257,6 @@ public class RecurringEventListener {
                 }
 
             }
-
-
 
         });
 

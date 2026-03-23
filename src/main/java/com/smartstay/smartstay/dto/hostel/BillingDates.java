@@ -8,5 +8,6 @@ public record BillingDates(Date currentBillStartDate,
                            Integer dueDays,
                            boolean hasGracePeriod,
                            Integer gracePeriodDays,
-                           String typeOfBilling) {
+                           String typeOfBilling,
+                           String billingModel) {
 }

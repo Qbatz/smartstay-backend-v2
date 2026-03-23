@@ -571,10 +571,20 @@ public class CustomersService {
             if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
             }
-            calculateRentAndCreateRentalInvoice(customers, payloads);
-            whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
-            userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
-            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+
+            if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+                calculateRentAndCreateRentalInvoice(customers, payloads);
+                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
+                return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+            }
+            else {
+//                calculateRentAndCreateRentalInvoice(customers, payloads);
+                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
+                return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+            }
+
 
         } else {
             return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);

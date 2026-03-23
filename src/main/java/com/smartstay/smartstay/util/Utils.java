@@ -237,6 +237,7 @@ public class Utils {
     public static final String CANNOT_DELETE_OCCUPIED_BEDS = "Cannot delete the occupied beds";
     public static final String DATE_VALIDATION_ERROR_CANCEL_BOOKING = "Cancel date cannot be earlier than the booking date";
     public static final String CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR = "Cannot modify the billing rules. Tenant already exists.";
+    public static final String CANNOT_MODIFY_BILLING_TYPE = "Cannot modify billing type, Check in tenant exist";
     public static final String CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED = "Cannot delete receipts for settlement generated customers";
     public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
     public static final String CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL = "Only manual invoices are allowed to mark unpaid";

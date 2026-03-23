@@ -1063,7 +1063,7 @@ public class InvoiceV1Service {
             paidAmount = invoicesV1.getPaidAmount();
         }
         balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
-        subTotal = invoicesV1.getTotalAmount();
+        subTotal = invoicesV1.getBasePrice();
         List<com.smartstay.smartstay.responses.invoices.InvoiceItems> listInvoiceItems = new ArrayList<>();
 
         for (InvoiceItems item : invoicesV1.getInvoiceItems()) {

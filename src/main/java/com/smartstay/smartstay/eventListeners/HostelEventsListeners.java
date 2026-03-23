@@ -60,6 +60,7 @@ public class HostelEventsListeners {
         billingRules.setCreatedAt(new Date());
         billingRules.setCreatedBy(events.getUserId());
         billingRules.setTypeOfBilling(BillingTypeEnum.FIXED_DATE.name());
+        billingRules.setBillingModel(BillingModel.PREPAID.name());
         billingRules.setHasGracePeriod(false);
         billingRules.setReminderDays(new ArrayList<>());
         billingRules.setShouldNotify(false);
