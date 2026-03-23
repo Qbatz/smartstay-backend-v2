@@ -32,6 +32,7 @@ import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -1605,10 +1606,44 @@ public class InvoiceV1Service {
         }
     }
 
+    @Transactional
+    public void updateJoiningDateOnAdvanceInvoice1(String customerId, Date joiningDate) {
+        List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceTypeIn(
+                customerId,
+                List.of(InvoiceType.ADVANCE.name(), InvoiceType.RENT.name())
+        );
+
+        if (invoicesV1 != null && !invoicesV1.isEmpty()) {
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(
+                    invoicesV1.getFirst().getHostelId(), joiningDate
+            );
+            int dueDays = billingDates.dueDays();
+
+            for (InvoicesV1 inv : invoicesV1) {
+                inv.setInvoiceStartDate(joiningDate);
+                Date dueDate = Utils.addDaysToDate(joiningDate, dueDays);
+                inv.setInvoiceDueDate(dueDate);
+            }
+
+            invoicesV1Repository.saveAll(invoicesV1);
+        }
+    }
+
+    public Date getEndOfDay(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
+        return calendar.getTime();
+    }
+
     public void findOldInvoiceAndUpdate(String customerId, Date oldJoiningDate, Date newJoiningDate, String hostelId, Double rent) {
         BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, oldJoiningDate);
 
-        List<InvoicesV1> oldInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+        Date endDate = getEndOfDay(billingDates.currentBillEndDate());
+        List<InvoicesV1> oldInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, billingDates.currentBillStartDate(), endDate);
         if (oldInvoices != null && !oldInvoices.isEmpty()) {
             InvoicesV1 invoicesV1 = oldInvoices.get(0);
             List<TransactionV1> transactions = transactionService.getTransactionsByInvoiceId(invoicesV1.getInvoiceId());

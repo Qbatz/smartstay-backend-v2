@@ -50,7 +50,12 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCaseAndIsCancelledFalse(String hostelId, String customerId, String paymentStatus);
 
     @Query(value = """
-            SELECT * FROM invoicesv1 invc WHERE invc.invoice_start_date <= DATE(:endDate) and invc.invoice_end_date >=DATE(:startDate) and invc.customer_id=:customerId and invc.invoice_type='RENT' and is_cancelled=false
+            SELECT * FROM invoicesv1 invc 
+            WHERE invc.customer_id = :customerId 
+              AND invc.invoice_type = 'RENT' 
+              AND invc.invoice_end_date >= :startDate 
+              AND invc.invoice_start_date <= :endDate 
+              AND is_cancelled = false
             """, nativeQuery = true)
     List<InvoicesV1> findInvoiceByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
@@ -78,6 +83,8 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoiceSummary> findInvoiceSummariesByHostelId(@Param("hostelId") String hostelId, @Param("invoiceId") List<String> invoiceId);
 
     List<InvoicesV1> findByCustomerIdAndInvoiceType(String customerId, String type);
+
+    List<InvoicesV1> findByCustomerIdAndInvoiceTypeIn(String customerId, List<String> types);
 
     @Query("""
             SELECT inv.customerId, inv.invoiceId FROM InvoicesV1 inv where (inv.paidAmount IS NULL OR inv.paidAmount<inv.totalAmount)
