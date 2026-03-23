@@ -493,6 +493,11 @@ public class DashboardService {
     }
 
     private DashboardDateRange getPreviousDateRange(DashboardDateRange current, String filter) {
+        // For billing-cycle-based filters, walk one cycle before current.startDate()
+        Calendar prevCal = Calendar.getInstance();
+        prevCal.setTime(current.startDate());
+        prevCal.add(Calendar.DAY_OF_MONTH, -1); // one day before current start = end of previous period
+
         Calendar start = Calendar.getInstance();
         start.setTime(current.startDate());
         Calendar end = Calendar.getInstance();
@@ -508,17 +513,20 @@ public class DashboardService {
                 end.add(Calendar.WEEK_OF_YEAR, -1);
                 break;
             case "This Month":
-                start.add(Calendar.MONTH, -1);
-                end.add(Calendar.MONTH, -1);
+            case "Last Month": {
+                // Previous billing cycle: one cycle before the supplied start date
+                long cycleLength = current.endDate().getTime() - current.startDate().getTime();
+                end.setTime(new Date(current.startDate().getTime() - 1));
+                start.setTime(new Date(end.getTime().getTime() - cycleLength));
                 break;
-            case "Last Month":
-                start.add(Calendar.MONTH, -1);
-                end.add(Calendar.MONTH, -1);
+            }
+            case "Last 3 Months": {
+                // Previous 3 billing cycles: shift the entire window back by the same duration
+                long windowLength = current.endDate().getTime() - current.startDate().getTime();
+                end.setTime(new Date(current.startDate().getTime() - 1));
+                start.setTime(new Date(end.getTime().getTime() - windowLength));
                 break;
-            case "Last 3 Months":
-                start.add(Calendar.MONTH, -3);
-                end.add(Calendar.MONTH, -3);
-                break;
+            }
             default:
                 start.add(Calendar.DATE, -7);
                 end.add(Calendar.DATE, -7);
@@ -676,23 +684,41 @@ public class DashboardService {
                 cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek());
                 startDate = cal.getTime();
                 break;
-            case "This Month":
+            case "This Month": {
                 BillingDates bd = hostelService.getCurrentBillStartAndEndDates(hostelId);
                 startDate = bd.currentBillStartDate();
                 endDate = bd.currentBillEndDate();
                 break;
-            case "Last Month":
-                cal.add(Calendar.MONTH, -1);
-                cal.set(Calendar.DAY_OF_MONTH, 1);
-                startDate = cal.getTime();
-                cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
-                endDate = cal.getTime();
+            }
+            case "Last Month": {
+
+                BillingDates currentBd = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+                Calendar prevCycleCal = Calendar.getInstance();
+                prevCycleCal.setTime(currentBd.currentBillStartDate());
+                prevCycleCal.add(Calendar.DAY_OF_MONTH, -1);
+                BillingDates prevBd = hostelService.getBillStartAndEndDateBasedOnDate(hostelId, prevCycleCal.getTime());
+                startDate = prevBd.currentBillStartDate();
+                endDate = prevBd.currentBillEndDate();
                 break;
-            case "Last 3 Months":
-                cal.add(Calendar.MONTH, -3);
-                cal.set(Calendar.DAY_OF_MONTH, 1);
-                startDate = cal.getTime();
+            }
+            case "Last 3 Months": {
+                BillingDates currentBd = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+                Calendar walkBackCal = Calendar.getInstance();
+                walkBackCal.setTime(currentBd.currentBillStartDate());
+                walkBackCal.add(Calendar.DAY_OF_MONTH, -1);
+                BillingDates cycle1 = hostelService.getBillStartAndEndDateBasedOnDate(hostelId, walkBackCal.getTime());
+                walkBackCal.setTime(cycle1.currentBillStartDate());
+                walkBackCal.add(Calendar.DAY_OF_MONTH, -1);
+                BillingDates cycle2 = hostelService.getBillStartAndEndDateBasedOnDate(hostelId, walkBackCal.getTime());
+                walkBackCal.setTime(cycle2.currentBillStartDate());
+                walkBackCal.add(Calendar.DAY_OF_MONTH, -1);
+                BillingDates cycle3 = hostelService.getBillStartAndEndDateBasedOnDate(hostelId, walkBackCal.getTime());
+                startDate = cycle3.currentBillStartDate();
+                endDate = currentBd.currentBillEndDate();
                 break;
+            }
             default: // Default 7 days
                 cal.add(Calendar.DAY_OF_MONTH, -7);
                 startDate = cal.getTime();
