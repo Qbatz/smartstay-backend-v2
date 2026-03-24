@@ -114,6 +114,9 @@ public class BankTransactionService {
      */
     public void cancelBooking(TransactionDto transactionDto, String sourceId, String transactionId) {
         if (authentication.isAuthenticated()) {
+            if (!bankingService.updateBalanceForExpense(transactionDto.amount(), BankTransactionType.DEBIT.name(), transactionDto.bankId())) {
+                return;
+            }
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
             BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
 

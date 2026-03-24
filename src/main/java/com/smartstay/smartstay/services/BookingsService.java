@@ -538,7 +538,6 @@ public class BookingsService {
 
             creditDebitNoteService.cancelBooking(cancelBookingDto);
 
-
             TransactionDto transactionDto = new TransactionDto(cancelBooking.bankId(), cancelBooking.referenceNumber(), bookingsV1.getBookingAmount(), BankTransactionType.DEBIT.name(), BankSource.INVOICE.name(), bookingsV1.getHostelId(), Utils.dateToString(cancelDate).replace("/", "-"), "");
             bankTransactionService.cancelBooking(transactionDto, invoicesV1.getInvoiceId(), transactionId);
         }
