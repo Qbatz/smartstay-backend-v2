@@ -100,6 +100,14 @@ public class RoomsService {
 
     }
 
+    public void updateSharingType(Integer roomId, Integer sharingType) {
+        Rooms rooms = roomRepository.findByRoomId(roomId);
+        if (rooms != null) {
+            rooms.setSharingType(sharingType);
+            roomRepository.save(rooms);
+        }
+    }
+
     public ResponseEntity<?> updateRoomById(String hostelId,int roomId, UpdateRoom updateRoom) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);

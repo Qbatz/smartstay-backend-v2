@@ -817,6 +817,9 @@ public class ElectricityService {
             listUsages.addAll(usages);
 
         }
+        listUsages.sort(Comparator.comparing(ElectricityUsage::floorId, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(ElectricityUsage::roomId, Comparator.nullsLast(Comparator.naturalOrder())));
+
         if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
             ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
 
