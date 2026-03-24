@@ -383,7 +383,14 @@ public class HostelService {
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate, billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(), billingRules.getTypeOfBilling());
+        return new BillingDates(calendar.getTime(),
+                findEndDate,
+                dueDate,
+                billingRuleDueDate,
+                billingRules.isHasGracePeriod(),
+                billingRules.getGracePeriodDays(),
+                billingRules.getTypeOfBilling(),
+                billingRules.getBillingModel());
     }
 
     public BillingDates getBillStartAndEndDateBasedOnDate(String hostelId, Date date) {
@@ -403,7 +410,14 @@ public class HostelService {
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate, billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(), billingRules.getTypeOfBilling());
+        return new BillingDates(calendar.getTime(),
+                findEndDate,
+                dueDate,
+                billingRuleDueDate,
+                billingRules.isHasGracePeriod(),
+                billingRules.getGracePeriodDays(),
+                billingRules.getTypeOfBilling(),
+                billingRules.getBillingModel());
     }
 
 
@@ -614,6 +628,7 @@ public class HostelService {
                     typeOfBilling,
                     gracePeriod,
                     billingRules.isHasGracePeriod(),
+                    billingRules.getBillingModel(),
                     billingRules.getReminderDays());
 
             return new ResponseEntity<>(rules, HttpStatus.OK);
@@ -648,10 +663,20 @@ public class HostelService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        if (billRules.startDate() != null || (billRules.calculationType() != null && !billRules.calculationType().isEmpty())) {
-            List<BookingsV1> bookingsV1 = bookingsService.checkAllByHostelId(hostelId);
-            if (bookingsV1 != null && !bookingsV1.isEmpty()) {
+        boolean isCheckinAvailable = false;
+        List<BookingsV1> bookingsV1 = bookingsService.checkAllByHostelId(hostelId);
+        if (bookingsV1 != null && !bookingsV1.isEmpty()) {
+            isCheckinAvailable = true;
+//            return new ResponseEntity<>(Utils.CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR, HttpStatus.BAD_REQUEST);
+        }
+
+        if (isCheckinAvailable) {
+            if (billRules.startDate() != null || (billRules.calculationType() != null && !billRules.calculationType().isEmpty())) {
                 return new ResponseEntity<>(Utils.CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR, HttpStatus.BAD_REQUEST);
+            }
+
+            if (billRules.billingModel() != null) {
+                return new ResponseEntity<>(Utils.CANNOT_MODIFY_BILLING_TYPE, HttpStatus.BAD_REQUEST);
             }
         }
 
@@ -694,6 +719,10 @@ public class HostelService {
                 newBillingRules.setHasGracePeriod(currentBillingRules.isHasGracePeriod());
                 newBillingRules.setGracePeriodDays(currentBillingRules.getGracePeriodDays());
             }
+        }
+        else {
+            newBillingRules.setHasGracePeriod(currentBillingRules.isHasGracePeriod());
+            newBillingRules.setGracePeriodDays(currentBillingRules.getGracePeriodDays());
         }
 
 
@@ -741,6 +770,18 @@ public class HostelService {
         else {
             newBillingRules.setShouldNotify(currentBillingRules.isShouldNotify());
             newBillingRules.setReminderDays(currentBillingRules.getReminderDays());
+        }
+
+        if (billRules.billingModel() != null) {
+            if (billRules.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                newBillingRules.setBillingModel(BillingModel.POSTPAID.name());
+            }
+            else if (billRules.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+                newBillingRules.setBillingModel(BillingModel.PREPAID.name());
+            }
+        }
+        else {
+            newBillingRules.setBillingModel(currentBillingRules.getBillingModel());
         }
 
         newBillingRules.setHostel(hostel);

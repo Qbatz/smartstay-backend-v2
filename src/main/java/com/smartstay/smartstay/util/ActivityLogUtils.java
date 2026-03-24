@@ -412,12 +412,18 @@ public class ActivityLogUtils {
         if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
             return "Hostel template has been updated";
         }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Hostel template has been updated";
+        }
         return null;
     }
 
 
     private static String getTemplateOperationsWithType(String operationName, String type) {
         if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return type + " has been removed";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE_OTHER_FIELDS.name())) {
             return type + " has been removed";
         }
         return null;

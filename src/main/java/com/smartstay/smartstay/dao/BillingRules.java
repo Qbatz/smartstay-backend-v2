@@ -22,6 +22,8 @@ public class BillingRules {
     private Integer gracePeriodDays;
     //From billing type enum
     private String typeOfBilling;
+    //Billing model enum
+    private String billingModel;
     private List<Integer> reminderDays;
     private boolean shouldNotify;
     private Date startFrom;

@@ -9,5 +9,6 @@ public record BillingRules(Integer billStartDate,
                            String typeOfBilling,
                            Integer gracePeriod,
                            boolean hasGracePeriod,
+                           String billingModel,
                            List<Integer> reminderDays) {
 }

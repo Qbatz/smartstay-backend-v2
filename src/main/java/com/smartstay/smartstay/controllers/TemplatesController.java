@@ -3,6 +3,7 @@ package com.smartstay.smartstay.controllers;
 import com.smartstay.smartstay.payloads.banking.UpdateBank;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillTemplate;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillingRule;
+import com.smartstay.smartstay.payloads.templates.DeleteTemplteImages;
 import com.smartstay.smartstay.payloads.templates.DeleteUrls;
 import com.smartstay.smartstay.services.TemplatesService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -65,6 +66,16 @@ public class TemplatesController {
             @Valid @RequestBody UpdateBillingRule payloads
     ) {
         return templateService.updateBillingRule(hostelId, billingRuleId,
+                payloads);
+    }
+
+    @DeleteMapping("template/{hostelId}/{templateId}")
+    public ResponseEntity<?> deleteImages(
+            @PathVariable("hostelId") String hostelId,
+            @PathVariable("templateId") Integer billingRuleId,
+            @Valid @RequestBody DeleteTemplteImages payloads
+    ) {
+        return templateService.deleteTemplateImages(hostelId, billingRuleId,
                 payloads);
     }
 

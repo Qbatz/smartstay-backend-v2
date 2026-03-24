@@ -1045,8 +1045,9 @@ public class InvoiceV1Service {
                 }
             }
 
-            InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(), 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount,
-                    discountedAmount, discountedPercentage, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(), totalDeductionAmount, listInvoiceItems, listDeductions);
+            InvoiceInfo invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(invoicesV1.getBasePrice()),
+                    0.0, 0.0, Utils.roundOffWithTwoDigit( invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
+                    Utils.roundOffWithTwoDigit(discountedAmount), discountedPercentage, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(), Utils.roundOffWithTwoDigit(totalDeductionAmount), listInvoiceItems, listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1064,7 +1065,7 @@ public class InvoiceV1Service {
             paidAmount = invoicesV1.getPaidAmount();
         }
         balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
-        subTotal = invoicesV1.getTotalAmount();
+        subTotal = invoicesV1.getBasePrice();
         List<com.smartstay.smartstay.responses.invoices.InvoiceItems> listInvoiceItems = new ArrayList<>();
 
         for (InvoiceItems item : invoicesV1.getInvoiceItems()) {
@@ -1091,8 +1092,8 @@ public class InvoiceV1Service {
                 discountedPercentage = invoiceDiscounts.discountPercentage();
             }
         }
-        InvoiceInfo invoiceInfo = new InvoiceInfo(subTotal, 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount,
-                discountedAmount,
+        InvoiceInfo invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
+                Utils.roundOffWithTwoDigit(discountedAmount),
                 discountedPercentage,
                 invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
                 0.0, listInvoiceItems, null);
@@ -2587,7 +2588,7 @@ public class InvoiceV1Service {
         if (discount == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
-        if (discount.discountAmount() == null) {
+        if (discount.discountAmount() == null && discount.discountPercentage() == null) {
             return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
         }
         if (invoicesV1.isDiscounted()) {
@@ -2605,20 +2606,37 @@ public class InvoiceV1Service {
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
             return new ResponseEntity<>(Utils.CANNOT_APPLY_DISCOUNT_ADVANCE, HttpStatus.BAD_REQUEST);
         }
-        if (discount.discountAmount() < 1) {
+        if (discount.discountAmount() != null && discount.discountAmount() < 1) {
             return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
         }
-        if (discount.discountAmount() >= invoicesV1.getTotalAmount()) {
+        if (discount.discountAmount() != null && discount.discountAmount() > invoicesV1.getTotalAmount()) {
             return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_VALIDATION, HttpStatus.BAD_REQUEST);
         }
 
-        double totalAmount = invoicesV1.getTotalAmount() - discount.discountAmount();
+        double discountAmount = 0.0;
+        if (discount.discountAmount() != null) {
+            discountAmount = discount.discountAmount();
+        }
+        if (discount.discountPercentage() != null) {
+            int percentage = 1;
+            try {
+                percentage = Integer.parseInt(String.valueOf(discount.discountPercentage()));
+            }
+            catch (Exception e) {
+                return new ResponseEntity<>(Utils.INVALID_DISCOUNT_PERCENTAGE, HttpStatus.BAD_REQUEST);
+            }
+            discountAmount = ((double) percentage /100) * invoicesV1.getBasePrice();
+
+        }
+
+        double invoiceTotalAmount = invoicesV1.getTotalAmount();
+        double totalAmount = invoicesV1.getTotalAmount() - discountAmount;
         invoicesV1.setTotalAmount(totalAmount);
         invoicesV1.setDiscounted(true);
         invoicesV1Repository.save(invoicesV1);
 
-        invoiceDiscountService.applyDiscount(hostelId, invoiceId,  invoicesV1.getCustomerId(), discount, invoicesV1.getTotalAmount());
-        paymentSummaryService.applyDiscount(invoicesV1.getCustomerId(), discount.discountAmount());
+        invoiceDiscountService.applyDiscount(hostelId, invoiceId,  invoicesV1.getCustomerId(), discount, discountAmount, invoiceTotalAmount);
+        paymentSummaryService.applyDiscount(invoicesV1.getCustomerId(), discountAmount);
         usersService.addUserLog(hostelId, invoiceId, ActivitySource.INVOICE, ActivitySourceType.DISCOUNT, users);
         return new ResponseEntity<>(HttpStatus.OK);
     }

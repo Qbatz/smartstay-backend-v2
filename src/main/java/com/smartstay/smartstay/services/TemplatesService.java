@@ -9,6 +9,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillTemplate;
 import com.smartstay.smartstay.payloads.billTemplate.UpdateBillingRule;
+import com.smartstay.smartstay.payloads.templates.DeleteTemplteImages;
 import com.smartstay.smartstay.payloads.templates.DeleteUrls;
 import com.smartstay.smartstay.repositories.BankingRepository;
 import com.smartstay.smartstay.repositories.BillTemplateTypeRepository;
@@ -626,5 +627,60 @@ public class TemplatesService {
        userService.addUserLogWithType(hostelId, templateId, ActivitySource.TEMPLATES, ActivitySourceType.DELETE, users, type);
        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 
+    }
+
+    public ResponseEntity<?> deleteTemplateImages(String hostelId, Integer templateGlobalId, DeleteTemplteImages payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (payloads == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (payloads.type() == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        Integer templateId = -1;
+        try {
+            templateId = Integer.parseInt(String.valueOf(templateGlobalId));
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(Utils.INVALID_TEMPLATE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        BillTemplates billTemplateType = templateRepository.findByHostelIdAndTemplateId(hostelId, templateId);
+        if (billTemplateType == null) {
+            return new ResponseEntity<>(Utils.INVALID_TEMPLATE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!billTemplateType.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (payloads.type().equalsIgnoreCase("SIGNATURE")) {
+            billTemplateType.setDigitalSignature(null);
+        }
+        else if (payloads.type().equalsIgnoreCase("LOGO")) {
+            billTemplateType.setHostelLogo(null);
+        }
+
+        templateRepository.save(billTemplateType);
+        userService.addUserLogWithType(hostelId, String.valueOf(billTemplateType.getTemplateId()), ActivitySource.TEMPLATES, ActivitySourceType.DELETE_OTHER_FIELDS, users, payloads.type());
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

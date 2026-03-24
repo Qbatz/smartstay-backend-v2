@@ -15,8 +15,8 @@ public class InvoiceDiscountService {
     private Authentication authentication;
     @Autowired
     private InvoiceDiscountRepository invoiceDiscountRepository;
-    public void applyDiscount(String hostelId, String invoiceId, String customerId, ApplyDiscount discount, Double totalInvoiceAmount) {
-        double percentage = (discount.discountAmount()/totalInvoiceAmount) * 100;
+    public void applyDiscount(String hostelId, String invoiceId, String customerId, ApplyDiscount discount, double discountAmount, Double totalInvoiceAmount) {
+        double percentage = (discountAmount/totalInvoiceAmount) * 100;
         InvoiceDiscounts invoiceDiscounts = new InvoiceDiscounts();
         invoiceDiscounts.setInvoiceId(invoiceId);
         invoiceDiscounts.setHostelId(hostelId);

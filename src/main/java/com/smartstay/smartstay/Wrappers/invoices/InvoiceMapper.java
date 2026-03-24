@@ -5,6 +5,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.invoice.ItemResponse;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
+import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.text.SimpleDateFormat;
@@ -21,10 +22,29 @@ public class InvoiceMapper {
         }
         String paymentStatus = null;
         if (invoice.getPaymentStatus() != null) {
-            paymentStatus = Utils.capitalize(PaymentStatus.valueOf(invoice.getPaymentStatus()).getDisplayName());
+            paymentStatus = InvoiceUtils.getInvoicePaymentStatusByStatus(invoice.getPaymentStatus());
         }
         if (invoice.isCancelled()) {
             paymentStatus = "Cancelled";
+        }
+
+        double dueAmount = 0.0;
+        if (invoice.getPaidAmount() != null) {
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
+                dueAmount = invoice.getTotalAmount() + invoice.getPaidAmount();
+            }
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+                dueAmount = 0;
+            }
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                dueAmount = invoice.getTotalAmount() - invoice.getPaidAmount();
+            }
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                dueAmount = 0;
+            }
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
+                dueAmount = invoice.getTotalAmount() + invoice.getPaidAmount();
+            }
         }
 
         return new InvoiceResponse(
@@ -33,7 +53,7 @@ public class InvoiceMapper {
                 Utils.capitalize(invoice.getInvoiceType()),
                 paymentStatus,
                 Utils.roundOfDouble(invoice.getTotalAmount()),
-                Utils.roundOfDouble(invoice.getTotalAmount() - paidAmount),
+                Utils.roundOfDouble(dueAmount),
                 Utils.roundOfDouble(paidAmount),
                 invoice.getInvoiceDueDate() != null
                         ? dateFormat.format(invoice.getInvoiceDueDate())
@@ -41,6 +61,8 @@ public class InvoiceMapper {
                 invoice.getInvoiceStartDate()!= null
                         ? dateFormat.format(invoice.getInvoiceStartDate())
                         : null,
+                invoice.getInvoiceMode(),
+                invoice.isDiscounted(),
                 invoice.getInvoiceItems() != null
                         ? invoice.getInvoiceItems().stream()
                         .map(item -> {
