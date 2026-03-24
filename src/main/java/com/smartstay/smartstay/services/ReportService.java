@@ -361,12 +361,26 @@ public class ReportService {
             cal.setTime(billingDates.currentBillStartDate());
             cal.add(Calendar.MONTH, -3);
             BillingDates bDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
-            return new BillingDates(bDates.currentBillStartDate(), billingDates.currentBillEndDate(), bDates.dueDate(), bDates.dueDays(), bDates.hasGracePeriod(), bDates.gracePeriodDays(), bDates.typeOfBilling());
+            return new BillingDates(bDates.currentBillStartDate(),
+                    billingDates.currentBillEndDate(),
+                    bDates.dueDate(),
+                    bDates.dueDays(),
+                    bDates.hasGracePeriod(),
+                    bDates.gracePeriodDays(),
+                    bDates.typeOfBilling(),
+                    billingDates.billingModel());
         } else if (period.equalsIgnoreCase("last 6 months") || period.equalsIgnoreCase("last_6_months")) {
             cal.setTime(billingDates.currentBillStartDate());
             cal.add(Calendar.MONTH, -6);
             BillingDates bDates = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
-            return new BillingDates(bDates.currentBillStartDate(), billingDates.currentBillEndDate(), bDates.dueDate(), bDates.dueDays(), bDates.hasGracePeriod(), bDates.gracePeriodDays(), bDates.typeOfBilling());
+            return new BillingDates(bDates.currentBillStartDate(),
+                    billingDates.currentBillEndDate(),
+                    bDates.dueDate(),
+                    bDates.dueDays(),
+                    bDates.hasGracePeriod(),
+                    bDates.gracePeriodDays(),
+                    bDates.typeOfBilling(),
+                    bDates.billingModel());
         }
         return billingDates;
     }

@@ -34,4 +34,20 @@ public class SmartstayApplication {
     public static void main(String[] args) {
         SpringApplication.run(SmartstayApplication.class, args);
     }
+
+//    @Bean
+//    CommandLineRunner mapBillingRuleToPrepaid(BillingRuleRepository billingRuleRepository) {
+//        return args -> {
+//            List<BillingRules> listBillingRules = billingRuleRepository
+//                    .findAll()
+//                    .stream()
+//                    .map(i -> {
+//                        i.setBillingModel(BillingModel.PREPAID.name());
+//                        return i;
+//                    })
+//                    .toList();
+//
+//            billingRuleRepository.saveAll(listBillingRules);
+//        };
+//    }
 }

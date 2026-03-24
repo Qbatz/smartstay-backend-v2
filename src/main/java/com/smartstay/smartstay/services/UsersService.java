@@ -567,6 +567,9 @@ public class UsersService {
         if (authentication.isAuthenticated()) {
             Users users = userRepository.findUserByUserId(authentication.getName());
             if (users != null) {
+                if (users.getRoleId() != 1 && users.getRoleId() != 2) {
+                    return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+                }
                 if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_USER, Utils.PERMISSION_WRITE)) {
                     return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
                 }

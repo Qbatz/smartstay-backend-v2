@@ -14,10 +14,7 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class CustomersBedHistoryService {
@@ -174,4 +171,11 @@ public class CustomersBedHistoryService {
         return customerBedHistoryRepository.findByRoomIdStartAndEndDate(roomId, startDate, endDate);
     }
 
+    public List<CustomersBedHistory> findBedHistoriesByListOfCustomersAndDates(List<String> customerIds, Date startDate, Date endDate) {
+        List<CustomersBedHistory> listCustomerBedHistories = customerBedHistoryRepository.findByListCustomerIdsAndStartAndEndDate(customerIds, startDate, endDate);
+        if (listCustomerBedHistories == null) {
+            listCustomerBedHistories = new ArrayList<>();
+        }
+        return listCustomerBedHistories;
+    }
 }

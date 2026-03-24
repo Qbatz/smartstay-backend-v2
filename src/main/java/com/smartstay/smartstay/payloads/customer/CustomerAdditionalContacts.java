@@ -7,8 +7,6 @@ public record CustomerAdditionalContacts(
         @NotEmpty(message = "Full name is required")
         @NotNull(message = "Full name is required")
         String fullName,
-        @NotEmpty(message = "Relationship is required")
-        @NotNull(message = "Relationship is required̵")
         String relationship,
         String occupation,
         @NotNull(message = "Mobile number is required")

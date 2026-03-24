@@ -4,16 +4,14 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.dao.BillingRules;
 import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.ennum.BillingModel;
 import com.smartstay.smartstay.ennum.BillingTypeEnum;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class HostelConfigService {
@@ -65,7 +63,14 @@ public class HostelConfigService {
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
         if (billingRules != null) {
-            billDates = new BillingDates(calendar.getTime(),findEndDate, dueDate, billingRuleDueDate, billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(), billingRules.getTypeOfBilling());
+            billDates = new BillingDates(calendar.getTime(),
+                    findEndDate,
+                    dueDate,
+                    billingRuleDueDate,
+                    billingRules.isHasGracePeriod(),
+                    billingRules.getGracePeriodDays(),
+                    billingRules.getTypeOfBilling(),
+                    billingRules.getBillingModel());
         }
         return billDates;
     }
@@ -92,7 +97,14 @@ public class HostelConfigService {
             Date findEndDate = Utils.findLastDate(billingRules.getBillingStartDate(), cal.getTime());
             Date dueDate = Utils.addDaysToDate(cal.getTime(), billingRules.getBillDueDays());
 
-            billingDates = new BillingDates(cal.getTime(), findEndDate, dueDate, billingRules.getBillDueDays(), billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(), billingRules.getTypeOfBilling());
+            billingDates = new BillingDates(cal.getTime(),
+                    findEndDate,
+                    dueDate,
+                    billingRules.getBillDueDays(),
+                    billingRules.isHasGracePeriod(),
+                    billingRules.getGracePeriodDays(),
+                    billingRules.getTypeOfBilling(),
+                    billingRules.getBillingModel());
         }
         else {
             Calendar cal = Calendar.getInstance();
@@ -101,7 +113,14 @@ public class HostelConfigService {
             Date findEndDate = Utils.findLastDate(1, cal.getTime());
             Date dueDate = Utils.addDaysToDate(cal.getTime(), 10);
 
-            billingDates = new BillingDates(cal.getTime(), findEndDate, dueDate, 10, false, 0, BillingTypeEnum.FIXED_DATE.name());
+            billingDates = new BillingDates(cal.getTime(),
+                    findEndDate,
+                    dueDate,
+                    10,
+                    false,
+                    0,
+                    BillingTypeEnum.FIXED_DATE.name(),
+                    BillingModel.PREPAID.name());
         }
 
 
@@ -126,5 +145,23 @@ public class HostelConfigService {
                     .toList();
         }
         return listHostels;
+    }
+
+    /**
+     * this will triggered for postpaid services
+     *
+     * @return
+     */
+    public List<BillingRules> findHostelsHavingBillingStartDateTomorrow() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_MONTH, 1);
+
+        int billingDay = Utils.findDateFromDate(calendar.getTime());
+
+        List<BillingRules> listBillingDates = billingRuleRepository.findPostpaidHostelsHavingBillingRuleTomorrow(billingDay);
+        if (listBillingDates == null) {
+            listBillingDates = new ArrayList<>();
+        }
+        return listBillingDates;
     }
 }

@@ -1078,8 +1078,8 @@ public class ElectricityService {
 
     }
 
-    public List<ElectricityReadings> getAllElectricityReadingForRecurring(String hostelId, Date startDate, Date endDate) {
-        return electricityReadingRepository.listAllReadingsForGenerateInvoice(hostelId, startDate, endDate);
+    public List<ElectricityReadings> getAllElectricityReadingForRecurring(String hostelId) {
+        return electricityReadingRepository.listAllReadingsForGenerateInvoice(hostelId);
     }
 
     public void markAsInvoiceGenerated(List<ElectricityReadings> listReadingForMakingInvoiceGenerated) {

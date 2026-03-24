@@ -167,6 +167,7 @@ public class Utils {
     public static final String DISCOUNT_AMOUNT_REQUIRED = "Discount amount is required";
     public static final String DISCOUNT_AMOUNT_VALIDATION= "Discount amount should not be greater than invoice amount";
     public static final String DISCOUNT_ALREADY_APPLIED = "Discount is already applied for this invoice";
+    public static final String INVALID_DISCOUNT_PERCENTAGE = "Invalid discount percentage";
     public static final String CANNOT_APPLY_DISCOUNT_PAID_INVOICES = "Cannot apply discount for paid/partially paid invoices";
     public static final String CANNOT_APPLY_DISCOUNT_REFUNDING = "Cannot apply discount for refundable invoices";
     public static final String CANNOT_APPLY_DISCOUNT_CANCELLED = "Cannot apply discount for cancelled invoices";
@@ -237,6 +238,7 @@ public class Utils {
     public static final String CANNOT_DELETE_OCCUPIED_BEDS = "Cannot delete the occupied beds";
     public static final String DATE_VALIDATION_ERROR_CANCEL_BOOKING = "Cancel date cannot be earlier than the booking date";
     public static final String CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR = "Cannot modify the billing rules. Tenant already exists.";
+    public static final String CANNOT_MODIFY_BILLING_TYPE = "Cannot modify billing type, Check in tenant exist";
     public static final String CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED = "Cannot delete receipts for settlement generated customers";
     public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
     public static final String CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL = "Only manual invoices are allowed to mark unpaid";
