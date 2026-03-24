@@ -628,6 +628,7 @@ public class HostelService {
                     typeOfBilling,
                     gracePeriod,
                     billingRules.isHasGracePeriod(),
+                    billingRules.getBillingModel(),
                     billingRules.getReminderDays());
 
             return new ResponseEntity<>(rules, HttpStatus.OK);

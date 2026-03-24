@@ -5,7 +5,6 @@ import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.PostpaidRecurringEvents;
-import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.services.*;
 import com.smartstay.smartstay.util.Utils;
@@ -17,6 +16,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 public class PostpaidRecurringEventListener {
@@ -35,6 +35,8 @@ public class PostpaidRecurringEventListener {
     @Autowired
     private CustomerEbHistoryService customerEbHistoryService;
     @Autowired
+    private CustomersBedHistoryService customersBedHistoryService;
+    @Autowired
     private AmenitiesService amenitiesService;
     @Autowired
     private TemplatesService templatesService;
@@ -50,17 +52,19 @@ public class PostpaidRecurringEventListener {
     public void generateInvoiceForPostpaid(PostpaidRecurringEvents postpaidRecurringEvents) {
         HostelV1 hostelV1 = hostelService.getHostelInfo(postpaidRecurringEvents.getHostelId());
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(postpaidRecurringEvents.getHostelId());
-        List<CustomersConfig> listCustomerConfig = customersConfigService.getAllActiveAndEnabledRecurringCustomers(postpaidRecurringEvents.getHostelId());
+//        List<CustomersConfig> listCustomerConfig = customersConfigService.getAllActiveAndEnabledRecurringCustomers(postpaidRecurringEvents.getHostelId());
 
-        List<String> tempCusIds = listCustomerConfig.stream()
-                .map(CustomersConfig::getCustomerId)
-                .toList();
+//        List<String> tempCusIds = listCustomerConfig.stream()
+//                .map(CustomersConfig::getCustomerId)
+//                .toList();
 
-        List<BookingsV1> customersList = bookingsService.getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(tempCusIds, postpaidRecurringEvents.getHostelId());
+        List<BookingsV1> customersList = bookingsService.findCheckedInCustomers(postpaidRecurringEvents.getHostelId());
         List<String> customerIds = customersList
                 .stream()
                 .map(BookingsV1::getCustomerId)
                 .toList();
+
+        List<CustomersBedHistory> listCustomerBedHistory = customersBedHistoryService.findBedHistoriesByListOfCustomersAndDates(customerIds, billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
 
         List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getWalletListForRecurring(customerIds);
 
@@ -70,6 +74,74 @@ public class PostpaidRecurringEventListener {
         customersList
                 .forEach(item -> {
                     Double rentAmount = item.getRentAmount();
+                    List<CustomersBedHistory> currentHistory = listCustomerBedHistory.stream()
+                            .filter(i -> i.getCustomerId().equalsIgnoreCase(item.getCustomerId()))
+                            .toList();
+                    //No bed change happens
+                    if (currentHistory.size() < 2) {
+                        if (Utils.compareWithTwoDates(item.getJoiningDate(), billingDates.currentBillStartDate()) <= 0) {
+                            rentAmount = item.getRentAmount();
+                        }
+                        else {
+                            if (billingDates.hasGracePeriod()) {
+                                Date dateAfterGracePeriod = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
+                                if (Utils.compareWithTwoDates(item.getJoiningDate(), dateAfterGracePeriod) <= 0) {
+                                    rentAmount = item.getRentAmount();
+                                }
+                                else {
+                                    rentAmount = calculateRentAmount(item.getJoiningDate(), item.getRentAmount(), billingDates);
+                                }
+                            }
+                            else {
+                                rentAmount = calculateRentAmount(item.getJoiningDate(), item.getRentAmount(), billingDates);
+                            }
+                        }
+                    }
+                    else {
+                        //executes when bed change happens
+                        List<CustomersBedHistory> oldBedHistories = currentHistory
+                                .stream()
+                                .filter(i -> i.getEndDate() != null)
+                                .toList();
+
+                        AtomicReference<Double> oldRentAmounts = new AtomicReference<>(0.0);
+                        if (oldBedHistories != null && !oldBedHistories.isEmpty()) {
+                            oldBedHistories.forEach(oldItems -> {
+                                double fullRentAmount = oldItems.getRentAmount();
+                                long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                                Date startDate = oldItems.getStartDate();
+                                if (Utils.compareWithTwoDates(oldItems.getStartDate(), billingDates.currentBillStartDate()) < 0) {
+                                    startDate = billingDates.currentBillStartDate();
+                                }
+                                long noOfDaysStayed = Utils.findNumberOfDays(startDate, oldItems.getEndDate());
+                                double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
+                                double rentForStayedDays = rentPerDay * noOfDaysStayed;
+                                oldRentAmounts.set(rentForStayedDays + oldRentAmounts.get());
+                            });
+                        }
+
+                        CustomersBedHistory currentBed = currentHistory
+                                .stream()
+                                .filter(i -> i.getEndDate() == null)
+                                .findFirst()
+                                .orElse(null);
+                        if (currentBed != null) {
+                            double fullRentAmount = currentBed.getRentAmount();
+                            long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                            Date startDate = currentBed.getStartDate();
+                            if (Utils.compareWithTwoDates(currentBed.getStartDate(), billingDates.currentBillStartDate()) < 0) {
+                                startDate = billingDates.currentBillStartDate();
+                            }
+                            long noOfDaysStayed = Utils.findNumberOfDays(startDate, currentBed.getEndDate());
+                            double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
+                            double rentForStayedDays = rentPerDay * noOfDaysStayed;
+                            oldRentAmounts.set(rentForStayedDays + oldRentAmounts.get());
+
+                        }
+                    }
+
+
+
                     List<Integer> ebReadingsId = listElectricityForAHostel
                             .stream()
                             .map(ElectricityReadings::getId)
@@ -94,7 +166,7 @@ public class PostpaidRecurringEventListener {
                     double rentEbAmount = rentAmount + ebAmount;
                     double rentEbAndAmenity = rentEbAmount + amenityAmount;
                     double walletAmount = 0.0;
-                    double finalAmount = rentEbAndAmenity;
+                    double finalAmount = Utils.roundOfDouble(rentEbAndAmenity);
 
                     Customers customers = listCustomers
                             .stream()
@@ -271,5 +343,14 @@ public class PostpaidRecurringEventListener {
         electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
         recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId());
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
+    }
+
+    public Double calculateRentAmount(Date joiningDate, Double totalRent, BillingDates billingDates) {
+        long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+        long noOfDaysStayed = Utils.findNumberOfDays(joiningDate, billingDates.currentBillEndDate());
+
+        double rentPerday = totalRent / noOfDaysInCurrentMonth;
+
+        return noOfDaysStayed * rentPerday;
     }
 }

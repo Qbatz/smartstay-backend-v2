@@ -153,6 +153,10 @@ public class BookingsService {
         return bookingsRepository.findBookingsByListOfCustomersAndHostelId(customerIds, hostelId);
     }
 
+    public List<BookingsV1> findCheckedInCustomers(String hostelId) {
+        return bookingsRepository.findCheckInByHostelId(hostelId);
+    }
+
     public int getAllCheckedInCustomersCount(String hostelId) {
         List<String> statuses = new ArrayList<>();
         statuses.add(BookingStatus.NOTICE.name());

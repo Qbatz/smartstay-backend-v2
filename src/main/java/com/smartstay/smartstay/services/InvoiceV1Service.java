@@ -1045,8 +1045,9 @@ public class InvoiceV1Service {
                 }
             }
 
-            InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getBasePrice(), 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount,
-                    discountedAmount, discountedPercentage, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(), totalDeductionAmount, listInvoiceItems, listDeductions);
+            InvoiceInfo invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(invoicesV1.getBasePrice()),
+                    0.0, 0.0, Utils.roundOffWithTwoDigit( invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
+                    Utils.roundOffWithTwoDigit(discountedAmount), discountedPercentage, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(), Utils.roundOffWithTwoDigit(totalDeductionAmount), listInvoiceItems, listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1091,8 +1092,8 @@ public class InvoiceV1Service {
                 discountedPercentage = invoiceDiscounts.discountPercentage();
             }
         }
-        InvoiceInfo invoiceInfo = new InvoiceInfo(subTotal, 0.0, 0.0, invoicesV1.getTotalAmount(), paidAmount, balanceAmount,
-                discountedAmount,
+        InvoiceInfo invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
+                Utils.roundOffWithTwoDigit(discountedAmount),
                 discountedPercentage,
                 invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
                 0.0, listInvoiceItems, null);

@@ -61,6 +61,8 @@ public class InvoiceMapper {
                 invoice.getInvoiceStartDate()!= null
                         ? dateFormat.format(invoice.getInvoiceStartDate())
                         : null,
+                invoice.getInvoiceMode(),
+                invoice.isDiscounted(),
                 invoice.getInvoiceItems() != null
                         ? invoice.getInvoiceItems().stream()
                         .map(item -> {

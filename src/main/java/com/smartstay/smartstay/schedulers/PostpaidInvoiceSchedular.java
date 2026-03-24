@@ -18,7 +18,8 @@ public class PostpaidInvoiceSchedular {
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
 
-    @Scheduled(cron = "0 58 20 * * *")
+    //Schedule it for morning 3;
+    @Scheduled(cron = "0 0 3 * * *")
     public void scheduleInvoice() {
         List<BillingRules> listBillingRules = hostelConfigService.findHostelsHavingBillingStartDateTomorrow();
 

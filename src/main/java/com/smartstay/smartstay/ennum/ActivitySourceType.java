@@ -39,6 +39,7 @@ public enum ActivitySourceType {
     DISCOUNT,
     REFUND,
     DOWNLOAD,
-    WHATSAPP
+    WHATSAPP,
+    DELETE_OTHER_FIELDS
 
 }

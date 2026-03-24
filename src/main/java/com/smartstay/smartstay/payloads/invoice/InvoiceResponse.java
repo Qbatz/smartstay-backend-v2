@@ -12,6 +12,8 @@ public record InvoiceResponse(
         Double paidAmount,
         String dueDate,
         String invoiceGeneratedDate,
+        String invoiceMode,
+        boolean isDiscounted,
         List<ItemResponse> items
 ) {
 }
