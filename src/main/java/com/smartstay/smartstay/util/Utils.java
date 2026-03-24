@@ -167,6 +167,7 @@ public class Utils {
     public static final String DISCOUNT_AMOUNT_REQUIRED = "Discount amount is required";
     public static final String DISCOUNT_AMOUNT_VALIDATION= "Discount amount should not be greater than invoice amount";
     public static final String DISCOUNT_ALREADY_APPLIED = "Discount is already applied for this invoice";
+    public static final String INVALID_DISCOUNT_PERCENTAGE = "Invalid discount percentage";
     public static final String CANNOT_APPLY_DISCOUNT_PAID_INVOICES = "Cannot apply discount for paid/partially paid invoices";
     public static final String CANNOT_APPLY_DISCOUNT_REFUNDING = "Cannot apply discount for refundable invoices";
     public static final String CANNOT_APPLY_DISCOUNT_CANCELLED = "Cannot apply discount for cancelled invoices";
