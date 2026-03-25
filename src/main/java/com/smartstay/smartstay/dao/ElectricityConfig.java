@@ -18,13 +18,14 @@ public class ElectricityConfig {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     private boolean shouldIncludeInRent;
+    //From EBReadingType enum
     private String typeOfReading;
-    private boolean isProRate;
     private Date lastUpdate;
     private String updatedBy;
     private Double charge;
     private boolean isUpdated;
     private Integer billDate;
+
 
     @OneToOne()
     @JoinColumn(name = "hostel_id", referencedColumnName = "hostelId")

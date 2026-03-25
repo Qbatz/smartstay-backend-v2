@@ -492,11 +492,15 @@ public class HostelService {
 
         ElectricityConfig config = hostel.getElectricityConfig();
         if (config != null) {
+            boolean shouldIncludeInRent = false;
+            if (config.getTypeOfReading().equalsIgnoreCase(EBReadingType.FLAT_RATE.name())) {
+                shouldIncludeInRent = config.isShouldIncludeInRent();
+            }
             EBSettings settings = new EBSettings(hostelId,
                     config.getCharge(),
-                    config.getTypeOfReading().equalsIgnoreCase(EBReadingType.HOSTEL_READING.name()),
-                    config.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name()),
-                    config.isProRate());
+                    config.getTypeOfReading(),
+                    shouldIncludeInRent,
+                    config.getCharge());
 
             return new ResponseEntity<>(settings, HttpStatus.OK);
         }
@@ -523,18 +527,55 @@ public class HostelService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No hostel found");
         }
 
-        if (payloads != null && payloads.isHostelBased() != null && payloads.isRoomBased() != null) {
-            if (payloads.isHostelBased() && payloads.isRoomBased()) {
-                return new ResponseEntity<>(Utils.CANNOT_ENABLE_HOSTEL_ROOM_READINGS, HttpStatus.BAD_GATEWAY);
-            }
+
+
+        ElectricityConfig ebConfig = hostel.getElectricityConfig();
+        if (ebConfig == null) {
+            ebConfig = new ElectricityConfig();
+            ebConfig.setBillDate(1);
+            ebConfig.setShouldIncludeInRent(true);
         }
 
-        if (payloads != null && payloads.isProRate() != null) {
-            if (payloads.isProRate()) {
-                if (!Utils.checkNullOrEmpty(payloads.calculationStartingDate())) {
-                    return new ResponseEntity<>(Utils.INVALID_STARTING_DATE, HttpStatus.BAD_REQUEST);
-                }
-            }
+
+        if (payloads != null && payloads.shouldIncludeInRent() != null) {
+            ebConfig.setUpdated(true);
+            ebConfig.setShouldIncludeInRent(payloads.shouldIncludeInRent());
+        }
+
+        hostel.setElectricityConfig(ebConfig);
+        ebConfig.setHostel(hostel);
+
+        hostelV1Repository.save(hostel);
+        usersService.addUserLog(hostelId, String.valueOf(ebConfig.getId()), ActivitySource.HOSTEL, ActivitySourceType.UPDATE_EB_CONFIG, users);
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
+    }
+
+    public ResponseEntity<?> updateEbConfigNew(String hostelId, UpdateEBConfigs payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ELECTRIC_CITY, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelV1Repository.findByHostelIdAndParentId(hostelId, users.getParentId());
+        if (hostel == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No hostel found");
+        }
+
+        if (payloads == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (payloads.typeofReading() == null) {
+            return new ResponseEntity<>(Utils.PLAN_TYPE_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
         ElectricityConfig ebConfig = hostel.getElectricityConfig();
@@ -543,27 +584,31 @@ public class HostelService {
             ebConfig.setBillDate(1);
             ebConfig.setShouldIncludeInRent(true);
         }
-        if (payloads != null && payloads.isHostelBased() != null) {
-            if (payloads.isHostelBased()) {
+        if (payloads != null && payloads.typeofReading() != null) {
+
+            if (payloads.typeofReading().equalsIgnoreCase("hostel")) {
                 ebConfig.setUpdated(true);
                 ebConfig.setTypeOfReading(EBReadingType.HOSTEL_READING.name());
             }
-        }
-
-        if (payloads != null && payloads.isRoomBased() != null) {
-            if (payloads.isRoomBased()) {
+            else if (payloads.typeofReading().equalsIgnoreCase("Room")) {
                 ebConfig.setUpdated(true);
                 ebConfig.setTypeOfReading(EBReadingType.ROOM_READING.name());
             }
-        }
+            else if (payloads.typeofReading().equalsIgnoreCase("flat")) {
+                if (payloads.charge() == null) {
+                    if (ebConfig.getCharge() == null) {
+                        return new ResponseEntity<>(Utils.FLAT_RATE_REQUIRED, HttpStatus.BAD_REQUEST);
+                    }
+                }
+                else {
+                    ebConfig.setCharge(payloads.charge());
+                }
 
-        if (payloads != null && payloads.isProRate() != null) {
-            ebConfig.setProRate(payloads.isProRate());
-            ebConfig.setUpdated(true);
-            if (payloads.isProRate()) {
-                ebConfig.setBillDate(payloads.calculationStartingDate());
+                ebConfig.setUpdated(true);
+                ebConfig.setTypeOfReading(EBReadingType.FLAT_RATE.name());
             }
         }
+
 
         if (payloads != null && payloads.shouldIncludeInRent() != null) {
             ebConfig.setUpdated(true);

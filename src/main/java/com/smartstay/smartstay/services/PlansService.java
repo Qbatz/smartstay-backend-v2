@@ -2,10 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.plans.PlanListMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.HostelPlan;
-import com.smartstay.smartstay.dao.HostelV1;
-import com.smartstay.smartstay.dao.Plans;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.PlanType;
 import com.smartstay.smartstay.repositories.PlansRepository;
 import com.smartstay.smartstay.responses.plans.PlanDetails;
@@ -17,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -96,6 +94,15 @@ public class PlansService {
             noOfDaysRemaining = Utils.findNumberOfDays(new Date(), hostelPlan.getCurrentPlanEndsAt());
         }
 
+        Plans plans = plansRepository.findPlanByPlanCode(hostelPlan.getCurrentPlanCode());
+        List<String> features = new ArrayList<>();
+        if (plans != null) {
+            features = plans.getFeaturesList()
+                    .stream()
+                    .map(PlanFeatures::getFeatureName)
+                    .toList();
+        }
+
         PlanDetails planDetails = new PlanDetails(
                 String.valueOf(hostelPlan.getHostelPlanId()),
                 hostelPlan.getCurrentPlanCode(),
@@ -106,9 +113,13 @@ public class PlansService {
                 Utils.dateToString(hostelPlan.getCurrentPlanStartsAt()),
                 Utils.dateToString(hostelPlan.getCurrentPlanEndsAt()),
                 Utils.roundOffWithTwoDigit(subscriptionAmount),
-                null
+                features
         );
 
         return new ResponseEntity<>(planDetails, HttpStatus.OK);
+    }
+
+    public Plans findPlanByPlanCode(String s) {
+        return plansRepository.findPlanByPlanCode(s);
     }
 }

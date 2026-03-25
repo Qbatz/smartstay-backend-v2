@@ -348,7 +348,7 @@ public class ElectricityService {
                 }
 
                 billEndDate = date;
-                isProRate = electricityConfig.isProRate();
+                isProRate = true;
             }
 
         }

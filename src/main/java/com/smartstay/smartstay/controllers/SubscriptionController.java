@@ -1,9 +1,11 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.subscription.Subscription;
 import com.smartstay.smartstay.services.SubscriptionService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +25,10 @@ public class SubscriptionController {
     }
 
     @PostMapping("/subscribe/{hostelId}")
-    public ResponseEntity<?> addSubscription(@PathVariable("hostelId") String hostelId) {
-        return subscriptionService.subscribeSingleHostel(hostelId);
+    public ResponseEntity<?> addSubscription(@PathVariable("hostelId") String hostelId, @RequestBody @Valid Subscription subscription) {
+        return subscriptionService.subscribeSingleHostel(hostelId, subscription);
     }
+
+
 
 }
