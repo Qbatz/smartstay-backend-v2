@@ -34,6 +34,7 @@ public class ElectricityUsgeMapper implements Function<ElectricityReadings, Elec
         if (!electricityReadings.isFirstEntry()) {
             totalPrice = electricityReadings.getCurrentUnitPrice() * electricityReadings.getConsumption();
         }
+        Integer floorId = null;
         if (listRoomInfo != null) {
             RoomInfo roomInfo = listRoomInfo
                     .stream()
@@ -44,6 +45,7 @@ public class ElectricityUsgeMapper implements Function<ElectricityReadings, Elec
             if (roomInfo != null) {
                 roomName = roomInfo.getRoomName();
                 floorName = roomInfo.getFloorName();
+                floorId = roomInfo.getFloorId();
             }
         }
 
@@ -51,7 +53,7 @@ public class ElectricityUsgeMapper implements Function<ElectricityReadings, Elec
                 electricityReadings.getId(),
                 Utils.roundOffWithTwoDigit(electricityReadings.getConsumption()),
                 electricityReadings.getRoomId(),
-                electricityReadings.getFloorId(),
+                floorId != null ? floorId : electricityReadings.getFloorId(),
                 roomName,
                 floorName,
                 Utils.dateToString(electricityReadings.getEntryDate()),
