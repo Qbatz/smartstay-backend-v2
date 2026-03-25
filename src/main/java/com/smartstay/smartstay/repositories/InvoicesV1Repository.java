@@ -255,6 +255,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             WHERE i.hostelId = :hostelId AND i.isCancelled = false
             AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
+           AND i.paymentStatus NOT IN ('REFUNDED')
             """)
     Map<String, Object> getBillingSummary(@Param("hostelId") String hostelId, @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate);
 

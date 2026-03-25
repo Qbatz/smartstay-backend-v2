@@ -2649,7 +2649,7 @@ public class InvoiceV1Service {
         return invoicesV1Repository.getAdvanceHoldingAmount(hostelId);
     }
 
-    public Double getRefundedAmount(String hostelId, java.util.Date startDate, java.util.Date endDate) {
+    public Double getRefundedAmount(String hostelId, Date startDate, Date endDate) {
         return invoicesV1Repository.getRefundedAmount(hostelId, startDate, endDate);
     }
 

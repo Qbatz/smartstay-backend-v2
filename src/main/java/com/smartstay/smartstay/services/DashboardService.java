@@ -359,6 +359,9 @@ public class DashboardService {
         if (totalPaid == null) totalPaid = 0.0;
         Double totalPending = totalInvoiced - totalPaid;
 
+        Double refundedAmount = invoiceV1Service.getRefundedAmount(hostelId, dates.startDate(), dates.endDate());
+        if (refundedAmount == null) refundedAmount = 0.0;
+
         String collectionRate = totalInvoiced > 0 
             ? Utils.roundOffWithTwoDigit((totalPaid / totalInvoiced) * 100) + "%" 
             : "0%";
@@ -376,6 +379,7 @@ public class DashboardService {
                 Utils.roundOffWithTwoDigit(totalInvoiced),
                 Utils.roundOffWithTwoDigit(totalPaid), 
                 Utils.roundOffWithTwoDigit(totalPending),
+                Utils.roundOffWithTwoDigit(refundedAmount),
                 collectionRate,
                 fromLastMonth);
     }
