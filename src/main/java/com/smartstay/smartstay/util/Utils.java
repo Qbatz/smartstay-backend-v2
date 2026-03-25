@@ -129,6 +129,11 @@ public class Utils {
     public static final String INVALID_TRANSACTION_TYPE = "This account does’t have Debit and Credit access";
     public static final String INSUFFICIENT_BALANCE = "Insufficient balance";
     public static final String INVALID_TRANSACTION_TYPE_TO_ACC = "This account does’t have Credit access";
+    public static final String PLAN_CODE_REQUIRED = "Plan code is required";
+    public static final String PLAN_TYPE_REQUIRED = "Plan type is required";
+    public static final String FLAT_RATE_REQUIRED = "Flat rate is required";
+    public static final String INVALID_PLAN_CODE = "Invalid plan code";
+    public static final String CANNOT_MAKE_PAYMENT_FOR_TRIAL_PERIOD = "Cannot make a payment for trial period";
     public static final String TEMPLATE_NOT_AVAILABLE = "Template not available for this hostel";
     public static final String BILLING_RULE_NOT_AVAILABLE = "Billing Rule not found";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";

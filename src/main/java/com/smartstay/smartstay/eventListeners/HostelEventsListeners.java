@@ -41,7 +41,6 @@ public class HostelEventsListeners {
 
         HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
         ElectricityConfig config = new ElectricityConfig();
-        config.setProRate(true);
         config.setHostel(hostelV1);
         config.setCharge(5.0);
         config.setBillDate(1);

@@ -35,6 +35,13 @@ public class SmartstayApplication {
         SpringApplication.run(SmartstayApplication.class, args);
     }
 
+    //This should be performed in prod environment
+
+//    ALTER TABLE smart_stay.bill_template_type MODIFY COLUMN invoice_terms_and_condition LONGTEXT;
+//    ALTER TABLE smart_stay.bill_template_type MODIFY COLUMN invoice_notes LONGTEXT;
+//    ALTER TABLE smart_stay.bill_template_type MODIFY COLUMN receipt_notes LONGTEXT;
+//    ALTER TABLE smart_stay.bill_template_type MODIFY COLUMN receipt_terms_and_condition LONGTEXT;
+
 //    @Bean
 //    CommandLineRunner mapBillingRuleToPrepaid(BillingRuleRepository billingRuleRepository) {
 //        return args -> {

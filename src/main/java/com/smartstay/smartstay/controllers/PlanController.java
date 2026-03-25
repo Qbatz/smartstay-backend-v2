@@ -19,7 +19,7 @@ public class PlanController {
     @Autowired
     private PlansService plansService;
 
-    @GetMapping("/")
+    @GetMapping("")
     public ResponseEntity<?> getPlans() {
         return plansService.getAllPlans();
     }

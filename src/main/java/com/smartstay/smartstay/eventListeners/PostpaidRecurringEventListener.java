@@ -58,6 +58,9 @@ public class PostpaidRecurringEventListener {
 //                .map(CustomersConfig::getCustomerId)
 //                .toList();
 
+        AtomicReference<Date> invoiceStartDate = new AtomicReference<>();
+        Date invoiceEndDate = null;
+
         List<BookingsV1> customersList = bookingsService.findCheckedInCustomers(postpaidRecurringEvents.getHostelId());
         List<String> customerIds = customersList
                 .stream()
@@ -81,8 +84,10 @@ public class PostpaidRecurringEventListener {
                     if (currentHistory.size() < 2) {
                         if (Utils.compareWithTwoDates(item.getJoiningDate(), billingDates.currentBillStartDate()) <= 0) {
                             rentAmount = item.getRentAmount();
+                            invoiceStartDate.set(billingDates.currentBillStartDate());
                         }
                         else {
+                            invoiceStartDate.set(item.getJoiningDate());
                             if (billingDates.hasGracePeriod()) {
                                 Date dateAfterGracePeriod = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
                                 if (Utils.compareWithTwoDates(item.getJoiningDate(), dateAfterGracePeriod) <= 0) {
@@ -98,6 +103,12 @@ public class PostpaidRecurringEventListener {
                         }
                     }
                     else {
+                        if (Utils.compareWithTwoDates(item.getJoiningDate(), billingDates.currentBillStartDate()) <= 0) {
+                            invoiceStartDate.set(billingDates.currentBillStartDate());
+                        }
+                        else {
+                            invoiceStartDate.set(item.getJoiningDate());
+                        }
                         //executes when bed change happens
                         List<CustomersBedHistory> oldBedHistories = currentHistory
                                 .stream()
@@ -245,7 +256,7 @@ public class PostpaidRecurringEventListener {
                         invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
                         invoicesV1.setInvoiceGeneratedDate(new Date());
                         invoicesV1.setInvoiceDueDate(billingDates.dueDate());
-                        invoicesV1.setInvoiceStartDate(billingDates.currentBillStartDate());
+                        invoicesV1.setInvoiceStartDate(invoiceStartDate.get());
                         invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
                         invoicesV1.setCreatedAt(new Date());
 

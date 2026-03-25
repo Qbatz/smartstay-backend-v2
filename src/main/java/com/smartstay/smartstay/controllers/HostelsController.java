@@ -69,7 +69,7 @@ public class HostelsController {
     }
     @PutMapping("/electricity/config/{hostelId}")
     public ResponseEntity<?> updateElectricityConfiguration(@PathVariable("hostelId") String hostelId, UpdateEBConfigs ebConfigs) {
-        return hostelService.updateEbConfig(hostelId, ebConfigs);
+        return hostelService.updateEbConfigNew(hostelId, ebConfigs);
     }
     @GetMapping("/config/billing/{hostelId}")
     public ResponseEntity<?> viewBillingRules(@PathVariable("hostelId") String hostelId) {
