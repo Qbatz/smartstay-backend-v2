@@ -104,8 +104,8 @@ public interface UserRepository extends JpaRepository<Users, String> {
             """, nativeQuery = true)
     List<UsersData> getUserList(@Param("hostelId") String hostelId, @Param("userId") String userId);
 
-    @Query("SELECT count(u) FROM Users u where u.emailId=:emailId and u.isDeleted =false and u.userId !=:userId")
-    int getUsersCountByEmail(String userId, String emailId);
+    @Query("SELECT count(u) FROM Users u where u.emailId=:emailId and u.isDeleted = false and u.userId !=:userId")
+    int getUsersCountByEmail(@Param("userId") String userId, @Param("emailId") String emailId);
 
     @Query("""
             SELECT count(u) FROM Users u where u.mobileNo=:mobile and u.userId !=:userId
