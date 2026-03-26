@@ -1325,7 +1325,7 @@ public class CustomersService {
             c.setTime(joiningDate);
 
             if (billingDates.hasGracePeriod()) {
-                Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
+                Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays()-1);
                 if (payloads.proRate() != null && payloads.proRate()) {
                     long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
                     long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());

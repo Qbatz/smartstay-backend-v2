@@ -379,7 +379,7 @@ public class HostelService {
 //        Calendar calendarDueDate = Calendar.getInstance();
 //        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
-        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
@@ -406,7 +406,7 @@ public class HostelService {
         calendar.setTime(date);
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
-        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
