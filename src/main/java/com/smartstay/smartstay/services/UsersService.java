@@ -848,7 +848,7 @@ public class UsersService {
                     add = new Address();
                 }
                 if (payloads.mailId() != null && !payloads.mailId().equalsIgnoreCase("")) {
-                    if (userRepository.getUsersCountByEmail(adminId, adminUser.getEmailId()) > 0) {
+                    if (userRepository.getUsersCountByEmail(adminId, payloads.mailId()) > 0) {
                         emailStatus = Utils.EMAIL_ID_EXISTS;
                     }
                     adminUser.setEmailId(payloads.mailId());
@@ -978,7 +978,7 @@ public class UsersService {
 //                return new ResponseEntity<>(Utils.EMAIL_ID_EXISTS, HttpStatus.BAD_REQUEST);\
                 mobileStatus = Utils.MOBILE_NO_EXISTS;
             }
-            userToUpdate.setEmailId(payloads.emailId());
+            userToUpdate.setMobileNo(payloads.mobile());
         }
 
 
