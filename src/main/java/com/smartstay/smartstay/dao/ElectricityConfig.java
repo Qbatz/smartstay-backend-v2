@@ -23,6 +23,7 @@ public class ElectricityConfig {
     private Date lastUpdate;
     private String updatedBy;
     private Double charge;
+    private Double flatCharge;
     private boolean isUpdated;
     private Integer billDate;
 

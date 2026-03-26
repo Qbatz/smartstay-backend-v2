@@ -52,14 +52,38 @@ public class PostpaidRecurringEventListener {
     public void generateInvoiceForPostpaid(PostpaidRecurringEvents postpaidRecurringEvents) {
         HostelV1 hostelV1 = hostelService.getHostelInfo(postpaidRecurringEvents.getHostelId());
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(postpaidRecurringEvents.getHostelId());
-//        List<CustomersConfig> listCustomerConfig = customersConfigService.getAllActiveAndEnabledRecurringCustomers(postpaidRecurringEvents.getHostelId());
+        ElectricityConfig ebConfig = hostelService.getElectricityConfig(hostelV1.getHostelId());
 
-//        List<String> tempCusIds = listCustomerConfig.stream()
-//                .map(CustomersConfig::getCustomerId)
-//                .toList();
+        boolean shouldIncludeEb;
+        double flatEbAmount;
+        boolean isFlatRate;
+
+        if (ebConfig != null) {
+            if (ebConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.FLAT_RATE.name())) {
+                if (ebConfig.isShouldIncludeInRent()) {
+                    flatEbAmount = ebConfig.getFlatCharge();
+                    isFlatRate = true;
+                    shouldIncludeEb = false;
+                }
+                else {
+                    shouldIncludeEb = false;
+                    isFlatRate = false;
+                    flatEbAmount = 0.0;
+                }
+            }
+            else {
+                flatEbAmount = 0.0;
+                isFlatRate = false;
+                shouldIncludeEb = true;
+            }
+        } else {
+            flatEbAmount = 0.0;
+            isFlatRate = false;
+            shouldIncludeEb = true;
+        }
 
         AtomicReference<Date> invoiceStartDate = new AtomicReference<>();
-        Date invoiceEndDate = null;
+        Date invoiceEndDate= null;
 
         List<BookingsV1> customersList = bookingsService.findCheckedInCustomers(postpaidRecurringEvents.getHostelId());
         List<String> customerIds = customersList
@@ -72,7 +96,12 @@ public class PostpaidRecurringEventListener {
         List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getWalletListForRecurring(customerIds);
 
         List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
-        List<ElectricityReadings> listElectricityForAHostel = electricityService.getAllElectricityReadingForRecurring(postpaidRecurringEvents.getHostelId());
+        List<ElectricityReadings> listElectricityForAHostel;
+        if (shouldIncludeEb) {
+            listElectricityForAHostel = electricityService.getAllElectricityReadingForRecurring(postpaidRecurringEvents.getHostelId());
+        } else {
+            listElectricityForAHostel = new ArrayList<>();
+        }
 
         customersList
                 .forEach(item -> {
@@ -143,29 +172,40 @@ public class PostpaidRecurringEventListener {
                             if (Utils.compareWithTwoDates(currentBed.getStartDate(), billingDates.currentBillStartDate()) < 0) {
                                 startDate = billingDates.currentBillStartDate();
                             }
-                            long noOfDaysStayed = Utils.findNumberOfDays(startDate, currentBed.getEndDate());
+                            Date endDate = currentBed.getEndDate();
+                            if (endDate == null) {
+                                endDate = billingDates.currentBillEndDate();
+                            }
+                            long noOfDaysStayed = Utils.findNumberOfDays(startDate, endDate);
                             double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
                             double rentForStayedDays = rentPerDay * noOfDaysStayed;
                             oldRentAmounts.set(rentForStayedDays + oldRentAmounts.get());
 
+                            rentAmount = oldRentAmounts.get();
                         }
                     }
 
+                    Double ebAmount = 0.0;
+                    if (shouldIncludeEb) {
+                        List<Integer> ebReadingsId = listElectricityForAHostel
+                                .stream()
+                                .map(ElectricityReadings::getId)
+                                .toList();
+                        List<CustomersEbHistory> listCustomerEb = customerEbHistoryService.getAllByCustomerIdAndReadingId(item.getCustomerId(), ebReadingsId);
 
-
-                    List<Integer> ebReadingsId = listElectricityForAHostel
-                            .stream()
-                            .map(ElectricityReadings::getId)
-                            .toList();
-                    List<CustomersEbHistory> listCustomerEb = customerEbHistoryService.getAllByCustomerIdAndReadingId(item.getCustomerId(), ebReadingsId);
-
-                    Double ebAmount = listCustomerEb
-                            .stream()
-                            .mapToDouble(CustomersEbHistory::getAmount)
-                            .sum();
-                    if (ebAmount > 0) {
-                        ebAmount = Utils.roundOfDouble(ebAmount);
+                        ebAmount = listCustomerEb
+                                .stream()
+                                .mapToDouble(CustomersEbHistory::getAmount)
+                                .sum();
+                        if (ebAmount > 0) {
+                            ebAmount = Utils.roundOfDouble(ebAmount);
+                        }
                     }
+                    else if (isFlatRate) {
+                        ebAmount = flatEbAmount;
+                    }
+
+
 
 //            List<CustomersAmenity> listCustomersAmenity = amenitiesService.getAllAmenitiesByCustomerId(item.getCustomerId());
                     List<CustomersAmenity> listCustomersAmenity = amenitiesService.getAllCustomerAmenitiesForRecurring(item.getCustomerId(), billingDates.currentBillStartDate());
@@ -335,23 +375,21 @@ public class PostpaidRecurringEventListener {
                         }
 
                     }
-
-
-
                 });
 
-        List<ElectricityReadings> listReadingForMakingInvoiceGenerated = listElectricityForAHostel
-                .stream()
-                .map(i -> {
-                    i.setBillStatus(ElectricityBillStatus.INVOICE_GENERATED.name());
-                    i.setUpdatedAt(new Date());
-                    i.setUpdatedBy(hostelV1.getCreatedBy());
-                    return i;
-                })
-                .toList();
+        if (shouldIncludeEb) {
+            List<ElectricityReadings> listReadingForMakingInvoiceGenerated = listElectricityForAHostel
+                    .stream()
+                    .map(i -> {
+                        i.setBillStatus(ElectricityBillStatus.INVOICE_GENERATED.name());
+                        i.setUpdatedAt(new Date());
+                        i.setUpdatedBy(hostelV1.getCreatedBy());
+                        return i;
+                    })
+                    .toList();
+            electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
+        }
 
-
-        electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
         recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId());
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
     }
