@@ -894,7 +894,7 @@ public class HostelService {
                 noticeDays = -1;
             }
 
-            if (noticeDays == -1 || noticeDays > 28) {
+            if (noticeDays == -1 ) {
                 errorMessage = Utils.INVALID_NOTICE_DAYS;
             }
         }

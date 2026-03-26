@@ -99,6 +99,8 @@ public class CustomersService {
     private CustomerWalletHistoryService customerWalletHistoryService;
     @Autowired
     private AdditionalContactService additionalContactService;
+    @Autowired
+    private CustomerBillingRulesService customerBillingRulesService;
     private ElectricityService electricityService;
 
     private AmenityRequestService amenityRequestService;
@@ -573,13 +575,17 @@ public class CustomersService {
             }
 
             if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
-                calculateRentAndCreateRentalInvoice(customers, payloads);
-                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
-                userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
-                return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+                if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                    return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, payloads);
+                }
+                else {
+                    calculateRentAndCreateRentalInvoice(customers, payloads);
+                    whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                    userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
+                    return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+                }
             }
             else {
-//                calculateRentAndCreateRentalInvoice(customers, payloads);
                 whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
                 userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -591,6 +597,25 @@ public class CustomersService {
         }
 
 
+    }
+
+    private ResponseEntity<?> setupJoiningDateBasisCheckin(BillingDates currentBillDate, Date joiningDate, Customers customers, Users users, CheckInRequest payloads) {
+        if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) >= 0 && Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillEndDate()) <= 0) {
+            //should generate the invoice
+            //send welcome message on whatsapp
+            invoiceService.createNewInvoiceCurrentMonthJoining(customers, joiningDate, payloads, currentBillDate);
+            whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+        }
+        else {
+            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
+                invoiceService.createNewInvoiceForCurrentMonth(customers, joiningDate, payloads, currentBillDate);
+            }
+        }
+
+        customerBillingRulesService.addCustomerBillingRule(customers.getCustomerId(), customers.getHostelId(), joiningDate);
+        userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, users);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
     public ResponseEntity<?> checkinBookedCustomer(String customerId, CheckInBookedCustomer checkinRequest) {

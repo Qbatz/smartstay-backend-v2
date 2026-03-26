@@ -25,13 +25,12 @@ import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
+import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.invoices.*;
-import com.smartstay.smartstay.util.InvoiceUtils;
-import com.smartstay.smartstay.util.NameUtils;
-import com.smartstay.smartstay.util.Utils;
+import com.smartstay.smartstay.util.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -2655,5 +2654,188 @@ public class InvoiceV1Service {
 
     public Double getTotalPaidAmountIncludePartial(String hostelId, Date startDate, Date endDate) {
         return invoicesV1Repository.getTotalPaidAmountIncludePartial(hostelId, startDate, endDate);
+    }
+
+    public void createNewInvoiceCurrentMonthJoining(Customers customers, Date joiningDate, CheckInRequest payloads, BillingDates billingDates) {
+        InvoicesV1 invoicesV1 = new InvoicesV1();
+
+        StringBuilder invoiceNumber = new StringBuilder();
+        BillTemplates templates = templateService.getBillTemplate(customers.getHostelId(), InvoiceType.RENT.name());
+        InvoicesV1 existingV1 = null;
+
+        double gstAmount = 0;
+        double gstPercentile = 0;
+        double baseAmount = 0;
+        double cgst = 0;
+        double sgst = 0;
+
+        if (templates != null) {
+
+            if (templates.gstPercentile() != null) {
+                gstPercentile = templates.gstPercentile();
+                cgst = templates.gstPercentile() / 2;
+                sgst = templates.gstPercentile() / 2;
+//                baseAmount = payloads.rentalAmount() / (1 + (templates.gstPercentile() / 100));
+                baseAmount = payloads.rentalAmount();
+                gstAmount = payloads.rentalAmount() - baseAmount;
+//                if (baseAmount == 0) {
+//                    baseAmount = amount;
+//                }
+            }
+
+            invoiceNumber.append(templates.prefix());
+            invoiceNumber.append("-");
+            invoiceNumber.append(templates.suffix());
+            existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix(), customers.getHostelId());
+        }
+        if (existingV1 != null) {
+            invoiceNumber = new StringBuilder();
+            invoiceNumber.append(templates.prefix());
+
+            String[] suffix = existingV1.getInvoiceNumber().split("-");
+            if (suffix.length > 1) {
+                invoiceNumber.append("-");
+                int suff = Integer.parseInt(suffix[1]) + 1;
+                invoiceNumber.append(String.format("%03d", suff));
+            } else {
+                invoiceNumber.append("-00");
+                invoiceNumber.append("1");
+
+            }
+        }
+
+//        Date joiningDate1 = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        Date dueDate = Utils.addDaysToDate(joiningDate, billingDates.dueDays() - 1);
+        Date endDate = Utils.findLastDate(Utils.dateToDate(joiningDate), joiningDate);
+
+        invoicesV1.setTotalAmount(payloads.rentalAmount());
+        invoicesV1.setBasePrice(payloads.rentalAmount());
+        invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+        invoicesV1.setCustomerId(customers.getCustomerId());
+        invoicesV1.setInvoiceNumber(invoiceNumber.toString());
+        invoicesV1.setPaidAmount(0.0);
+        invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        invoicesV1.setCreatedBy(authentication.getName());
+        invoicesV1.setGst(gstAmount);
+        invoicesV1.setCgst(cgst);
+        invoicesV1.setSgst(sgst);
+        invoicesV1.setGstPercentile(gstPercentile);
+        invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(dueDate));
+        invoicesV1.setCustomerMobile(customers.getMobile());
+        invoicesV1.setCustomerMailId(customers.getCustomerId());
+        invoicesV1.setCreatedAt(new Date());
+        invoicesV1.setInvoiceStartDate(Utils.convertToTimeStamp(joiningDate));
+        invoicesV1.setInvoiceEndDate(Utils.convertToTimeStamp(endDate));
+        invoicesV1.setInvoiceGeneratedDate(Utils.convertToTimeStamp(joiningDate));
+        invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+        invoicesV1.setCancelled(false);
+        invoicesV1.setHostelId(customers.getHostelId());
+
+        List<InvoiceItems> listInvoiceItems = new ArrayList<>();
+
+        InvoiceItems invoiceItems = new InvoiceItems();
+        invoiceItems.setInvoice(invoicesV1);
+        invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+
+        invoiceItems.setAmount(payloads.rentalAmount());
+        listInvoiceItems.add(invoiceItems);
+
+        invoicesV1.setInvoiceItems(listInvoiceItems);
+
+        invoicesV1Repository.save(invoicesV1);
+
+    }
+
+    public void createNewInvoiceForCurrentMonth(Customers customers, Date joiningDate, CheckInRequest payloads, BillingDates currentBillDate) {
+        InvoicesV1 invoicesV1 = new InvoicesV1();
+
+        Calendar currentMonthJoining = Calendar.getInstance();
+        currentMonthJoining.set(Calendar.DAY_OF_MONTH, Utils.dateToDate(joiningDate));
+        System.out.println(currentMonthJoining.getTime());
+
+        StringBuilder invoiceNumber = new StringBuilder();
+        BillTemplates templates = templateService.getBillTemplate(customers.getHostelId(), InvoiceType.RENT.name());
+        InvoicesV1 existingV1 = null;
+
+        double gstAmount = 0;
+        double gstPercentile = 0;
+        double baseAmount = 0;
+        double cgst = 0;
+        double sgst = 0;
+
+        if (templates != null) {
+
+            if (templates.gstPercentile() != null) {
+                gstPercentile = templates.gstPercentile();
+                cgst = templates.gstPercentile() / 2;
+                sgst = templates.gstPercentile() / 2;
+//                baseAmount = payloads.rentalAmount() / (1 + (templates.gstPercentile() / 100));
+                baseAmount = payloads.rentalAmount();
+                gstAmount = payloads.rentalAmount() - baseAmount;
+//                if (baseAmount == 0) {
+//                    baseAmount = amount;
+//                }
+            }
+
+            invoiceNumber.append(templates.prefix());
+            invoiceNumber.append("-");
+            invoiceNumber.append(templates.suffix());
+            existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix(), customers.getHostelId());
+        }
+        if (existingV1 != null) {
+            invoiceNumber = new StringBuilder();
+            invoiceNumber.append(templates.prefix());
+
+            String[] suffix = existingV1.getInvoiceNumber().split("-");
+            if (suffix.length > 1) {
+                invoiceNumber.append("-");
+                int suff = Integer.parseInt(suffix[1]) + 1;
+                invoiceNumber.append(String.format("%03d", suff));
+            } else {
+                invoiceNumber.append("-00");
+                invoiceNumber.append("1");
+
+            }
+        }
+
+//        Date joiningDate1 = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        Date dueDate = Utils.addDaysToDate(joiningDate, currentBillDate.dueDays() - 1);
+        Date endDate = Utils.findLastDate(Utils.dateToDate(joiningDate), joiningDate);
+
+        invoicesV1.setTotalAmount(payloads.rentalAmount());
+        invoicesV1.setBasePrice(payloads.rentalAmount());
+        invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+        invoicesV1.setCustomerId(customers.getCustomerId());
+        invoicesV1.setInvoiceNumber(invoiceNumber.toString());
+        invoicesV1.setPaidAmount(0.0);
+        invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        invoicesV1.setCreatedBy(authentication.getName());
+        invoicesV1.setGst(gstAmount);
+        invoicesV1.setCgst(cgst);
+        invoicesV1.setSgst(sgst);
+        invoicesV1.setGstPercentile(gstPercentile);
+        invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(dueDate));
+        invoicesV1.setCustomerMobile(customers.getMobile());
+        invoicesV1.setCustomerMailId(customers.getCustomerId());
+        invoicesV1.setCreatedAt(new Date());
+        invoicesV1.setInvoiceStartDate(Utils.convertToTimeStamp(joiningDate));
+        invoicesV1.setInvoiceEndDate(Utils.convertToTimeStamp(endDate));
+        invoicesV1.setInvoiceGeneratedDate(Utils.convertToTimeStamp(joiningDate));
+        invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+        invoicesV1.setCancelled(false);
+        invoicesV1.setHostelId(customers.getHostelId());
+
+        List<InvoiceItems> listInvoiceItems = new ArrayList<>();
+
+        InvoiceItems invoiceItems = new InvoiceItems();
+        invoiceItems.setInvoice(invoicesV1);
+        invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+
+        invoiceItems.setAmount(payloads.rentalAmount());
+        listInvoiceItems.add(invoiceItems);
+
+        invoicesV1.setInvoiceItems(listInvoiceItems);
+
+        invoicesV1Repository.save(invoicesV1);
     }
 }
