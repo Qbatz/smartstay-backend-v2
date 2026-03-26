@@ -280,7 +280,7 @@ public class RoomsService {
     }
 
     public List<Rooms> getAllRoomsByHostelIdForListener(String hostelId) {
-            return roomRepository.findByHostelId(hostelId);
+            return roomRepository.findByHostelIdAndIsDeletedFalse(hostelId);
     }
 
     public List<RoomInfoForEB> getBedsNotRegisteredOnEB(List<Integer> listRoomsInMeterReadings, String hostelId) {
@@ -310,7 +310,7 @@ public class RoomsService {
     }
 
     public List<Rooms> findByHostelId(String hostelId) {
-        return roomRepository.findByHostelId(hostelId);
+        return roomRepository.findByHostelIdAndIsDeletedFalse(hostelId);
     }
 
     public List<Rooms> findByHostelIdAndShareType(String hostelId, List<Integer> shareTypes) {
