@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.dao.Beds, Integer> {
 
-    List<com.smartstay.smartstay.dao.Beds> findAllByRoomIdAndParentId(int roomId, String parentId);
+    List<com.smartstay.smartstay.dao.Beds> findAllByRoomIdAndParentIdAndIsDeletedFalse(int roomId, String parentId);
 
     com.smartstay.smartstay.dao.Beds findByBedIdAndParentId(int bedId, String parentId);
 
@@ -29,7 +29,10 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
     @Query("SELECT COUNT(b) FROM Beds b WHERE b.bedName = :bedName AND b.bedId != :bedId AND b.roomId = :roomId AND b.isDeleted = false")
     int countByBedNameAndBedId(@Param("bedName") String bedName, @Param("bedId") Integer bedId, @Param("roomId") Integer roomId);
 
-    @Query(value = "SELECT b.status as status, COUNT(b.bed_id) as count FROM beds b WHERE b.hostel_id = :hostelId GROUP BY b.status", nativeQuery = true)
+    @Query("SELECT COUNT(b) FROM Beds b WHERE b.roomId = :roomId AND b.isDeleted = false")
+    int countByRoomId(@Param("roomId") Integer roomId);
+
+    @Query(value = "SELECT b.status as status, COUNT(b.bed_id) as count FROM beds b WHERE b.hostel_id = :hostelId and b.is_deleted = false GROUP BY b.status", nativeQuery = true)
     List<BedsStatusCount> getBedCountByStatus(@Param("hostelId") String hostelId);
 
     List<com.smartstay.smartstay.dao.Beds> findByBedNameIgnoreCaseAndBedIdNot(String bedName, Integer bedId);
@@ -73,7 +76,7 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
                        ROW_NUMBER() OVER (PARTITION BY bk.bed_id ORDER BY bk.leaving_date DESC) rn
                 FROM bookingsv1 bk
                 WHERE bk.current_status = 'NOTICE' 
-            ) nb ON b.bed_id = nb.bed_id AND nb.rn = 1 where b.hostel_id=:hostelId
+            ) nb ON b.bed_id = nb.bed_id AND nb.rn = 1 where b.hostel_id=:hostelId and b.is_deleted=false
                         """, nativeQuery = true)
     List<FreeBeds> getFreeBeds(@Param("hostelId") String hostelId);
 
@@ -83,7 +86,7 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
             rms.room_name as roomName, b.current_status as currentStatus, b.is_booked as isBooked FROM beds b 
             inner join rooms rms on rms.room_id=b.room_id inner join floors flr on flr.floor_id= rms.floor_id 
             where b.current_status in ('NOTICE', 'VACANT', 'CANCELLED') AND (b.free_from IS NULL OR DATE(b.free_from) <= DATE(:joiningDate)) 
-            and b.hostel_id=:hostelId and b.is_active=true
+            and b.hostel_id=:hostelId and b.is_active=true and b.is_deleted=false
             """, nativeQuery = true)
     List<InitializeBooking> getFreeBeds(@Param("hostelId") String hostelId, @Param("joiningDate") Date joiningDate);
 
@@ -93,7 +96,7 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
     List<com.smartstay.smartstay.dao.Beds> getAvailableBeds(@Param("hostelId") String hostelId);
 
     @Query(value = """
-           SELECT * FROM beds b WHERE b.bed_id=:bedId and b.current_status in ('NOTICE', 'VACANT') and b.is_active=true
+           SELECT * FROM beds b WHERE b.bed_id=:bedId and b.current_status in ('NOTICE', 'VACANT') and b.is_active=true and b.is_deleted=false
             """, nativeQuery = true)
     com.smartstay.smartstay.dao.Beds checkBedAvailability(@Param("bedId") Integer bedId);
 
@@ -107,7 +110,7 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
 
 
     @Query(value = """
-            SELECT * FROM beds where current_status != 'OCCUPIED' and (free_from IS NULL OR free_from <= DATE(:joiningDate)) and bed_id=:bedId
+            SELECT * FROM beds where current_status != 'OCCUPIED' and (free_from IS NULL OR free_from <= DATE(:joiningDate)) and bed_id=:bedId and is_active=true and is_deleted=false
             """, nativeQuery = true)
     com.smartstay.smartstay.dao.Beds checkIsBedAvailable(@Param("bedId") Integer bedId, @Param("joiningDate")  Date joiningDate);
 
@@ -115,13 +118,13 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
             SELECT bed.bed_id as bedId, bed.bed_name as bedName, flrs.floor_id as floorId, 
             flrs.floor_name as floorName, rms.room_id as roomId, rms.room_name as roomName 
             FROM beds bed left outer JOIN rooms rms on rms.room_id=bed.room_id LEFT OUTER JOIN 
-            floors flrs on flrs.floor_id=rms.floor_id where bed.bed_id=:bedId;
+            floors flrs on flrs.floor_id=rms.floor_id where bed.bed_id=:bedId and bed.is_deleted=false;
             """, nativeQuery = true)
     BedDetails findByBedId(@Param("bedId") Integer bedId);
 
     @Query("SELECT b.roomId AS roomId, r.floorId AS floorId " +
             "FROM Beds b JOIN Rooms r ON b.roomId = r.roomId " +
-            "WHERE b.bedId = :bedId AND b.hostelId = :hostelId")
+            "WHERE b.bedId = :bedId AND b.hostelId = :hostelId AND b.isDeleted = false")
     BedRoomFloor findRoomAndFloorByBedIdAndHostelId(@Param("bedId") Integer bedId,
                                                     @Param("hostelId") String hostelId);
     @Query(value = """
@@ -145,7 +148,7 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
         @Query("SELECT COUNT(b) FROM Beds b WHERE b.hostelId = :hostelId AND b.currentStatus = 'OCCUPIED' AND b.isDeleted = false")
         int countOccupiedByHostelId(@Param("hostelId") String hostelId);
 
-        @Query("SELECT b.roomId as roomId, COUNT(b) as bedCount FROM Beds b WHERE b.hostelId = :hostelId GROUP BY b.roomId")
+        @Query("SELECT b.roomId as roomId, COUNT(b) as bedCount FROM Beds b WHERE b.hostelId = :hostelId and b.isDeleted = false GROUP BY b.roomId")
         List<RoomBedCount> countBedsByRoomForHostel(
                 @Param("hostelId") String hostelId);
 

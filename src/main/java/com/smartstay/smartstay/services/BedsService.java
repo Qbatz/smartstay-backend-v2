@@ -85,7 +85,7 @@ public class BedsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId, user.getParentId());
+        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentIdAndIsDeletedFalse(roomId, user.getParentId());
         List<Integer> listBedId = listBeds
                 .stream()
                 .map(Beds::getBedId)
@@ -505,10 +505,12 @@ public class BedsService {
         if (!subscriptionService.validateSubscription(existingBed.getHostelId())) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
-
-        bedsRepository.delete(existingBed);
+        existingBed.setIsDeleted(true);
+        bedsRepository.save(existingBed);
+        Integer bedCount = bedsRepository.countByRoomId(existingBed.getRoomId());
+        roomsService.updateSharingType(existingBed.getRoomId(), bedCount);
         usersService.addUserLog(existingBed.getHostelId(), String.valueOf(existingBed.getBedId()), ActivitySource.BEDS, ActivitySourceType.DELETE, users);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
 
     }
 
@@ -966,7 +968,7 @@ public class BedsService {
     }
 
     public void deleteBedsByRoomId(Integer roomId, String parentId) {
-        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentId(roomId, parentId)
+        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentIdAndIsDeletedFalse(roomId, parentId)
                 .stream()
                 .map(i -> {
                     i.setIsDeleted(true);
