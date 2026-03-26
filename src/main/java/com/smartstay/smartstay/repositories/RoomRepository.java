@@ -23,7 +23,7 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
     Rooms findByRoomIdAndParentIdAndHostelId(int roomId, String parentId, String hostelId);
     Rooms findByRoomIdAndParentIdAndHostelIdAndFloorId(int roomId, String parentId, String hostelId,int floorId);
     List<Rooms> findByHostelIdAndParentId(String hostelId, String parentId);
-    List<Rooms> findByHostelId(String hostelId);
+    List<Rooms> findByHostelIdAndIsDeletedFalse(String hostelId);
     List<Rooms> findByIsDeletedTrue();
     List<Rooms> findByHostelIdAndSharingTypeIn(String hostelId, List<Integer> shareType);
     List<Rooms> findByHostelIdAndFloorId(String hostelId, Integer floorId);

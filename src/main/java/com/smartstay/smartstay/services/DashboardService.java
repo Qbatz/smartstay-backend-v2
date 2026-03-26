@@ -355,9 +355,10 @@ public class DashboardService {
         Double totalInvoiced = summary.get("totalInvoiced") != null
                 ? ((Number) summary.get("totalInvoiced")).doubleValue()
                 : 0.0;
-        Double totalPaid = invoiceV1Service.getTotalPaidAmountIncludePartial(hostelId, dates.startDate(), dates.endDate());
-        if (totalPaid == null) totalPaid = 0.0;
-        Double totalPending = totalInvoiced - totalPaid;
+        Double totalPaid = summary.get("totalPaid") != null
+                ? ((Number) summary.get("totalPaid")).doubleValue()
+                : 0.0;
+        double totalPending = totalInvoiced - totalPaid;
 
         Double refundedAmount = invoiceV1Service.getRefundedAmount(hostelId, dates.startDate(), dates.endDate());
         if (refundedAmount == null) refundedAmount = 0.0;
