@@ -37,6 +37,7 @@ public class SmartstayApplication {
 
     //This should be performed in prod environment
 
+//    alter table smart_stay.electricity_config drop is_pro_rate;
 //    ALTER TABLE smart_stay.bill_template_type MODIFY COLUMN invoice_terms_and_condition LONGTEXT;
 //    ALTER TABLE smart_stay.bill_template_type MODIFY COLUMN invoice_notes LONGTEXT;
 //    ALTER TABLE smart_stay.bill_template_type MODIFY COLUMN receipt_notes LONGTEXT;
@@ -55,6 +56,37 @@ public class SmartstayApplication {
 //                    .toList();
 //
 //            billingRuleRepository.saveAll(listBillingRules);
+//        };
+//    }
+
+//    @Bean
+//    CommandLineRunner updateRoomCount(RoomRepository roomRepository, BedsRepository bedsRepository) {
+//        return args -> {
+//            List<Rooms> listRooms = roomRepository.findAll()
+//                    .stream()
+//                    .filter(i -> i.getIsDeleted()== null || !i.getIsDeleted())
+//                    .toList();
+//
+//            List<Integer> listRoomIds = listRooms
+//                    .stream()
+//                    .map(Rooms::getRoomId)
+//                    .toList();
+//
+//            List<Beds> listBeds = bedsRepository.findByRoomIdIn(listRoomIds);
+//            List<Rooms> listRoomsForUpdate = listRooms
+//                    .stream()
+//                    .map(i -> {
+//                        long counts = listBeds
+//                                .stream()
+//                                .filter(j -> j.getRoomId().equals(i.getRoomId()))
+//                                .filter(j -> i.getIsDeleted() == null || !i.getIsDeleted())
+//                                .count();
+//                        i.setSharingType((int) counts);
+//                        return i;
+//                    })
+//                    .toList();
+//
+//            roomRepository.saveAll(listRoomsForUpdate);
 //        };
 //    }
 }

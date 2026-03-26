@@ -176,7 +176,7 @@ public class InvoiceV1Service {
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Utils.USER_INPUT_DATE_FORMAT);
             Date joiningDate1 = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-            Date dueDate = Utils.addDaysToDate(joiningDate1, billingDates.dueDays());
+            Date dueDate = Utils.addDaysToDate(joiningDate1, billingDates.dueDays() - 1);
             Date endDate = billingDates.currentBillEndDate();
 
             invoicesV1.setTotalAmount(amount);
@@ -706,7 +706,7 @@ public class InvoiceV1Service {
 
         if (Utils.compareWithTwoDates(filteredBooking.getJoiningDate(), invoiceBillingDate.currentBillStartDate()) <= 0) {
             invoiceStartDate = invoiceBillingDate.currentBillStartDate();
-            invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, invoiceBillingDate.dueDays());
+            invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, invoiceBillingDate.dueDays() -1);
         } else {
             invoiceStartDate = filteredBooking.getJoiningDate();
             invoiceDueDate = Utils.addDaysToDate(filteredBooking.getJoiningDate(), invoiceBillingDate.dueDays());

@@ -379,7 +379,7 @@ public class HostelService {
 //        Calendar calendarDueDate = Calendar.getInstance();
 //        calendarDueDate.set(Calendar.DAY_OF_MONTH, billingRuleDate);
 
-        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
@@ -406,7 +406,7 @@ public class HostelService {
         calendar.setTime(date);
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
-        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
@@ -500,7 +500,7 @@ public class HostelService {
                     config.getCharge(),
                     config.getTypeOfReading(),
                     shouldIncludeInRent,
-                    config.getCharge());
+                    config.getFlatCharge());
 
             return new ResponseEntity<>(settings, HttpStatus.OK);
         }
@@ -589,19 +589,25 @@ public class HostelService {
             if (payloads.typeofReading().equalsIgnoreCase("hostel")) {
                 ebConfig.setUpdated(true);
                 ebConfig.setTypeOfReading(EBReadingType.HOSTEL_READING.name());
+                if (payloads.charge() !=null) {
+                    ebConfig.setCharge(payloads.charge());
+                }
             }
             else if (payloads.typeofReading().equalsIgnoreCase("Room")) {
                 ebConfig.setUpdated(true);
                 ebConfig.setTypeOfReading(EBReadingType.ROOM_READING.name());
+                if (payloads.charge() !=null) {
+                    ebConfig.setCharge(payloads.charge());
+                }
             }
             else if (payloads.typeofReading().equalsIgnoreCase("flat")) {
                 if (payloads.charge() == null) {
-                    if (ebConfig.getCharge() == null) {
+                    if (ebConfig.getFlatCharge() == null) {
                         return new ResponseEntity<>(Utils.FLAT_RATE_REQUIRED, HttpStatus.BAD_REQUEST);
                     }
                 }
                 else {
-                    ebConfig.setCharge(payloads.charge());
+                    ebConfig.setFlatCharge(payloads.charge());
                 }
 
                 ebConfig.setUpdated(true);

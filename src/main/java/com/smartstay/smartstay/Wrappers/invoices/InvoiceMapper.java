@@ -45,6 +45,29 @@ public class InvoiceMapper {
             if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
                 dueAmount = invoice.getTotalAmount() + invoice.getPaidAmount();
             }
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+                dueAmount = invoice.getTotalAmount() - invoice.getPaidAmount();
+            }
+        }
+        else {
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
+                dueAmount = invoice.getTotalAmount();
+            }
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+                dueAmount = invoice.getTotalAmount();
+            }
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                dueAmount = invoice.getTotalAmount();
+            }
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                dueAmount = invoice.getTotalAmount();
+            }
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
+                dueAmount = invoice.getTotalAmount();
+            }
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+                dueAmount = invoice.getTotalAmount();
+            }
         }
 
         return new InvoiceResponse(

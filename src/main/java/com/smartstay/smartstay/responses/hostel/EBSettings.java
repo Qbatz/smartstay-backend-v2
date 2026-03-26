@@ -4,5 +4,5 @@ public record EBSettings(String hostelId,
                          Double chargerPerUnit,
                          String typeOfReading,
                          boolean shouldIncludeInRent,
-                         Double charge) {
+                         Double flatCharge) {
 }
