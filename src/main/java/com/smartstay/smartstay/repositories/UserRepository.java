@@ -108,7 +108,7 @@ public interface UserRepository extends JpaRepository<Users, String> {
     int getUsersCountByEmail(@Param("userId") String userId, @Param("emailId") String emailId);
 
     @Query("""
-            SELECT count(u) FROM Users u where u.mobileNo=:mobile and u.userId !=:userId
+            SELECT count(u) FROM Users u where u.mobileNo=:mobile and u.userId !=:userId and u.isDeleted = false
             """)
     int getUsersCountByMobile(@Param("userId") String userId, @Param("mobile") String mobile);
 
