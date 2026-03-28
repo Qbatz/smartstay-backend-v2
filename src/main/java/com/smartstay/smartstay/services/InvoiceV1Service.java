@@ -2617,9 +2617,9 @@ public class InvoiceV1Service {
             discountAmount = discount.discountAmount();
         }
         if (discount.discountPercentage() != null) {
-            int percentage = 1;
+            double percentage = 1;
             try {
-                percentage = Integer.parseInt(String.valueOf(discount.discountPercentage()));
+                percentage = Double.parseDouble(String.valueOf(discount.discountPercentage()));
             }
             catch (Exception e) {
                 return new ResponseEntity<>(Utils.INVALID_DISCOUNT_PERCENTAGE, HttpStatus.BAD_REQUEST);
@@ -2656,7 +2656,7 @@ public class InvoiceV1Service {
         return invoicesV1Repository.getTotalPaidAmountIncludePartial(hostelId, startDate, endDate);
     }
 
-    public void createNewInvoiceCurrentMonthJoining(Customers customers, Date joiningDate, CheckInRequest payloads, BillingDates billingDates) {
+    public void createNewInvoiceCurrentMonthJoining(Customers customers, Date joiningDate, double rentalAmount, BillingDates billingDates) {
         InvoicesV1 invoicesV1 = new InvoicesV1();
 
         StringBuilder invoiceNumber = new StringBuilder();
@@ -2676,8 +2676,8 @@ public class InvoiceV1Service {
                 cgst = templates.gstPercentile() / 2;
                 sgst = templates.gstPercentile() / 2;
 //                baseAmount = payloads.rentalAmount() / (1 + (templates.gstPercentile() / 100));
-                baseAmount = payloads.rentalAmount();
-                gstAmount = payloads.rentalAmount() - baseAmount;
+                baseAmount = rentalAmount;
+                gstAmount = rentalAmount - baseAmount;
 //                if (baseAmount == 0) {
 //                    baseAmount = amount;
 //                }
@@ -2708,8 +2708,8 @@ public class InvoiceV1Service {
         Date dueDate = Utils.addDaysToDate(joiningDate, billingDates.dueDays() - 1);
         Date endDate = Utils.findLastDate(Utils.dateToDate(joiningDate), joiningDate);
 
-        invoicesV1.setTotalAmount(payloads.rentalAmount());
-        invoicesV1.setBasePrice(payloads.rentalAmount());
+        invoicesV1.setTotalAmount(rentalAmount);
+        invoicesV1.setBasePrice(rentalAmount);
         invoicesV1.setInvoiceType(InvoiceType.RENT.name());
         invoicesV1.setCustomerId(customers.getCustomerId());
         invoicesV1.setInvoiceNumber(invoiceNumber.toString());
@@ -2737,7 +2737,7 @@ public class InvoiceV1Service {
         invoiceItems.setInvoice(invoicesV1);
         invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
 
-        invoiceItems.setAmount(payloads.rentalAmount());
+        invoiceItems.setAmount(rentalAmount);
         listInvoiceItems.add(invoiceItems);
 
         invoicesV1.setInvoiceItems(listInvoiceItems);
@@ -2746,12 +2746,14 @@ public class InvoiceV1Service {
 
     }
 
-    public void createNewInvoiceForCurrentMonth(Customers customers, Date joiningDate, CheckInRequest payloads, BillingDates currentBillDate) {
+    public void createNewInvoiceForCurrentMonth(Customers customers, Date joiningDate, double rentalAmount, BillingDates currentBillDate) {
         InvoicesV1 invoicesV1 = new InvoicesV1();
 
         Calendar currentMonthJoining = Calendar.getInstance();
         currentMonthJoining.set(Calendar.DAY_OF_MONTH, Utils.dateToDate(joiningDate));
         System.out.println(currentMonthJoining.getTime());
+
+
 
         StringBuilder invoiceNumber = new StringBuilder();
         BillTemplates templates = templateService.getBillTemplate(customers.getHostelId(), InvoiceType.RENT.name());
@@ -2770,8 +2772,8 @@ public class InvoiceV1Service {
                 cgst = templates.gstPercentile() / 2;
                 sgst = templates.gstPercentile() / 2;
 //                baseAmount = payloads.rentalAmount() / (1 + (templates.gstPercentile() / 100));
-                baseAmount = payloads.rentalAmount();
-                gstAmount = payloads.rentalAmount() - baseAmount;
+                baseAmount = rentalAmount;
+                gstAmount = rentalAmount - baseAmount;
 //                if (baseAmount == 0) {
 //                    baseAmount = amount;
 //                }
@@ -2798,12 +2800,13 @@ public class InvoiceV1Service {
             }
         }
 
+        Date newDateForCurrentMonth = currentMonthJoining.getTime();
 //        Date joiningDate1 = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        Date dueDate = Utils.addDaysToDate(joiningDate, currentBillDate.dueDays() - 1);
-        Date endDate = Utils.findLastDate(Utils.dateToDate(joiningDate), joiningDate);
+        Date dueDate = Utils.addDaysToDate(newDateForCurrentMonth, currentBillDate.dueDays() - 1);
+        Date endDate = Utils.findLastDate(Utils.dateToDate(joiningDate), newDateForCurrentMonth);
 
-        invoicesV1.setTotalAmount(payloads.rentalAmount());
-        invoicesV1.setBasePrice(payloads.rentalAmount());
+        invoicesV1.setTotalAmount(rentalAmount);
+        invoicesV1.setBasePrice(rentalAmount);
         invoicesV1.setInvoiceType(InvoiceType.RENT.name());
         invoicesV1.setCustomerId(customers.getCustomerId());
         invoicesV1.setInvoiceNumber(invoiceNumber.toString());
@@ -2831,7 +2834,7 @@ public class InvoiceV1Service {
         invoiceItems.setInvoice(invoicesV1);
         invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
 
-        invoiceItems.setAmount(payloads.rentalAmount());
+        invoiceItems.setAmount(rentalAmount);
         listInvoiceItems.add(invoiceItems);
 
         invoicesV1.setInvoiceItems(listInvoiceItems);

@@ -569,14 +569,18 @@ public class CustomersService {
 
 //            Date startateOfCurrentCycle = cal.getTime();
 
-            //checking joining date is fall under current billing cycle
-            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
-                return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+            if (!billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                //checking joining date is fall under current billing cycle
+                if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
+                    return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+                }
             }
+
+
 
             if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
-                    return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, payloads);
+                    return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, payloads.rentalAmount());
                 }
                 else {
                     calculateRentAndCreateRentalInvoice(customers, payloads);
@@ -599,16 +603,17 @@ public class CustomersService {
 
     }
 
-    private ResponseEntity<?> setupJoiningDateBasisCheckin(BillingDates currentBillDate, Date joiningDate, Customers customers, Users users, CheckInRequest payloads) {
+    private ResponseEntity<?> setupJoiningDateBasisCheckin(BillingDates currentBillDate, Date joiningDate, Customers customers, Users users, double rentalAmount) {
         if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) >= 0 && Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillEndDate()) <= 0) {
             //should generate the invoice
             //send welcome message on whatsapp
-            invoiceService.createNewInvoiceCurrentMonthJoining(customers, joiningDate, payloads, currentBillDate);
+            invoiceService.createNewInvoiceCurrentMonthJoining(customers, joiningDate, rentalAmount, currentBillDate);
             whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
         }
         else {
             if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
-                invoiceService.createNewInvoiceForCurrentMonth(customers, joiningDate, payloads, currentBillDate);
+                //for old month joining and new invoice for current month
+                invoiceService.createNewInvoiceForCurrentMonth(customers, joiningDate, rentalAmount, currentBillDate);
             }
         }
 
@@ -745,15 +750,34 @@ public class CustomersService {
             bedsService.addUserToBed(booking.getBedId(), date, savedCustomer.getCustomerId());
             customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
 
-            //check joining date is in this current cycle.
-            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
-                return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+            if (!billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                //checking joining date is fall under current billing cycle
+                if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
+                    return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+                }
             }
 
-            calculateRentAndCreateRentalInvoice(customers, request);
-            whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
-            userService.addUserLog(hostelV1.getHostelId(), customerId, ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
-            return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+            if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+                if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                    return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, checkinRequest.rentalAmount());
+                }
+                else {
+                    calculateRentAndCreateRentalInvoice(customers, request);
+                    whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                    userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
+                    return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+                }
+            }
+            else {
+                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
+                return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+            }
+
+//            calculateRentAndCreateRentalInvoice(customers, request);
+//            whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+//            userService.addUserLog(hostelV1.getHostelId(), customerId, ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
+//            return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
         }

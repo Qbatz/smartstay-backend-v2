@@ -45,6 +45,7 @@ public class HostelEventsListeners {
         config.setCharge(5.0);
         config.setBillDate(1);
         config.setUpdated(false);
+        config.setFlatCharge(0.0);
         config.setShouldIncludeInRent(true);
         config.setLastUpdate(new Date());
         config.setUpdatedBy(events.getUserId());
