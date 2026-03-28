@@ -1839,7 +1839,10 @@ public class InvoiceV1Service {
             if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBillingDates.currentBillStartDate()) < 0) {
                 if (Utils.compareWithTwoDates(currentMonthBillingDates.currentBillStartDate(), joinigDate) <= 0) {
 //                    findOldInvoiceAndUpdate(customerId, oldJoiningDate, joinigDate, hostelId, rent);
-                    createNewInvoiceAfterForCurrentBillingCycle(customers, joinigDate, hostelId, rent, currentMonthBillingDates);
+
+                    if (!currentMonthBillingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                        createNewInvoiceAfterForCurrentBillingCycle(customers, joinigDate, hostelId, rent, currentMonthBillingDates);
+                    }
                 }
             }
         }
