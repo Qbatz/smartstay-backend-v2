@@ -34,4 +34,10 @@ public class CustomerBillingRulesService {
 
         return listCustomerBillingRules;
     }
+
+    public void updateRecurringInvoiceDate(String hostelId, String customerId, Date joinigDate) {
+        CustomerBillingRules customerBillingRules = customerBillingRulesRepository.findByHostelIdAndCustomerId(hostelId, customerId);
+        customerBillingRules.setBillingDay(Utils.dateToDate(joinigDate));
+        customerBillingRulesRepository.save(customerBillingRules);
+    }
 }

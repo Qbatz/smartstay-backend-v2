@@ -67,7 +67,8 @@ public class BookingsService {
     private BankingService bankingService;
     @Autowired
     private CustomersBedHistoryService customersBedHistoryService;
-
+    @Autowired
+    private CustomerBillingRulesService customerBillingRulesService;
     @Autowired
     private SettlementDetailsService settlementDetailsService;
     @Autowired
@@ -896,12 +897,20 @@ public class BookingsService {
                     return new ResponseEntity<>(Utils.BED_OCCUPIED_ON_DATE, HttpStatus.BAD_REQUEST);
                 }
 
-                if (invoiceService.updateJoiningDate(customers, joinigDate, hostelId, customers.getJoiningDate(), bookingsV1.getRentAmount())) {
+                if (invoiceService.updateJoiningDate(customers, joinigDate, hostelId, customers.getJoiningDate(), joinigDate, bookingsV1.getRentAmount())) {
                     rentHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
                     customersBedHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
                     customersService.updateCustomersJoiningDate(customers, joinigDate);
                     bookingsV1.setJoiningDate(joinigDate);
                     bookingsRepository.save(bookingsV1);
+
+                    BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+                    if (billingDates != null) {
+                        if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                            //have to update the recurring date here
+                            customerBillingRulesService.updateRecurringInvoiceDate(hostelId, customers.getCustomerId(), joinigDate);
+                        }
+                    }
 
                     userService.addUserLog(hostelId, bookingId, ActivitySource.BOOKING, ActivitySourceType.JOINING_DATE, users);
                     return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);

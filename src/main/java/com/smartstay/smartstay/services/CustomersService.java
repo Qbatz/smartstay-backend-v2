@@ -37,6 +37,7 @@ import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
@@ -51,6 +52,8 @@ import java.util.stream.Collectors;
 @Service
 public class CustomersService {
 
+    @Value("${ENVIRONMENT}")
+    private String environment;
     @Autowired
     private UploadFileToS3 uploadToS3;
     @Autowired
@@ -576,8 +579,6 @@ public class CustomersService {
                 }
             }
 
-
-
             if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
                     return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, payloads.rentalAmount());
@@ -608,14 +609,17 @@ public class CustomersService {
             //should generate the invoice
             //send welcome message on whatsapp
             invoiceService.createNewInvoiceCurrentMonthJoining(customers, joiningDate, rentalAmount, currentBillDate);
-            whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
-        }
-        else {
-            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
-                //for old month joining and new invoice for current month
-                invoiceService.createNewInvoiceForCurrentMonth(customers, joiningDate, rentalAmount, currentBillDate);
+            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
             }
+
         }
+//        else {
+//            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
+//                //for old month joining and new invoice for current month
+//                invoiceService.createNewInvoiceForCurrentMonth(customers, joiningDate, rentalAmount, currentBillDate);
+//            }
+//        }
 
         customerBillingRulesService.addCustomerBillingRule(customers.getCustomerId(), customers.getHostelId(), joiningDate);
         userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, users);

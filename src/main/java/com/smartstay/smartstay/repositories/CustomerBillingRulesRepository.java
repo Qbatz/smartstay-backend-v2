@@ -14,4 +14,6 @@ public interface CustomerBillingRulesRepository extends JpaRepository<CustomerBi
             SELECT cbr FROM CustomerBillingRules cbr WHERE cbr.billingDay=:billingDay AND cbr.hostelId in (:hostelIds)
             """)
     List<CustomerBillingRules> findCustomersHavingBillingToday(List<String> hostelIds, int billingDay);
+
+    CustomerBillingRules findByHostelIdAndCustomerId(String hostelId, String customerId);
 }
