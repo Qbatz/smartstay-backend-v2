@@ -64,13 +64,6 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findByCustomerId(String customerId);
 
     @Query(value = """
-            SELECT COALESCE(SUM(t.paid_amount), 0)
-            FROM transactionv1 t
-            WHERE t.invoice_id = :invoiceId
-            """, nativeQuery = true)
-    Double findTotalPaidAmountByInvoiceId(@Param("invoiceId") String invoiceId);
-
-    @Query(value = """
             SELECT
                 i.invoice_number AS invoiceNumber,
                 i.total_amount AS totalAmount,
@@ -321,4 +314,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
             """)
     Double getRefundedAmount(@Param("hostelId") String hostelId, @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate);
+
+    @Query("SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType IN :invoiceTypes")
+    List<InvoicesV1> findInvoicesByCustomerIdAndTypeIn(@Param("customerId") String customerId, @Param("invoiceTypes") List<String> invoiceTypes);
+
+    @Query("SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType IN :invoiceTypes AND DATE(i.invoiceStartDate) >= DATE(:startDate) AND DATE(i.invoiceEndDate) <= DATE(:endDate)")
+    List<InvoicesV1> findInvoicesByCustomerIdAndTypeInAndDate(@Param("customerId") String customerId, @Param("invoiceTypes") List<String> invoiceTypes, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 }

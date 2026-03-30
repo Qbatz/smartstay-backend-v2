@@ -28,6 +28,7 @@ public class Utils {
     public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
     public static final String OUTPUT_MONTH_FORMAT = "MMM YYYY";
     public static final String OUTPUT_MONTH_ALONE_FORMAT = "MM";
+    public static final String OUTPUT_DATE_ALONE_FORMAT = "dd";
     public static final String OUTPUT_YEAR_FORMAT = "YYYY";
     public static final String OUTPUT_DATE_MONTH_FORMAT = "dd MMM";
     public static final String OUTPUT_DATE_TIME_FORMAT = "dd/MM/yyyy hh:mm:ss a";
@@ -385,6 +386,14 @@ public class Utils {
         }
         String month = new SimpleDateFormat(OUTPUT_MONTH_ALONE_FORMAT).format(date);
         return Integer.parseInt(month);
+    }
+
+    public static Integer dateToDate(Date date) {
+        if (date == null) {
+            return null;
+        }
+        String d = new SimpleDateFormat(OUTPUT_DATE_ALONE_FORMAT).format(date);
+        return Integer.parseInt(d);
     }
     public static Integer dateToYear(Date date) {
         if (date == null) {

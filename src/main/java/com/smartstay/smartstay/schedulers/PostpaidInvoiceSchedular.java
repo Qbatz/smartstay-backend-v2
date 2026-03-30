@@ -19,7 +19,7 @@ public class PostpaidInvoiceSchedular {
     private ApplicationEventPublisher applicationEventPublisher;
 
     //Schedule it for morning 3;
-    @Scheduled(cron = "0 25 13 * * *")
+    @Scheduled(cron = "0 0 3 * * *")
     public void scheduleInvoice() {
         List<BillingRules> listBillingRules = hostelConfigService.findHostelsHavingBillingStartDateTomorrow();
 

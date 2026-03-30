@@ -37,6 +37,7 @@ public class DemoRequest {
     private String presentedBy;
     private String comments;
 
+    private Date bookedFor;
     private String requestedDate;
     private String requestedTime;
     private Date presentedAt;

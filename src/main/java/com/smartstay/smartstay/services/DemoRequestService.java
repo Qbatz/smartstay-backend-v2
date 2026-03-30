@@ -49,6 +49,7 @@ public class DemoRequestService {
         request.setNoOfHostels(demoRequest.noOfProperties());
         request.setNoOfTenant(demoRequest.noOfTenants());
         request.setState(demoRequest.state());
+        request.setBookedFor(requestedDate);
         request.setCountry("India");
         request.setDemoRequestStatus(com.smartstay.smartstay.ennum.DemoRequest.REQUESTED.name());
         request.setIsDemoCompleted(false);

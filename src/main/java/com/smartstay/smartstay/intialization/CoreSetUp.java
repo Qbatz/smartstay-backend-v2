@@ -359,7 +359,7 @@ public class CoreSetUp {
     @Bean
     CommandLineRunner addPlans(PlansRepository plansRepository) {
         return args -> {
-			Plans trialPlan = plansRepository.findPlanByPlanType(PlanType.TRIAL.name());
+			Plans trialPlan = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.TRIAL.name());
 			if (trialPlan == null) {
 				String planCode1 = Utils.generatePlanCode();
 
@@ -413,7 +413,7 @@ public class CoreSetUp {
 				plansRepository.save(planTrial);
 			}
 
-			Plans planBasic = plansRepository.findPlanByPlanType(PlanType.BASIC.name());
+			Plans planBasic = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.BASIC.name());
 			if (planBasic == null) {
 				String planCode3 = Utils.generatePlanCode();
 				planBasic = new Plans();
@@ -465,7 +465,7 @@ public class CoreSetUp {
 				plansRepository.save(planBasic);
 			}
 
-			Plans planAdvance = plansRepository.findPlanByPlanType(PlanType.ADVANCED.name());
+			Plans planAdvance = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.ADVANCED.name());
 			if (planAdvance == null) {
 				String planCode2 = Utils.generatePlanCode();
 				planAdvance = new Plans();

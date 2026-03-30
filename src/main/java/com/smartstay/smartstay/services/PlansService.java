@@ -43,7 +43,7 @@ public class PlansService {
         if (!authentication.isAuthenticated()) {
             return null;
         }
-        return plansRepository.findPlanByPlanType(PlanType.TRIAL.name());
+        return plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.TRIAL.name());
     }
 
     public ResponseEntity<?> getAllPlans() {
