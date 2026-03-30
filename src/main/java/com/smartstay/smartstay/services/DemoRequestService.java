@@ -8,6 +8,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 @Service
@@ -32,6 +36,27 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.DATE_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
+        try {
+            LocalDate parsedDate = LocalDate.parse(demoRequest.requestedDate().replaceAll("/", "-"), DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            if (demoRequest.requestedTime() != null && !demoRequest.requestedTime().trim().isEmpty()) {
+                String[] timeParts = demoRequest.requestedTime().trim().split(":");
+                if (timeParts.length >= 2) {
+                    int hour = Integer.parseInt(timeParts[0].trim());
+                    int minute = Integer.parseInt(timeParts[1].trim());
+                    LocalDateTime requestedDateTime = LocalDateTime.of(parsedDate, LocalTime.of(hour, minute));
+                    if (requestedDateTime.isBefore(LocalDateTime.now())) {
+                        return new ResponseEntity<>(Utils.PAST_DATE_TIME_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+                    }
+                }
+            } else {
+                if (parsedDate.isBefore(LocalDate.now())) {
+                    return new ResponseEntity<>(Utils.PAST_DATE_TIME_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+                }
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
         Date requestedDate = Utils.stringToDate(demoRequest.requestedDate().replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         Date time = null;
         String countryCode = null;
@@ -50,14 +75,13 @@ public class DemoRequestService {
         request.setNoOfTenant(demoRequest.noOfTenants());
         request.setState(demoRequest.state());
         request.setBookedFor(requestedDate);
+        request.setRequestedTime(demoRequest.requestedTime());
         request.setCountry("India");
         request.setDemoRequestStatus(com.smartstay.smartstay.ennum.DemoRequest.REQUESTED.name());
         request.setIsDemoCompleted(false);
 
         demoRequestRepository.save(request);
 
-
-        return new ResponseEntity<>(HttpStatus.OK);
-
+        return new ResponseEntity<>(Utils.DEMO_REQUESTED_SUCCESSFULLY, HttpStatus.OK);
     }
 }
