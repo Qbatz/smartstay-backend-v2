@@ -6,7 +6,9 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class CustomerBillingRulesService {
@@ -22,5 +24,14 @@ public class CustomerBillingRulesService {
         cbr.setCreatedAt(new Date());
 
         customerBillingRulesRepository.save(cbr);
+    }
+
+    public List<CustomerBillingRules> findCustomersHavingBillingToday(List<String> hostelIds, int dayFromDate) {
+        List<CustomerBillingRules> listCustomerBillingRules = customerBillingRulesRepository.findCustomersHavingBillingToday(hostelIds, dayFromDate);
+        if (listCustomerBillingRules == null) {
+            listCustomerBillingRules = new ArrayList<>();
+        }
+
+        return listCustomerBillingRules;
     }
 }

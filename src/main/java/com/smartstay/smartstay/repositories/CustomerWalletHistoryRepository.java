@@ -16,4 +16,5 @@ public interface CustomerWalletHistoryRepository extends JpaRepository<CustomerW
             cwh.billingStatus='INVOICE_NOT_GENERATED'
             """)
     List<CustomerWalletHistory> findInvoiceNotGeneratedByCustomerId(String customerId);
+
 }

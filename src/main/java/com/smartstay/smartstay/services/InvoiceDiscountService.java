@@ -22,7 +22,7 @@ public class InvoiceDiscountService {
         invoiceDiscounts.setHostelId(hostelId);
         invoiceDiscounts.setCustomerId(customerId);
         invoiceDiscounts.setDiscountReason(discount.reason());
-        invoiceDiscounts.setDiscountAmount(discount.discountAmount());
+        invoiceDiscounts.setDiscountAmount(discountAmount);
         invoiceDiscounts.setDiscountPercentage(percentage);
         invoiceDiscounts.setInvoiceAmount(totalInvoiceAmount);
         invoiceDiscounts.setActive(true);

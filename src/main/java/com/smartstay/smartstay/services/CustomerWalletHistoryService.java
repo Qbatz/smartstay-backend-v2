@@ -91,6 +91,15 @@ public class CustomerWalletHistoryService {
         return listWallteTransactions;
     }
 
+    public  List<CustomerWalletHistory> getAllInvoiceNotGeneratedWallets(String customerId) {
+        List<CustomerWalletHistory> listCustomerWalletHistory = walletHistoryRepository.findInvoiceNotGeneratedByCustomerId(customerId);
+        if (listCustomerWalletHistory == null) {
+            listCustomerWalletHistory = new ArrayList<>();
+        }
+
+        return listCustomerWalletHistory;
+    }
+
     public void makePendingToInvoiceGenerated(String customerId, String invoiceId) {
         List<CustomerWalletHistory> walletHistories = walletHistoryRepository
                 .findInvoiceNotGeneratedByCustomerId(customerId)

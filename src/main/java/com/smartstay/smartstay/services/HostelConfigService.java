@@ -51,6 +51,20 @@ public class HostelConfigService {
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
             billingRuleDueDate = billingRules.getBillDueDays();
+
+            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
+                Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
+
+                return new BillingDates(calendar.getTime(),
+                        findEndDate,
+                        null,
+                        billingRules.getBillDueDays(),
+                        billingRules.isHasGracePeriod(),
+                        billingRules.getGracePeriodDays(),
+                        billingRules.getTypeOfBilling(),
+                        billingRules.getBillingModel());
+            }
         }
 
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
@@ -163,5 +177,13 @@ public class HostelConfigService {
             listBillingDates = new ArrayList<>();
         }
         return listBillingDates;
+    }
+
+    public List<BillingRules> findHostelsHavingJoiningBsedInvoice() {
+        List<BillingRules> listJoiningBasedHostels = billingRuleRepository.findHostelsHavingJoiningDateBasedBillings();
+        if (listJoiningBasedHostels == null) {
+            listJoiningBasedHostels = new ArrayList<>();
+        }
+        return listJoiningBasedHostels;
     }
 }
