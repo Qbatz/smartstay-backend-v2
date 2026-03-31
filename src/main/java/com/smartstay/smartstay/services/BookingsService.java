@@ -889,7 +889,10 @@ public class BookingsService {
         }
 
         if (updateInfo.joiningDate() != null && !updateInfo.joiningDate().equalsIgnoreCase("")) {
-            //trying to modify the joining date.
+
+            if (customersBedHistoryService.hasReassignedHistory(customers.getCustomerId())) {
+                return new ResponseEntity<>("This customer did the bed change so can't edit.", HttpStatus.BAD_REQUEST);
+            }
             Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
                 if (!isBedAvailableForJoiningDateChange(bookingsV1.getBedId(), bookingsV1.getCustomerId(), joinigDate)) {

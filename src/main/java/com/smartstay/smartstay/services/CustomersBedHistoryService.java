@@ -178,4 +178,8 @@ public class CustomersBedHistoryService {
         }
         return listCustomerBedHistories;
     }
+
+    public boolean hasReassignedHistory(String customerId) {
+        return customerBedHistoryRepository.existsByCustomerIdAndType(customerId, CustomersBedType.REASSIGNED.name());
+    }
 }
