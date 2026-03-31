@@ -891,7 +891,7 @@ public class BookingsService {
         if (updateInfo.joiningDate() != null && !updateInfo.joiningDate().equalsIgnoreCase("")) {
 
             if (customersBedHistoryService.hasReassignedHistory(customers.getCustomerId())) {
-                return new ResponseEntity<>("This customer did the bed change so can't edit.", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(Utils.CUSTOMER_DID_THE_BED_CHANGE, HttpStatus.BAD_REQUEST);
             }
             Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
