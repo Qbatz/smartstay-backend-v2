@@ -100,5 +100,6 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
             """, nativeQuery = true)
     List<CustomersBedHistory> findByListCustomerIdsAndStartAndEndDate(@Param("customerId") List<String> customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
+    boolean existsByCustomerIdAndType(String customerId, String type);
 }
 

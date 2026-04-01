@@ -1331,6 +1331,8 @@ public class CustomersService {
         CustomerFiles customerFiles = customerDocumentsService.getCustomerFiles(customerId);
         List<AdditionalContacts> additionalContacts = additionalContactService.getAdditionalContact(customers.getHostelId(), customerId);
 
+        boolean isJoiningDateEditable = !bedHistory.hasReassignedHistory(customerId);
+
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getHostelId(),
                 customers.getFirstName(),
@@ -1356,7 +1358,8 @@ public class CustomersService {
                 listRequestedAmenities,
                 walletInfo,
                 customerFiles,
-                additionalContacts);
+                additionalContacts,
+                isJoiningDateEditable);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }

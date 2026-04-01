@@ -34,5 +34,6 @@ public record CustomerDetails(String customerId,
                               List<AmenityRequestDTO> requestedAmenities,
                               WalletInfo walletInfo,
                               CustomerFiles files,
-                              List<AdditionalContacts> additionalContacts) {
+                              List<AdditionalContacts> additionalContacts,
+                              Boolean isJoiningDateEditable) {
 }
