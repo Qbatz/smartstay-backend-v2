@@ -309,11 +309,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     @Query("""
             SELECT SUM(i.paidAmount)
             FROM InvoicesV1 i
-            WHERE i.hostelId = :hostelId AND i.invoiceType = 'SETTLEMENT' AND i.paymentStatus = 'REFUNDED'
+            WHERE i.hostelId = :hostelId AND i.invoiceType = 'SETTLEMENT' AND i.paymentStatus in ('REFUNDED', 'PARTIAL_REFUND') AND i.isCancelled = false
             AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
             """)
-    Double getRefundedAmount(@Param("hostelId") String hostelId, @Param("startDate") java.util.Date startDate, @Param("endDate") java.util.Date endDate);
+    Double getRefundedAmount(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
     @Query("SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType IN :invoiceTypes")
     List<InvoicesV1> findInvoicesByCustomerIdAndTypeIn(@Param("customerId") String customerId, @Param("invoiceTypes") List<String> invoiceTypes);
