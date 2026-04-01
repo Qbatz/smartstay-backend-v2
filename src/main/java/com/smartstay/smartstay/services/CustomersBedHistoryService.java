@@ -1,17 +1,25 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Electricity.BedHistoryCustomerListMapper;
+import com.smartstay.smartstay.Wrappers.customers.BedHistoryBreakupMapper;
 import com.smartstay.smartstay.Wrappers.customers.BedHistoryMapper;
+import com.smartstay.smartstay.Wrappers.customers.FinalSettlementMapper;
 import com.smartstay.smartstay.dao.BookingsV1;
+import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.CustomersBedHistory;
 import com.smartstay.smartstay.dao.RentHistory;
+import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.electricity.BedHistoryByRoomId;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.CustomersBedType;
 import com.smartstay.smartstay.repositories.CustomerBedHistoryRespository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
+import com.smartstay.smartstay.responses.customer.RentBreakUp;
+import com.smartstay.smartstay.responses.customer.RentInfo;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -21,6 +29,13 @@ public class CustomersBedHistoryService {
 
     @Autowired
     private CustomerBedHistoryRespository customerBedHistoryRepository;
+
+    private BedsService bedsService;
+
+    @Autowired
+    public void setBedsService(@Lazy BedsService bedsService) {
+        this.bedsService = bedsService;
+    }
 
 
     public CustomersBedHistory getCustomerBedByStartDate(String customerId, Date startDate, Date endDate) {
@@ -181,5 +196,37 @@ public class CustomersBedHistoryService {
 
     public boolean hasReassignedHistory(String customerId) {
         return customerBedHistoryRepository.existsByCustomerIdAndType(customerId, CustomersBedType.REASSIGNED.name());
+    }
+
+    public List<RentBreakUp> getBreakupBasedOnRentHistory(Customers customers, Date leavingDate, BillingDates billingDates) {
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryRepository.findByCustomerIdAndStartAndEndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+        List<Integer> beds = listCustomerBedHistory
+                .stream()
+                .map(CustomersBedHistory::getBedId)
+                .toList();
+        List<BedDetails> listBedDetails = bedsService.getBedDetails(beds);
+
+        return listCustomerBedHistory
+                .stream()
+                .map(i -> new BedHistoryBreakupMapper(listBedDetails, leavingDate, billingDates).apply(i))
+                .toList();
+    }
+
+
+    public List<RentBreakUp> getRentBreakupForPostpaid(Customers customers, BookingsV1 bookingsV1, Date leavingDate, BillingDates currentMonthBillingDates) {
+        List<CustomersBedHistory> currentMonthHistory = customerBedHistoryRepository.findByCustomerIdAndStartDate(customers.getCustomerId(), currentMonthBillingDates.currentBillStartDate());
+        if (currentMonthHistory != null) {
+            List<Integer> bedIds = currentMonthHistory
+                    .stream()
+                    .map(CustomersBedHistory::getBedId)
+                    .toList();
+            List<BedDetails> listBedDetails = bedsService.getBedDetails(bedIds);
+
+            return currentMonthHistory
+                    .stream()
+                    .map(i -> new BedHistoryBreakupMapper(listBedDetails, leavingDate, currentMonthBillingDates).apply(i))
+                    .toList();
+        }
+        return null;
     }
 }

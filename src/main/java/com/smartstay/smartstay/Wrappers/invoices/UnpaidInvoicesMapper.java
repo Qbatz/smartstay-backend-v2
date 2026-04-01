@@ -13,12 +13,6 @@ import java.util.function.Function;
 
 public class UnpaidInvoicesMapper implements Function<InvoicesV1, UnpaidInvoices> {
 
-    List<PartialPaidInvoiceInfo> listPartialPayments = null;
-
-    public UnpaidInvoicesMapper(List<PartialPaidInvoiceInfo> listPartialPayments) {
-        this.listPartialPayments = listPartialPayments;
-    }
-
     @Override
     public UnpaidInvoices apply(InvoicesV1 invoicesV1) {
 

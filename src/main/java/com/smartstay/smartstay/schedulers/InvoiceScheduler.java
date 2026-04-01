@@ -29,8 +29,8 @@ public class InvoiceScheduler {
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
 
-
-    @Scheduled(cron = "0 0 2 * * *")
+//    @Scheduled(cron = "0 0 2 * * *") for productions
+    @Scheduled(cron = "0 20 2 * * *")
     public void generateInvoice() {
 
         List<com.smartstay.smartstay.dao.BillingRules> listBillingRules = hostelConfigService.findAllHostelsHavingBillingToday();

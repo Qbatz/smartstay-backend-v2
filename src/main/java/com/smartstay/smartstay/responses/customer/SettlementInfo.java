@@ -7,5 +7,7 @@ public record SettlementInfo(Double amountTobePaid,
                              Double refundableAdvance,
                              Double electricityAmount,
                              Double unpaidInvoiceAmount,
-                             boolean isRefundable) {
+                             boolean isRefundable,
+                             String label,
+                             double payableAmount) {
 }

@@ -18,6 +18,7 @@ public class CustomerAmenityMapper implements Function<CustomersAmenity, Ameniti
 
     @Override
     public Amenities apply(CustomersAmenity customersAmenity) {
+        boolean isProRate = false;
         AmenitiesV1 amenitiesV1 = listAmenities
                 .stream()
                 .filter(i -> i.getAmenityId().equalsIgnoreCase(customersAmenity.getAmenityId()))
@@ -26,6 +27,7 @@ public class CustomerAmenityMapper implements Function<CustomersAmenity, Ameniti
         String amenityName = null;
         if (amenitiesV1 != null) {
             amenityName = amenitiesV1.getAmenityName();
+            isProRate = amenitiesV1.getIsProRate();
         }
 
 
@@ -34,6 +36,7 @@ public class CustomerAmenityMapper implements Function<CustomersAmenity, Ameniti
                 customersAmenity.getAmenityPrice(),
                 Utils.dateToString(customersAmenity.getStartDate()),
                 Utils.dateToString(customersAmenity.getEndDate()),
-                customersAmenity.getAmenityPrice());
+                customersAmenity.getAmenityPrice(),
+                isProRate);
     }
 }

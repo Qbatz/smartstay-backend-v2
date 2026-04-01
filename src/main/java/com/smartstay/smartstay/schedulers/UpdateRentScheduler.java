@@ -11,7 +11,7 @@ public class UpdateRentScheduler {
     @Autowired
     private BookingsService bookingsService;
 
-    @Scheduled(cron = "0 1 0 * * *")
+    @Scheduled(cron = "0 10 0 * * *")
     public void updateRentalAmount() {
         bookingsService.updateRentalAmount();
     }
