@@ -194,6 +194,10 @@ public class CustomersBedHistoryService {
         return listCustomerBedHistories;
     }
 
+    public boolean hasReassignedHistory(String customerId) {
+        return customerBedHistoryRepository.existsByCustomerIdAndType(customerId, CustomersBedType.REASSIGNED.name());
+    }
+
     public List<RentBreakUp> getBreakupBasedOnRentHistory(Customers customers, Date leavingDate, BillingDates billingDates) {
         List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryRepository.findByCustomerIdAndStartAndEndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
         List<Integer> beds = listCustomerBedHistory

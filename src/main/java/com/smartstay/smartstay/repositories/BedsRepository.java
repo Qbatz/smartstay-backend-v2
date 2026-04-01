@@ -32,7 +32,7 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
     @Query("SELECT COUNT(b) FROM Beds b WHERE b.roomId = :roomId AND b.isDeleted = false")
     int countByRoomId(@Param("roomId") Integer roomId);
 
-    @Query(value = "SELECT b.status as status, COUNT(b.bed_id) as count FROM beds b WHERE b.hostel_id = :hostelId and b.is_deleted = false GROUP BY b.status", nativeQuery = true)
+    @Query(value = "SELECT b.current_status as status, COUNT(b.bed_id) as count FROM beds b WHERE b.hostel_id = :hostelId and b.is_deleted = false GROUP BY b.current_status", nativeQuery = true)
     List<BedsStatusCount> getBedCountByStatus(@Param("hostelId") String hostelId);
 
     List<com.smartstay.smartstay.dao.Beds> findByBedNameIgnoreCaseAndBedIdNot(String bedName, Integer bedId);

@@ -100,6 +100,7 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
             """, nativeQuery = true)
     List<CustomersBedHistory> findByListCustomerIdsAndStartAndEndDate(@Param("customerId") List<String> customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
+    boolean existsByCustomerIdAndType(String customerId, String type);
     @Query("""
             SELECT cbh FROM CustomersBedHistory cbh WHERE cbh.customerId=:customerId AND cbh.type IN ('CHECK_IN', 'REASSIGNED') 
             AND (cbh.endDate IS NULL OR DATE(cbh.endDate) >= DATE(:startDate))
