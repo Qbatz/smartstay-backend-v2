@@ -28,7 +28,7 @@ public class JoiningBasedBillingSchedular {
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
 //    @Scheduled(cron = "* 30 3 * * *")
-    @Scheduled(cron = "0 54 11 * * *")
+    @Scheduled(cron = "0 30 3 * * *")
     public void joiningDateInvoiceScheduler() {
         int dayFromDate = Utils.findDateFromDate(new Date());
         List<BillingRules> findListOfHostelsHavingJoiningBasedBilling = hostelConfigService.findHostelsHavingJoiningBsedInvoice();

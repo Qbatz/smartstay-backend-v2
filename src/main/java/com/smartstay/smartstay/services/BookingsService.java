@@ -28,6 +28,9 @@ import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.bookings.InitializeCancel;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckIn;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckout;
+import com.smartstay.smartstay.responses.customer.RentBreakUp;
+import com.smartstay.smartstay.responses.customer.RentInfo;
+import com.smartstay.smartstay.responses.customer.StayInfo;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -1237,5 +1240,31 @@ public class BookingsService {
 
     public Date findEarliestLeavingDate(String hostelId, Date now) {
         return bookingsRepository.findEarliestLeavingDate(hostelId, now);
+    }
+
+    public StayInfo getStayInfo(Customers customers, BookingsV1 bookingsV1, Date leavingDate) {
+        String bookingDate = null;
+        String noticeDate = null;
+        String lDate = null;
+        if (bookingsV1.getBookingDate() != null) {
+            bookingDate = Utils.dateToString(bookingsV1.getBookingDate());
+        }
+        if (bookingsV1.getNoticeDate() != null) {
+            noticeDate = Utils.dateToString(bookingsV1.getNoticeDate());
+        }
+        if (bookingsV1.getLeavingDate() != null) {
+            lDate = Utils.dateToString(bookingsV1.getLeavingDate());
+        }
+
+        return new StayInfo(bookingDate,
+                noticeDate,
+                lDate,
+                lDate,
+                Utils.dateToString(leavingDate));
+    }
+
+
+    public List<RentBreakUp> getRentBreakup(Customers customers, BookingsV1 bookingsV1, Date leavingDate, BillingDates currentMonthBillingDates) {
+        return customersBedHistoryService.getRentBreakupForPostpaid(customers, bookingsV1, leavingDate, currentMonthBillingDates);
     }
 }

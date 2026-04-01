@@ -104,7 +104,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     @Query(value = """
             SELECT * FROM `invoicesv1` WHERE customer_id=:customerId AND hostel_id=:hostelId AND DATE(invoice_start_date) >= DATE(:startDate)
-             AND  (invoice_type='RENT' OR invoice_type='REASSIGN_RENT')
+             AND  (invoice_type='RENT' OR invoice_type='REASSIGN_RENT') AND is_cancelled=false
             """, nativeQuery = true)
     List<InvoicesV1> findAllCurrentMonthInvoices(@Param("customerId") String customerId, @Param("hostelId") String hostelId, @Param("startDate") Date startDate);
 
@@ -320,4 +320,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     @Query("SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType IN :invoiceTypes AND DATE(i.invoiceStartDate) >= DATE(:startDate) AND DATE(i.invoiceEndDate) <= DATE(:endDate)")
     List<InvoicesV1> findInvoicesByCustomerIdAndTypeInAndDate(@Param("customerId") String customerId, @Param("invoiceTypes") List<String> invoiceTypes, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType IN :invoiceTypes AND DATE(i.invoiceStartDate) < DATE(:currentMonth) 
+            AND i.isCancelled=false AND i.paymentStatus != 'PAID'
+            """)
+    List<InvoicesV1> findOldMonthPendingInvoices(String customerId, Date currentMonth, List<String> invoiceTypes);
 }
