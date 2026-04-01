@@ -9,6 +9,7 @@ public record FinalSettlement(CustomerInformations customerInfo,
                               StayInfo stayInfo,
                               EBInfo ebInfo,
                               List<UnpaidInvoices> unpaidInvoices,
+                              com.smartstay.smartstay.responses.settlement.UnpaidInvoices unpaidInvoiceInfo,
                               RentInfo currentMonthRentInfo,
                               WalletInfo walletInfo,
                               SettlementInfo settlementInfo) {

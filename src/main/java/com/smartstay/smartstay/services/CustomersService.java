@@ -35,8 +35,10 @@ import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
+import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
@@ -51,6 +53,8 @@ import java.util.stream.Collectors;
 @Service
 public class CustomersService {
 
+    @Value("${ENVIRONMENT}")
+    private String environment;
     @Autowired
     private UploadFileToS3 uploadToS3;
     @Autowired
@@ -576,8 +580,6 @@ public class CustomersService {
                 }
             }
 
-
-
             if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
                     return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, payloads.rentalAmount());
@@ -608,14 +610,17 @@ public class CustomersService {
             //should generate the invoice
             //send welcome message on whatsapp
             invoiceService.createNewInvoiceCurrentMonthJoining(customers, joiningDate, rentalAmount, currentBillDate);
-            whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
-        }
-        else {
-            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
-                //for old month joining and new invoice for current month
-                invoiceService.createNewInvoiceForCurrentMonth(customers, joiningDate, rentalAmount, currentBillDate);
+            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
             }
+
         }
+//        else {
+//            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
+//                //for old month joining and new invoice for current month
+//                invoiceService.createNewInvoiceForCurrentMonth(customers, joiningDate, rentalAmount, currentBillDate);
+//            }
+//        }
 
         customerBillingRulesService.addCustomerBillingRule(customers.getCustomerId(), customers.getHostelId(), joiningDate);
         userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, users);
@@ -1556,6 +1561,18 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.CANNOT_GENERATE_FINAL_SETTLEMENT_PREVIOUS_HISTORY_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
+        if (!billDate.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+            if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                return getInformationForPostpaidSettlements(customers, lDate, bookingDetails, billDate);
+            }
+        }
+        else {
+            if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+                return getFinalSettlementInfoFotJoiningBasedPrepaid(customers, lDate, bookingDetails);
+            }
+        }
+
+
         if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
             return calculateFinalSettlemtForBedChange(customers, bookingDetails, billDate, lDate);
         }
@@ -1822,7 +1839,7 @@ public class CustomersService {
 
         List<UnpaidInvoices> unpaidInvoices = listUnpaidRentalInvoices
                 .stream()
-                .map(item -> new UnpaidInvoicesMapper(lisPartialPayments).apply(item))
+                .map(item -> new UnpaidInvoicesMapper().apply(item))
                 .toList();
 
         List<Integer> roomId = new ArrayList<>();
@@ -1942,14 +1959,396 @@ public class CustomersService {
                 Utils.roundOffWithTwoDigit(refundableAdvance),
                 0.0,
                 Utils.roundOfDouble(unpaidInvoiceAmount),
-                isRefundable);
+                isRefundable,
+                null,
+                0.0);
 
         settlementDetailsService.addSettlementForCustomer(customerId, lDate);
 
 
-        FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, rentInfo, walletInfo, settlementInfo);
+        FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, null, rentInfo, walletInfo, settlementInfo);
 
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
+    }
+
+
+
+    private ResponseEntity<?> getInformationForPostpaidSettlements(Customers customers, Date lDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates) {
+        FinalSettlement settlement = getFinalSettlementInfo(customers, lDate, bookingDetails, currentMonthBillingDates);
+        return new ResponseEntity<>(settlement, HttpStatus.OK);
+    }
+    
+    private FinalSettlement getFinalSettlementInfo(Customers customers, Date leavingDate, BookingsV1 bookingsV1, BillingDates currentMonthBillingDates) {
+        boolean isAdvancePaid = false;
+        double advancePaidAmount = invoiceService.invoicesPaidAmountByType(customers.getCustomerId(), InvoiceType.ADVANCE.name());
+        double bookingAmount = invoiceService.invoicesPaidAmountByType(customers.getCustomerId(), InvoiceType.BOOKING.name());
+        double totalAdvanceAmount = 0.0;
+        if (advancePaidAmount > 0) {
+            isAdvancePaid = true;
+            totalAdvanceAmount = totalAdvanceAmount + advancePaidAmount;
+        }
+        if (bookingAmount > 0) {
+            isAdvancePaid = true;
+            totalAdvanceAmount = totalAdvanceAmount + bookingAmount;
+        }
+
+        List<Deductions> listDeductions = new ArrayList<>();
+        
+        CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(),
+                customers.getFirstName(),
+                customers.getLastName(),
+                NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
+                customers.getProfilePic(),
+                NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
+                "91",
+                customers.getMobile(),
+                Utils.dateToString(bookingsV1.getJoiningDate()),
+                customers.getAdvance().getAdvanceAmount(),
+                bookingsV1.getRentAmount(),
+                isAdvancePaid,
+                advancePaidAmount,
+                bookingAmount,
+                listDeductions);
+        
+        StayInfo stayInfo = bookingsService.getStayInfo(customers, bookingsV1, leavingDate);
+        EBInfo ebInfo =  electricityService.getEbInfoForSettlement(customers, customers.getHostelId(), leavingDate);
+        List<UnpaidInvoices> listUnpaidInvoices = invoiceService.getUnpaidInvoices(customers.getCustomerId(), customers.getHostelId(), leavingDate);
+        com.smartstay.smartstay.responses.settlement.UnpaidInvoices unpaidInvoicesInfo = invoiceService.getUnpaidInvoicesInfo(customers.getCustomerId(), customers.getHostelId(), leavingDate);
+//        RentInfo currentMonthRentInfo = getRentInfo(customers.getHostelId(), customers, leavingDate, bookingsV1.getRentAmount());
+        RentInfo currentMonthRentInfo = getRentInfoForPostpaidHostels(customers, bookingsV1, leavingDate, currentMonthBillingDates);
+        String label = null;
+        double payableAmount = 0.0;
+        if (currentMonthRentInfo.currentRentPaid() > currentMonthRentInfo.currentPayableRent()) {
+            label = "Refundable rent";
+            payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+        }
+        else {
+            label = "Payable rent";
+            payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+        }
+        double walletAmount = 0.0;
+        if (customers.getWallet() != null) {
+            CustomerWallet wallet = customers.getWallet();
+            if (wallet.getAmount() != null) {
+                walletAmount = wallet.getAmount();
+            }
+        }
+
+        double ebAmount = 0.0;
+        if (ebInfo != null) {
+            ebAmount = ebInfo.pendingEbAmount();
+        }
+        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService
+                .getInvoicePendingByCustomerId(customers.getCustomerId());
+
+        com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
+
+        double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentMonthPayableAmount();
+        double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
+        double totalDeductions = 0.0;
+        double payableRent = unpaidInvoicesInfo.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
+        if (customers.getAdvance() != null) {
+            Advance advance = customers.getAdvance();
+            if (advance.getDeductions() != null) {
+                totalDeductions = advance.getDeductions()
+                        .stream()
+                        .mapToDouble(i -> i.getAmount())
+                        .sum();
+            }
+        }
+
+        totalAmountToBePaid = totalAmountToBePaid + totalDeductions - paidAmount;
+        if (isAdvancePaid) {
+            totalAmountToBePaid = totalAmountToBePaid - totalAdvanceAmount;
+        }
+        boolean isRefundable = false;
+        if (totalAmountToBePaid < 0) {
+            isRefundable = true;
+        }
+
+
+        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
+                totalDeductions,
+                payableRent,
+                Utils.roundOffWithTwoDigit(0.0),
+                Utils.roundOffWithTwoDigit(advancePaidAmount),
+                Utils.roundOffWithTwoDigit(ebAmount),
+                Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
+                isRefundable,
+                label,
+                Utils.roundOffWithTwoDigit(payableAmount));
+        return new FinalSettlement(customerInformations,
+                stayInfo,
+                ebInfo,
+                listUnpaidInvoices,
+                unpaidInvoicesInfo,
+                currentMonthRentInfo,
+                walletInfo,
+                settlementInfo);
+    }
+
+    private ResponseEntity<?> getFinalSettlementInfoFotJoiningBasedPrepaid(Customers customers, Date lDate, BookingsV1 bookingDetails) {
+        FinalSettlement settlement = getSettlementInfoForJoiningBased(customers, lDate, bookingDetails);
+        return new ResponseEntity<>(settlement, HttpStatus.OK);
+    }
+
+    private FinalSettlement getSettlementInfoForJoiningBased(Customers customers, Date leavingDate, BookingsV1 bookingsV1) {
+        BillingDates currentMonthBillingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), leavingDate);
+        boolean isAdvancePaid = false;
+        double advancePaidAmount = invoiceService.invoicesPaidAmountByType(customers.getCustomerId(), InvoiceType.ADVANCE.name());
+        double bookingAmount = invoiceService.invoicesPaidAmountByType(customers.getCustomerId(), InvoiceType.BOOKING.name());
+        double totalAdvanceAmount = 0.0;
+        if (advancePaidAmount > 0) {
+            isAdvancePaid = true;
+            totalAdvanceAmount = totalAdvanceAmount + advancePaidAmount;
+        }
+        if (bookingAmount > 0) {
+            isAdvancePaid = true;
+            totalAdvanceAmount = totalAdvanceAmount + bookingAmount;
+        }
+
+        List<Deductions> listDeductions = new ArrayList<>();
+
+        CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(),
+                customers.getFirstName(),
+                customers.getLastName(),
+                NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
+                customers.getProfilePic(),
+                NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
+                "91",
+                customers.getMobile(),
+                Utils.dateToString(bookingsV1.getJoiningDate()),
+                customers.getAdvance().getAdvanceAmount(),
+                bookingsV1.getRentAmount(),
+                isAdvancePaid,
+                advancePaidAmount,
+                bookingAmount,
+                listDeductions);
+
+        StayInfo stayInfo = bookingsService.getStayInfo(customers, bookingsV1, leavingDate);
+        EBInfo ebInfo =  electricityService.getEbInfoForSettlement(customers, customers.getHostelId(), leavingDate);
+        List<UnpaidInvoices> listUnpaidInvoices = invoiceService.getUnpaidInvoices(customers.getCustomerId(), customers.getHostelId(), leavingDate);
+        com.smartstay.smartstay.responses.settlement.UnpaidInvoices unpaidInvoicesInfo = invoiceService.getUnpaidInvoicesInfoForJoiningBased(customers.getCustomerId(), customers.getHostelId(), customers.getJoiningDate(), leavingDate);
+        RentInfo currentMonthRentInfo = getRentInfo(customers.getHostelId(), customers, leavingDate, bookingsV1.getRentAmount());
+//        RentInfo currentMonthRentInfo = getRentInfoForJoiningBased(customers, bookingsV1, leavingDate, currentMonthBillingDates);
+        String label = null;
+        double payableAmount = 0.0;
+        if (currentMonthRentInfo.currentRentPaid() > currentMonthRentInfo.currentPayableRent()) {
+            label = "Refundable rent";
+            payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+        }
+        else {
+            label = "Payable rent";
+            payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+        }
+        double walletAmount = 0.0;
+        if (customers.getWallet() != null) {
+            CustomerWallet wallet = customers.getWallet();
+            if (wallet.getAmount() != null) {
+                walletAmount = wallet.getAmount();
+            }
+        }
+
+        double ebAmount = 0.0;
+        if (ebInfo != null) {
+            ebAmount = ebInfo.pendingEbAmount();
+        }
+        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService
+                .getInvoicePendingByCustomerId(customers.getCustomerId());
+
+        com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
+
+        double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentMonthPayableAmount();
+        double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
+        double totalDeductions = 0.0;
+        double payableRent = unpaidInvoicesInfo.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
+        if (customers.getAdvance() != null) {
+            Advance advance = customers.getAdvance();
+            if (advance.getDeductions() != null) {
+                totalDeductions = advance.getDeductions()
+                        .stream()
+                        .mapToDouble(i -> i.getAmount())
+                        .sum();
+            }
+        }
+
+        totalAmountToBePaid = totalAmountToBePaid + totalDeductions - paidAmount;
+        if (isAdvancePaid) {
+            totalAmountToBePaid = totalAmountToBePaid - totalAdvanceAmount;
+        }
+        boolean isRefundable = false;
+        if (totalAmountToBePaid < 0) {
+            isRefundable = true;
+        }
+
+
+        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
+                totalDeductions,
+                payableRent,
+                Utils.roundOffWithTwoDigit(0.0),
+                Utils.roundOffWithTwoDigit(advancePaidAmount),
+                Utils.roundOffWithTwoDigit(ebAmount),
+                Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
+                isRefundable,
+                label,
+                Utils.roundOffWithTwoDigit(payableAmount));
+        return new FinalSettlement(customerInformations,
+                stayInfo,
+                ebInfo,
+                listUnpaidInvoices,
+                unpaidInvoicesInfo,
+                currentMonthRentInfo,
+                walletInfo,
+                settlementInfo);
+    }
+
+    private RentInfo getRentInfoForJoiningBased(Customers customers, BookingsV1 bookingsV1, Date leavingDate, BillingDates currentMonthBillingDates) {
+        List<RentBreakUp> listRentBreakup = bookingsService.getRentBreakup(customers, bookingsV1, leavingDate, currentMonthBillingDates);
+        List<CurrentMonthOtherItems> currentMonthOtherItems = new ArrayList<>();
+        List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customers.getCustomerId());
+        Date startDate = null;
+        Date endDate = null;
+        if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), currentMonthBillingDates.currentBillStartDate()) < 0) {
+            startDate = currentMonthBillingDates.currentBillStartDate();
+        }
+        else {
+            startDate = bookingsV1.getJoiningDate();
+        }
+        final double[] otherItemAMount = {0.0};
+        long totalDaysStayed = Utils.findNumberOfDays(startDate, leavingDate);
+        long totalDaysInAMonth = Utils.findNumberOfDays(currentMonthBillingDates.currentBillStartDate(), currentMonthBillingDates.currentBillEndDate());
+        if (amenities != null) {
+            List<Amenities> proRateAmenities = amenities.stream()
+                    .filter(Amenities::isProRate)
+                    .toList();
+            proRateAmenities.forEach(item -> {
+                double perDayAmount = item.amenityAmount() / totalDaysInAMonth;
+                double amenityAmount = perDayAmount * totalDaysStayed;
+                otherItemAMount[0] = otherItemAMount[0] + amenityAmount;
+                currentMonthOtherItems.add(new CurrentMonthOtherItems(item.amenityName(), Utils.roundOffWithTwoDigit(amenityAmount)));
+            });
+
+            List<Amenities> nonProRateAmenities = amenities
+                    .stream()
+                    .filter(i -> !i.isProRate())
+                    .toList();
+            nonProRateAmenities.forEach(item -> {
+                otherItemAMount[0] = otherItemAMount[0] + item.amenityAmount();
+                currentMonthOtherItems.add(new CurrentMonthOtherItems(item.amenityName(), Utils.roundOffWithTwoDigit(item.amenityAmount())));
+            });
+        }
+
+        double currentPayableRent = 0.0;
+        double currentRentPaid = 0.0;
+        int stayDays = 0;
+        double currentMonthRent = bookingsV1.getRentAmount();
+        double currentMonthPayableAmount = 0.0;
+        String currentInvoiceStartDate = Utils.dateToString(currentMonthBillingDates.currentBillStartDate());
+        String currentInvoiceEndDate = Utils.dateToString(currentMonthBillingDates.currentBillEndDate());
+
+        if (listRentBreakup != null) {
+            currentPayableRent = listRentBreakup
+                    .stream()
+                    .mapToDouble(RentBreakUp::totalRent)
+                    .sum();
+            stayDays = (int) listRentBreakup
+                    .stream()
+                    .mapToLong(RentBreakUp::noOfDays)
+                    .sum();
+            currentMonthPayableAmount = currentPayableRent + otherItemAMount[0];
+        }
+
+
+        return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent),
+                currentRentPaid,
+                stayDays,
+                currentMonthRent,
+                Utils.roundOffWithTwoDigit(currentMonthPayableAmount),
+                currentInvoiceStartDate,
+                currentInvoiceEndDate,
+                Utils.roundOffWithTwoDigit(otherItemAMount[0]),
+                currentMonthOtherItems,
+                listRentBreakup);
+    }
+
+    private RentInfo getRentInfoForPostpaidHostels(Customers customers, BookingsV1 bookingsV1, Date leavingDate, BillingDates currentMonthBillingDates) {
+        List<RentBreakUp> listRentBreakup = bookingsService.getRentBreakup(customers, bookingsV1, leavingDate, currentMonthBillingDates);
+        List<CurrentMonthOtherItems> currentMonthOtherItems = new ArrayList<>();
+        List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customers.getCustomerId());
+        Date startDate = null;
+        Date endDate = null;
+        if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), currentMonthBillingDates.currentBillStartDate()) < 0) {
+            startDate = currentMonthBillingDates.currentBillStartDate();
+        }
+        else {
+            startDate = bookingsV1.getJoiningDate();
+        }
+        final double[] otherItemAMount = {0.0};
+        long totalDaysStayed = Utils.findNumberOfDays(startDate, leavingDate);
+        long totalDaysInAMonth = Utils.findNumberOfDays(currentMonthBillingDates.currentBillStartDate(), currentMonthBillingDates.currentBillEndDate());
+        if (amenities != null) {
+            List<Amenities> proRateAmenities = amenities.stream()
+                    .filter(Amenities::isProRate)
+                    .toList();
+            proRateAmenities.forEach(item -> {
+                double perDayAmount = item.amenityAmount() / totalDaysInAMonth;
+                double amenityAmount = perDayAmount * totalDaysStayed;
+                otherItemAMount[0] = otherItemAMount[0] + amenityAmount;
+                currentMonthOtherItems.add(new CurrentMonthOtherItems(item.amenityName(), Utils.roundOffWithTwoDigit(amenityAmount)));
+            });
+
+            List<Amenities> nonProRateAmenities = amenities
+                    .stream()
+                    .filter(i -> !i.isProRate())
+                    .toList();
+            nonProRateAmenities.forEach(item -> {
+                otherItemAMount[0] = otherItemAMount[0] + item.amenityAmount();
+                currentMonthOtherItems.add(new CurrentMonthOtherItems(item.amenityName(), Utils.roundOffWithTwoDigit(item.amenityAmount())));
+            });
+        }
+
+        double currentPayableRent = 0.0;
+        double currentRentPaid = 0.0;
+        int stayDays = 0;
+        double currentMonthRent = bookingsV1.getRentAmount();
+        double currentMonthPayableAmount = 0.0;
+        String currentInvoiceStartDate = Utils.dateToString(currentMonthBillingDates.currentBillStartDate());
+        String currentInvoiceEndDate = Utils.dateToString(currentMonthBillingDates.currentBillEndDate());
+
+        if (listRentBreakup != null) {
+            currentPayableRent = listRentBreakup
+                    .stream()
+                    .mapToDouble(RentBreakUp::totalRent)
+                    .sum();
+            stayDays = (int) listRentBreakup
+                    .stream()
+                    .mapToLong(RentBreakUp::noOfDays)
+                    .sum();
+            currentMonthPayableAmount = currentPayableRent + otherItemAMount[0];
+        }
+
+
+        return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent),
+                currentRentPaid,
+                stayDays,
+                currentMonthRent,
+                Utils.roundOffWithTwoDigit(currentMonthPayableAmount),
+                currentInvoiceStartDate,
+                currentInvoiceEndDate,
+                Utils.roundOffWithTwoDigit(otherItemAMount[0]),
+                currentMonthOtherItems,
+                listRentBreakup);
+    }
+
+    /**
+     * this will work based on current month
+     *
+     * @param
+     * @param leavingDate
+     * @return
+     */
+    private RentInfo getRentInfo(String hostelId, Customers customers, Date leavingDate, double monthlyRent) {
+        return invoiceService.getRentInfoForSettlement(hostelId, customers, leavingDate, monthlyRent);
     }
 
     private ResponseEntity<?> calculateFinalSettlemtForBedChange(Customers customers, BookingsV1 bookingDetails, BillingDates billDate, Date leavingDate) {
@@ -2118,7 +2517,7 @@ public class CustomersService {
 
         List<UnpaidInvoices> unpaidInvoices = listUnpaidInvoices
                 .stream()
-                .map(item -> new UnpaidInvoicesMapper(lisPartialPayments).apply(item))
+                .map(item -> new UnpaidInvoicesMapper().apply(item))
                 .toList();
 
         long totalNoOfDaysStayedIncludeOldAndNewBed = Utils.findNumberOfDays(currentMonthInvoiceStartDate, leavingDate);
@@ -2269,7 +2668,8 @@ public class CustomersService {
                 Utils.roundOffWithTwoDigit(refundableAdvance),
                 electricityAmount,
                 Utils.roundOfDouble(oldInvoiceBalanceAmount),
-                isRefundable);
+                isRefundable,
+                null, 0.0);
 //        SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountIncludePreviousBed), Utils.roundOfDouble(totalDeductions), Utils.roundOfDouble(oldInvoiceBalanceAmount), Utils.roundOfDouble(refundableRent), Utils.roundOffWithTwoDigit(refundableAdvance), electricityAmount, Utils.roundOfDouble(oldInvoiceBalanceAmount), isRefundable);
 
 //        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
@@ -2283,7 +2683,7 @@ public class CustomersService {
 
         settlementDetailsService.addSettlementForCustomer(customers.getCustomerId(), leavingDate);
 
-        FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, rentInfo, walletInfo,  settlementInfo);
+        FinalSettlement finalSettlement = new FinalSettlement(customerInformations, stayInfo, ebInfo, unpaidInvoices, null, rentInfo, walletInfo,  settlementInfo);
 
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
     }

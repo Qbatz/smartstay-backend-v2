@@ -28,6 +28,9 @@ import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.bookings.InitializeCancel;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckIn;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckout;
+import com.smartstay.smartstay.responses.customer.RentBreakUp;
+import com.smartstay.smartstay.responses.customer.RentInfo;
+import com.smartstay.smartstay.responses.customer.StayInfo;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -67,7 +70,8 @@ public class BookingsService {
     private BankingService bankingService;
     @Autowired
     private CustomersBedHistoryService customersBedHistoryService;
-
+    @Autowired
+    private CustomerBillingRulesService customerBillingRulesService;
     @Autowired
     private SettlementDetailsService settlementDetailsService;
     @Autowired
@@ -899,12 +903,20 @@ public class BookingsService {
                     return new ResponseEntity<>(Utils.BED_OCCUPIED_ON_DATE, HttpStatus.BAD_REQUEST);
                 }
 
-                if (invoiceService.updateJoiningDate(customers, joinigDate, hostelId, customers.getJoiningDate(), bookingsV1.getRentAmount())) {
+                if (invoiceService.updateJoiningDate(customers, joinigDate, hostelId, customers.getJoiningDate(), joinigDate, bookingsV1.getRentAmount())) {
                     rentHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
                     customersBedHistoryService.updateJoiningDate(customers.getCustomerId(), joinigDate);
                     customersService.updateCustomersJoiningDate(customers, joinigDate);
                     bookingsV1.setJoiningDate(joinigDate);
                     bookingsRepository.save(bookingsV1);
+
+                    BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+                    if (billingDates != null) {
+                        if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                            //have to update the recurring date here
+                            customerBillingRulesService.updateRecurringInvoiceDate(hostelId, customers.getCustomerId(), joinigDate);
+                        }
+                    }
 
                     userService.addUserLog(hostelId, bookingId, ActivitySource.BOOKING, ActivitySourceType.JOINING_DATE, users);
                     return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
@@ -1231,5 +1243,31 @@ public class BookingsService {
 
     public Date findEarliestLeavingDate(String hostelId, Date now) {
         return bookingsRepository.findEarliestLeavingDate(hostelId, now);
+    }
+
+    public StayInfo getStayInfo(Customers customers, BookingsV1 bookingsV1, Date leavingDate) {
+        String bookingDate = null;
+        String noticeDate = null;
+        String lDate = null;
+        if (bookingsV1.getBookingDate() != null) {
+            bookingDate = Utils.dateToString(bookingsV1.getBookingDate());
+        }
+        if (bookingsV1.getNoticeDate() != null) {
+            noticeDate = Utils.dateToString(bookingsV1.getNoticeDate());
+        }
+        if (bookingsV1.getLeavingDate() != null) {
+            lDate = Utils.dateToString(bookingsV1.getLeavingDate());
+        }
+
+        return new StayInfo(bookingDate,
+                noticeDate,
+                lDate,
+                lDate,
+                Utils.dateToString(leavingDate));
+    }
+
+
+    public List<RentBreakUp> getRentBreakup(Customers customers, BookingsV1 bookingsV1, Date leavingDate, BillingDates currentMonthBillingDates) {
+        return customersBedHistoryService.getRentBreakupForPostpaid(customers, bookingsV1, leavingDate, currentMonthBillingDates);
     }
 }

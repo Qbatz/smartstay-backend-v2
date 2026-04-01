@@ -7,6 +7,7 @@ public record Amenities(String amenityId,
                         Double amenityAmount,
                         String starDate,
                         String endDate,
-                        Double amenityPrice) {
+                        Double amenityPrice,
+                        boolean isProRate) {
 
 }
