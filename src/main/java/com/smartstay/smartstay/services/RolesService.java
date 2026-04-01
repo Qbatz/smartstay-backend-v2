@@ -15,6 +15,7 @@ import com.smartstay.smartstay.payloads.roles.UpdateRoles;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.repositories.ModulesRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
+import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.responses.roles.Roles;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,8 @@ public class RolesService {
 
     @Autowired
     ModulesRepository modulesRepository;
+    @Autowired
+    UserRepository userRepository;
     @Autowired
     private Authentication authentication;
 
@@ -67,7 +70,10 @@ public class RolesService {
         List<RolesV1> getCommonRoles = rolesRepository.findDefaultRoles(List.of(3, 4));
         List<RolesV1> listRoles = rolesRepository.findAllByHostelId(hostelId);
         listRoles.addAll(0, getCommonRoles);
-        List<Roles> rolesList = listRoles.stream().map(item -> new RolesMapper(modulesRepository).apply(item)).toList();
+
+        Map<Integer, Long> userCountMap = buildUserCountMap(listRoles);
+
+        List<Roles> rolesList = listRoles.stream().map(item -> new RolesMapper(modulesRepository, userCountMap).apply(item)).toList();
         return new ResponseEntity<>(rolesList, HttpStatus.OK);
     }
 
@@ -97,7 +103,8 @@ public class RolesService {
 
         }
         if (v1 != null) {
-            Roles rolesData = new RolesMapper(modulesRepository).apply(v1);
+            Map<Integer, Long> userCountMap = buildUserCountMap(List.of(v1));
+            Roles rolesData = new RolesMapper(modulesRepository, userCountMap).apply(v1);
             return new ResponseEntity<>(rolesData, HttpStatus.OK);
         }
 
@@ -138,6 +145,9 @@ public class RolesService {
         }
         if (updatedRole.isActive() != null) {
             existingRole.setIsActive(updatedRole.isActive());
+        }
+        if (updatedRole.description() != null) {
+            existingRole.setDescription(updatedRole.description());
         }
         if (updatedRole.permissionList() != null && !updatedRole.permissionList().isEmpty()) {
             Map<Integer, Permission> incomingPermissions = updatedRole.permissionList().stream().collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
@@ -189,6 +199,9 @@ public class RolesService {
         role.setParentId(user.getParentId());
         role.setHostelId(roleData.hostelId());
         role.setPermissions(rolesPermissions);
+        if (roleData.description() != null) {
+            role.setDescription(roleData.description());
+        }
         RolesV1 roleV1 = rolesRepository.save(role);
 
         usersService.addUserLog(roleData.hostelId(), String.valueOf(roleV1.getRoleId()), ActivitySource.ROLE, ActivitySourceType.CREATE, user);
@@ -308,5 +321,20 @@ public class RolesService {
         }
         List<Modules> listModules = modulesRepository.findAll();
         return new ResponseEntity<>(listModules, HttpStatus.OK);
+    }
+
+    private Map<Integer, Long> buildUserCountMap(List<RolesV1> roles) {
+        List<Integer> roleIds = roles.stream().map(RolesV1::getRoleId).toList();
+        if (roleIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Object[]> results = userRepository.countUsersByRoleIds(roleIds);
+        Map<Integer, Long> map = new HashMap<>();
+        for (Object[] row : results) {
+            Integer roleId = ((Number) row[0]).intValue();
+            Long count = ((Number) row[1]).longValue();
+            map.put(roleId, count);
+        }
+        return map;
     }
 }
