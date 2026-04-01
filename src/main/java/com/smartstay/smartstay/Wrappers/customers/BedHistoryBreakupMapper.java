@@ -65,7 +65,7 @@ public class BedHistoryBreakupMapper implements Function<CustomersBedHistory, Re
         }
 
         noOfDays = Utils.findNumberOfDays(dStartDate, dEndDate);
-        long noOfDaysInCurrentMonth = Utils.findNoOfDaysInCurrentMonth(leavingDate);
+        long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
         rentPerDay = customersBedHistory.getRentAmount() / noOfDaysInCurrentMonth;
         totalRent = rentPerDay * noOfDays;
         rent = rentPerDay * noOfDays;

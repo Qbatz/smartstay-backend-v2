@@ -27,7 +27,8 @@ public class EBBillingScheduler {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
-    @Scheduled(cron = "0 50 23 * * *")
+//    @Scheduled(cron = "0 50 23 * * *") for production
+    @Scheduled(cron = "0 30 23 * * *")
     public void calculateEb() {
        List<HostelV1> hostelIds = hostelService.findAHostelsHavingBillingRuleEndingToday();
        hostelIds.forEach(i -> {
