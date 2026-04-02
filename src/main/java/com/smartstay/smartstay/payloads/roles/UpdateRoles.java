@@ -11,6 +11,9 @@ public record UpdateRoles(
         Boolean isActive,
         @NotNull(message = "Permission list cannot be null")
         @Size(min = 1, max = 19, message = "Permission list must contain between 1 and 19 items")
-        List<Permission> permissionList
+        List<Permission> permissionList,
+
+        @Size(max = 255, message = "Description must not exceed 255 characters")
+        String description
 ) {
 }

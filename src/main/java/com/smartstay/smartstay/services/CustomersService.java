@@ -1338,6 +1338,18 @@ public class CustomersService {
 
         boolean isJoiningDateEditable = !bedHistory.hasReassignedHistory(customerId);
 
+        String createdDate = Utils.dateToString(customers.getCreatedAt());
+        String createdTime = Utils.dateToTime(customers.getCreatedAt());
+        String createdAt = Utils.dateToDateTime(customers.getCreatedAt());
+        String createdBy = customers.getCreatedBy();
+        String createdByName = null;
+        if (createdBy != null && !createdBy.isEmpty()) {
+            Users createdByUser = userService.findUserByUserId(createdBy);
+            if (createdByUser != null) {
+                createdByName = Utils.fullName(createdByUser.getFirstName(), createdByUser.getLastName());
+            }
+        }
+
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
                 customers.getHostelId(),
                 customers.getFirstName(),
@@ -1364,7 +1376,12 @@ public class CustomersService {
                 walletInfo,
                 customerFiles,
                 additionalContacts,
-                isJoiningDateEditable);
+                isJoiningDateEditable,
+                createdDate,
+                createdTime,
+                createdAt,
+                createdBy,
+                createdByName);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }

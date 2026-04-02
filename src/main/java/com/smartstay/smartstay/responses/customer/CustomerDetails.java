@@ -35,5 +35,10 @@ public record CustomerDetails(String customerId,
                               WalletInfo walletInfo,
                               CustomerFiles files,
                               List<AdditionalContacts> additionalContacts,
-                              Boolean isJoiningDateEditable) {
+                              Boolean isJoiningDateEditable,
+                              String createdDate,
+                              String createdTime,
+                              String createdAt,
+                              String createdBy,
+                              String createdByName) {
 }
