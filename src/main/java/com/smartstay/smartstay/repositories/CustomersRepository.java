@@ -128,4 +128,5 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
         List<com.smartstay.smartstay.dao.Advance> findAdvancesByHostelId(@Param("hostelId") String hostelId);
 
 
+    List<Customers> findByXuid(String xuid);
 }
