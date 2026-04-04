@@ -1,0 +1,52 @@
+package com.smartstay.smartstay.services;
+
+import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.dao.OrderHistory;
+import com.smartstay.smartstay.ennum.OrderStatus;
+import com.smartstay.smartstay.ennum.UserType;
+import com.smartstay.smartstay.events.HostelEvents;
+import com.smartstay.smartstay.events.SubscriptionEvents;
+import com.smartstay.smartstay.payloads.subscription.PaymentLinks;
+import com.smartstay.smartstay.repositories.OrderHistoryRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+
+@Service
+public class OrderHistoryService {
+    @Autowired
+    private OrderHistoryRepository orderHistoryRepository;
+    @Autowired
+    private Authentication authentication;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
+    public void createOrder(String hostelId, PaymentLinks details, Double finalAmount, String planCode, Double discountAmount, Double planPrice) {
+        OrderHistory orderHistory = new OrderHistory();
+        orderHistory.setCreatedBy(authentication.getName());
+        orderHistory.setCreatedAt(new Date());
+        orderHistory.setPlanAmount(planPrice);
+        orderHistory.setPlanCode(planCode);
+        orderHistory.setTotalAmount(finalAmount);
+        orderHistory.setDiscountAmount(discountAmount);
+        orderHistory.setOrderStatus(OrderStatus.CREATED.name());
+        orderHistory.setActive(true);
+        orderHistory.setHostelId(hostelId);
+        orderHistory.setPaymentUrl(details.paymentLink());
+        orderHistory.setPaymentLinkId(details.paymentLinkId());
+        orderHistory.setUserType(UserType.OWNER.name());
+
+        orderHistoryRepository.save(orderHistory);
+    }
+
+    public void successfullPayment(Object payload) {
+        PaymentLinks paymentLinks = (PaymentLinks) payload;
+        OrderHistory orderHistory = orderHistoryRepository.findByPaymentLinkId(paymentLinks.paymentLinkId());
+        orderHistory.setOrderStatus(OrderStatus.PAID.name());
+        orderHistoryRepository.save(orderHistory);
+
+        eventPublisher.publishEvent(new SubscriptionEvents(this, orderHistory, authentication.getName()));
+    }
+}

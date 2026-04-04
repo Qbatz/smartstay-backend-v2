@@ -11,30 +11,25 @@ import lombok.NoArgsConstructor;
 import java.util.Date;
 
 @Entity
-@Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Subscription {
+@Data
+public class OrderHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long subscriptionId;
-    private String subscriptionNumber;
+    private Long historyId;
     private String hostelId;
+    private String paymentUrl;
+    private String paymentLinkId;
+    private Double discountAmount;
+    private Double planAmount;
     private String planCode;
     private String planName;
-    private Date planStartsAt;
-    private Date planEndsAt;
-    private Date activatedAt;
-    private Double paidAmount;
-    private Double planAmount;
-    private Double discount;
-    private Double discountAmount;
-    private Date nextBillingAt;
-    private String createdBy;
-    private String createdByUserType;
+    private Double totalAmount;
+    //order status enum
+    private String orderStatus;
+    private String userType;
+    private boolean isActive;
     private Date createdAt;
-    private Boolean isActive;
-    private String paymentProof;
-
+    private String createdBy;
 }
-

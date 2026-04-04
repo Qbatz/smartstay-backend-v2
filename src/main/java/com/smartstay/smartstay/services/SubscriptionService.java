@@ -8,8 +8,10 @@ import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.PlanType;
+import com.smartstay.smartstay.payloads.subscription.PaymentLinks;
 import com.smartstay.smartstay.repositories.SubscriptionRepository;
 import com.smartstay.smartstay.responses.plans.PlansList;
+import com.smartstay.smartstay.sockets.ClientConnect;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 @Service
 public class SubscriptionService {
@@ -37,6 +40,10 @@ public class SubscriptionService {
     private RolesService rolesService;
     @Autowired
     private SubscriptionRepository subscriptionRepository;
+    @Autowired
+    private ClientConnect clientConnect;
+    @Autowired
+    private OrderHistoryService orderHistoryService;
     private final RestTemplate restTemplate;
 
     @Autowired
@@ -283,13 +290,30 @@ public class SubscriptionService {
 //        String paymentUrl = "http://localhost:8083/v2/payments/generate/" + hostelId ;
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody);
 
-        ResponseEntity<String> responseEntity = restTemplate.exchange(paymentUrl, HttpMethod.POST, entity, String.class);
+        ResponseEntity<PaymentLinks> responseEntity = restTemplate.exchange(paymentUrl, HttpMethod.POST, entity, PaymentLinks.class);
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            PaymentLinks details = responseEntity.getBody();
+            orderHistoryService.createOrder(hostelId, details, finalAmount, plans.getPlanCode(), discountAmount, plans.getPrice());
+            try {
+                clientConnect.connect(details.paymentLinkId());
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             return new ResponseEntity<>(responseEntity.getBody(), HttpStatus.OK);
         }
         else {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
+    }
+
+    public Subscription findLatestSubscription(String hostelId) {
+        return subscriptionRepository.findLatestSubscription(hostelId);
+    }
+
+    public void saveFromEvents(Subscription subscription) {
+        subscriptionRepository.save(subscription);
     }
 }

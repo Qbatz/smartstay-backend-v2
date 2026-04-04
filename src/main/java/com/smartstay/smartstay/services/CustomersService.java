@@ -3463,8 +3463,11 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.CANNOT_DELETE_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);
         }
 
-        customers.setCurrentStatus(CustomerStatus.DELETED.name());
-        customersRepository.save(customers);
+        List<Customers> listCustomersBasedOnXuid = customersRepository.findByXuid(customers.getXuid());
+        if (listCustomersBasedOnXuid.size() == 1) {
+            ccs.deleteCustomer(customers.getXuid());
+        }
+        customersRepository.delete(customers);
 
         userService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.DELETE, users);
 

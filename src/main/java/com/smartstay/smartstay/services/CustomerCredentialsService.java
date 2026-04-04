@@ -51,4 +51,9 @@ public class CustomerCredentialsService {
         }
         return listCredentials;
     }
+
+    public void deleteCustomer(String xuid) {
+        CustomerCredentials customerCredentials = customerCredentialsRepository.findByXuid(xuid);
+        customerCredentialsRepository.delete(customerCredentials);
+    }
 }
