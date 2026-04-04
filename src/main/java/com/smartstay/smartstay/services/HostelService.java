@@ -50,6 +50,9 @@ public class HostelService {
     private HostelV1Repository hostelV1Repository;
 
     @Autowired
+    private com.smartstay.smartstay.repositories.HostelImagesRepository hostelImagesRepository;
+
+    @Autowired
     @Lazy
     private CustomersService customersService;
 
@@ -1091,5 +1094,52 @@ public class HostelService {
     public void updateHostel(HostelV1 hostelV1) {
         hostelV1Repository.save(hostelV1);
     }
-}
 
+    public ResponseEntity<?> deleteAdditionalImage(String hostelId, Integer imageId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostelV1 = hostelV1Repository.findByHostelId(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        List<HostelImages> additionalImages = hostelV1.getAdditionalImages();
+        if (additionalImages == null || additionalImages.isEmpty()) {
+            return new ResponseEntity<>(Utils.NO_ADDITIONAL_IMAGES_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Optional<HostelImages> imageToDeleteOpt = additionalImages.stream()
+                .filter(img -> img.getId().equals(imageId))
+                .findFirst();
+
+        if (imageToDeleteOpt.isEmpty()) {
+            return new ResponseEntity<>(Utils.IMAGES_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelImages imageToDelete = imageToDeleteOpt.get();
+
+        if (imageToDelete.getImageUrl() != null && !imageToDelete.getImageUrl().isEmpty()) {
+            uploadToS3.deleteFileFromS3(imageToDelete.getImageUrl());
+        }
+
+        additionalImages.remove(imageToDelete);
+        hostelV1Repository.save(hostelV1);
+        hostelImagesRepository.delete(imageToDelete);
+
+        usersService.addUserLog(hostelId, String.valueOf(imageId), ActivitySource.HOSTEL, ActivitySourceType.UPDATE, users);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+}
