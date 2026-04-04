@@ -52,7 +52,7 @@ public class SubscriptionEventsListener {
         subscription.setPlanAmount(oh.getPlanAmount());
         subscription.setDiscount(oh.getDiscountAmount());
         subscription.setDiscountAmount(discountPercentage);
-        subscription.setCreatedBy(subscriptionEvents.getCreatedBy());
+        subscription.setCreatedBy(oh.getCreatedBy());
         subscription.setCreatedByUserType(UserType.OWNER.name());
         subscription.setCreatedAt(new Date());
         subscription.setPlanEndsAt(endDate);

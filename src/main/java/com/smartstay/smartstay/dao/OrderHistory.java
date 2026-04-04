@@ -28,6 +28,10 @@ public class OrderHistory {
     private Double totalAmount;
     //order status enum
     private String orderStatus;
+    private String paymentType;
+    //UPI or bank
+    private String channel;
+    private String upiId;
     private String userType;
     private boolean isActive;
     private Date createdAt;

@@ -344,7 +344,7 @@ public class CoreSetUp {
 				modules24.setModuleName("Agreement");
 				modulesRepository.save(modules24);
 			}
-			Modules modules25 = modulesRepository.findByModuleName("User");
+			Modules modules25 = modulesRepository.findByModuleName("Subscription");
 			if (modules25 == null) {
 				modules25 = new Modules();
 				modules25.setModuleName("Subscription");
