@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -78,7 +79,20 @@ public class UploadFileToS3 {
         }
 
         return new UploadFiles(fileName, mimeType);
+    }
 
+    public void deleteFileFromS3(String fileUrl) {
+        try {
+            AmazonS3 s3 = AWSConfig.setupS3Client(accessKey, secretKey);
+            URI uri = new URI(fileUrl);
+            String path = uri.getPath();
+            if (path != null && path.startsWith("/")) {
+                path = path.substring(1);
+            }
+            s3.deleteObject(new com.amazonaws.services.s3.model.DeleteObjectRequest(bucketName, path));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
