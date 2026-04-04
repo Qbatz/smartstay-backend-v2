@@ -230,9 +230,10 @@ public class HostelService {
             final long[] noOfAvailableBeds = {0};
             List<BedsStatusCount> bedsCounts = bedsService.findBedCount(item.getHostelId());
             bedsCounts.forEach(itm -> {
-                noOfBeds[0] = noOfBeds[0] + Integer.parseInt(String.valueOf(itm.getCount()));
-                if (itm.getStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
-                    noOfAvailableBeds[0] = itm.getCount();
+                int currentCount = Integer.parseInt(String.valueOf(itm.getCount()));
+                noOfBeds[0] += currentCount;
+                if (itm.getStatus().equalsIgnoreCase(BedStatus.VACANT.name()) || itm.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+                    noOfAvailableBeds[0] += currentCount;
                 }
                 if (itm.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) || itm.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
                     noOfOccupiedBeds.set(noOfOccupiedBeds.get() + Integer.valueOf(String.valueOf(itm.getCount())));
