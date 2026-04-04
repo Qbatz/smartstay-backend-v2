@@ -60,7 +60,7 @@ public class RecurringEventListener {
         boolean isFlatRate;
         if (ebConfig != null) {
             if (ebConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.FLAT_RATE.name())) {
-                if (ebConfig.isShouldIncludeInRent()) {
+                if (!ebConfig.isShouldIncludeInRent()) {
                     flatEbAmount = ebConfig.getFlatCharge();
                     isFlatRate = true;
                     shouldIncludeEb = false;
