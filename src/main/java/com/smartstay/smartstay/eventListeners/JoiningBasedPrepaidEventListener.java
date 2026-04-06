@@ -1,11 +1,9 @@
 package com.smartstay.smartstay.eventListeners;
 
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
-import com.smartstay.smartstay.ennum.BillConfigTypes;
-import com.smartstay.smartstay.ennum.InvoiceMode;
-import com.smartstay.smartstay.ennum.InvoiceType;
-import com.smartstay.smartstay.ennum.WalletBillingStatus;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.JoiningBasedPrepaidEvents;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.services.*;
@@ -45,6 +43,7 @@ public class JoiningBasedPrepaidEventListener {
         BookingsV1 bookingsV1 = bookingsService.getBookingInfoByCustomerId(jbpe.getCustomerId());
         Customers customers = customersService.getCustomerInformation(jbpe.getCustomerId());
         BillingDates billingDates = hostelService.getBillingRuleOnDate(jbpe.getHostelId(), new Date());
+        ElectricityConfig ebConfig = hostelV1.getElectricityConfig();
         String customerId = jbpe.getCustomerId();
         if (bookingsV1 != null) {
             List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getAllInvoiceNotGeneratedWallets(customerId);
@@ -56,6 +55,13 @@ public class JoiningBasedPrepaidEventListener {
                     .mapToDouble(CustomersAmenity::getAmenityPrice)
                     .sum();
             double ebAmount = 0.0;
+            if (ebConfig != null) {
+                if (ebConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.FLAT_RATE.name())) {
+                    if (!ebConfig.isShouldIncludeInRent()) {
+                        ebAmount = ebConfig.getFlatCharge();
+                    }
+                }
+            }
             double rentEbAmount = rentAmount + ebAmount;
             double rentEbAndAmenity = rentEbAmount + amenityAmount;
             double walletAmount = 0.0;

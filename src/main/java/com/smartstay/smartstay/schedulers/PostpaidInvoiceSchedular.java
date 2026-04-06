@@ -20,9 +20,10 @@ public class PostpaidInvoiceSchedular {
 
     //Schedule it for morning 3;
 //    @Scheduled(cron = "0 0 3 * * *") for production
+//    @Scheduled(cron = "0 15 3 * * *") for dev
     @Scheduled(cron = "0 15 3 * * *")
     public void scheduleInvoice() {
-        List<BillingRules> listBillingRules = hostelConfigService.findHostelsHavingBillingStartDateTomorrow();
+        List<BillingRules> listBillingRules = hostelConfigService.findHostelsHavingBillingStartDateToday();
 
         if (!listBillingRules.isEmpty()) {
             List<HostelV1> listHostels = listBillingRules

@@ -373,6 +373,12 @@ public class ActivityLogUtils {
         if (operation.equalsIgnoreCase(ActivitySourceType.DISCOUNT.name())) {
             return "Applied discount for an invoice ";
         }
+        if (operation.equalsIgnoreCase(ActivitySourceType.EDIT_DISCOUNT.name())) {
+            return "Modified discount for invoice ";
+        }
+        if (operation.equalsIgnoreCase(ActivitySourceType.DELETE_DISCOUNT.name())) {
+            return "Discount has been deleted for invoice ";
+        }
         return null;
     }
 

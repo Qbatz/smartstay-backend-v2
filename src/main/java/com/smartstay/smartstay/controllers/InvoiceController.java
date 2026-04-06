@@ -83,4 +83,14 @@ public class InvoiceController {
     public ResponseEntity<?> applyDiscountForInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody @Valid ApplyDiscount discount) {
         return invoiceV1Service.applyinvoiceDiscount(hostelId, invoiceId, discount);
     }
+
+    @PutMapping("/discount/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> editDiscountForInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody ApplyDiscount discount) {
+        return invoiceV1Service.editDiscount(hostelId, invoiceId, discount);
+    }
+
+    @DeleteMapping("/discount/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> removeDiscount(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.deleteDiscount(hostelId, invoiceId);
+    }
 }
