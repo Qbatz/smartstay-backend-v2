@@ -19,6 +19,7 @@ import com.smartstay.smartstay.dto.customer.ReassignRent;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
+import com.smartstay.smartstay.dto.invoices.InvoiceDiscountDto;
 import com.smartstay.smartstay.dto.invoices.InvoiceDiscounts;
 import com.smartstay.smartstay.dto.settlement.CurrentMonthOtherItems;
 import com.smartstay.smartstay.dto.transaction.Receipts;
@@ -27,6 +28,7 @@ import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
+import com.smartstay.smartstay.payloads.customer.Settlement;
 import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
@@ -35,6 +37,7 @@ import com.smartstay.smartstay.responses.customer.RentInfo;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
 import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.util.*;
+import io.swagger.v3.core.util.ReferenceTypeUtils;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -3554,5 +3557,135 @@ public class InvoiceV1Service {
                 totalAmount,
                 paidAmount,
                 unpaidInvoices);
+    }
+
+    public ResponseEntity<?> editDiscount(String hostelId, String invoiceId, ApplyDiscount discount) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (discount == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.isDiscounted()) {
+            return new ResponseEntity<>(Utils.DISCOUNT_NOT_APPLIED_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (discount.discountAmount() == null && discount.discountPercentage() == null) {
+            return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (discount.discountAmount() != null && discount.discountAmount() < 1) {
+            return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (discount.discountAmount() != null && discount.discountAmount() > invoicesV1.getTotalAmount()) {
+            return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_VALIDATION, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoiceDiscountDto isDiscountApplied =  invoiceDiscountService.editDiscount(hostelId, invoiceId, discount);
+        if (isDiscountApplied == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+
+        invoicesV1.setTotalAmount(invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference());
+
+        invoicesV1Repository.save(invoicesV1);
+        paymentSummaryService.editDiscount(invoicesV1.getCustomerId(), isDiscountApplied.invoiceDifference());
+        usersService.addUserLog(hostelId, invoiceId, ActivitySource.INVOICE, ActivitySourceType.EDIT_DISCOUNT, users);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> deleteDiscount(String hostelId, String invoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!invoicesV1.isDiscounted()) {
+            return new ResponseEntity<>(Utils.DISCOUNT_NOT_APPLIED_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+
+        Double invoiceDiscountAmount = invoiceDiscountService.deleteInvoiceDiscount(hostelId, invoiceId);
+        invoicesV1.setTotalAmount(invoicesV1.getTotalAmount() + invoiceDiscountAmount);
+        invoicesV1.setDiscounted(false);
+
+        invoicesV1Repository.save(invoicesV1);
+
+        paymentSummaryService.deleteDiscount(invoicesV1.getCustomerId(), invoiceDiscountAmount);
+        usersService.addUserLog(hostelId, invoiceId, ActivitySource.INVOICE, ActivitySourceType.DELETE_DISCOUNT, users);
+
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
+    }
+
+    public InvoicesV1 createSettlementInvoiceForPostpaid(Customers customers, String hostelId, long round, List<String> listUnpaidInvoices, List<Deductions> deductions, double amoutToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid) {
+        InvoicesV1 advanceInvoice = null;
+
+        List<InvoicesV1> listInvoices = new ArrayList<>();
+        if (!isAdvancePaid) {
+            advanceInvoice = invoicesV1Repository.findAdvanceInvoiceByCustomerId(customers.getCustomerId());
+            listInvoices.add(advanceInvoice);
+        }
+        if (listUnpaidInvoices != null && !listUnpaidInvoices.isEmpty()) {
+            List<InvoicesV1> invoices = invoicesV1Repository.findAllById(listUnpaidInvoices);
+            listInvoices.addAll(invoices);
+        }
+
+        List<InvoicesV1> invoicesHasToBeCancelled = listInvoices
+                .stream()
+                        .map(i -> {
+                            i.setCancelled(true);
+                            return i;
+                        })
+                                .toList();
+
+        cancelActiveInvoice(invoicesHasToBeCancelled);
+
+        return createSettlementInvoice(customers, hostelId, round, listInvoices, deductions, amoutToBePaidWithoutDeductions, leavingDate, users);
     }
 }

@@ -167,4 +167,26 @@ public class PaymentSummaryService {
             paymentSummaryRepository.save(paymentSummary);
         }
     }
+
+    public void editDiscount(String customerId, double difference) {
+        com.smartstay.smartstay.dao.PaymentSummary paymentSummary = paymentSummaryRepository.findByCustomerId(customerId);
+        if (paymentSummary != null) {
+            paymentSummary.setDebitAmount(paymentSummary.getDebitAmount() - difference);
+            paymentSummary.setBalance(paymentSummary.getBalance() - difference);
+            paymentSummary.setLastUpdate(new Date());
+
+            paymentSummaryRepository.save(paymentSummary);
+        }
+    }
+
+    public void deleteDiscount(String customerId, Double invoiceDiscountAmount) {
+        com.smartstay.smartstay.dao.PaymentSummary paymentSummary = paymentSummaryRepository.findByCustomerId(customerId);
+        if (paymentSummary != null) {
+            paymentSummary.setDebitAmount(paymentSummary.getDebitAmount() + invoiceDiscountAmount);
+            paymentSummary.setBalance(paymentSummary.getBalance() + invoiceDiscountAmount);
+            paymentSummary.setLastUpdate(new Date());
+
+            paymentSummaryRepository.save(paymentSummary);
+        }
+    }
 }

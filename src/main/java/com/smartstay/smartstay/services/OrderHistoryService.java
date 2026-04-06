@@ -8,6 +8,7 @@ import com.smartstay.smartstay.events.HostelEvents;
 import com.smartstay.smartstay.events.SubscriptionEvents;
 import com.smartstay.smartstay.payloads.subscription.PaymentLinks;
 import com.smartstay.smartstay.payloads.subscription.PaymentStatus;
+import com.smartstay.smartstay.payloads.subscription.PaymentStatusCardType;
 import com.smartstay.smartstay.payloads.subscription.ZohoPaymentResponse;
 import com.smartstay.smartstay.repositories.OrderHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,16 @@ public class OrderHistoryService {
             PaymentStatus status = paymentLinks.upiStatus();
             orderHistory.setChannel(status.channel());
             orderHistory.setUpiId(status.id());
+        }
+        else if (paymentLinks.type().equalsIgnoreCase("CARD")) {
+            PaymentStatusCardType cardType = paymentLinks.cardType();
+            orderHistory.setCardBrand(cardType.issuer());
+            orderHistory.setCardHolderName(cardType.cardHolderName());
+            orderHistory.setCardType(cardType.cardType());
+            orderHistory.setIssuer(cardType.issuer());
+            orderHistory.setChannel("Card");
+            orderHistory.setCardNo(cardType.lastFourDigits());
+
         }
 
 

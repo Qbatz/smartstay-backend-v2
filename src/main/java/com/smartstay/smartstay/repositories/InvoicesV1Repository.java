@@ -326,4 +326,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND i.isCancelled=false AND i.paymentStatus != 'PAID'
             """)
     List<InvoicesV1> findOldMonthPendingInvoices(String customerId, Date currentMonth, List<String> invoiceTypes);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType='ADVANCE' 
+            """)
+    InvoicesV1 findAdvanceInvoiceByCustomerId(String customerId);
 }

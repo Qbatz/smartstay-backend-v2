@@ -28,23 +28,25 @@ public class ClientConnect {
         WebSocketStompClient stompClient = new WebSocketStompClient(new StandardWebSocketClient());
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 
+//        "wss://payment.qbatz.com/ws",
+
         StompSession session = stompClient.connectAsync(
                 "wss://payment.qbatz.com/ws",
                 new StompSessionHandlerAdapter() {
                     @Override
                     public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
-//                        System.out.println("✅ Connected to WebSocket");
+                        System.out.println("✅ Connected to WebSocket");
                     }
 
                     @Override
                     public void handleException(StompSession session, StompCommand command,
                                                 StompHeaders headers, byte[] payload, Throwable exception) {
-//                        System.out.println("❌ Exception: " + exception.getMessage());
+                        System.out.println("❌ Exception: " + exception.getMessage());
                     }
 
                     @Override
                     public void handleTransportError(StompSession session, Throwable exception) {
-//                        System.out.println("❌ Transport Error: " + exception.getMessage());
+                        System.out.println("❌ Transport Error: " + exception.getMessage());
                     }
                 }
         ).get();

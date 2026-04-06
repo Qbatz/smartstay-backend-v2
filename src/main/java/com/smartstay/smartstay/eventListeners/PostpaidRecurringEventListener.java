@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,9 +52,17 @@ public class PostpaidRecurringEventListener {
     @EventListener
     public void generateInvoiceForPostpaid(PostpaidRecurringEvents postpaidRecurringEvents) {
         HostelV1 hostelV1 = hostelService.getHostelInfo(postpaidRecurringEvents.getHostelId());
-        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(postpaidRecurringEvents.getHostelId());
+        BillingDates newMonthBillDate = hostelService.getCurrentBillStartAndEndDates(postpaidRecurringEvents.getHostelId());
         ElectricityConfig ebConfig = hostelService.getElectricityConfig(hostelV1.getHostelId());
 
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(newMonthBillDate.currentBillStartDate());
+        calendar.add(Calendar.MONTH, -1);
+
+        BillingDates invoiceMonthBillingDates = hostelService.getBillingRuleOnDate(postpaidRecurringEvents.getHostelId(), calendar.getTime());
+
+        Date currentBillingInvoiceStartDate = invoiceMonthBillingDates.currentBillStartDate();
+        Date currentBillingInvoiceEndDate = invoiceMonthBillingDates.currentBillEndDate();
         boolean shouldIncludeEb;
         double flatEbAmount;
         boolean isFlatRate;
@@ -83,6 +92,7 @@ public class PostpaidRecurringEventListener {
         }
 
         AtomicReference<Date> invoiceStartDate = new AtomicReference<>();
+        AtomicReference<Date> invoiceDueDate = new AtomicReference<>();
         Date invoiceEndDate= null;
 
         List<BookingsV1> customersList = bookingsService.findCheckedInCustomers(postpaidRecurringEvents.getHostelId());
@@ -91,7 +101,7 @@ public class PostpaidRecurringEventListener {
                 .map(BookingsV1::getCustomerId)
                 .toList();
 
-        List<CustomersBedHistory> listCustomerBedHistory = customersBedHistoryService.findBedHistoriesByListOfCustomersAndDates(customerIds, billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+        List<CustomersBedHistory> listCustomerBedHistory = customersBedHistoryService.findBedHistoriesByListOfCustomersAndDates(customerIds, invoiceMonthBillingDates.currentBillStartDate(), invoiceMonthBillingDates.currentBillEndDate());
 
         List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getWalletListForRecurring(customerIds);
 
@@ -111,32 +121,36 @@ public class PostpaidRecurringEventListener {
                             .toList();
                     //No bed change happens
                     if (currentHistory.size() < 2) {
-                        if (Utils.compareWithTwoDates(item.getJoiningDate(), billingDates.currentBillStartDate()) <= 0) {
+                        if (Utils.compareWithTwoDates(item.getJoiningDate(), currentBillingInvoiceStartDate) <= 0) {
                             rentAmount = item.getRentAmount();
-                            invoiceStartDate.set(billingDates.currentBillStartDate());
+                            invoiceStartDate.set(currentBillingInvoiceStartDate);
+                            invoiceDueDate.set(Utils.addDaysToDate(currentBillingInvoiceStartDate, invoiceMonthBillingDates.dueDays()));
                         }
                         else {
                             invoiceStartDate.set(item.getJoiningDate());
-                            if (billingDates.hasGracePeriod()) {
-                                Date dateAfterGracePeriod = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
+                            invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()));
+                            if (invoiceMonthBillingDates.hasGracePeriod()) {
+                                Date dateAfterGracePeriod = Utils.addDaysToDate(currentBillingInvoiceStartDate, invoiceMonthBillingDates.gracePeriodDays());
                                 if (Utils.compareWithTwoDates(item.getJoiningDate(), dateAfterGracePeriod) <= 0) {
                                     rentAmount = item.getRentAmount();
                                 }
                                 else {
-                                    rentAmount = calculateRentAmount(item.getJoiningDate(), item.getRentAmount(), billingDates);
+                                    rentAmount = calculateRentAmount(item.getJoiningDate(), item.getRentAmount(), invoiceMonthBillingDates);
                                 }
                             }
                             else {
-                                rentAmount = calculateRentAmount(item.getJoiningDate(), item.getRentAmount(), billingDates);
+                                rentAmount = calculateRentAmount(item.getJoiningDate(), item.getRentAmount(), invoiceMonthBillingDates);
                             }
                         }
                     }
                     else {
-                        if (Utils.compareWithTwoDates(item.getJoiningDate(), billingDates.currentBillStartDate()) <= 0) {
-                            invoiceStartDate.set(billingDates.currentBillStartDate());
+                        if (Utils.compareWithTwoDates(item.getJoiningDate(), invoiceMonthBillingDates.currentBillStartDate()) <= 0) {
+                            invoiceStartDate.set(invoiceMonthBillingDates.currentBillStartDate());
+                            invoiceDueDate.set(Utils.addDaysToDate(invoiceMonthBillingDates.currentBillStartDate(), invoiceMonthBillingDates.dueDays()));
                         }
                         else {
                             invoiceStartDate.set(item.getJoiningDate());
+                            invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()));
                         }
                         //executes when bed change happens
                         List<CustomersBedHistory> oldBedHistories = currentHistory
@@ -148,10 +162,10 @@ public class PostpaidRecurringEventListener {
                         if (oldBedHistories != null && !oldBedHistories.isEmpty()) {
                             oldBedHistories.forEach(oldItems -> {
                                 double fullRentAmount = oldItems.getRentAmount();
-                                long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                                long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(invoiceMonthBillingDates.currentBillStartDate(), invoiceMonthBillingDates.currentBillEndDate());
                                 Date startDate = oldItems.getStartDate();
-                                if (Utils.compareWithTwoDates(oldItems.getStartDate(), billingDates.currentBillStartDate()) < 0) {
-                                    startDate = billingDates.currentBillStartDate();
+                                if (Utils.compareWithTwoDates(oldItems.getStartDate(), invoiceMonthBillingDates.currentBillStartDate()) < 0) {
+                                    startDate = invoiceMonthBillingDates.currentBillStartDate();
                                 }
                                 long noOfDaysStayed = Utils.findNumberOfDays(startDate, oldItems.getEndDate());
                                 double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
@@ -167,14 +181,14 @@ public class PostpaidRecurringEventListener {
                                 .orElse(null);
                         if (currentBed != null) {
                             double fullRentAmount = currentBed.getRentAmount();
-                            long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                            long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(invoiceMonthBillingDates.currentBillStartDate(), invoiceMonthBillingDates.currentBillEndDate());
                             Date startDate = currentBed.getStartDate();
-                            if (Utils.compareWithTwoDates(currentBed.getStartDate(), billingDates.currentBillStartDate()) < 0) {
-                                startDate = billingDates.currentBillStartDate();
+                            if (Utils.compareWithTwoDates(currentBed.getStartDate(), invoiceMonthBillingDates.currentBillStartDate()) < 0) {
+                                startDate = invoiceMonthBillingDates.currentBillStartDate();
                             }
                             Date endDate = currentBed.getEndDate();
                             if (endDate == null) {
-                                endDate = billingDates.currentBillEndDate();
+                                endDate = invoiceMonthBillingDates.currentBillEndDate();
                             }
                             long noOfDaysStayed = Utils.findNumberOfDays(startDate, endDate);
                             double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
@@ -208,7 +222,7 @@ public class PostpaidRecurringEventListener {
 
 
 //            List<CustomersAmenity> listCustomersAmenity = amenitiesService.getAllAmenitiesByCustomerId(item.getCustomerId());
-                    List<CustomersAmenity> listCustomersAmenity = amenitiesService.getAllCustomerAmenitiesForRecurring(item.getCustomerId(), billingDates.currentBillStartDate());
+                    List<CustomersAmenity> listCustomersAmenity = amenitiesService.getAllCustomerAmenitiesForRecurring(item.getCustomerId(), invoiceMonthBillingDates.currentBillStartDate());
                     Double amenityAmount = listCustomersAmenity
                             .stream()
                             .mapToDouble(CustomersAmenity::getAmenityPrice)
@@ -295,9 +309,9 @@ public class PostpaidRecurringEventListener {
                         invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
                         invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
                         invoicesV1.setInvoiceGeneratedDate(new Date());
-                        invoicesV1.setInvoiceDueDate(billingDates.dueDate());
+                        invoicesV1.setInvoiceDueDate(invoiceDueDate.get());
                         invoicesV1.setInvoiceStartDate(invoiceStartDate.get());
-                        invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
+                        invoicesV1.setInvoiceEndDate(invoiceMonthBillingDates.currentBillEndDate());
                         invoicesV1.setCreatedAt(new Date());
 
                         List<InvoiceItems> invoicesItems = new ArrayList<>();
