@@ -1129,11 +1129,6 @@ public class HostelService {
         }
 
         HostelImages imageToDelete = imageToDeleteOpt.get();
-
-        if (imageToDelete.getImageUrl() != null && !imageToDelete.getImageUrl().isEmpty()) {
-            uploadToS3.deleteFileFromS3(imageToDelete.getImageUrl());
-        }
-
         additionalImages.remove(imageToDelete);
         hostelV1Repository.save(hostelV1);
         hostelImagesRepository.delete(imageToDelete);
