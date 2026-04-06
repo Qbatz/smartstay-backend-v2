@@ -270,4 +270,14 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
         @Query(value = "SELECT MIN(leaving_date) FROM bookingsv1 WHERE hostel_id = :hostelId AND current_status = 'NOTICE' AND leaving_date >= DATE(:now)", nativeQuery = true)
         Date findEarliestLeavingDate(@Param("hostelId") String hostelId, @Param("now") Date now);
+
+        @Query(value = """
+            SELECT COUNT(*) FROM bookingsv1
+            WHERE bed_id = :bedId AND customer_id != :customerId
+            AND current_status IN ('CHECKIN', 'NOTICE', 'BOOKED')
+            AND (leaving_date IS NULL OR DATE(leaving_date) > DATE(:joiningDate))
+        """, nativeQuery = true)
+        int countOverlappingBookings(@Param("bedId") int bedId, 
+                                     @Param("customerId") String customerId, 
+                                     @Param("joiningDate") Date joiningDate);
 }

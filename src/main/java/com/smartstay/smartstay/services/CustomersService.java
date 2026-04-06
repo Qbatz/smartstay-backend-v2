@@ -3258,7 +3258,7 @@ public class CustomersService {
         if (bookingsV1.getBedId() == request.bedId()) {
             return new ResponseEntity<>(Utils.CHANGE_BED_SAME_BED_ERROR, HttpStatus.BAD_REQUEST);
         }
-        if (!bedsService.isBedAvailableForReassign(request.bedId(), request.joiningDate())) {
+        if (!bedsService.isBedAvailableForReassign(request.bedId(), request.joiningDate(), customerId)) {
             return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);
         }
 
