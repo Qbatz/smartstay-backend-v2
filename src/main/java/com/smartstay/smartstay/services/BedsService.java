@@ -48,6 +48,10 @@ public class BedsService {
     @Autowired
     RoomRepository roomRepository;
     @Autowired
+    CustomerBedHistoryRespository customerBedHistoryRespository;
+    @Autowired
+    BookingsRepository bookingsRepository;
+    @Autowired
     private RolesService rolesService;
     @Autowired
     private Authentication authentication;
@@ -807,13 +811,25 @@ public class BedsService {
         return bedsRepository.findByBedId(bedId);
     }
 
-    public boolean isBedAvailableForReassign(Integer bedId, String joiningDate) {
+    public boolean isBedAvailableForReassign(Integer bedId, String joiningDate, String customerId) {
+        Date dtJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+        int historicalOverlaps = customerBedHistoryRespository.countOverlappingHistoricalBeds(bedId, customerId, dtJoiningDate);
+        if (historicalOverlaps > 0) {
+            return false;
+        }
+
+        int activeOverlaps = bookingsRepository.countOverlappingBookings(bedId, customerId, dtJoiningDate);
+        if (activeOverlaps > 0) {
+            return false;
+        }
+
         Beds beds = bedsRepository.findById(bedId).orElse(null);
         if (beds == null) {
             return false;
         }
         if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) && !beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-           return false;
+            return false;
         }
         if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             return bookingService.isBedAvailableByDate(bedId, joiningDate);

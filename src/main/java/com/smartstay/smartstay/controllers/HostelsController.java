@@ -85,4 +85,9 @@ public class HostelsController {
         return hostelService.updatePgInformation(hostelId, payloads, mainImage, additionalImages);
     }
 
+    @DeleteMapping("/{hostelId}/additional-images/{imageId}")
+    public ResponseEntity<?> deleteAdditionalImage(@PathVariable("hostelId") String hostelId, @PathVariable("imageId") Integer imageId) {
+        return hostelService.deleteAdditionalImage(hostelId, imageId);
+    }
+
 }

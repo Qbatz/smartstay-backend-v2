@@ -19,9 +19,10 @@ import java.util.List;
 public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
         @Query(value = "SELECT bookings.booking_id, bookings.customer_id, bookings.joining_date, bookings.rent_amount, "
-                        + "bookings.hostel_id, cus.first_name, cus.city, cus.state, cus.country, cus.current_status, cus.email_id, "
-                        + "cus.profile_pic FROM bookingsv1 bookings left outer join customers cus "
-                        + "on cus.customer_id=bookings.customer_id where bookings.hostel_id=:hostelId", nativeQuery = true)
+                + "bookings.hostel_id, cus.first_name, cus.city, cus.state, cus.country, cus.current_status, cus.email_id, "
+                + "cus.profile_pic FROM bookingsv1 bookings LEFT OUTER JOIN customers cus "
+                + "ON cus.customer_id = bookings.customer_id WHERE bookings.hostel_id = :hostelId "
+                + "ORDER BY bookings.floor_id", nativeQuery = true)
         List<Bookings> findAllByHostelId(@Param("hostelId") String hostelId);
 
         List<BookingsV1> findByCustomerIdIn(List<String> customerIds);
@@ -269,4 +270,14 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
         @Query(value = "SELECT MIN(leaving_date) FROM bookingsv1 WHERE hostel_id = :hostelId AND current_status = 'NOTICE' AND leaving_date >= DATE(:now)", nativeQuery = true)
         Date findEarliestLeavingDate(@Param("hostelId") String hostelId, @Param("now") Date now);
+
+        @Query(value = """
+            SELECT COUNT(*) FROM bookingsv1
+            WHERE bed_id = :bedId AND customer_id != :customerId
+            AND current_status IN ('CHECKIN', 'NOTICE', 'BOOKED')
+            AND (leaving_date IS NULL OR DATE(leaving_date) > DATE(:joiningDate))
+        """, nativeQuery = true)
+        int countOverlappingBookings(@Param("bedId") int bedId, 
+                                     @Param("customerId") String customerId, 
+                                     @Param("joiningDate") Date joiningDate);
 }

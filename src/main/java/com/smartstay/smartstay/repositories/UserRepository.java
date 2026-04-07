@@ -149,4 +149,12 @@ public interface UserRepository extends JpaRepository<Users, String> {
             """, nativeQuery = true)
     LoginUsersDetails getLoginUserDetails(@Param("userId") String userId);
 
+    @Query(value = """
+            SELECT u.role_id AS roleId, COUNT(u.user_id) AS userCount
+            FROM users u
+            WHERE u.is_deleted = false AND u.role_id IN (:roleIds)
+            GROUP BY u.role_id
+            """, nativeQuery = true)
+    List<Object[]> countUsersByRoleIds(@Param("roleIds") List<Integer> roleIds);
+
 }
