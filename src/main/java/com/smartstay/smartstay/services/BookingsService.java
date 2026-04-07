@@ -29,7 +29,6 @@ import com.smartstay.smartstay.responses.bookings.InitializeCancel;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckIn;
 import com.smartstay.smartstay.responses.bookings.InitializeCheckout;
 import com.smartstay.smartstay.responses.customer.RentBreakUp;
-import com.smartstay.smartstay.responses.customer.RentInfo;
 import com.smartstay.smartstay.responses.customer.StayInfo;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -912,7 +911,7 @@ public class BookingsService {
 
                     BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
                     if (billingDates != null) {
-                        if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                        if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                             //have to update the recurring date here
                             customerBillingRulesService.updateRecurringInvoiceDate(hostelId, customers.getCustomerId(), joinigDate);
                         }

@@ -28,7 +28,6 @@ import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
-import com.smartstay.smartstay.payloads.customer.Settlement;
 import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
@@ -37,7 +36,6 @@ import com.smartstay.smartstay.responses.customer.RentInfo;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
 import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.util.*;
-import io.swagger.v3.core.util.ReferenceTypeUtils;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -623,7 +621,7 @@ public class InvoiceV1Service {
         BillingDates invoiceBillingDate = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), invoiceDate);
         BillingDates currentBillingDate = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), new Date());
 
-        if (currentBillingDate.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+        if (currentBillingDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             return generateManualInvoiceForJoiningBasedTenants(hostelV1.getHostelId(), customers, manualInvoice, users);
         }
 
@@ -1416,7 +1414,7 @@ public class InvoiceV1Service {
         Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         BillingDates billingDates = hostelService.getBillingRuleOnDate(customers.getHostelId(), dateJoiningDate);
         if (billingDates != null) {
-            if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+            if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                 return calculateAndCreateNewInvoiceForJoiningBasedHostels(customers, dateJoiningDate, newRent, joiningDate);
             }
 //            List<InvoicesV1> listInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
@@ -2073,7 +2071,7 @@ public class InvoiceV1Service {
         BillingDates billingDatesForOldJoiningDates = hostelService.getBillingRuleOnDate(hostelId, oldJoiningDate);
         BillingDates currentMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
 
-        if (currentMonthBillingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+        if (currentMonthBillingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             List<String> invoicesTypes = new ArrayList<>();
             invoicesTypes.add(InvoiceType.RENT.name());
             invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
@@ -3359,7 +3357,7 @@ public class InvoiceV1Service {
      */
     public RentInfo getRentInfoForSettlement(String hostelId, Customers customers, Date leavingDate, double monthlyRent) {
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
-        if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+        if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             billingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), leavingDate);
         }
         List<InvoicesV1> listInvoices = invoicesV1Repository.findAllCurrentMonthInvoices(customers.getCustomerId(), hostelId, billingDates.currentBillStartDate());
