@@ -46,7 +46,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             AND (:name IS NULL OR LOWER(cus.first_name) LIKE LOWER(CONCAT('%', :name, '%'))
                                    OR LOWER(cus.last_name) LIKE LOWER(CONCAT('%', :name, '%')))
               AND  cus.current_status in (:status)
-               order by cus.created_at desc
+               order by booking.floor_id asc, booking.room_id asc, booking.bed_id asc, cus.created_at desc
             """, nativeQuery = true)
     List<CustomerData> getCustomerData(
             @Param("hostelId") String hostelId,
@@ -68,7 +68,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             AND (:name IS NULL OR LOWER(cus.first_name) LIKE LOWER(CONCAT('%', :name, '%'))
                                    OR LOWER(cus.last_name) LIKE LOWER(CONCAT('%', :name, '%')))
               AND cus.current_status in ('VACATED') 
-               order by cus.created_at desc
+               order by booking.floor_id asc, booking.room_id asc, booking.bed_id asc, cus.created_at desc
             """, nativeQuery = true)
     List<CheckoutCustomers> getCheckedOutCustomerData(
             @Param("hostelId") String hostelId,

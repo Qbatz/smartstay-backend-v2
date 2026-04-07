@@ -2095,6 +2095,7 @@ public class InvoiceV1Service {
                     if (!listInvoices.isEmpty()) {
                         return false;
                     }
+                    findAndUpdateAdvanceInvoice(customers.getCustomerId(), hostelId, joinigDate, currentMonthBillingDates);
                     return true;
                 }
                 if (Utils.compareWithTwoDates(newJoiningDate, currentMonthBillingDates.currentBillStartDate()) >= 0) {

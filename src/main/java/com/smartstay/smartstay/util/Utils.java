@@ -114,6 +114,9 @@ public class Utils {
     public static final String SUBSCRIPTION_EXPIRED = "Subscription has expired. Please renew to continue.";
     public static final String INVALID_BED_ID = "Invalid bed id passed";
     public static final String INVALID_DOCUMENT_ID = "Invalid document id";
+
+    public static final String NO_ADDITIONAL_IMAGES_FOUND = "No additional images found";
+    public static final String IMAGES_NOT_FOUND = "Image not found";
     public static final String CANNOT_CREATE_CURRENT_MONTH_INVOICE_POSTPAID = "Manual invoice creation is not allowed for the current month for postpaid billing model.";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";

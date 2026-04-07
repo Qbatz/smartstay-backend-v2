@@ -107,5 +107,15 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
             """)
     List<CustomersBedHistory> findByCustomerIdAndStartDate(String customerId, Date startDate);
 
+    @Query(value = """
+            SELECT COUNT(*) FROM customers_bed_history 
+            WHERE bed_id = :bedId AND customer_id != :customerId
+            AND type IN ('CHECK_IN', 'REASSIGNED')
+            AND (end_date IS NULL OR DATE(end_date) > DATE(:joiningDate))
+            """, nativeQuery = true)
+    int countOverlappingHistoricalBeds(@Param("bedId") int bedId, 
+                                       @Param("customerId") String customerId, 
+                                       @Param("joiningDate") Date joiningDate);
+
 }
 
