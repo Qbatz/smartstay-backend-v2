@@ -1503,6 +1503,7 @@ public class InvoiceV1Service {
                     }
 
                     latestInvoice.setTotalAmount(totalAmountForOldInvoice);
+                    latestInvoice.setBasePrice(totalAmountForOldInvoice);
 
                     latestInvoice.getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem())).findFirst().map(item -> {
                         item.setAmount(rentForOldInvoice);
