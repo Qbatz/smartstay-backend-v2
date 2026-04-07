@@ -35,7 +35,6 @@ import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
-import com.smartstay.smartstay.responses.invoices.CustomerInfo;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -574,7 +573,7 @@ public class CustomersService {
 
 //            Date startateOfCurrentCycle = cal.getTime();
 
-            if (!billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+            if (!billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                 //checking joining date is fall under current billing cycle
                 if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -582,7 +581,7 @@ public class CustomersService {
             }
 
             if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
-                if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                     return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, payloads.rentalAmount());
                 }
                 else {
@@ -756,7 +755,7 @@ public class CustomersService {
             bedsService.addUserToBed(booking.getBedId(), date, savedCustomer.getCustomerId());
             customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
 
-            if (!billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+            if (!billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                 //checking joining date is fall under current billing cycle
                 if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -764,7 +763,7 @@ public class CustomersService {
             }
 
             if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
-                if (billingDates.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+                if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                     return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, checkinRequest.rentalAmount());
                 }
                 else {
@@ -1562,7 +1561,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.CANNOT_GENERATE_FINAL_SETTLEMENT_PREVIOUS_HISTORY_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
-        if (!billDate.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+        if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
                 return getInformationForPostpaidSettlements(customers, lDate, bookingDetails, billDate);
             }
@@ -2738,7 +2737,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.SETTLEMENT_INFORMATION_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
         }
 
-        if (!billDate.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+        if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
                 return generateFinalSettlementForFixesPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, deductions, users);
             }

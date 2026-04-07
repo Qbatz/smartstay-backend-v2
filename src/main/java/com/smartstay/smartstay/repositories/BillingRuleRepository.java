@@ -48,7 +48,7 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
 
     @Query(value = """
             SELECT * FROM billing_rules b WHERE b.billing_start_date =:day 
-                AND b.billing_model='PREPAID' AND b.type_of_billing='FIXED_DATE' 
+                AND  b.type_of_billing='FIXED_DATE' 
                       AND b.created_at = (
                           SELECT MAX(b2.created_at)
                           FROM billing_rules b2
