@@ -166,13 +166,11 @@ public class HostelConfigService {
      *
      * @return
      */
-    public List<BillingRules> findHostelsHavingBillingStartDateTomorrow() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DAY_OF_MONTH, 1);
+    public List<BillingRules> findHostelsHavingBillingStartDateToday() {
 
-        int billingDay = Utils.findDateFromDate(calendar.getTime());
+        int billingDay = Utils.findDateFromDate(new Date());
 
-        List<BillingRules> listBillingDates = billingRuleRepository.findPostpaidHostelsHavingBillingRuleTomorrow(billingDay);
+        List<BillingRules> listBillingDates = billingRuleRepository.findPostpaidHostelsHavingBillingRuleToday(billingDay);
         if (listBillingDates == null) {
             listBillingDates = new ArrayList<>();
         }

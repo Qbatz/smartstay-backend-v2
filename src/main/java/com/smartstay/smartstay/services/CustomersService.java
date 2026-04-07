@@ -35,6 +35,7 @@ import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
+import com.smartstay.smartstay.responses.invoices.CustomerInfo;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1972,8 +1973,8 @@ public class CustomersService {
     }
 
 
-
     private ResponseEntity<?> getInformationForPostpaidSettlements(Customers customers, Date lDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates) {
+        settlementDetailsService.addSettlementForCustomer(customers.getCustomerId(), lDate);
         FinalSettlement settlement = getFinalSettlementInfo(customers, lDate, bookingDetails, currentMonthBillingDates);
         return new ResponseEntity<>(settlement, HttpStatus.OK);
     }
@@ -2737,6 +2738,17 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.SETTLEMENT_INFORMATION_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
         }
 
+        if (!billDate.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+            if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                return generateFinalSettlementForFixesPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, deductions, users);
+            }
+        }
+        else {
+            if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+                return getFinalSettlementInfoFotJoiningBasedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails);
+            }
+        }
+
         if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
             return calculateAndGenerateFinalSettlemtForBedChange(customers, bookingDetails, billDate, cbh, deductions, settlementDetails, users);
         }
@@ -3000,6 +3012,79 @@ public class CustomersService {
                 }
             }
 //        }
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+    }
+
+    private ResponseEntity<?> generateFinalSettlementForFixesPostpaid(Customers customers, Date leavingDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates, List<Settlement> deductions, Users users) {
+        FinalSettlement settlement = getFinalSettlementInfo(customers, leavingDate, bookingDetails, currentMonthBillingDates);
+        List<String> listUnpaidInvoices = new ArrayList<>();
+        if (deductions == null) {
+            deductions = new ArrayList<>();
+        }
+        boolean isAdvancePaid = false;
+        double amountToBePaid = 0.0;
+        double amoutToBePaidWithoutDeductions = 0.0;
+        double deductionAmount = deductions
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.amount() != null) {
+                        return i.amount();
+                    }
+                    return 0.0;
+                })
+                .sum();
+        CustomerInformations customerInfo = settlement.customerInfo();
+        if (customerInfo != null) {
+            isAdvancePaid = customerInfo.isAdvancePaid();
+        }
+        com.smartstay.smartstay.responses.settlement.UnpaidInvoices unpaidInvoices = settlement.unpaidInvoiceInfo();
+        if (unpaidInvoices != null) {
+            List<UnpaidInvoices> unpaid = unpaidInvoices.listUnpaidInvoices();
+            if (unpaid != null) {
+                listUnpaidInvoices = unpaid.stream()
+                        .map(UnpaidInvoices::invoiceId)
+                        .toList();
+            }
+        }
+
+        SettlementInfo info = settlement.settlementInfo();
+        if (info != null) {
+            amountToBePaid = info.amountTobePaid();
+            amoutToBePaidWithoutDeductions = info.amountTobePaid();
+            amountToBePaid = amountToBePaid + deductionAmount;
+        }
+
+        List<Deductions> lisDeductions = customers.getAdvance()
+                .getDeductions();
+        if (deductions != null && !deductions.isEmpty()) {
+            lisDeductions.addAll(deductions
+                    .stream()
+                    .map(i -> new Deductions(i.item(), i.amount()))
+                    .toList());
+        }
+
+
+        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoiceForPostpaid(customers, customers.getHostelId(), Math.round(amountToBePaid), listUnpaidInvoices, lisDeductions, amoutToBePaidWithoutDeductions, leavingDate, users, isAdvancePaid);
+
+        CustomerWallet cw = customers.getWallet();
+        if (cw != null) {
+            cw.setAmount(0.0);
+            cw.setCustomers(customers);
+            customers.setWallet(cw);
+            customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
+        }
+        customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
+        customersRepository.save(customers);
+
+        userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.SETTLEMENT, users);
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
+        if (electricityConfig != null) {
+            if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+                eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customers.getCustomerId(), leavingDate, authentication.getName()));
+            }
+        }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }

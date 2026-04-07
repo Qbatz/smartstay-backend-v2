@@ -1,6 +1,6 @@
 package com.smartstay.smartstay.sockets;
 
-import com.smartstay.smartstay.payloads.subscription.PaymentLinks;
+import com.smartstay.smartstay.payloads.subscription.ZohoPaymentResponse;
 import com.smartstay.smartstay.services.OrderHistoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -28,20 +28,25 @@ public class ClientConnect {
         WebSocketStompClient stompClient = new WebSocketStompClient(new StandardWebSocketClient());
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 
+//        "wss://payment.qbatz.com/ws",
+
         StompSession session = stompClient.connectAsync(
                 "wss://payment.qbatz.com/ws",
                 new StompSessionHandlerAdapter() {
                     @Override
                     public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
+                        System.out.println("✅ Connected to WebSocket");
                     }
 
                     @Override
                     public void handleException(StompSession session, StompCommand command,
                                                 StompHeaders headers, byte[] payload, Throwable exception) {
+                        System.out.println("❌ Exception: " + exception.getMessage());
                     }
 
                     @Override
                     public void handleTransportError(StompSession session, Throwable exception) {
+                        System.out.println("❌ Transport Error: " + exception.getMessage());
                     }
                 }
         ).get();
@@ -49,14 +54,14 @@ public class ClientConnect {
         session.subscribe("/payments/" + paymentId, new StompFrameHandler() {
             @Override
             public Type getPayloadType(StompHeaders headers) {
-                return PaymentLinks.class;
+                return ZohoPaymentResponse.class;
             }
 
             @Override
             public void handleFrame(StompHeaders headers, Object payload) {
-                if (payload instanceof PaymentLinks paymentLinks) {
+                if (payload instanceof ZohoPaymentResponse paymentDetails) {
                     orderHistoryService.successfullPayment(payload);
-                    messagingTemplate.convertAndSend("/payments/" + paymentLinks.paymentLinkId(), "success");
+                    messagingTemplate.convertAndSend("/payments/" + paymentDetails.linkId(), "success");
                 }
 
             }

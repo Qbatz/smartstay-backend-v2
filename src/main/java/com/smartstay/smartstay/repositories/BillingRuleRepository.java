@@ -74,7 +74,7 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
                             group by b2.hostel_id
                       )
             """, nativeQuery = true)
-    List<BillingRules> findPostpaidHostelsHavingBillingRuleTomorrow(@Param("day") Integer day);
+    List<BillingRules> findPostpaidHostelsHavingBillingRuleToday(@Param("day") Integer day);
 
     @Query(value = """
              SELECT * FROM billing_rules b WHERE b.billing_model='PREPAID' AND b.type_of_billing='JOINING_DATE_BASED' 

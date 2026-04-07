@@ -2,9 +2,11 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.InvoiceDiscounts;
+import com.smartstay.smartstay.dto.invoices.InvoiceDiscountDto;
 import com.smartstay.smartstay.payloads.invoice.ApplyDiscount;
 import com.smartstay.smartstay.repositories.InvoiceDiscountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -42,5 +44,53 @@ public class InvoiceDiscountService {
         }
 
         return null;
+    }
+
+    public InvoiceDiscountDto editDiscount(String hostelId, String invoiceId, ApplyDiscount discount) {
+        InvoiceDiscounts invDiscount = invoiceDiscountRepository.findByHostelIdAndInvoiceId(hostelId, invoiceId);
+        double oldInvoiceDiscount = 0.0;
+        if (invDiscount != null) {
+            oldInvoiceDiscount = invDiscount.getDiscountAmount();
+            double discountAmount = 0.0;
+            double discountPercentage = 0.0;
+            if (discount.discountPercentage() != null) {
+                discountPercentage = Double.parseDouble(String.valueOf(discount.discountPercentage()));
+                discountAmount = ((double) discountPercentage /100) * invDiscount.getInvoiceAmount();
+            }
+            else if (discount.discountAmount() != null) {
+                discountAmount = discount.discountAmount();
+                discountPercentage =  (discountAmount/invDiscount.getInvoiceAmount()) * 100;
+            }
+
+            if (discount.reason() != null) {
+                invDiscount.setDiscountReason(discount.reason());
+            }
+            else if (invDiscount.getDiscountReason() != null) {
+                invDiscount.setDiscountReason(null);
+            }
+
+            invDiscount.setDiscountPercentage(discountPercentage);
+            invDiscount.setDiscountAmount(discountAmount);
+
+            invoiceDiscountRepository.save(invDiscount);
+
+            double difference = oldInvoiceDiscount - discountAmount;
+
+            return new InvoiceDiscountDto(discountPercentage,
+                    discountAmount,
+                    oldInvoiceDiscount,
+                    difference);
+        }
+        return null;
+    }
+
+    public double deleteInvoiceDiscount(String hostelId, String invoiceId) {
+        InvoiceDiscounts invoiceDiscounts = invoiceDiscountRepository.findByHostelIdAndInvoiceId(hostelId, invoiceId);
+        if (invoiceDiscounts != null) {
+            invoiceDiscounts.setActive(true);
+            invoiceDiscountRepository.save(invoiceDiscounts);
+            return invoiceDiscounts.getDiscountAmount();
+        }
+        return 0.0;
     }
 }

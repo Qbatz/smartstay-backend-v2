@@ -7,6 +7,9 @@ import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.events.HostelEvents;
 import com.smartstay.smartstay.events.SubscriptionEvents;
 import com.smartstay.smartstay.payloads.subscription.PaymentLinks;
+import com.smartstay.smartstay.payloads.subscription.PaymentStatus;
+import com.smartstay.smartstay.payloads.subscription.PaymentStatusCardType;
+import com.smartstay.smartstay.payloads.subscription.ZohoPaymentResponse;
 import com.smartstay.smartstay.repositories.OrderHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -42,11 +45,29 @@ public class OrderHistoryService {
     }
 
     public void successfullPayment(Object payload) {
-        PaymentLinks paymentLinks = (PaymentLinks) payload;
-        OrderHistory orderHistory = orderHistoryRepository.findByPaymentLinkId(paymentLinks.paymentLinkId());
+        ZohoPaymentResponse paymentLinks = (ZohoPaymentResponse) payload;
+        OrderHistory orderHistory = orderHistoryRepository.findByPaymentLinkId(paymentLinks.linkId());
+        orderHistory.setPaymentType(paymentLinks.type());
+        if (paymentLinks.type().equalsIgnoreCase("UPI")) {
+            PaymentStatus status = paymentLinks.upiStatus();
+            orderHistory.setChannel(status.channel());
+            orderHistory.setUpiId(status.id());
+        }
+        else if (paymentLinks.type().equalsIgnoreCase("CARD")) {
+            PaymentStatusCardType cardType = paymentLinks.cardType();
+            orderHistory.setCardBrand(cardType.issuer());
+            orderHistory.setCardHolderName(cardType.cardHolderName());
+            orderHistory.setCardType(cardType.cardType());
+            orderHistory.setIssuer(cardType.issuer());
+            orderHistory.setChannel("Card");
+            orderHistory.setCardNo(cardType.lastFourDigits());
+
+        }
+
+
         orderHistory.setOrderStatus(OrderStatus.PAID.name());
         orderHistoryRepository.save(orderHistory);
 
-        eventPublisher.publishEvent(new SubscriptionEvents(this, orderHistory, authentication.getName()));
+        eventPublisher.publishEvent(new SubscriptionEvents(this, orderHistory));
     }
 }

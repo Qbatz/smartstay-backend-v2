@@ -28,6 +28,19 @@ public class OrderHistory {
     private Double totalAmount;
     //order status enum
     private String orderStatus;
+    private String paymentType;
+    //incase of type is card
+    private String cardHolderName;
+    //credit or debit
+    private String cardType;
+    //Visa, rupay, mastercard ....
+    private String cardBrand;
+    //Icici, Hdfc, SBI
+    private String issuer;
+    private String cardNo;
+    //UPI or bank
+    private String channel;
+    private String upiId;
     private String userType;
     private boolean isActive;
     private Date createdAt;
