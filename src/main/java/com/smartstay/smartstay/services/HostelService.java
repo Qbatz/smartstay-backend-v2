@@ -1081,9 +1081,6 @@ public class HostelService {
         return hostelConfigService.getNextMonthBillingDates(hostelId);
     }
 
-    public List<BillingRules> findAllHostelsHavingBillingToday() {
-        return hostelConfigService.findAllHostelsHavingBillingToday();
-    }
 
     public List<HostelV1> findAHostelsHavingBillingRuleEndingToday() {
         return hostelConfigService.findAHostelsHavingBillingRuleEndingToday();

@@ -1556,7 +1556,7 @@ public class CustomersService {
             }
         }
 
-        if (billDate.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+        if (billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             BillingDates currentBillStartAndEndDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), lDate);
             if (Utils.compareWithTwoDates(lDate, currentBillStartAndEndDates.currentBillStartDate()) < 0) {
                 return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
@@ -2095,6 +2095,7 @@ public class CustomersService {
     }
 
     private ResponseEntity<?> getFinalSettlementInfoFotJoiningBasedPrepaid(Customers customers, Date lDate, BookingsV1 bookingDetails) {
+        settlementDetailsService.addSettlementForCustomer(customers.getCustomerId(), lDate);
         FinalSettlement settlement = getSettlementInfoForJoiningBased(customers, lDate, bookingDetails);
         return new ResponseEntity<>(settlement, HttpStatus.OK);
     }
@@ -2707,9 +2708,9 @@ public class CustomersService {
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
-//        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
-//            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
-//        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new ResponseEntity<>(Utils.FINAL_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
         if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
@@ -2746,12 +2747,13 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                return generateFinalSettlementForFixesPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, deductions, users);
+                return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, deductions, users);
             }
         }
         else {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
-                return getFinalSettlementInfoFotJoiningBasedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails);
+                BillingDates customerBillingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), settlementDetails.getLeavingDate());
+                return generateFinalSettlementForJoininBasedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, customerBillingDates, deductions, users);
             }
         }
 
@@ -3022,7 +3024,89 @@ public class CustomersService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
-    private ResponseEntity<?> generateFinalSettlementForFixesPostpaid(Customers customers, Date leavingDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates, List<Settlement> deductions, Users users) {
+    private ResponseEntity<?> generateFinalSettlementForJoininBasedPrepaid(Customers customers, Date leavingDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates, List<Settlement> deductions, Users users) {
+        FinalSettlement settlement = getSettlementInfoForJoiningBased(customers, leavingDate, bookingDetails);
+
+        List<InvoicesV1> currentMonthUnpaidInvoices = invoiceService.findAllCurrentMonthRentalInvoice(customers.getCustomerId(), customers.getHostelId(), currentMonthBillingDates.currentBillStartDate());
+        List<InvoicesV1> currentMonthUnPaid = currentMonthUnpaidInvoices
+                .stream()
+                .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                .toList();
+        List<String> listUnpaidInvoices = new ArrayList<>();
+        if (deductions == null) {
+            deductions = new ArrayList<>();
+        }
+        boolean isAdvancePaid = false;
+        double amountToBePaid = 0.0;
+        double amoutToBePaidWithoutDeductions = 0.0;
+        double deductionAmount = deductions
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.amount() != null) {
+                        return i.amount();
+                    }
+                    return 0.0;
+                })
+                .sum();
+        CustomerInformations customerInfo = settlement.customerInfo();
+        if (customerInfo != null) {
+            isAdvancePaid = customerInfo.isAdvancePaid();
+        }
+        com.smartstay.smartstay.responses.settlement.UnpaidInvoices unpaidInvoices = settlement.unpaidInvoiceInfo();
+        if (unpaidInvoices != null) {
+            List<UnpaidInvoices> unpaid = unpaidInvoices.listUnpaidInvoices();
+            if (unpaid != null) {
+                listUnpaidInvoices.addAll(unpaid.stream()
+                        .map(UnpaidInvoices::invoiceId)
+                        .toList());
+            }
+        }
+
+        if (currentMonthUnPaid != null) {
+            if (listUnpaidInvoices == null) {
+                listUnpaidInvoices = new ArrayList<>();
+            }
+            listUnpaidInvoices.addAll(currentMonthUnPaid
+                    .stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList());
+        }
+
+        SettlementInfo info = settlement.settlementInfo();
+        if (info != null) {
+            amountToBePaid = info.amountTobePaid();
+            amoutToBePaidWithoutDeductions = info.amountTobePaid();
+            amountToBePaid = amountToBePaid + deductionAmount;
+        }
+
+        List<Deductions> lisDeductions = customers.getAdvance()
+                .getDeductions();
+        if (deductions != null && !deductions.isEmpty()) {
+            lisDeductions.addAll(deductions
+                    .stream()
+                    .map(i -> new Deductions(i.item(), i.amount()))
+                    .toList());
+        }
+
+
+        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoiceForPostpaid(customers, customers.getHostelId(), Math.round(amountToBePaid), listUnpaidInvoices, lisDeductions, amoutToBePaidWithoutDeductions, leavingDate, users, isAdvancePaid);
+
+        CustomerWallet cw = customers.getWallet();
+        if (cw != null) {
+            cw.setAmount(0.0);
+            cw.setCustomers(customers);
+            customers.setWallet(cw);
+            customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
+        }
+        customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
+        customersRepository.save(customers);
+
+        userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.SETTLEMENT, users);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+    }
+
+    private ResponseEntity<?> generateFinalSettlementForFixedPostpaid(Customers customers, Date leavingDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates, List<Settlement> deductions, Users users) {
         FinalSettlement settlement = getFinalSettlementInfo(customers, leavingDate, bookingDetails, currentMonthBillingDates);
         List<String> listUnpaidInvoices = new ArrayList<>();
         if (deductions == null) {

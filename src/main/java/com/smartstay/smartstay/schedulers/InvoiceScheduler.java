@@ -7,6 +7,7 @@ import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.services.BookingsService;
 import com.smartstay.smartstay.services.HostelConfigService;
 import com.smartstay.smartstay.services.HostelService;
+import com.smartstay.smartstay.services.RecurringTrackerService;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,6 +29,8 @@ public class InvoiceScheduler {
     private BookingsService bookingsService;
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
+    @Autowired
+    private RecurringTrackerService recurringTrackerService;
 
 //    @Scheduled(cron = "0 0 2 * * *") for productions
     @Scheduled(cron = "0 20 2 * * *")
@@ -42,7 +45,9 @@ public class InvoiceScheduler {
 
         if (listHostels != null && !listHostels.isEmpty()) {
             listHostels.forEach(item -> {
-                applicationEventPublisher.publishEvent(new RecurringEvents(this, item.getHostelId()));
+                if (recurringTrackerService.canGenerateInvoice(item.getHostelId(), new Date())) {
+                    applicationEventPublisher.publishEvent(new RecurringEvents(this, item.getHostelId()));
+                }
             });
         }
     }

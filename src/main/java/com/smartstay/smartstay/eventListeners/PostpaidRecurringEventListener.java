@@ -404,7 +404,7 @@ public class PostpaidRecurringEventListener {
             electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
         }
 
-        recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId());
+        recurringTrackerService.markAsPostpaidInvoiceGenerated(hostelV1.getHostelId());
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
     }
 
