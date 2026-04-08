@@ -1556,6 +1556,13 @@ public class CustomersService {
             }
         }
 
+        if (billDate.typeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+            BillingDates currentBillStartAndEndDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), lDate);
+            if (Utils.compareWithTwoDates(lDate, currentBillStartAndEndDates.currentBillStartDate()) < 0) {
+                return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+            }
+        }
+
         CustomersBedHistory cbh = bedHistory.getLatestCustomerBed(customerId);
         if (Utils.compareWithTwoDates(cbh.getStartDate(), lDate) > 0) {
             return new ResponseEntity<>(Utils.CANNOT_GENERATE_FINAL_SETTLEMENT_PREVIOUS_HISTORY_EXISTS, HttpStatus.BAD_REQUEST);
