@@ -495,11 +495,24 @@ public class InvoiceV1Service {
         }
 
         List<InvoicesV1> listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
-
+        List<String> invoiceIds = new ArrayList<>();
+        if (listAllInvoice != null && !listAllInvoice.isEmpty()) {
+            invoiceIds = listAllInvoice
+                    .stream()
+                    .filter(InvoicesV1::isDiscounted)
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList();
+        }
+        List<com.smartstay.smartstay.dao.InvoiceDiscounts> listInvoiceDiscounts;
+        if (!invoiceIds.isEmpty()) {
+            listInvoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, invoiceIds);
+        } else {
+            listInvoiceDiscounts = new ArrayList<>();
+        }
         List<String> customerIds = listAllInvoice.stream().map(InvoicesV1::getCustomerId).toList();
         List<Customers> lisAllCustomersForInvoices = customersService.getCustomerDetails(customerIds);
 
-        List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers).apply(i)).toList();
+        List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers, listInvoiceDiscounts).apply(i)).toList();
 
         NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, invoiceFilterOptions, newInvoicesList);
         return new ResponseEntity<>(newInvoicesListResponse, HttpStatus.OK);
@@ -1197,17 +1210,23 @@ public class InvoiceV1Service {
 
             double discountedAmount = 0.0;
             double discountedPercentage = 0.0;
+            String discountReason = null;
             if (invoicesV1.isDiscounted()) {
                 InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, invoiceId);
                 if (invoiceDiscounts != null) {
                     discountedAmount = invoiceDiscounts.discountAmount();
                     discountedPercentage = invoiceDiscounts.discountPercentage();
+                    discountReason = invoiceDiscounts.reason();
                 }
             }
 
             InvoiceInfo invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(invoicesV1.getBasePrice()),
                     0.0, 0.0, Utils.roundOffWithTwoDigit( invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
-                    Utils.roundOffWithTwoDigit(discountedAmount), discountedPercentage, invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(), Utils.roundOffWithTwoDigit(totalDeductionAmount), listInvoiceItems, listDeductions);
+                    Utils.roundOffWithTwoDigit(discountedAmount), discountedPercentage,
+                    invoiceRentalPeriod.toString(),
+                    invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
+                    discountReason,
+                    Utils.roundOffWithTwoDigit(totalDeductionAmount), listInvoiceItems, listDeductions);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1245,17 +1264,22 @@ public class InvoiceV1Service {
         List<InvoiceRefundHistory> paymentHistoryList = transactionService.findByInvoiceId(invoiceId);
         double discountedAmount = 0.0;
         double discountedPercentage = 0.0;
+        String discountReason = null;
         if (invoicesV1.isDiscounted()) {
             InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, invoiceId);
             if (invoiceDiscounts != null) {
                 discountedAmount = invoiceDiscounts.discountAmount();
                 discountedPercentage = invoiceDiscounts.discountPercentage();
+                discountReason = invoiceDiscounts.reason();
             }
         }
         InvoiceInfo invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
                 Utils.roundOffWithTwoDigit(discountedAmount),
                 discountedPercentage,
-                invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
+                invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus,
+                invoicesV1.isCancelled(),
+                invoicesV1.isDiscounted(),
+                discountReason,
                 0.0, listInvoiceItems, null);
 
 
@@ -2486,8 +2510,11 @@ public class InvoiceV1Service {
     }
 
     public List<InvoicesV1> findAllCurrentMonthRentalInvoice(String customerId, String hostelId, Date startDate) {
-
-        return invoicesV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, startDate);
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, startDate);
+        if (listInvoices == null) {
+            listInvoices = new ArrayList<>();
+        }
+        return listInvoices;
     }
 
     public void updateAdvaceAmount(InvoicesV1 advanceInvoice, Double newAdvance) {
@@ -3216,99 +3243,6 @@ public class InvoiceV1Service {
 
     }
 
-    public void createNewInvoiceForCurrentMonth(Customers customers, Date joiningDate, double rentalAmount, BillingDates currentBillDate) {
-        InvoicesV1 invoicesV1 = new InvoicesV1();
-
-        Calendar currentMonthJoining = Calendar.getInstance();
-        currentMonthJoining.set(Calendar.DAY_OF_MONTH, Utils.dateToDate(joiningDate));
-
-        StringBuilder invoiceNumber = new StringBuilder();
-        BillTemplates templates = templateService.getBillTemplate(customers.getHostelId(), InvoiceType.RENT.name());
-        InvoicesV1 existingV1 = null;
-
-        double gstAmount = 0;
-        double gstPercentile = 0;
-        double baseAmount = 0;
-        double cgst = 0;
-        double sgst = 0;
-
-        if (templates != null) {
-
-            if (templates.gstPercentile() != null) {
-                gstPercentile = templates.gstPercentile();
-                cgst = templates.gstPercentile() / 2;
-                sgst = templates.gstPercentile() / 2;
-//                baseAmount = payloads.rentalAmount() / (1 + (templates.gstPercentile() / 100));
-                baseAmount = rentalAmount;
-                gstAmount = rentalAmount - baseAmount;
-//                if (baseAmount == 0) {
-//                    baseAmount = amount;
-//                }
-            }
-
-            invoiceNumber.append(templates.prefix());
-            invoiceNumber.append("-");
-            invoiceNumber.append(templates.suffix());
-            existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix(), customers.getHostelId());
-        }
-        if (existingV1 != null) {
-            invoiceNumber = new StringBuilder();
-            invoiceNumber.append(templates.prefix());
-
-            String[] suffix = existingV1.getInvoiceNumber().split("-");
-            if (suffix.length > 1) {
-                invoiceNumber.append("-");
-                int suff = Integer.parseInt(suffix[1]) + 1;
-                invoiceNumber.append(String.format("%03d", suff));
-            } else {
-                invoiceNumber.append("-00");
-                invoiceNumber.append("1");
-
-            }
-        }
-
-        Date newDateForCurrentMonth = currentMonthJoining.getTime();
-//        Date joiningDate1 = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        Date dueDate = Utils.addDaysToDate(newDateForCurrentMonth, currentBillDate.dueDays() - 1);
-        Date endDate = Utils.findLastDate(Utils.dateToDate(newDateForCurrentMonth), newDateForCurrentMonth);
-
-        invoicesV1.setTotalAmount(rentalAmount);
-        invoicesV1.setBasePrice(rentalAmount);
-        invoicesV1.setInvoiceType(InvoiceType.RENT.name());
-        invoicesV1.setCustomerId(customers.getCustomerId());
-        invoicesV1.setInvoiceNumber(invoiceNumber.toString());
-        invoicesV1.setPaidAmount(0.0);
-        invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
-        invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setGst(gstAmount);
-        invoicesV1.setCgst(cgst);
-        invoicesV1.setSgst(sgst);
-        invoicesV1.setGstPercentile(gstPercentile);
-        invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(dueDate));
-        invoicesV1.setCustomerMobile(customers.getMobile());
-        invoicesV1.setCustomerMailId(customers.getCustomerId());
-        invoicesV1.setCreatedAt(new Date());
-        invoicesV1.setInvoiceStartDate(Utils.convertToTimeStamp(newDateForCurrentMonth));
-        invoicesV1.setInvoiceEndDate(Utils.convertToTimeStamp(endDate));
-        invoicesV1.setInvoiceGeneratedDate(Utils.convertToTimeStamp(endDate));
-        invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
-        invoicesV1.setCancelled(false);
-        invoicesV1.setHostelId(customers.getHostelId());
-
-        List<InvoiceItems> listInvoiceItems = new ArrayList<>();
-
-        InvoiceItems invoiceItems = new InvoiceItems();
-        invoiceItems.setInvoice(invoicesV1);
-        invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
-
-        invoiceItems.setAmount(rentalAmount);
-        listInvoiceItems.add(invoiceItems);
-
-        invoicesV1.setInvoiceItems(listInvoiceItems);
-
-        invoicesV1Repository.save(invoicesV1);
-    }
-
     public double invoicesPaidAmountByType(String customerId, String name) {
         List<String> listTypes = new ArrayList<>();
         listTypes.add(name);
@@ -3553,9 +3487,9 @@ public class InvoiceV1Service {
                 .toList();
 
         return new com.smartstay.smartstay.responses.settlement.UnpaidInvoices(listOldInvoices.size(),
-                unpaidAmount,
-                totalAmount,
-                paidAmount,
+                Utils.roundOffWithTwoDigit(unpaidAmount),
+                Utils.roundOffWithTwoDigit(totalAmount),
+                Utils.roundOffWithTwoDigit(paidAmount),
                 unpaidInvoices);
     }
 

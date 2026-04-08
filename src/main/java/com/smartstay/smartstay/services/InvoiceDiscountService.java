@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class InvoiceDiscountService {
@@ -92,5 +94,14 @@ public class InvoiceDiscountService {
             return invoiceDiscounts.getDiscountAmount();
         }
         return 0.0;
+    }
+
+    public List<InvoiceDiscounts> getInvoiceDiscounts(String hostelId, List<String> invoiceIds) {
+        List<InvoiceDiscounts> listInvoiceDiscounts = invoiceDiscountRepository.findByHostelIdAndInvoiceIdIn(hostelId, invoiceIds);
+        if (listInvoiceDiscounts == null) {
+            listInvoiceDiscounts = new ArrayList<>();
+        }
+
+        return listInvoiceDiscounts;
     }
 }
