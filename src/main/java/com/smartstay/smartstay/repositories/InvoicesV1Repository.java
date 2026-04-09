@@ -53,8 +53,8 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT * FROM invoicesv1 invc 
             WHERE invc.customer_id = :customerId 
               AND invc.invoice_type = 'RENT' 
-              AND invc.invoice_end_date >= :startDate 
-              AND invc.invoice_start_date <= :endDate 
+              AND DATE(invc.invoice_end_date) >= DATE(:startDate) 
+              AND DATE(invc.invoice_start_date) <= DATE(:endDate) 
               AND is_cancelled = false
             """, nativeQuery = true)
     List<InvoicesV1> findInvoiceByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);

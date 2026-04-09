@@ -5,6 +5,7 @@ import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.ennum.InvoiceItems;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
+import com.smartstay.smartstay.util.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +33,7 @@ public class UnpaidInvoicesMapper implements Function<InvoicesV1, UnpaidInvoices
                 .mapToDouble(com.smartstay.smartstay.dao.InvoiceItems::getAmount)
                 .sum();
 
-        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
             invoiceType = "Rent";
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
@@ -42,9 +43,9 @@ public class UnpaidInvoicesMapper implements Function<InvoicesV1, UnpaidInvoices
         return  new UnpaidInvoices(invoicesV1.getInvoiceNumber(),
                 invoicesV1.getInvoiceId(),
                 invoiceType,
-                invoicesV1.getTotalAmount(),
-                invoicePendingAmount,
-                ebAmount,
-                amenityAmount);
+                Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()),
+                Utils.roundOffWithTwoDigit(invoicePendingAmount),
+                Utils.roundOffWithTwoDigit(ebAmount),
+                Utils.roundOffWithTwoDigit(amenityAmount));
     }
 }

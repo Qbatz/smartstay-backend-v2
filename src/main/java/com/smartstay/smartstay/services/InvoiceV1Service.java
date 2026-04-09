@@ -1932,8 +1932,7 @@ public class InvoiceV1Service {
     public void findOldInvoiceAndUpdate(String customerId, Date oldJoiningDate, Date newJoiningDate, String hostelId, Double rent) {
         BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, oldJoiningDate);
 
-        Date endDate = getEndOfDay(billingDates.currentBillEndDate());
-        List<InvoicesV1> oldInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, billingDates.currentBillStartDate(), endDate);
+        List<InvoicesV1> oldInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
         if (oldInvoices != null && !oldInvoices.isEmpty()) {
             InvoicesV1 invoicesV1 = oldInvoices.get(0);
             List<TransactionV1> transactions = transactionService.getTransactionsByInvoiceId(invoicesV1.getInvoiceId());
@@ -3435,9 +3434,9 @@ public class InvoiceV1Service {
                 .toList();
 
         return new com.smartstay.smartstay.responses.settlement.UnpaidInvoices(listOldInvoices.size(),
-                unpaidAmount,
-                totalAmount,
-                paidAmount,
+                Utils.roundOffWithTwoDigit(unpaidAmount),
+                Utils.roundOffWithTwoDigit(totalAmount),
+                Utils.roundOffWithTwoDigit(paidAmount),
                 unpaidInvoices);
     }
 
