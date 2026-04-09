@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.InvoiceDiscounts;
+import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.invoices.InvoiceDiscountDto;
 import com.smartstay.smartstay.payloads.invoice.ApplyDiscount;
 import com.smartstay.smartstay.repositories.InvoiceDiscountRepository;
@@ -103,5 +104,33 @@ public class InvoiceDiscountService {
         }
 
         return listInvoiceDiscounts;
+    }
+
+    public Double getDiscountAmount(String hostelId,String invoiceId) {
+        InvoiceDiscounts discount = invoiceDiscountRepository.findByHostelIdAndInvoiceIdAndIsActiveTrue(hostelId, invoiceId);
+        if (discount == null) {
+            return 0.0;
+        }
+        return discount.getDiscountAmount();
+    }
+
+    public double getDiscountAmount(String hostelId, List<String> discountedInvoices) {
+        double discountAmount = 0.0;
+        List<InvoiceDiscounts> listDiscounts = invoiceDiscountRepository
+                .findByHostelIdAndInvoiceIdsAndIsActive(hostelId, discountedInvoices);
+
+        if (listDiscounts != null && !listDiscounts.isEmpty()) {
+            discountAmount = listDiscounts
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getDiscountAmount() == null) {
+                            return 0.0;
+                        }
+                        return i.getDiscountAmount();
+                    })
+                    .sum();
+        }
+
+        return discountAmount;
     }
 }

@@ -1932,8 +1932,7 @@ public class InvoiceV1Service {
     public void findOldInvoiceAndUpdate(String customerId, Date oldJoiningDate, Date newJoiningDate, String hostelId, Double rent) {
         BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, oldJoiningDate);
 
-        Date endDate = getEndOfDay(billingDates.currentBillEndDate());
-        List<InvoicesV1> oldInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, billingDates.currentBillStartDate(), endDate);
+        List<InvoicesV1> oldInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
         if (oldInvoices != null && !oldInvoices.isEmpty()) {
             InvoicesV1 invoicesV1 = oldInvoices.get(0);
             List<TransactionV1> transactions = transactionService.getTransactionsByInvoiceId(invoicesV1.getInvoiceId());
@@ -3382,6 +3381,8 @@ public class InvoiceV1Service {
                     Utils.dateToString(currentMonthStartDate),
                     Utils.dateToString(billingDates.currentBillEndDate()),
                     otherItemAmount.get(),
+                    false,
+                    0.0,
                     otherItems,
                     listRentBreakup);
 
@@ -3435,9 +3436,9 @@ public class InvoiceV1Service {
                 .toList();
 
         return new com.smartstay.smartstay.responses.settlement.UnpaidInvoices(listOldInvoices.size(),
-                unpaidAmount,
-                totalAmount,
-                paidAmount,
+                Utils.roundOffWithTwoDigit(unpaidAmount),
+                Utils.roundOffWithTwoDigit(totalAmount),
+                Utils.roundOffWithTwoDigit(paidAmount),
                 unpaidInvoices);
     }
 
@@ -3621,5 +3622,13 @@ public class InvoiceV1Service {
         cancelActiveInvoice(invoicesHasToBeCancelled);
 
         return createSettlementInvoice(customers, hostelId, round, listInvoices, deductions, amoutToBePaidWithoutDeductions, leavingDate, users);
+    }
+
+    public Double getDiscountAmountForInvoice(String hostelId, String invoiceId) {
+        return invoiceDiscountService.getDiscountAmount(hostelId, invoiceId);
+    }
+
+    public double getDiscountAmountForInvoice(String hostelId, List<String> discountedInvoices) {
+        return invoiceDiscountService.getDiscountAmount(hostelId, discountedInvoices);
     }
 }
