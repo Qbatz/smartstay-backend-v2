@@ -7,6 +7,7 @@ import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.JoiningBasedPrepaidEvents;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.services.*;
+import com.smartstay.smartstay.services.CustomerRecurringTracker;
 import com.smartstay.smartstay.util.BillingCycleUtil;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,8 @@ public class JoiningBasedPrepaidEventListener {
     private InvoicesV1Repository invoicesV1Repository;
     @Autowired
     private TemplatesService templatesService;
+    @Autowired
+    private CustomerRecurringTracker customerRecurringTrackerService;
 
     @Async
     @EventListener
@@ -209,6 +212,8 @@ public class JoiningBasedPrepaidEventListener {
 
                 customerWalletHistoryService.saveAll(whu);
             }
+
+            customerRecurringTrackerService.addToTracker(customerId, hostelV1.getHostelId(), new Date());
 
         }
     }

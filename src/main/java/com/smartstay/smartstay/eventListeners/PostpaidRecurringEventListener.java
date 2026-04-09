@@ -69,7 +69,7 @@ public class PostpaidRecurringEventListener {
 
         if (ebConfig != null) {
             if (ebConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.FLAT_RATE.name())) {
-                if (ebConfig.isShouldIncludeInRent()) {
+                if (!ebConfig.isShouldIncludeInRent()) {
                     flatEbAmount = ebConfig.getFlatCharge();
                     isFlatRate = true;
                     shouldIncludeEb = false;
@@ -124,7 +124,7 @@ public class PostpaidRecurringEventListener {
                         if (Utils.compareWithTwoDates(item.getJoiningDate(), currentBillingInvoiceStartDate) <= 0) {
                             rentAmount = item.getRentAmount();
                             invoiceStartDate.set(currentBillingInvoiceStartDate);
-                            invoiceDueDate.set(Utils.addDaysToDate(currentBillingInvoiceStartDate, invoiceMonthBillingDates.dueDays()));
+                            invoiceDueDate.set(Utils.addDaysToDate(newMonthBillDate.currentBillStartDate(), invoiceMonthBillingDates.dueDays()));
                         }
                         else {
                             invoiceStartDate.set(item.getJoiningDate());
@@ -404,7 +404,7 @@ public class PostpaidRecurringEventListener {
             electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
         }
 
-        recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId());
+        recurringTrackerService.markAsPostpaidInvoiceGenerated(hostelV1.getHostelId());
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
     }
 

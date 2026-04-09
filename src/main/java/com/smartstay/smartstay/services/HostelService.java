@@ -5,7 +5,6 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
 import com.smartstay.smartstay.ennum.*;
@@ -30,7 +29,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -692,10 +690,10 @@ public class HostelService {
         if (hostel.getBillingRulesList() != null && !hostel.getBillingRulesList().isEmpty()) {
             billingRules = hostel.getBillingRulesList().get(hostel.getBillingRulesList().size()-1);
             String typeOfBilling = null;
-            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.FIXED_DATE.name())) {
+            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingType.FIXED_DATE.name())) {
                 typeOfBilling = "Fixed";
             }
-            else if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+            else if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                 typeOfBilling = "Joining Date Based";
             }
             Integer gracePeriod = 0;
@@ -705,7 +703,7 @@ public class HostelService {
                 }
             }
 
-            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                 updateEbConfigForJoiningBased(hostel);
             }
 
@@ -783,10 +781,10 @@ public class HostelService {
 
         if (billRules.calculationType() != null) {
             if (billRules.calculationType().equalsIgnoreCase("Fixed")) {
-                newBillingRules.setTypeOfBilling(BillingTypeEnum.FIXED_DATE.name());
+                newBillingRules.setTypeOfBilling(BillingType.FIXED_DATE.name());
             }
             else {
-                newBillingRules.setTypeOfBilling(BillingTypeEnum.JOINING_DATE_BASED.name());
+                newBillingRules.setTypeOfBilling(BillingType.JOINING_DATE_BASED.name());
             }
         }
 
@@ -1083,9 +1081,6 @@ public class HostelService {
         return hostelConfigService.getNextMonthBillingDates(hostelId);
     }
 
-    public List<BillingRules> findAllHostelsHavingBillingToday() {
-        return hostelConfigService.findAllHostelsHavingBillingToday();
-    }
 
     public List<HostelV1> findAHostelsHavingBillingRuleEndingToday() {
         return hostelConfigService.findAHostelsHavingBillingRuleEndingToday();

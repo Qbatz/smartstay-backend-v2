@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.smartstay.dao.Customers;
+import com.smartstay.smartstay.dao.InvoiceDiscounts;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.customer.Deductions;
@@ -20,10 +21,12 @@ import java.util.function.Function;
 public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> {
     List<Customers> listCustomers = null;
     List<Users> listCreatedBy = null;
+    List<InvoiceDiscounts> listInvoiceDiscounts = null;
 
-    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy) {
+    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts) {
         this.listCustomers = customers;
         this.listCreatedBy = createdBy;
+        this.listInvoiceDiscounts = listInvoiceDiscounts;
     }
 
     @Override
@@ -37,6 +40,8 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         String invoiceMode = null;
         boolean isRefundable = false;
         boolean isCancelled = false;
+        Double discountPercentage = 0.0;
+        Double discountAmount = 0.0;
 
         Double dueAmount = 0.0;
         Double paidAmount = 0.0;
@@ -128,6 +133,18 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             invoiceMode = "Automatic";
         }
 
+        if (listInvoiceDiscounts != null) {
+            InvoiceDiscounts ids = listInvoiceDiscounts
+                    .stream()
+                    .filter(i -> i.getInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId()))
+                    .findFirst()
+                    .orElse(null);
+            if (ids != null) {
+                discountPercentage = Utils.roundOffWithTwoDigit(ids.getDiscountPercentage());
+                discountAmount = Utils.roundOffWithTwoDigit(ids.getDiscountAmount());
+            }
+        }
+
 
         return new InvoicesList(firstName,
                 lastName,
@@ -142,6 +159,8 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 Utils.roundOfDouble(paidAmount),
                 Utils.roundOfDouble(dueAmount),
                 invoicesV1.isDiscounted(),
+                discountAmount,
+                discountPercentage,
                 invoicesV1.getCgst(),
                 invoicesV1.getSgst(),
                 gstAmount,

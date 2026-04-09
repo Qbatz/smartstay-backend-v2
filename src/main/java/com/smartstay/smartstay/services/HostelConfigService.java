@@ -5,7 +5,7 @@ import com.smartstay.smartstay.dao.BillingRules;
 import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.BillingModel;
-import com.smartstay.smartstay.ennum.BillingTypeEnum;
+import com.smartstay.smartstay.ennum.BillingType;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +52,7 @@ public class HostelConfigService {
             billStartDate = billingRules.getBillingStartDate();
             billingRuleDueDate = billingRules.getBillDueDays();
 
-            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingTypeEnum.JOINING_DATE_BASED.name())) {
+            if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                 calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
                 Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
@@ -133,7 +133,7 @@ public class HostelConfigService {
                     10,
                     false,
                     0,
-                    BillingTypeEnum.FIXED_DATE.name(),
+                    BillingType.FIXED_DATE.name(),
                     BillingModel.PREPAID.name());
         }
 
