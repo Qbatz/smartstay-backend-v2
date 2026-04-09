@@ -3381,6 +3381,8 @@ public class InvoiceV1Service {
                     Utils.dateToString(currentMonthStartDate),
                     Utils.dateToString(billingDates.currentBillEndDate()),
                     otherItemAmount.get(),
+                    false,
+                    0.0,
                     otherItems,
                     listRentBreakup);
 
@@ -3620,5 +3622,13 @@ public class InvoiceV1Service {
         cancelActiveInvoice(invoicesHasToBeCancelled);
 
         return createSettlementInvoice(customers, hostelId, round, listInvoices, deductions, amoutToBePaidWithoutDeductions, leavingDate, users);
+    }
+
+    public Double getDiscountAmountForInvoice(String hostelId, String invoiceId) {
+        return invoiceDiscountService.getDiscountAmount(hostelId, invoiceId);
+    }
+
+    public double getDiscountAmountForInvoice(String hostelId, List<String> discountedInvoices) {
+        return invoiceDiscountService.getDiscountAmount(hostelId, discountedInvoices);
     }
 }

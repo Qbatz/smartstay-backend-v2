@@ -12,6 +12,8 @@ public record RentInfo(Double currentPayableRent,
                        String currentInvoiceStartDate,
                        String currentInvoiceEndDate,
                        Double otherItemAmount,
+                       boolean isDiscountApplied,
+                       Double discountAmount,
                        List<CurrentMonthOtherItems> currentMonthOtherItems,
                        List<RentBreakUp> rentLists) {
 }

@@ -1680,6 +1680,8 @@ public class CustomersService {
         List<CurrentMonthOtherItems> otherItems = new ArrayList<>();
         final double[] currentMonthOtherItemsAmount = {0.0};
         double currentMonthPayableAmount = 0;
+        boolean isDiscountApplied = false;
+        Double discountAmount = 0.0;
 
         //taken from unpaid invoices. So current month invoice is empty for paid
         if (!currentMonthInvoice.isEmpty()) {
@@ -1689,6 +1691,16 @@ public class CustomersService {
                     .mapToDouble(InvoicesV1::getTotalAmount)
                     .sum();
 
+            if (currentMonthInvoice.size() == 1) {
+                isDiscountApplied = currentMonthInvoice.get(0)
+                        .isDiscounted();
+                if (isDiscountApplied) {
+                    discountAmount = invoiceService.getDiscountAmountForInvoice(customers.getHostelId(), currentMonthInvoice.get(0).getInvoiceId());
+                }
+                else {
+                    discountAmount = 0.0;
+                }
+            }
 
             currentMonthInvoice.forEach(item -> {
                 otherItems.addAll(item.getInvoiceItems()
@@ -1752,6 +1764,16 @@ public class CustomersService {
                         .mapToDouble(InvoicesV1::getTotalAmount)
                         .sum();
                 isCurrentRentPaid = true;
+
+                if (listCurrentInvoicesPaid.size() == 1) {
+                    isDiscountApplied = listCurrentInvoicesPaid.get(0).isDiscounted();
+                    if (isDiscountApplied) {
+                        discountAmount = invoiceService.getDiscountAmountForInvoice(customers.getHostelId(), listCurrentInvoicesPaid.get(0).getInvoiceId());
+                    }
+                    else {
+                        discountAmount = 0.0;
+                    }
+                }
 
                 listCurrentInvoicesPaid.forEach(item -> {
                     otherItems.addAll(item.getInvoiceItems().stream().filter(i -> !i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name())).map(i -> {
@@ -1833,6 +1855,17 @@ public class CustomersService {
         unpaidInvoiceAmount = unpaidInvoiceAmount - partialPaidAmount;
 
         totalAmountToBePaid = invoiceBalance - advancePaidAmount;
+        String label = null;
+        Double payableAmount = 0.0;
+
+        if (currentMonthPayableAmount > currentRentPaid) {
+            label = "Payable Rent";
+            payableAmount = currentMonthPayableAmount - currentRentPaid;
+        }
+        else {
+            label = "Refundable Rent";
+            payableAmount = currentRentPaid - currentMonthPayableAmount;
+        }
 
         if (isCurrentRentPaid) {
             totalAmountToBePaid = totalAmountToBePaid + (currentMonthPayableAmount - currentRentPaid);
@@ -1842,6 +1875,7 @@ public class CustomersService {
 
         totalAmountToBePaid =  totalAmountToBePaid + totalDeductions;
         totalAmountToBePaid = totalAmountToBePaid + walletAmount;
+        totalAmountToBePaid = totalAmountToBePaid - discountAmount;
 
 
         List<UnpaidInvoices> unpaidInvoices = listUnpaidRentalInvoices
@@ -1933,6 +1967,8 @@ public class CustomersService {
                 Utils.dateToString(calStartDate.getTime()),
                 Utils.dateToString(calEndDate.getTime()),
                 currentMonthOtherItemsAmount[0],
+                isDiscountApplied,
+                discountAmount,
                 otherItems,
                 rentBreakUpList);
 
@@ -1959,7 +1995,7 @@ public class CustomersService {
 
         }
 
-        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
+        SettlementInfo settlementInfo = new SettlementInfo(Utils.roundOffWithTwoDigit(totalAmountToBePaid),
                 totalDeductions,
                 unpaidInvoiceAmount,
                 Utils.roundOffWithTwoDigit(refundableRent),
@@ -1967,8 +2003,8 @@ public class CustomersService {
                 0.0,
                 Utils.roundOfDouble(unpaidInvoiceAmount),
                 isRefundable,
-                null,
-                0.0);
+                label,
+                Utils.roundOffWithTwoDigit(payableAmount));
 
         settlementDetailsService.addSettlementForCustomer(customerId, lDate);
 
@@ -2275,6 +2311,8 @@ public class CustomersService {
                 currentInvoiceStartDate,
                 currentInvoiceEndDate,
                 Utils.roundOffWithTwoDigit(otherItemAMount[0]),
+                false,
+                0.0,
                 currentMonthOtherItems,
                 listRentBreakup);
     }
@@ -2344,6 +2382,8 @@ public class CustomersService {
                 currentInvoiceStartDate,
                 currentInvoiceEndDate,
                 Utils.roundOffWithTwoDigit(otherItemAMount[0]),
+                false,
+                0.0,
                 currentMonthOtherItems,
                 listRentBreakup);
     }
@@ -2379,6 +2419,8 @@ public class CustomersService {
         double electricityAmount = 0.0;
         double refundableRent = 0.0;
         double walletAmount = 0.0;
+        boolean isDiscounted = false;
+        double discountAmount = 0.0;
 
         if (customers.getFirstName() != null) {
             fullName.append(customers.getFirstName());
@@ -2497,6 +2539,18 @@ public class CustomersService {
                             .sum();
                 })
                 .sum();
+        List<InvoicesV1> discountAppliedInvoices = currentMonthInvoices
+                .stream()
+                .filter(InvoicesV1::isDiscounted)
+                .toList();
+        if (!discountAppliedInvoices.isEmpty()) {
+            isDiscounted = true;
+            List<String> discountedInvoices = discountAppliedInvoices
+                    .stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList();
+            discountAmount = invoiceService.getDiscountAmountForInvoice(customers.getHostelId(), discountedInvoices);
+        }
         double currentMonthPaidAmountBeforeChangingBed = currentMonthInvoicesBeforeBedChange
                 .stream()
                 .mapToDouble(i -> {
@@ -2619,15 +2673,28 @@ public class CustomersService {
             breakUpList.add(rentBreakUpForNewInvoice);
         }
 
+        double payableAmount = 0.0;
+        String label = null;
+        if (totalRentIncludePreviousBed > currentMonthPaidRent) {
+            payableAmount = totalRentIncludePreviousBed - currentMonthPaidRent;
+            label = "Payable Rent";
+        }
+        else {
+            payableAmount = -totalRentIncludePreviousBed + currentMonthPaidRent;
+            label = "Refundable Rent";
+        }
+
 
         RentInfo rentInfo = new RentInfo(Utils.roundOffWithTwoDigit(totalRentIncludePreviousBed),
-                (double) Math.round(currentMonthPaidRent),
+                Utils.roundOffWithTwoDigit(currentMonthPaidRent),
                 (int) totalNoOfDaysStayedIncludeOldAndNewBed,
                 findLatestInvoice.getTotalAmount() + oldTotalInvoiceAmount,
                 Utils.roundOffWithTwoDigit(totalAmountIncludePreviousBed),
                 Utils.dateToString(currentMonthInvoiceStartDate),
                 Utils.dateToString(billDate.currentBillEndDate()),
                 Utils.roundOffWithTwoDigit(currentMonthOtherItemAmount.get()),
+                isDiscounted,
+                discountAmount,
                 currentMonthOtherItems,
                 breakUpList);
 
@@ -2669,7 +2736,7 @@ public class CustomersService {
         }
 
 
-        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
+        SettlementInfo settlementInfo = new SettlementInfo(Utils.roundOffWithTwoDigit(totalAmountToBePaid),
                 Utils.roundOfDouble(totalDeductions),
                 Utils.roundOfDouble(oldInvoiceBalanceAmount),
                 Utils.roundOfDouble(refundableRent),
@@ -2677,7 +2744,8 @@ public class CustomersService {
                 electricityAmount,
                 Utils.roundOfDouble(oldInvoiceBalanceAmount),
                 isRefundable,
-                null, 0.0);
+                label,
+                Utils.roundOffWithTwoDigit(payableAmount));
 //        SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountIncludePreviousBed), Utils.roundOfDouble(totalDeductions), Utils.roundOfDouble(oldInvoiceBalanceAmount), Utils.roundOfDouble(refundableRent), Utils.roundOffWithTwoDigit(refundableAdvance), electricityAmount, Utils.roundOfDouble(oldInvoiceBalanceAmount), isRefundable);
 
 //        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
