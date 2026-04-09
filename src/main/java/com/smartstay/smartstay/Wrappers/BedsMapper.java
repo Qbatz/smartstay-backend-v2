@@ -66,10 +66,7 @@ public class BedsMapper implements Function<Beds, BedsResponse> {
         if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
             isOccupied = true;
         }
-        if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
-            isBooked = true;
-        }
-        if (beds.isBooked()) {
+        if (beds.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name()) && beds.isBooked()) {
             isBooked = true;
         }
 

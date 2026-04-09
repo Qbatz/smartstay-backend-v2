@@ -2044,7 +2044,7 @@ public class InvoiceV1Service {
                 double rentAmount = rentHistoryService.findRent(customerId, invoicesV1.getInvoiceStartDate());
                 double newRent = 0.0;
                 if (billingDates.hasGracePeriod()) {
-                    Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays());
+                    Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays()-1);
                     if (Utils.compareWithTwoDates(newJoiningDate, gracePeriodEndingDate) <= 0) {
                         newRent = rentAmount;
                     }
