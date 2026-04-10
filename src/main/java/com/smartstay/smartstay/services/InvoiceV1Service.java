@@ -3305,6 +3305,7 @@ public class InvoiceV1Service {
         else {
             currentMonthStartDate = customers.getJoiningDate();
         }
+
         double payableAmountForCurrentInvoiceRent = 0.0;
         double currentMonthPaidRent = 0.0;
         double currentMonthPayableAmount = 0.0;
@@ -3380,6 +3381,7 @@ public class InvoiceV1Service {
                     Utils.roundOffWithTwoDigit(currentMonthPayableAmount),
                     Utils.dateToString(currentMonthStartDate),
                     Utils.dateToString(billingDates.currentBillEndDate()),
+                    runningInvoice.getInvoiceId(),
                     otherItemAmount.get(),
                     false,
                     0.0,
