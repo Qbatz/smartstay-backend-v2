@@ -318,7 +318,7 @@ public class PostpaidRecurringEventListener {
                         if (rentAmount > 0) {
                             InvoiceItems item1 = new InvoiceItems();
                             item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
-                            item1.setAmount(rentAmount);
+                            item1.setAmount(Utils.roundOffWithTwoDigit(rentAmount));
                             item1.setInvoice(invoicesV1);
                             invoicesItems.add(item1);
                         }
@@ -326,7 +326,7 @@ public class PostpaidRecurringEventListener {
                         if (ebAmount > 0) {
                             InvoiceItems item1 = new InvoiceItems();
                             item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
-                            item1.setAmount(ebAmount);
+                            item1.setAmount(Utils.roundOffWithTwoDigit(ebAmount));
                             item1.setInvoice(invoicesV1);
                             invoicesItems.add(item1);
                         }
@@ -334,7 +334,7 @@ public class PostpaidRecurringEventListener {
                         if (amenityAmount > 0) {
                             InvoiceItems item1 = new InvoiceItems();
                             item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
-                            item1.setAmount(amenityAmount);
+                            item1.setAmount(Utils.roundOffWithTwoDigit(amenityAmount));
                             item1.setInvoice(invoicesV1);
                             invoicesItems.add(item1);
                         }
@@ -356,7 +356,7 @@ public class PostpaidRecurringEventListener {
                                     itms.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
                                     itms.setOtherItem(it.getSourceType());
                                 }
-                                itms.setAmount(it.getAmount());
+                                itms.setAmount(Utils.roundOffWithTwoDigit(it.getAmount()));
                                 itms.setInvoice(invoicesV1);
 
                                 invoicesItems.add(itms);

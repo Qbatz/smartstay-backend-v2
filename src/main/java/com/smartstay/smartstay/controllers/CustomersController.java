@@ -4,6 +4,7 @@ import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.CancelCheckout;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
 import com.smartstay.smartstay.payloads.customer.*;
+import com.smartstay.smartstay.payloads.settlement.Settlement;
 import com.smartstay.smartstay.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -101,8 +102,8 @@ public class CustomersController {
         return customersService.getInformationForFinalSettlementNew(customerId, leavingDate);
     }
     @PostMapping("/settlement/{customerId}")
-    public ResponseEntity<?> generateFinalSettlement(@PathVariable("customerId") String customerId, @RequestBody List<Settlement> deductions) {
-        return customersService.generateFinalSettlement(customerId, deductions);
+    public ResponseEntity<?> generateFinalSettlement(@PathVariable("customerId") String customerId, @RequestBody Settlement settlement) {
+        return customersService.generateFinalSettlement(customerId, settlement);
     }
     @PostMapping("/change-bed/{hostelId}/{customerId}")
     public ResponseEntity<?> changeBed(@PathVariable("customerId") String customerId,@PathVariable("hostelId") String hostelId,@Valid @RequestBody ChangeBed request) {

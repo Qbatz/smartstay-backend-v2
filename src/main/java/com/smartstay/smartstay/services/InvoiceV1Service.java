@@ -48,6 +48,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -3126,7 +3127,7 @@ public class InvoiceV1Service {
 
         double invoiceTotalAmount = invoicesV1.getTotalAmount();
         double totalAmount = invoicesV1.getTotalAmount() - discountAmount;
-        invoicesV1.setTotalAmount(totalAmount);
+        invoicesV1.setTotalAmount(Utils.roundOfDouble(totalAmount));
         invoicesV1.setDiscounted(true);
         invoicesV1Repository.save(invoicesV1);
 
@@ -3297,6 +3298,7 @@ public class InvoiceV1Service {
         }
         List<InvoicesV1> listInvoices = invoicesV1Repository.findAllCurrentMonthInvoices(customers.getCustomerId(), hostelId, billingDates.currentBillStartDate());
         InvoicesV1 runningInvoice = invoicesV1Repository.findCurrentRunningInvoice(customers.getCustomerId(), billingDates.currentBillStartDate());
+        List<String> discountedInvoiceIds = new ArrayList<>();
 
         Date currentMonthStartDate = null;
         if (Utils.compareWithTwoDates(customers.getJoiningDate(), billingDates.currentBillStartDate()) < 0) {
@@ -3305,12 +3307,18 @@ public class InvoiceV1Service {
         else {
             currentMonthStartDate = customers.getJoiningDate();
         }
+        AtomicBoolean isDiscountApplied = new AtomicBoolean(false);
+        double discountAmount = 0.0;
         double payableAmountForCurrentInvoiceRent = 0.0;
         double currentMonthPaidRent = 0.0;
         double currentMonthPayableAmount = 0.0;
         AtomicReference<Double> otherItemAmount = new AtomicReference<>(0.0);
         List<CurrentMonthOtherItems> otherItems = new ArrayList<>();
         listInvoices.forEach(item -> {
+            if (item.isDiscounted()) {
+                isDiscountApplied.set(true);
+                discountedInvoiceIds.add(item.getInvoiceId());
+            }
             otherItems.addAll(item.getInvoiceItems()
                     .stream()
                     .filter(i -> !i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name()))
@@ -3335,6 +3343,10 @@ public class InvoiceV1Service {
                     .toList());
         });
         if (runningInvoice != null) {
+            if (runningInvoice.isDiscounted()) {
+                isDiscountApplied.set(true);
+                discountedInvoiceIds.add(runningInvoice.getInvoiceId());
+            }
             List<InvoicesV1> oldInvoices = listInvoices
                     .stream()
                     .filter(i -> !i.getInvoiceId().equalsIgnoreCase(runningInvoice.getInvoiceId()))
@@ -3367,6 +3379,13 @@ public class InvoiceV1Service {
             long noOfDaysStayed = Utils.findNumberOfDays(runningInvoice.getInvoiceStartDate(), leavingDate);
             double rentForRunningInvoice = rentPerDay * noOfDaysStayed;
 
+            List<com.smartstay.smartstay.dao.InvoiceDiscounts> listInvoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, discountedInvoiceIds);
+            if (listInvoiceDiscounts != null) {
+                discountAmount = listInvoiceDiscounts
+                        .stream()
+                        .mapToDouble(com.smartstay.smartstay.dao.InvoiceDiscounts::getDiscountAmount)
+                        .sum();
+            }
             payableAmountForCurrentInvoiceRent = payableAmountForCurrentInvoiceRent + rentForRunningInvoice;
             currentMonthPaidRent = currentMonthPaidRent + runningInvoicePaidAmount;
             currentMonthPayableAmount = payableAmountForCurrentInvoiceRent - currentMonthPaidRent + otherItemAmount.get();
@@ -3380,9 +3399,10 @@ public class InvoiceV1Service {
                     Utils.roundOffWithTwoDigit(currentMonthPayableAmount),
                     Utils.dateToString(currentMonthStartDate),
                     Utils.dateToString(billingDates.currentBillEndDate()),
+                    runningInvoice.getInvoiceId(),
                     otherItemAmount.get(),
-                    false,
-                    0.0,
+                    isDiscountApplied.get(),
+                    discountAmount,
                     otherItems,
                     listRentBreakup);
 
@@ -3628,7 +3648,7 @@ public class InvoiceV1Service {
         return invoiceDiscountService.getDiscountAmount(hostelId, invoiceId);
     }
 
-    public double getDiscountAmountForInvoice(String hostelId, List<String> discountedInvoices) {
+    public List<InvoiceDiscounts> getDiscountAmountForInvoice(String hostelId, List<String> discountedInvoices) {
         return invoiceDiscountService.getDiscountAmount(hostelId, discountedInvoices);
     }
 }

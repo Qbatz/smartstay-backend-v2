@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.invoices.InvoiceDiscountDto;
 import com.smartstay.smartstay.payloads.invoice.ApplyDiscount;
 import com.smartstay.smartstay.repositories.InvoiceDiscountRepository;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -114,23 +115,23 @@ public class InvoiceDiscountService {
         return discount.getDiscountAmount();
     }
 
-    public double getDiscountAmount(String hostelId, List<String> discountedInvoices) {
+    public List<com.smartstay.smartstay.dto.invoices.InvoiceDiscounts> getDiscountAmount(String hostelId, List<String> discountedInvoices) {
         double discountAmount = 0.0;
         List<InvoiceDiscounts> listDiscounts = invoiceDiscountRepository
                 .findByHostelIdAndInvoiceIdsAndIsActive(hostelId, discountedInvoices);
 
         if (listDiscounts != null && !listDiscounts.isEmpty()) {
-            discountAmount = listDiscounts
+            List<com.smartstay.smartstay.dto.invoices.InvoiceDiscounts> listInvoiceDiscounts = listDiscounts
                     .stream()
-                    .mapToDouble(i -> {
-                        if (i.getDiscountAmount() == null) {
-                            return 0.0;
-                        }
-                        return i.getDiscountAmount();
+                    .map(i -> {
+                        return new com.smartstay.smartstay.dto.invoices.InvoiceDiscounts(i.getDiscountReason(),
+                                Utils.roundOffWithTwoDigit(i.getDiscountPercentage()),
+                                Utils.roundOffWithTwoDigit(i.getDiscountAmount()));
                     })
-                    .sum();
+                    .toList();
+           return listInvoiceDiscounts;
         }
 
-        return discountAmount;
+        return new ArrayList<>();
     }
 }
