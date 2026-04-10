@@ -17,6 +17,7 @@ import com.smartstay.smartstay.dto.documents.CustomerFiles;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.invoices.InvoiceDiscounts;
 import com.smartstay.smartstay.dto.settlement.CurrentMonthOtherItems;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
 import com.smartstay.smartstay.ennum.InvoiceItems;
@@ -43,6 +44,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -1670,7 +1672,7 @@ public class CustomersService {
                 totalDeductions,
                 Utils.roundOffWithTwoDigit(payableRent),
                 Utils.roundOffWithTwoDigit(payableRent),
-                Utils.roundOffWithTwoDigit(totalAdvanceAmount),
+                Utils.roundOffWithTwoDigit(totalAdvanceAmount - totalDeductions),
                 Utils.roundOffWithTwoDigit(ebAmount),
                 Utils.roundOffWithTwoDigit(unpaidInvoiceAmount),
                 isRefundable,
@@ -1687,8 +1689,6 @@ public class CustomersService {
                 settlementInfo);
 
     }
-
-
 
 
     private ResponseEntity<?> getInformationForPostpaidSettlements(Customers customers, Date lDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates) {
@@ -1864,7 +1864,7 @@ public class CustomersService {
 
         com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
-        double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentMonthPayableAmount();
+        double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentPayableRent();
         double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
         double totalDeductions = 0.0;
         double payableRent = unpaidInvoicesInfo.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
@@ -2175,7 +2175,12 @@ public class CustomersService {
                     .stream()
                     .map(InvoicesV1::getInvoiceId)
                     .toList();
-            discountAmount = invoiceService.getDiscountAmountForInvoice(customers.getHostelId(), discountedInvoices);
+            List<InvoiceDiscounts> invoiceDiscounts = invoiceService.getDiscountAmountForInvoice(customers.getHostelId(), discountedInvoices);
+
+            discountAmount = invoiceDiscounts
+                    .stream()
+                    .mapToDouble(InvoiceDiscounts::discountAmount)
+                    .sum();
         }
         double currentMonthPaidAmountBeforeChangingBed = currentMonthInvoicesBeforeBedChange
                 .stream()
@@ -2391,7 +2396,7 @@ public class CustomersService {
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> generateFinalSettlement(String customerId, List<Settlement> deductions) {
+    public ResponseEntity<?> generateFinalSettlement(String customerId, com.smartstay.smartstay.payloads.settlement.Settlement settlement) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -2442,18 +2447,21 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, deductions, users);
+                return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users);
+            }
+            else {
+                return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users);
             }
         }
         else {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 BillingDates customerBillingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), settlementDetails.getLeavingDate());
-                return generateFinalSettlementForJoininBasedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, customerBillingDates, deductions, users);
+                return generateFinalSettlementForJoininBasedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, customerBillingDates, settlement, users);
             }
         }
 
         if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-            return calculateAndGenerateFinalSettlemtForBedChange(customers, bookingDetails, billDate, cbh, deductions, settlementDetails, users);
+            return calculateAndGenerateFinalSettlemtForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users);
         }
 
         boolean isCurrentRentPaid = false;
@@ -2660,6 +2668,11 @@ public class CustomersService {
         double totalAmountForFinalSettlement = totalAmountToBePaid;
         double totalDeductionForFinalSettlement = 0.0;
 
+        List<Settlement> deductions = new ArrayList<>();
+        if (settlement.deductions() != null) {
+            deductions = settlement.deductions();
+        }
+
         if (deductions != null && !deductions.isEmpty()) {
             double finalDeductions = deductions
                     .stream()
@@ -2719,7 +2732,64 @@ public class CustomersService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
-    private ResponseEntity<?> generateFinalSettlementForJoininBasedPrepaid(Customers customers, Date leavingDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates, List<Settlement> deductions, Users users) {
+    private ResponseEntity<?> generateFinalSettlementInvoiceForFixedPrepaid(Customers customers, Date leavingDate, BookingsV1 bookingDetails, BillingDates billDate, com.smartstay.smartstay.payloads.settlement.Settlement settlement, Users users) {
+        FinalSettlement settlementInfo = getFinalSettlementForPrepaidFixed(customers, bookingDetails, billDate, leavingDate);
+        double totalAmountToBePaid = settlementInfo.settlementInfo().amountTobePaid();
+        double advanceDeductionAmount = 0.0;
+        double settlementDeductionAmount = 0.0;
+        double discountAmount = 0.0;
+        double discountAmountFromInvoice = 0.0;
+        double finalDiscountAmount = 0.0;
+
+        Advance advance = customers.getAdvance();
+        if (advance != null) {
+            List<Deductions> advanceDeductionList = advance.getDeductions();
+            if (advanceDeductionList != null) {
+                advanceDeductionAmount = advance
+                        .getDeductions()
+                        .stream()
+                        .mapToDouble(Deductions::getAmount)
+                        .sum();
+            }
+        }
+
+        if (settlement != null) {
+            List<Settlement> listSettlementDeducitons = settlement.deductions();
+            if (listSettlementDeducitons != null) {
+                settlementDeductionAmount = listSettlementDeducitons
+                        .stream()
+                        .mapToDouble(Settlement::amount)
+                        .sum();
+            }
+
+            if (settlement.discountAmount() != null) {
+                discountAmount = settlement.discountAmount();
+            }
+        }
+
+        RentInfo currentMonthRentInfo = settlementInfo.currentMonthRentInfo();
+        if (currentMonthRentInfo != null) {
+            if (currentMonthRentInfo.isDiscountApplied()) {
+                discountAmountFromInvoice = currentMonthRentInfo.discountAmount();
+            }
+        }
+
+        if (discountAmountFromInvoice != discountAmount) {
+            finalDiscountAmount = discountAmountFromInvoice - discountAmount;
+        }
+        else {
+            finalDiscountAmount = discountAmountFromInvoice;
+        }
+
+        totalAmountToBePaid = totalAmountToBePaid - finalDiscountAmount;
+
+        System.out.println(totalAmountToBePaid);
+
+        return null;
+
+    }
+
+    private ResponseEntity<?> generateFinalSettlementForJoininBasedPrepaid(Customers customers, Date leavingDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates, com.smartstay.smartstay.payloads.settlement.Settlement stml, Users users) {
         FinalSettlement settlement = getSettlementInfoForJoiningBased(customers, leavingDate, bookingDetails);
 
         List<InvoicesV1> currentMonthUnpaidInvoices = invoiceService.findAllCurrentMonthRentalInvoice(customers.getCustomerId(), customers.getHostelId(), currentMonthBillingDates.currentBillStartDate());
@@ -2728,6 +2798,7 @@ public class CustomersService {
                 .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
                 .toList();
         List<String> listUnpaidInvoices = new ArrayList<>();
+        List<Settlement> deductions = stml.deductions();
         if (deductions == null) {
             deductions = new ArrayList<>();
         }
@@ -2801,9 +2872,11 @@ public class CustomersService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
-    private ResponseEntity<?> generateFinalSettlementForFixedPostpaid(Customers customers, Date leavingDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates, List<Settlement> deductions, Users users) {
+    private ResponseEntity<?> generateFinalSettlementForFixedPostpaid(Customers customers, Date leavingDate, BookingsV1 bookingDetails, BillingDates currentMonthBillingDates, com.smartstay.smartstay.payloads.settlement.Settlement stlm, Users users) {
         FinalSettlement settlement = getFinalSettlementInfo(customers, leavingDate, bookingDetails, currentMonthBillingDates);
         List<String> listUnpaidInvoices = new ArrayList<>();
+
+        List<Settlement> deductions = stlm.deductions();
         if (deductions == null) {
             deductions = new ArrayList<>();
         }
@@ -2874,7 +2947,7 @@ public class CustomersService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
-    public ResponseEntity<?> calculateAndGenerateFinalSettlemtForBedChange(Customers customers, BookingsV1 bookings, BillingDates billingDates, CustomersBedHistory latestBed, List<Settlement> deductions, SettlementDetails settlementDetails, Users users) {
+    public ResponseEntity<?> calculateAndGenerateFinalSettlemtForBedChange(Customers customers, BookingsV1 bookings, BillingDates billingDates, CustomersBedHistory latestBed, com.smartstay.smartstay.payloads.settlement.Settlement stml, SettlementDetails settlementDetails, Users users) {
         Double advanceAmount = 0.0;
         Double bookingAmount = 0.0;
         Double advancePaidAmount = 0.0;
@@ -2888,6 +2961,10 @@ public class CustomersService {
         double walletAmount = 0.0;
         Double totalAmountWithoutDeductions = 0.0;
         List<Deductions> listDeductions = new ArrayList<>();
+        List<Settlement> deductions = stml.deductions();
+        if (deductions == null) {
+            deductions = new ArrayList<>();
+        }
 
         boolean isAdvancePaid = false;
 
