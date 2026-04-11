@@ -3120,12 +3120,12 @@ public class InvoiceV1Service {
             catch (Exception e) {
                 return new ResponseEntity<>(Utils.INVALID_DISCOUNT_PERCENTAGE, HttpStatus.BAD_REQUEST);
             }
-            discountAmount = ((double) percentage /100) * invoicesV1.getBasePrice();
+            discountAmount = Utils.roundOfDouble(((double) percentage / 100) * invoicesV1.getBasePrice());
 
         }
 
         double invoiceTotalAmount = invoicesV1.getTotalAmount();
-        double totalAmount = invoicesV1.getTotalAmount() - discountAmount;
+        double totalAmount = Utils.roundOfDouble(invoicesV1.getTotalAmount() - discountAmount);
         invoicesV1.setTotalAmount(totalAmount);
         invoicesV1.setDiscounted(true);
         invoicesV1Repository.save(invoicesV1);
@@ -3543,7 +3543,7 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
-        invoicesV1.setTotalAmount(invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference());
+        invoicesV1.setTotalAmount(Utils.roundOfDouble(invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference()));
 
         invoicesV1Repository.save(invoicesV1);
         paymentSummaryService.editDiscount(invoicesV1.getCustomerId(), isDiscountApplied.invoiceDifference());

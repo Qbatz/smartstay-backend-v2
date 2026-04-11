@@ -55,7 +55,7 @@ public class InvoiceDiscountService {
             double discountPercentage = 0.0;
             if (discount.discountPercentage() != null) {
                 discountPercentage = Double.parseDouble(String.valueOf(discount.discountPercentage()));
-                discountAmount = ((double) discountPercentage /100) * invDiscount.getInvoiceAmount();
+                discountAmount = (double) Math.round(((double) discountPercentage / 100) * invDiscount.getInvoiceAmount());
             }
             else if (discount.discountAmount() != null) {
                 discountAmount = discount.discountAmount();
