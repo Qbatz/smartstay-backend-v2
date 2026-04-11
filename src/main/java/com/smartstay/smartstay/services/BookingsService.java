@@ -1269,4 +1269,8 @@ public class BookingsService {
     public List<RentBreakUp> getRentBreakup(Customers customers, BookingsV1 bookingsV1, Date leavingDate, BillingDates currentMonthBillingDates) {
         return customersBedHistoryService.getRentBreakupForPostpaid(customers, bookingsV1, leavingDate, currentMonthBillingDates);
     }
+
+    public List<RentBreakUp> findRentBreakUpPrepaidFixed(Customers customers, BookingsV1 bookingDetails, Date lDate, BillingDates billingDates) {
+        return customersBedHistoryService.getRentBreakupForFixedPrepaid(customers, lDate, billingDates);
+    }
 }

@@ -212,7 +212,7 @@ public class CustomersBedHistoryService {
                 .toList();
     }
 
-
+//    this and below is same
     public List<RentBreakUp> getRentBreakupForPostpaid(Customers customers, BookingsV1 bookingsV1, Date leavingDate, BillingDates currentMonthBillingDates) {
         List<CustomersBedHistory> currentMonthHistory = customerBedHistoryRepository.findByCustomerIdAndStartDate(customers.getCustomerId(), currentMonthBillingDates.currentBillStartDate());
         if (currentMonthHistory != null) {
@@ -227,6 +227,24 @@ public class CustomersBedHistoryService {
                     .map(i -> new BedHistoryBreakupMapper(listBedDetails, leavingDate, currentMonthBillingDates).apply(i))
                     .toList();
         }
-        return null;
+        return new ArrayList<>();
+    }
+
+//    this and above are same
+    public List<RentBreakUp> getRentBreakupForFixedPrepaid(Customers customers, Date lDate, BillingDates billingDates) {
+        List<CustomersBedHistory> currentMonthHistory = customerBedHistoryRepository.findByCustomerIdAndStartDate(customers.getCustomerId(), billingDates.currentBillStartDate());
+        if (currentMonthHistory != null) {
+            List<Integer> bedIds = currentMonthHistory
+                    .stream()
+                    .map(CustomersBedHistory::getBedId)
+                    .toList();
+            List<BedDetails> listBedDetails = bedsService.getBedDetails(bedIds);
+
+            return currentMonthHistory
+                    .stream()
+                    .map(i -> new BedHistoryBreakupMapper(listBedDetails, lDate, billingDates).apply(i))
+                    .toList();
+        }
+        return new ArrayList<>();
     }
 }

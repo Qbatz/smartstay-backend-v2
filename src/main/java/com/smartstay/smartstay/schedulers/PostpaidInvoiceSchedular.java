@@ -39,9 +39,7 @@ public class PostpaidInvoiceSchedular {
                 String hostelId = item.getHostel().getHostelId();
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, -1);
-                if (recurringTrackerService.canGenerateInvoice(hostelId, calendar.getTime())) {
-                    applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this, hostelId));
-                }
+                applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this, hostelId));
 
             });
         }
