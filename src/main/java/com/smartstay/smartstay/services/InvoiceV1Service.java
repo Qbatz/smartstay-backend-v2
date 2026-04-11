@@ -3651,4 +3651,29 @@ public class InvoiceV1Service {
     public List<InvoiceDiscounts> getDiscountAmountForInvoice(String hostelId, List<String> discountedInvoices) {
         return invoiceDiscountService.getDiscountAmount(hostelId, discountedInvoices);
     }
+
+    public InvoicesV1 createSettlementInvoiceForFixedPrepaid(Customers customers, String hostelId, double totalAmountToBePaid, List<String> listUnpaidInvoices, List<Deductions> lisDeductions, double amountToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid) {
+        InvoicesV1 advanceInvoice = null;
+
+        List<InvoicesV1> listInvoices = new ArrayList<>();
+        if (!isAdvancePaid) {
+            advanceInvoice = invoicesV1Repository.findAdvanceInvoiceByCustomerId(customers.getCustomerId());
+            listInvoices.add(advanceInvoice);
+        }
+        if (listUnpaidInvoices != null && !listUnpaidInvoices.isEmpty()) {
+            List<InvoicesV1> invoices = invoicesV1Repository.findAllById(listUnpaidInvoices);
+            listInvoices.addAll(invoices);
+        }
+
+        List<InvoicesV1> invoicesHasToBeCancelled = listInvoices
+                .stream()
+                .map(i -> {
+                    i.setCancelled(true);
+                    return i;
+                })
+                .toList();
+
+        cancelActiveInvoice(invoicesHasToBeCancelled);
+        return createSettlementInvoice(customers, hostelId, totalAmountToBePaid, listInvoices, lisDeductions, amountToBePaidWithoutDeductions, leavingDate, users);
+    }
 }
