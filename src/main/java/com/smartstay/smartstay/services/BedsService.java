@@ -26,6 +26,7 @@ import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.beds.*;
 import com.smartstay.smartstay.responses.beds.BedDetails;
 import com.smartstay.smartstay.responses.customer.InitializeBooking;
+import com.smartstay.smartstay.responses.hostel.IBedSummary;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -686,6 +687,10 @@ public class BedsService {
         return bedsRepository.getBedCountByStatus(hostelId);
     }
 
+    public IBedSummary findBedSummary(String hostelId) {
+        return bedsRepository.getBedSummary(hostelId);
+    }
+
     public ResponseEntity<?> findFreeBeds(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -896,29 +901,39 @@ public class BedsService {
         }
         return bedsRepository.save(bed);
     }
-
     public BedsStatus getBedCountsForDashboard(String hostelId) {
         List<Beds> listBeds = bedsRepository.findByHostelIdAndIsDeletedFalse(hostelId);
-        List<Integer> roomIds = listBeds.stream()
-                .map(Beds::getRoomId)
-                .toList();
-        Integer totalBeds = listBeds.size();
-        long occupiedBeds = listBeds
-                .stream()
-                .filter(i ->
-                        i.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) ||
-                                i.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name()) ||
-                                Boolean.TRUE.equals(i.isBooked())
-                )
-                .count();
-        Integer freeBeds = totalBeds - (int) occupiedBeds;
+
+        int totalBeds = listBeds.size();
+        int occupiedCount = 0;
+        int availableCount = 0;
+
+        for (Beds bed : listBeds) {
+            String status = bed.getCurrentStatus();
+            boolean isBooked = Boolean.TRUE.equals(bed.isBooked());
+
+
+            if (status.equalsIgnoreCase(BedStatus.OCCUPIED.name()) ||
+                    status.equalsIgnoreCase(BedStatus.BOOKED.name()) || isBooked) {
+                occupiedCount++;
+            }
+
+            else if (status.equalsIgnoreCase(BedStatus.VACANT.name()) ||
+                    status.equalsIgnoreCase(BedStatus.NOTICE.name())) {
+                availableCount++;
+            }
+        }
+
         Integer bookedBedCount = bookingService.getBookedBedCount(hostelId);
 
-        return new BedsStatus(totalBeds,
-                freeBeds,
-                (int) occupiedBeds,
-                bookedBedCount);
+        return new BedsStatus(
+                totalBeds,
+                availableCount,
+                occupiedCount,
+                bookedBedCount
+        );
     }
+
 
     public List<com.smartstay.smartstay.dto.beds.BedDetails> getBedDetails(List<Integer> bedIds) {
         return bedsRepository.findByBedIds(bedIds);
