@@ -18,10 +18,10 @@ import com.smartstay.smartstay.payloads.hostel.UpdateElectricityPrice;
 import com.smartstay.smartstay.payloads.hostel.UpdatePg;
 import com.smartstay.smartstay.repositories.HostelV1Repository;
 import com.smartstay.smartstay.responses.Hostels;
-import com.smartstay.smartstay.responses.beds.BedsStatusCount;
 import com.smartstay.smartstay.responses.hostel.EBSettings;
 import com.smartstay.smartstay.responses.hostel.FloorDetails;
 import com.smartstay.smartstay.responses.hostel.HostelDetails;
+import com.smartstay.smartstay.responses.hostel.IBedSummary;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -229,17 +229,14 @@ public class HostelService {
             final int[] noOfBeds = {0};
             AtomicInteger noOfOccupiedBeds = new AtomicInteger(0);
             final long[] noOfAvailableBeds = {0};
-            List<BedsStatusCount> bedsCounts = bedsService.findBedCount(item.getHostelId());
-            bedsCounts.forEach(itm -> {
-                int currentCount = Integer.parseInt(String.valueOf(itm.getCount()));
-                noOfBeds[0] += currentCount;
-                if (itm.getStatus().equalsIgnoreCase(BedStatus.VACANT.name()) || itm.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-                    noOfAvailableBeds[0] += currentCount;
-                }
-                if (itm.getStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name()) || itm.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
-                    noOfOccupiedBeds.set(noOfOccupiedBeds.get() + Integer.valueOf(String.valueOf(itm.getCount())));
-                }
-            });
+            IBedSummary summary = bedsService.findBedSummary(item.getHostelId());
+            long total = (summary != null) ? summary.getTotal() : 0L;
+            long available = (summary != null) ? summary.getAvailable() : 0L;
+            long occupied = (summary != null) ? summary.getOccupied() : 0L;
+            noOfBeds[0] = (int) total;
+            noOfOccupiedBeds.set((int) occupied);
+            noOfAvailableBeds[0] = available;
+
             noOfFloors = floorsService.getFloorCounts(item.getHostelId());
             noOfRooms = roomsService.getRoomCount(item.getHostelId());
             SubscriptionDto subscriptionDto = subscriptionService.getCurrentSubscriptionDetails(item.getHostelId());
@@ -293,6 +290,7 @@ public class HostelService {
         usersService.addUserLog(hostelId, hostelId, ActivitySource.HOSTEL, ActivitySourceType.DELETE, users);
         return new ResponseEntity<>("Hostel Deleted", HttpStatus.OK);
     }
+
     public ResponseEntity<?> getHostelDetails(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid user");
@@ -325,28 +323,9 @@ public class HostelService {
         }
         int notificationCount = notificationService.getUnreadNotificationCount(hostelId);
         List<BookingsV1> bookingsV1 = bookingsService.checkAllByHostelId(hostelId);
-        boolean canModifyBilling = true;
-        if (bookingsV1 != null && !bookingsV1.isEmpty()) {
-            canModifyBilling = false;
-        }
+        boolean canModifyBilling = bookingsV1 == null || bookingsV1.isEmpty();
 
-        HostelDetails details = new HostelDetails(hostel.getHostelId(),
-                hostel.getMainImage(),
-                hostel.getCity(),
-                String.valueOf(hostel.getCountry()),
-                hostel.getEmailId(),
-                hostel.getHostelName(),
-                hostel.getHouseNo(),
-                hostel.getLandmark(),
-                hostel.getMobile(),
-                hostel.getPincode(),
-                hostel.getState(),
-                hostel.getStreet(),
-                Utils.dateToString(hostel.getUpdatedAt()),
-                isSubscriptionActive, nextBillingDate,
-                remainingDays, floorDetails.size(),
-                floorDetails,notificationCount,
-                canModifyBilling);
+        HostelDetails details = new HostelDetails(hostel.getHostelId(), hostel.getMainImage(), hostel.getCity(), String.valueOf(hostel.getCountry()), hostel.getEmailId(), hostel.getHostelName(), hostel.getHouseNo(), hostel.getLandmark(), hostel.getMobile(), hostel.getPincode(), hostel.getState(), hostel.getStreet(), Utils.dateToString(hostel.getUpdatedAt()), isSubscriptionActive, nextBillingDate, remainingDays, floorDetails.size(), floorDetails, notificationCount, canModifyBilling);
 
         return ResponseEntity.ok(details);
     }
@@ -385,14 +364,7 @@ public class HostelService {
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(),
-                findEndDate,
-                dueDate,
-                billingRuleDueDate,
-                billingRules.isHasGracePeriod(),
-                billingRules.getGracePeriodDays(),
-                billingRules.getTypeOfBilling(),
-                billingRules.getBillingModel());
+        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate, billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(), billingRules.getTypeOfBilling(), billingRules.getBillingModel());
     }
 
     public BillingDates getJoiningBasedCurrentMonthBillingDate(Date joiningDate, String hostelId, Date requestedDate) {
@@ -418,16 +390,10 @@ public class HostelService {
         Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
         Date endDate = Utils.findLastDate(Utils.dateToDate(calendar.getTime()), calendar.getTime());
 
-        return new BillingDates(calendar.getTime(),
-                endDate,
-                dueDate,
-                billingRuleDueDate,
-                hasGracePeriod,
-                gracePeriodDays,
-                billingRules.getTypeOfBilling(),
-                billingRules.getBillingModel());
+        return new BillingDates(calendar.getTime(), endDate, dueDate, billingRuleDueDate, hasGracePeriod, gracePeriodDays, billingRules.getTypeOfBilling(), billingRules.getBillingModel());
 
     }
+
     public BillingDates getBillStartAndEndDateBasedOnDate(String hostelId, Date date) {
         BillingRules billingRules = hostelConfigService.getCurrentMonthTemplate(hostelId);
         int billStartDate = 1;
@@ -445,14 +411,7 @@ public class HostelService {
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
-        return new BillingDates(calendar.getTime(),
-                findEndDate,
-                dueDate,
-                billingRuleDueDate,
-                billingRules.isHasGracePeriod(),
-                billingRules.getGracePeriodDays(),
-                billingRules.getTypeOfBilling(),
-                billingRules.getBillingModel());
+        return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate, billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(), billingRules.getTypeOfBilling(), billingRules.getBillingModel());
     }
 
 
@@ -531,11 +490,7 @@ public class HostelService {
             if (config.getTypeOfReading().equalsIgnoreCase(EBReadingType.FLAT_RATE.name())) {
                 shouldIncludeInRent = config.isShouldIncludeInRent();
             }
-            EBSettings settings = new EBSettings(hostelId,
-                    config.getCharge(),
-                    config.getTypeOfReading(),
-                    shouldIncludeInRent,
-                    config.getFlatCharge());
+            EBSettings settings = new EBSettings(hostelId, config.getCharge(), config.getTypeOfReading(), shouldIncludeInRent, config.getFlatCharge());
 
             return new ResponseEntity<>(settings, HttpStatus.OK);
         }
@@ -561,7 +516,6 @@ public class HostelService {
         if (hostel == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No hostel found");
         }
-
 
 
         ElectricityConfig ebConfig = hostel.getElectricityConfig();
@@ -624,24 +578,21 @@ public class HostelService {
             if (payloads.typeofReading().equalsIgnoreCase("hostel")) {
                 ebConfig.setUpdated(true);
                 ebConfig.setTypeOfReading(EBReadingType.HOSTEL_READING.name());
-                if (payloads.charge() !=null) {
+                if (payloads.charge() != null) {
                     ebConfig.setCharge(payloads.charge());
                 }
-            }
-            else if (payloads.typeofReading().equalsIgnoreCase("Room")) {
+            } else if (payloads.typeofReading().equalsIgnoreCase("Room")) {
                 ebConfig.setUpdated(true);
                 ebConfig.setTypeOfReading(EBReadingType.ROOM_READING.name());
-                if (payloads.charge() !=null) {
+                if (payloads.charge() != null) {
                     ebConfig.setCharge(payloads.charge());
                 }
-            }
-            else if (payloads.typeofReading().equalsIgnoreCase("flat")) {
+            } else if (payloads.typeofReading().equalsIgnoreCase("flat")) {
                 if (payloads.charge() == null) {
                     if (ebConfig.getFlatCharge() == null) {
                         return new ResponseEntity<>(Utils.FLAT_RATE_REQUIRED, HttpStatus.BAD_REQUEST);
                     }
-                }
-                else {
+                } else {
                     ebConfig.setFlatCharge(payloads.charge());
                 }
 
@@ -688,12 +639,11 @@ public class HostelService {
 
         BillingRules billingRules = null;
         if (hostel.getBillingRulesList() != null && !hostel.getBillingRulesList().isEmpty()) {
-            billingRules = hostel.getBillingRulesList().get(hostel.getBillingRulesList().size()-1);
+            billingRules = hostel.getBillingRulesList().get(hostel.getBillingRulesList().size() - 1);
             String typeOfBilling = null;
             if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingType.FIXED_DATE.name())) {
                 typeOfBilling = "Fixed";
-            }
-            else if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
+            } else if (billingRules.getTypeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                 typeOfBilling = "Joining Date Based";
             }
             Integer gracePeriod = 0;
@@ -707,20 +657,10 @@ public class HostelService {
                 updateEbConfigForJoiningBased(hostel);
             }
 
-            com.smartstay.smartstay.responses.hostelConfig.BillingRules rules = new com.smartstay.smartstay.responses.hostelConfig.BillingRules(
-                    billingRules.getBillingStartDate(),
-                    billingRules.getBillDueDays(),
-                    billingRules.getNoticePeriod(),
-                    typeOfBilling,
-                    gracePeriod,
-                    billingRules.isHasGracePeriod(),
-                    billingRules.getBillingModel(),
-                    billingRules.getReminderDays());
+            com.smartstay.smartstay.responses.hostelConfig.BillingRules rules = new com.smartstay.smartstay.responses.hostelConfig.BillingRules(billingRules.getBillingStartDate(), billingRules.getBillDueDays(), billingRules.getNoticePeriod(), typeOfBilling, gracePeriod, billingRules.isHasGracePeriod(), billingRules.getBillingModel(), billingRules.getReminderDays());
 
             return new ResponseEntity<>(rules, HttpStatus.OK);
-        }
-
-        else {
+        } else {
             return new ResponseEntity<>(Utils.BILLING_RULE_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
         }
     }
@@ -772,18 +712,16 @@ public class HostelService {
         }
 
 
-
         BillingDates billDates = getBillingRuleOnDate(hostelId, new Date());
 
         BillingRules currentBillingRules = hostelConfigService.getCurrentBillingRule(hostel.getHostelId());
-        BillingRules newBillingRules =  new BillingRules();
+        BillingRules newBillingRules = new BillingRules();
         newBillingRules.setTypeOfBilling(currentBillingRules.getTypeOfBilling());
 
         if (billRules.calculationType() != null) {
             if (billRules.calculationType().equalsIgnoreCase("Fixed")) {
                 newBillingRules.setTypeOfBilling(BillingType.FIXED_DATE.name());
-            }
-            else {
+            } else {
                 newBillingRules.setTypeOfBilling(BillingType.JOINING_DATE_BASED.name());
             }
         }
@@ -792,57 +730,48 @@ public class HostelService {
             int gracePeriodDays = 0;
             try {
                 gracePeriodDays = Integer.parseInt(String.valueOf(billRules.gracePeriodDays()));
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 gracePeriodDays = 0;
             }
 
             if (gracePeriodDays > 0) {
                 newBillingRules.setHasGracePeriod(true);
                 newBillingRules.setGracePeriodDays(gracePeriodDays);
-            }
-            else {
+            } else {
                 newBillingRules.setHasGracePeriod(currentBillingRules.isHasGracePeriod());
                 newBillingRules.setGracePeriodDays(currentBillingRules.getGracePeriodDays());
             }
-        }
-        else {
+        } else {
             newBillingRules.setHasGracePeriod(currentBillingRules.isHasGracePeriod());
             newBillingRules.setGracePeriodDays(currentBillingRules.getGracePeriodDays());
         }
 
 
-
         if (Utils.checkNullOrEmpty(billRules.startDate())) {
             newBillingRules.setBillingStartDate(billRules.startDate());
 
-        }
-        else {
+        } else {
             if (currentBillingRules != null) {
                 newBillingRules.setBillingStartDate(currentBillingRules.getBillingStartDate());
-            }
-            else {
+            } else {
                 newBillingRules.setBillingStartDate(1);
             }
         }
         if (Utils.checkNullOrEmpty(billRules.dueDate())) {
             newBillingRules.setBillDueDays(billRules.dueDate());
-        }
-        else {
+        } else {
             if (currentBillingRules != null) {
                 newBillingRules.setBillDueDays(currentBillingRules.getBillDueDays());
-            }
-            else {
+            } else {
                 newBillingRules.setBillDueDays(10);
             }
         }
         if (Utils.checkNullOrEmpty(billRules.noticeDays())) {
             newBillingRules.setNoticePeriod(billRules.noticeDays());
-        }
-        else {
+        } else {
             if (currentBillingRules != null) {
                 newBillingRules.setNoticePeriod(currentBillingRules.getNoticePeriod());
-            }else {
+            } else {
                 newBillingRules.setNoticePeriod(10);
             }
         }
@@ -852,8 +781,7 @@ public class HostelService {
                 newBillingRules.setShouldNotify(true);
             }
             newBillingRules.setReminderDays(billRules.reminderDays());
-        }
-        else {
+        } else {
             newBillingRules.setShouldNotify(currentBillingRules.isShouldNotify());
             newBillingRules.setReminderDays(currentBillingRules.getReminderDays());
         }
@@ -861,12 +789,10 @@ public class HostelService {
         if (billRules.billingModel() != null) {
             if (billRules.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
                 newBillingRules.setBillingModel(BillingModel.POSTPAID.name());
-            }
-            else if (billRules.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+            } else if (billRules.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 newBillingRules.setBillingModel(BillingModel.PREPAID.name());
             }
-        }
-        else {
+        } else {
             newBillingRules.setBillingModel(currentBillingRules.getBillingModel());
         }
 
@@ -896,8 +822,7 @@ public class HostelService {
             int sDate = -1;
             try {
                 sDate = Integer.parseInt(String.valueOf(billRules.startDate()));
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 sDate = -1;
             }
 
@@ -910,8 +835,7 @@ public class HostelService {
             int dueDays = -1;
             try {
                 dueDays = Integer.parseInt(String.valueOf(billRules.dueDate()));
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 dueDays = -1;
             }
 
@@ -924,12 +848,11 @@ public class HostelService {
             int noticeDays = -1;
             try {
                 noticeDays = Integer.parseInt(String.valueOf(billRules.noticeDays()));
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 noticeDays = -1;
             }
 
-            if (noticeDays == -1 ) {
+            if (noticeDays == -1) {
                 errorMessage = Utils.INVALID_NOTICE_DAYS;
             }
         }
@@ -938,8 +861,7 @@ public class HostelService {
             int gracePeriodDays = -1;
             try {
                 gracePeriodDays = Integer.parseInt(String.valueOf(billRules.gracePeriodDays()));
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 gracePeriodDays = -1;
             }
 
@@ -1005,9 +927,7 @@ public class HostelService {
 
                     hostelV1.getAdditionalImages().add(hostelImg);
                 });
-            }
-
-            else {
+            } else {
                 listImg.addAll(listImageUrls.stream().map(item -> {
                     HostelImages hostelImg = new HostelImages();
                     hostelImg.setCreatedBy(authentication.getName());
@@ -1020,7 +940,6 @@ public class HostelService {
             }
 
 
-
 //            hostelV1.setAdditionalImages(new ArrayList<>(listImg));
         }
 
@@ -1031,15 +950,13 @@ public class HostelService {
 
             if (updatePg.street() != null) {
                 hostelV1.setStreet(updatePg.street());
-            }
-            else if (hostelV1.getStreet() != null) {
+            } else if (hostelV1.getStreet() != null) {
                 hostelV1.setStreet(null);
             }
 
             if (updatePg.landmark() != null) {
                 hostelV1.setLandmark(updatePg.landmark());
-            }
-            else if (hostelV1.getLandmark() != null) {
+            } else if (hostelV1.getLandmark() != null) {
                 hostelV1.setLandmark(null);
             }
 
@@ -1115,9 +1032,7 @@ public class HostelService {
             return new ResponseEntity<>(Utils.NO_ADDITIONAL_IMAGES_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        Optional<HostelImages> imageToDeleteOpt = additionalImages.stream()
-                .filter(img -> img.getId().equals(imageId))
-                .findFirst();
+        Optional<HostelImages> imageToDeleteOpt = additionalImages.stream().filter(img -> img.getId().equals(imageId)).findFirst();
 
         if (imageToDeleteOpt.isEmpty()) {
             return new ResponseEntity<>(Utils.IMAGES_NOT_FOUND, HttpStatus.BAD_REQUEST);

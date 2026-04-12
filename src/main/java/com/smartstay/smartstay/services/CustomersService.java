@@ -1536,12 +1536,18 @@ public class CustomersService {
      * @return
      */
     private ResponseEntity<?> generateFinalSettlementCommon(String customerId, BookingsV1 bookingDetails, Customers customers, String leavingDate) {
+        BillingDates billDate = hostelService.getCurrentBillStartAndEndDates(customers.getHostelId());
         Date lDate = null;
         if (leavingDate != null) {
             lDate = Utils.stringToDate(leavingDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            if (billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
+                BillingDates currentBillStartAndEndDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), new Date());
+                if (Utils.compareWithTwoDates(lDate, currentBillStartAndEndDates.currentBillStartDate()) < 0) {
+                    return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+                }
+            }
         }
 
-        BillingDates billDate = hostelService.getCurrentBillStartAndEndDates(customers.getHostelId());
         if (lDate != null) {
             if (Utils.compareWithTwoDates(lDate, new Date()) > 0) {
                 return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
@@ -1555,13 +1561,6 @@ public class CustomersService {
         if (bookingDetails.getNoticeDate() != null) {
             if (Utils.compareWithTwoDates(bookingDetails.getNoticeDate(), lDate) > 0) {
                 return new ResponseEntity<>(Utils.CANNOT_GENERATE_FINAL_SETTLEMENT_INVALID_NOTICE_DATE, HttpStatus.BAD_REQUEST);
-            }
-        }
-
-        if (billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
-            BillingDates currentBillStartAndEndDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), lDate);
-            if (Utils.compareWithTwoDates(lDate, currentBillStartAndEndDates.currentBillStartDate()) < 0) {
-                return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
             }
         }
 

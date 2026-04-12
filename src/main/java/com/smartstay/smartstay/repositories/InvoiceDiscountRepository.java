@@ -6,10 +6,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface InvoiceDiscountRepository extends JpaRepository<InvoiceDiscounts, Long> {
     InvoiceDiscounts findByHostelIdAndInvoiceId(String hostelId, String invoiceId);
+
+
+    Optional<InvoiceDiscounts> findFirstByHostelIdAndInvoiceIdOrderByDiscountIdDesc(String hostelId, String invoiceId);
 
     @Query("""
             SELECT ids FROM InvoiceDiscounts ids WHERE ids.hostelId=:hostelId AND ids.invoiceId IN (:invoiceIds)

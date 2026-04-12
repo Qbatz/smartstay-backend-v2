@@ -722,7 +722,7 @@ public class InvoiceV1Service {
             invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, invoiceBillingDate.dueDays() -1);
         } else {
             invoiceStartDate = filteredBooking.getJoiningDate();
-            invoiceDueDate = Utils.addDaysToDate(filteredBooking.getJoiningDate(), invoiceBillingDate.dueDays());
+            invoiceDueDate = Utils.addDaysToDate(filteredBooking.getJoiningDate(), invoiceBillingDate.dueDays()-1);
         }
 
 
@@ -1694,7 +1694,7 @@ public class InvoiceV1Service {
         }
 
         invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(Utils.addDaysToDate(dateJoiningDate, billingDates.dueDays())));
+        invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(Utils.addDaysToDate(dateJoiningDate, billingDates.dueDays()-1)));
         invoicesV1.setCustomerMobile(invoicesV1.getCustomerMobile());
         invoicesV1.setCustomerMailId(invoicesV1.getCustomerMailId());
         invoicesV1.setGst(0.0);
@@ -1888,7 +1888,7 @@ public class InvoiceV1Service {
             BillingDates billingDates = hostelService.getBillingRuleOnDate(invoicesV1.get(0).getHostelId(), joiningDate);
             InvoicesV1 inv1 = invoicesV1.get(0);
             inv1.setInvoiceStartDate(joiningDate);
-            Date dueDate = Utils.addDaysToDate(joiningDate, billingDates.dueDays());
+            Date dueDate = Utils.addDaysToDate(joiningDate, billingDates.dueDays()-1);
             inv1.setInvoiceDueDate(dueDate);
 
             invoicesV1Repository.save(inv1);
@@ -2061,7 +2061,7 @@ public class InvoiceV1Service {
 
                     newRent = Math.round(noDaysStayingBasedOnNewJoiningDate * rentPerDay);
                 }
-                Date dueDate = Utils.addDaysToDate(newJoiningDate, billingDates.dueDays());
+                Date dueDate = Utils.addDaysToDate(newJoiningDate, billingDates.dueDays()-1);
 
                 Double totalAmount = invoicesV1.getTotalAmount();
                 double oldRent = invoicesV1.getInvoiceItems().stream().filter(i -> i.getInvoiceItem().equalsIgnoreCase(InvoiceType.RENT.name())).mapToDouble(InvoiceItems::getAmount).sum();
@@ -2372,7 +2372,7 @@ public class InvoiceV1Service {
         invoicesV1.setPaidAmount(0.0);
 
         invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joinigDate, billingDates.dueDays()));
+        invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joinigDate, billingDates.dueDays()-1));
         invoicesV1.setGst(0.0);
         invoicesV1.setCgst(0.0);
         invoicesV1.setSgst(0.0);
@@ -2470,7 +2470,7 @@ public class InvoiceV1Service {
             invoicesV1.setPaidAmount(0.0);
 
             invoicesV1.setCreatedBy(authentication.getName());
-            invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joiningDate, billingDates.dueDays()));
+            invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joiningDate, billingDates.dueDays()-1));
             invoicesV1.setGst(0.0);
             invoicesV1.setCgst(0.0);
             invoicesV1.setSgst(0.0);
@@ -3119,13 +3119,13 @@ public class InvoiceV1Service {
             catch (Exception e) {
                 return new ResponseEntity<>(Utils.INVALID_DISCOUNT_PERCENTAGE, HttpStatus.BAD_REQUEST);
             }
-            discountAmount = ((double) percentage /100) * invoicesV1.getBasePrice();
+            discountAmount = Utils.roundOfDouble(((double) percentage / 100) * invoicesV1.getBasePrice());
 
         }
 
         double invoiceTotalAmount = invoicesV1.getTotalAmount();
-        double totalAmount = invoicesV1.getTotalAmount() - discountAmount;
-        invoicesV1.setTotalAmount(Utils.roundOfDouble(totalAmount));
+        double totalAmount = Utils.roundOfDouble(invoicesV1.getTotalAmount() - discountAmount);
+        invoicesV1.setTotalAmount(totalAmount);
         invoicesV1.setDiscounted(true);
         invoicesV1Repository.save(invoicesV1);
 
@@ -3561,7 +3561,7 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
-        invoicesV1.setTotalAmount(invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference());
+        invoicesV1.setTotalAmount(Utils.roundOfDouble(invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference()));
 
         invoicesV1Repository.save(invoicesV1);
         paymentSummaryService.editDiscount(invoicesV1.getCustomerId(), isDiscountApplied.invoiceDifference());
