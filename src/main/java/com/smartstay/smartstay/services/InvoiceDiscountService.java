@@ -39,15 +39,12 @@ public class InvoiceDiscountService {
     }
 
     public com.smartstay.smartstay.dto.invoices.InvoiceDiscounts getInvoiceDiscounts(String hostelId, String invoiceId) {
-        InvoiceDiscounts discounts = invoiceDiscountRepository.findByHostelIdAndInvoiceId(hostelId, invoiceId);
-        if (discounts != null) {
-            com.smartstay.smartstay.dto.invoices.InvoiceDiscounts invoiceDiscounts = new com.smartstay.smartstay.dto.invoices.InvoiceDiscounts(discounts.getDiscountReason(),
-                    discounts.getDiscountPercentage(),
-                    discounts.getDiscountAmount());
-            return invoiceDiscounts;
-        }
-
-        return null;
+        return invoiceDiscountRepository.findFirstByHostelIdAndInvoiceIdOrderByDiscountIdDesc(hostelId, invoiceId)
+                .map(d -> new com.smartstay.smartstay.dto.invoices.InvoiceDiscounts(
+                        d.getDiscountReason(),
+                        d.getDiscountPercentage(),
+                        d.getDiscountAmount()
+                )).orElse(null);
     }
 
     public InvoiceDiscountDto editDiscount(String hostelId, String invoiceId, ApplyDiscount discount) {
@@ -59,7 +56,7 @@ public class InvoiceDiscountService {
             double discountPercentage = 0.0;
             if (discount.discountPercentage() != null) {
                 discountPercentage = Double.parseDouble(String.valueOf(discount.discountPercentage()));
-                discountAmount = ((double) discountPercentage /100) * invDiscount.getInvoiceAmount();
+                discountAmount = (double) Math.round(((double) discountPercentage / 100) * invDiscount.getInvoiceAmount());
             }
             else if (discount.discountAmount() != null) {
                 discountAmount = discount.discountAmount();
@@ -91,7 +88,7 @@ public class InvoiceDiscountService {
     public double deleteInvoiceDiscount(String hostelId, String invoiceId) {
         InvoiceDiscounts invoiceDiscounts = invoiceDiscountRepository.findByHostelIdAndInvoiceId(hostelId, invoiceId);
         if (invoiceDiscounts != null) {
-            invoiceDiscounts.setActive(true);
+            invoiceDiscounts.setActive(false);
             invoiceDiscountRepository.save(invoiceDiscounts);
             return invoiceDiscounts.getDiscountAmount();
         }
