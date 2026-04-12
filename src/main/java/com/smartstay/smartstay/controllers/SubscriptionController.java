@@ -29,6 +29,9 @@ public class SubscriptionController {
         return subscriptionService.subscribeSingleHostel(hostelId, subscription);
     }
 
-
+    @PostMapping("/mobile/subscribe/{hostelId}")
+    public ResponseEntity<?> addMobileSubscription(@PathVariable("hostelId") String hostelId, @RequestBody @Valid Subscription subscription) {
+        return subscriptionService.addSubscriptionMobile(hostelId, subscription);
+    }
 
 }
