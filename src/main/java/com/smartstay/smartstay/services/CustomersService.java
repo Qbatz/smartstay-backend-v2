@@ -1345,10 +1345,14 @@ public class CustomersService {
         String createdAt = Utils.dateToDateTime(customers.getCreatedAt());
         String createdBy = customers.getCreatedBy();
         String createdByName = null;
+        String createdByInitials = null;
+        String createdByPic = null;
         if (createdBy != null && !createdBy.isEmpty()) {
             Users createdByUser = userService.findUserByUserId(createdBy);
             if (createdByUser != null) {
                 createdByName = Utils.fullName(createdByUser.getFirstName(), createdByUser.getLastName());
+                createdByInitials = Utils.getInitials(createdByUser.getFirstName(), createdByUser.getLastName());
+                createdByPic = createdByUser.getProfileUrl();
             }
         }
 
@@ -1383,7 +1387,9 @@ public class CustomersService {
                 createdTime,
                 createdAt,
                 createdBy,
-                createdByName);
+                createdByName,
+                createdByInitials,
+                createdByPic);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
