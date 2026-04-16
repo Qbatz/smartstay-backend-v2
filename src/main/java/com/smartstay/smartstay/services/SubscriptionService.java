@@ -355,6 +355,9 @@ public class SubscriptionService {
         if (plans.getPlanType().equalsIgnoreCase(PlanType.TRIAL.name())) {
             return new ResponseEntity<>(Utils.CANNOT_MAKE_PAYMENT_FOR_TRIAL_PERIOD, HttpStatus.BAD_REQUEST);
         }
+        if (plans.getPlanType().equalsIgnoreCase(PlanType.ADVANCED.name())) {
+            return new ResponseEntity<>(Utils.ADVANCE_PLAN_SUBSCRIPTION_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
+        }
 
         Subscription latestSubscription = subscriptionRepository.findLatestSubscription(hostelId);
         if (latestSubscription == null) {
@@ -384,23 +387,23 @@ public class SubscriptionService {
 //        String paymentUrl = "http://localhost:8083/v2/payments/generate/" + hostelId ;
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody);
 
-        ResponseEntity<PaymentSession> responseEntity = restTemplate.exchange(paymentUrl, HttpMethod.POST, entity, PaymentSession.class);
-        if (responseEntity.getStatusCode() == HttpStatus.OK) {
-            PaymentSession session = responseEntity.getBody();
-            if (session != null) {
-                PaymentSessionResponse response = new PaymentSessionResponse(session.getSessionId(),
-                        session.getAmount(),
-                        "1003.b2a3acfd49c278e09485f9d3a07e6728.07ecfeb8627ef8e907173b524a161bee",
-                        "60035196766",
-                        "live");
+//        ResponseEntity<PaymentSession> responseEntity = restTemplate.exchange(paymentUrl, HttpMethod.POST, entity, PaymentSession.class);
+//        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+//            PaymentSession session = responseEntity.getBody();
+//            if (session != null) {
+//                PaymentSessionResponse response = new PaymentSessionResponse(session.getSessionId(),
+//                        session.getAmount(),
+//                        "1003.b2a3acfd49c278e09485f9d3a07e6728.07ecfeb8627ef8e907173b524a161bee",
+//                        "60035196766",
+//                        "live");
+//
+//                return new ResponseEntity<>(response, HttpStatus.OK);
+//            }
 
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            }
+            return new ResponseEntity<>("Currently unavailable. use web app for renewal.", HttpStatus.BAD_REQUEST);
 
-            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+//        }
 
-        }
-
-        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+//        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
     }
 }

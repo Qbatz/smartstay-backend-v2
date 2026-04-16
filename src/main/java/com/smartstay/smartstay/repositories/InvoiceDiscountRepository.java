@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @Repository
 public interface InvoiceDiscountRepository extends JpaRepository<InvoiceDiscounts, Long> {
-    InvoiceDiscounts findByHostelIdAndInvoiceId(String hostelId, String invoiceId);
+//    InvoiceDiscounts findByHostelIdAndInvoiceIdAndIsActiveTrue(String hostelId, String invoiceId);
 
 
     Optional<InvoiceDiscounts> findFirstByHostelIdAndInvoiceIdOrderByDiscountIdDesc(String hostelId, String invoiceId);

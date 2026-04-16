@@ -28,8 +28,8 @@ public class InvoiceDiscountService {
         invoiceDiscounts.setHostelId(hostelId);
         invoiceDiscounts.setCustomerId(customerId);
         invoiceDiscounts.setDiscountReason(discount.reason());
-        invoiceDiscounts.setDiscountAmount(discountAmount);
-        invoiceDiscounts.setDiscountPercentage(percentage);
+        invoiceDiscounts.setDiscountAmount(Utils.roundOffWithTwoDigit(discountAmount));
+        invoiceDiscounts.setDiscountPercentage(Utils.roundOffWithTwoDigit(percentage));
         invoiceDiscounts.setInvoiceAmount(totalInvoiceAmount);
         invoiceDiscounts.setActive(true);
         invoiceDiscounts.setCreatedAt(new Date());
@@ -48,7 +48,7 @@ public class InvoiceDiscountService {
     }
 
     public InvoiceDiscountDto editDiscount(String hostelId, String invoiceId, ApplyDiscount discount) {
-        InvoiceDiscounts invDiscount = invoiceDiscountRepository.findByHostelIdAndInvoiceId(hostelId, invoiceId);
+        InvoiceDiscounts invDiscount = invoiceDiscountRepository.findByHostelIdAndInvoiceIdAndIsActiveTrue(hostelId, invoiceId);
         double oldInvoiceDiscount = 0.0;
         if (invDiscount != null) {
             oldInvoiceDiscount = invDiscount.getDiscountAmount();
@@ -70,8 +70,8 @@ public class InvoiceDiscountService {
                 invDiscount.setDiscountReason(null);
             }
 
-            invDiscount.setDiscountPercentage(discountPercentage);
-            invDiscount.setDiscountAmount(discountAmount);
+            invDiscount.setDiscountPercentage(Utils.roundOffWithTwoDigit(discountPercentage));
+            invDiscount.setDiscountAmount(Utils.roundOffWithTwoDigit(discountAmount));
 
             invoiceDiscountRepository.save(invDiscount);
 
@@ -86,7 +86,7 @@ public class InvoiceDiscountService {
     }
 
     public double deleteInvoiceDiscount(String hostelId, String invoiceId) {
-        InvoiceDiscounts invoiceDiscounts = invoiceDiscountRepository.findByHostelIdAndInvoiceId(hostelId, invoiceId);
+        InvoiceDiscounts invoiceDiscounts = invoiceDiscountRepository.findByHostelIdAndInvoiceIdAndIsActiveTrue(hostelId, invoiceId);
         if (invoiceDiscounts != null) {
             invoiceDiscounts.setActive(false);
             invoiceDiscountRepository.save(invoiceDiscounts);
@@ -130,5 +130,24 @@ public class InvoiceDiscountService {
         }
 
         return new ArrayList<>();
+    }
+
+    public InvoiceDiscountDto modifyInvoiceDiscount(String hostelId, String invoiceId, Double discountAmount) {
+        InvoiceDiscounts invoiceDiscounts = invoiceDiscountRepository
+                .findByHostelIdAndInvoiceIdAndIsActiveTrue(hostelId, invoiceId);
+        if (invoiceDiscounts != null) {
+            double discountPercentage = 0.0;
+            double appliedDiscountAmount = invoiceDiscounts.getDiscountAmount();
+            discountPercentage =  (discountAmount/invoiceDiscounts.getInvoiceAmount()) * 100;
+
+            double balance = appliedDiscountAmount - discountAmount;
+
+            invoiceDiscounts.setDiscountAmount(discountAmount);
+            invoiceDiscounts.setDiscountPercentage(discountPercentage);
+
+            return new InvoiceDiscountDto(discountPercentage, discountAmount, appliedDiscountAmount, balance);
+        }
+
+        return null;
     }
 }
