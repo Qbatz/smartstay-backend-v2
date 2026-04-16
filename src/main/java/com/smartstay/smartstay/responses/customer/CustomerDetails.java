@@ -40,5 +40,7 @@ public record CustomerDetails(String customerId,
                               String createdTime,
                               String createdAt,
                               String createdBy,
-                              String createdByName) {
+                              String createdByName,
+                              String createdByInitials,
+                              String createdByPic) {
 }
