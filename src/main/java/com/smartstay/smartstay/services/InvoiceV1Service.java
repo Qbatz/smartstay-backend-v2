@@ -2606,7 +2606,13 @@ public class InvoiceV1Service {
 
         Double newInvoiceAmount = invoiceItemService.updateRecurringInvoiceItems(recurringInvoiceItems, invoicesV1);
 
+        double gstPercentile = invoicesV1.getGstPercentile() != null ? invoicesV1.getGstPercentile() : 0.0;
+        double basePrice = Utils.roundOffWithTwoDigit(newInvoiceAmount / (1 + (gstPercentile / 100)));
+        double gstAmount = newInvoiceAmount - basePrice;
+
         invoicesV1.setTotalAmount(newInvoiceAmount);
+        invoicesV1.setBasePrice(basePrice);
+        invoicesV1.setGst(Utils.roundOfDouble(gstAmount));
 
         invoicesV1Repository.save(invoicesV1);
 
