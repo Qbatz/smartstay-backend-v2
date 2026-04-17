@@ -142,6 +142,7 @@ public class Utils {
     public static final String FLAT_RATE_REQUIRED = "Flat rate is required";
     public static final String INVALID_PLAN_CODE = "Invalid plan code";
     public static final String CANNOT_MAKE_PAYMENT_FOR_TRIAL_PERIOD = "Cannot make a payment for trial period";
+    public static final String ADVANCE_PLAN_SUBSCRIPTION_NOT_AVAILABLE = "Advanced subscription is not available";
     public static final String TEMPLATE_NOT_AVAILABLE = "Template not available for this hostel";
     public static final String BILLING_RULE_NOT_AVAILABLE = "Billing Rule not found";
     public static final String CUSTOMER_ALREADY_CHECKED_IN = "Customer is already checked in";

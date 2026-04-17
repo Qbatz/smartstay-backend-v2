@@ -662,8 +662,21 @@ public class TransactionService {
 
     public Double getFinalSettlementPaidAmount(String invoiceId) {
         List<TransactionV1> listTransactions = transactionRespository.findByInvoiceId(invoiceId);
+        if (listTransactions == null) {
+            return 0.0;
+        }
 
-        return listTransactions.stream().mapToDouble(TransactionV1::getPaidAmount).sum();
+        double paidAmount = listTransactions
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getPaidAmount() == null) {
+                        return 0.0;
+                    }
+                    return i.getPaidAmount();
+                })
+                .sum();
+
+        return paidAmount;
     }
 
     public ResponseEntity<?> refundForInvoice(String hostelId, String invoiceId, RefundInvoice refundInvoice) {

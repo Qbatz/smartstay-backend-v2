@@ -4,6 +4,7 @@ import com.smartstay.smartstay.Wrappers.plans.PlanListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.subscription.PaymentSession;
 import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
@@ -11,6 +12,7 @@ import com.smartstay.smartstay.ennum.PlanType;
 import com.smartstay.smartstay.payloads.subscription.PaymentLinks;
 import com.smartstay.smartstay.repositories.SubscriptionRepository;
 import com.smartstay.smartstay.responses.plans.PlansList;
+import com.smartstay.smartstay.responses.subscriptions.PaymentSessionResponse;
 import com.smartstay.smartstay.sockets.ClientConnect;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -316,5 +319,91 @@ public class SubscriptionService {
 
     public void saveFromEvents(Subscription subscription) {
         subscriptionRepository.save(subscription);
+    }
+
+    public ResponseEntity<?> addSubscriptionMobile(String hostelId, com.smartstay.smartstay.payloads.subscription.Subscription subscription) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_SUBSCRIPTION, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (subscription == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (subscription.planCode() == null) {
+            return new ResponseEntity<>(Utils.PLAN_CODE_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        Plans plans = plansService.findPlanByPlanCode(subscription.planCode());
+        if (plans == null) {
+            return new ResponseEntity<>(Utils.INVALID_PLAN_CODE, HttpStatus.BAD_REQUEST);
+        }
+        if (plans.getPlanType().equalsIgnoreCase(PlanType.TRIAL.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_MAKE_PAYMENT_FOR_TRIAL_PERIOD, HttpStatus.BAD_REQUEST);
+        }
+        if (plans.getPlanType().equalsIgnoreCase(PlanType.ADVANCED.name())) {
+            return new ResponseEntity<>(Utils.ADVANCE_PLAN_SUBSCRIPTION_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
+        }
+
+        Subscription latestSubscription = subscriptionRepository.findLatestSubscription(hostelId);
+        if (latestSubscription == null) {
+            return new ResponseEntity<>(Utils.INVALID_SUBSCRIPTION, HttpStatus.BAD_REQUEST);
+        }
+
+        double discountAmount = 0.0;
+        double discountPercentage = 0.0;
+        double totalAmount = plans.getPrice();
+        if (subscription.discountAmount() != null) {
+            discountAmount = subscription.discountAmount();
+            discountPercentage = (discountAmount / totalAmount) * 100;
+        }
+        else if (subscription.discountPercentage() != null) {
+            discountPercentage = subscription.discountPercentage();
+            discountAmount = (discountPercentage/100) * totalAmount;
+        }
+        double finalAmount = totalAmount - discountAmount;
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("amount", finalAmount);
+        requestBody.put("currency", "INR");
+        requestBody.put("description", "Plan renewal");
+
+        String paymentUrl = "https://payment.qbatz.com/v2/payments/session/" + hostelId ;
+
+//        String paymentUrl = "http://localhost:8083/v2/payments/generate/" + hostelId ;
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody);
+
+//        ResponseEntity<PaymentSession> responseEntity = restTemplate.exchange(paymentUrl, HttpMethod.POST, entity, PaymentSession.class);
+//        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+//            PaymentSession session = responseEntity.getBody();
+//            if (session != null) {
+//                PaymentSessionResponse response = new PaymentSessionResponse(session.getSessionId(),
+//                        session.getAmount(),
+//                        "1003.b2a3acfd49c278e09485f9d3a07e6728.07ecfeb8627ef8e907173b524a161bee",
+//                        "60035196766",
+//                        "live");
+//
+//                return new ResponseEntity<>(response, HttpStatus.OK);
+//            }
+
+            return new ResponseEntity<>("Currently unavailable. use web app for renewal.", HttpStatus.BAD_REQUEST);
+
+//        }
+
+//        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
     }
 }
