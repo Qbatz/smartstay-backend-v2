@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 public class ReminderSchedulers {
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
+
+//    @Scheduled(cron = "0 0 8 * * *") for production
+//    @Scheduled(cron = "0 0 7 * * *") for dev
     @Scheduled(cron = "0 0 8 * * *")
     public void sendReminderNotifications() {
         applicationEventPublisher.publishEvent(new ReminderEvents(this));
