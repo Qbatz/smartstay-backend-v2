@@ -5,6 +5,7 @@ import com.smartstay.smartstay.ennum.CardType;
 import com.smartstay.smartstay.responses.beds.Bank;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.function.Function;
 
 public class BankingListMapper implements Function<BankingV1, Bank>{
@@ -21,7 +22,9 @@ public class BankingListMapper implements Function<BankingV1, Bank>{
             cardType = CardType.CREDIT.name();
         }
         if (bankingV1.getBalance() != null ) {
-            balance = BigDecimal.valueOf(bankingV1.getBalance());
+            balance = BigDecimal
+                    .valueOf(bankingV1.getBalance())
+                    .setScale(2, RoundingMode.HALF_UP);
         }
          return new Bank(bankingV1.getBankId(),
                 bankingV1.getBankName(),

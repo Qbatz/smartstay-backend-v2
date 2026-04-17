@@ -107,12 +107,13 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             invoiceType = "Settlement";
-            if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
-                if (invoicesV1.getTotalAmount() - paidAmount < 0) {
-                    isRefundable = true;
+            if (invoicesV1.getPaymentStatus() != null) {
+                if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
+                    if (invoicesV1.getTotalAmount() - paidAmount < 0) {
+                        isRefundable = true;
+                    }
                 }
             }
-
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
             invoiceType = "Reassign-Rent";

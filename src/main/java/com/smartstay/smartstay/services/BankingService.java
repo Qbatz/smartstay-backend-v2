@@ -237,7 +237,7 @@ public class BankingService {
 
                         return new TransactionDto(item.transactionId(),
                                 item.referenceNumber(),
-                                item.amount(),
+                                Utils.roundOffWithTwoDigit(item.amount()),
                                 item.type(),
                                 item.source(),
                                 item.createdBy(),
