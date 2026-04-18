@@ -54,6 +54,14 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             @Param("status") List<String> status
     );
 
+    @Query("""
+            SELECT c FROM Customers c WHERE c.hostelId=:hostelId AND 
+            (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR 
+            LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND 
+            c.currentStatus IN (:type)
+            """)
+    List<Customers> listCustomers(String hostelId, String name, List<String> type);
+
     @Query(value = """
             SELECT cus.first_name AS firstName, cus.last_name as lastName, cus.city, cus.mobile, cus.state, cus.joining_date, 
             cus.created_at, cus.country, cus.current_status AS currentStatus, 
