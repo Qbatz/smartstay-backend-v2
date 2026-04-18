@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TenantFilters {
+public class ColumnFilters {
     //it should be pointing the position
     private int order;
     //eg. tenant name or phone or room

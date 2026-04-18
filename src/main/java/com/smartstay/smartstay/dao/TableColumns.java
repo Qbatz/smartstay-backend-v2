@@ -13,16 +13,17 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class FilterOptions {
+public class TableColumns {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long filterOptionId;
-    //From filteroption module enum
+    private Long columnId;
+    private String hostelId;
+    private String userId;
+    //From filter options module
     private String moduleName;
     @Column(columnDefinition = "TEXT")
     @Convert(converter = TenantFilterConverters.class)
-    private List<ColumnFilters> filterOptions;
-    private Boolean isActive;
+    private List<ColumnFilters> columns;
+    private boolean isActive;
     private Date createdAt;
-
 }

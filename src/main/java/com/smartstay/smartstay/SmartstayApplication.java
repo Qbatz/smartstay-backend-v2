@@ -1,30 +1,17 @@
 package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.ennum.*;
-import com.smartstay.smartstay.ennum.PaymentStatus;
-import com.smartstay.smartstay.payloads.roles.Permission;
 import com.smartstay.smartstay.repositories.*;
-import com.smartstay.smartstay.services.TemplatesService;
-import com.smartstay.smartstay.util.BillingCycle;
-import com.smartstay.smartstay.util.BillingCycleUtil;
-import com.smartstay.smartstay.util.Utils;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.yaml.snakeyaml.comments.CommentLine;
 
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 @SpringBootApplication
 @EnableScheduling
@@ -44,69 +31,69 @@ public class SmartstayApplication {
                 tenantFilterOptions.setModuleName(FilterOptionsModule.MODULE_TENANT.name());
                 tenantFilterOptions.setIsActive(true);
                 tenantFilterOptions.setCreatedAt(new Date());
-                List<TenantFilters> filters = new ArrayList<>();
+                List<ColumnFilters> filters = new ArrayList<>();
 
-                TenantFilters filters1 = new TenantFilters();
+                ColumnFilters filters1 = new ColumnFilters();
                 filters1.setSelected(true);
                 filters1.setFieldName("Profile Pic");
                 filters1.setOrder(1);
 
-                TenantFilters filters2 = new TenantFilters();
+                ColumnFilters filters2 = new ColumnFilters();
                 filters2.setSelected(true);
                 filters2.setFieldName("Full Name");
                 filters2.setOrder(2);
 
-                TenantFilters filters3 = new TenantFilters();
+                ColumnFilters filters3 = new ColumnFilters();
                 filters3.setSelected(true);
                 filters3.setFieldName("Status");
                 filters3.setOrder(3);
 
-                TenantFilters filters4 = new TenantFilters();
+                ColumnFilters filters4 = new ColumnFilters();
                 filters4.setSelected(true);
                 filters4.setFieldName("Joining Date");
                 filters4.setOrder(4);
 
-                TenantFilters filters5 = new TenantFilters();
+                ColumnFilters filters5 = new ColumnFilters();
                 filters5.setSelected(true);
                 filters5.setFieldName("Mobile No");
                 filters5.setOrder(5);
 
-                TenantFilters filters6 = new TenantFilters();
+                ColumnFilters filters6 = new ColumnFilters();
                 filters6.setSelected(true);
                 filters6.setFieldName("Floor");
                 filters6.setOrder(6);
 
-                TenantFilters filters7 = new TenantFilters();
+                ColumnFilters filters7 = new ColumnFilters();
                 filters7.setSelected(true);
                 filters7.setFieldName("Room");
                 filters7.setOrder(7);
 
-                TenantFilters filters8 = new TenantFilters();
+                ColumnFilters filters8 = new ColumnFilters();
                 filters8.setSelected(true);
                 filters8.setFieldName("Bed");
                 filters8.setOrder(8);
 
-                TenantFilters filters9 = new TenantFilters();
+                ColumnFilters filters9 = new ColumnFilters();
                 filters9.setSelected(false);
                 filters9.setFieldName("Email ID");
                 filters9.setOrder(9);
 
-                TenantFilters filters10 = new TenantFilters();
+                ColumnFilters filters10 = new ColumnFilters();
                 filters10.setSelected(false);
                 filters10.setFieldName("Booking Date");
                 filters10.setOrder(10);
 
-                TenantFilters filters11 = new TenantFilters();
+                ColumnFilters filters11 = new ColumnFilters();
                 filters11.setSelected(false);
                 filters11.setFieldName("Monthly Rent");
                 filters11.setOrder(11);
 
-                TenantFilters filters12 = new TenantFilters();
+                ColumnFilters filters12 = new ColumnFilters();
                 filters12.setSelected(false);
                 filters12.setFieldName("Advance");
                 filters12.setOrder(12);
 
-                TenantFilters filters13 = new TenantFilters();
+                ColumnFilters filters13 = new ColumnFilters();
                 filters13.setSelected(false);
                 filters13.setFieldName("Booking Amount");
                 filters13.setOrder(13);

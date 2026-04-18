@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.customers.FinalSettlementMapper;
+import com.smartstay.smartstay.Wrappers.customers.TenantTableMapper;
 import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
 import com.smartstay.smartstay.Wrappers.invoices.UnpaidInvoicesMapper;
 import com.smartstay.smartstay.config.Authentication;
@@ -107,6 +108,8 @@ public class CustomersService {
     private AdditionalContactService additionalContactService;
     @Autowired
     private CustomerBillingRulesService customerBillingRulesService;
+    @Autowired
+    private TableColumnService columnService;
     private ElectricityService electricityService;
 
     private AmenityRequestService amenityRequestService;
@@ -317,6 +320,10 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
 
+//        if (authentication.getSource().equalsIgnoreCase("web")) {
+//            return getCustomerDetailsForWeb(hostelId, name, type);
+//        }
+
         List<CustomerData> customerData = searchAndGetCustomers(hostelId, name, type);
         HashMap<String, String> filterOption = new HashMap<>();
         List<com.smartstay.smartstay.responses.customer.CustomerData> listCustomers = customerData.stream().map(item -> {
@@ -383,7 +390,69 @@ public class CustomersService {
                     item.getFloorName());
         }).collect(Collectors.toList());
 
+
+
         CustomersList response = new CustomersList(hostelId, listCustomers.size(), null, listCustomers);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, String type) {
+
+        List<String> typeArray = new ArrayList<>();
+        if (type == null || (type != null && type.trim().equalsIgnoreCase(""))) {
+            typeArray.add(CustomerStatus.NOTICE.name());
+            typeArray.add(CustomerStatus.CHECK_IN.name());
+            typeArray.add(CustomerStatus.BOOKED.name());
+            typeArray.add(CustomerStatus.SETTLEMENT_GENERATED.name());
+        }
+        else {
+            typeArray.add(type.toUpperCase());
+        }
+
+        List<Customers> listCustomers = customersRepository.listCustomers(hostelId, name, typeArray);
+        List<ColumnFilters> listColumns = columnService.getCustomerColumns(hostelId, FilterOptionsModule.MODULE_TENANT.name());
+
+        List<ColumnFilters> activeColumns = listColumns
+                .stream()
+                .filter(ColumnFilters::isSelected)
+                .sorted(Comparator.comparingInt(ColumnFilters::getOrder))
+                .toList();
+        List<String> tableColumns = activeColumns
+                .stream()
+                .map(ColumnFilters::getFieldName)
+                .toList();
+
+        boolean floorRoomBedNameIncluded = false;
+        floorRoomBedNameIncluded = tableColumns
+                .stream().anyMatch(i -> i.equalsIgnoreCase("Floor") || i.equalsIgnoreCase("Room") || i.equalsIgnoreCase("Bed"));
+
+        List<String> listCustomerIds = listCustomers
+                .stream()
+                .map(Customers::getCustomerId)
+                .toList();
+        List<BookingsV1> listBookings = bookingsService.findByCustomerIds(listCustomerIds);
+        List<Integer> bedIds = listBookings
+                .stream()
+                .map(BookingsV1::getBedId)
+                .toList();
+        List<BedDetails> listBedDetails;
+        if (floorRoomBedNameIncluded) {
+            listBedDetails = bedsService.getBedDetails(bedIds);
+        } else {
+            listBedDetails = new ArrayList<>();
+        }
+
+        List<List<Object>> listTenants = listCustomers
+                .stream()
+                .map(i -> new TenantTableMapper(listBedDetails, listBookings, tableColumns).apply(i))
+                .toList();
+
+        CustomerWebResponse response = new CustomerWebResponse(
+                listCustomers.size(),
+                tableColumns,
+                listColumns,
+                listTenants
+        );
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -3672,5 +3741,95 @@ public class CustomersService {
 
         return additionalContactService.addAdditionalContacts(hostelId, customerId, additionalContacts);
 
+    }
+
+    public ResponseEntity<?> getAllCustomersForHostelNew(String hostelId, String name, String type) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (authentication.getSource().equalsIgnoreCase("web")) {
+            return getCustomerDetailsForWeb(hostelId, name, type);
+        }
+
+        List<CustomerData> customerData = searchAndGetCustomers(hostelId, name, type);
+        HashMap<String, String> filterOption = new HashMap<>();
+        List<com.smartstay.smartstay.responses.customer.CustomerData> listCustomers = customerData.stream().map(item -> {
+            StringBuilder initials = new StringBuilder();
+            StringBuilder fullName = new StringBuilder();
+            if (item.getFirstName() != null) {
+                initials.append(item.getFirstName().toUpperCase().charAt(0));
+                fullName.append(item.getFirstName());
+            }
+            if (item.getLastName() != null && !item.getLastName().equalsIgnoreCase("")) {
+                fullName.append(" ");
+                fullName.append(item.getLastName());
+                initials.append(item.getLastName().toUpperCase().charAt(0));
+
+            } else {
+                if (item.getFirstName().length() > 1) {
+                    initials.append(item.getFirstName().toUpperCase().charAt(1));
+                }
+            }
+            String currentStatus = null;
+            if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
+                currentStatus = "Booked";
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+                currentStatus = "Vacated";
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
+                currentStatus = "Notice Period";
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+                currentStatus = "Checked In";
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
+                currentStatus = "Inactive";
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ACTIVE.name())) {
+                currentStatus = "Active";
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
+                currentStatus = "Cancelled";
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+                currentStatus = "Settlement Generated";
+            }
+
+            if (!filterOption.containsKey(currentStatus)) {
+                filterOption.put(currentStatus, currentStatus);
+            }
+
+            return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
+                    item.getLastName(),
+                    fullName.toString(),
+                    item.getCity(),
+                    item.getState(),
+                    item.getCountry(),
+                    item.getMobile(),
+                    currentStatus,
+                    item.getEmailId(),
+                    item.getProfilePic(),
+                    item.getBedId(),
+                    item.getFloorId(),
+                    item.getRoomId(),
+                    item.getCustomerId(),
+                    initials.toString(),
+                    Utils.dateToString(item.getExpectedJoiningDate()),
+                    Utils.dateToString(item.getActualJoiningDate()),
+                    item.getCountryCode(),
+                    Utils.dateToString(item.getCreatedAt()),
+                    item.getBedName(),
+                    item.getRoomName(),
+                    item.getFloorName());
+        }).collect(Collectors.toList());
+
+
+
+        CustomersList response = new CustomersList(hostelId, listCustomers.size(), null, listCustomers);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
