@@ -117,7 +117,7 @@ public class JoiningBasedPrepaidEventListener {
                 prefixSuffix.append("001");
             }
 
-            Date dueDate = Utils.addDaysToDate(new Date(), billingDates.dueDays());
+            Date dueDate = Utils.addDaysToDate(new Date(), billingDates.dueDays()-1);
             int cycleStartDate = Utils.dateToDate(new Date());
             Date invoiceEndDate = Utils.findLastDate(cycleStartDate, new Date());
             InvoicesV1 invoicesV1 = new InvoicesV1();
