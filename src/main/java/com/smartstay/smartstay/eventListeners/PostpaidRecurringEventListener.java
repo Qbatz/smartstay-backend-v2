@@ -124,11 +124,11 @@ public class PostpaidRecurringEventListener {
                         if (Utils.compareWithTwoDates(item.getJoiningDate(), currentBillingInvoiceStartDate) <= 0) {
                             rentAmount = item.getRentAmount();
                             invoiceStartDate.set(currentBillingInvoiceStartDate);
-                            invoiceDueDate.set(Utils.addDaysToDate(newMonthBillDate.currentBillStartDate(), invoiceMonthBillingDates.dueDays()));
+                            invoiceDueDate.set(Utils.addDaysToDate(newMonthBillDate.currentBillStartDate(), invoiceMonthBillingDates.dueDays()-1));
                         }
                         else {
                             invoiceStartDate.set(item.getJoiningDate());
-                            invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()));
+                            invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()-1));
                             if (invoiceMonthBillingDates.hasGracePeriod()) {
                                 Date dateAfterGracePeriod = Utils.addDaysToDate(currentBillingInvoiceStartDate, invoiceMonthBillingDates.gracePeriodDays());
                                 if (Utils.compareWithTwoDates(item.getJoiningDate(), dateAfterGracePeriod) <= 0) {
@@ -146,11 +146,11 @@ public class PostpaidRecurringEventListener {
                     else {
                         if (Utils.compareWithTwoDates(item.getJoiningDate(), invoiceMonthBillingDates.currentBillStartDate()) <= 0) {
                             invoiceStartDate.set(invoiceMonthBillingDates.currentBillStartDate());
-                            invoiceDueDate.set(Utils.addDaysToDate(invoiceMonthBillingDates.currentBillStartDate(), invoiceMonthBillingDates.dueDays()));
+                            invoiceDueDate.set(Utils.addDaysToDate(invoiceMonthBillingDates.currentBillStartDate(), invoiceMonthBillingDates.dueDays()-1));
                         }
                         else {
                             invoiceStartDate.set(item.getJoiningDate());
-                            invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()));
+                            invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()-1));
                         }
                         //executes when bed change happens
                         List<CustomersBedHistory> oldBedHistories = currentHistory
