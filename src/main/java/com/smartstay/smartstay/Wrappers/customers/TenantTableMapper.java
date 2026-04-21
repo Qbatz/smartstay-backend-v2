@@ -106,6 +106,11 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
                         return Utils.dateToString(bookingsV1.getExpectedJoiningDate());
                     }
                 }
+                if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
+                    if (bookingsV1.getJoiningDate() != null) {
+                        return Utils.dateToString(bookingsV1.getJoiningDate());
+                    }
+                }
             }
             return "NA";
         }

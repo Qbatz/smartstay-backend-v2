@@ -39,7 +39,10 @@ public class TableColumnService {
             return filterOptionsService.findCustomersBasicFilters();
         }
 
-        return customerTableColumns.getColumns();
+        return customerTableColumns.getColumns()
+                .stream()
+                .sorted(Comparator.comparing(ColumnFilters::getOrder))
+                .toList();
     }
 
     public ResponseEntity<?> updateCustomerTableFields(String hostelId, List<CustomersTablesColumn> customersTables) {
@@ -57,6 +60,10 @@ public class TableColumnService {
            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
        }
 
+       if (customersTables.isEmpty()) {
+           return new ResponseEntity<>(Utils.ATLEAST_ONE_COLUMN_REQUIRED, HttpStatus.BAD_REQUEST);
+       }
+
        TableColumns tableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, users.getUserId(), FilterOptionsModule.MODULE_TENANT.name());
        if (tableColumns == null) {
            List<ColumnFilters> listDefaultColumns = filterOptionsService.findCustomersBasicFilters();
@@ -67,46 +74,58 @@ public class TableColumnService {
            tableColumns.setActive(true);
            tableColumns.setCreatedAt(new Date());
 
-           List<ColumnFilters> listNewColumnFilters = new ArrayList<>(listDefaultColumns
-                   .stream()
-                   .map(i -> {
-                       boolean isExist = !customersTables
-                               .stream()
-                               .filter(i2 -> i2.fieldName().equalsIgnoreCase(i.getFieldName()))
-                               .toList().isEmpty();
-                       if (isExist) {
-                           i.setSelected(true);
-                       }
-                       else {
-                           i.setSelected(false);
-                       }
+           boolean isAnySelected = customersTables
+                   .stream().anyMatch(CustomersTablesColumn::isSelected);
+           if (!isAnySelected) {
+               tableColumns.setColumns(listDefaultColumns);
+           }
+           else {
 
-                       return i;
-                   })
-                   .toList());
+               List<ColumnFilters> listNewColumns = customersTables
+                       .stream()
+                       .map(i -> {
+                           ColumnFilters newFilters = new ColumnFilters();
+                           newFilters.setSelected(i.isSelected());
+                           newFilters.setFieldName(i.fieldName());
+                           newFilters.setOrder(i.order());
 
-           tableColumns.setColumns(listNewColumnFilters);
+                           return newFilters;
+                       })
+                       .toList();
+
+
+               tableColumns.setColumns(listNewColumns);
+           }
+
+
 
            tableColumnsRepositories.save(tableColumns);
 
        }
        else {
-           List<ColumnFilters> listNewColumnFilters = new ArrayList<>(tableColumns.getColumns()
-                   .stream()
-                   .map(i -> {
-                       boolean isExist = !customersTables
-                               .stream()
-                               .filter(i2 -> i2.fieldName().equalsIgnoreCase(i.getFieldName()))
-                               .toList().isEmpty();
-                       if (isExist) {
-                           i.setSelected(true);
-                       }
+           List<ColumnFilters> listDefaultColumns = filterOptionsService.findCustomersBasicFilters();
+           boolean isAnySelected = customersTables
+                   .stream().anyMatch(CustomersTablesColumn::isSelected);
+           if (!isAnySelected) {
+               tableColumns.setColumns(listDefaultColumns);
+           }
+           else {
 
-                       return i;
-                   })
-                   .toList());
+               List<ColumnFilters> listNewColumns = customersTables
+                       .stream()
+                       .map(i -> {
+                           ColumnFilters newFilters = new ColumnFilters();
+                           newFilters.setSelected(i.isSelected());
+                           newFilters.setFieldName(i.fieldName());
+                           newFilters.setOrder(i.order());
 
-           tableColumns.setColumns(listNewColumnFilters);
+                           return newFilters;
+                       })
+                       .toList();
+
+
+               tableColumns.setColumns(listNewColumns);
+           }
 
            tableColumnsRepositories.save(tableColumns);
        }

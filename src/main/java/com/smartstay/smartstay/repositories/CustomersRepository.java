@@ -3,6 +3,8 @@ package com.smartstay.smartstay.repositories;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dto.customer.CheckoutCustomers;
 import com.smartstay.smartstay.dto.customer.CustomerData;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -54,13 +56,19 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             @Param("status") List<String> status
     );
 
-    @Query("""
+    @Query(value = """
             SELECT c FROM Customers c WHERE c.hostelId=:hostelId AND 
             (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR 
             LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND 
             c.currentStatus IN (:type)
+            """,
+    countQuery = """
+             SELECT count(*) FROM Customers c WHERE c.hostelId=:hostelId AND 
+            (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR 
+            LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND 
+            c.currentStatus IN (:type)
             """)
-    List<Customers> listCustomers(String hostelId, String name, List<String> type);
+    Page<Customers> listCustomers(String hostelId, String name, List<String> type, Pageable pageable);
 
     @Query(value = """
             SELECT cus.first_name AS firstName, cus.last_name as lastName, cus.city, cus.mobile, cus.state, cus.joining_date, 

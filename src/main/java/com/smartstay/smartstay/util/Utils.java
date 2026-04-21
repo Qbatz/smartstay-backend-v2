@@ -96,6 +96,7 @@ public class Utils {
     public static final String PAYMENT_SUCCESS = "Payment Success";
     public static final String CUSTOMER_ON_NOTICE = "Customer is already on notice";
     public static final String CUSTOMER_BOOKING_NOT_FOUND = "Booking not found for this customer";
+    public static final String CUSTOMER_NOT_FOUND = "Customer not found";
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
     public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
@@ -110,6 +111,7 @@ public class Utils {
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
     public static final String INVALID_BOOKING_ID = "Invalid booking id";
     public static final String PAYLOADS_REQUIRED = "Payloads required";
+    public static final String PARAMS_REQUIRED = "Params required";
     public static final String TRY_AGAIN = "Try Again";
     public static final String SUBSCRIPTION_EXPIRED = "Subscription has expired. Please renew to continue.";
     public static final String INVALID_BED_ID = "Invalid bed id passed";
@@ -192,6 +194,7 @@ public class Utils {
     public static final String INVALID_DUE_DYS = "Invalid due days";
     public static final String INVALID_NOTICE_DAYS = "Invalid notice days";
     public static final String FULL_NAME_REQUIRES = "Full name is required";
+    public static final String ATLEAST_ONE_COLUMN_REQUIRED = "Atleast one column required";
 
     public static final String INVALID_GRACE_PERIOD = "Invalid grace period.";
     public static final String PERMISSION_READ = "READ";

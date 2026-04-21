@@ -84,13 +84,12 @@ public class CustomersController {
 //    }
 
     @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getAllCustomerForHostel(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required=false) String name, @RequestParam(value = "type", required = false) String type) {
-        return customersService.getAllCustomersForHostel(hostelId, name, type);
-    }
-
-    @GetMapping("/new/{hostelId}")
-    public ResponseEntity<?> getAllCustomersNew(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required=false) String name, @RequestParam(value = "type", required = false) String type) {
-        return customersService.getAllCustomersForHostelNew(hostelId, name, type);
+    public ResponseEntity<?> getAllCustomerForHostel(@PathVariable("hostelId") String hostelId,
+                                                     @RequestParam(value = "name", required=false) String name,
+                                                     @RequestParam(value = "type", required = false) String type,
+                                                     @RequestParam(value = "page", defaultValue = "1") int page,
+                                                     @RequestParam(value = "size", defaultValue = "10") int size) {
+        return customersService.getAllCustomersForHostel(hostelId, name, type, page, size);
     }
 
     @GetMapping("/details/{customerId}")
@@ -135,5 +134,10 @@ public class CustomersController {
     @PutMapping("/additional-contacts/{hostelId}/{customerId}")
     public ResponseEntity<?> addAdditionalContacts(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @Valid @RequestBody CustomerAdditionalContacts additionalContacts) {
         return customersService.addAdditionalContacts(hostelId, customerId, additionalContacts);
+    }
+
+    @GetMapping("/get/{hostelId}")
+    public ResponseEntity<?> getCustomersList(@PathVariable("hostelId") String hostelId, @Param("purpose") GetCustomersPurpose purpose) {
+        return customersService.getCustomersOnPurpose(hostelId, purpose);
     }
  }

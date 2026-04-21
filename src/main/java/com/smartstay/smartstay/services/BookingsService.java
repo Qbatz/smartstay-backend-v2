@@ -1277,4 +1277,12 @@ public class BookingsService {
     public List<BookingsV1> findByCustomerIds(List<String> listCustomerIds) {
         return bookingsRepository.findByCustomerIdIn(listCustomerIds);
     }
+
+    public List<RentHistory> getNewRentAmount(String customerId, Date date) {
+        BookingsV1 bookingsV1 = bookingsRepository.findByCustomerId(customerId);
+        if (bookingsV1 != null) {
+            return bookingsV1.getRentHistory();
+        }
+        return null;
+    }
 }
