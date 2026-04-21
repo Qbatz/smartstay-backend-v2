@@ -22,6 +22,12 @@ public class SmartstayApplication {
         SpringApplication.run(SmartstayApplication.class, args);
     }
 
+    /**
+     * required to run on production environment
+     *
+     * @param filterOptionsRepositories
+     * @return
+     */
     @Bean
     CommandLineRunner addTenantBasicFilterOptions(FilterOptionsRepositories filterOptionsRepositories) {
         return args -> {

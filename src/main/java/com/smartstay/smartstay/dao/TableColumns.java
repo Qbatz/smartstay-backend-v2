@@ -26,4 +26,5 @@ public class TableColumns {
     private List<ColumnFilters> columns;
     private boolean isActive;
     private Date createdAt;
+    private Date updatedAt;
 }

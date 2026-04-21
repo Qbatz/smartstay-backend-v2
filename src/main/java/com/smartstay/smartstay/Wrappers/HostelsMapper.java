@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
 import com.smartstay.smartstay.responses.Hostels;
 import com.smartstay.smartstay.responses.hostel.HostelImages;
+import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.security.core.parameters.P;
 
@@ -34,18 +35,18 @@ public class HostelsMapper implements Function<HostelV1, Hostels> {
         List<HostelImages> listImages = hostelV1.getAdditionalImages()
                 .stream()
                 .map(item -> new HostelImages(item.getImageUrl(), item.getId())).toList();
-        String[] initialsArray = null;
         StringBuilder initials = new StringBuilder();
         if (hostelV1.getHostelName() != null) {
-            initialsArray = hostelV1.getHostelName().split(" ");
-            if (initialsArray.length > 1) {
-                initials.append(initialsArray[0].toUpperCase().charAt(0));
-                initials.append(initialsArray[initialsArray.length -1].toUpperCase().charAt(0));
-            }
-            else {
-                initials.append(initialsArray[0].toUpperCase().charAt(0));
-                initials.append(initialsArray[0].toUpperCase().charAt(1));
-            }
+            initials.append(NameUtils.getInitials(hostelV1.getHostelName(), null));
+//            initialsArray = hostelV1.getHostelName().split(" ");
+//            if (initialsArray.length > 1) {
+//                initials.append(initialsArray[0].toUpperCase().charAt(0));
+//                initials.append(initialsArray[initialsArray.length -1].toUpperCase().charAt(0));
+//            }
+//            else {
+//                initials.append(initialsArray[0].toUpperCase().charAt(0));
+//                initials.append(initialsArray[0].toUpperCase().charAt(1));
+//            }
         }
 
 
