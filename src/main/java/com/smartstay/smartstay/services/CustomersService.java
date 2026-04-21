@@ -320,9 +320,9 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
         }
 
-//        if (authentication.getSource().equalsIgnoreCase("web")) {
-//            return getCustomerDetailsForWeb(hostelId, name, type);
-//        }
+        if (authentication.getSource().equalsIgnoreCase("web")) {
+            return getCustomerDetailsForWeb(hostelId, name, type);
+        }
 
         List<CustomerData> customerData = searchAndGetCustomers(hostelId, name, type);
         HashMap<String, String> filterOption = new HashMap<>();
