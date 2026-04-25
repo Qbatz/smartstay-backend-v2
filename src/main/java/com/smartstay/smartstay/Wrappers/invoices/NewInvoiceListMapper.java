@@ -141,8 +141,12 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                     .findFirst()
                     .orElse(null);
             if (ids != null) {
-                discountPercentage = Utils.roundOffWithTwoDigit(ids.getDiscountPercentage());
-                discountAmount = Utils.roundOffWithTwoDigit(ids.getDiscountAmount());
+                if (ids.getDiscountPercentage() != null) {
+                    discountPercentage = Utils.roundOffWithTwoDigit(ids.getDiscountPercentage());
+                }
+                if (ids.getDiscountAmount() != null) {
+                    discountAmount = Utils.roundOffWithTwoDigit(ids.getDiscountAmount());
+                }
             }
         }
 

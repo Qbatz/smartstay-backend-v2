@@ -40,6 +40,8 @@ public class OrderHistoryService {
         orderHistory.setPaymentUrl(details.paymentLink());
         orderHistory.setPaymentLinkId(details.paymentLinkId());
         orderHistory.setUserType(UserType.OWNER.name());
+        orderHistory.setPaidBy(authentication.getName());
+
 
         orderHistoryRepository.save(orderHistory);
     }

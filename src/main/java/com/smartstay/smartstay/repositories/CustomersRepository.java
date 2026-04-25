@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -17,15 +18,17 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     boolean existsByMobile(String mobileNo);
 
     boolean existsByEmailId(String emailId);
-    boolean existsByHostelIdAndCustomerId(String hostelId,String customerId);
+
+    boolean existsByHostelIdAndCustomerId(String hostelId, String customerId);
+
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
             "FROM Customers c " +
             "WHERE c.hostelId = :hostelId " +
             "AND c.customerId = :customerId " +
             "AND c.currentStatus IN (:statuses)")
     boolean existsByHostelIdAndCustomerIdAndStatusesIn(@Param("hostelId") String hostelId,
-                                                          @Param("customerId") String customerId,
-                                                          @Param("statuses") List<String> statuses);
+                                                       @Param("customerId") String customerId,
+                                                       @Param("statuses") List<String> statuses);
 
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
             "FROM Customers c " +
@@ -57,18 +60,20 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     );
 
     @Query(value = """
-            SELECT c FROM Customers c WHERE c.hostelId=:hostelId AND 
+            SELECT c FROM Customers c, BookingsV1 b 
+            WHERE c.customerId = b.customerId AND c.hostelId=:hostelId AND 
             (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR 
             LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND 
-            c.currentStatus IN (:type)
+            c.currentStatus IN (:type) AND (:customerIds IS NULL OR c.customerId IN (:customerIds)) 
+            ORDER BY b.floorId ASC
             """,
-    countQuery = """
-             SELECT count(*) FROM Customers c WHERE c.hostelId=:hostelId AND 
-            (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR 
-            LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND 
-            c.currentStatus IN (:type)
-            """)
-    Page<Customers> listCustomers(String hostelId, String name, List<String> type, Pageable pageable);
+            countQuery = """
+                     SELECT count(*) FROM Customers c, BookingsV1 b WHERE c.customerId = b.customerId AND c.hostelId=:hostelId AND 
+                    (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR 
+                    LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND 
+                    c.currentStatus IN (:type) AND (:customerIds IS NULL OR c.customerId IN (:customerIds))
+                    """)
+    Page<Customers> listCustomers(String hostelId, String name, List<String> type, List<String> customerIds, Pageable pageable);
 
     @Query(value = """
             SELECT cus.first_name AS firstName, cus.last_name as lastName, cus.city, cus.mobile, cus.state, cus.joining_date, 
@@ -97,7 +102,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     @Query("SELECT COUNT(c) FROM Customers c where c.mobile=:mobile and c.hostelId=:hostelId and c.customerId!=:customerId")
     int findCustomerByMobileAndHostelId(@Param("hostelId") String hostelId, @Param("customerId") String customerId, @Param("mobile") String mobile);
 
-           
+
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
             "FROM Customers c " +
             "WHERE c.emailId = :emailId and c.emailId != '' AND c.hostelId = :hostelId " +
@@ -113,6 +118,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     boolean existsByMobileAndHostelIdAndStatusesNotIn(@Param("mobile") String mobile,
                                                       @Param("hostelId") String hostelId,
                                                       @Param("statuses") List<String> statuses);
+
     List<Customers> findByCustomerIdIn(List<String> customerId);
 
     @Query("""
@@ -134,14 +140,16 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     List<Customers> findAllCheckedInCustomers();
 
     List<Customers> findByHostelIdAndFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(String hostelId,
-            String firstName, String lastName
+                                                                                                 String firstName, String lastName
     );
 
-        @Query("SELECT c FROM Customers c WHERE c.hostelId = :hostelId AND c.currentStatus IN :statuses")
-        List<Customers> findCustomerByHostelId(@Param("hostelId") String hostelId, @Param("statuses") List<String> statuses);
+    @Query("""
+            SELECT c FROM Customers c WHERE c.hostelId = :hostelId AND c.currentStatus IN :statuses
+            """)
+    List<Customers> findCustomerByHostelId(@Param("hostelId") String hostelId, @Param("statuses") List<String> statuses);
 
-        @Query("SELECT c.advance FROM Customers c WHERE c.hostelId = :hostelId AND c.advance IS NOT NULL")
-        List<com.smartstay.smartstay.dao.Advance> findAdvancesByHostelId(@Param("hostelId") String hostelId);
+    @Query("SELECT c.advance FROM Customers c WHERE c.hostelId = :hostelId AND c.advance IS NOT NULL")
+    List<com.smartstay.smartstay.dao.Advance> findAdvancesByHostelId(@Param("hostelId") String hostelId);
 
 
     List<Customers> findByXuid(String xuid);

@@ -119,32 +119,53 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.FLOOR)) {
             if (bedDetail != null) {
+                if (bedDetail.getFloorName() == null) {
+                    return "-";
+                }
                 return bedDetail.getFloorName();
             }
             return "NA";
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.ROOM)) {
             if (bedDetail != null) {
+                if (bedDetail.getRoomName() == null) {
+                    return "-";
+                }
                 return bedDetail.getRoomName();
             }
             return "NA";
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.BED)) {
             if (bedDetail != null) {
+                if (bedDetail.getBedName() == null) {
+                    return "-";
+                }
                 return bedDetail.getBedName();
             }
             return "NA";
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.EMAIL_ID)) {
+            if (customers.getEmailId() == null) {
+                return "-";
+            }
             return customers.getEmailId();
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.MONTHLY_RENT)) {
+            if (bookingsV1.getRentAmount() == null) {
+                return "-";
+            }
             return String.valueOf(bookingsV1.getRentAmount());
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.ADVANCE)) {
+            if (bookingsV1.getAdvanceAmount() == null) {
+                return "-";
+            }
             return String.valueOf(bookingsV1.getAdvanceAmount());
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.BOOKING_AMOUNT)) {
+            if (bookingsV1.getBookingAmount() == null) {
+                return "-";
+            }
             return String.valueOf(bookingsV1.getBookingAmount());
         }
 

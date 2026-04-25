@@ -26,6 +26,7 @@ import com.smartstay.smartstay.ennum.InvoiceItems;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.AddRoomSettlementEbEvents;
+import com.smartstay.smartstay.filterOptions.customers.FilterOptions;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.CancelCheckout;
@@ -38,6 +39,7 @@ import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
+import com.smartstay.smartstay.util.FilterKeywords;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -310,7 +312,7 @@ public class CustomersService {
         return customersRepository.getCustomerData(hostelId, name != null && !name.isBlank() ? name : null, typeArray);
     }
 
-    public ResponseEntity<?> getAllCustomersForHostel(String hostelId, String name, String type, Integer page, Integer size) {
+    public ResponseEntity<?> getAllCustomersForHostel(String hostelId, String name, String type, Integer page, Integer size, String periods, String sharingType) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -325,7 +327,7 @@ public class CustomersService {
         }
 
         if (authentication.getSource().equalsIgnoreCase("web")) {
-            return getCustomerDetailsForWeb(hostelId, name, type, page, size);
+            return getCustomerDetailsForWeb(hostelId, name, type, page, size, periods, sharingType);
         }
 
         List<CustomerData> customerData = searchAndGetCustomers(hostelId, name, type);
@@ -400,7 +402,7 @@ public class CustomersService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, String type, Integer page, Integer size) {
+    private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, String type, Integer page, Integer size, String periods, String sharingType) {
 
         List<String> typeArray = new ArrayList<>();
         if (type == null || (type != null && type.trim().equalsIgnoreCase(""))) {
@@ -413,13 +415,104 @@ public class CustomersService {
             typeArray.add(type.toUpperCase());
         }
 
+        Date startDate = null;
+        Date endDate = null;
+        List<String> customerIds = null;
+
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        if (periods != null) {
+            if (periods.equalsIgnoreCase(FilterKeywords.THIS_MONTH)) {
+                startDate = billingDates.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+            else if (periods.equalsIgnoreCase(FilterKeywords.LAST_MONTH)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.MONTH, -1);
+                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                startDate = billDatesBasedOnDate.currentBillStartDate();
+                endDate = billDatesBasedOnDate.currentBillEndDate();
+            }
+            else if (periods.equalsIgnoreCase(FilterKeywords.LAST_3_MONTH)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.MONTH, -3);
+                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                startDate = billDatesBasedOnDate.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+            else if (periods.equalsIgnoreCase(FilterKeywords.LAST_6_MONTH)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.MONTH, -6);
+                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                startDate = billDatesBasedOnDate.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+            else if (periods.equalsIgnoreCase(FilterKeywords.LAST_1_YEAR)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.YEAR, -1);
+                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                startDate = billDatesBasedOnDate.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+
+            customerIds = bookingsService.getCustomerIdsByStartAndEndDate(hostelId, startDate, endDate);
+        }
+
         Pageable pageableRequest = PageRequest.of(page-1, size);
-        Page<Customers> listCustomers = customersRepository.listCustomers(hostelId, name, typeArray, pageableRequest);
+
+        List<String> listStatus = new ArrayList<>();
+        listStatus.add(CustomerStatus.VACATED.name());
+        listStatus.add(CustomerStatus.CHECK_IN.name());
+        listStatus.add(CustomerStatus.NOTICE.name());
+        listStatus.add(CustomerStatus.BOOKED.name());
+        listStatus.add(CustomerStatus.SETTLEMENT_GENERATED.name());
+
+
+
+        List<Customers> listAllCustomersForCount = customersRepository.findCustomerByHostelId(hostelId, listStatus);
+        Page<Customers> listCustomers = customersRepository.listCustomers(hostelId, name, typeArray, customerIds, pageableRequest);
         List<ColumnFilters> listColumns = columnService.getCustomerColumns(hostelId, FilterOptionsModule.MODULE_TENANT.name());
 
         int totalCustomers = (int) listCustomers.getTotalElements();
         int currentPage = listCustomers.getPageable().getPageNumber() + 1;
         int totalPages = listCustomers.getTotalPages();
+        int vacatedCount = 0;
+        int bookedCount = 0;
+        int settlementGeneratedCount = 0;
+        int noticePeriodCounts = 0;
+        int checkedInCounts = 0;
+
+        if (listAllCustomersForCount != null) {
+            vacatedCount = (int) listAllCustomersForCount
+                    .stream()
+                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name()))
+                    .count();
+
+            bookedCount = (int) listAllCustomersForCount
+                    .stream()
+                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name()))
+                    .count();
+
+            settlementGeneratedCount = (int) listAllCustomersForCount
+                    .stream()
+                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()))
+                    .count();
+            noticePeriodCounts = (int) listAllCustomersForCount
+                    .stream()
+                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name()))
+                    .count();
+            checkedInCounts = (int) listAllCustomersForCount
+                    .stream()
+                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()))
+                    .count();
+        }
+
+        Summary summary = new Summary(totalCustomers,
+                vacatedCount,
+                bookedCount,
+                settlementGeneratedCount,
+                noticePeriodCounts,
+                checkedInCounts);
+
         List<Customers> customersList = listCustomers.getContent();
         List<ColumnFilters> activeColumns = listColumns
                 .stream()
@@ -456,16 +549,68 @@ public class CustomersService {
                 .map(i -> new TenantTableMapper(listBedDetails, listBookings, tableColumns).apply(i))
                 .toList();
 
+        FilterOptions filterOptions = getTenantFilterOptions(hostelId);
+
         CustomerWebResponse response = new CustomerWebResponse(
                 totalCustomers,
                 currentPage,
                 totalPages,
                 size,
+                summary,
+                filterOptions,
                 tableColumns,
                 listColumns,
                 listTenants
         );
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private FilterOptions getTenantFilterOptions(String hostelId) {
+        FilterOptions filterOptions = new FilterOptions();
+        List<FilterOptions.FilterItems> statusFilterItems = new ArrayList<>();
+        statusFilterItems.add(new FilterOptions.FilterItems("Booked", CustomerStatus.BOOKED.name()));
+        statusFilterItems.add(new FilterOptions.FilterItems("Checked In", CustomerStatus.CHECK_IN.name()));
+        statusFilterItems.add(new FilterOptions.FilterItems("Settlement Generated", CustomerStatus.SETTLEMENT_GENERATED.name()));
+        statusFilterItems.add(new FilterOptions.FilterItems("Vacated", CustomerStatus.VACATED.name()));
+        statusFilterItems.add(new FilterOptions.FilterItems("Notice", CustomerStatus.NOTICE.name()));
+
+        List<FilterOptions.FilterItems> listPeriods = new ArrayList<>();
+        listPeriods.add(new FilterOptions.FilterItems("This Month", FilterKeywords.THIS_MONTH));
+        listPeriods.add(new FilterOptions.FilterItems("Last Month", FilterKeywords.LAST_MONTH));
+        listPeriods.add(new FilterOptions.FilterItems("Last 3 Months", FilterKeywords.LAST_3_MONTH));
+        listPeriods.add(new FilterOptions.FilterItems("Last 6 Months", FilterKeywords.LAST_6_MONTH));
+        listPeriods.add(new FilterOptions.FilterItems("Last 1 Year", FilterKeywords.LAST_1_YEAR));
+
+        List<Rooms> listRooms = roomsService.findByHostelId(hostelId);
+
+        List<Integer> roomsBySharing = listRooms
+                .stream()
+                .filter(i -> i.getSharingType() > 0)
+                .map(Rooms::getSharingType)
+                .distinct()
+                .sorted()
+                .toList();
+        List<FilterOptions.FilterItems> listSharingType = new ArrayList<>();
+        roomsBySharing.forEach(item -> {
+            if (item == 1) {
+                listSharingType.add(new FilterOptions.FilterItems("Single sharing", item.toString()));
+            }
+            else if (item == 2) {
+                listSharingType.add(new FilterOptions.FilterItems("Two sharing", item.toString()));
+            }
+            else if (item == 3) {
+                listSharingType.add(new FilterOptions.FilterItems("Three sharing", item.toString()));
+            }
+            else  {
+                listSharingType.add(new FilterOptions.FilterItems(item + " sharing", item.toString()));
+            }
+        });
+
+        filterOptions.setPeriods(listPeriods);
+        filterOptions.setSharingType(listSharingType);
+        filterOptions.setStatus(statusFilterItems);
+
+        return filterOptions;
     }
 
     /**
@@ -1770,11 +1915,15 @@ public class CustomersService {
         if (amountToBePaid < 0) {
             isRefundable = true;
         }
+        double totalRefundableAdvance = 0.0;
+        if (isAdvancePaid) {
+            totalRefundableAdvance = totalAdvanceAmount - totalDeductions;
+        }
         SettlementInfo settlementInfo = new SettlementInfo(Utils.roundOffWithTwoDigit(amountToBePaid),
                 totalDeductions,
                 Utils.roundOffWithTwoDigit(payableRent),
                 Utils.roundOffWithTwoDigit(payableRent),
-                Utils.roundOffWithTwoDigit(totalAdvanceAmount - totalDeductions),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
                 Utils.roundOffWithTwoDigit(ebAmount),
                 Utils.roundOffWithTwoDigit(unpaidInvoiceAmount),
                 isRefundable,
@@ -1896,12 +2045,17 @@ public class CustomersService {
             isRefundable = true;
         }
 
+        double totalRefundableAdvance = 0.0;
+        if (isAdvancePaid) {
+            totalRefundableAdvance = totalAdvanceAmount - totalDeductions;
+        }
+
 
         SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
                 totalDeductions,
                 payableRent,
-                Utils.roundOffWithTwoDigit(0.0),
-                Utils.roundOffWithTwoDigit(totalAdvancePaid),
+                Utils.roundOffWithTwoDigit(totalDeductions),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
                 Utils.roundOffWithTwoDigit(ebAmount),
                 Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
                 isRefundable,
@@ -2001,12 +2155,17 @@ public class CustomersService {
             isRefundable = true;
         }
 
+        double totalRefundableAdvance = 0.0;
+        if (isAdvancePaid) {
+            totalRefundableAdvance = totalAdvanceAmount - totalDeductions;
+        }
+
 
         SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
                 totalDeductions,
                 payableRent,
-                Utils.roundOffWithTwoDigit(0.0),
-                Utils.roundOffWithTwoDigit(totalAdvancePaid),
+                Utils.roundOffWithTwoDigit(totalDeductions),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
                 Utils.roundOffWithTwoDigit(ebAmount),
                 Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
                 isRefundable,
@@ -3796,7 +3955,8 @@ public class CustomersService {
                                 NameUtils.getFullName(i.getFirstName(), i.getLastName()),
                                 i.getProfilePic(),
                                 NameUtils.getInitials(i.getFirstName(), i.getLastName()),
-                                "+91 " + i.getMobile()))
+                                "+91 " + i.getMobile(),
+                                i.getEmailId()))
                         .toList();
 
                 return new ResponseEntity<>(listWalkInCustomers, HttpStatus.OK);

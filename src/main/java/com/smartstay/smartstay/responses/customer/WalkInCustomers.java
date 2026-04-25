@@ -4,5 +4,6 @@ public record WalkInCustomers(String customerId,
                               String fullName,
                               String profilePic,
                               String initials,
-                              String mobile) {
+                              String mobile,
+                              String emailId) {
 }

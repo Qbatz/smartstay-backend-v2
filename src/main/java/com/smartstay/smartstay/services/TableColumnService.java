@@ -80,7 +80,6 @@ public class TableColumnService {
                tableColumns.setColumns(listDefaultColumns);
            }
            else {
-
                List<ColumnFilters> listNewColumns = customersTables
                        .stream()
                        .map(i -> {

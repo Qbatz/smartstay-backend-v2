@@ -280,4 +280,11 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
         int countOverlappingBookings(@Param("bedId") int bedId, 
                                      @Param("customerId") String customerId, 
                                      @Param("joiningDate") Date joiningDate);
+
+        @Query("""
+                SELECT booking FROM BookingsV1 booking WHERE booking.hostelId=:hostelId AND 
+                (DATE(booking.joiningDate) <= DATE(:endDate) OR DATE(booking.expectedJoiningDate) <= DATE(:endDate) 
+                AND (booking.leavingDate IS NULL OR DATE(booking.leavingDate) >= DATE(:startDate) AND booking.checkoutDate IS NULL OR DATE(booking.checkoutDate) >= DATE(:startDate)))
+                """)
+        List<BookingsV1> findBookingsByHostelIdAndStartAndEndDate(String hostelId, Date startDate, Date endDate);
 }

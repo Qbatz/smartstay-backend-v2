@@ -88,8 +88,10 @@ public class CustomersController {
                                                      @RequestParam(value = "name", required=false) String name,
                                                      @RequestParam(value = "type", required = false) String type,
                                                      @RequestParam(value = "page", defaultValue = "1") int page,
-                                                     @RequestParam(value = "size", defaultValue = "10") int size) {
-        return customersService.getAllCustomersForHostel(hostelId, name, type, page, size);
+                                                     @RequestParam(value = "size", defaultValue = "10") int size,
+                                                     @RequestParam(value = "period", required = false) String periods,
+                                                     @RequestParam(value = "sharingType", required = false) String sharingType) {
+        return customersService.getAllCustomersForHostel(hostelId, name, type, page, size, periods, sharingType);
     }
 
     @GetMapping("/details/{customerId}")

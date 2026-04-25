@@ -16,7 +16,8 @@ public interface InvoiceDiscountRepository extends JpaRepository<InvoiceDiscount
     Optional<InvoiceDiscounts> findFirstByHostelIdAndInvoiceIdOrderByDiscountIdDesc(String hostelId, String invoiceId);
 
     @Query("""
-            SELECT ids FROM InvoiceDiscounts ids WHERE ids.hostelId=:hostelId AND ids.invoiceId IN (:invoiceIds)
+            SELECT ids FROM InvoiceDiscounts ids WHERE ids.hostelId=:hostelId AND ids.invoiceId IN (:invoiceIds) 
+            AND ids.isActive=true
             """)
     List<InvoiceDiscounts> findByHostelIdAndInvoiceIdIn(String hostelId, List<String> invoiceIds);
     InvoiceDiscounts findByHostelIdAndInvoiceIdAndIsActiveTrue(String hostelId, String invoiceId);

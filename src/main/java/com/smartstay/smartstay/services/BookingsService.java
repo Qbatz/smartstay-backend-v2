@@ -947,7 +947,7 @@ public class BookingsService {
 
                     Calendar calendar = Calendar.getInstance();
                     calendar.setTime(futureBillDates.currentBillStartDate());
-                    calendar.add(Calendar.MONTH, -1);
+                    calendar.add(Calendar.DAY_OF_MONTH, -1);
 
                     currentRentEndDate = calendar.getTime();
                 } else {
@@ -1283,6 +1283,18 @@ public class BookingsService {
         if (bookingsV1 != null) {
             return bookingsV1.getRentHistory();
         }
+        return null;
+    }
+
+    public List<String> getCustomerIdsByStartAndEndDate(String hostelId, Date startDate, Date endDate) {
+        List<BookingsV1> listBookings = bookingsRepository.findBookingsByHostelIdAndStartAndEndDate(hostelId, startDate, endDate);
+        if (listBookings != null) {
+            return listBookings
+                    .stream()
+                    .map(BookingsV1::getCustomerId)
+                    .toList();
+        }
+
         return null;
     }
 }
