@@ -11,6 +11,7 @@ import com.smartstay.smartstay.dto.Admin.UsersData;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.AppSource;
+import com.smartstay.smartstay.ennum.Platform;
 import com.smartstay.smartstay.events.AddAdminEvents;
 import com.smartstay.smartstay.events.AddUserEvents;
 import com.smartstay.smartstay.payloads.*;
@@ -1042,6 +1043,13 @@ public class UsersService {
         if (pin == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
+        if (pin.platform() == null || pin.platform().trim().isEmpty()) {
+            return new ResponseEntity<>(Utils.PLATFORM_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        Platform platformEnum = Platform.fromValue(pin.platform());
+        if (platformEnum == null) {
+            return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
+        }
         if (pin.pin() == null) {
             return new ResponseEntity<>(Utils.PIN_REQUIRED, HttpStatus.BAD_REQUEST);
         }
@@ -1058,7 +1066,7 @@ public class UsersService {
                 userRepository.save(users);
                 userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
                         ActivitySourceType.SETUP.name(), users.getUserId(), users);
-                return generateToken(config);
+                return generateToken(config, platformEnum);
             } else {
                 return new ResponseEntity<>(Utils.PIN_ALREADY_SETUP, HttpStatus.BAD_REQUEST);
             }
@@ -1070,7 +1078,7 @@ public class UsersService {
             userRepository.save(users);
             userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
                     ActivitySourceType.SETUP.name(), users.getUserId(), users);
-            return generateToken(config);
+            return generateToken(config, platformEnum);
         }
     }
 
@@ -1080,6 +1088,13 @@ public class UsersService {
         }
         if (pin == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (pin.platform() == null || pin.platform().trim().isEmpty()) {
+            return new ResponseEntity<>(Utils.PLATFORM_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        Platform platformEnum = Platform.fromValue(pin.platform());
+        if (platformEnum == null) {
+            return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
         }
         if (pin.pin() == null) {
             return new ResponseEntity<>(Utils.PIN_REQUIRED, HttpStatus.BAD_REQUEST);
@@ -1094,10 +1109,10 @@ public class UsersService {
             return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
         }
 
-        return generateToken(usersConfig);
+        return generateToken(usersConfig, platformEnum);
     }
 
-    public ResponseEntity<?>generateToken(UsersConfig usersConfig) {
+    public ResponseEntity<?>generateToken(UsersConfig usersConfig, Platform platform) {
         Users users = usersConfig.getUser();
         UserDetails userDetails = myUserDetailService.loadUserByUsername(users.getUserId());
 
@@ -1110,13 +1125,15 @@ public class UsersService {
             return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
         }
 
+        String platformValue = platform.name().toLowerCase();
+
         HashMap<String, Object> claims = new HashMap<>();
         claims.put("userId", users.getUserId());
         claims.put("role", rolesService.findById(users.getRoleId()));
-        claims.put("source", "android");
+        claims.put("source", platformValue);
 
         Long validity = System.currentTimeMillis() + (1000L * 60 * 60 * 24 * 15);
-        loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.MOBILE.name(), "android");
+        loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.MOBILE.name(), platformValue);
         String token = jwtService.generateMobileToken(authentication.getName(), claims, validity);
         com.smartstay.smartstay.responses.user.VerifyPin vPin = new com.smartstay.smartstay.responses.user.VerifyPin(
                 validity, token);
