@@ -3416,6 +3416,13 @@ public class CustomersService {
         //check is it after or equal current billing cycle
         Date joiningDate = Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        if (billingDates != null && billingDates.currentBillStartDate() != null) {
+            if (Utils.compareWithTwoDates(joiningDate, billingDates.currentBillStartDate()) < 0) {
+                return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
+            }
+        }
+
         ReassignRent reassignRent = invoiceService.calculateAndCreateInvoiceForReassign(customers, request.joiningDate(), request.rentAmount());
         double balanceAmount = 0.0;
         if (reassignRent != null) {

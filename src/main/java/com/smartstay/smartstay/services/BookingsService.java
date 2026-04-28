@@ -897,6 +897,14 @@ public class BookingsService {
                 return new ResponseEntity<>(Utils.CUSTOMER_DID_THE_BED_CHANGE, HttpStatus.BAD_REQUEST);
             }
             Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+            BillingDates targetBillingDates = hostelService.getBillingRuleOnDate(hostelId, joinigDate);
+            if (targetBillingDates != null) {
+                if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), joinigDate)) {
+                    return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
+                }
+            }
+
             if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
                 if (!isBedAvailableForJoiningDateChange(bookingsV1.getBedId(), bookingsV1.getCustomerId(), joinigDate)) {
                     return new ResponseEntity<>(Utils.BED_OCCUPIED_ON_DATE, HttpStatus.BAD_REQUEST);
