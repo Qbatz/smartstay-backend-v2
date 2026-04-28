@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.account.Login;
+import com.smartstay.smartstay.payloads.account.MobileLoginRequest;
 import com.smartstay.smartstay.payloads.user.ResetPin;
 import com.smartstay.smartstay.payloads.user.SetupPin;
 import com.smartstay.smartstay.payloads.user.VerifyPin;
@@ -18,7 +19,7 @@ public class MobileController {
     private UsersService usersService;
 
     @PostMapping("login")
-    public ResponseEntity<?> login(@Valid @RequestBody Login login) {
+    public ResponseEntity<?> login(@Valid @RequestBody MobileLoginRequest login) {
         return usersService.mobileLogin(login);
     }
 

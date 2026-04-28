@@ -159,12 +159,18 @@ public class UsersService {
         return new ResponseEntity<>(new AdminUserResponse("", "", "Created successfully"), HttpStatus.CREATED);
     }
 
-    public ResponseEntity<?> mobileLogin(Login login) {
+    public ResponseEntity<?> mobileLogin(MobileLoginRequest login) {
         if (login == null) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
         }
         if (!Utils.checkNullOrEmpty(login.emailId()) && !Utils.checkNullOrEmpty(login.password())) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+        if (login.platform() == null || login.platform().trim().isEmpty()) {
+            return new ResponseEntity<>(Utils.PLATFORM_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (Platform.fromValue(login.platform()) == null) {
+            return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
         }
         Users users = userRepository.findByEmailIdAndIsDeletedFalse(login.emailId());
         if (users == null) {
@@ -186,8 +192,9 @@ public class UsersService {
                 }
             }
             MobileLogin mobileLogin = new MobileLogin(users.getUserId(), isPinSetup);
-            userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
-                    ActivitySourceType.LOGGED_IN.name(), users.getUserId(), users);
+            userActivitiesService.addMobileLoginLog(null, null, ActivitySource.PROFILE.name(),
+                    ActivitySourceType.LOGGED_IN.name(), users.getUserId(), users,
+                    Platform.fromValue(login.platform()).name().toLowerCase());
             return new ResponseEntity<>(mobileLogin, HttpStatus.OK);
         }
 
@@ -225,7 +232,6 @@ public class UsersService {
 
     private void dispatchLoginOtp(Users users) {
         int otp = Utils.generateOtp();
-        System.out.println("OTP: " + otp);
         String otpMessage = "Dear user, your SmartStay Login OTP is " + otp
                 + ". Use this OTP to verify your login. Do not share it with anyone. - SmartStay";
         otpService.insertOTP(users, otp);
