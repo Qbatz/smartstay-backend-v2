@@ -1414,6 +1414,7 @@ public class CustomersService {
         }
         boolean isNewRentAvailable = false;
         double newRentAmount = 0.0;
+        String newRentLabelHint = null;
         List<RentHistory> rentHistories = bookingsService.getNewRentAmount(customerId, new Date());
         CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
         List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
@@ -1432,6 +1433,7 @@ public class CustomersService {
                 RentHistory rh = listNewRentHistory.get(listNewRentHistory.size() - 1);
                 if (rh != null) {
                     newRentAmount = rh.getRent();
+                    newRentLabelHint = "Rent Update Scheduled, Effective from " + Utils.dateToString(rh.getStartsFrom());
                 }
             }
         }
@@ -1609,6 +1611,7 @@ public class CustomersService {
                 bookingId,
                 isNewRentAvailable,
                 newRentAmount,
+                newRentLabelHint,
                 customers.getCurrentStatus(),
                 address,
                 hostelInformation,
@@ -3074,6 +3077,9 @@ public class CustomersService {
                             .map(UnpaidInvoices::invoiceId)
                             .toList());
                 }
+
+                List<String> listCurrentMonthInvoicesIds = invoiceService.findUnpaidCurrentMonthInvoicesIds(customers.getHostelId(), customers.getCustomerId(), billDate);
+                listUnpaidInvoices.addAll(listCurrentMonthInvoicesIds);
             }
         }
 
@@ -3084,10 +3090,6 @@ public class CustomersService {
             }
 
             if (currentMonthRentInfo.currentRentPaid() == 0) {
-                listUnpaidInvoices.add(currentMonthRentInfo.currentInvoiceId());
-            }
-
-            if (currentMonthRentInfo.currentRentPaid() < currentMonthRentInfo.currentMonthPayableAmount()) {
                 listUnpaidInvoices.add(currentMonthRentInfo.currentInvoiceId());
             }
         }

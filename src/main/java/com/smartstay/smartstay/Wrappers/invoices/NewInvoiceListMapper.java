@@ -42,6 +42,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         boolean isCancelled = false;
         Double discountPercentage = 0.0;
         Double discountAmount = 0.0;
+        boolean canEdit = false;
 
         Double dueAmount = 0.0;
         Double paidAmount = 0.0;
@@ -90,23 +91,28 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
 
         String paymentStatus = null;
         if (invoicesV1.getPaymentStatus() != null) {
+
             paymentStatus = InvoiceUtils.getInvoicePaymentStatusByStatus(invoicesV1.getPaymentStatus());
         }
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
             invoiceType = "Rent";
+            canEdit = true;
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
             invoiceType = "Booking";
+            canEdit = false;
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
             invoiceType = "Advance";
+            canEdit = false;
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHERS.name())) {
             invoiceType = "Others";
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             invoiceType = "Settlement";
+            canEdit = false;
             if (invoicesV1.getPaymentStatus() != null) {
                 if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
                     if (invoicesV1.getTotalAmount() - paidAmount < 0) {
@@ -117,21 +123,27 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
             invoiceType = "Reassign-Rent";
+            canEdit = true;
         }
 
         if (invoicesV1.isCancelled()) {
             paymentStatus = "Cancelled";
             isCancelled = true;
+            canEdit = false;
         }
 
         if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name())) {
             invoiceMode = "Recurring";
+            if (!canEdit) {
+                canEdit = true;
+            }
         }
         else if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
             invoiceMode = "Manual";
         }
         else if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.AUTOMATIC.name())) {
             invoiceMode = "Automatic";
+
         }
 
         if (listInvoiceDiscounts != null) {
@@ -141,6 +153,9 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                     .findFirst()
                     .orElse(null);
             if (ids != null) {
+                if (canEdit) {
+                    canEdit = false;
+                }
                 if (ids.getDiscountPercentage() != null) {
                     discountPercentage = Utils.roundOffWithTwoDigit(ids.getDiscountPercentage());
                 }
@@ -149,6 +164,19 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 }
             }
         }
+
+        if (invoicesV1.getPaymentStatus() != null) {
+            if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                canEdit = false;
+            }
+        }
+
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            if (canEdit) {
+                canEdit = false;
+            }
+        }
+
 
 
         return new InvoicesList(firstName,
@@ -180,6 +208,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 Utils.dateToString(invoicesV1.getUpdatedAt()),
                 invoicesV1.getInvoiceNumber(),
                 isCancelled,
+                canEdit,
                 null);
     }
 }

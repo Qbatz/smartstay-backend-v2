@@ -23,6 +23,7 @@ public class Utils {
     public static final String ENVIRONMENT_PROD = "PROD";
 
     public static final String USER_INPUT_DATE_FORMAT = "dd-MM-yyyy";
+    public static final String USER_INPUT_DATE_FORMAT_DD_MM = "MM-yyyy";
 
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
     public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";

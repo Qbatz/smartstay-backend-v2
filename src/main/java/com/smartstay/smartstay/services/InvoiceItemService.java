@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class InvoiceItemService {
@@ -93,5 +94,69 @@ public class InvoiceItemService {
                 .sum();
 
         return newAmount;
+    }
+
+    public double updateInvoiceItems(List<UpdateRecurringInvoice> recurringInvoiceItems, List<InvoiceItems> invoiceItems, InvoicesV1 invoiceV1) {
+        AtomicReference<Double> newInvoiceAmount = new AtomicReference<>(0.0);
+        List<InvoiceItems> newInvoiceItemsToupdate = new ArrayList<>();
+        if (recurringInvoiceItems != null) {
+            recurringInvoiceItems.forEach(item -> {
+                InvoiceItems invItem = invoiceItems
+                        .stream()
+                        .filter(i -> i.getInvoiceItem().equalsIgnoreCase(item.type()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (invItem != null) {
+                    newInvoiceAmount.set(newInvoiceAmount.get() + item.amount());
+                    invItem.setAmount(item.amount());
+
+                    newInvoiceItemsToupdate.add(invItem);
+                }
+                else {
+                    InvoiceItems invOtherItems = invoiceItems
+                            .stream()
+                            .filter(i -> i.getOtherItem() != null && i.getOtherItem().equalsIgnoreCase(item.type()))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (invOtherItems != null) {
+                        newInvoiceAmount.set(newInvoiceAmount.get() + item.amount());
+                        invOtherItems.setAmount(item.amount());
+                        newInvoiceItemsToupdate.add(invOtherItems);
+                    }
+                    else {
+                        InvoiceItems invItems = new InvoiceItems();
+                        invItems.setAmount(item.amount());
+                        if (item.type().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
+                            invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+                        }
+                        else if (item.type().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
+                            invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
+                        }
+                        else if (item.type().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
+                            invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+                        }
+                        else {
+                            invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
+                            invItems.setOtherItem(item.type());
+                        }
+
+
+                        invItems.setInvoice(invoiceV1);
+                        newInvoiceItemsToupdate.add(invItems);
+
+                        newInvoiceAmount.set(newInvoiceAmount.get() + item.amount());
+
+                    }
+                }
+            });
+
+            if (!newInvoiceItemsToupdate.isEmpty()) {
+                invoiceItemsRepository.saveAll(newInvoiceItemsToupdate);
+            }
+        }
+
+        return newInvoiceAmount.get();
     }
 }

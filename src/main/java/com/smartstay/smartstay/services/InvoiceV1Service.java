@@ -2612,14 +2612,15 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
-        if (!invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name())) {
-            return new ResponseEntity<>(Utils.EDIT_ALLOWED_ONLY_RECURRING_INVOICE, HttpStatus.BAD_REQUEST);
-        }
         if (recurringInvoiceItems == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
         if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
             return new ResponseEntity<>(Utils.CANNOT_EDIT_PAID_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
+        if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.AUTOMATIC.name()) || invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
+            return updateInvoice(recurringInvoiceItems, invoicesV1);
         }
 
         Double newInvoiceAmount = invoiceItemService.updateRecurringInvoiceItems(recurringInvoiceItems, invoicesV1);
@@ -2636,6 +2637,24 @@ public class InvoiceV1Service {
 
         return new ResponseEntity<>(HttpStatus.OK);
 
+    }
+
+    private ResponseEntity<?> updateInvoice(List<UpdateRecurringInvoice> recurringInvoiceItems, InvoicesV1 invoicesV1) {
+        List<InvoiceItems> listInvoiceItemsFromSavedItesm = invoicesV1.getInvoiceItems();
+
+        double newInvoiceAmount = invoiceItemService.updateInvoiceItems(recurringInvoiceItems, invoicesV1.getInvoiceItems(), invoicesV1);
+
+        double gstPercentile = invoicesV1.getGstPercentile() != null ? invoicesV1.getGstPercentile() : 0.0;
+        double basePrice = Utils.roundOffWithTwoDigit(newInvoiceAmount / (1 + (gstPercentile / 100)));
+        double gstAmount = newInvoiceAmount - basePrice;
+
+        invoicesV1.setTotalAmount(newInvoiceAmount);
+        invoicesV1.setBasePrice(basePrice);
+        invoicesV1.setGst(Utils.roundOfDouble(gstAmount));
+
+        invoicesV1Repository.save(invoicesV1);
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     public ResponseEntity<?> getInvoiceDetailsForEdit(String hostelId, String invoiceId) {
@@ -3347,6 +3366,8 @@ public class InvoiceV1Service {
         double payableAmountForCurrentInvoiceRent = 0.0;
         double currentMonthPaidRent = 0.0;
         double currentMonthPayableAmount = 0.0;
+        double currentInvoiceAmount = 0.0;
+
         AtomicReference<Double> otherItemAmount = new AtomicReference<>(0.0);
         List<CurrentMonthOtherItems> otherItems = new ArrayList<>();
         listInvoices.forEach(item -> {
@@ -3425,6 +3446,7 @@ public class InvoiceV1Service {
             currentMonthPaidRent = currentMonthPaidRent + runningInvoicePaidAmount;
             currentMonthPayableAmount = payableAmountForCurrentInvoiceRent - currentMonthPaidRent + otherItemAmount.get();
             double currentMonthTotalAmount = payableAmountForCurrentInvoiceRent + otherItemAmount.get();
+
             List<RentBreakUp> listRentBreakup = customersBedHistoryService.getBreakupBasedOnRentHistory(customers, leavingDate, billingDates);
 
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
@@ -3669,6 +3691,19 @@ public class InvoiceV1Service {
 
     }
 
+
+    public Double getDiscountAmountForInvoice(String hostelId, String invoiceId) {
+        return invoiceDiscountService.getDiscountAmount(hostelId, invoiceId);
+    }
+
+    public List<InvoiceDiscounts> getDiscountAmountForInvoice(String hostelId, List<String> discountedInvoices) {
+        return invoiceDiscountService.getDiscountAmount(hostelId, discountedInvoices);
+    }
+
+    //used for both fixed postpaid and joining based.
+    //multipurpose - Rename
+
+    @Deprecated
     public InvoicesV1 createSettlementInvoiceForPostpaid(Customers customers, String hostelId, long round, List<String> listUnpaidInvoices, List<Deductions> deductions, double amoutToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid) {
         InvoicesV1 advanceInvoice = null;
 
@@ -3689,23 +3724,15 @@ public class InvoiceV1Service {
 
         List<InvoicesV1> invoicesHasToBeCancelled = listInvoices
                 .stream()
-                        .map(i -> {
-                            i.setCancelled(true);
-                            return i;
-                        })
-                                .toList();
+                .map(i -> {
+                    i.setCancelled(true);
+                    return i;
+                })
+                .toList();
 
         cancelActiveInvoice(invoicesHasToBeCancelled);
 
         return createSettlementInvoice(customers, hostelId, round, listInvoices, deductions, amoutToBePaidWithoutDeductions, leavingDate, users);
-    }
-
-    public Double getDiscountAmountForInvoice(String hostelId, String invoiceId) {
-        return invoiceDiscountService.getDiscountAmount(hostelId, invoiceId);
-    }
-
-    public List<InvoiceDiscounts> getDiscountAmountForInvoice(String hostelId, List<String> discountedInvoices) {
-        return invoiceDiscountService.getDiscountAmount(hostelId, discountedInvoices);
     }
 
     public InvoicesV1 createSettlementInvoiceForFixedPrepaid(Customers customers, String hostelId, double totalAmountToBePaid, List<String> listUnpaidInvoices, List<Deductions> lisDeductions, double amountToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid) {
@@ -3714,7 +3741,9 @@ public class InvoiceV1Service {
         List<InvoicesV1> listInvoices = new ArrayList<>();
         if (!isAdvancePaid) {
             advanceInvoice = invoicesV1Repository.findAdvanceInvoiceByCustomerId(customers.getCustomerId());
-            listInvoices.add(advanceInvoice);
+            if (advanceInvoice != null) {
+                listInvoices.add(advanceInvoice);
+            }
         }
         if (listUnpaidInvoices != null && !listUnpaidInvoices.isEmpty()) {
             List<InvoicesV1> invoices = invoicesV1Repository.findAllById(listUnpaidInvoices);
@@ -3741,5 +3770,23 @@ public class InvoiceV1Service {
             runningInvoice.setTotalAmount(runningInvoice.getTotalAmount() + invoiceDiscountDto.invoiceDifference());
             invoicesV1Repository.save(runningInvoice);
         }
+    }
+
+    public List<String> findUnpaidCurrentMonthInvoicesIds(String hostelId, String customerId, BillingDates billDate) {
+        List<InvoicesV1> listCurrentMonthInvoice = invoicesV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, billDate.currentBillStartDate());
+        if (listCurrentMonthInvoice != null) {
+            List<String> invoicesIds = listCurrentMonthInvoice
+                    .stream()
+                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList();
+            if (invoicesIds != null) {
+                return invoicesIds;
+            }
+
+            return new ArrayList<>();
+        }
+
+        return new ArrayList<>();
     }
 }

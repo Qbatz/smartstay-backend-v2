@@ -940,7 +940,7 @@ public class BookingsService {
             Date startDate = null;
             Date currentRentEndDate = null;
             if (updateInfo.effectiveDate() != null && !updateInfo.effectiveDate().trim().equalsIgnoreCase("")) {
-                Date startsFrom = Utils.stringToDate(updateInfo.effectiveDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                Date startsFrom = Utils.stringToDate(updateInfo.effectiveDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT_DD_MM);
                 if (Utils.compareWithTwoDates(startsFrom, billingDates.currentBillEndDate()) > 0) {
                     BillingDates futureBillDates = hostelService.getBillingRuleOnDate(hostelId, startsFrom);
                     startDate = futureBillDates.currentBillStartDate();
