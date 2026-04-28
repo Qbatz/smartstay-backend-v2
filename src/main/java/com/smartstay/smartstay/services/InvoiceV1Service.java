@@ -2611,7 +2611,9 @@ public class InvoiceV1Service {
         if (!subscriptionService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
-
+        if (invoicesV1.isDiscounted()) {
+            return new ResponseEntity<>(Utils.CANNOT_EDIT_DISCOUNTED_INVOICES, HttpStatus.BAD_REQUEST);
+        }
         if (recurringInvoiceItems == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
@@ -2623,12 +2625,13 @@ public class InvoiceV1Service {
             return updateInvoice(recurringInvoiceItems, invoicesV1);
         }
 
-        Double newInvoiceAmount = invoiceItemService.updateRecurringInvoiceItems(recurringInvoiceItems, invoicesV1);
+        Double newInvoiceAmount = invoiceItemService.updateInvoiceItems(recurringInvoiceItems, invoicesV1.getInvoiceItems(), invoicesV1);
 
         double gstPercentile = invoicesV1.getGstPercentile() != null ? invoicesV1.getGstPercentile() : 0.0;
         double basePrice = Utils.roundOffWithTwoDigit(newInvoiceAmount / (1 + (gstPercentile / 100)));
         double gstAmount = newInvoiceAmount - basePrice;
 
+        invoicesV1.setBasePrice(newInvoiceAmount);
         invoicesV1.setTotalAmount(newInvoiceAmount);
         invoicesV1.setBasePrice(basePrice);
         invoicesV1.setGst(Utils.roundOfDouble(gstAmount));

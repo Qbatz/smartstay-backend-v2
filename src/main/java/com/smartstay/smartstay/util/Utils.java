@@ -246,6 +246,7 @@ public class Utils {
     public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_INVOICE = "Cannot change advance for cancelled invoices";
     public static final String RENT_AMOUNT_REQUIRED = "Rent amount is required";
     public static final String CANNOT_EDIT_PAID_INVOICES = "Cannot edit paid invoices";
+    public static final String CANNOT_EDIT_DISCOUNTED_INVOICES = "Cannot edit discounted applied invoices";
     public static final String COMPLAINT_NOT_FOUND = "Complaint not found";
     public static final String JOINING_DATE_CANNOT_BEFORE_BOOKING = "Check-in cannot be earlier than the booking date";
     public static final String CANNOT_DELETE_ACTIVE_CUSTOMERS = "Cannot delete active customers";
