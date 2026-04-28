@@ -3701,4 +3701,9 @@ public class InvoiceV1Service {
             invoicesV1Repository.save(runningInvoice);
         }
     }
+    public boolean hasInvoicesInRange(String customerId, Date date) {
+        List<String> types = Arrays.asList(InvoiceType.RENT.name(), InvoiceType.REASSIGN_RENT.name());
+        List<InvoicesV1> invoices = invoicesV1Repository.findInvoicesByCustomerIdAndTypeInAndDate1(customerId, types, date);
+        return invoices != null && !invoices.isEmpty();
+    }
 }
