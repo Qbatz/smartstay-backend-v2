@@ -14,7 +14,6 @@ public record MobileLoginRequest(
         @Size(min = 8, max = 100, message = "Password must be at least 8 characters and less than 100")
         String password,
 
-        @NotBlank(message = "Platform is required")
         String platform
 
 ) {}

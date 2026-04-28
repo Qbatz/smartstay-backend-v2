@@ -2,7 +2,6 @@ package com.smartstay.smartstay.payloads.user;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record ResetPin(
@@ -14,6 +13,5 @@ public record ResetPin(
         @Max(value = 999999, message = "PIN must be at most 6 digits")
         Integer pin,
 
-        @NotBlank(message = "Platform is required")
         String platform) {
 }

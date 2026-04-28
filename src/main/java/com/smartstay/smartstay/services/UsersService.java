@@ -166,10 +166,8 @@ public class UsersService {
         if (!Utils.checkNullOrEmpty(login.emailId()) && !Utils.checkNullOrEmpty(login.password())) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
         }
-        if (login.platform() == null || login.platform().trim().isEmpty()) {
-            return new ResponseEntity<>(Utils.PLATFORM_REQUIRED, HttpStatus.BAD_REQUEST);
-        }
-        if (Platform.fromValue(login.platform()) == null) {
+        Platform platformEnum = Platform.resolveOrDefault(login.platform());
+        if (platformEnum == null) {
             return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
         }
         Users users = userRepository.findByEmailIdAndIsDeletedFalse(login.emailId());
@@ -194,7 +192,7 @@ public class UsersService {
             MobileLogin mobileLogin = new MobileLogin(users.getUserId(), isPinSetup);
             userActivitiesService.addMobileLoginLog(null, null, ActivitySource.PROFILE.name(),
                     ActivitySourceType.LOGGED_IN.name(), users.getUserId(), users,
-                    Platform.fromValue(login.platform()).name().toLowerCase());
+                    platformEnum.name().toLowerCase());
             return new ResponseEntity<>(mobileLogin, HttpStatus.OK);
         }
 
@@ -1089,10 +1087,7 @@ public class UsersService {
         if (pin == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
-        if (pin.platform() == null || pin.platform().trim().isEmpty()) {
-            return new ResponseEntity<>(Utils.PLATFORM_REQUIRED, HttpStatus.BAD_REQUEST);
-        }
-        Platform platformEnum = Platform.fromValue(pin.platform());
+        Platform platformEnum = Platform.resolveOrDefault(pin.platform());
         if (platformEnum == null) {
             return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
         }
@@ -1135,10 +1130,7 @@ public class UsersService {
         if (payload == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
-        if (payload.platform() == null || payload.platform().trim().isEmpty()) {
-            return new ResponseEntity<>(Utils.PLATFORM_REQUIRED, HttpStatus.BAD_REQUEST);
-        }
-        Platform platformEnum = Platform.fromValue(payload.platform());
+        Platform platformEnum = Platform.resolveOrDefault(payload.platform());
         if (platformEnum == null) {
             return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
         }
@@ -1188,10 +1180,7 @@ public class UsersService {
         if (pin == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
-        if (pin.platform() == null || pin.platform().trim().isEmpty()) {
-            return new ResponseEntity<>(Utils.PLATFORM_REQUIRED, HttpStatus.BAD_REQUEST);
-        }
-        Platform platformEnum = Platform.fromValue(pin.platform());
+        Platform platformEnum = Platform.resolveOrDefault(pin.platform());
         if (platformEnum == null) {
             return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
         }

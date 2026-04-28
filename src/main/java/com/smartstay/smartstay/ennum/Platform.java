@@ -14,4 +14,11 @@ public enum Platform {
             return null;
         }
     }
+
+    public static Platform resolveOrDefault(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return ANDROID;
+        }
+        return fromValue(value);
+    }
 }
