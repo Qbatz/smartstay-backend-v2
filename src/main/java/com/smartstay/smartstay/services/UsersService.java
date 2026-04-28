@@ -20,6 +20,7 @@ import com.smartstay.smartstay.payloads.profile.Logout;
 import com.smartstay.smartstay.payloads.profile.ResetPassword;
 import com.smartstay.smartstay.payloads.profile.UpdateFCMToken;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
+import com.smartstay.smartstay.payloads.user.ResetPin;
 import com.smartstay.smartstay.payloads.user.SetupPin;
 import com.smartstay.smartstay.payloads.user.VerifyPin;
 import com.smartstay.smartstay.repositories.RolesRepository;
@@ -30,6 +31,7 @@ import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
 import com.smartstay.smartstay.responses.user.MobileLogin;
 import com.smartstay.smartstay.responses.user.OtpResponse;
+import com.smartstay.smartstay.responses.user.VerifyUsername;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import jdk.jshell.execution.Util;
@@ -191,6 +193,44 @@ public class UsersService {
 
         else {
             return new ResponseEntity<>(Utils.INVALID_USER_NAME_PASSWORD, HttpStatus.FORBIDDEN);
+        }
+    }
+
+    public ResponseEntity<?> verifyUsername(Login login) {
+        if (login == null) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+        if (!Utils.checkNullOrEmpty(login.emailId()) && !Utils.checkNullOrEmpty(login.password())) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+        Users users = userRepository.findByEmailIdAndIsDeletedFalse(login.emailId());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.INVALID_USER_NAME_PASSWORD, HttpStatus.BAD_REQUEST);
+        }
+
+        Authentication authentication = authManager
+                .authenticate(new UsernamePasswordAuthenticationToken(users.getUserId(), login.password()));
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.INVALID_USER_NAME_PASSWORD, HttpStatus.FORBIDDEN);
+        }
+
+        dispatchLoginOtp(users);
+        userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
+                ActivitySourceType.LOGGED_IN.name(), users.getUserId(), users);
+
+        return new ResponseEntity<>(
+                new VerifyUsername(users.getUserId(), Utils.OTP_SENT_TO_REGISTERED_MOBILE),
+                HttpStatus.OK);
+    }
+
+    private void dispatchLoginOtp(Users users) {
+        int otp = Utils.generateOtp();
+        System.out.println("OTP: " + otp);
+        String otpMessage = "Dear user, your SmartStay Login OTP is " + otp
+                + ". Use this OTP to verify your login. Do not share it with anyone. - SmartStay";
+        otpService.insertOTP(users, otp);
+        if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+            otpService.sendOtp(users.getMobileNo(), otpMessage);
         }
     }
 
@@ -1080,6 +1120,59 @@ public class UsersService {
                     ActivitySourceType.SETUP.name(), users.getUserId(), users);
             return generateToken(config, platformEnum);
         }
+    }
+
+    public ResponseEntity<?> resetPin(String userId, ResetPin payload) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (payload == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (payload.platform() == null || payload.platform().trim().isEmpty()) {
+            return new ResponseEntity<>(Utils.PLATFORM_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        Platform platformEnum = Platform.fromValue(payload.platform());
+        if (platformEnum == null) {
+            return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
+        }
+        if (payload.pin() == null) {
+            return new ResponseEntity<>(Utils.PIN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (payload.otp() == null) {
+            return new ResponseEntity<>(Utils.INVALID_OTP, HttpStatus.BAD_REQUEST);
+        }
+
+        Users users = userRepository.findUserByUserId(userId);
+        if (users == null) {
+            return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
+        }
+
+        UserOtp userOtp = otpService.verifyOtp(userId, payload.otp());
+        if (userOtp == null) {
+            return new ResponseEntity<>(Utils.INVALID_OTP, HttpStatus.BAD_REQUEST);
+        }
+        if (userOtp.getOtpValidity().before(new Date())) {
+            return new ResponseEntity<>(Utils.OTP_EXPIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        savePin(users, payload.pin(), ActivitySourceType.UPDATE);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", Utils.PIN_RESET_SUCCESS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private void savePin(Users users, Integer pin, ActivitySourceType activityType) {
+        UsersConfig config = users.getConfig();
+        if (config == null) {
+            config = new UsersConfig();
+            config.setUser(users);
+        }
+        config.setPin(pin);
+        users.setConfig(config);
+        userRepository.save(users);
+        userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
+                activityType.name(), users.getUserId(), users);
     }
 
     public ResponseEntity<?> verifyPin(String userId, VerifyPin pin) {
