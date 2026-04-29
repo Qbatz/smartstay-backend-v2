@@ -23,6 +23,7 @@ public class Utils {
     public static final String ENVIRONMENT_PROD = "PROD";
 
     public static final String USER_INPUT_DATE_FORMAT = "dd-MM-yyyy";
+    public static final String USER_INPUT_DATE_FORMAT_DD_MM = "MM-yyyy";
 
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
     public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
@@ -96,6 +97,7 @@ public class Utils {
     public static final String PAYMENT_SUCCESS = "Payment Success";
     public static final String CUSTOMER_ON_NOTICE = "Customer is already on notice";
     public static final String CUSTOMER_BOOKING_NOT_FOUND = "Booking not found for this customer";
+    public static final String CUSTOMER_NOT_FOUND = "Customer not found";
     public static final String RESTRICTED_HOSTEL_ACCESS = "Do not have the access to access this hostel";
     public static final String N0_FLOOR_FOUND_HOSTEL = "No floor found for the specified hostel.";
     public static final String N0_ROOM_FOUND_FLOOR = "No room found for the specified floor.";
@@ -110,6 +112,7 @@ public class Utils {
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
     public static final String INVALID_BOOKING_ID = "Invalid booking id";
     public static final String PAYLOADS_REQUIRED = "Payloads required";
+    public static final String PARAMS_REQUIRED = "Params required";
     public static final String TRY_AGAIN = "Try Again";
     public static final String SUBSCRIPTION_EXPIRED = "Subscription has expired. Please renew to continue.";
     public static final String INVALID_BED_ID = "Invalid bed id passed";
@@ -192,6 +195,7 @@ public class Utils {
     public static final String INVALID_DUE_DYS = "Invalid due days";
     public static final String INVALID_NOTICE_DAYS = "Invalid notice days";
     public static final String FULL_NAME_REQUIRES = "Full name is required";
+    public static final String ATLEAST_ONE_COLUMN_REQUIRED = "Atleast one column required";
 
     public static final String INVALID_GRACE_PERIOD = "Invalid grace period.";
     public static final String PERMISSION_READ = "READ";
@@ -242,6 +246,7 @@ public class Utils {
     public static final String CANNOT_CHANGE_ADVANCE_CANCELLED_INVOICE = "Cannot change advance for cancelled invoices";
     public static final String RENT_AMOUNT_REQUIRED = "Rent amount is required";
     public static final String CANNOT_EDIT_PAID_INVOICES = "Cannot edit paid invoices";
+    public static final String CANNOT_EDIT_DISCOUNTED_INVOICES = "Cannot edit discounted applied invoices";
     public static final String COMPLAINT_NOT_FOUND = "Complaint not found";
     public static final String JOINING_DATE_CANNOT_BEFORE_BOOKING = "Check-in cannot be earlier than the booking date";
     public static final String CANNOT_DELETE_ACTIVE_CUSTOMERS = "Cannot delete active customers";
@@ -257,6 +262,7 @@ public class Utils {
     public static final String CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED = "Cannot delete receipts for settlement generated customers";
     public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
     public static final String CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL = "Only manual invoices are allowed to mark unpaid";
+    public static final String CANNOT_MARK_UNPAID_DISCOUNT_APPLIED = "Cannot mark as unpaid for discounted invoices";
     public static final String REEIPTS_EXISTS_CANNOT_MARK_UNPAID = "Cannot mark unpaid, Please delete the receipts";
     public static final String EB_ENTRY_NOT_FOUND = "EB entry not found";
     public static final String EB_ENTRY_CANNOT_CHANGE_INVOICE_GENERATED = "Cannot modify invoice generated readings";

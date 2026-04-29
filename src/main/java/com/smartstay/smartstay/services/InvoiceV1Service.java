@@ -43,6 +43,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -565,7 +566,12 @@ public class InvoiceV1Service {
      */
     public Double getBookingAmount(String customerId, String hostelId) {
         InvoicesV1 invoiceV1 = invoicesV1Repository.findByCustomerIdAndHostelIdAndInvoiceType(customerId, hostelId, InvoiceType.BOOKING.name());
-        return invoiceV1.getPaidAmount();
+        if (invoiceV1 != null) {
+            if (invoiceV1.getPaidAmount() != null) {
+                return invoiceV1.getPaidAmount();
+            }
+        }
+        return 0.0;
     }
 
     public InvoicesV1 getBookingInvoice(String customerId, String hostelId) {
@@ -1309,6 +1315,15 @@ public class InvoiceV1Service {
             settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
             settlementInvoice.setBasePrice(Utils.roundOfDouble(totalAmountWithoutDeduction));
             settlementInvoice.setTotalAmount(Utils.roundOfDouble(totalAmountToBePaid));
+            if (Utils.roundOfDouble(totalAmountToBePaid) == 0) {
+                settlementInvoice.setPaymentStatus(PaymentStatus.PAID.name());
+            }
+            else if (Utils.roundOfDouble(totalAmountToBePaid) > 0) {
+                settlementInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+            }
+            else if (Utils.roundOfDouble(totalAmountToBePaid) < 0) {
+                settlementInvoice.setPaymentStatus(PaymentStatus.PENDING_REFUND.name());
+            }
             settlementInvoice.setInvoiceStartDate(leavingDate);
             settlementInvoice.setInvoiceDueDate(leavingDate);
             settlementInvoice.setInvoiceEndDate(leavingDate);
@@ -1359,7 +1374,7 @@ public class InvoiceV1Service {
             if (totalAmountToBePaid > 0) {
                 settlementInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
             } else if (totalAmountToBePaid == 0) {
-                settlementInvoice.setPaymentStatus(PaymentStatus.REFUNDED.name());
+                settlementInvoice.setPaymentStatus(PaymentStatus.PAID.name());
             } else {
                 settlementInvoice.setPaymentStatus(PaymentStatus.PENDING_REFUND.name());
             }
@@ -2402,7 +2417,10 @@ public class InvoiceV1Service {
 
     private void findAndDeleteCurrentMothInvoice(Date date, String customerId) {
         InvoicesV1 invoicesV1 = invoicesV1Repository.findLatestRentInvoiceByCustomerId(customerId);
-        invoicesV1Repository.delete(invoicesV1);
+        if (invoicesV1 != null) {
+            invoicesV1Repository.delete(invoicesV1);
+        }
+
     }
 
     public List<InvoicesV1> findRentInvoiceByCustomerId(String customerId) {
@@ -2593,9 +2611,8 @@ public class InvoiceV1Service {
         if (!subscriptionService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
-
-        if (!invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name())) {
-            return new ResponseEntity<>(Utils.EDIT_ALLOWED_ONLY_RECURRING_INVOICE, HttpStatus.BAD_REQUEST);
+        if (invoicesV1.isDiscounted()) {
+            return new ResponseEntity<>(Utils.CANNOT_EDIT_DISCOUNTED_INVOICES, HttpStatus.BAD_REQUEST);
         }
         if (recurringInvoiceItems == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
@@ -2604,7 +2621,31 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.CANNOT_EDIT_PAID_INVOICES, HttpStatus.BAD_REQUEST);
         }
 
-        Double newInvoiceAmount = invoiceItemService.updateRecurringInvoiceItems(recurringInvoiceItems, invoicesV1);
+        if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.AUTOMATIC.name()) || invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
+            return updateInvoice(recurringInvoiceItems, invoicesV1);
+        }
+
+        Double newInvoiceAmount = invoiceItemService.updateInvoiceItems(recurringInvoiceItems, invoicesV1.getInvoiceItems(), invoicesV1);
+
+        double gstPercentile = invoicesV1.getGstPercentile() != null ? invoicesV1.getGstPercentile() : 0.0;
+        double basePrice = Utils.roundOffWithTwoDigit(newInvoiceAmount / (1 + (gstPercentile / 100)));
+        double gstAmount = newInvoiceAmount - basePrice;
+
+        invoicesV1.setBasePrice(newInvoiceAmount);
+        invoicesV1.setTotalAmount(newInvoiceAmount);
+        invoicesV1.setBasePrice(basePrice);
+        invoicesV1.setGst(Utils.roundOfDouble(gstAmount));
+
+        invoicesV1Repository.save(invoicesV1);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+
+    }
+
+    private ResponseEntity<?> updateInvoice(List<UpdateRecurringInvoice> recurringInvoiceItems, InvoicesV1 invoicesV1) {
+        List<InvoiceItems> listInvoiceItemsFromSavedItesm = invoicesV1.getInvoiceItems();
+
+        double newInvoiceAmount = invoiceItemService.updateInvoiceItems(recurringInvoiceItems, invoicesV1.getInvoiceItems(), invoicesV1);
 
         double gstPercentile = invoicesV1.getGstPercentile() != null ? invoicesV1.getGstPercentile() : 0.0;
         double basePrice = Utils.roundOffWithTwoDigit(newInvoiceAmount / (1 + (gstPercentile / 100)));
@@ -3030,6 +3071,9 @@ public class InvoiceV1Service {
         if (invoicesV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
         }
+        if (invoicesV1.isDiscounted()) {
+            return new ResponseEntity<>(Utils.CANNOT_MARK_UNPAID_DISCOUNT_APPLIED, HttpStatus.BAD_REQUEST);
+        }
         if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
             return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
         }
@@ -3136,7 +3180,7 @@ public class InvoiceV1Service {
 
         }
 
-        double invoiceTotalAmount = invoicesV1.getTotalAmount();
+        double invoiceTotalAmount = invoicesV1.getBasePrice();
         double totalAmount = Utils.roundOfDouble(invoicesV1.getTotalAmount() - discountAmount);
         invoicesV1.setTotalAmount(totalAmount);
         invoicesV1.setDiscounted(true);
@@ -3326,6 +3370,8 @@ public class InvoiceV1Service {
         double payableAmountForCurrentInvoiceRent = 0.0;
         double currentMonthPaidRent = 0.0;
         double currentMonthPayableAmount = 0.0;
+        double currentInvoiceAmount = 0.0;
+
         AtomicReference<Double> otherItemAmount = new AtomicReference<>(0.0);
         List<CurrentMonthOtherItems> otherItems = new ArrayList<>();
         listInvoices.forEach(item -> {
@@ -3404,6 +3450,7 @@ public class InvoiceV1Service {
             currentMonthPaidRent = currentMonthPaidRent + runningInvoicePaidAmount;
             currentMonthPayableAmount = payableAmountForCurrentInvoiceRent - currentMonthPaidRent + otherItemAmount.get();
             double currentMonthTotalAmount = payableAmountForCurrentInvoiceRent + otherItemAmount.get();
+
             List<RentBreakUp> listRentBreakup = customersBedHistoryService.getBreakupBasedOnRentHistory(customers, leavingDate, billingDates);
 
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
@@ -3569,7 +3616,8 @@ public class InvoiceV1Service {
         if (discount.discountAmount() != null && discount.discountAmount() < 1) {
             return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
         }
-        if (discount.discountAmount() != null && discount.discountAmount() > invoicesV1.getTotalAmount()) {
+
+        if (discount.discountAmount() != null && discount.discountAmount() > invoicesV1.getBasePrice()) {
             return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_VALIDATION, HttpStatus.BAD_REQUEST);
         }
 
@@ -3578,6 +3626,15 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
+        if ((invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference()) == 0) {
+            invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+        }
+        else if (invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference() < 0) {
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING_REFUND.name());
+        }
+        else {
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        }
         invoicesV1.setTotalAmount(Utils.roundOfDouble(invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference()));
 
         invoicesV1Repository.save(invoicesV1);
@@ -3622,6 +3679,11 @@ public class InvoiceV1Service {
         Double invoiceDiscountAmount = invoiceDiscountService.deleteInvoiceDiscount(hostelId, invoiceId);
         invoicesV1.setTotalAmount(invoicesV1.getTotalAmount() + invoiceDiscountAmount);
         invoicesV1.setDiscounted(false);
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        } else if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING_REFUND.name());
+        }
 
         invoicesV1Repository.save(invoicesV1);
 
@@ -3633,31 +3695,6 @@ public class InvoiceV1Service {
 
     }
 
-    public InvoicesV1 createSettlementInvoiceForPostpaid(Customers customers, String hostelId, long round, List<String> listUnpaidInvoices, List<Deductions> deductions, double amoutToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid) {
-        InvoicesV1 advanceInvoice = null;
-
-        List<InvoicesV1> listInvoices = new ArrayList<>();
-        if (!isAdvancePaid) {
-            advanceInvoice = invoicesV1Repository.findAdvanceInvoiceByCustomerId(customers.getCustomerId());
-            listInvoices.add(advanceInvoice);
-        }
-        if (listUnpaidInvoices != null && !listUnpaidInvoices.isEmpty()) {
-            List<InvoicesV1> invoices = invoicesV1Repository.findAllById(listUnpaidInvoices);
-            listInvoices.addAll(invoices);
-        }
-
-        List<InvoicesV1> invoicesHasToBeCancelled = listInvoices
-                .stream()
-                        .map(i -> {
-                            i.setCancelled(true);
-                            return i;
-                        })
-                                .toList();
-
-        cancelActiveInvoice(invoicesHasToBeCancelled);
-
-        return createSettlementInvoice(customers, hostelId, round, listInvoices, deductions, amoutToBePaidWithoutDeductions, leavingDate, users);
-    }
 
     public Double getDiscountAmountForInvoice(String hostelId, String invoiceId) {
         return invoiceDiscountService.getDiscountAmount(hostelId, invoiceId);
@@ -3667,13 +3704,50 @@ public class InvoiceV1Service {
         return invoiceDiscountService.getDiscountAmount(hostelId, discountedInvoices);
     }
 
+    //used for both fixed postpaid and joining based.
+    //multipurpose - Rename
+
+    @Deprecated
+    public InvoicesV1 createSettlementInvoiceForPostpaid(Customers customers, String hostelId, long round, List<String> listUnpaidInvoices, List<Deductions> deductions, double amoutToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid) {
+        InvoicesV1 advanceInvoice = null;
+
+        List<InvoicesV1> listInvoices = new ArrayList<>();
+        if (!isAdvancePaid) {
+            advanceInvoice = invoicesV1Repository.findAdvanceInvoiceByCustomerId(customers.getCustomerId());
+            if (advanceInvoice != null) {
+                listInvoices.add(advanceInvoice);
+            }
+        }
+        if (listUnpaidInvoices != null && !listUnpaidInvoices.isEmpty()) {
+            List<InvoicesV1> invoices = invoicesV1Repository.findAllById(listUnpaidInvoices);
+            if (invoices != null) {
+                listInvoices.addAll(invoices);
+            }
+
+        }
+
+        List<InvoicesV1> invoicesHasToBeCancelled = listInvoices
+                .stream()
+                .map(i -> {
+                    i.setCancelled(true);
+                    return i;
+                })
+                .toList();
+
+        cancelActiveInvoice(invoicesHasToBeCancelled);
+
+        return createSettlementInvoice(customers, hostelId, round, listInvoices, deductions, amoutToBePaidWithoutDeductions, leavingDate, users);
+    }
+
     public InvoicesV1 createSettlementInvoiceForFixedPrepaid(Customers customers, String hostelId, double totalAmountToBePaid, List<String> listUnpaidInvoices, List<Deductions> lisDeductions, double amountToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid) {
         InvoicesV1 advanceInvoice = null;
 
         List<InvoicesV1> listInvoices = new ArrayList<>();
         if (!isAdvancePaid) {
             advanceInvoice = invoicesV1Repository.findAdvanceInvoiceByCustomerId(customers.getCustomerId());
-            listInvoices.add(advanceInvoice);
+            if (advanceInvoice != null) {
+                listInvoices.add(advanceInvoice);
+            }
         }
         if (listUnpaidInvoices != null && !listUnpaidInvoices.isEmpty()) {
             List<InvoicesV1> invoices = invoicesV1Repository.findAllById(listUnpaidInvoices);
@@ -3700,6 +3774,24 @@ public class InvoiceV1Service {
             runningInvoice.setTotalAmount(runningInvoice.getTotalAmount() + invoiceDiscountDto.invoiceDifference());
             invoicesV1Repository.save(runningInvoice);
         }
+    }
+
+    public List<String> findUnpaidCurrentMonthInvoicesIds(String hostelId, String customerId, BillingDates billDate) {
+        List<InvoicesV1> listCurrentMonthInvoice = invoicesV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, billDate.currentBillStartDate());
+        if (listCurrentMonthInvoice != null) {
+            List<String> invoicesIds = listCurrentMonthInvoice
+                    .stream()
+                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList();
+            if (invoicesIds != null) {
+                return invoicesIds;
+            }
+
+            return new ArrayList<>();
+        }
+
+        return new ArrayList<>();
     }
     public boolean hasInvoicesInRange(String customerId, Date date) {
         List<String> types = Arrays.asList(InvoiceType.RENT.name(), InvoiceType.REASSIGN_RENT.name());
