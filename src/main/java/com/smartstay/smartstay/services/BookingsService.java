@@ -897,6 +897,14 @@ public class BookingsService {
                 return new ResponseEntity<>(Utils.CUSTOMER_DID_THE_BED_CHANGE, HttpStatus.BAD_REQUEST);
             }
             Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+            BillingDates targetBillingDates = hostelService.getBillingRuleOnDate(hostelId, joinigDate);
+            if (targetBillingDates != null) {
+                if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), joinigDate)) {
+                    return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
+                }
+            }
+
             if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
                 if (!isBedAvailableForJoiningDateChange(bookingsV1.getBedId(), bookingsV1.getCustomerId(), joinigDate)) {
                     return new ResponseEntity<>(Utils.BED_OCCUPIED_ON_DATE, HttpStatus.BAD_REQUEST);
@@ -940,14 +948,14 @@ public class BookingsService {
             Date startDate = null;
             Date currentRentEndDate = null;
             if (updateInfo.effectiveDate() != null && !updateInfo.effectiveDate().trim().equalsIgnoreCase("")) {
-                Date startsFrom = Utils.stringToDate(updateInfo.effectiveDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                Date startsFrom = Utils.stringToDate(updateInfo.effectiveDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT_DD_MM);
                 if (Utils.compareWithTwoDates(startsFrom, billingDates.currentBillEndDate()) > 0) {
                     BillingDates futureBillDates = hostelService.getBillingRuleOnDate(hostelId, startsFrom);
                     startDate = futureBillDates.currentBillStartDate();
 
                     Calendar calendar = Calendar.getInstance();
                     calendar.setTime(futureBillDates.currentBillStartDate());
-                    calendar.add(Calendar.MONTH, -1);
+                    calendar.add(Calendar.DAY_OF_MONTH, -1);
 
                     currentRentEndDate = calendar.getTime();
                 } else {
@@ -1276,5 +1284,25 @@ public class BookingsService {
 
     public List<BookingsV1> findByCustomerIds(List<String> listCustomerIds) {
         return bookingsRepository.findByCustomerIdIn(listCustomerIds);
+    }
+
+    public List<RentHistory> getNewRentAmount(String customerId, Date date) {
+        BookingsV1 bookingsV1 = bookingsRepository.findByCustomerId(customerId);
+        if (bookingsV1 != null) {
+            return bookingsV1.getRentHistory();
+        }
+        return null;
+    }
+
+    public List<String> getCustomerIdsByStartAndEndDate(String hostelId, Date startDate, Date endDate) {
+        List<BookingsV1> listBookings = bookingsRepository.findBookingsByHostelIdAndStartAndEndDate(hostelId, startDate, endDate);
+        if (listBookings != null) {
+            return listBookings
+                    .stream()
+                    .map(BookingsV1::getCustomerId)
+                    .toList();
+        }
+
+        return null;
     }
 }

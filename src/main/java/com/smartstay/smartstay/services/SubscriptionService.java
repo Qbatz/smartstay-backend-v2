@@ -296,7 +296,6 @@ public class SubscriptionService {
         ResponseEntity<PaymentLinks> responseEntity = restTemplate.exchange(paymentUrl, HttpMethod.POST, entity, PaymentLinks.class);
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
             PaymentLinks details = responseEntity.getBody();
-            System.out.println(details.toString());
             orderHistoryService.createOrder(hostelId, details, finalAmount, plans.getPlanCode(), discountAmount, plans.getPrice());
             try {
                 clientConnect.connect(details.paymentLinkId());

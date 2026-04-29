@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -17,7 +18,10 @@ public class FilterOptionsService {
     public List<ColumnFilters> findCustomersBasicFilters() {
         FilterOptions filterOptions = filterOptionsRepositories.findByModuleName(FilterOptionsModule.MODULE_TENANT.name());
         if (filterOptions != null) {
-            return filterOptions.getFilterOptions();
+            return filterOptions.getFilterOptions()
+                    .stream()
+                    .sorted(Comparator.comparing(ColumnFilters::getOrder))
+                    .toList();
         }
         return new ArrayList<>();
     }

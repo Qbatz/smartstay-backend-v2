@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.customers.CustomerMapperForBills;
 import com.smartstay.smartstay.Wrappers.customers.FinalSettlementMapper;
 import com.smartstay.smartstay.Wrappers.customers.TenantTableMapper;
 import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
@@ -25,6 +26,7 @@ import com.smartstay.smartstay.ennum.InvoiceItems;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.AddRoomSettlementEbEvents;
+import com.smartstay.smartstay.filterOptions.customers.FilterOptions;
 import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.CancelCheckout;
@@ -37,12 +39,16 @@ import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
+import com.smartstay.smartstay.util.FilterKeywords;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.parameters.P;
@@ -306,7 +312,7 @@ public class CustomersService {
         return customersRepository.getCustomerData(hostelId, name != null && !name.isBlank() ? name : null, typeArray);
     }
 
-    public ResponseEntity<?> getAllCustomersForHostel(String hostelId, String name, String type) {
+    public ResponseEntity<?> getAllCustomersForHostel(String hostelId, String name, String type, Integer page, Integer size, String periods, String sharingType) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -321,7 +327,7 @@ public class CustomersService {
         }
 
         if (authentication.getSource().equalsIgnoreCase("web")) {
-            return getCustomerDetailsForWeb(hostelId, name, type);
+            return getCustomerDetailsForWeb(hostelId, name, type, page, size, periods, sharingType);
         }
 
         List<CustomerData> customerData = searchAndGetCustomers(hostelId, name, type);
@@ -396,7 +402,7 @@ public class CustomersService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, String type) {
+    private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, String type, Integer page, Integer size, String periods, String sharingType) {
 
         List<String> typeArray = new ArrayList<>();
         if (type == null || (type != null && type.trim().equalsIgnoreCase(""))) {
@@ -409,9 +415,105 @@ public class CustomersService {
             typeArray.add(type.toUpperCase());
         }
 
-        List<Customers> listCustomers = customersRepository.listCustomers(hostelId, name, typeArray);
+        Date startDate = null;
+        Date endDate = null;
+        List<String> customerIds = null;
+
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        if (periods != null) {
+            if (periods.equalsIgnoreCase(FilterKeywords.THIS_MONTH)) {
+                startDate = billingDates.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+            else if (periods.equalsIgnoreCase(FilterKeywords.LAST_MONTH)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.MONTH, -1);
+                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                startDate = billDatesBasedOnDate.currentBillStartDate();
+                endDate = billDatesBasedOnDate.currentBillEndDate();
+            }
+            else if (periods.equalsIgnoreCase(FilterKeywords.LAST_3_MONTH)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.MONTH, -3);
+                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                startDate = billDatesBasedOnDate.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+            else if (periods.equalsIgnoreCase(FilterKeywords.LAST_6_MONTH)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.MONTH, -6);
+                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                startDate = billDatesBasedOnDate.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+            else if (periods.equalsIgnoreCase(FilterKeywords.LAST_1_YEAR)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.YEAR, -1);
+                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                startDate = billDatesBasedOnDate.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+            }
+
+            customerIds = bookingsService.getCustomerIdsByStartAndEndDate(hostelId, startDate, endDate);
+        }
+
+        Pageable pageableRequest = PageRequest.of(page-1, size);
+
+        List<String> listStatus = new ArrayList<>();
+        listStatus.add(CustomerStatus.VACATED.name());
+        listStatus.add(CustomerStatus.CHECK_IN.name());
+        listStatus.add(CustomerStatus.NOTICE.name());
+        listStatus.add(CustomerStatus.BOOKED.name());
+        listStatus.add(CustomerStatus.SETTLEMENT_GENERATED.name());
+
+
+
+        List<Customers> listAllCustomersForCount = customersRepository.findCustomerByHostelId(hostelId, listStatus);
+        Page<Customers> listCustomers = customersRepository.listCustomers(hostelId, name, typeArray, customerIds, pageableRequest);
         List<ColumnFilters> listColumns = columnService.getCustomerColumns(hostelId, FilterOptionsModule.MODULE_TENANT.name());
 
+        int totalCustomers = (int) listCustomers.getTotalElements();
+        int currentPage = listCustomers.getPageable().getPageNumber() + 1;
+        int totalPages = listCustomers.getTotalPages();
+        int vacatedCount = 0;
+        int bookedCount = 0;
+        int settlementGeneratedCount = 0;
+        int noticePeriodCounts = 0;
+        int checkedInCounts = 0;
+
+        if (listAllCustomersForCount != null) {
+            vacatedCount = (int) listAllCustomersForCount
+                    .stream()
+                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name()))
+                    .count();
+
+            bookedCount = (int) listAllCustomersForCount
+                    .stream()
+                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name()))
+                    .count();
+
+            settlementGeneratedCount = (int) listAllCustomersForCount
+                    .stream()
+                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()))
+                    .count();
+            noticePeriodCounts = (int) listAllCustomersForCount
+                    .stream()
+                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name()))
+                    .count();
+            checkedInCounts = (int) listAllCustomersForCount
+                    .stream()
+                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()))
+                    .count();
+        }
+
+        Summary summary = new Summary(totalCustomers,
+                vacatedCount,
+                bookedCount,
+                settlementGeneratedCount,
+                noticePeriodCounts,
+                checkedInCounts);
+
+        List<Customers> customersList = listCustomers.getContent();
         List<ColumnFilters> activeColumns = listColumns
                 .stream()
                 .filter(ColumnFilters::isSelected)
@@ -442,18 +544,73 @@ public class CustomersService {
             listBedDetails = new ArrayList<>();
         }
 
-        List<List<Object>> listTenants = listCustomers
+        List<List<Object>> listTenants = customersList
                 .stream()
                 .map(i -> new TenantTableMapper(listBedDetails, listBookings, tableColumns).apply(i))
                 .toList();
 
+        FilterOptions filterOptions = getTenantFilterOptions(hostelId);
+
         CustomerWebResponse response = new CustomerWebResponse(
-                listCustomers.size(),
+                totalCustomers,
+                currentPage,
+                totalPages,
+                size,
+                summary,
+                filterOptions,
                 tableColumns,
                 listColumns,
                 listTenants
         );
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private FilterOptions getTenantFilterOptions(String hostelId) {
+        FilterOptions filterOptions = new FilterOptions();
+        List<FilterOptions.FilterItems> statusFilterItems = new ArrayList<>();
+        statusFilterItems.add(new FilterOptions.FilterItems("Booked", CustomerStatus.BOOKED.name()));
+        statusFilterItems.add(new FilterOptions.FilterItems("Checked In", CustomerStatus.CHECK_IN.name()));
+        statusFilterItems.add(new FilterOptions.FilterItems("Settlement Generated", CustomerStatus.SETTLEMENT_GENERATED.name()));
+        statusFilterItems.add(new FilterOptions.FilterItems("Vacated", CustomerStatus.VACATED.name()));
+        statusFilterItems.add(new FilterOptions.FilterItems("Notice", CustomerStatus.NOTICE.name()));
+
+        List<FilterOptions.FilterItems> listPeriods = new ArrayList<>();
+        listPeriods.add(new FilterOptions.FilterItems("This Month", FilterKeywords.THIS_MONTH));
+        listPeriods.add(new FilterOptions.FilterItems("Last Month", FilterKeywords.LAST_MONTH));
+        listPeriods.add(new FilterOptions.FilterItems("Last 3 Months", FilterKeywords.LAST_3_MONTH));
+        listPeriods.add(new FilterOptions.FilterItems("Last 6 Months", FilterKeywords.LAST_6_MONTH));
+        listPeriods.add(new FilterOptions.FilterItems("Last 1 Year", FilterKeywords.LAST_1_YEAR));
+
+        List<Rooms> listRooms = roomsService.findByHostelId(hostelId);
+
+        List<Integer> roomsBySharing = listRooms
+                .stream()
+                .filter(i -> i.getSharingType() > 0)
+                .map(Rooms::getSharingType)
+                .distinct()
+                .sorted()
+                .toList();
+        List<FilterOptions.FilterItems> listSharingType = new ArrayList<>();
+        roomsBySharing.forEach(item -> {
+            if (item == 1) {
+                listSharingType.add(new FilterOptions.FilterItems("Single sharing", item.toString()));
+            }
+            else if (item == 2) {
+                listSharingType.add(new FilterOptions.FilterItems("Two sharing", item.toString()));
+            }
+            else if (item == 3) {
+                listSharingType.add(new FilterOptions.FilterItems("Three sharing", item.toString()));
+            }
+            else  {
+                listSharingType.add(new FilterOptions.FilterItems(item + " sharing", item.toString()));
+            }
+        });
+
+        filterOptions.setPeriods(listPeriods);
+        filterOptions.setSharingType(listSharingType);
+        filterOptions.setStatus(statusFilterItems);
+
+        return filterOptions;
     }
 
     /**
@@ -1255,8 +1412,10 @@ public class CustomersService {
             }
             fullName.append(customers.getLastName());
         }
-//        String fullName = customers.getFirstName() + " " + customers.getLastName();
-
+        boolean isNewRentAvailable = false;
+        double newRentAmount = 0.0;
+        String newRentLabelHint = null;
+        List<RentHistory> rentHistories = bookingsService.getNewRentAmount(customerId, new Date());
         CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
         List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
         InvoiceResponse advanceInvoice = invoiceResponseList.stream()
@@ -1264,6 +1423,20 @@ public class CustomersService {
                 .limit(1)
                 .findFirst()
                 .orElse(null);
+        if (rentHistories != null) {
+            List<RentHistory> listNewRentHistory = rentHistories
+                    .stream()
+                    .filter(i -> Utils.compareWithTwoDates(i.getStartsFrom(), new Date()) > 0)
+                    .toList();
+            if (listNewRentHistory != null && !listNewRentHistory.isEmpty()) {
+                isNewRentAvailable = true;
+                RentHistory rh = listNewRentHistory.get(listNewRentHistory.size() - 1);
+                if (rh != null) {
+                    newRentAmount = rh.getRent();
+                    newRentLabelHint = "Rent Update Scheduled, Effective from " + Utils.dateToString(rh.getStartsFrom());
+                }
+            }
+        }
 
         HostelInformation hostelInformation = null;
         BookingInfo bookingInfo = null;
@@ -1436,6 +1609,9 @@ public class CustomersService {
                 initials.toString(),
                 customers.getProfilePic(),
                 bookingId,
+                isNewRentAvailable,
+                newRentAmount,
+                newRentLabelHint,
                 customers.getCurrentStatus(),
                 address,
                 hostelInformation,
@@ -1742,11 +1918,15 @@ public class CustomersService {
         if (amountToBePaid < 0) {
             isRefundable = true;
         }
+        double totalRefundableAdvance = 0.0;
+        if (isAdvancePaid) {
+            totalRefundableAdvance = totalAdvanceAmount - totalDeductions;
+        }
         SettlementInfo settlementInfo = new SettlementInfo(Utils.roundOffWithTwoDigit(amountToBePaid),
                 totalDeductions,
                 Utils.roundOffWithTwoDigit(payableRent),
                 Utils.roundOffWithTwoDigit(payableRent),
-                Utils.roundOffWithTwoDigit(totalAdvanceAmount - totalDeductions),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
                 Utils.roundOffWithTwoDigit(ebAmount),
                 Utils.roundOffWithTwoDigit(unpaidInvoiceAmount),
                 isRefundable,
@@ -1868,12 +2048,17 @@ public class CustomersService {
             isRefundable = true;
         }
 
+        double totalRefundableAdvance = 0.0;
+        if (isAdvancePaid) {
+            totalRefundableAdvance = totalAdvanceAmount - totalDeductions;
+        }
+
 
         SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
                 totalDeductions,
                 payableRent,
-                Utils.roundOffWithTwoDigit(0.0),
-                Utils.roundOffWithTwoDigit(totalAdvancePaid),
+                Utils.roundOffWithTwoDigit(totalDeductions),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
                 Utils.roundOffWithTwoDigit(ebAmount),
                 Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
                 isRefundable,
@@ -1973,12 +2158,17 @@ public class CustomersService {
             isRefundable = true;
         }
 
+        double totalRefundableAdvance = 0.0;
+        if (isAdvancePaid) {
+            totalRefundableAdvance = totalAdvanceAmount - totalDeductions;
+        }
+
 
         SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
                 totalDeductions,
                 payableRent,
-                Utils.roundOffWithTwoDigit(0.0),
-                Utils.roundOffWithTwoDigit(totalAdvancePaid),
+                Utils.roundOffWithTwoDigit(totalDeductions),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
                 Utils.roundOffWithTwoDigit(ebAmount),
                 Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
                 isRefundable,
@@ -2887,6 +3077,9 @@ public class CustomersService {
                             .map(UnpaidInvoices::invoiceId)
                             .toList());
                 }
+
+                List<String> listCurrentMonthInvoicesIds = invoiceService.findUnpaidCurrentMonthInvoicesIds(customers.getHostelId(), customers.getCustomerId(), billDate);
+                listUnpaidInvoices.addAll(listCurrentMonthInvoicesIds);
             }
         }
 
@@ -2897,10 +3090,6 @@ public class CustomersService {
             }
 
             if (currentMonthRentInfo.currentRentPaid() == 0) {
-                listUnpaidInvoices.add(currentMonthRentInfo.currentInvoiceId());
-            }
-
-            if (currentMonthRentInfo.currentRentPaid() < currentMonthRentInfo.currentMonthPayableAmount()) {
                 listUnpaidInvoices.add(currentMonthRentInfo.currentInvoiceId());
             }
         }
@@ -3416,6 +3605,13 @@ public class CustomersService {
         //check is it after or equal current billing cycle
         Date joiningDate = Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        if (billingDates != null && billingDates.currentBillStartDate() != null) {
+            if (Utils.compareWithTwoDates(joiningDate, billingDates.currentBillStartDate()) < 0) {
+                return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
+            }
+        }
+
         ReassignRent reassignRent = invoiceService.calculateAndCreateInvoiceForReassign(customers, request.joiningDate(), request.rentAmount());
         double balanceAmount = 0.0;
         if (reassignRent != null) {
@@ -3743,93 +3939,79 @@ public class CustomersService {
 
     }
 
-    public ResponseEntity<?> getAllCustomersForHostelNew(String hostelId, String name, String type) {
+    public ResponseEntity<?> getCustomersOnPurpose(String hostelId, GetCustomersPurpose purpose) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        String userId = authentication.getName();
-        Users user = userService.findUserByUserId(userId);
-
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
-
-        if (authentication.getSource().equalsIgnoreCase("web")) {
-            return getCustomerDetailsForWeb(hostelId, name, type);
+        if (purpose == null) {
+            return new ResponseEntity<>(Utils.PARAMS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
+        if (purpose.equals(GetCustomersPurpose.WALK_IN)) {
+            List<String> customerStatus = new ArrayList<>();
+            customerStatus.add(CustomerStatus.INACTIVE.name());
+            List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
+            if (listCustomers != null) {
+                List<WalkInCustomers> listWalkInCustomers = listCustomers
+                        .stream()
+                        .map(i -> new WalkInCustomers(i.getCustomerId(),
+                                NameUtils.getFullName(i.getFirstName(), i.getLastName()),
+                                i.getProfilePic(),
+                                NameUtils.getInitials(i.getFirstName(), i.getLastName()),
+                                "+91 " + i.getMobile(),
+                                i.getEmailId()))
+                        .toList();
 
-        List<CustomerData> customerData = searchAndGetCustomers(hostelId, name, type);
-        HashMap<String, String> filterOption = new HashMap<>();
-        List<com.smartstay.smartstay.responses.customer.CustomerData> listCustomers = customerData.stream().map(item -> {
-            StringBuilder initials = new StringBuilder();
-            StringBuilder fullName = new StringBuilder();
-            if (item.getFirstName() != null) {
-                initials.append(item.getFirstName().toUpperCase().charAt(0));
-                fullName.append(item.getFirstName());
+                return new ResponseEntity<>(listWalkInCustomers, HttpStatus.OK);
             }
-            if (item.getLastName() != null && !item.getLastName().equalsIgnoreCase("")) {
-                fullName.append(" ");
-                fullName.append(item.getLastName());
-                initials.append(item.getLastName().toUpperCase().charAt(0));
+            return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+        }
+        else if (purpose.equals(GetCustomersPurpose.BILL)) {
+            List<String> customerStatus = new ArrayList<>();
+            customerStatus.add(CustomerStatus.ACTIVE.name());
+            customerStatus.add(CustomerStatus.VACATED.name());
+            customerStatus.add(CustomerStatus.NOTICE.name());
+            customerStatus.add(CustomerStatus.CHECK_IN.name());
 
-            } else {
-                if (item.getFirstName().length() > 1) {
-                    initials.append(item.getFirstName().toUpperCase().charAt(1));
-                }
-            }
-            String currentStatus = null;
-            if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
-                currentStatus = "Booked";
-            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
-                currentStatus = "Vacated";
-            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
-                currentStatus = "Notice Period";
-            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
-                currentStatus = "Checked In";
-            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
-                currentStatus = "Inactive";
-            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.ACTIVE.name())) {
-                currentStatus = "Active";
-            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
-                currentStatus = "Cancelled";
-            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
-                currentStatus = "Settlement Generated";
-            }
+            List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
+            List<String> customerIds = listCustomers
+                    .stream()
+                    .map(Customers::getCustomerId)
+                    .toList();
+            List<BookingsV1> cusotmerBookings = bookingsService.findByCustomerIds(customerIds);
 
-            if (!filterOption.containsKey(currentStatus)) {
-                filterOption.put(currentStatus, currentStatus);
-            }
+            List<GetCustomersForBills> customerForBills = listCustomers
+                    .stream()
+                    .map(i -> new CustomerMapperForBills(cusotmerBookings).apply(i))
+                    .toList();
 
-            return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
-                    item.getLastName(),
-                    fullName.toString(),
-                    item.getCity(),
-                    item.getState(),
-                    item.getCountry(),
-                    item.getMobile(),
-                    currentStatus,
-                    item.getEmailId(),
-                    item.getProfilePic(),
-                    item.getBedId(),
-                    item.getFloorId(),
-                    item.getRoomId(),
-                    item.getCustomerId(),
-                    initials.toString(),
-                    Utils.dateToString(item.getExpectedJoiningDate()),
-                    Utils.dateToString(item.getActualJoiningDate()),
-                    item.getCountryCode(),
-                    Utils.dateToString(item.getCreatedAt()),
-                    item.getBedName(),
-                    item.getRoomName(),
-                    item.getFloorName());
-        }).collect(Collectors.toList());
+            return new ResponseEntity<>(customerForBills, HttpStatus.OK);
+        }
+        else {
+            List<String> customerStatus = new ArrayList<>();
+            customerStatus.add(CustomerStatus.ACTIVE.name());
+            customerStatus.add(CustomerStatus.NOTICE.name());
+            customerStatus.add(CustomerStatus.CHECK_IN.name());
 
+            List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
+            List<CustomersForComplaints> listCustomersForComplaint = listCustomers
+                    .stream()
+                    .map(i -> new CustomersForComplaints(i.getCustomerId(),
+                            NameUtils.getFullName(i.getFirstName(), i.getLastName()),
+                            i.getFirstName(),
+                            i.getLastName(),
+                            i.getProfilePic(),
+                            NameUtils.getInitials(i.getFirstName(), i.getLastName())))
+                    .toList();
 
+            return new ResponseEntity<>(listCustomersForComplaint, HttpStatus.OK);
 
-        CustomersList response = new CustomersList(hostelId, listCustomers.size(), null, listCustomers);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        }
     }
 }
