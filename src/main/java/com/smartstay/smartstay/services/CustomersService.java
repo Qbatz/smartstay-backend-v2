@@ -585,7 +585,7 @@ public class CustomersService {
 
         List<Integer> roomsBySharing = listRooms
                 .stream()
-                .filter(i -> i.getSharingType() > 0)
+                .filter(i -> i.getSharingType() != null && i.getSharingType() > 0)
                 .map(Rooms::getSharingType)
                 .distinct()
                 .sorted()
@@ -1965,7 +1965,7 @@ public class CustomersService {
         if (bookingAmount > 0) {
             isAdvancePaid = true;
             totalAdvanceAmount = totalAdvanceAmount + bookingAmount;
-            totalAdvanceAmount = totalAdvanceAmount + bookingAmount;
+            totalAdvancePaid = totalAdvancePaid + bookingAmount;
         }
 
         List<Deductions> listDeductions = new ArrayList<>();

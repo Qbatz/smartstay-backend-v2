@@ -26,8 +26,8 @@ public class CustomerBillingRulesService {
         customerBillingRulesRepository.save(cbr);
     }
 
-    public List<CustomerBillingRules> findCustomersHavingBillingToday(List<String> hostelIds, int dayFromDate) {
-        List<CustomerBillingRules> listCustomerBillingRules = customerBillingRulesRepository.findCustomersHavingBillingToday(hostelIds, dayFromDate);
+    public List<CustomerBillingRules> findCustomersHavingBillingToday(List<String> hostelIds, List<Integer> billingDays) {
+        List<CustomerBillingRules> listCustomerBillingRules = customerBillingRulesRepository.findCustomersHavingBillingToday(hostelIds, billingDays);
         if (listCustomerBillingRules == null) {
             listCustomerBillingRules = new ArrayList<>();
         }

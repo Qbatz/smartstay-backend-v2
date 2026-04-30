@@ -11,8 +11,10 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -32,6 +34,7 @@ public class JoiningBasedBillingSchedular {
     @Scheduled(cron = "0 30 2 * * *")
     public void joiningDateInvoiceScheduler() {
         int dayFromDate = Utils.findDateFromDate(new Date());
+//        int dayFromDate = 29;
         List<BillingRules> findListOfHostelsHavingJoiningBasedBilling = hostelConfigService.findHostelsHavingJoiningBsedInvoice();
         List<HostelV1> hostels = findListOfHostelsHavingJoiningBasedBilling
                 .stream()
@@ -41,8 +44,45 @@ public class JoiningBasedBillingSchedular {
                 .stream()
                 .map(HostelV1::getHostelId)
                 .toList();
+        int lastDayOfCurrentMonth = Utils.findLastDate(new Date());
 
-        List<CustomerBillingRules> listBilling = customerBillingRulesService.findCustomersHavingBillingToday(hostelIds, dayFromDate);
+//        int lastDayOfCurrentMonth = 29;
+        List<Integer> billingDays = new ArrayList<>();
+        if (dayFromDate == 28) {
+            if (lastDayOfCurrentMonth == 28) {
+                for (int i = 28; i<=31; i++) {
+                    billingDays.add(i);
+                }
+            }
+            else {
+                billingDays.add(dayFromDate);
+            }
+        }
+        else if (dayFromDate == 29) {
+            if (lastDayOfCurrentMonth == 29) {
+                for (int i = 29; i<=31; i++) {
+                    billingDays.add(i);
+                }
+            }
+            else {
+                billingDays.add(dayFromDate);
+            }
+        }
+        else if (dayFromDate == 30) {
+            if (lastDayOfCurrentMonth == 30) {
+                for (int i = 30; i<=31; i++) {
+                    billingDays.add(i);
+                }
+            }
+            else {
+                billingDays.add(dayFromDate);
+            }
+        }
+        else {
+            billingDays.add(dayFromDate);
+        }
+
+        List<CustomerBillingRules> listBilling = customerBillingRulesService.findCustomersHavingBillingToday(hostelIds, billingDays);
 
         listBilling.forEach(item -> {
             applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this, item.getHostelId(), item.getCustomerId()));

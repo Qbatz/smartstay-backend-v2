@@ -120,7 +120,7 @@ public class Utils {
 
     public static final String NO_ADDITIONAL_IMAGES_FOUND = "No additional images found";
     public static final String IMAGES_NOT_FOUND = "Image not found";
-    public static final String CANNOT_CREATE_CURRENT_MONTH_INVOICE_POSTPAID = "Manual invoice creation is not allowed for the current month for postpaid billing model.";
+    public static final String CANNOT_CREATE_CURRENT_MONTH_INVOICE_POSTPAID = "Current month manual bill creation is not allowed for postpaid hostels";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
     public static final String FUTURE_DATES_NOT_ALLOWED = "Future Dates are not allowed";
@@ -729,4 +729,11 @@ public class Utils {
         return (fName + " " + lName).trim();
     }
 
+    public static int findLastDate(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
+
+        return cal.get(Calendar.DAY_OF_MONTH);
+    }
 }
