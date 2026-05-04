@@ -4,7 +4,10 @@ import com.smartstay.smartstay.Wrappers.plans.PlanListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.PlanType;
+import com.smartstay.smartstay.repositories.OrderHistoryRepository;
 import com.smartstay.smartstay.repositories.PlansRepository;
+import com.smartstay.smartstay.repositories.SubscriptionRepository;
+import com.smartstay.smartstay.responses.plans.BillingHistoryItem;
 import com.smartstay.smartstay.responses.plans.PlanDetails;
 import com.smartstay.smartstay.responses.plans.PlansList;
 import com.smartstay.smartstay.util.Utils;
@@ -17,6 +20,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class PlansService {
@@ -30,7 +35,10 @@ public class PlansService {
     private RolesService rolesService;
     @Autowired
     private UserHostelService userHostelService;
-
+    @Autowired
+    private SubscriptionRepository subscriptionRepository;
+    @Autowired
+    private OrderHistoryRepository orderHistoryRepository;
 
     private HostelService hostelService;
 
@@ -103,6 +111,87 @@ public class PlansService {
                     .toList();
         }
 
+        Subscription latestSubscription = subscriptionRepository.findLatestSubscription(hostelId);
+
+        double resolvedPlanAmount = 0.0;
+        if (latestSubscription != null && latestSubscription.getPlanAmount() != null) {
+            resolvedPlanAmount = latestSubscription.getPlanAmount();
+        } else if (hostelPlan.getCurrentPlanPrice() != null) {
+            resolvedPlanAmount = hostelPlan.getCurrentPlanPrice();
+        } else if (plans != null && plans.getPrice() != null) {
+            resolvedPlanAmount = plans.getPrice();
+        }
+        String formattedPlanAmount = "₹" + (long) resolvedPlanAmount + "/month";
+
+
+        String renewalDate;
+        if (latestSubscription != null && latestSubscription.getNextBillingAt() != null) {
+            renewalDate = Utils.dateToString(latestSubscription.getNextBillingAt());
+        } else if (latestSubscription != null && latestSubscription.getPlanEndsAt() != null) {
+            renewalDate = Utils.dateToString(latestSubscription.getPlanEndsAt());
+        } else {
+            renewalDate = Utils.dateToString(hostelPlan.getTrialEndingAt());
+        }
+
+        String status;
+        if (hostelPlan.isTrial()) {
+            status = "TRIAL";
+        } else if (latestSubscription != null && Boolean.TRUE.equals(latestSubscription.getIsActive())) {
+            status = "ACTIVE";
+        } else {
+            status = "EXPIRED";
+        }
+
+        List<OrderHistory> orderHistoryList = orderHistoryRepository.findByHostelIdOrderByCreatedAtDesc(hostelId);
+
+        List<String> paidByIds = orderHistoryList.stream()
+                .map(OrderHistory::getPaidBy)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<String, Users> paidByUserMap = usersService.findAllUsersFromUserId(paidByIds)
+                .stream()
+                .collect(Collectors.toMap(Users::getUserId, u -> u));
+
+        List<BillingHistoryItem> billingHistory = orderHistoryList.stream().map(oh -> {
+
+            String paymentMethod = resolvePaymentMethod(oh);
+            String subscriptionNo = hostelPlan.getSubscriptionNumber() != null
+                    ? hostelPlan.getSubscriptionNumber() : "";
+
+            String paidById = oh.getPaidBy();
+            String paidByName = "";
+            if (paidById != null && paidByUserMap.containsKey(paidById)) {
+                Users paidByUser = paidByUserMap.get(paidById);
+                String firstName = paidByUser.getFirstName() != null ? paidByUser.getFirstName() : "";
+                String lastName = paidByUser.getLastName() != null ? paidByUser.getLastName() : "";
+                paidByName = (firstName + " " + lastName).trim();
+            }
+
+            return new BillingHistoryItem(
+                    oh.getHistoryId(),
+                    subscriptionNo,
+                    oh.getPlanName(),
+                    oh.getPlanCode(),
+                    oh.getPlanAmount(),
+                    oh.getDiscountAmount(),
+                    oh.getTotalAmount(),
+                    oh.getOrderStatus(),
+                    oh.getPaymentType(),
+                    paymentMethod,
+                    paidById,
+                    paidByName,
+                    Utils.dateToDateTime(oh.getCreatedAt())
+            );
+        }).toList();
+
+        String currentPaymentMethod = orderHistoryList.stream()
+                .filter(oh -> "PAID".equalsIgnoreCase(oh.getOrderStatus()))
+                .findFirst()
+                .map(this::resolvePaymentMethod)
+                .orElse("N/A");
+
         PlanDetails planDetails = new PlanDetails(
                 String.valueOf(hostelPlan.getHostelPlanId()),
                 hostelPlan.getCurrentPlanCode(),
@@ -113,10 +202,32 @@ public class PlansService {
                 Utils.dateToString(hostelPlan.getCurrentPlanStartsAt()),
                 Utils.dateToString(hostelPlan.getCurrentPlanEndsAt()),
                 Utils.roundOffWithTwoDigit(subscriptionAmount),
-                features
+                features,
+                formattedPlanAmount,
+                renewalDate,
+                currentPaymentMethod,
+                status,
+                billingHistory
         );
 
         return new ResponseEntity<>(planDetails, HttpStatus.OK);
+    }
+
+
+    private String resolvePaymentMethod(OrderHistory oh) {
+        if (oh.getPaymentType() == null) return "N/A";
+        if ("UPI".equalsIgnoreCase(oh.getPaymentType())) {
+            return oh.getUpiId() != null ? "UPI - " + oh.getUpiId() : "UPI";
+        }
+        if ("CARD".equalsIgnoreCase(oh.getPaymentType())) {
+            StringBuilder card = new StringBuilder();
+            if (oh.getCardBrand() != null) card.append(oh.getCardBrand()).append(" ");
+            if (oh.getCardType() != null) card.append(oh.getCardType()).append(" ");
+            if (oh.getCardNo() != null) card.append("****").append(oh.getCardNo());
+            String label = card.toString().trim();
+            return label.isEmpty() ? "Card" : label;
+        }
+        return oh.getPaymentType();
     }
 
     public Plans findPlanByPlanCode(String s) {
