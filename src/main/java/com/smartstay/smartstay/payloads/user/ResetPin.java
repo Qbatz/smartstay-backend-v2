@@ -4,10 +4,14 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-public record SetupPin(
+public record ResetPin(
+        @NotNull(message = "OTP is required")
+        Integer otp,
+
         @NotNull(message = "PIN is required")
         @Min(value = 1000, message = "PIN must be at least 4 digits")
         @Max(value = 999999, message = "PIN must be at most 6 digits")
         Integer pin,
+
         String platform) {
 }

@@ -269,6 +269,10 @@ public class Utils {
     public static final String EB_ENTRY_CANNOT_DELETE_INVOICE_GENERATED = "Cannot delete invoice generated readings";
     public static final String DELETE_AVAILABLE_ONLY_FOR_LAST_ENTRY = "Delete is available only for latest entries";
     public static final String PIN_REQUIRED = "Pin is required";
+    public static final String PLATFORM_REQUIRED = "Platform is required";
+    public static final String INVALID_PLATFORM = "Invalid platform. Allowed values are android or ios";
+    public static final String OTP_SENT_TO_REGISTERED_MOBILE = "OTP Has been sent to the registered mobile";
+    public static final String PIN_RESET_SUCCESS = "PIN Successfully changed. Please login again.";
     public static final String PIN_ALREADY_SETUP = "Pin is added for this account";
     public static final String INVALID_PIN = "Invalid Pin";
     public static final String TOKEN_REQUIRED = "FCM token is required";
