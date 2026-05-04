@@ -410,7 +410,11 @@ public class CoreSetUp {
 
 				planTrial.setFeaturesList(listFeatures);
 
+				applyGstColumns(planTrial);
 				plansRepository.save(planTrial);
+			} else if (trialPlan.getFinalPrice() == null) {
+				applyGstColumns(trialPlan);
+				plansRepository.save(trialPlan);
 			}
 
 			Plans planBasic = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.BASIC.name());
@@ -462,6 +466,10 @@ public class CoreSetUp {
 				listFeatures21.add(planFeatures24);
 
 				planBasic.setFeaturesList(listFeatures21);
+				applyGstColumns(planBasic);
+				plansRepository.save(planBasic);
+			} else if (planBasic.getFinalPrice() == null) {
+				applyGstColumns(planBasic);
 				plansRepository.save(planBasic);
 			}
 
@@ -514,8 +522,45 @@ public class CoreSetUp {
 				listFeatures31.add(planFeatures34);
 
 				planAdvance.setFeaturesList(listFeatures31);
+				applyGstColumns(planAdvance);
+				plansRepository.save(planAdvance);
+			} else if (planAdvance.getFinalPrice() == null) {
+				applyGstColumns(planAdvance);
 				plansRepository.save(planAdvance);
 			}
         };
+    }
+
+    @Bean
+    CommandLineRunner backfillPlanGstColumns(PlansRepository plansRepository) {
+        return args -> {
+            List<Plans> plansToUpdate = plansRepository.findAll()
+                    .stream()
+                    .filter(plan -> plan.getFinalPrice() == null)
+                    .toList();
+
+            if (plansToUpdate.isEmpty()) {
+                return;
+            }
+
+            plansToUpdate.forEach(CoreSetUp::applyGstColumns);
+            plansRepository.saveAll(plansToUpdate);
+        };
+    }
+
+    private static void applyGstColumns(Plans plan) {
+        double cgstPercent = 9.0;
+        double sgstPercent = 9.0;
+        double originalPrice = plan.getPrice() != null ? plan.getPrice() : 0.0;
+
+        double cgstAmount = (cgstPercent / 100.0) * originalPrice;
+        double sgstAmount = (sgstPercent / 100.0) * originalPrice;
+
+        plan.setCGST(cgstPercent);
+        plan.setSGST(sgstPercent);
+        plan.setFinalPrice(originalPrice);
+        plan.setCGSTAmount(cgstAmount);
+        plan.setSGSTAmount(sgstAmount);
+        plan.setPrice(originalPrice - (cgstAmount + sgstAmount));
     }
 }

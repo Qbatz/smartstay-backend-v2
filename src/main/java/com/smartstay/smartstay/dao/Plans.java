@@ -27,6 +27,16 @@ public class Plans {
     private boolean shouldShow;
     private boolean canCustomize;
     private boolean isActive;
+    @Column(nullable = false)
+    private Double CGST;
+    @Column(nullable = false)
+    private Double SGST;
+    @Column(nullable = false)
+    private Double cGSTAmount;
+    @Column(nullable = false)
+    private Double sGSTAmount;
+    @Column(nullable = false)
+    private Double finalPrice;
     private Date createdAt;
     private Date updatedAt;
 
