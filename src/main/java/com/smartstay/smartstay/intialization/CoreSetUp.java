@@ -357,179 +357,179 @@ public class CoreSetUp {
 
 
 
-    @Bean
-    CommandLineRunner addPlans(PlansRepository plansRepository) {
-        return args -> {
-			Plans trialPlan = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.TRIAL.name());
-			if (trialPlan == null) {
-				String planCode1 = Utils.generatePlanCode();
-
-				Plans planTrial = new Plans();
-				planTrial.setPlanName("Trial");
-				planTrial.setDuration(30l);
-				planTrial.setPrice(0.0);
-				planTrial.setDiscounts(0.0);
-				planTrial.setPlanType(PlanType.TRIAL.name());
-				planTrial.setPlanCode(planCode1);
-				planTrial.setShouldShow(false);
-				planTrial.setActive(true);
-				planTrial.setCanCustomize(false);
-				planTrial.setCreatedAt(new Date());
-				planTrial.setUpdatedAt(new Date());
-
-				List<PlanFeatures> listFeatures = new ArrayList<>();
-				PlanFeatures planFeatures = new PlanFeatures();
-				planFeatures.setActive(true);
-				planFeatures.setPrice(0.0);
-				planFeatures.setFeatureName("Tenant Management");
-				planFeatures.setPlan(planTrial);
-
-				PlanFeatures planFeatures2 = new PlanFeatures();
-				planFeatures2.setActive(true);
-				planFeatures2.setPrice(0.0);
-				planFeatures2.setFeatureName("PG Management");
-				planFeatures2.setPlan(planTrial);
-
-				PlanFeatures planFeatures3 = new PlanFeatures();
-				planFeatures3.setActive(true);
-				planFeatures3.setPrice(0.0);
-				planFeatures3.setFeatureName("Account Management");
-				planFeatures3.setPlan(planTrial);
-
-				PlanFeatures planFeatures4 = new PlanFeatures();
-				planFeatures4.setActive(true);
-				planFeatures4.setPrice(0.0);
-				planFeatures4.setFeatureName("Expense Management");
-				planFeatures4.setPlan(planTrial);
-
-
-
-				listFeatures.add(planFeatures);
-				listFeatures.add(planFeatures2);
-				listFeatures.add(planFeatures3);
-				listFeatures.add(planFeatures4);
-
-				planTrial.setFeaturesList(listFeatures);
-
-				SmartstayApplication.applyGstColumns(planTrial);
-				plansRepository.save(planTrial);
-			} else if (trialPlan.getFinalPrice() == null) {
-				SmartstayApplication.applyGstColumns(trialPlan);
-				plansRepository.save(trialPlan);
-			}
-
-			Plans planBasic = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.BASIC.name());
-			if (planBasic == null) {
-				String planCode3 = Utils.generatePlanCode();
-				planBasic = new Plans();
-				planBasic.setPlanName("Basic");
-				planBasic.setDuration(30l);
-				planBasic.setPrice(599.0);
-				planBasic.setDiscounts(0.0);
-				planBasic.setPlanType(PlanType.BASIC.name());
-				planBasic.setPlanCode(planCode3);
-				planBasic.setShouldShow(true);
-				planBasic.setActive(true);
-				planBasic.setCanCustomize(false);
-				planBasic.setCreatedAt(new Date());
-				planBasic.setUpdatedAt(new Date());
-
-				List<PlanFeatures> listFeatures21 = new ArrayList<>();
-				PlanFeatures planFeatures21 = new PlanFeatures();
-				planFeatures21.setActive(true);
-				planFeatures21.setPrice(0.0);
-				planFeatures21.setFeatureName("Tenant Management");
-				planFeatures21.setPlan(planBasic);
-
-				PlanFeatures planFeatures22 = new PlanFeatures();
-				planFeatures22.setActive(true);
-				planFeatures22.setPrice(0.0);
-				planFeatures22.setFeatureName("PG Management");
-				planFeatures22.setPlan(planBasic);
-
-				PlanFeatures planFeatures23 = new PlanFeatures();
-				planFeatures23.setActive(true);
-				planFeatures23.setPrice(0.0);
-				planFeatures23.setFeatureName("Account Management");
-				planFeatures23.setPlan(planBasic);
-
-				PlanFeatures planFeatures24 = new PlanFeatures();
-				planFeatures24.setActive(true);
-				planFeatures24.setPrice(0.0);
-				planFeatures24.setFeatureName("Expense Management");
-				planFeatures24.setPlan(planBasic);
-
-
-
-				listFeatures21.add(planFeatures21);
-				listFeatures21.add(planFeatures22);
-				listFeatures21.add(planFeatures23);
-				listFeatures21.add(planFeatures24);
-
-				planBasic.setFeaturesList(listFeatures21);
-				SmartstayApplication.applyGstColumns(planBasic);
-				plansRepository.save(planBasic);
-			} else if (planBasic.getFinalPrice() == null) {
-				SmartstayApplication.applyGstColumns(planBasic);
-				plansRepository.save(planBasic);
-			}
-
-			Plans planAdvance = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.ADVANCED.name());
-			if (planAdvance == null) {
-				String planCode2 = Utils.generatePlanCode();
-				planAdvance = new Plans();
-				planAdvance.setPlanName("Advance");
-				planAdvance.setDuration(30l);
-				planAdvance.setPrice(999.0);
-				planAdvance.setDiscounts(0.0);
-				planAdvance.setPlanType(PlanType.ADVANCED.name());
-				planAdvance.setPlanCode(planCode2);
-				planAdvance.setShouldShow(true);
-				planAdvance.setActive(true);
-				planAdvance.setCanCustomize(false);
-				planAdvance.setCreatedAt(new Date());
-				planAdvance.setUpdatedAt(new Date());
-
-				List<PlanFeatures> listFeatures31 = new ArrayList<>();
-				PlanFeatures planFeatures31 = new PlanFeatures();
-				planFeatures31.setActive(true);
-				planFeatures31.setPrice(0.0);
-				planFeatures31.setFeatureName("Tenant Management");
-				planFeatures31.setPlan(planAdvance);
-
-				PlanFeatures planFeatures32 = new PlanFeatures();
-				planFeatures32.setActive(true);
-				planFeatures32.setPrice(0.0);
-				planFeatures32.setFeatureName("PG Management");
-				planFeatures32.setPlan(planAdvance);
-
-				PlanFeatures planFeatures33 = new PlanFeatures();
-				planFeatures33.setActive(true);
-				planFeatures33.setPrice(0.0);
-				planFeatures33.setFeatureName("Account Management");
-				planFeatures33.setPlan(planAdvance);
-
-				PlanFeatures planFeatures34 = new PlanFeatures();
-				planFeatures34.setActive(true);
-				planFeatures34.setPrice(0.0);
-				planFeatures34.setFeatureName("Expense Management");
-				planFeatures34.setPlan(planAdvance);
-
-
-
-				listFeatures31.add(planFeatures31);
-				listFeatures31.add(planFeatures32);
-				listFeatures31.add(planFeatures33);
-				listFeatures31.add(planFeatures34);
-
-				planAdvance.setFeaturesList(listFeatures31);
-				SmartstayApplication.applyGstColumns(planAdvance);
-				plansRepository.save(planAdvance);
-			} else if (planAdvance.getFinalPrice() == null) {
-				SmartstayApplication.applyGstColumns(planAdvance);
-				plansRepository.save(planAdvance);
-			}
-        };
-    }
+//    @Bean
+//    CommandLineRunner addPlans(PlansRepository plansRepository) {
+//        return args -> {
+//			Plans trialPlan = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.TRIAL.name());
+//			if (trialPlan == null) {
+//				String planCode1 = Utils.generatePlanCode();
+//
+//				Plans planTrial = new Plans();
+//				planTrial.setPlanName("Trial");
+//				planTrial.setDuration(30l);
+//				planTrial.setPrice(0.0);
+//				planTrial.setDiscounts(0.0);
+//				planTrial.setPlanType(PlanType.TRIAL.name());
+//				planTrial.setPlanCode(planCode1);
+//				planTrial.setShouldShow(false);
+//				planTrial.setActive(true);
+//				planTrial.setCanCustomize(false);
+//				planTrial.setCreatedAt(new Date());
+//				planTrial.setUpdatedAt(new Date());
+//
+//				List<PlanFeatures> listFeatures = new ArrayList<>();
+//				PlanFeatures planFeatures = new PlanFeatures();
+//				planFeatures.setActive(true);
+//				planFeatures.setPrice(0.0);
+//				planFeatures.setFeatureName("Tenant Management");
+//				planFeatures.setPlan(planTrial);
+//
+//				PlanFeatures planFeatures2 = new PlanFeatures();
+//				planFeatures2.setActive(true);
+//				planFeatures2.setPrice(0.0);
+//				planFeatures2.setFeatureName("PG Management");
+//				planFeatures2.setPlan(planTrial);
+//
+//				PlanFeatures planFeatures3 = new PlanFeatures();
+//				planFeatures3.setActive(true);
+//				planFeatures3.setPrice(0.0);
+//				planFeatures3.setFeatureName("Account Management");
+//				planFeatures3.setPlan(planTrial);
+//
+//				PlanFeatures planFeatures4 = new PlanFeatures();
+//				planFeatures4.setActive(true);
+//				planFeatures4.setPrice(0.0);
+//				planFeatures4.setFeatureName("Expense Management");
+//				planFeatures4.setPlan(planTrial);
+//
+//
+//
+//				listFeatures.add(planFeatures);
+//				listFeatures.add(planFeatures2);
+//				listFeatures.add(planFeatures3);
+//				listFeatures.add(planFeatures4);
+//
+//				planTrial.setFeaturesList(listFeatures);
+//
+//				SmartstayApplication.applyGstColumns(planTrial);
+//				plansRepository.save(planTrial);
+//			} else if (trialPlan.getFinalPrice() == null) {
+//				SmartstayApplication.applyGstColumns(trialPlan);
+//				plansRepository.save(trialPlan);
+//			}
+//
+//			Plans planBasic = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.BASIC.name());
+//			if (planBasic == null) {
+//				String planCode3 = Utils.generatePlanCode();
+//				planBasic = new Plans();
+//				planBasic.setPlanName("Basic");
+//				planBasic.setDuration(30l);
+//				planBasic.setPrice(599.0);
+//				planBasic.setDiscounts(0.0);
+//				planBasic.setPlanType(PlanType.BASIC.name());
+//				planBasic.setPlanCode(planCode3);
+//				planBasic.setShouldShow(true);
+//				planBasic.setActive(true);
+//				planBasic.setCanCustomize(false);
+//				planBasic.setCreatedAt(new Date());
+//				planBasic.setUpdatedAt(new Date());
+//
+//				List<PlanFeatures> listFeatures21 = new ArrayList<>();
+//				PlanFeatures planFeatures21 = new PlanFeatures();
+//				planFeatures21.setActive(true);
+//				planFeatures21.setPrice(0.0);
+//				planFeatures21.setFeatureName("Tenant Management");
+//				planFeatures21.setPlan(planBasic);
+//
+//				PlanFeatures planFeatures22 = new PlanFeatures();
+//				planFeatures22.setActive(true);
+//				planFeatures22.setPrice(0.0);
+//				planFeatures22.setFeatureName("PG Management");
+//				planFeatures22.setPlan(planBasic);
+//
+//				PlanFeatures planFeatures23 = new PlanFeatures();
+//				planFeatures23.setActive(true);
+//				planFeatures23.setPrice(0.0);
+//				planFeatures23.setFeatureName("Account Management");
+//				planFeatures23.setPlan(planBasic);
+//
+//				PlanFeatures planFeatures24 = new PlanFeatures();
+//				planFeatures24.setActive(true);
+//				planFeatures24.setPrice(0.0);
+//				planFeatures24.setFeatureName("Expense Management");
+//				planFeatures24.setPlan(planBasic);
+//
+//
+//
+//				listFeatures21.add(planFeatures21);
+//				listFeatures21.add(planFeatures22);
+//				listFeatures21.add(planFeatures23);
+//				listFeatures21.add(planFeatures24);
+//
+//				planBasic.setFeaturesList(listFeatures21);
+//				SmartstayApplication.applyGstColumns(planBasic);
+//				plansRepository.save(planBasic);
+//			} else if (planBasic.getFinalPrice() == null) {
+//				SmartstayApplication.applyGstColumns(planBasic);
+//				plansRepository.save(planBasic);
+//			}
+//
+//			Plans planAdvance = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.ADVANCED.name());
+//			if (planAdvance == null) {
+//				String planCode2 = Utils.generatePlanCode();
+//				planAdvance = new Plans();
+//				planAdvance.setPlanName("Advance");
+//				planAdvance.setDuration(30l);
+//				planAdvance.setPrice(999.0);
+//				planAdvance.setDiscounts(0.0);
+//				planAdvance.setPlanType(PlanType.ADVANCED.name());
+//				planAdvance.setPlanCode(planCode2);
+//				planAdvance.setShouldShow(true);
+//				planAdvance.setActive(true);
+//				planAdvance.setCanCustomize(false);
+//				planAdvance.setCreatedAt(new Date());
+//				planAdvance.setUpdatedAt(new Date());
+//
+//				List<PlanFeatures> listFeatures31 = new ArrayList<>();
+//				PlanFeatures planFeatures31 = new PlanFeatures();
+//				planFeatures31.setActive(true);
+//				planFeatures31.setPrice(0.0);
+//				planFeatures31.setFeatureName("Tenant Management");
+//				planFeatures31.setPlan(planAdvance);
+//
+//				PlanFeatures planFeatures32 = new PlanFeatures();
+//				planFeatures32.setActive(true);
+//				planFeatures32.setPrice(0.0);
+//				planFeatures32.setFeatureName("PG Management");
+//				planFeatures32.setPlan(planAdvance);
+//
+//				PlanFeatures planFeatures33 = new PlanFeatures();
+//				planFeatures33.setActive(true);
+//				planFeatures33.setPrice(0.0);
+//				planFeatures33.setFeatureName("Account Management");
+//				planFeatures33.setPlan(planAdvance);
+//
+//				PlanFeatures planFeatures34 = new PlanFeatures();
+//				planFeatures34.setActive(true);
+//				planFeatures34.setPrice(0.0);
+//				planFeatures34.setFeatureName("Expense Management");
+//				planFeatures34.setPlan(planAdvance);
+//
+//
+//
+//				listFeatures31.add(planFeatures31);
+//				listFeatures31.add(planFeatures32);
+//				listFeatures31.add(planFeatures33);
+//				listFeatures31.add(planFeatures34);
+//
+//				planAdvance.setFeaturesList(listFeatures31);
+//				SmartstayApplication.applyGstColumns(planAdvance);
+//				plansRepository.save(planAdvance);
+//			} else if (planAdvance.getFinalPrice() == null) {
+//				SmartstayApplication.applyGstColumns(planAdvance);
+//				plansRepository.save(planAdvance);
+//			}
+//        };
+//    }
 
 }

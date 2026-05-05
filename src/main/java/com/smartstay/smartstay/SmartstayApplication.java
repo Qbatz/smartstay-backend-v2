@@ -126,42 +126,49 @@ public class SmartstayApplication {
     }
 
     /**
-     * One-shot backfill of GST-related columns (CGST, SGST, cGSTAmount, sGSTAmount, finalPrice)
-     * for every existing row in the plans table. Runs on every boot but is idempotent: the
-     * `finalPrice == null` filter ensures already-migrated rows are skipped, so it only does
-     * real work the first time it runs in any given environment.
+     * Recomputes GST columns for every plan row on each startup so changes to the rates in
+     * {@link #applyGstColumns} are persisted. Safe to run repeatedly when {@code applyGstColumns}
+     * derives amounts from {@code finalPrice} (fallback: {@code price}).
      */
     @Bean
     CommandLineRunner backfillPlanGstColumns(PlansRepository plansRepository) {
         return args -> {
-            List<Plans> plansToUpdate = plansRepository.findAll()
-                    .stream()
-                    .filter(plan -> plan.getFinalPrice() == null)
-                    .toList();
-
-            if (plansToUpdate.isEmpty()) {
+            List<Plans> allPlans = plansRepository.findAll();
+            if (allPlans.isEmpty()) {
                 return;
             }
 
-            plansToUpdate.forEach(SmartstayApplication::applyGstColumns);
-            plansRepository.saveAll(plansToUpdate);
+            allPlans.forEach(SmartstayApplication::applyGstColumns);
+            plansRepository.saveAll(allPlans);
         };
     }
 
+    /**
+     * Idempotent. Prefer {@code finalPrice} as the gross total; if it is null, use {@code price}
+     * once (first migration / legacy rows). Then recompute cgst/sgst amounts and net {@code price}.
+     */
     public static void applyGstColumns(Plans plan) {
         double cgstPercent = 9.0;
         double sgstPercent = 9.0;
-        double originalPrice = plan.getPrice() != null ? plan.getPrice() : 0.0;
 
-        double cgstAmount = (cgstPercent / 100.0) * originalPrice;
-        double sgstAmount = (sgstPercent / 100.0) * originalPrice;
+        double basePrice;
+        if (plan.getFinalPrice() != null) {
+            basePrice = plan.getFinalPrice();
+        } else if (plan.getPrice() != null) {
+            basePrice = plan.getPrice();
+        } else {
+            basePrice = 0.0;
+        }
 
-        plan.setCGST(cgstPercent);
-        plan.setSGST(sgstPercent);
-        plan.setFinalPrice(originalPrice);
-        plan.setCGSTAmount(cgstAmount);
-        plan.setSGSTAmount(sgstAmount);
-        plan.setPrice(originalPrice - (cgstAmount + sgstAmount));
+        double cgstAmount = (cgstPercent / 100.0) * basePrice;
+        double sgstAmount = (sgstPercent / 100.0) * basePrice;
+
+        plan.setCgst(cgstPercent);
+        plan.setSgst(sgstPercent);
+        plan.setFinalPrice(basePrice);
+        plan.setCgstAmount(cgstAmount);
+        plan.setSgstAmount(sgstAmount);
+        plan.setPrice(basePrice - (cgstAmount + sgstAmount));
     }
 
 }

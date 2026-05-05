@@ -28,13 +28,13 @@ public class Plans {
     private boolean canCustomize;
     private boolean isActive;
     @Column(nullable = false)
-    private Double CGST;
+    private Double cgst;
     @Column(nullable = false)
-    private Double SGST;
+    private Double sgst;
     @Column(nullable = false)
-    private Double cGSTAmount;
+    private Double cgstAmount;
     @Column(nullable = false)
-    private Double sGSTAmount;
+    private Double sgstAmount;
     @Column(nullable = false)
     private Double finalPrice;
     private Date createdAt;
