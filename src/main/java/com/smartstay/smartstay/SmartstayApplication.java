@@ -125,4 +125,43 @@ public class SmartstayApplication {
         };
     }
 
+    /**
+     * One-shot backfill of GST-related columns (CGST, SGST, cGSTAmount, sGSTAmount, finalPrice)
+     * for every existing row in the plans table. Runs on every boot but is idempotent: the
+     * `finalPrice == null` filter ensures already-migrated rows are skipped, so it only does
+     * real work the first time it runs in any given environment.
+     */
+    @Bean
+    CommandLineRunner backfillPlanGstColumns(PlansRepository plansRepository) {
+        return args -> {
+            List<Plans> plansToUpdate = plansRepository.findAll()
+                    .stream()
+                    .filter(plan -> plan.getFinalPrice() == null)
+                    .toList();
+
+            if (plansToUpdate.isEmpty()) {
+                return;
+            }
+
+            plansToUpdate.forEach(SmartstayApplication::applyGstColumns);
+            plansRepository.saveAll(plansToUpdate);
+        };
+    }
+
+    public static void applyGstColumns(Plans plan) {
+        double cgstPercent = 9.0;
+        double sgstPercent = 9.0;
+        double originalPrice = plan.getPrice() != null ? plan.getPrice() : 0.0;
+
+        double cgstAmount = (cgstPercent / 100.0) * originalPrice;
+        double sgstAmount = (sgstPercent / 100.0) * originalPrice;
+
+        plan.setCGST(cgstPercent);
+        plan.setSGST(sgstPercent);
+        plan.setFinalPrice(originalPrice);
+        plan.setCGSTAmount(cgstAmount);
+        plan.setSGSTAmount(sgstAmount);
+        plan.setPrice(originalPrice - (cgstAmount + sgstAmount));
+    }
+
 }
