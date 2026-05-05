@@ -335,4 +335,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType='ADVANCE' 
             """)
     InvoicesV1 findAdvanceInvoiceByCustomerId(String customerId);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.invoiceType IN :invoiceTypes
+            """)
+    List<InvoicesV1> findAllAdvances(List<String> invoiceTypes);
 }

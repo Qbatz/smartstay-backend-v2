@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.invoice.ApplyDiscount;
+import com.smartstay.smartstay.payloads.invoice.InvoiceRedemption;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.payloads.invoice.UpdateRecurringInvoice;
 import com.smartstay.smartstay.services.InvoiceV1Service;
@@ -92,5 +93,10 @@ public class InvoiceController {
     @DeleteMapping("/discount/{hostelId}/{invoiceId}")
     public ResponseEntity<?> removeDiscount(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return invoiceV1Service.deleteDiscount(hostelId, invoiceId);
+    }
+
+    @PostMapping("/redeem/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> redeemInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @Valid @RequestBody InvoiceRedemption invoiceRedemption) {
+        return invoiceV1Service.redeeemAdvanceAmount(hostelId, invoiceId, invoiceRedemption);
     }
 }

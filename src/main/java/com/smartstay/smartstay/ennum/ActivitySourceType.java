@@ -42,6 +42,7 @@ public enum ActivitySourceType {
     WHATSAPP,
     DELETE_OTHER_FIELDS,
     EDIT_DISCOUNT,
-    DELETE_DISCOUNT
+    DELETE_DISCOUNT,
+    REDEEMED
 
 }

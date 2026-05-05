@@ -29,6 +29,7 @@ import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
 import com.smartstay.smartstay.payloads.invoice.*;
+import com.smartstay.smartstay.payloads.invoice.InvoiceRedemption;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.customer.RentBreakUp;
@@ -95,6 +96,8 @@ public class InvoiceV1Service {
     private ApplicationEventPublisher applicationEventPublisher;
     @Autowired
     private InvoiceDiscountService invoiceDiscountService;
+    @Autowired
+    private InvoiceRedemptionService invoiceRedemptionService;
     private TransactionService transactionService;
 
     private BookingsService bookingsService;
@@ -3797,5 +3800,127 @@ public class InvoiceV1Service {
         List<String> types = Arrays.asList(InvoiceType.RENT.name(), InvoiceType.REASSIGN_RENT.name());
         List<InvoicesV1> invoices = invoicesV1Repository.findInvoicesByCustomerIdAndTypeInAndDate1(customerId, types, date);
         return invoices != null && !invoices.isEmpty();
+    }
+
+    public ResponseEntity<?> redeeemAdvanceAmount(String hostelId, String invoiceId, InvoiceRedemption invoiceRedemption) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+        if (invoicesV1.isCancelled()) {
+            return new ResponseEntity<>(Utils.CANNOT_REDEEM_FROM_CANCELLED_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REDEEM_FROM_UNPAID_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REDEEM_RENTAL_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REDEEM_RENTAL_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REDEEM_SETTLEMENT_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (invoiceRedemption == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (invoiceRedemption.targetInvoiceId() == null) {
+            return new ResponseEntity<>(Utils.TARGET_INVOICE_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 targetInvoice = invoicesV1Repository.findById(invoiceRedemption.targetInvoiceId()).orElse(null);
+        if (targetInvoice == null) {
+            return new ResponseEntity<>(Utils.INVALID_TARGET_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (targetInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_FOR_PAID_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
+        if (targetInvoice.isCancelled()) {
+            return new ResponseEntity<>(Utils.TARGET_INVOICE_CANNOT_BE_CANCELLED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            if (!targetInvoice.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && !targetInvoice.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
+                return new ResponseEntity<>(Utils.INVALID_TARGET_INVOICE_ID, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        Date redeemedAt = new Date();
+        if (invoiceRedemption.date() != null) {
+            redeemedAt = Utils.stringToDate(invoiceRedemption.date().replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        double redemptionAmount = 0.0;
+        double targetInvoiceTotalAmount = 0.0;
+        double targetInvoicePaidAmount = 0.0;
+        if (targetInvoice.getTotalAmount() != null) {
+            targetInvoiceTotalAmount = targetInvoice.getTotalAmount();
+        }
+        if (targetInvoice.getPaidAmount() != null) {
+            targetInvoicePaidAmount = targetInvoice.getPaidAmount();
+        }
+
+        if (invoiceRedemption.amount() != null) {
+            try {
+                redemptionAmount = Double.parseDouble(invoiceRedemption.amount().toString());
+            }
+            catch (Exception e) {
+                return new ResponseEntity<>(Utils.INVALID_REDEMPTION_AMOUNT, HttpStatus.BAD_REQUEST);
+            }
+
+            if (redemptionAmount > (targetInvoiceTotalAmount - targetInvoicePaidAmount)) {
+                return new ResponseEntity<>(Utils.REDEMPTION_AMOUNT_CANNOT_EXCEED_PAYABLE_AMOUNT, HttpStatus.BAD_REQUEST);
+            }
+         }
+        else {
+            redemptionAmount = invoicesV1.getBalanceAmount();
+        }
+
+
+
+        com.smartstay.smartstay.dao.InvoiceRedemption ir = invoiceRedemptionService.redeemInvoice(hostelId, invoicesV1.getInvoiceId(), targetInvoice.getInvoiceId(), redemptionAmount, redeemedAt, invoiceRedemption.reason());
+
+        if (ir != null) {
+            invoicesV1.setBalanceAmount(invoicesV1.getBalanceAmount() - redemptionAmount);
+            invoicesV1Repository.save(invoicesV1);
+
+            targetInvoice.setPaidAmount(targetInvoicePaidAmount + redemptionAmount);
+            if ((targetInvoicePaidAmount + redemptionAmount) == targetInvoice.getTotalAmount()) {
+                targetInvoice.setPaymentStatus(PaymentStatus.PAID.name());
+            }
+            else {
+                targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+            }
+            invoicesV1Repository.save(targetInvoice);
+
+            usersService.addUserLog(hostelId, targetInvoice.getInvoiceId(), ActivitySource.INVOICE, ActivitySourceType.REDEEMED, users);
+
+            return new ResponseEntity<>(HttpStatus.CREATED);
+        }
+
+        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
     }
 }
