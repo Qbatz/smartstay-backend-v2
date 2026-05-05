@@ -15,4 +15,6 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
             SELECT oh FROM OrderHistory oh WHERE oh.userType = 'OWNER'
             """)
     List<OrderHistory> findAllRecordByOwner();
+
+    List<OrderHistory> findByHostelIdOrderByCreatedAtDesc(String hostelId);
 }

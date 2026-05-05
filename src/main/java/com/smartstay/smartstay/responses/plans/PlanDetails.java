@@ -11,5 +11,11 @@ public record PlanDetails(String planId,
                           String planStartDate,
                           String planEndDate,
                           double subscriptionAmount,
-                          List<String> planFeatures) {
+                          List<String> planFeatures,
+                          // New fields
+                          String planAmount,
+                          String renewalDate,
+                          String paymentMethod,
+                          String status,
+                          List<BillingHistoryItem> billingHistory) {
 }
