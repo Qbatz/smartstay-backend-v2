@@ -3,6 +3,7 @@ package com.smartstay.smartstay.repositories;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
 import com.smartstay.smartstay.responses.invoices.InvoiceSummary;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -340,4 +341,21 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT i FROM InvoicesV1 i WHERE i.invoiceType IN :invoiceTypes
             """)
     List<InvoicesV1> findAllAdvances(List<String> invoiceTypes);
+
+    @Query(value = """
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
+            i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false AND i.balanceAmount > 0 
+            """,
+    countQuery = """
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
+            i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.balanceAmount > 0 
+            """)
+    Page<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Pageable pageable);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId=:customerId AND 
+            i.isCancelled=false AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND 
+            i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADVANCE')
+            """)
+    List<InvoicesV1> findPendingByHostelIdAndCustomerId(String hostelId, String customerId);
 }

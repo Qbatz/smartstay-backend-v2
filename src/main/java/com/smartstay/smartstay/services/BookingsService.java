@@ -1305,4 +1305,12 @@ public class BookingsService {
 
         return null;
     }
+
+    public List<BookingsV1> getBookings(String hostelId, List<String> customerIds) {
+        List<BookingsV1> bookings = bookingsRepository.findBookingsByListOfCustomersAndHostelId(customerIds, hostelId);
+        if (bookings != null) {
+            return bookings;
+        }
+        return new ArrayList<>();
+    }
 }

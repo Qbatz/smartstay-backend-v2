@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
+import com.smartstay.smartstay.Wrappers.booking.AdvanceInvoicesMapper;
+import com.smartstay.smartstay.Wrappers.booking.InitializeRedemptionMapper;
 import com.smartstay.smartstay.Wrappers.invoices.InitializeRefund;
 import com.smartstay.smartstay.Wrappers.invoices.InvoiceMapper;
 import com.smartstay.smartstay.Wrappers.invoices.NewInvoiceListMapper;
@@ -32,16 +34,21 @@ import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.payloads.invoice.InvoiceRedemption;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
+import com.smartstay.smartstay.responses.bookings.*;
 import com.smartstay.smartstay.responses.customer.RentBreakUp;
 import com.smartstay.smartstay.responses.customer.RentInfo;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
 import com.smartstay.smartstay.responses.invoices.*;
+import com.smartstay.smartstay.responses.invoices.CustomerInfo;
 import com.smartstay.smartstay.util.*;
 import jakarta.transaction.Transactional;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.security.core.parameters.P;
@@ -290,6 +297,7 @@ public class InvoiceV1Service {
             invoicesV1.setBasePrice(basePrice);
             invoicesV1.setTotalAmount(amount);
             invoicesV1.setPaidAmount(amount);
+            invoicesV1.setBalanceAmount(amount);
             invoicesV1.setInvoiceType(type);
             invoicesV1.setCustomerId(customerId);
             invoicesV1.setInvoiceNumber(invoiceNumber.toString());
@@ -533,6 +541,7 @@ public class InvoiceV1Service {
             invoice.setPaymentStatus(status);
             invoice.setUpdatedAt(new Date());
             invoice.setPaidAmount(paidAmount + amount);
+            invoice.setBalanceAmount(paidAmount + amount);
             invoice.setUpdatedBy(authentication.getName());
             invoicesV1Repository.save(invoice);
             return 1;
@@ -3922,5 +3931,182 @@ public class InvoiceV1Service {
         }
 
         return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+    }
+
+    public ResponseEntity<?> getAdvanceInvoicesForRedemption(String hostelId, int page, int size) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        List<String> invoiceTypes = new ArrayList<>();
+        invoiceTypes.add(InvoiceType.ADVANCE.name());
+        invoiceTypes.add(InvoiceType.BOOKING.name());
+
+        int totalAdvanceInvoice = 0;
+        int currentPage = 1;
+        int noOfItemsPerPage = 10;
+        int totalPages = 1;
+
+        List<BookingsV1> customerBookings = bookingsService.getAllCheckedInCustomer(hostelId);
+        List<String> listCustomerIds = new ArrayList<>();
+        if (customerBookings != null) {
+            listCustomerIds = customerBookings.stream()
+                    .map(BookingsV1::getCustomerId)
+                    .toList();
+        }
+
+
+        Pageable pageableRequest = PageRequest.of(page-1, size);
+
+        Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, listCustomerIds, invoiceTypes, pageableRequest);
+        if (pagebleAdvances != null) {
+            totalAdvanceInvoice = pagebleAdvances.getNumberOfElements();
+            currentPage = pagebleAdvances.getPageable().getPageNumber() + 1;
+            totalPages = pagebleAdvances.getTotalPages();
+            noOfItemsPerPage = pagebleAdvances.getSize();
+
+            List<InvoicesV1> listAdvanceInvoices = pagebleAdvances.getContent();
+            List<AdvanceListItems> advanceListItems = new ArrayList<>();
+            if (listAdvanceInvoices != null) {
+                List<String> customerIds = listAdvanceInvoices.stream()
+                        .map(InvoicesV1::getCustomerId)
+                        .distinct()
+                        .toList();
+                List<BookingsV1> listBookings = bookingsService.getBookings(hostelId, customerIds);
+                List<Integer> bedIds = new ArrayList<>();
+                if (listBookings != null) {
+                    bedIds = listBookings
+                            .stream()
+                            .map(BookingsV1::getBedId)
+                            .toList();
+                }
+
+                List<BedDetails> listBedDetails = bedService.getBedDetails(bedIds);
+                List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+
+                advanceListItems = listAdvanceInvoices
+                        .stream()
+                        .map(i -> new AdvanceInvoicesMapper(listBookings, listBedDetails, listCustomers)
+                                .apply(i)).toList();
+
+            }
+
+
+
+            AdvanceList advanceList = new AdvanceList(totalAdvanceInvoice,
+                    currentPage,
+                    totalPages,
+                    noOfItemsPerPage,
+                    advanceListItems);
+
+            return new ResponseEntity<>(advanceList, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+    }
+
+    public ResponseEntity<?> initializeRedemption(String hostelId, String advanceInvoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoicesV1 advanceInvoices = invoicesV1Repository.findById(advanceInvoiceId).orElse(null);
+        if (advanceInvoices == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!advanceInvoices.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        String customerId = advanceInvoices.getCustomerId();
+
+        List<InvoicesV1> listPendingInvoices = invoicesV1Repository.findPendingByHostelIdAndCustomerId(hostelId, customerId);
+        List<InvoicesV1> invoiceItemsToShow = listPendingInvoices;
+        if (advanceInvoices.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            invoiceItemsToShow = listPendingInvoices
+                    .stream()
+                    .filter(i -> !i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
+                    .toList();
+        }
+
+        String bedName = null;
+        String floorName = null;
+        String roomName = null;
+        boolean status = true;
+        String message = "Can be redeemed";
+
+        if (advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+            status = false;
+            message = "Cannot redeem this invoice";
+        }
+        else if (advanceInvoices.getBalanceAmount() <= 0) {
+            status = false;
+            message = "Insufficient balance amount to redeem";
+        }
+
+        AdvanceInfo advanceInfo = new AdvanceInfo(advanceInvoices.getTotalAmount(),
+                advanceInvoices.getBalanceAmount(),
+                Utils.dateToString(advanceInvoices.getInvoiceStartDate()),
+                advanceInvoices.getInvoiceType(),
+                advanceInvoices.getInvoiceId(),
+                advanceInvoices.getInvoiceNumber(),
+                status,
+                message,
+                advanceInvoices.getPaymentStatus());
+
+        BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(advanceInvoices.getCustomerId());
+        BedDetails bedDetails = null;
+        if (bookingsV1 != null) {
+            bedDetails = bedService.getBedDetails(bookingsV1.getBedId());
+        }
+        if (bedDetails != null) {
+            bedName = bedDetails.getBedName();
+            floorName = bedDetails.getFloorName();
+            roomName = bedDetails.getRoomName();
+        }
+        Customers customers = customersService.getCustomerInformation(advanceInvoices.getCustomerId());
+        com.smartstay.smartstay.responses.bookings.CustomerInfo customerInfo = null;
+        if (customers != null) {
+            customerInfo = new com.smartstay.smartstay.responses.bookings.CustomerInfo(NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
+                    customers.getProfilePic(),
+                    NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
+                    customers.getFirstName(),
+                    customers.getLastName(),
+                    floorName,
+                    bedName, roomName);
+        }
+
+        List<InitializeInvoiceItems> listInvoiceItems = invoiceItemsToShow
+                .stream()
+                .map(i -> new InitializeRedemptionMapper().apply(i))
+                .toList();
+
+        InitializeRedemption initializeRedemption = new InitializeRedemption(advanceInfo,
+                customerInfo,
+                listInvoiceItems);
+
+        return new ResponseEntity<>(initializeRedemption, HttpStatus.OK);
     }
 }

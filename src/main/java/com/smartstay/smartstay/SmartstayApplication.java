@@ -2,6 +2,7 @@ package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.*;
+import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.repositories.*;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
@@ -23,6 +24,13 @@ public class SmartstayApplication {
     }
 
 
+    /**
+     *
+     * required to run on prod
+     *
+     * @param invoicesV1Repository
+     * @return
+     */
 //    @Bean
 //    CommandLineRunner mapInvoiceAmount(InvoicesV1Repository invoicesV1Repository) {
 //        return args -> {
@@ -32,7 +40,16 @@ public class SmartstayApplication {
 //            List<InvoicesV1> listAdvanceInvoices = invoicesV1Repository.findAllAdvances(invoiceTypes)
 //                    .stream()
 //                    .map(i -> {
-//                        i.setBalanceAmount(i.getTotalAmount());
+//                        if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+//                            i.setBalanceAmount(i.getPaidAmount());
+//                        }
+//                        else if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+//                            i.setBalanceAmount(i.getPaidAmount());
+//                        }
+//                        else {
+//                            i.setBalanceAmount(0.0);
+//                        }
+//
 //                        return i;
 //                    })
 //                    .toList();
