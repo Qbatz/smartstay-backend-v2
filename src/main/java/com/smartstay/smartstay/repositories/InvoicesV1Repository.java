@@ -343,8 +343,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findAllAdvances(List<String> invoiceTypes);
 
     @Query(value = """
-            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
+            SELECT i FROM InvoicesV1 i, BookingsV1 b, Rooms r  WHERE i.customerId = b.customerId AND r.roomId = b.roomId AND 
+            i.hostelId=:hostelId AND 
+            i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
             i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false AND i.balanceAmount > 0 
+            ORDER BY b.floorId ASC, r.roomId ASC
             """,
     countQuery = """
             SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
