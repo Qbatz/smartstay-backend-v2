@@ -272,7 +272,7 @@ public class SubscriptionService {
 
         double discountAmount = 0.0;
         double discountPercentage = 0.0;
-        double totalAmount = plans.getPrice();
+        double totalAmount = plans.getFinalPrice();
         if (subscription.discountAmount() != null) {
             discountAmount = subscription.discountAmount();
             discountPercentage = (discountAmount / totalAmount) * 100;

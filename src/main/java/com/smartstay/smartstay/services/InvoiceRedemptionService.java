@@ -6,12 +6,14 @@ import com.smartstay.smartstay.dao.BillTemplates;
 import com.smartstay.smartstay.dao.InvoiceRedemption;
 import com.smartstay.smartstay.ennum.BillConfigTypes;
 import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.payloads.invoice.RedemptionItems;
 import com.smartstay.smartstay.repositories.InvoiceRedemptionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class InvoiceRedemptionService {
@@ -22,20 +24,30 @@ public class InvoiceRedemptionService {
     @Autowired
     private InvoiceRedemptionRepository invoiceRedemptionRepository;
 
-    public InvoiceRedemption redeemInvoice(String hostelId, String sourceInvoiceId, String targetInvoiceId, double redemptionAmount, Date redeemedAt, String reason) {
-        InvoiceRedemption ir = new InvoiceRedemption();
-        ir.setCreatedAt(new Date());
-        ir.setRedeemedAt(redeemedAt);
-        ir.setSourceInvoiceId(sourceInvoiceId);
-        ir.setTargetInvoiceId(targetInvoiceId);
-        ir.setRedemptionAmount(redemptionAmount);
-        ir.setHostelId(hostelId);
-        ir.setTransactionId(getNextReferenceNumber(hostelId));
-        ir.setReferenceNumber(null);
-        ir.setReason(reason);
-        ir.setCreatedBy(authentication.getName());
+    public List<InvoiceRedemption> redeemInvoice(String hostelId, String sourceInvoiceId, List<RedemptionItems> targetRedemptions,  Date redeemedAt, String reason) {
 
-        return invoiceRedemptionRepository.save(ir);
+        List<InvoiceRedemption> listRedemptions = targetRedemptions
+                .stream()
+                .map(i -> {
+                    InvoiceRedemption ir = new InvoiceRedemption();
+                    ir.setCreatedAt(new Date());
+                    ir.setRedeemedAt(redeemedAt);
+                    ir.setSourceInvoiceId(sourceInvoiceId);
+                    ir.setTargetInvoiceId(i.invoiceId());
+                    ir.setRedemptionAmount(i.amount());
+                    ir.setHostelId(hostelId);
+                    ir.setTransactionId(getNextReferenceNumber(hostelId));
+                    ir.setReferenceNumber(null);
+                    ir.setReason(reason);
+                    ir.setCreatedBy(authentication.getName());
+
+                    return ir;
+                })
+                .toList();
+
+
+
+        return invoiceRedemptionRepository.saveAll(listRedemptions);
     }
 
     private String getNextReferenceNumber(String hostelId) {

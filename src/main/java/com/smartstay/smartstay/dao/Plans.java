@@ -27,6 +27,8 @@ public class Plans {
     private boolean shouldShow;
     private boolean canCustomize;
     private boolean isActive;
+    private Double gst;
+    private Double gstAmount;
     @Column(nullable = false)
     private Double cgst;
     @Column(nullable = false)

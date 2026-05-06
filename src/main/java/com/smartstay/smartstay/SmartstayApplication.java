@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.repositories.*;
+import com.smartstay.smartstay.util.Utils;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.CommandLineRunner;
@@ -61,48 +62,48 @@ public class SmartstayApplication {
 
     /**
      * Recomputes GST columns for every plan row on each startup so changes to the rates in
-     * {@link #applyGstColumns} are persisted. Safe to run repeatedly when {@code applyGstColumns}
+     * {@link #} are persisted. Safe to run repeatedly when {@code applyGstColumns}
      * derives amounts from {@code finalPrice} (fallback: {@code price}).
      */
-    @Bean
-    CommandLineRunner backfillPlanGstColumns(PlansRepository plansRepository) {
-        return args -> {
-            List<Plans> allPlans = plansRepository.findAll();
-            if (allPlans.isEmpty()) {
-                return;
-            }
+//    @Bean
+//    CommandLineRunner backfillPlanGstColumns(PlansRepository plansRepository) {
+//        return args -> {
+//            List<Plans> allPlans = plansRepository.findAll();
+//            if (!allPlans.isEmpty()) {
+//                List<Plans> listNewPlans = allPlans
+//                        .stream()
+//                        .map(i -> {
+//                            double gstAmount = 0.0;
+//                            double cgstAmount = 0.0;
+//                            double sgstAmount = 0.0;
+//                            double finalPrice = 0.0;
+//
+//                            double gstPercentage = 18;
+//                            double cgstPercentage = gstPercentage/2;
+//                            double sgstPercentage = gstPercentage/2;
+//
+//                            if (i.getPrice() != null) {
+//                                gstAmount = (gstPercentage/100) * i.getPrice();
+//                                cgstAmount = (cgstPercentage/100) * i.getPrice();
+//                                sgstAmount = (sgstPercentage/100) * i.getPrice();
+//                                finalPrice = i.getPrice() + gstAmount;
+//                            }
+//                            i.setGst(Utils.roundOffWithTwoDigit(gstPercentage));
+//                            i.setGstAmount(Utils.roundOffWithTwoDigit(gstAmount));
+//                            i.setCgst(Utils.roundOffWithTwoDigit(cgstPercentage));
+//                            i.setSgst(Utils.roundOffWithTwoDigit(sgstPercentage));
+//                            i.setCgstAmount(Utils.roundOffWithTwoDigit(cgstAmount));
+//                            i.setSgstAmount(Utils.roundOffWithTwoDigit(sgstAmount));
+//                            i.setFinalPrice(Utils.roundOffWithTwoDigit(finalPrice));
+//
+//                            return i;
+//                        })
+//                        .toList();
+//                plansRepository.saveAll(listNewPlans);
+//            }
+//        };
+//    }
 
-            allPlans.forEach(SmartstayApplication::applyGstColumns);
-            plansRepository.saveAll(allPlans);
-        };
-    }
 
-    /**
-     * Idempotent. Prefer {@code finalPrice} as the gross total; if it is null, use {@code price}
-     * once (first migration / legacy rows). Then recompute cgst/sgst amounts and net {@code price}.
-     */
-    public static void applyGstColumns(Plans plan) {
-        double cgstPercent = 9.0;
-        double sgstPercent = 9.0;
-
-        double basePrice;
-        if (plan.getFinalPrice() != null) {
-            basePrice = plan.getFinalPrice();
-        } else if (plan.getPrice() != null) {
-            basePrice = plan.getPrice();
-        } else {
-            basePrice = 0.0;
-        }
-
-        double cgstAmount = (cgstPercent / 100.0) * basePrice;
-        double sgstAmount = (sgstPercent / 100.0) * basePrice;
-
-        plan.setCgst(cgstPercent);
-        plan.setSgst(sgstPercent);
-        plan.setFinalPrice(basePrice);
-        plan.setCgstAmount(cgstAmount);
-        plan.setSgstAmount(sgstAmount);
-        plan.setPrice(basePrice - (cgstAmount + sgstAmount));
-    }
 
 }

@@ -356,8 +356,6 @@ public class CoreSetUp {
         };
     }
 
-
-
     @Bean
     CommandLineRunner addPlans(PlansRepository plansRepository) {
         return args -> {
@@ -370,6 +368,13 @@ public class CoreSetUp {
 				planTrial.setDuration(30l);
 				planTrial.setPrice(0.0);
 				planTrial.setDiscounts(0.0);
+				planTrial.setCgstAmount(0.0);
+				planTrial.setSgstAmount(0.0);
+				planTrial.setGstAmount(0.0);
+				planTrial.setGst(18.0);
+				planTrial.setSgst(9.0);
+				planTrial.setCgst(9.0);
+				planTrial.setFinalPrice(0.0);
 				planTrial.setPlanType(PlanType.TRIAL.name());
 				planTrial.setPlanCode(planCode1);
 				planTrial.setShouldShow(false);
@@ -417,12 +422,31 @@ public class CoreSetUp {
 
 			Plans planBasic = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.BASIC.name());
 			if (planBasic == null) {
+				double gstPercentage = 18;
+				double cgstPercentage = gstPercentage/2;
+				double sgstPercentage = gstPercentage/2;
+
+				double gstAmount = 0.0;
+				double cgstAmount = 0.0;
+				double sgstAmount = 0.0;
+
+				gstAmount = (gstPercentage/100) * 599;
+				cgstAmount = (cgstPercentage/100) * 599;
+				sgstAmount = (sgstPercentage/100) * 599;
+
 				String planCode3 = Utils.generatePlanCode();
 				planBasic = new Plans();
 				planBasic.setPlanName("Basic");
 				planBasic.setDuration(30l);
 				planBasic.setPrice(599.0);
 				planBasic.setDiscounts(0.0);
+				planBasic.setCgstAmount(Utils.roundOffWithTwoDigit(cgstAmount));
+				planBasic.setSgstAmount(Utils.roundOffWithTwoDigit(sgstAmount));
+				planBasic.setGstAmount(Utils.roundOffWithTwoDigit(gstAmount));
+				planBasic.setGst(18.0);
+				planBasic.setSgst(9.0);
+				planBasic.setCgst(9.0);
+				planBasic.setFinalPrice(Utils.roundOffWithTwoDigit(599+gstAmount));
 				planBasic.setPlanType(PlanType.BASIC.name());
 				planBasic.setPlanCode(planCode3);
 				planBasic.setShouldShow(true);
@@ -469,12 +493,31 @@ public class CoreSetUp {
 
 			Plans planAdvance = plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.ADVANCED.name());
 			if (planAdvance == null) {
+				double gstPercentage = 18;
+				double cgstPercentage = gstPercentage/2;
+				double sgstPercentage = gstPercentage/2;
+
+				double gstAmount = 0.0;
+				double cgstAmount = 0.0;
+				double sgstAmount = 0.0;
+
+				gstAmount = (gstPercentage/100) * 999;
+				cgstAmount = (cgstPercentage/100) * 999;
+				sgstAmount = (sgstPercentage/100) * 999;
+
 				String planCode2 = Utils.generatePlanCode();
 				planAdvance = new Plans();
 				planAdvance.setPlanName("Advance");
 				planAdvance.setDuration(30l);
 				planAdvance.setPrice(999.0);
 				planAdvance.setDiscounts(0.0);
+				planAdvance.setCgstAmount(Utils.roundOffWithTwoDigit(cgstAmount));
+				planAdvance.setSgstAmount(Utils.roundOffWithTwoDigit(sgstAmount));
+				planAdvance.setGstAmount(Utils.roundOffWithTwoDigit(gstAmount));
+				planAdvance.setGst(18.0);
+				planAdvance.setSgst(9.0);
+				planAdvance.setCgst(9.0);
+				planAdvance.setFinalPrice(Utils.roundOffWithTwoDigit(999+gstAmount));
 				planAdvance.setPlanType(PlanType.ADVANCED.name());
 				planAdvance.setPlanCode(planCode2);
 				planAdvance.setShouldShow(true);
@@ -520,4 +563,101 @@ public class CoreSetUp {
 			}
         };
     }
+
+	@Bean
+	CommandLineRunner addTenantBasicFilterOptions(FilterOptionsRepositories filterOptionsRepositories) {
+		return args -> {
+			FilterOptions tenantFilterOptions = filterOptionsRepositories.findTenantFilterOption();
+			if (tenantFilterOptions == null) {
+				tenantFilterOptions = new FilterOptions();
+				tenantFilterOptions.setModuleName(FilterOptionsModule.MODULE_TENANT.name());
+				tenantFilterOptions.setIsActive(true);
+				tenantFilterOptions.setCreatedAt(new Date());
+				List<ColumnFilters> filters = new ArrayList<>();
+
+				ColumnFilters filters1 = new ColumnFilters();
+				filters1.setSelected(true);
+				filters1.setFieldName("Profile Pic");
+				filters1.setOrder(1);
+
+				ColumnFilters filters2 = new ColumnFilters();
+				filters2.setSelected(true);
+				filters2.setFieldName("Full Name");
+				filters2.setOrder(2);
+
+				ColumnFilters filters3 = new ColumnFilters();
+				filters3.setSelected(true);
+				filters3.setFieldName("Status");
+				filters3.setOrder(3);
+
+				ColumnFilters filters4 = new ColumnFilters();
+				filters4.setSelected(true);
+				filters4.setFieldName("Joining Date");
+				filters4.setOrder(4);
+
+				ColumnFilters filters5 = new ColumnFilters();
+				filters5.setSelected(true);
+				filters5.setFieldName("Mobile No");
+				filters5.setOrder(5);
+
+				ColumnFilters filters6 = new ColumnFilters();
+				filters6.setSelected(true);
+				filters6.setFieldName("Floor");
+				filters6.setOrder(6);
+
+				ColumnFilters filters7 = new ColumnFilters();
+				filters7.setSelected(true);
+				filters7.setFieldName("Room");
+				filters7.setOrder(7);
+
+				ColumnFilters filters8 = new ColumnFilters();
+				filters8.setSelected(true);
+				filters8.setFieldName("Bed");
+				filters8.setOrder(8);
+
+				ColumnFilters filters9 = new ColumnFilters();
+				filters9.setSelected(false);
+				filters9.setFieldName("Email ID");
+				filters9.setOrder(9);
+
+				ColumnFilters filters10 = new ColumnFilters();
+				filters10.setSelected(false);
+				filters10.setFieldName("Booking Date");
+				filters10.setOrder(10);
+
+				ColumnFilters filters11 = new ColumnFilters();
+				filters11.setSelected(false);
+				filters11.setFieldName("Monthly Rent");
+				filters11.setOrder(11);
+
+				ColumnFilters filters12 = new ColumnFilters();
+				filters12.setSelected(false);
+				filters12.setFieldName("Advance");
+				filters12.setOrder(12);
+
+				ColumnFilters filters13 = new ColumnFilters();
+				filters13.setSelected(false);
+				filters13.setFieldName("Booking Amount");
+				filters13.setOrder(13);
+
+				filters.add(filters1);
+				filters.add(filters2);
+				filters.add(filters3);
+				filters.add(filters4);
+				filters.add(filters5);
+				filters.add(filters6);
+				filters.add(filters7);
+				filters.add(filters8);
+				filters.add(filters9);
+				filters.add(filters10);
+				filters.add(filters11);
+				filters.add(filters12);
+				filters.add(filters13);
+
+				tenantFilterOptions.setFilterOptions(filters);
+
+				filterOptionsRepositories.save(tenantFilterOptions);
+			}
+		};
+	}
 }
