@@ -26,6 +26,11 @@ public class PlanListMapper implements Function<Plans, PlansList>  {
                 plans.getPlanCode(),
                 plans.isCanCustomize(),
                 "Monthly",
+                plans.getCgst(),
+                plans.getSgst(),
+                plans.getCgstAmount(),
+                plans.getSgstAmount(),
+                plans.getFinalPrice(),
                 features);
     }
 }
