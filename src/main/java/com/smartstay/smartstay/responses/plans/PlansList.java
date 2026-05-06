@@ -10,5 +10,10 @@ public record PlansList(String planName,
                         String planCode,
                         boolean canCustomize,
                         String frequency,
+                        Double CGST,
+                        Double SGST,
+                        Double cGSTAmount,
+                        Double sGSTAmount,
+                        Double finalPrice,
                         List<String> features) {
 }

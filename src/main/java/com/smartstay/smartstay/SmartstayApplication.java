@@ -125,4 +125,50 @@ public class SmartstayApplication {
         };
     }
 
+    /**
+     * Recomputes GST columns for every plan row on each startup so changes to the rates in
+     * {@link #applyGstColumns} are persisted. Safe to run repeatedly when {@code applyGstColumns}
+     * derives amounts from {@code finalPrice} (fallback: {@code price}).
+     */
+    @Bean
+    CommandLineRunner backfillPlanGstColumns(PlansRepository plansRepository) {
+        return args -> {
+            List<Plans> allPlans = plansRepository.findAll();
+            if (allPlans.isEmpty()) {
+                return;
+            }
+
+            allPlans.forEach(SmartstayApplication::applyGstColumns);
+            plansRepository.saveAll(allPlans);
+        };
+    }
+
+    /**
+     * Idempotent. Prefer {@code finalPrice} as the gross total; if it is null, use {@code price}
+     * once (first migration / legacy rows). Then recompute cgst/sgst amounts and net {@code price}.
+     */
+    public static void applyGstColumns(Plans plan) {
+        double cgstPercent = 9.0;
+        double sgstPercent = 9.0;
+
+        double basePrice;
+        if (plan.getFinalPrice() != null) {
+            basePrice = plan.getFinalPrice();
+        } else if (plan.getPrice() != null) {
+            basePrice = plan.getPrice();
+        } else {
+            basePrice = 0.0;
+        }
+
+        double cgstAmount = (cgstPercent / 100.0) * basePrice;
+        double sgstAmount = (sgstPercent / 100.0) * basePrice;
+
+        plan.setCgst(cgstPercent);
+        plan.setSgst(sgstPercent);
+        plan.setFinalPrice(basePrice);
+        plan.setCgstAmount(cgstAmount);
+        plan.setSgstAmount(sgstAmount);
+        plan.setPrice(basePrice - (cgstAmount + sgstAmount));
+    }
+
 }
