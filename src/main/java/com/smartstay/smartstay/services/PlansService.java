@@ -192,6 +192,7 @@ public class PlansService {
                 .map(this::resolvePaymentMethod)
                 .orElse("N/A");
 
+
         PlanDetails planDetails = new PlanDetails(
                 String.valueOf(hostelPlan.getHostelPlanId()),
                 hostelPlan.getCurrentPlanCode(),

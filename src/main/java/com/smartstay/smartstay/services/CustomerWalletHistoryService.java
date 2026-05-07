@@ -46,7 +46,7 @@ public class CustomerWalletHistoryService {
     }
 
     public List<CustomerWalletHistory> getWalletListForRecurring(List<String> customerIds) {
-        return walletHistoryRepository.findByCustomerIdIn(customerIds);
+        return walletHistoryRepository.findInvoiceNotGeneratedWalletByCustomerIds(customerIds);
     }
 
     public void addReassignRentIntoWalletHistory(double balanceAmount, String invoiceId, String customerId, Date transactionDate) {

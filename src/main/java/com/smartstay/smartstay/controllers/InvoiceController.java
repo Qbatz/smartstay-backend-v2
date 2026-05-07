@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.invoice.ApplyDiscount;
+import com.smartstay.smartstay.payloads.invoice.InvoiceRedemption;
 import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
 import com.smartstay.smartstay.payloads.invoice.UpdateRecurringInvoice;
 import com.smartstay.smartstay.services.InvoiceV1Service;
@@ -9,6 +10,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -92,5 +95,22 @@ public class InvoiceController {
     @DeleteMapping("/discount/{hostelId}/{invoiceId}")
     public ResponseEntity<?> removeDiscount(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return invoiceV1Service.deleteDiscount(hostelId, invoiceId);
+    }
+
+    @PostMapping("/redeem/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> redeemInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @Valid @RequestBody InvoiceRedemption invoiceRedemption) {
+        return invoiceV1Service.redeeemAdvanceAmount(hostelId, invoiceId, invoiceRedemption);
+    }
+
+    @GetMapping("/advances/{hostelId}")
+    public ResponseEntity<?> getAdvanceInvoices(@PathVariable("hostelId") String hostelId,
+                                                @RequestParam(value = "page", defaultValue = "1") int page,
+                                                @RequestParam(value = "size", defaultValue = "10") int size) {
+        return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, page, size);
+    }
+
+    @GetMapping("/redeem/initialize/{hostelId}/{advanceInvoiceId}")
+    public ResponseEntity<?> initializeRedemption(@PathVariable("hostelId") String hostelId, @PathVariable("advanceInvoiceId") String advanceInvoiceId) {
+        return invoiceV1Service.initializeRedemption(hostelId, advanceInvoiceId);
     }
 }

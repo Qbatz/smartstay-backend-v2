@@ -30,24 +30,27 @@ public class InvoiceMapper {
 
         double dueAmount = 0.0;
         if (invoice.getPaidAmount() != null) {
-            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
-                dueAmount = invoice.getTotalAmount() + invoice.getPaidAmount();
+            if (invoice.getPaymentStatus() != null) {
+                if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {
+                    dueAmount = invoice.getTotalAmount() + invoice.getPaidAmount();
+                }
+                if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+                    dueAmount = 0;
+                }
+                if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                    dueAmount = invoice.getTotalAmount() - invoice.getPaidAmount();
+                }
+                if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                    dueAmount = 0;
+                }
+                if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
+                    dueAmount = invoice.getTotalAmount() + invoice.getPaidAmount();
+                }
+                if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+                    dueAmount = invoice.getTotalAmount() - invoice.getPaidAmount();
+                }
             }
-            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
-                dueAmount = 0;
-            }
-            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                dueAmount = invoice.getTotalAmount() - invoice.getPaidAmount();
-            }
-            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-                dueAmount = 0;
-            }
-            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
-                dueAmount = invoice.getTotalAmount() + invoice.getPaidAmount();
-            }
-            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
-                dueAmount = invoice.getTotalAmount() - invoice.getPaidAmount();
-            }
+
         }
         else {
             if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name())) {

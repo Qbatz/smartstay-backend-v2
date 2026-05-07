@@ -11,9 +11,9 @@ import java.util.List;
 public interface CustomerBillingRulesRepository extends JpaRepository<CustomerBillingRules, String> {
 
     @Query("""
-            SELECT cbr FROM CustomerBillingRules cbr WHERE cbr.billingDay=:billingDay AND cbr.hostelId in (:hostelIds)
+            SELECT cbr FROM CustomerBillingRules cbr WHERE cbr.billingDay IN (:billingDays) AND cbr.hostelId IN (:hostelIds)
             """)
-    List<CustomerBillingRules> findCustomersHavingBillingToday(List<String> hostelIds, int billingDay);
+    List<CustomerBillingRules> findCustomersHavingBillingToday(List<String> hostelIds, List<Integer> billingDays);
 
     CustomerBillingRules findByHostelIdAndCustomerId(String hostelId, String customerId);
 }

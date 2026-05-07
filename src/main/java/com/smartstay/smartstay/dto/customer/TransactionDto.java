@@ -5,6 +5,7 @@ public record TransactionDto(String transactionId,
                              String transctionDate,
                              Double transactionAmount,
                              String referenceNumber,
+                             String transactionReferenceId,
                              String bankId,
                              String collectedBy) {
 }

@@ -177,6 +177,18 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             }
         }
 
+        if (invoicesV1.isCancelled()) {
+            if (canEdit) {
+                canEdit = false;
+            }
+        }
+
+        if (invoicesV1.isDiscounted()) {
+            if (canEdit) {
+                canEdit = false;
+            }
+        }
+
 
 
         return new InvoicesList(firstName,

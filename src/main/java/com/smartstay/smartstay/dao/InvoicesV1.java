@@ -26,6 +26,8 @@ public class InvoicesV1 {
     //this includes GST
     Double totalAmount;
     Double paidAmount;
+    //this is for redemption.
+    Double balanceAmount;
     Double gst;
     Double cgst;
     Double sgst;

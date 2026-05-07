@@ -14,6 +14,7 @@ public class TransactionForCustomerDetailsMapper implements Function<Transaction
                 Utils.dateToString(transactionV1.getPaymentDate()),
                 transactionV1.getPaidAmount(),
                 transactionV1.getReferenceNumber(),
+                transactionV1.getTransactionReferenceId(),
                 transactionV1.getBankId(),
                 transactionV1.getCreatedBy());
     }

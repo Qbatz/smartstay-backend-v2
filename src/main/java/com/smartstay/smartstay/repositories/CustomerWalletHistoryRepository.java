@@ -9,7 +9,12 @@ import java.util.List;
 
 @Repository
 public interface CustomerWalletHistoryRepository extends JpaRepository<CustomerWalletHistory, Long> {
+
     List<CustomerWalletHistory> findByCustomerIdIn(List<String> customerId);
+    @Query("""
+            SELECT cwh FROM CustomerWalletHistory cwh WHERE cwh.customerId IN (:customerId) AND cwh.billingStatus='INVOICE_NOT_GENERATED'
+            """)
+    List<CustomerWalletHistory> findInvoiceNotGeneratedWalletByCustomerIds(List<String> customerId);
     List<CustomerWalletHistory> findByCustomerId(String customerId);
     @Query("""
             SELECT cwh FROM CustomerWalletHistory cwh WHERE cwh.customerId=:customerId AND 
