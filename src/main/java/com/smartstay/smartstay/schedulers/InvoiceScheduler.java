@@ -46,7 +46,7 @@ public class InvoiceScheduler {
         if (listHostels != null && !listHostels.isEmpty()) {
             listHostels.forEach(item -> {
                 if (recurringTrackerService.canGenerateInvoice(item.getHostelId(), new Date())) {
-                    applicationEventPublisher.publishEvent(new RecurringEvents(this, item.getHostelId()));
+//                    applicationEventPublisher.publishEvent(new RecurringEvents(this, item.getHostelId()));
                 }
             });
         }

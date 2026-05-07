@@ -361,4 +361,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADVANCE')
             """)
     List<InvoicesV1> findPendingByHostelIdAndCustomerId(String hostelId, String customerId);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.invoiceType='ADVANCE' AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND i.isCancelled=false
+            """)
+    List<InvoicesV1> findPaidAdvanceInvoices();
 }

@@ -57,7 +57,7 @@ public class OTPService {
         userOtp.setUsers(users);
         userOtp.setCreatedAt(new Date());
         Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.MINUTE, calendar.get(Calendar.MINUTE) + 15);
+        calendar.add(Calendar.MINUTE, 15);
         userOtp.setOtpValidity(calendar.getTime());
 
         userOtpRepository.save(userOtp);
@@ -91,7 +91,7 @@ public class OTPService {
 
             URL url = URI.create(requestUrl).toURL();
             HttpURLConnection uc = (HttpURLConnection)url.openConnection();
-
+            System.out.println(uc.getResponseMessage());
             uc.disconnect();
         } catch (MalformedURLException | UnsupportedEncodingException e) {
             throw new RuntimeException(e);

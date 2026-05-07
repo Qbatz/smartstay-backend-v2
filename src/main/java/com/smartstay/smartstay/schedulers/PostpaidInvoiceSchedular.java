@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 @Component
@@ -39,7 +40,9 @@ public class PostpaidInvoiceSchedular {
                 String hostelId = item.getHostel().getHostelId();
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, -1);
-                applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this, hostelId));
+                if (recurringTrackerService.canGeneratePostpaidInvoice(hostelId, calendar.getTime())) {
+//                    applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this, hostelId));
+                }
 
             });
         }

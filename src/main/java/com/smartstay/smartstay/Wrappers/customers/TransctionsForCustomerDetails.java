@@ -115,6 +115,7 @@ public class TransctionsForCustomerDetails implements Function<TransactionDto, c
 
         return new com.smartstay.smartstay.responses.customer.TransactionDto(transactionDto.transactionId(),
                 transactionDto.referenceNumber(),
+                transactionDto.transactionReferenceId(),
                 billName,
                 transactionDto.transctionDate(),
                 transactionDto.transactionAmount(),
