@@ -350,8 +350,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             ORDER BY b.floorId ASC, r.roomId ASC
             """,
     countQuery = """
-            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
-            i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.balanceAmount > 0 
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes)
             """)
     Page<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Pageable pageable);
 

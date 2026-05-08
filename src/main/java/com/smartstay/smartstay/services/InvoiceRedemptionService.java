@@ -4,11 +4,16 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BillTemplateType;
 import com.smartstay.smartstay.dao.BillTemplates;
 import com.smartstay.smartstay.dao.InvoiceRedemption;
+import com.smartstay.smartstay.dto.invoices.AmountSettled;
+import com.smartstay.smartstay.dto.invoices.AppliedInvoices;
 import com.smartstay.smartstay.ennum.BillConfigTypes;
 import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.payloads.invoice.RedemptionItems;
 import com.smartstay.smartstay.repositories.InvoiceRedemptionRepository;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +40,8 @@ public class InvoiceRedemptionService {
                     ir.setSourceInvoiceId(sourceInvoiceId);
                     ir.setTargetInvoiceId(i.invoiceId());
                     ir.setRedemptionAmount(i.amount());
+                    ir.setUserType(UserType.OWNER.name());
+                    ir.setIsActive(true);
                     ir.setHostelId(hostelId);
                     ir.setTransactionId(getNextReferenceNumber(hostelId));
                     ir.setReferenceNumber(null);
@@ -101,5 +108,13 @@ public class InvoiceRedemptionService {
                 return prefix + "-001";
             }
         }
+    }
+
+    public List<InvoiceRedemption> getAmountRedeemedForInvoice(String invoiceId, String hostelId) {
+        if (!authentication.isAuthenticated()){
+            return null;
+        }
+
+        return invoiceRedemptionRepository.findByHostelIdAndTargetInvoiceId(hostelId, invoiceId);
     }
 }

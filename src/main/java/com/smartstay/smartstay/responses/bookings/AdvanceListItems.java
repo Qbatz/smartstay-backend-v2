@@ -16,5 +16,6 @@ public record AdvanceListItems(
         String mobileNumber,
         String floorName,
         String bedName,
-        String roomName) {
+        String roomName,
+        boolean canRedeem) {
 }

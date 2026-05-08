@@ -153,7 +153,7 @@ public class BookingsService {
 
     public List<BookingsV1> getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(List<String> customerIds,
             String hostelId) {
-        return bookingsRepository.findBookingsByListOfCustomersAndHostelId(customerIds, hostelId);
+        return bookingsRepository.findCheckedCustomersByListOfCustomersAndHostelId(customerIds, hostelId);
     }
 
     public List<BookingsV1> findCheckedInCustomers(String hostelId) {
@@ -1312,5 +1312,13 @@ public class BookingsService {
             return bookings;
         }
         return new ArrayList<>();
+    }
+
+    public List<BookingsV1> getAllBookedAndCheckedInCustomers(String hostelId) {
+        List<String> statuses = new ArrayList<>();
+        statuses.add(BookingStatus.NOTICE.name());
+        statuses.add(BookingStatus.CHECKIN.name());
+        statuses.add(BookingStatus.BOOKED.name());
+        return bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
     }
 }

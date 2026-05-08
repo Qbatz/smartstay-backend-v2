@@ -3,15 +3,14 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.booking.AdvanceInvoicesMapper;
 import com.smartstay.smartstay.Wrappers.booking.InitializeRedemptionMapper;
-import com.smartstay.smartstay.Wrappers.invoices.InitializeRefund;
-import com.smartstay.smartstay.Wrappers.invoices.InvoiceMapper;
-import com.smartstay.smartstay.Wrappers.invoices.NewInvoiceListMapper;
-import com.smartstay.smartstay.Wrappers.invoices.UnpaidInvoicesMapper;
+import com.smartstay.smartstay.Wrappers.invoices.*;
 import com.smartstay.smartstay.Wrappers.transactions.TransactionsListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
+import com.smartstay.smartstay.dao.InvoiceDiscounts;
 import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.InvoiceRedemption;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
@@ -19,10 +18,7 @@ import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.customer.InvoiceRefundHistory;
 import com.smartstay.smartstay.dto.customer.ReassignRent;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
-import com.smartstay.smartstay.dto.invoices.InvoiceAggregateDto;
-import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
-import com.smartstay.smartstay.dto.invoices.InvoiceDiscountDto;
-import com.smartstay.smartstay.dto.invoices.InvoiceDiscounts;
+import com.smartstay.smartstay.dto.invoices.*;
 import com.smartstay.smartstay.dto.settlement.CurrentMonthOtherItems;
 import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.PaymentStatus;
@@ -31,7 +27,6 @@ import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
 import com.smartstay.smartstay.payloads.invoice.*;
-import com.smartstay.smartstay.payloads.invoice.InvoiceRedemption;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.bookings.*;
@@ -1238,7 +1233,7 @@ public class InvoiceV1Service {
             double discountedPercentage = 0.0;
             String discountReason = null;
             if (invoicesV1.isDiscounted()) {
-                InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, invoiceId);
+                com.smartstay.smartstay.dto.invoices.InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, invoiceId);
                 if (invoiceDiscounts != null) {
                     discountedAmount = invoiceDiscounts.discountAmount();
                     discountedPercentage = invoiceDiscounts.discountPercentage();
@@ -1252,7 +1247,7 @@ public class InvoiceV1Service {
                     invoiceRentalPeriod.toString(),
                     invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
                     discountReason,
-                    Utils.roundOffWithTwoDigit(totalDeductionAmount), listInvoiceItems, listDeductions);
+                    Utils.roundOffWithTwoDigit(totalDeductionAmount), false, listInvoiceItems, listDeductions, null);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1292,13 +1287,36 @@ public class InvoiceV1Service {
         double discountedPercentage = 0.0;
         String discountReason = null;
         if (invoicesV1.isDiscounted()) {
-            InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, invoiceId);
+            com.smartstay.smartstay.dto.invoices.InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, invoiceId);
             if (invoiceDiscounts != null) {
                 discountedAmount = invoiceDiscounts.discountAmount();
                 discountedPercentage = invoiceDiscounts.discountPercentage();
                 discountReason = invoiceDiscounts.reason();
             }
         }
+
+        List<InvoiceRedemption> listInvoicesApplied = invoiceRedemptionService.getAmountRedeemedForInvoice(invoiceId, hostelId);
+        AmountSettled amountSettled = null;
+        List<AppliedInvoices> appliedInvoicesInfo = null;
+        if (listInvoicesApplied != null && !listInvoicesApplied.isEmpty()) {
+            List<String> sourceInvoiceIds = listInvoicesApplied
+                    .stream()
+                    .map(InvoiceRedemption::getSourceInvoiceId)
+                    .toList();
+            List<InvoicesV1> sourceInvoices = invoicesV1Repository.findByInvoiceIdIn(sourceInvoiceIds);
+            appliedInvoicesInfo = listInvoicesApplied.stream()
+                    .map(i -> new AppliedInvoicesMapper(sourceInvoices).apply(i))
+                    .toList();
+            double appliedAmount = listInvoicesApplied
+                    .stream()
+                    .mapToDouble(InvoiceRedemption::getRedemptionAmount)
+                    .sum();
+            amountSettled = new AmountSettled(appliedAmount, listInvoicesApplied.size(), appliedInvoicesInfo);
+
+
+        }
+
+
         InvoiceInfo invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
                 Utils.roundOffWithTwoDigit(discountedAmount),
                 discountedPercentage,
@@ -1306,7 +1324,10 @@ public class InvoiceV1Service {
                 invoicesV1.isCancelled(),
                 invoicesV1.isDiscounted(),
                 discountReason,
-                0.0, listInvoiceItems, null);
+                0.0,
+                false,
+                listInvoiceItems, null,
+                amountSettled);
 
 
         InvoiceDetails details = new InvoiceDetails(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", customers.getHostelId(), customerInfo, stayInfo, invoiceInfo, accountDetails, paymentHistoryList, signatureInfo);
@@ -3715,12 +3736,7 @@ public class InvoiceV1Service {
 
     }
 
-
-    public Double getDiscountAmountForInvoice(String hostelId, String invoiceId) {
-        return invoiceDiscountService.getDiscountAmount(hostelId, invoiceId);
-    }
-
-    public List<InvoiceDiscounts> getDiscountAmountForInvoice(String hostelId, List<String> discountedInvoices) {
+    public List<com.smartstay.smartstay.dto.invoices.InvoiceDiscounts> getDiscountAmountForInvoice(String hostelId, List<String> discountedInvoices) {
         return invoiceDiscountService.getDiscountAmount(hostelId, discountedInvoices);
     }
 
@@ -3819,7 +3835,7 @@ public class InvoiceV1Service {
         return invoices != null && !invoices.isEmpty();
     }
 
-    public ResponseEntity<?> redeeemAdvanceAmount(String hostelId, String invoiceId, InvoiceRedemption invoiceRedemption) {
+    public ResponseEntity<?> redeeemAdvanceAmount(String hostelId, String invoiceId, com.smartstay.smartstay.payloads.invoice.InvoiceRedemption invoiceRedemption) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -4012,7 +4028,6 @@ public class InvoiceV1Service {
         }
 
         List<String> invoiceTypes = new ArrayList<>();
-        invoiceTypes.add(InvoiceType.ADVANCE.name());
         invoiceTypes.add(InvoiceType.BOOKING.name());
 
         int totalAdvanceInvoice = 0;
@@ -4020,7 +4035,7 @@ public class InvoiceV1Service {
         int noOfItemsPerPage = 10;
         int totalPages = 1;
 
-        List<BookingsV1> customerBookings = bookingsService.getAllCheckedInCustomer(hostelId);
+        List<BookingsV1> customerBookings = bookingsService.getAllBookedAndCheckedInCustomers(hostelId);
         List<String> listCustomerIds = new ArrayList<>();
         if (customerBookings != null) {
             listCustomerIds = customerBookings.stream()
