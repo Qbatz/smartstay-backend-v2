@@ -965,17 +965,30 @@ public class BookingsService {
 
                 rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), startDate, currentRentEndDate);
 
-                RentHistory rentHistory = new RentHistory();
-                rentHistory.setRent(updateInfo.newRent());
-                rentHistory.setStartsFrom(startDate);
-                rentHistory.setCustomerId(customers.getCustomerId());
-                rentHistory.setReason(updateInfo.reason());
-                rentHistory.setCreatedAt(new Date());
-                rentHistory.setCreatedBy(authentication.getName());
+                List<RentHistory> existingRentHistories = rentHistoryService.findByCustomerIdAndStartsFrom(customers.getCustomerId(), startDate);
 
-                rentHistory.setBooking(bookingsV1);
-                List<RentHistory> listRentHistories = bookingsV1.getRentHistory();
-                listRentHistories.add(rentHistory);
+                if (existingRentHistories != null && !existingRentHistories.isEmpty()) {
+                    // Update all existing records that match customer_id and starts_from
+                    for (RentHistory existing : existingRentHistories) {
+                        existing.setRent(updateInfo.newRent());
+                        existing.setReason(updateInfo.reason());
+                        existing.setCreatedAt(new Date());
+                        existing.setCreatedBy(authentication.getName());
+                    }
+                } else {
+                    // No existing record found — create a new one
+                    RentHistory rentHistory = new RentHistory();
+                    rentHistory.setRent(updateInfo.newRent());
+                    rentHistory.setStartsFrom(startDate);
+                    rentHistory.setCustomerId(customers.getCustomerId());
+                    rentHistory.setReason(updateInfo.reason());
+                    rentHistory.setCreatedAt(new Date());
+                    rentHistory.setCreatedBy(authentication.getName());
+
+                    rentHistory.setBooking(bookingsV1);
+                    List<RentHistory> listRentHistories = bookingsV1.getRentHistory();
+                    listRentHistories.add(rentHistory);
+                }
 
                 bookingsRepository.save(bookingsV1);
             } else {

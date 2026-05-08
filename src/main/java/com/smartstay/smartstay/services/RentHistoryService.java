@@ -72,4 +72,8 @@ public class RentHistoryService {
         return rentHistoryRepository.findRentApplyFromDate(new Date());
 
     }
+
+    public List<RentHistory> findByCustomerIdAndStartsFrom(String customerId, Date startsFrom) {
+        return rentHistoryRepository.findByCustomerIdAndStartsFrom(customerId, startsFrom);
+    }
 }
