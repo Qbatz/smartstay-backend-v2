@@ -22,6 +22,7 @@ public class VendorV1 {
 
     private String firstName;
     private String lastName;
+    private String countryCode;
     private String mobile;
     private String emailId;
     private String businessName;
