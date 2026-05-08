@@ -27,4 +27,9 @@ public interface RentHistoryRepository extends JpaRepository<RentHistory, Long> 
             """, nativeQuery = true)
     List<RentHistory> findRentApplyFromDate(@Param("startsFrom") Date startsFrom);
 
+    @Query(value = """
+            SELECT * FROM rent_history WHERE customer_id = :customerId AND DATE(starts_from) = DATE(:startsFrom)
+            """, nativeQuery = true)
+    List<RentHistory> findByCustomerIdAndStartsFrom(@Param("customerId") String customerId, @Param("startsFrom") Date startsFrom);
+
 }
