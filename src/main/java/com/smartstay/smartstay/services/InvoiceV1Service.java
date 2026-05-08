@@ -3667,6 +3667,10 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
+        if(invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())){
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_DISCOUNT_PAID_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
         if ((invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference()) == 0) {
             invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
         }

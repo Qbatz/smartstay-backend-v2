@@ -41,6 +41,21 @@ public class VendorService {
     @Autowired
     private SubscriptionService subscriptionService;
 
+    private String normalizeMobile(String countryCode, String mobile) {
+        if (mobile == null) {
+            return null;
+        }
+        String cleanedMobile = mobile.replaceAll("\\s+", "");
+        if (countryCode == null || countryCode.isBlank()) {
+            return cleanedMobile;
+        }
+        String cleanedCountryCode = countryCode.replace("+", "").replaceAll("\\s+", "");
+        if (cleanedMobile.startsWith(cleanedCountryCode) && cleanedMobile.length() > cleanedCountryCode.length()) {
+            return cleanedMobile.substring(cleanedCountryCode.length());
+        }
+        return cleanedMobile;
+    }
+
     public ResponseEntity<?> getAllVendors(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -116,7 +131,10 @@ public class VendorService {
             existingVendor.setLastName(updateVendor.lastName());
         }
         if (updateVendor.mobile() != null && !updateVendor.mobile().isEmpty()) {
-            existingVendor.setMobile(updateVendor.mobile());
+            existingVendor.setMobile(normalizeMobile(updateVendor.countryCode(), updateVendor.mobile()));
+        }
+        if (updateVendor.countryCode() != null && !updateVendor.countryCode().isEmpty()) {
+            existingVendor.setCountryCode(updateVendor.countryCode().replace("+", "").trim());
         }
         if (updateVendor.mailId() != null && !updateVendor.mailId().isEmpty()) {
             existingVendor.setEmailId(updateVendor.mailId());
@@ -167,7 +185,8 @@ public class VendorService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        if (vendorRepository.existsByMobile(payloads.mobile())) {
+        String normalizedMobile = normalizeMobile(payloads.countryCode(), payloads.mobile());
+        if (vendorRepository.existsByMobile(normalizedMobile)) {
             return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
@@ -183,7 +202,8 @@ public class VendorService {
         VendorV1 vendorV1 = new VendorV1();
         vendorV1.setFirstName(payloads.firstName());
         vendorV1.setLastName(payloads.lastName());
-        vendorV1.setMobile(payloads.mobile());
+        vendorV1.setCountryCode(payloads.countryCode() == null ? null : payloads.countryCode().replace("+", "").trim());
+        vendorV1.setMobile(normalizedMobile);
         vendorV1.setEmailId(payloads.mailId());
         vendorV1.setHouseNo(payloads.houseNo());
         vendorV1.setLandMark(payloads.landmark());
