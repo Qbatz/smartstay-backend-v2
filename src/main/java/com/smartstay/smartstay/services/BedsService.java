@@ -178,6 +178,7 @@ public class BedsService {
                     String lastInvoiceNumber = null;
                     int totalInvoice = 0;
                     String leavingDate = null;
+                    String requestedLeavingDate = null;
                     String currentStatus = BookingStatus.CHECKIN.name();
 
                     bookingAmount = currentCheckIn.getBookingAmount();
@@ -193,6 +194,7 @@ public class BedsService {
                         onNotice = true;
                         freeFrom = Utils.dateToString(currentCheckIn.getLeavingDate());
                         leavingDate = Utils.dateToString(currentCheckIn.getLeavingDate());
+                        requestedLeavingDate = Utils.dateToString(currentCheckIn.getNoticeDate());
                     }
 
                     joiningDate = Utils.dateToString(currentCheckIn.getJoiningDate());
@@ -242,6 +244,7 @@ public class BedsService {
                             lastInvoiceNumber,
                             totalInvoice,
                             leavingDate,
+                            requestedLeavingDate,
                             currentStatus,
                             Utils.COUNTRY_CODE);
 
@@ -272,6 +275,7 @@ public class BedsService {
                     String lastInvoiceNumber = null;
                     int totalInvoice = 0;
                     String leavingDate = null;
+                    String requestedLeavingDate = null;
                     String currentStatus = BookingStatus.CHECKIN.name();
 
                     bookingAmount = noticeTenant.getBookingAmount();
@@ -287,6 +291,7 @@ public class BedsService {
                         onNotice = true;
                         freeFrom = Utils.dateToString(noticeTenant.getLeavingDate());
                         leavingDate = Utils.dateToString(noticeTenant.getLeavingDate());
+                        requestedLeavingDate = Utils.dateToString(noticeTenant.getNoticeDate());
                     }
 
                     joiningDate = Utils.dateToString(noticeTenant.getJoiningDate());
@@ -336,6 +341,7 @@ public class BedsService {
                             lastInvoiceNumber,
                             totalInvoice,
                             leavingDate,
+                            requestedLeavingDate,
                             currentStatus,
                             Utils.COUNTRY_CODE);
 

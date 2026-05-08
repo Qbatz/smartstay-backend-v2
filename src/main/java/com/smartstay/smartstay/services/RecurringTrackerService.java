@@ -61,4 +61,15 @@ public class RecurringTrackerService {
         }
         return false;
     }
+
+    public boolean canGeneratePostpaidInvoice(String hostelId, Date date) {
+        List<RecurringTracker> listRecurringForHostel = recurringTrackerRepository.findInvoiceGenerateForAMonth(hostelId, Utils.dateToMonthAlone(date), Utils.dateToYear(date));
+        if (listRecurringForHostel == null) {
+            return true;
+        }
+        else if (listRecurringForHostel.isEmpty()) {
+            return true;
+        }
+        return false;
+    }
 }

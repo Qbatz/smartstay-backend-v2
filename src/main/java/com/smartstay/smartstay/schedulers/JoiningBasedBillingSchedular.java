@@ -85,7 +85,7 @@ public class JoiningBasedBillingSchedular {
         List<CustomerBillingRules> listBilling = customerBillingRulesService.findCustomersHavingBillingToday(hostelIds, billingDays);
 
         listBilling.forEach(item -> {
-            applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this, item.getHostelId(), item.getCustomerId()));
+//            applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this, item.getHostelId(), item.getCustomerId()));
         });
 
 

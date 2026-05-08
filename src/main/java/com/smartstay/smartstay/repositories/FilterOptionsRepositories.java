@@ -11,6 +11,10 @@ public interface FilterOptionsRepositories extends JpaRepository<FilterOptions, 
             SELECT fo FROM FilterOptions fo WHERE fo.moduleName='MODULE_TENANT'
             """)
     FilterOptions findTenantFilterOption();
+    @Query("""
+            SELECT fo FROM FilterOptions fo WHERE fo.moduleName='MODULE_BOOKINGS'
+            """)
+    FilterOptions findBookingsFilterOptions();
 
     FilterOptions findByModuleName(String moduleName);
 }

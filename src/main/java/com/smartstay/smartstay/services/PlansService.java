@@ -143,6 +143,12 @@ public class PlansService {
         }
 
         List<OrderHistory> orderHistoryList = orderHistoryRepository.findByHostelIdOrderByCreatedAtDesc(hostelId);
+        List<String> listPlanCodes = orderHistoryList.stream()
+                .map(OrderHistory::getPlanCode)
+                .distinct()
+                .toList();
+
+        List<Plans> listPlans = plansRepository.findPlansByPlanCodes(listPlanCodes);
 
         List<String> paidByIds = orderHistoryList.stream()
                 .map(OrderHistory::getPaidBy)
@@ -162,6 +168,7 @@ public class PlansService {
 
             String paidById = oh.getPaidBy();
             String paidByName = "";
+            String planName = null;
             if (paidById != null && paidByUserMap.containsKey(paidById)) {
                 Users paidByUser = paidByUserMap.get(paidById);
                 String firstName = paidByUser.getFirstName() != null ? paidByUser.getFirstName() : "";
@@ -169,10 +176,18 @@ public class PlansService {
                 paidByName = (firstName + " " + lastName).trim();
             }
 
+            Plans plans1 = listPlans.stream()
+                    .filter(i -> i.getPlanCode().equalsIgnoreCase(oh.getPlanCode()))
+                    .findFirst()
+                    .orElse(null);
+            if (plans1 != null) {
+                planName = plans1.getPlanName();
+            }
+
             return new BillingHistoryItem(
                     oh.getHistoryId(),
                     subscriptionNo,
-                    oh.getPlanName(),
+                    planName,
                     oh.getPlanCode(),
                     oh.getPlanAmount(),
                     oh.getDiscountAmount(),

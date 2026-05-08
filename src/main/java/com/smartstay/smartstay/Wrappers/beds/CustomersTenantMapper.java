@@ -93,6 +93,7 @@ public class CustomersTenantMapper implements Function<Customers, TenantInfo> {
                 null,
                 totalInvoice,
                 null,
+                null,
                 currentStatus,
                 Utils.COUNTRY_CODE);
 

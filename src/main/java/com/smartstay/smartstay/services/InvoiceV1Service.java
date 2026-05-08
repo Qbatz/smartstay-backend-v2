@@ -541,10 +541,15 @@ public class InvoiceV1Service {
             if (invoice.getPaidAmount() != null) {
                 paidAmount = invoice.getPaidAmount();
             }
+            if (invoice.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+                double deductionAmount = customersService.getDeductionAmount(invoice.getCustomerId());
+                if ((paidAmount + amount) > deductionAmount) {
+                    invoice.setBalanceAmount((paidAmount + amount) - deductionAmount);
+                }
+            }
             invoice.setPaymentStatus(status);
             invoice.setUpdatedAt(new Date());
             invoice.setPaidAmount(paidAmount + amount);
-            invoice.setBalanceAmount(paidAmount + amount);
             invoice.setUpdatedBy(authentication.getName());
             invoicesV1Repository.save(invoice);
             return 1;
@@ -1386,9 +1391,9 @@ public class InvoiceV1Service {
             settlementInvoice.setCgst(0.0);
             settlementInvoice.setSgst(0.0);
             settlementInvoice.setGst(0.0);
-            if (totalAmountToBePaid > 0) {
+            if (Utils.roundOfDouble(totalAmountToBePaid) > 0) {
                 settlementInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
-            } else if (totalAmountToBePaid == 0) {
+            } else if (Utils.roundOfDouble(totalAmountToBePaid) == 0) {
                 settlementInvoice.setPaymentStatus(PaymentStatus.PAID.name());
             } else {
                 settlementInvoice.setPaymentStatus(PaymentStatus.PENDING_REFUND.name());
@@ -3011,7 +3016,7 @@ public class InvoiceV1Service {
                     if (settlementInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name()) ||
                             settlementInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
                         refundHistory.add(new InvoiceRefundHistory(
-                                settlementInvoice.getInvoiceNumber(),
+                                transactionMap.get(settlementInvoice.getInvoiceId()).getTransactionReferenceId(),
                                 Utils.dateToString(item.getPaymentDate()),
                                 Utils.dateToTime(item.getPaymentDate()),
                                 paymentMode,
@@ -3021,7 +3026,7 @@ public class InvoiceV1Service {
                     }
                     else {
                         paymentHistory.add(new InvoiceRefundHistory(
-                                settlementInvoice.getInvoiceNumber(),
+                                transactionMap.get(settlementInvoice.getInvoiceId()).getTransactionReferenceId(),
                                 Utils.dateToString(item.getPaymentDate()),
                                 Utils.dateToTime(item.getPaymentDate()),
                                 paymentMode,
@@ -3914,7 +3919,7 @@ public class InvoiceV1Service {
         }
 
         Date redeemedAt = new Date();
-        if (invoiceRedemption.date() != null) {
+        if (invoiceRedemption.date() != null && !invoiceRedemption.date().trim().equalsIgnoreCase("")) {
             redeemedAt = Utils.stringToDate(invoiceRedemption.date().replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
         double redemptionAmount = listRedemptions

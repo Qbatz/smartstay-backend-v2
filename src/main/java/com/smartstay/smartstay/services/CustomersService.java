@@ -1390,23 +1390,9 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
 
-        StringBuilder fullName = new StringBuilder();
-        StringBuilder initials = new StringBuilder();
-        initials.append(customers.getFirstName().toUpperCase().charAt(0));
-        if (customers.getLastName() != null && !customers.getLastName().equalsIgnoreCase("")) {
-            initials.append(customers.getLastName().toUpperCase().charAt(0));
-        } else {
-            initials.append(customers.getFirstName().toUpperCase().charAt(1));
-        }
-        if (customers.getFirstName() != null) {
-            fullName.append(customers.getFirstName());
-        }
-        if (customers.getLastName() != null && !customers.getLastName().isEmpty()) {
-            if (customers.getFirstName() != null) {
-                fullName.append(" ");
-            }
-            fullName.append(customers.getLastName());
-        }
+        String fullName = NameUtils.getFullName(customers.getFirstName(), customers.getLastName());
+        String initials = NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
+
         boolean isNewRentAvailable = false;
         double newRentAmount = 0.0;
         String newRentLabelHint = null;
@@ -1595,11 +1581,11 @@ public class CustomersService {
                 customers.getHostelId(),
                 customers.getFirstName(),
                 customers.getLastName(),
-                fullName.toString(),
+                fullName,
                 customers.getEmailId(),
                 customers.getMobile(),
                 "91",
-                initials.toString(),
+                initials,
                 customers.getProfilePic(),
                 bookingId,
                 isNewRentAvailable,
@@ -3025,11 +3011,6 @@ public class CustomersService {
             }
         }
 
-        CustomerInformations customerInformations = settlementInfo.customerInfo();
-        if (customerInformations != null) {
-            isAdvancePaid = customerInformations.isAdvancePaid();
-        }
-
         if (settlement != null) {
             List<Settlement> listSettlementDeducitons = settlement.deductions();
             if (listSettlementDeducitons != null) {
@@ -3980,5 +3961,27 @@ public class CustomersService {
             return new ResponseEntity<>(listCustomersForComplaint, HttpStatus.OK);
 
         }
+    }
+
+    public double getDeductionAmount(String customerId) {
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return 0.0;
+        }
+
+        Advance advance = customers.getAdvance();
+        if (advance == null) {
+            return 0.0;
+        }
+        List<Deductions> deductions = advance.getDeductions();
+        if (deductions != null && !deductions.isEmpty()) {
+            double dedctionAmount = deductions
+                    .stream()
+                    .mapToDouble(Deductions::getAmount)
+                    .sum();
+            return dedctionAmount;
+        }
+
+        return 0.0;
     }
 }
