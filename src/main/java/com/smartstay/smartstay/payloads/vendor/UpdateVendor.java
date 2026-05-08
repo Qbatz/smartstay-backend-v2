@@ -5,6 +5,8 @@ public record UpdateVendor(
 
         String lastName,
 
+        String countryCode,
+
         String mobile,
 
         String mailId, String houseNo, String landmark, String area,

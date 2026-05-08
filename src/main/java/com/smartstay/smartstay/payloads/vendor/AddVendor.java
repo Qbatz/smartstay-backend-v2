@@ -8,6 +8,8 @@ public record AddVendor(
 
         String lastName,
 
+        String countryCode,
+
         @NotNull(message = "Mobile no is required") @NotEmpty(message = "Mobile no is required") String mobile,
 
         String mailId, String houseNo, String landmark, String area,

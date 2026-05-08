@@ -786,7 +786,7 @@ public class BedsService {
         Beds bed = bedsRepository.checkBedAvailability(bedId);
         if (bed != null) {
             if (bed.getFreeFrom() != null) {
-                if (Utils.compareWithTwoDates(new Date(), joiningDate) <= 0) {
+                if (Utils.compareWithTwoDates(bed.getFreeFrom(), joiningDate) <= 0) {
                     return bed;
                 }
                 return null;
