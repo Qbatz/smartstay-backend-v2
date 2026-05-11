@@ -139,6 +139,9 @@ public class ActivityLogUtils {
         if (activitySource.equalsIgnoreCase(ActivitySource.TEMPLATES.name())) {
             return getTemplateOperationsWithType(operationType, type);
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.TRANSACTIONS.name())) {
+            return getTransactionsOperationsWithType(operationType, type);
+        }
         return null;
     }
 
@@ -429,6 +432,16 @@ public class ActivityLogUtils {
 
 
     private static String getTemplateOperationsWithType(String operationName, String type) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return type + " has been removed";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE_OTHER_FIELDS.name())) {
+            return type + " has been removed";
+        }
+        return null;
+    }
+
+    private static String getTransactionsOperationsWithType(String operationName, String type) {
         if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
             return type + " has been removed";
         }

@@ -29,6 +29,7 @@ import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
 import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
+import com.smartstay.smartstay.responses.InvoiceRedemption.AvailableInvoices;
 import com.smartstay.smartstay.responses.bookings.*;
 import com.smartstay.smartstay.responses.customer.RentBreakUp;
 import com.smartstay.smartstay.responses.customer.RentInfo;
@@ -3949,12 +3950,28 @@ public class InvoiceV1Service {
         if (invoiceRedemption == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
+        double redemptionAmount1 = 0.0;
         List<RedemptionItems> listRedemptions;
         if (invoiceRedemption.listItems() != null) {
             listRedemptions = invoiceRedemption.listItems()
                     .stream()
                     .filter(i -> i.invoiceId() != null && i.amount() != null)
                     .toList();
+
+            redemptionAmount1 = invoiceRedemption
+                    .listItems()
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.amount() != null) {
+                            return i.amount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            if (redemptionAmount1 > invoicesV1.getBalanceAmount()) {
+                return new ResponseEntity<>(Utils.REDEMPTION_AMOUNT_CANNOT_EXCEED_PAYABLE_AMOUNT, HttpStatus.BAD_REQUEST);
+            }
+
         } else {
             listRedemptions = new ArrayList<>();
         }
@@ -4254,5 +4271,70 @@ public class InvoiceV1Service {
                 listInvoiceItems);
 
         return new ResponseEntity<>(initializeRedemption, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAvailableInvoicesToApply(String hostelId, String invoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<String> invoiceTypes = new ArrayList<>();
+        invoiceTypes.add(InvoiceType.BOOKING.name());
+        invoiceTypes.add(InvoiceType.ADVANCE.name());
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        com.smartstay.smartstay.responses.InvoiceRedemption.CustomerInfo customerInfo = null;
+        Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());
+        if (customers != null) {
+            BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(customers.getCustomerId());
+            if (bookingsV1 != null) {
+                BedDetails bedDetails = bedService.getBedDetails(bookingsV1.getBedId());
+                if (bedDetails != null) {
+                    customerInfo = new com.smartstay.smartstay.responses.InvoiceRedemption.CustomerInfo(customers.getFirstName(),
+                            customers.getLastName(),
+                            NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
+                            NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
+                            customers.getProfilePic(),
+                            bedDetails.getBedName(),
+                            bedDetails.getRoomName(),
+                            bedDetails.getFloorName());
+                }
+            }
+        }
+        List<com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo> invoiceInfoList = null;
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findAllAdvanceInvoices(hostelId, invoicesV1.getCustomerId());
+        if (listInvoices != null && !listInvoices.isEmpty()) {
+            invoiceInfoList = listInvoices
+                    .stream()
+                    .map(i -> new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(i.getInvoiceId(),
+                            i.getInvoiceNumber(),
+                            i.getInvoiceType(),
+                            i.getTotalAmount(),
+                            i.getPaidAmount(),
+                            i.getBalanceAmount(),
+                            Utils.dateToString(i.getInvoiceStartDate()))).toList();
+
+        }
+
+        AvailableInvoices availableInvoices = new AvailableInvoices(customerInfo, invoiceInfoList);
+
+        return new ResponseEntity<>(availableInvoices, HttpStatus.OK);
     }
 }

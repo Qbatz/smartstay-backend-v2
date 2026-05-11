@@ -35,5 +35,6 @@ public record InvoicesList(String firstName,
                            boolean isCancelled,
                            boolean canEdit,
                            boolean isInvoicesApplied,
+                           boolean canRedeem,
                            InvoicesApplied invoicesApplied) {
 }

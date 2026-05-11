@@ -113,4 +113,9 @@ public class InvoiceController {
     public ResponseEntity<?> initializeRedemption(@PathVariable("hostelId") String hostelId, @PathVariable("advanceInvoiceId") String advanceInvoiceId) {
         return invoiceV1Service.initializeRedemption(hostelId, advanceInvoiceId);
     }
+
+    @GetMapping("/advances/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> getAdvanceInvoicesForCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.getAvailableInvoicesToApply(hostelId, invoiceId);
+    }
 }

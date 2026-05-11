@@ -44,6 +44,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         Double discountAmount = 0.0;
         boolean canEdit = false;
         boolean isInvoicesApplied = false;
+        boolean canRedeem = false;
         InvoicesApplied invoicesApplied = null;
 
         Double dueAmount = 0.0;
@@ -104,10 +105,12 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
             invoiceType = "Booking";
             canEdit = false;
+            canRedeem = true;
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
             invoiceType = "Advance";
             canEdit = false;
+            canRedeem = true;
         }
         else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHERS.name())) {
             invoiceType = "Others";
@@ -168,7 +171,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         }
 
         if (!listAppliedInvoices.isEmpty()) {
-            isInvoicesApplied = true;
+
             double appliedInvoiceAmount = listAppliedInvoices
                     .stream()
                     .filter(i -> i.getTargetInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId()))
@@ -180,7 +183,15 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                     })
                     .sum();
 
-            invoicesApplied = new InvoicesApplied(listAppliedInvoices.size(), appliedInvoiceAmount);
+            long appliedInvoiceCount = listAppliedInvoices
+                    .stream()
+                    .filter(i -> i.getTargetInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId()))
+                    .count();
+
+            if (appliedInvoiceCount > 0) {
+                isInvoicesApplied = true;
+                invoicesApplied = new InvoicesApplied((int) appliedInvoiceCount, appliedInvoiceAmount);
+            }
         }
 
         if (invoicesV1.getPaymentStatus() != null) {
@@ -196,6 +207,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         }
 
         if (invoicesV1.isCancelled()) {
+            canRedeem = false;
             if (canEdit) {
                 canEdit = false;
             }
@@ -206,6 +218,13 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 canEdit = false;
             }
         }
+
+        if (canRedeem) {
+            if (paymentStatus.equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+                canRedeem = true;
+            }
+        }
+
 
 
 
@@ -240,6 +259,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 isCancelled,
                 canEdit,
                 isInvoicesApplied,
+                canRedeem,
                 invoicesApplied);
     }
 }
