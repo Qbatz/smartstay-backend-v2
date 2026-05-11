@@ -3,6 +3,7 @@ package com.smartstay.smartstay.Wrappers.invoices;
 import com.smartstay.smartstay.dao.InvoiceRedemption;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.invoices.AppliedInvoices;
+import com.smartstay.smartstay.util.Utils;
 
 import java.util.List;
 import java.util.function.Function;
@@ -32,6 +33,7 @@ public class AppliedInvoicesMapper implements Function<com.smartstay.smartstay.d
 
         return new AppliedInvoices(invoiceRedemption.getSourceInvoiceId(),
                 invoiceNo,
-                invoiceRedemption.getRedemptionAmount());
+                invoiceRedemption.getRedemptionAmount(),
+                Utils.dateToString(invoiceRedemption.getRedeemedAt()));
     }
 }

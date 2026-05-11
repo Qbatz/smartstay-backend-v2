@@ -506,6 +506,7 @@ public class InvoiceV1Service {
         }
 
         List<InvoicesV1> listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
+        List<InvoiceRedemption> listInvoiceRedeemed;
         List<String> invoiceIds = new ArrayList<>();
         if (listAllInvoice != null && !listAllInvoice.isEmpty()) {
             invoiceIds = listAllInvoice
@@ -513,6 +514,13 @@ public class InvoiceV1Service {
                     .filter(InvoicesV1::isDiscounted)
                     .map(InvoicesV1::getInvoiceId)
                     .toList();
+            List<String> invoicesId = listAllInvoice
+                    .stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList();
+            listInvoiceRedeemed = invoiceRedemptionService.getRedeemedInvoicesByInvoiceId(hostelId, invoicesId);
+        } else {
+            listInvoiceRedeemed = null;
         }
         List<com.smartstay.smartstay.dao.InvoiceDiscounts> listInvoiceDiscounts;
         if (!invoiceIds.isEmpty()) {
@@ -523,7 +531,7 @@ public class InvoiceV1Service {
         List<String> customerIds = listAllInvoice.stream().map(InvoicesV1::getCustomerId).toList();
         List<Customers> lisAllCustomersForInvoices = customersService.getCustomerDetails(customerIds);
 
-        List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers, listInvoiceDiscounts).apply(i)).toList();
+        List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers, listInvoiceDiscounts, listInvoiceRedeemed).apply(i)).toList();
 
         NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, invoiceFilterOptions, newInvoicesList);
         return new ResponseEntity<>(newInvoicesListResponse, HttpStatus.OK);
@@ -1202,6 +1210,37 @@ public class InvoiceV1Service {
             }
         }
 
+        boolean isInvoicesAvailableForRedeem = false;
+        double availableCreditAmount = 0.0;
+
+        List<InvoicesV1> listInvoicesAvailableForReddem = invoicesV1Repository.findAllAdvanceInvoices(hostelId, customers.getCustomerId());
+        if (!listInvoicesAvailableForReddem.isEmpty()) {
+            isInvoicesAvailableForRedeem = true;
+
+            availableCreditAmount = listInvoicesAvailableForReddem
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+        }
+
+        if (isInvoicesAvailableForRedeem) {
+            if (invoicesV1.isCancelled()) {
+                isInvoicesAvailableForRedeem = false;
+                availableCreditAmount = 0.0;
+            }
+            if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                isInvoicesAvailableForRedeem = false;
+                availableCreditAmount = 0.0;
+            }
+
+        }
+
+
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             double paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
 
@@ -1247,7 +1286,7 @@ public class InvoiceV1Service {
                     invoiceRentalPeriod.toString(),
                     invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
                     discountReason,
-                    Utils.roundOffWithTwoDigit(totalDeductionAmount), false, listInvoiceItems, listDeductions, null);
+                    Utils.roundOffWithTwoDigit(totalDeductionAmount), false, 0.0, listInvoiceItems, listDeductions, null);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1325,7 +1364,8 @@ public class InvoiceV1Service {
                 invoicesV1.isDiscounted(),
                 discountReason,
                 0.0,
-                false,
+                isInvoicesAvailableForRedeem,
+                availableCreditAmount,
                 listInvoiceItems, null,
                 amountSettled);
 
@@ -1336,7 +1376,7 @@ public class InvoiceV1Service {
     }
 
     public List<InvoiceResponse> getInvoiceResponseList(String customerId) {
-        List<InvoicesV1> invoices = invoicesV1Repository.findByCustomerId(customerId);
+        List<InvoicesV1> invoices = invoicesV1Repository.findByCustomerIdOrderByInvoiceStartDateDesc(customerId);
 
         return invoices.stream().map(InvoiceMapper::toResponse).toList();
 
@@ -3356,6 +3396,31 @@ public class InvoiceV1Service {
                         if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                             if (i.getPaidAmount() != null) {
                                 return i.getPaidAmount();
+                            }
+                            return 0.0;
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            return paidAmount;
+        }
+        return paidAmount;
+    }
+
+    public double findAdvanceBalancesByType(String customerId, String name) {
+        List<String> listTypes = new ArrayList<>();
+        listTypes.add(name);
+
+        double paidAmount = 0.0;
+
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findInvoicesByCustomerIdAndTypeIn(customerId, listTypes);
+        if (listInvoices != null) {
+            paidAmount = listInvoices
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                            if (i.getBalanceAmount() != null) {
+                                return i.getBalanceAmount();
                             }
                             return 0.0;
                         }

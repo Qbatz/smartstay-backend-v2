@@ -3,14 +3,12 @@ package com.smartstay.smartstay.Wrappers.invoices;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.InvoiceDiscounts;
-import com.smartstay.smartstay.dao.InvoicesV1;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
+import com.smartstay.smartstay.responses.invoices.InvoicesApplied;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
 import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.Utils;
@@ -22,11 +20,13 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
     List<Customers> listCustomers = null;
     List<Users> listCreatedBy = null;
     List<InvoiceDiscounts> listInvoiceDiscounts = null;
+    List<InvoiceRedemption> listAppliedInvoices = null;
 
-    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts) {
+    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts, List<InvoiceRedemption> listAppliedInvoices) {
         this.listCustomers = customers;
         this.listCreatedBy = createdBy;
         this.listInvoiceDiscounts = listInvoiceDiscounts;
+        this.listAppliedInvoices = listAppliedInvoices;
     }
 
     @Override
@@ -43,6 +43,8 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         Double discountPercentage = 0.0;
         Double discountAmount = 0.0;
         boolean canEdit = false;
+        boolean isInvoicesApplied = false;
+        InvoicesApplied invoicesApplied = null;
 
         Double dueAmount = 0.0;
         Double paidAmount = 0.0;
@@ -165,6 +167,22 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             }
         }
 
+        if (!listAppliedInvoices.isEmpty()) {
+            isInvoicesApplied = true;
+            double appliedInvoiceAmount = listAppliedInvoices
+                    .stream()
+                    .filter(i -> i.getTargetInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId()))
+                    .mapToDouble(i -> {
+                        if (i.getRedemptionAmount() != null) {
+                            return i.getRedemptionAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            invoicesApplied = new InvoicesApplied(listAppliedInvoices.size(), appliedInvoiceAmount);
+        }
+
         if (invoicesV1.getPaymentStatus() != null) {
             if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                 canEdit = false;
@@ -221,6 +239,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 invoicesV1.getInvoiceNumber(),
                 isCancelled,
                 canEdit,
-                null);
+                isInvoicesApplied,
+                invoicesApplied);
     }
 }

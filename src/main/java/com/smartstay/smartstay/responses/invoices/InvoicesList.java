@@ -34,5 +34,6 @@ public record InvoicesList(String firstName,
                            String invoiceNumber,
                            boolean isCancelled,
                            boolean canEdit,
-                           List<Deductions> listDeductions) {
+                           boolean isInvoicesApplied,
+                           InvoicesApplied invoicesApplied) {
 }

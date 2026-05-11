@@ -22,6 +22,7 @@ public record InvoiceInfo(Double subTotal,
                           String discountReason,
                           double totalDeduction,
                           boolean canRedeem,
+                          Double avilableAmountToRedeem,
                           List<InvoiceItems> invoiceItems,
                           List<Deductions> listDeductions,
                           AmountSettled redemptionInfo) {

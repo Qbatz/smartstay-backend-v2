@@ -963,18 +963,19 @@ public class BookingsService {
                     startDate = newBillingCalendar.getTime();
                 }
 
-                rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), startDate, currentRentEndDate);
+                rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate(), currentRentEndDate);
 
-                List<RentHistory> existingRentHistories = rentHistoryService.findByCustomerIdAndStartsFrom(customers.getCustomerId(), startDate);
+                RentHistory existing = rentHistoryService.findByCustomerIdAndStartsFrom(customers.getCustomerId(), new Date());
 
-                if (existingRentHistories != null && !existingRentHistories.isEmpty()) {
+                if (existing != null ) {
                     // Update all existing records that match customer_id and starts_from
-                    for (RentHistory existing : existingRentHistories) {
-                        existing.setRent(updateInfo.newRent());
-                        existing.setReason(updateInfo.reason());
-                        existing.setCreatedAt(new Date());
-                        existing.setCreatedBy(authentication.getName());
-                    }
+                    existing.setRent(updateInfo.newRent());
+                    existing.setReason(updateInfo.reason());
+                    existing.setStartsFrom(startDate);
+                    existing.setCreatedAt(new Date());
+                    existing.setCreatedBy(authentication.getName());
+
+
                 } else {
                     // No existing record found — create a new one
                     RentHistory rentHistory = new RentHistory();

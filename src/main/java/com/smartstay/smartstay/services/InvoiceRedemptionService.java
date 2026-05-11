@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -116,5 +117,14 @@ public class InvoiceRedemptionService {
         }
 
         return invoiceRedemptionRepository.findByHostelIdAndTargetInvoiceId(hostelId, invoiceId);
+    }
+
+    public List<InvoiceRedemption> getRedeemedInvoicesByInvoiceId(String hostelId, List<String> invoicesId) {
+        List<InvoiceRedemption> listInvoicesApplied = invoiceRedemptionRepository.findByHostelIdAndTargetInvoiceId(hostelId, invoicesId);
+        if (listInvoicesApplied == null) {
+            return new ArrayList<>();
+        }
+
+        return listInvoicesApplied;
     }
 }

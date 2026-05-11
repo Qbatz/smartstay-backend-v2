@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.responses.customer;
 
 import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.dto.settlement.AvailableAmountToRedeem;
 
 import java.util.List;
 
@@ -18,5 +19,5 @@ public record CustomerInformations(String customerId,
                                    boolean isAdvancePaid,
                                    Double advancePaidAmount,
                                    Double bookingAmount,
-                                   List<Deductions> listDeductions) {
+                                   AvailableAmountToRedeem availableAmountToRedeem) {
 }
