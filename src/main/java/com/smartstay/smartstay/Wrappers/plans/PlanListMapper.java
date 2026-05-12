@@ -3,11 +3,12 @@ package com.smartstay.smartstay.Wrappers.plans;
 import com.smartstay.smartstay.dao.PlanFeatures;
 import com.smartstay.smartstay.dao.Plans;
 import com.smartstay.smartstay.responses.plans.PlansList;
+import com.smartstay.smartstay.util.Utils;
 
 import java.util.List;
 import java.util.function.Function;
 
-public class PlanListMapper implements Function<Plans, PlansList>  {
+public class PlanListMapper implements Function<Plans, PlansList> {
     @Override
     public PlansList apply(Plans plans) {
         Double discount = 0.0;
@@ -20,17 +21,17 @@ public class PlanListMapper implements Function<Plans, PlansList>  {
 
         return new PlansList(plans.getPlanName(),
                 plans.getPlanId(),
-                plans.getPrice(),
-                discount,
-                discountedPrice,
+                Utils.roundOffWithTwoDigit(plans.getPrice()),
+                Utils.roundOffWithTwoDigit(discount),
+                Utils.roundOffWithTwoDigit(discountedPrice),
                 plans.getPlanCode(),
                 plans.isCanCustomize(),
                 "Monthly",
-                plans.getCgst(),
-                plans.getSgst(),
-                plans.getCgstAmount(),
-                plans.getSgstAmount(),
-                plans.getFinalPrice(),
+                Utils.roundOffWithTwoDigit(plans.getCgst()),
+                Utils.roundOffWithTwoDigit(plans.getSgst()),
+                Utils.roundOffWithTwoDigit(plans.getCgstAmount()),
+                Utils.roundOffWithTwoDigit(plans.getSgstAmount()),
+                Utils.roundOffWithTwoDigit(plans.getFinalPrice()),
                 features);
     }
 }

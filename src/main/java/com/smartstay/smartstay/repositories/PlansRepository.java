@@ -14,4 +14,8 @@ public interface PlansRepository extends JpaRepository<Plans, Long> {
     @Query(value = "SELECT * FROM plans WHERE plan_type=:planType limit 1", nativeQuery = true)
     Plans findPlanByPlanTypeAndIsActiveTrue(@Param("planType") String planType);
 
+    @Query("""
+            SELECT p FROM Plans p WHERE p.planCode IN (:listPlanCodes)
+            """)
+    List<Plans> findPlansByPlanCodes(List<String> listPlanCodes);
 }

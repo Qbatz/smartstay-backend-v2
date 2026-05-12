@@ -16,6 +16,7 @@ public record TenantInfo(String tenetId,
                          String lastInvoiceNumber,
                          Integer totalInvoices,
                          String leavingDate,
+                         String requestedLeavingDate,
                          String currentStatus,
                          String countryCode) {
 

@@ -77,7 +77,7 @@ public class InvoiceRedemptionService {
             return prefix + "-001";
         }
         else {
-            String[] arrReferenceNUmbers = ir.getReferenceNumber().split("-");
+            String[] arrReferenceNUmbers = ir.getTransactionId().split("-");
             if (arrReferenceNUmbers.length > 0) {
                 String previousPrefix = arrReferenceNUmbers[0];
                 String currentPrefix = null;

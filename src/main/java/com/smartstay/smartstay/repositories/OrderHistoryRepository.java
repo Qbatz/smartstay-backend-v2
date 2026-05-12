@@ -16,5 +16,8 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
             """)
     List<OrderHistory> findAllRecordByOwner();
 
+    @Query("""
+            SELECT oh FROM OrderHistory oh WHERE oh.hostelId=:hostelId AND oh.orderStatus='PAID'
+            """)
     List<OrderHistory> findByHostelIdOrderByCreatedAtDesc(String hostelId);
 }

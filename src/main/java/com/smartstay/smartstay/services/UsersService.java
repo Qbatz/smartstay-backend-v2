@@ -19,6 +19,7 @@ import com.smartstay.smartstay.payloads.account.*;
 import com.smartstay.smartstay.payloads.profile.Logout;
 import com.smartstay.smartstay.payloads.profile.ResetPassword;
 import com.smartstay.smartstay.payloads.profile.UpdateFCMToken;
+import com.smartstay.smartstay.payloads.profile.VerifyPassword;
 import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
 import com.smartstay.smartstay.payloads.user.ResetPin;
 import com.smartstay.smartstay.payloads.user.SetupPin;
@@ -1334,5 +1335,31 @@ public class UsersService {
 
     public List<Users> findAllUsersFromUserId(List<String> userIds) {
         return userRepository.findAllByUserIdIn(userIds);
+    }
+
+    //this for resetting pin
+    public ResponseEntity<?> verifyPasswordForResetting(VerifyPassword verifyPassword) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.BAD_REQUEST);
+        }
+        Users users = userRepository.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.BAD_REQUEST);
+        }
+
+        boolean matches = encoder.matches(verifyPassword.password(), users.getPassword());
+        if (matches) {
+            int otp = Utils.generateOtp();
+            otpService.insertOrUpdateOTP(users, otp);
+
+            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+                com.smartstay.smartstay.responses.profile.VerifyPassword verifyPassword1 = new com.smartstay.smartstay.responses.profile.VerifyPassword(otp, users.getUserId());
+                return new ResponseEntity<>(verifyPassword1, HttpStatus.OK);
+            }
+            String otpMessage = "Your OTP to reset the password for SmartStay is " + otp + ". This code is valid for 15 minutes. Do not share this OTP with anyone. – Team SmartStay";
+            otpService.sendOtp(users.getMobileNo(), otpMessage);
+            return new ResponseEntity<>(users.getUserId(), HttpStatus.OK);
+        }
+        return new ResponseEntity<>("Incorrect password", HttpStatus.BAD_REQUEST);
     }
 }

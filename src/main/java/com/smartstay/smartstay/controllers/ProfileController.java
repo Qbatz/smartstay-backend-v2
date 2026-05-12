@@ -6,6 +6,7 @@ import com.smartstay.smartstay.payloads.UpdateUserProfilePayloads;
 import com.smartstay.smartstay.payloads.profile.Logout;
 import com.smartstay.smartstay.payloads.profile.ResetPassword;
 import com.smartstay.smartstay.payloads.profile.UpdateFCMToken;
+import com.smartstay.smartstay.payloads.profile.VerifyPassword;
 import com.smartstay.smartstay.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -107,4 +108,15 @@ public class ProfileController {
     public ResponseEntity<?> logoutFromApp(@Valid @RequestBody Logout logout) {
         return usersService.logout(logout);
     }
+
+    //this is for resetting pin by them selves.
+    @PostMapping("/password/verify")
+    public ResponseEntity<?> verifyPassword(@Valid @RequestBody VerifyPassword verifyPassword) {
+        return usersService.verifyPasswordForResetting(verifyPassword);
+    }
+
+
+//    public ResponseEntity<?> resetPin() {
+//
+//    }
 }

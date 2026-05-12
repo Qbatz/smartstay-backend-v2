@@ -1,6 +1,7 @@
 package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.repositories.*;
@@ -104,6 +105,128 @@ public class SmartstayApplication {
 //        };
 //    }
 
+//    @Bean
+//    CommandLineRunner updateAvailableBalances(InvoicesV1Repository invoicesV1Repository, CustomersRepository customersRepository) {
+//        return args -> {
+//            List<InvoicesV1> advanceInvoices = invoicesV1Repository.findPaidAdvanceInvoices();
+//            List<String> customerIds = advanceInvoices
+//                    .stream()
+//                    .map(InvoicesV1::getCustomerId)
+//                    .toList();
+//            List<Customers> customers = customersRepository.findByCustomerIdIn(customerIds);
+//            List<InvoicesV1> newAdvanceInvoices = advanceInvoices
+//                    .stream()
+//                    .map(i -> {
+//                        Customers customers1 = customers.stream()
+//                                .filter(i1 -> i1.getCustomerId().equalsIgnoreCase(i.getCustomerId()))
+//                                .findFirst()
+//                                .orElse(null);
+//                        if (customers1 != null) {
+//                            Advance customerAdvance = customers1.getAdvance();
+//                            if (customerAdvance != null) {
+//                                List<Deductions> listDeductions = customerAdvance.getDeductions();
+//                                double deductionAMount = 0.0;
+//                                if (listDeductions != null) {
+//                                    deductionAMount = listDeductions
+//                                            .stream()
+//                                            .mapToDouble(i2 -> {
+//                                                if (i2.getAmount() == null) {
+//                                                    return 0;
+//                                                }
+//                                                return i2.getAmount();
+//                                            })
+//                                            .sum();
+//                                    if (i.getPaidAmount() != null) {
+//                                        i.setBalanceAmount(i.getPaidAmount() - deductionAMount);
+//                                    }
+//
+//
+//                                }
+//                            }
+//                        }
+//                        return i;
+//                    })
+//                    .toList();
+//
+//            invoicesV1Repository.saveAll(newAdvanceInvoices);
+//        };
+//    }
+
+    @Bean
+    CommandLineRunner addBookingFilterOptions(FilterOptionsRepositories filterOptionsRepositories) {
+        return args -> {
+            FilterOptions bookingsFilterOptions = filterOptionsRepositories.findBookingsFilterOptions();
+            if (bookingsFilterOptions == null) {
+                bookingsFilterOptions = new FilterOptions();
+                bookingsFilterOptions.setModuleName(FilterOptionsModule.MODULE_BOOKINGS.name());
+                bookingsFilterOptions.setIsActive(true);
+                bookingsFilterOptions.setCreatedAt(new Date());
+
+                List<ColumnFilters> defaultColumnFilters = new ArrayList<>();
+                ColumnFilters filters1 = new ColumnFilters();
+                filters1.setSelected(true);
+                filters1.setFieldName("Inv No");
+                filters1.setOrder(1);
+
+
+                ColumnFilters filters2 = new ColumnFilters();
+                filters2.setSelected(true);
+                filters2.setFieldName("Booking Date");
+                filters2.setOrder(2);
+
+                ColumnFilters filters3 = new ColumnFilters();
+                filters3.setSelected(true);
+                filters3.setFieldName("Tenant Name");
+                filters3.setOrder(3);
+
+
+                ColumnFilters filters4 = new ColumnFilters();
+                filters4.setSelected(true);
+                filters4.setFieldName("Mobile No");
+                filters4.setOrder(4);
+
+                ColumnFilters filters5 = new ColumnFilters();
+                filters5.setSelected(true);
+                filters5.setFieldName("Floor");
+                filters5.setOrder(5);
+
+                ColumnFilters filters6 = new ColumnFilters();
+                filters6.setSelected(true);
+                filters6.setFieldName("Room");
+                filters6.setOrder(6);
+
+                ColumnFilters filters7 = new ColumnFilters();
+                filters7.setSelected(true);
+                filters7.setFieldName("Bed");
+                filters7.setOrder(7);
+
+                ColumnFilters filters8 = new ColumnFilters();
+                filters8.setSelected(true);
+                filters8.setFieldName("Amount");
+                filters8.setOrder(8);
+
+                ColumnFilters filters9 = new ColumnFilters();
+                filters9.setSelected(true);
+                filters9.setFieldName("Status");
+                filters9.setOrder(9);
+
+                defaultColumnFilters.add(filters1);
+                defaultColumnFilters.add(filters2);
+                defaultColumnFilters.add(filters3);
+                defaultColumnFilters.add(filters4);
+                defaultColumnFilters.add(filters5);
+                defaultColumnFilters.add(filters6);
+                defaultColumnFilters.add(filters7);
+                defaultColumnFilters.add(filters8);
+                defaultColumnFilters.add(filters9);
+
+                bookingsFilterOptions.setFilterOptions(defaultColumnFilters);
+
+                filterOptionsRepositories.save(bookingsFilterOptions);
+
+            }
+        };
+    }
 
 
 }
