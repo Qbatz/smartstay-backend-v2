@@ -858,6 +858,12 @@ public class TransactionService {
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
             return new ResponseEntity<>(Utils.CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED, HttpStatus.BAD_REQUEST);
         }
+        if (invoicesV1.getInvoiceType() != null
+                && invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())
+                && invoicesV1.getPaymentStatus() != null
+                && (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name()))) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_REFUNDED_BOOKING_RECEIPT, HttpStatus.BAD_REQUEST);
+        }
 
         InvoicesV1 inv = invoiceService.deleteReceipt(invoicesV1, transactionV1);
         if (inv == null) {
