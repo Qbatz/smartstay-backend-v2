@@ -153,4 +153,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
 
 
     List<Customers> findByXuid(String xuid);
+
+    @Query("SELECT c FROM Customers c WHERE c.hostelId = :hostelId AND c.mobile LIKE CONCAT('%', :mobile, '%')")
+    List<Customers> searchByMobileAndHostelId(@Param("hostelId") String hostelId, @Param("mobile") String mobile);
 }
