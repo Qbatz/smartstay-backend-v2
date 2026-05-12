@@ -46,8 +46,9 @@ public class RentHistoryService {
         rentHistoryRepository.save(rentHistory);
     }
 
-    public void updateOldRentEndDate(String customerId, Date startDate, Date currentEndDate) {
-        RentHistory rentHistory = rentHistoryRepository.findRentByCustomerIdAndDate(customerId, startDate);
+    public void updateOldRentEndDate(String customerId, Date billStartDate, Date currentBillEndDate, Date currentEndDate) {
+//        RentHistory rentHistory1 = rentHistoryRepository.findCurrentMonthRent()
+        RentHistory rentHistory = rentHistoryRepository.findCurrentMonthRent(customerId, billStartDate, currentBillEndDate);
         rentHistory.setEndingAt(currentEndDate);
 
         rentHistoryRepository.save(rentHistory);
@@ -73,7 +74,7 @@ public class RentHistoryService {
 
     }
 
-    public List<RentHistory> findByCustomerIdAndStartsFrom(String customerId, Date startsFrom) {
+    public RentHistory findByCustomerIdAndStartsFrom(String customerId, Date startsFrom) {
         return rentHistoryRepository.findByCustomerIdAndStartsFrom(customerId, startsFrom);
     }
 }

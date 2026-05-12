@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.beds.BedDetails;
+import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.responses.bookings.AdvanceListItems;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
@@ -36,6 +37,7 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
         String floorName = null;
         String bedName = null;
         String roomName = null;
+        boolean canRedeem = true;
 
         if (listCustomers != null) {
             Customers customers = listCustomers
@@ -88,13 +90,19 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
                     floorName = "NA";
                     roomName = "NA";
                 }
+
+                if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
+                    canRedeem = false;
+                }
             }
         }
 
-        if (invoicesV1.getPaidAmount() != null) {
-            paidAmount = invoicesV1.getPaidAmount();
-            pendingAmount = invoicesV1.getTotalAmount() - invoicesV1.getPaidAmount();
+        if (canRedeem) {
+            if (invoicesV1.getBalanceAmount() == null || invoicesV1.getBalanceAmount() <= 0) {
+                canRedeem = false;
+            }
         }
+
 
         return new AdvanceListItems(invoicesV1.getInvoiceId(),
                 invoicesV1.getInvoiceNumber(),
@@ -111,6 +119,7 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
                 "+91 " + customerMobile,
                 floorName,
                 bedName,
-                roomName);
+                roomName,
+                canRedeem);
     }
 }

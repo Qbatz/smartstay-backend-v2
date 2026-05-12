@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface InvoiceRedemptionRepository extends JpaRepository<InvoiceRedemption, Long> {
 
@@ -13,4 +15,16 @@ public interface InvoiceRedemptionRepository extends JpaRepository<InvoiceRedemp
             SELECT * FROM invoice_redemption  WHERE hostel_id=:hostelId order by created_at desc limit 1
             """, nativeQuery = true)
     InvoiceRedemption findLatestInvoice(@Param("hostelId") String hostelId);
+
+    @Query("""
+            SELECT ir FROM InvoiceRedemption ir WHERE ir.hostelId=:hostelId AND ir.targetInvoiceId=:targetInvoiceId 
+            AND ir.isActive=true
+            """)
+    List<InvoiceRedemption> findByHostelIdAndTargetInvoiceId(String hostelId, String targetInvoiceId);
+
+    @Query("""
+            SELECT ir FROM InvoiceRedemption ir WHERE ir.hostelId=:hostelId AND ir.targetInvoiceId IN (:targetInvoiceId) 
+            AND ir.isActive=true
+            """)
+    List<InvoiceRedemption> findByHostelIdAndTargetInvoiceId(String hostelId, List<String> targetInvoiceId);
 }

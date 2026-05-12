@@ -62,7 +62,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     InvoicesV1 findByInvoiceNumberAndHostelId(String invoiceNumber, String hostelId);
 
-    List<InvoicesV1> findByCustomerId(String customerId);
+    List<InvoicesV1> findByCustomerIdOrderByInvoiceStartDateDesc(String customerId);
 
     @Query(value = """
             SELECT
@@ -132,6 +132,13 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='BOOKING'
             """)
     List<InvoicesV1> findAllBookingInvoices();
+
+    @Query("""
+            SELECT inv FROM InvoicesV1 inv WHERE inv.hostelId=:hostelId AND inv.customerId=:customerId AND 
+            inv.invoiceType in ('BOOKING', 'ADVANCE') AND inv.paymentStatus IN ('PAID', 'PARTIAL_PAYMENT') AND 
+            inv.isCancelled=false AND inv.balanceAmount > 0
+            """)
+    List<InvoicesV1> findAllAdvanceInvoices(String hostelId, String customerId);
 
     @Query("SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId = :hostelId")
     int countByHostelId(@Param("hostelId") String hostelId);
@@ -350,8 +357,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             ORDER BY b.floorId ASC, r.roomId ASC
             """,
     countQuery = """
-            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
-            i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.balanceAmount > 0 
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes)
             """)
     Page<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Pageable pageable);
 
