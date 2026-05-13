@@ -74,7 +74,7 @@ public class BedHistoryBreakupMapper implements Function<CustomersBedHistory, Re
                 endDate,
                 noOfDays,
                 Utils.roundOffWithTwoDigit(rentPerDay),
-                rent,
+                Utils.roundOffWithTwoDigit(rent),
                 Utils.roundOffWithTwoDigit(totalRent),
                 bedName,
                 roomName,

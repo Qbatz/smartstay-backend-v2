@@ -15,7 +15,18 @@ public interface PlansRepository extends JpaRepository<Plans, Long> {
     Plans findPlanByPlanTypeAndIsActiveTrue(@Param("planType") String planType);
 
     @Query("""
+            SELECT p FROM Plans p WHERE p.planType IN (:planType)
+            """)
+    List<Plans> findPlansByPlanType(List<String> planType);
+
+    @Query("""
             SELECT p FROM Plans p WHERE p.planCode IN (:listPlanCodes)
             """)
     List<Plans> findPlansByPlanCodes(List<String> listPlanCodes);
+
+    @Query("""
+            SELECT p FROM Plans p WHERE  p.planCode NOT IN (:listPlanCodes) AND p.isActive = true AND 
+            p.shouldShow = true
+            """)
+    List<Plans> findActivePayablePlans(List<String> listPlanCodes);
 }

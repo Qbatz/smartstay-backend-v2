@@ -249,6 +249,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """)
     List<InvoicesV1> findCancelledBooking();
 
+    @Query("""
+           SELECT i FROM InvoicesV1 i WHERE i.invoiceType = 'BOOKING' AND i.paymentStatus='PAID' AND i.isCancelled=false AND 
+           i.hostelId=:hostelId AND i.customerId=:customerId
+            """)
+    InvoicesV1 findBookingInvoice(String hostelId, String customerId);
 
     @Query("""
             SELECT COUNT(i) as totalInvoiceGenerated, SUM(i.totalAmount) as totalInvoiced, SUM(i.paidAmount) as totalPaid
