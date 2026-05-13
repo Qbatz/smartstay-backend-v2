@@ -130,6 +130,9 @@ public class ActivityLogUtils {
         if (activitySource.equalsIgnoreCase(ActivitySource.TRANSACTIONS.name())) {
             return getTransactionOperations(operationType, null);
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.PAYMENTS.name())) {
+            return getPaymentsOperations(operationType);
+        }
 
         return null;
     }
@@ -138,6 +141,9 @@ public class ActivityLogUtils {
     public static String getActivityDescriptionWithType(String activitySource, String operationType, String type) {
         if (activitySource.equalsIgnoreCase(ActivitySource.TEMPLATES.name())) {
             return getTemplateOperationsWithType(operationType, type);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.TRANSACTIONS.name())) {
+            return getTransactionsOperationsWithType(operationType, type);
         }
         return null;
     }
@@ -438,6 +444,16 @@ public class ActivityLogUtils {
         return null;
     }
 
+    private static String getTransactionsOperationsWithType(String operationName, String type) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return type + " has been removed";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE_OTHER_FIELDS.name())) {
+            return type + " has been removed";
+        }
+        return null;
+    }
+
     private static String getTransactionOperations(String operationName, String type) {
         if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
             return "Received payment for";
@@ -454,6 +470,14 @@ public class ActivityLogUtils {
         if (operationName.equalsIgnoreCase(ActivitySourceType.WHATSAPP.name())) {
             return "Share receipts through whatsapp";
         }
+        return null;
+    }
+
+    private static String getPaymentsOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE_SESSION.name())) {
+            return "Payment session has been created for subscription";
+        }
+
         return null;
     }
 }

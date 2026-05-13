@@ -54,14 +54,23 @@ public class ClientConnect {
         session.subscribe("/payments/" + paymentId, new StompFrameHandler() {
             @Override
             public Type getPayloadType(StompHeaders headers) {
+                System.out.println("getting payment");
                 return ZohoPaymentResponse.class;
             }
 
             @Override
             public void handleFrame(StompHeaders headers, Object payload) {
                 if (payload instanceof ZohoPaymentResponse paymentDetails) {
-                    orderHistoryService.successfullPayment(payload);
-                    messagingTemplate.convertAndSend("/payments/" + paymentDetails.linkId(), "success");
+                    ZohoPaymentResponse paymentResponse = (ZohoPaymentResponse) payload;
+                    if (paymentResponse.linkId() == null) {
+                        orderHistoryService.successfullMobilePayment(payload);
+                        messagingTemplate.convertAndSend("/payments/" + paymentDetails.paymentSessionId(), "success");
+                    }
+                    else {
+                        orderHistoryService.successfullPayment(payload);
+                        messagingTemplate.convertAndSend("/payments/" + paymentDetails.linkId(), "success");
+                    }
+
                 }
 
             }

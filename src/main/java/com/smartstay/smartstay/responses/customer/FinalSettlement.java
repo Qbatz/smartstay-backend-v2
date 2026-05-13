@@ -12,5 +12,7 @@ public record FinalSettlement(CustomerInformations customerInfo,
                               com.smartstay.smartstay.responses.settlement.UnpaidInvoices unpaidInvoiceInfo,
                               RentInfo currentMonthRentInfo,
                               WalletInfo walletInfo,
+                              AdvanceItems advanceItems,
+                              AdvanceItems bookingItems,
                               SettlementInfo settlementInfo) {
 }

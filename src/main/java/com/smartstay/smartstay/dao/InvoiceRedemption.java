@@ -22,8 +22,12 @@ public class InvoiceRedemption {
     private Double redemptionAmount;
     private String referenceNumber;
     private String transactionId;
+    private Boolean isActive;
     private String reason;
     private Date redeemedAt;
-    private Date createdAt;
     private String createdBy;
+    private String updatedBy;
+    private String userType;
+    private Date createdAt;
+    private Date updatedAt;
 }

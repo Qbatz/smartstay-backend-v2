@@ -219,11 +219,13 @@ public class Utils {
     public static final String CANNOT_INITIATE_REFUND = "Cannot initiate refund";
     public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund processed successfully";
     public static final String CANNOT_REDEEM_RENTAL_INVOICE = "Cannot redeem rental invoices";
+    public static final String NO_INVOICE_AVAILABLE_TO_REDEEM = "No invoice available to redeem";
     public static final String CANNOT_REDEEM_SETTLEMENT_INVOICE = "Cannot redeem settlement invoices";
     public static final String TARGET_INVOICE_ID_REQUIRED = "Target invoice id is required";
     public static final String CANNOT_CREATE_INVOICE_CHECKOUT_CUSTOMERS = "Cannot create manual invoice for checkout customers";
     public static final String INVALID_TARGET_INVOICE_ID = "Invalid target invoice id";
     public static final String CANNOT_REDEEM_FROM_CANCELLED_INVOICES = "Cannot redeem from cancelled invoices";
+    public static final String REDEMPTION_AMOUNT_CANNOT_EXCEED_AVAILABLE_AMOUNT = "Redemption amount cannot exceed balance amount";
     public static final String CANNOT_REDEEM_FROM_UNPAID_INVOICES = "Cannot redeem from unpaid invoices";
     public static final String CANNOT_APPLY_FOR_PAID_INVOICES = "Cannot apply for paid invoices";
     public static final String TARGET_INVOICE_CANNOT_BE_CANCELLED = "Target invoice cannot be cancelled";

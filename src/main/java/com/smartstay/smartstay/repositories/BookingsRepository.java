@@ -161,9 +161,14 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
         List<BookingsV1> findLatestBookingsForBeds(@Param("bedIds") List<Integer> bedIds);
 
         @Query(value = """
-                        SELECT * FROM bookingsv1 where hostel_id=:hostelId AND customer_id IN (:customerIds) AND current_status IN ('CHECKIN', 'NOTICE')
+                        SELECT * FROM bookingsv1 where hostel_id=:hostelId AND customer_id IN (:customerIds) AND current_status IN ('CHECKIN', 'NOTICE', 'BOOKED')
                         """, nativeQuery = true)
         List<BookingsV1> findBookingsByListOfCustomersAndHostelId(List<String> customerIds, String hostelId);
+
+        @Query(value = """
+                        SELECT * FROM bookingsv1 where hostel_id=:hostelId AND customer_id IN (:customerIds) AND current_status IN ('CHECKIN', 'NOTICE')
+                        """, nativeQuery = true)
+        List<BookingsV1> findCheckedCustomersByListOfCustomersAndHostelId(List<String> customerIds, String hostelId);
 
         @Query(value = """
                         SELECT * FROM bookingsv1 where hostel_id=:hostelId  AND current_status IN ('CHECKIN', 'NOTICE')
@@ -287,4 +292,16 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
                 AND (booking.leavingDate IS NULL OR DATE(booking.leavingDate) >= DATE(:startDate) AND booking.checkoutDate IS NULL OR DATE(booking.checkoutDate) >= DATE(:startDate)))
                 """)
         List<BookingsV1> findBookingsByHostelIdAndStartAndEndDate(String hostelId, Date startDate, Date endDate);
+
+        @Query(value = """
+                        SELECT * FROM bookingsv1 where hostel_id=:hostelId  AND current_status IN ('CHECKIN', 'NOTICE') AND 
+                        (:roomId IS NULL OR room_id=:roomId)
+                        """, nativeQuery = true)
+        List<BookingsV1> findCheckInByHostelIdAndRoomId(@Param("hostelId") String hostelId, @Param("roomId") Integer roomId);
+
+        @Query(value = """
+                        SELECT * FROM bookingsv1 where hostel_id=:hostelId  AND current_status IN ('CHECKIN', 'NOTICE') AND 
+                        (:floorId IS NULL OR floor_id=:floorId)
+                        """, nativeQuery = true)
+        List<BookingsV1> findCheckInByHostelIdAndFloorId(@Param("hostelId") String hostelId, @Param("floorId") Integer floorId);
 }

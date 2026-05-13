@@ -1,17 +1,27 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.settlement.RedeemedInvoiceMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BillTemplateType;
 import com.smartstay.smartstay.dao.BillTemplates;
 import com.smartstay.smartstay.dao.InvoiceRedemption;
+import com.smartstay.smartstay.dao.InvoicesV1;
+import com.smartstay.smartstay.dto.invoices.AmountSettled;
+import com.smartstay.smartstay.dto.invoices.AppliedInvoices;
 import com.smartstay.smartstay.ennum.BillConfigTypes;
 import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.payloads.invoice.RedemptionItems;
 import com.smartstay.smartstay.repositories.InvoiceRedemptionRepository;
+import com.smartstay.smartstay.responses.customer.RedeemedInfo;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -24,6 +34,13 @@ public class InvoiceRedemptionService {
     @Autowired
     private InvoiceRedemptionRepository invoiceRedemptionRepository;
 
+    private InvoiceV1Service invoiceV1Service;
+
+    @Autowired
+    public void setInvoiceV1Service(@Lazy InvoiceV1Service invoiceV1Service) {
+        this.invoiceV1Service = invoiceV1Service;
+    }
+
     public List<InvoiceRedemption> redeemInvoice(String hostelId, String sourceInvoiceId, List<RedemptionItems> targetRedemptions,  Date redeemedAt, String reason) {
 
         List<InvoiceRedemption> listRedemptions = targetRedemptions
@@ -35,6 +52,8 @@ public class InvoiceRedemptionService {
                     ir.setSourceInvoiceId(sourceInvoiceId);
                     ir.setTargetInvoiceId(i.invoiceId());
                     ir.setRedemptionAmount(i.amount());
+                    ir.setUserType(UserType.OWNER.name());
+                    ir.setIsActive(true);
                     ir.setHostelId(hostelId);
                     ir.setTransactionId(getNextReferenceNumber(hostelId));
                     ir.setReferenceNumber(null);
@@ -101,5 +120,42 @@ public class InvoiceRedemptionService {
                 return prefix + "-001";
             }
         }
+    }
+
+    public List<InvoiceRedemption> getAmountRedeemedForInvoice(String invoiceId, String hostelId) {
+        if (!authentication.isAuthenticated()){
+            return null;
+        }
+
+        return invoiceRedemptionRepository.findByHostelIdAndTargetInvoiceId(hostelId, invoiceId);
+    }
+
+    public List<InvoiceRedemption> getRedeemedInvoicesByInvoiceId(String hostelId, List<String> invoicesId) {
+        List<InvoiceRedemption> listInvoicesApplied = invoiceRedemptionRepository.findByHostelIdAndTargetInvoiceId(hostelId, invoicesId);
+        if (listInvoicesApplied == null) {
+            return new ArrayList<>();
+        }
+
+        return listInvoicesApplied;
+    }
+
+    public List<RedeemedInfo> findRedeemedItemsFromAdvance(String hostelId, String invoiceId) {
+        List<InvoiceRedemption> listInvoiceRedemption = invoiceRedemptionRepository.findByHostelIdAndSourceId(hostelId, invoiceId);
+        if (listInvoiceRedemption == null) {
+            return new ArrayList<>();
+        }
+
+        List<String> targetInvoiceIds = listInvoiceRedemption
+                .stream()
+                .map(InvoiceRedemption::getTargetInvoiceId)
+                .toList();
+
+        List<InvoicesV1> listInvoices = invoiceV1Service.findInvoices(targetInvoiceIds);
+
+
+        return listInvoiceRedemption
+                .stream()
+                .map(i -> new RedeemedInvoiceMapper(listInvoices).apply(i))
+                .toList();
     }
 }

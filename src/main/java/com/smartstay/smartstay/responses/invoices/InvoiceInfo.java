@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.responses.invoices;
 
 import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.dto.invoices.AmountSettled;
+import com.smartstay.smartstay.dto.invoices.AppliedInvoices;
 
 import java.util.List;
 
@@ -19,6 +21,11 @@ public record InvoiceInfo(Double subTotal,
                           boolean isDiscounted,
                           String discountReason,
                           double totalDeduction,
+                          boolean canRedeem,
+                          Double avilableAmountToRedeem,
+                          boolean isAvanceAvailableForRedeem,
+                          Double advanceAvailableAmount,
                           List<InvoiceItems> invoiceItems,
-                          List<Deductions> listDeductions) {
+                          List<Deductions> listDeductions,
+                          AmountSettled redemptionInfo) {
 }

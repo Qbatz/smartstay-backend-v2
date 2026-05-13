@@ -153,7 +153,7 @@ public class BookingsService {
 
     public List<BookingsV1> getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(List<String> customerIds,
             String hostelId) {
-        return bookingsRepository.findBookingsByListOfCustomersAndHostelId(customerIds, hostelId);
+        return bookingsRepository.findCheckedCustomersByListOfCustomersAndHostelId(customerIds, hostelId);
     }
 
     public List<BookingsV1> findCheckedInCustomers(String hostelId) {
@@ -963,18 +963,19 @@ public class BookingsService {
                     startDate = newBillingCalendar.getTime();
                 }
 
-                rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), startDate, currentRentEndDate);
+                rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate(), currentRentEndDate);
 
-                List<RentHistory> existingRentHistories = rentHistoryService.findByCustomerIdAndStartsFrom(customers.getCustomerId(), startDate);
+                RentHistory existing = rentHistoryService.findByCustomerIdAndStartsFrom(customers.getCustomerId(), new Date());
 
-                if (existingRentHistories != null && !existingRentHistories.isEmpty()) {
+                if (existing != null ) {
                     // Update all existing records that match customer_id and starts_from
-                    for (RentHistory existing : existingRentHistories) {
-                        existing.setRent(updateInfo.newRent());
-                        existing.setReason(updateInfo.reason());
-                        existing.setCreatedAt(new Date());
-                        existing.setCreatedBy(authentication.getName());
-                    }
+                    existing.setRent(updateInfo.newRent());
+                    existing.setReason(updateInfo.reason());
+                    existing.setStartsFrom(startDate);
+                    existing.setCreatedAt(new Date());
+                    existing.setCreatedBy(authentication.getName());
+
+
                 } else {
                     // No existing record found — create a new one
                     RentHistory rentHistory = new RentHistory();
@@ -1325,5 +1326,31 @@ public class BookingsService {
             return bookings;
         }
         return new ArrayList<>();
+    }
+
+    public List<BookingsV1> getAllBookedAndCheckedInCustomers(String hostelId) {
+        List<String> statuses = new ArrayList<>();
+        statuses.add(BookingStatus.NOTICE.name());
+        statuses.add(BookingStatus.CHECKIN.name());
+        statuses.add(BookingStatus.BOOKED.name());
+        return bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
+    }
+
+    public List<BookingsV1> getAllCheckedInCustomer(String hostelId, int roomId) {
+        List<BookingsV1> listBookings = bookingsRepository.findCheckInByHostelIdAndRoomId(hostelId, roomId);
+        if (listBookings == null) {
+            listBookings = new ArrayList<>();
+        }
+
+        return listBookings;
+    }
+
+    public List<BookingsV1> getAllCheckedInCustomersByHostelIdAndFloorId(String hostelId, int floorId) {
+        List<BookingsV1> listBookings = bookingsRepository.findCheckInByHostelIdAndFloorId(hostelId, floorId);
+        if (listBookings == null) {
+            listBookings = new ArrayList<>();
+        }
+
+        return listBookings;
     }
 }

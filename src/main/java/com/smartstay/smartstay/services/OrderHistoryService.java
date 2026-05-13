@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.OrderHistory;
+import com.smartstay.smartstay.dao.PaymentSessions;
 import com.smartstay.smartstay.ennum.OrderStatus;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.events.HostelEvents;
@@ -25,6 +26,8 @@ public class OrderHistoryService {
     private Authentication authentication;
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private PaymentSessionService paymentSessionService;
 
     public void createOrder(String hostelId, PaymentLinks details, Double finalAmount, String planCode, Double discountAmount, Double planPrice) {
         OrderHistory orderHistory = new OrderHistory();
@@ -71,5 +74,54 @@ public class OrderHistoryService {
         orderHistoryRepository.save(orderHistory);
 
         eventPublisher.publishEvent(new SubscriptionEvents(this, orderHistory));
+    }
+
+    public void successfullMobilePayment(Object payload) {
+        ZohoPaymentResponse paymentLinks = (ZohoPaymentResponse) payload;
+        if (paymentLinks != null) {
+            String[] hostelIdSessionId = paymentLinks.paymentSessionId().split("-");
+            String sessionId = hostelIdSessionId[hostelIdSessionId.length - 1];
+
+            PaymentSessions paymentSessions = paymentSessionService.getPaymentSessionBySessionId(sessionId);
+
+            if (paymentSessions != null) {
+                OrderHistory orderHistory = new OrderHistory();
+                orderHistory.setHostelId(paymentSessions.getHostelId());
+                orderHistory.setPaymentSessionId(paymentSessions.getPaymentSessionId());
+                orderHistory.setDiscountAmount(paymentSessions.getDiscountAmount());
+                orderHistory.setPlanAmount(paymentSessions.getPlanAmount());
+                orderHistory.setPlanCode(paymentSessions.getPlanCode());
+                orderHistory.setTotalAmount(paymentSessions.getPaymentAmount());
+                orderHistory.setUserType(UserType.OWNER.name());
+                orderHistory.setPaidBy(paymentSessions.getCreatedBy());
+                orderHistory.setCreatedAt(new Date());
+                orderHistory.setCreatedBy(paymentSessions.getCreatedBy());
+                orderHistory.setActive(true);
+
+                orderHistory.setPaymentType(paymentLinks.type());
+                if (paymentLinks.type().equalsIgnoreCase("UPI")) {
+                    PaymentStatus status = paymentLinks.upiStatus();
+                    orderHistory.setChannel(status.channel());
+                    orderHistory.setUpiId(status.id());
+                }
+                else if (paymentLinks.type().equalsIgnoreCase("CARD")) {
+                    PaymentStatusCardType cardType = paymentLinks.cardType();
+                    orderHistory.setCardBrand(cardType.issuer());
+                    orderHistory.setCardHolderName(cardType.cardHolderName());
+                    orderHistory.setCardType(cardType.cardType());
+                    orderHistory.setIssuer(cardType.issuer());
+                    orderHistory.setChannel("Card");
+                    orderHistory.setCardNo(cardType.lastFourDigits());
+
+                }
+
+
+                orderHistory.setOrderStatus(OrderStatus.PAID.name());
+                OrderHistory oh = orderHistoryRepository.save(orderHistory);
+
+                eventPublisher.publishEvent(new SubscriptionEvents(this, oh));
+            }
+
+        }
     }
 }
