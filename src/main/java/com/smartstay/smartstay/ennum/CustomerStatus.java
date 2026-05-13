@@ -3,6 +3,7 @@ package com.smartstay.smartstay.ennum;
 public enum CustomerStatus {
     ACTIVE("active"),
     INACTIVE("inactive"),
+    DRAFT("Draft"),
     VACATED("vacated"),
     NOTICE("notice"),
     BOOKED("Booked"),

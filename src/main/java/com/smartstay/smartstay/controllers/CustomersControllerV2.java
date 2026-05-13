@@ -1,9 +1,11 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.customer.SaveDraftCustomerRequest;
 import com.smartstay.smartstay.services.CustomersServiceV2;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,5 +29,11 @@ public class CustomersControllerV2 {
     public ResponseEntity<?> searchCustomers(@PathVariable("hostelId") String hostelId,
                                              @RequestParam("search") String search) {
         return customersServiceV2.searchCustomersByMobile(hostelId, search);
+    }
+
+    @PostMapping("/saveDraft/{hostelId}")
+    public ResponseEntity<?> saveDraft(@PathVariable("hostelId") String hostelId,
+                                       @Valid @RequestBody SaveDraftCustomerRequest payloads) {
+        return customersServiceV2.saveDraft(hostelId, payloads);
     }
 }
