@@ -366,6 +366,21 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """)
     Page<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Pageable pageable);
 
+    @Query(value = """
+            SELECT i FROM InvoicesV1 i, BookingsV1 b, Rooms r, Beds bed  WHERE i.customerId = b.customerId AND 
+            r.roomId = b.roomId AND bed.roomId = b.roomId AND
+            i.hostelId=:hostelId AND 
+            i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
+            i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false AND 
+            (:minAmount IS NULL OR i.balanceAmount >= :minAmount) AND 
+            (:maxAmount IS NULL OR i.balanceAmount <= :maxAmount)
+            ORDER BY b.floorId ASC, r.roomId ASC, bed.bedId
+            """,
+            countQuery = """
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes)
+            """)
+    Page<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Integer minAmount, Integer maxAmount, Pageable pageable);
+
     @Query("""
             SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId=:customerId AND 
             i.isCancelled=false AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND 

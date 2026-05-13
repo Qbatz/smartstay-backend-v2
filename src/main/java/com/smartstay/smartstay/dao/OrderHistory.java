@@ -21,6 +21,7 @@ public class OrderHistory {
     private String hostelId;
     private String paymentUrl;
     private String paymentLinkId;
+    private String paymentSessionId;
     private Double discountAmount;
     private Double planAmount;
     private String planCode;

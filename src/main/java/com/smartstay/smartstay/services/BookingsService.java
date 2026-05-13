@@ -1335,4 +1335,22 @@ public class BookingsService {
         statuses.add(BookingStatus.BOOKED.name());
         return bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
     }
+
+    public List<BookingsV1> getAllCheckedInCustomer(String hostelId, int roomId) {
+        List<BookingsV1> listBookings = bookingsRepository.findCheckInByHostelIdAndRoomId(hostelId, roomId);
+        if (listBookings == null) {
+            listBookings = new ArrayList<>();
+        }
+
+        return listBookings;
+    }
+
+    public List<BookingsV1> getAllCheckedInCustomersByHostelIdAndFloorId(String hostelId, int floorId) {
+        List<BookingsV1> listBookings = bookingsRepository.findCheckInByHostelIdAndFloorId(hostelId, floorId);
+        if (listBookings == null) {
+            listBookings = new ArrayList<>();
+        }
+
+        return listBookings;
+    }
 }

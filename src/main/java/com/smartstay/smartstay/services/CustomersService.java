@@ -4084,4 +4084,12 @@ public class CustomersService {
 
         return 0.0;
     }
+
+    public List<Customers> getCustomerDetails(List<String> listCustomerIds, String name) {
+        List<Customers> listCustomers = customersRepository.findByCustomerIdsAndName(listCustomerIds, name);
+        if (listCustomers == null) {
+            return new ArrayList<>();
+        }
+        return listCustomers;
+    }
 }

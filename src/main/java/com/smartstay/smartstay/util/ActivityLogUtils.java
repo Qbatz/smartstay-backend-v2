@@ -130,6 +130,9 @@ public class ActivityLogUtils {
         if (activitySource.equalsIgnoreCase(ActivitySource.TRANSACTIONS.name())) {
             return getTransactionOperations(operationType, null);
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.PAYMENTS.name())) {
+            return getPaymentsOperations(operationType);
+        }
 
         return null;
     }
@@ -467,6 +470,14 @@ public class ActivityLogUtils {
         if (operationName.equalsIgnoreCase(ActivitySourceType.WHATSAPP.name())) {
             return "Share receipts through whatsapp";
         }
+        return null;
+    }
+
+    private static String getPaymentsOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE_SESSION.name())) {
+            return "Payment session has been created for subscription";
+        }
+
         return null;
     }
 }
