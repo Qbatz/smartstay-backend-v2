@@ -43,6 +43,7 @@ public enum ActivitySourceType {
     DELETE_OTHER_FIELDS,
     EDIT_DISCOUNT,
     DELETE_DISCOUNT,
-    REDEEMED
+    REDEEMED,
+    CREATE_SESSION
 
 }

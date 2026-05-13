@@ -106,7 +106,20 @@ public class InvoiceController {
     public ResponseEntity<?> getAdvanceInvoices(@PathVariable("hostelId") String hostelId,
                                                 @RequestParam(value = "page", defaultValue = "1") int page,
                                                 @RequestParam(value = "size", defaultValue = "10") int size) {
-        return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, page, size);
+        return invoiceV1Service.getAdvanceInvoicesForRedemptionOld(hostelId, page, size);
+    }
+
+    @GetMapping("/advances/new/{hostelId}")
+    public ResponseEntity<?> getAdvancesNew(@PathVariable("hostelId") String hostelId,
+                                            @RequestParam(value = "page", defaultValue = "1") int page,
+                                            @RequestParam(value = "size", defaultValue = "10") int size,
+                                            @RequestParam(value = "name") String name,
+                                            @RequestParam(value = "period") String period,
+                                            @RequestParam(value = "floor") String floor,
+                                            @RequestParam(value = "room") String room,
+                                            @RequestParam(value = "minAmount") String minimumAmount,
+                                            @RequestParam(value = "maxAmount") String maxAmount) {
+        return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, name, period, floor, room, minimumAmount, maxAmount, page, size);
     }
 
     @GetMapping("/redeem/initialize/{hostelId}/{advanceInvoiceId}")

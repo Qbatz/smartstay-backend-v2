@@ -47,6 +47,8 @@ public class SubscriptionService {
     private ClientConnect clientConnect;
     @Autowired
     private OrderHistoryService orderHistoryService;
+    @Autowired
+    private PaymentSessionService paymentSessionService;
     private final RestTemplate restTemplate;
 
     @Autowired
@@ -300,9 +302,9 @@ public class SubscriptionService {
             try {
                 clientConnect.connect(details.paymentLinkId());
             } catch (ExecutionException e) {
-                throw new RuntimeException(e);
+//                throw new RuntimeException(e);
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+//                throw new RuntimeException(e);
             }
             return new ResponseEntity<>(responseEntity.getBody(), HttpStatus.OK);
         }
@@ -340,6 +342,10 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
+        if (authentication.getSource().equalsIgnoreCase("web")) {
+            return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
+        }
+
         HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
         if (hostelV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
@@ -365,7 +371,7 @@ public class SubscriptionService {
 
         double discountAmount = 0.0;
         double discountPercentage = 0.0;
-        double totalAmount = plans.getPrice();
+        double totalAmount = plans.getFinalPrice();
         if (subscription.discountAmount() != null) {
             discountAmount = subscription.discountAmount();
             discountPercentage = (discountAmount / totalAmount) * 100;
@@ -383,26 +389,35 @@ public class SubscriptionService {
 
         String paymentUrl = "https://payment.qbatz.com/v2/payments/session/" + hostelId ;
 
-//        String paymentUrl = "http://localhost:8083/v2/payments/generate/" + hostelId ;
+//        String paymentUrl = "http://localhost:8083/v2/payments/session/" + hostelId ;
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody);
 
-//        ResponseEntity<PaymentSession> responseEntity = restTemplate.exchange(paymentUrl, HttpMethod.POST, entity, PaymentSession.class);
-//        if (responseEntity.getStatusCode() == HttpStatus.OK) {
-//            PaymentSession session = responseEntity.getBody();
-//            if (session != null) {
-//                PaymentSessionResponse response = new PaymentSessionResponse(session.getSessionId(),
-//                        session.getAmount(),
-//                        "1003.b2a3acfd49c278e09485f9d3a07e6728.07ecfeb8627ef8e907173b524a161bee",
-//                        "60035196766",
-//                        "live");
-//
-//                return new ResponseEntity<>(response, HttpStatus.OK);
-//            }
+        ResponseEntity<PaymentSession> responseEntity = restTemplate.exchange(paymentUrl, HttpMethod.POST, entity, PaymentSession.class);
+        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            PaymentSession session = responseEntity.getBody();
+            if (session != null) {
+                //values are hard coded. Front end SDK needs this is order to collect payments
+                PaymentSessionResponse response = new PaymentSessionResponse(session.getSessionId(),
+                        session.getAmount(),
+                        "1003.b2a3acfd49c278e09485f9d3a07e6728.07ecfeb8627ef8e907173b524a161bee",
+                        "60035196766",
+                        "live");
+                PaymentSessions paymentSessions = paymentSessionService.addPaymentSession(session.getSessionId(), session.getAmount(), hostelId, discountAmount, plans.getFinalPrice(), plans.getPlanCode());
+                try {
+                    clientConnect.connect(hostelId + "-" + session.getSessionId());
+                } catch (ExecutionException e) {
+//                    throw new RuntimeException(e);
+                } catch (InterruptedException e) {
+//                    throw new RuntimeException(e);
+                }
 
-            return new ResponseEntity<>("Currently unavailable. use web app for renewal.", HttpStatus.BAD_REQUEST);
+                usersService.addUserLog(hostelId, paymentSessions.getPaymentSessionId(), ActivitySource.PAYMENTS, ActivitySourceType.CREATE_SESSION, users);
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            }
 
-//        }
 
-//        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
     }
 }

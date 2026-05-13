@@ -4122,7 +4122,7 @@ public class InvoiceV1Service {
         return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
     }
 
-    public ResponseEntity<?> getAdvanceInvoicesForRedemption(String hostelId, int page, int size) {
+    public ResponseEntity<?> getAdvanceInvoicesForRedemptionOld(String hostelId, int page, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -4456,5 +4456,87 @@ public class InvoiceV1Service {
                 paidAmount,
                 advanceInvoice.getInvoiceNumber(),
                 listRedeemedInfo);
+    }
+
+    public ResponseEntity<?> getAdvanceInvoicesForRedemption(String hostelId, String name, String period, String floor, String room, String minAmount, String maxAmount, int page, int size) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        List<BookingsV1> listAllCheckedInCustomers = new ArrayList<>();
+
+        if (room != null && !room.trim().equalsIgnoreCase("")) {
+            int roomId = Integer.parseInt(room);
+            listAllCheckedInCustomers = bookingsService.getAllCheckedInCustomer(hostelId, roomId);
+        }
+        else if (floor != null && !floor.trim().equalsIgnoreCase("")) {
+            int floorId = Integer.parseInt(floor);
+
+            listAllCheckedInCustomers = bookingsService.getAllCheckedInCustomersByHostelIdAndFloorId(hostelId, floorId);
+        }
+        else {
+            listAllCheckedInCustomers = bookingsService.getAllCheckedInCustomer(hostelId);
+        }
+
+
+        if (listAllCheckedInCustomers != null && !listAllCheckedInCustomers.isEmpty()) {
+            List<String> listCustomerIds = listAllCheckedInCustomers
+                    .stream()
+                    .map(BookingsV1::getCustomerId)
+                    .toList();
+
+            List<Customers> listCustomers = customersService.getCustomerDetails(listCustomerIds, name);
+            List<String> customerIds = null;
+            if (listCustomers != null) {
+                customerIds = listCustomers
+                        .stream()
+                        .map(Customers::getCustomerId)
+                        .toList();
+            }
+
+            List<String> invoiceTypes = new ArrayList<>();
+            invoiceTypes.add(InvoiceType.BOOKING.name());
+
+            Integer minimumAmount = null;
+            Integer maximumAmount = null;
+            if (minAmount != null && !minAmount.trim().equalsIgnoreCase("")) {
+                minimumAmount = Integer.parseInt(minAmount);
+            }
+            if (maxAmount != null && !maxAmount.trim().equalsIgnoreCase("")) {
+                maximumAmount = Integer.parseInt(maxAmount);
+            }
+
+            int totalAdvanceInvoice = 0;
+            int currentPage = 1;
+            int noOfItemsPerPage = 10;
+            int totalPages = 1;
+
+
+            Pageable pageableRequest = PageRequest.of(page-1, size);
+
+            Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, listCustomerIds, invoiceTypes, minimumAmount, maximumAmount, pageableRequest);
+            if (pagebleAdvances != null) {
+                totalAdvanceInvoice = pagebleAdvances.getNumberOfElements();
+                currentPage = pagebleAdvances.getPageable().getPageNumber() + 1;
+                totalPages = pagebleAdvances.getTotalPages();
+                noOfItemsPerPage = pagebleAdvances.getSize();
+
+                List<InvoicesV1> listAdvanceInvoices = pagebleAdvances.getContent();
+            }
+
+        }
+
+        return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN, HttpStatus.BAD_REQUEST);
     }
 }
