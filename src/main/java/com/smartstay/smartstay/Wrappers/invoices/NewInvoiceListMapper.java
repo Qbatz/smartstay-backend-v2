@@ -21,12 +21,14 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
     List<Users> listCreatedBy = null;
     List<InvoiceDiscounts> listInvoiceDiscounts = null;
     List<InvoiceRedemption> listAppliedInvoices = null;
+    List<InvoicesV1> listAdvances = null;
 
-    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts, List<InvoiceRedemption> listAppliedInvoices) {
+    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts, List<InvoiceRedemption> listAppliedInvoices, List<InvoicesV1> listAdvanceInvoices) {
         this.listCustomers = customers;
         this.listCreatedBy = createdBy;
         this.listInvoiceDiscounts = listInvoiceDiscounts;
         this.listAppliedInvoices = listAppliedInvoices;
+        this.listAdvances = listAdvanceInvoices;
     }
 
     @Override
@@ -45,7 +47,9 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         boolean canEdit = false;
         boolean isInvoicesApplied = false;
         boolean canRedeem = false;
+        boolean canApplyFromAdvance = false;
         InvoicesApplied invoicesApplied = null;
+        InvoicesV1 advanceInvoiceForCurrentCustomer = null;
 
         Double dueAmount = 0.0;
         Double paidAmount = 0.0;
@@ -91,6 +95,26 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 }
             }
         }
+
+        if (listAdvances != null) {
+            advanceInvoiceForCurrentCustomer = listAdvances
+                    .stream()
+                    .filter(i -> i.getCustomerId().equalsIgnoreCase(invoicesV1.getCustomerId()))
+                    .findFirst()
+                    .orElse(null);
+            if (advanceInvoiceForCurrentCustomer != null) {
+                if (advanceInvoiceForCurrentCustomer.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
+                advanceInvoiceForCurrentCustomer.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                    if (advanceInvoiceForCurrentCustomer.getPaidAmount() != null) {
+                        if (advanceInvoiceForCurrentCustomer.getBalanceAmount() != null && advanceInvoiceForCurrentCustomer.getBalanceAmount() > 0) {
+                            canApplyFromAdvance = true;
+                            canRedeem = true;
+                        }
+                    }
+                }
+            }
+        }
+
 
         String paymentStatus = null;
         if (invoicesV1.getPaymentStatus() != null) {
@@ -219,11 +243,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             }
         }
 
-        if (canRedeem) {
-            if (paymentStatus.equalsIgnoreCase(PaymentStatus.PENDING.name())) {
-                canRedeem = true;
-            }
-        }
+
 
 
 
@@ -260,6 +280,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 canEdit,
                 isInvoicesApplied,
                 canRedeem,
+                canApplyFromAdvance,
                 invoicesApplied);
     }
 }

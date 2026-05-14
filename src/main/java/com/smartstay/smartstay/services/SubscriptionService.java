@@ -420,4 +420,32 @@ public class SubscriptionService {
 
         return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
     }
+
+    public ResponseEntity<?> verifyPayment(String hostelId, String paymentId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_SUBSCRIPTION, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (authentication.getSource().equalsIgnoreCase("web")) {
+            return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
+        }
+
+        String paymentStatusUrl = "https://payment.qbatz.com//v2/payments/" + paymentId ;
+        ResponseEntity<String> responseEntity = restTemplate.getForEntity(paymentStatusUrl, String.class);
+        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+    }
 }
