@@ -36,4 +36,15 @@ public class CustomersControllerV2 {
                                        @Valid @RequestBody SaveDraftCustomerRequest payloads) {
         return customersServiceV2.saveDraft(hostelId, payloads);
     }
+
+    @DeleteMapping("/draft/{hostelId}/{customerId}")
+    public ResponseEntity<?> deleteDraft(@PathVariable("hostelId") String hostelId,
+                                         @PathVariable("customerId") String customerId) {
+        return customersServiceV2.deleteDraft(hostelId, customerId);
+    }
+
+    @GetMapping("/draftDetails/{customerId}")
+    public ResponseEntity<?> getDraftCustomerDetails(@PathVariable("customerId") String customerId) {
+        return customersServiceV2.getDraftCustomerDetails(customerId);
+    }
 }
