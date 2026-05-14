@@ -152,6 +152,9 @@ public class PlansService {
             status = "EXPIRED";
         }
 
+        boolean isTrial = hostelPlan.isTrial()
+                || (plans != null && PlanType.TRIAL.name().equalsIgnoreCase(plans.getPlanType()));
+
         List<OrderHistory> orderHistoryList = orderHistoryRepository.findByHostelIdOrderByCreatedAtDesc(hostelId);
         List<String> listPlanCodes = orderHistoryList.stream()
                 .map(OrderHistory::getPlanCode)
@@ -233,6 +236,7 @@ public class PlansService {
                 renewalDate,
                 currentPaymentMethod,
                 status,
+                isTrial,
                 billingHistory
         );
 
