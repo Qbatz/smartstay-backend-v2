@@ -32,8 +32,8 @@ import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.CancelCheckout;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
-import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.payloads.customer.CustomerAdditionalContacts;
+import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.CustomersRepository;
@@ -52,7 +52,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -372,28 +371,7 @@ public class CustomersService {
                 filterOption.put(currentStatus, currentStatus);
             }
 
-            return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
-                    item.getLastName(),
-                    fullName.toString(),
-                    item.getCity(),
-                    item.getState(),
-                    item.getCountry(),
-                    item.getMobile(),
-                    currentStatus,
-                    item.getEmailId(),
-                    item.getProfilePic(),
-                    item.getBedId(),
-                    item.getFloorId(),
-                    item.getRoomId(),
-                    item.getCustomerId(),
-                    initials.toString(),
-                    Utils.dateToString(item.getExpectedJoiningDate()),
-                    Utils.dateToString(item.getActualJoiningDate()),
-                    item.getCountryCode(),
-                    Utils.dateToString(item.getCreatedAt()),
-                    item.getBedName(),
-                    item.getRoomName(),
-                    item.getFloorName());
+            return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(), item.getLastName(), fullName.toString(), item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), item.getProfilePic(), item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName());
         }).collect(Collectors.toList());
 
 
@@ -475,61 +453,27 @@ public class CustomersService {
         int checkedInCounts = 0;
 
         if (listAllCustomersForCount != null) {
-            vacatedCount = (int) listAllCustomersForCount
-                    .stream()
-                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name()))
-                    .count();
+            vacatedCount = (int) listAllCustomersForCount.stream().filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())).count();
 
-            bookedCount = (int) listAllCustomersForCount
-                    .stream()
-                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name()))
-                    .count();
+            bookedCount = (int) listAllCustomersForCount.stream().filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())).count();
 
-            settlementGeneratedCount = (int) listAllCustomersForCount
-                    .stream()
-                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()))
-                    .count();
-            noticePeriodCounts = (int) listAllCustomersForCount
-                    .stream()
-                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name()))
-                    .count();
-            checkedInCounts = (int) listAllCustomersForCount
-                    .stream()
-                    .filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name()))
-                    .count();
+            settlementGeneratedCount = (int) listAllCustomersForCount.stream().filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())).count();
+            noticePeriodCounts = (int) listAllCustomersForCount.stream().filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())).count();
+            checkedInCounts = (int) listAllCustomersForCount.stream().filter(i -> i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())).count();
         }
 
-        Summary summary = new Summary(totalCustomers,
-                vacatedCount,
-                bookedCount,
-                settlementGeneratedCount,
-                noticePeriodCounts,
-                checkedInCounts);
+        Summary summary = new Summary(totalCustomers, vacatedCount, bookedCount, settlementGeneratedCount, noticePeriodCounts, checkedInCounts);
 
         List<Customers> customersList = listCustomers.getContent();
-        List<ColumnFilters> activeColumns = listColumns
-                .stream()
-                .filter(ColumnFilters::isSelected)
-                .sorted(Comparator.comparingInt(ColumnFilters::getOrder))
-                .toList();
-        List<String> tableColumns = activeColumns
-                .stream()
-                .map(ColumnFilters::getFieldName)
-                .toList();
+        List<ColumnFilters> activeColumns = listColumns.stream().filter(ColumnFilters::isSelected).sorted(Comparator.comparingInt(ColumnFilters::getOrder)).toList();
+        List<String> tableColumns = activeColumns.stream().map(ColumnFilters::getFieldName).toList();
 
         boolean floorRoomBedNameIncluded = false;
-        floorRoomBedNameIncluded = tableColumns
-                .stream().anyMatch(i -> i.equalsIgnoreCase("Floor") || i.equalsIgnoreCase("Room") || i.equalsIgnoreCase("Bed"));
+        floorRoomBedNameIncluded = tableColumns.stream().anyMatch(i -> i.equalsIgnoreCase("Floor") || i.equalsIgnoreCase("Room") || i.equalsIgnoreCase("Bed"));
 
-        List<String> listCustomerIds = listCustomers
-                .stream()
-                .map(Customers::getCustomerId)
-                .toList();
+        List<String> listCustomerIds = listCustomers.stream().map(Customers::getCustomerId).toList();
         List<BookingsV1> listBookings = bookingsService.findByCustomerIds(listCustomerIds);
-        List<Integer> bedIds = listBookings
-                .stream()
-                .map(BookingsV1::getBedId)
-                .toList();
+        List<Integer> bedIds = listBookings.stream().map(BookingsV1::getBedId).toList();
         List<BedDetails> listBedDetails;
         if (floorRoomBedNameIncluded) {
             listBedDetails = bedsService.getBedDetails(bedIds);
@@ -537,24 +481,11 @@ public class CustomersService {
             listBedDetails = new ArrayList<>();
         }
 
-        List<List<Object>> listTenants = customersList
-                .stream()
-                .map(i -> new TenantTableMapper(listBedDetails, listBookings, tableColumns).apply(i))
-                .toList();
+        List<List<Object>> listTenants = customersList.stream().map(i -> new TenantTableMapper(listBedDetails, listBookings, tableColumns).apply(i)).toList();
 
         FilterOptions filterOptions = getTenantFilterOptions(hostelId);
 
-        CustomerWebResponse response = new CustomerWebResponse(
-                totalCustomers,
-                currentPage,
-                totalPages,
-                size,
-                summary,
-                filterOptions,
-                tableColumns,
-                listColumns,
-                listTenants
-        );
+        CustomerWebResponse response = new CustomerWebResponse(totalCustomers, currentPage, totalPages, size, summary, filterOptions, tableColumns, listColumns, listTenants);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -576,13 +507,7 @@ public class CustomersService {
 
         List<Rooms> listRooms = roomsService.findByHostelId(hostelId);
 
-        List<Integer> roomsBySharing = listRooms
-                .stream()
-                .filter(i -> i.getSharingType() != null && i.getSharingType() > 0)
-                .map(Rooms::getSharingType)
-                .distinct()
-                .sorted()
-                .toList();
+        List<Integer> roomsBySharing = listRooms.stream().filter(i -> i.getSharingType() != null && i.getSharingType() > 0).map(Rooms::getSharingType).distinct().sorted().toList();
         List<FilterOptions.FilterItems> listSharingType = new ArrayList<>();
         roomsBySharing.forEach(item -> {
             if (item == 1) {
@@ -760,15 +685,9 @@ public class CustomersService {
                 listDeductions = advance.getDeductions();
             }
 
-            listDeductions.addAll(payloads.deductions()
-                    .stream()
-                    .map(item -> new Deductions(item.type(), item.amount()))
-                    .toList());
+            listDeductions.addAll(payloads.deductions().stream().map(item -> new Deductions(item.type(), item.amount())).toList());
 
-            deductionAmount = listDeductions
-                    .stream()
-                    .mapToDouble(Deductions::getAmount)
-                    .sum();
+            deductionAmount = listDeductions.stream().mapToDouble(Deductions::getAmount).sum();
 
             advance.setAdvanceAmount(payloads.advanceAmount());
             advance.setCustomers(customers);
@@ -924,15 +843,9 @@ public class CustomersService {
             } else {
                 listDeductions = advance.getDeductions();
             }
-            listDeductions.addAll(checkinRequest.deductions()
-                    .stream()
-                    .map(item -> new Deductions(item.type(), item.amount()))
-                    .toList());
+            listDeductions.addAll(checkinRequest.deductions().stream().map(item -> new Deductions(item.type(), item.amount())).toList());
 
-            double deductionAmount = listDeductions
-                    .stream()
-                    .mapToDouble(Deductions::getAmount)
-                    .sum();
+            double deductionAmount = listDeductions.stream().mapToDouble(Deductions::getAmount).sum();
 
             advance.setAdvanceAmount(checkinRequest.advanceAmount());
             advance.setStatus(AdvanceStatus.INVOICE_GENERATED.name());
@@ -952,17 +865,7 @@ public class CustomersService {
 
             bedsService.addUserToBed(booking.getBedId(), date, savedCustomer.getCustomerId());
 
-            CheckInRequest request = new CheckInRequest(
-                    booking.getFloorId(),
-                    booking.getBedId(),
-                    booking.getRoomId(),
-                    checkinRequest.joiningDate(),
-                    checkinRequest.advanceAmount(),
-                    checkinRequest.rentalAmount(),
-                    checkinRequest.stayType(),
-                    checkinRequest.deductions(),
-                    checkinRequest.proRate()
-            );
+            CheckInRequest request = new CheckInRequest(booking.getFloorId(), booking.getBedId(), booking.getRoomId(), checkinRequest.joiningDate(), checkinRequest.advanceAmount(), checkinRequest.rentalAmount(), checkinRequest.stayType(), checkinRequest.deductions(), checkinRequest.proRate());
 
             bookingsService.checkInBookedCustomer(customers, request);
 
@@ -1126,8 +1029,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
-        if (customersRepository.existsByMobileAndHostelIdAndStatusesNotIn(customerInfo.mobile(), hostelId,
-                List.of("VACATED"))) {
+        if (customersRepository.existsByMobileAndHostelIdAndStatusesNotIn(customerInfo.mobile(), hostelId, List.of("VACATED"))) {
             mobileStatus = Utils.MOBILE_NO_EXISTS;
 //            return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
         }
@@ -1151,7 +1053,7 @@ public class CustomersService {
         Customers customers = new Customers();
         customers.setFirstName(customerInfo.firstName());
         customers.setLastName(customerInfo.lastName());
-        customers.setCountry(1l);
+        customers.setCountry(1L);
         customers.setMobile(customerInfo.mobile());
         customers.setEmailId(customerInfo.emailId());
         customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
@@ -1400,16 +1302,9 @@ public class CustomersService {
         List<RentHistory> rentHistories = bookingsService.getNewRentAmount(customerId, new Date());
         CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
         List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
-        InvoiceResponse advanceInvoice = invoiceResponseList.stream()
-                .filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType()))
-                .limit(1)
-                .findFirst()
-                .orElse(null);
+        InvoiceResponse advanceInvoice = invoiceResponseList.stream().filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType())).limit(1).findFirst().orElse(null);
         if (rentHistories != null) {
-            List<RentHistory> listNewRentHistory = rentHistories
-                    .stream()
-                    .filter(i -> Utils.compareWithTwoDates(i.getStartsFrom(), new Date()) > 0)
-                    .toList();
+            List<RentHistory> listNewRentHistory = rentHistories.stream().filter(i -> Utils.compareWithTwoDates(i.getStartsFrom(), new Date()) > 0).toList();
             if (listNewRentHistory != null && !listNewRentHistory.isEmpty()) {
                 isNewRentAvailable = true;
                 RentHistory rh = listNewRentHistory.get(listNewRentHistory.size() - 1);
@@ -1464,61 +1359,34 @@ public class CustomersService {
                         bookedRoomName = bedDetails.getRoomName();
                     }
 
-                    bookingInfo = new BookingInfo(Utils.dateToString(bookingV1.getBookingDate()),
-                            bookingV1.getBookingAmount(),
-                            bookedBedName,
-                            bookedFloorName,
-                            bookedRoomName);
+                    bookingInfo = new BookingInfo(Utils.dateToString(bookingV1.getBookingDate()), bookingV1.getBookingAmount(), bookedBedName, bookedFloorName, bookedRoomName);
                 }
             }
 
         }
 
-        CustomerAddress address = new CustomerAddress(customers.getStreet(),
-                customers.getHouseNo(),
-                customers.getLandmark(),
-                customers.getPincode(),
-                customers.getCity(),
-                customers.getState());
+        CustomerAddress address = new CustomerAddress(customers.getStreet(), customers.getHouseNo(), customers.getLandmark(), customers.getPincode(), customers.getCity(), customers.getState());
         KycDetails kycDetails = customers.getKycDetails();
         KycInformations kycInfo = null;
         if (kycDetails == null) {
-            kycInfo = new KycInformations(customers.getKycStatus(),
-                    null,
-                    null,
-                    null);
+            kycInfo = new KycInformations(customers.getKycStatus(), null, null, null);
         } else {
-            kycInfo = new KycInformations(kycDetails.getCurrentStatus(),
-                    null,
-                    null,
-                    null);
+            kycInfo = new KycInformations(kycDetails.getCurrentStatus(), null, null, null);
         }
 
         CheckoutInfo checkoutInfo = null;
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
             assert bookingDetails != null;
             long noticeDays = Utils.findNumberOfDays(bookingDetails.getNoticeDate(), bookingDetails.getCheckoutDate());
-            checkoutInfo = new CheckoutInfo(Utils.dateToString(bookingDetails.getCheckoutDate()),
-                    Utils.dateToString(bookingDetails.getRequestedCheckoutDate()),
-                    Utils.dateToString(bookingDetails.getNoticeDate()),
-                    noticeDays,
-                    null);
+            checkoutInfo = new CheckoutInfo(Utils.dateToString(bookingDetails.getCheckoutDate()), Utils.dateToString(bookingDetails.getRequestedCheckoutDate()), Utils.dateToString(bookingDetails.getNoticeDate()), noticeDays, null);
         } else if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
             assert bookingDetails != null;
             long noticeDays = Utils.findNumberOfDays(bookingDetails.getNoticeDate(), bookingDetails.getRequestedCheckoutDate());
-            checkoutInfo = new CheckoutInfo(null,
-                    Utils.dateToString(bookingDetails.getRequestedCheckoutDate()),
-                    Utils.dateToString(bookingDetails.getNoticeDate()),
-                    noticeDays,
-                    null);
+            checkoutInfo = new CheckoutInfo(null, Utils.dateToString(bookingDetails.getRequestedCheckoutDate()), Utils.dateToString(bookingDetails.getNoticeDate()), noticeDays, null);
         } else if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
             assert bookingDetails != null;
             long noticeDays = Utils.findNumberOfDays(bookingDetails.getNoticeDate(), bookingDetails.getRequestedCheckoutDate());
-            checkoutInfo = new CheckoutInfo(null,
-                    Utils.dateToString(bookingDetails.getRequestedCheckoutDate()),
-                    Utils.dateToString(bookingDetails.getNoticeDate()),
-                    noticeDays,
-                    null);
+            checkoutInfo = new CheckoutInfo(null, Utils.dateToString(bookingDetails.getRequestedCheckoutDate()), Utils.dateToString(bookingDetails.getNoticeDate()), noticeDays, null);
         }
 
 
@@ -1527,26 +1395,15 @@ public class CustomersService {
         List<TransactionDto> listTransactions = transactionService.getTranactionInfoByCustomerId(customerId);
         List<AmenityRequestDTO> listRequestedAmenities = amenityRequestService.getRequestedAmenities(customerId, customers.getHostelId());
 
-        List<String> invoicesIds = listTransactions
-                .stream()
-                .map(TransactionDto::invoiceId)
-                .toList();
-        Set<String> bankIds = listTransactions
-                .stream()
-                .map(TransactionDto::bankId)
-                .collect(Collectors.toSet());
+        List<String> invoicesIds = listTransactions.stream().map(TransactionDto::invoiceId).toList();
+        Set<String> bankIds = listTransactions.stream().map(TransactionDto::bankId).collect(Collectors.toSet());
         List<InvoicesV1> listOfInvoices = invoiceService.findInvoices(invoicesIds);
         List<BankingV1> listOFBankings = bankingService.findAllBanksById(bankIds);
-        List<String> userIds = listOFBankings.stream()
-                .map(BankingV1::getUserId)
-                .toList();
+        List<String> userIds = listOFBankings.stream().map(BankingV1::getUserId).toList();
         List<Users> listUsers = userService.findAllUsersFromUserId(userIds);
 
 
-        List<com.smartstay.smartstay.responses.customer.TransactionDto> listTransactionResponse = listTransactions
-                .stream()
-                .map(i -> new TransctionsForCustomerDetails(listOfInvoices, listOFBankings, listUsers).apply(i))
-                .toList();
+        List<com.smartstay.smartstay.responses.customer.TransactionDto> listTransactionResponse = listTransactions.stream().map(i -> new TransctionsForCustomerDetails(listOfInvoices, listOFBankings, listUsers).apply(i)).toList();
 
         List<WalletTransactions> walletTransactions = customerWalletHistoryService.getWalletTransactions(customerId);
         double walletAmount = 0.0;
@@ -1578,43 +1435,7 @@ public class CustomersService {
             }
         }
 
-        CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
-                customers.getHostelId(),
-                customers.getFirstName(),
-                customers.getLastName(),
-                fullName,
-                customers.getEmailId(),
-                customers.getMobile(),
-                "91",
-                initials,
-                customers.getProfilePic(),
-                bookingId,
-                isNewRentAvailable,
-                newRentAmount,
-                newRentLabelHint,
-                customers.getCurrentStatus(),
-                address,
-                hostelInformation,
-                kycInfo,
-                advanceInfo,
-                checkoutInfo,
-                bookingInfo,
-                invoiceResponseList,
-                listBeds,
-                listTransactionResponse,
-                amenities,
-                listRequestedAmenities,
-                walletInfo,
-                customerFiles,
-                additionalContacts,
-                isJoiningDateEditable,
-                createdDate,
-                createdTime,
-                createdAt,
-                createdBy,
-                createdByName,
-                createdByInitials,
-                createdByPic);
+        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, customers.getProfilePic(), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -2040,8 +1861,7 @@ public class CustomersService {
         if (ebInfo != null) {
             ebAmount = ebInfo.pendingEbAmount();
         }
-        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService
-                .getInvoicePendingByCustomerId(customers.getCustomerId());
+        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService.getInvoicePendingByCustomerId(customers.getCustomerId());
 
         com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
@@ -2052,10 +1872,7 @@ public class CustomersService {
         if (customers.getAdvance() != null) {
             Advance advance = customers.getAdvance();
             if (advance.getDeductions() != null) {
-                totalDeductions = advance.getDeductions()
-                        .stream()
-                        .mapToDouble(i -> i.getAmount())
-                        .sum();
+                totalDeductions = advance.getDeductions().stream().mapToDouble(i -> i.getAmount()).sum();
             }
         }
 
@@ -2063,10 +1880,7 @@ public class CustomersService {
         if (isAdvancePaid) {
             totalAmountToBePaid = totalAmountToBePaid - totalAdvanceAmount;
         }
-        boolean isRefundable = false;
-        if (totalAmountToBePaid < 0) {
-            isRefundable = true;
-        }
+        boolean isRefundable = totalAmountToBePaid < 0;
 
         double totalRefundableAdvance = 0.0;
         if (isAdvancePaid) {
@@ -2153,8 +1967,7 @@ public class CustomersService {
         if (ebInfo != null) {
             ebAmount = ebInfo.pendingEbAmount();
         }
-        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService
-                .getInvoicePendingByCustomerId(customers.getCustomerId());
+        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService.getInvoicePendingByCustomerId(customers.getCustomerId());
 
         com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
@@ -2165,10 +1978,7 @@ public class CustomersService {
         if (customers.getAdvance() != null) {
             Advance advance = customers.getAdvance();
             if (advance.getDeductions() != null) {
-                totalDeductions = advance.getDeductions()
-                        .stream()
-                        .mapToDouble(i -> i.getAmount())
-                        .sum();
+                totalDeductions = advance.getDeductions().stream().mapToDouble(i -> i.getAmount()).sum();
             }
         }
 
@@ -2176,10 +1986,7 @@ public class CustomersService {
         if (isAdvancePaid) {
             totalAmountToBePaid = totalAmountToBePaid - totalAdvanceAmount;
         }
-        boolean isRefundable = false;
-        if (totalAmountToBePaid < 0) {
-            isRefundable = true;
-        }
+        boolean isRefundable = totalAmountToBePaid < 0;
 
         double totalRefundableAdvance = 0.0;
         if (isAdvancePaid) {
@@ -2303,9 +2110,7 @@ public class CustomersService {
         long totalDaysStayed = Utils.findNumberOfDays(startDate, leavingDate);
         long totalDaysInAMonth = Utils.findNumberOfDays(currentMonthBillingDates.currentBillStartDate(), currentMonthBillingDates.currentBillEndDate());
         if (amenities != null) {
-            List<Amenities> proRateAmenities = amenities.stream()
-                    .filter(Amenities::isProRate)
-                    .toList();
+            List<Amenities> proRateAmenities = amenities.stream().filter(Amenities::isProRate).toList();
             proRateAmenities.forEach(item -> {
                 double perDayAmount = item.amenityAmount() / totalDaysInAMonth;
                 double amenityAmount = perDayAmount * totalDaysStayed;
@@ -2313,10 +2118,7 @@ public class CustomersService {
                 currentMonthOtherItems.add(new CurrentMonthOtherItems(item.amenityName(), Utils.roundOffWithTwoDigit(amenityAmount)));
             });
 
-            List<Amenities> nonProRateAmenities = amenities
-                    .stream()
-                    .filter(i -> !i.isProRate())
-                    .toList();
+            List<Amenities> nonProRateAmenities = amenities.stream().filter(i -> !i.isProRate()).toList();
             nonProRateAmenities.forEach(item -> {
                 otherItemAMount[0] = otherItemAMount[0] + item.amenityAmount();
                 currentMonthOtherItems.add(new CurrentMonthOtherItems(item.amenityName(), Utils.roundOffWithTwoDigit(item.amenityAmount())));
@@ -2332,32 +2134,13 @@ public class CustomersService {
         String currentInvoiceEndDate = Utils.dateToString(currentMonthBillingDates.currentBillEndDate());
 
         if (listRentBreakup != null) {
-            currentPayableRent = listRentBreakup
-                    .stream()
-                    .mapToDouble(RentBreakUp::totalRent)
-                    .sum();
-            stayDays = (int) listRentBreakup
-                    .stream()
-                    .mapToLong(RentBreakUp::noOfDays)
-                    .sum();
+            currentPayableRent = listRentBreakup.stream().mapToDouble(RentBreakUp::totalRent).sum();
+            stayDays = (int) listRentBreakup.stream().mapToLong(RentBreakUp::noOfDays).sum();
             currentMonthPayableAmount = currentPayableRent + otherItemAMount[0];
         }
 
 
-        return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent),
-                currentRentPaid,
-                stayDays,
-                currentMonthRent,
-                currentMonthPayableAmount,
-                Utils.roundOffWithTwoDigit(currentMonthPayableAmount),
-                currentInvoiceStartDate,
-                currentInvoiceEndDate,
-                null,
-                Utils.roundOffWithTwoDigit(otherItemAMount[0]),
-                false,
-                0.0,
-                currentMonthOtherItems,
-                listRentBreakup);
+        return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent), currentRentPaid, stayDays, currentMonthRent, currentMonthPayableAmount, Utils.roundOffWithTwoDigit(currentMonthPayableAmount), currentInvoiceStartDate, currentInvoiceEndDate, null, Utils.roundOffWithTwoDigit(otherItemAMount[0]), false, 0.0, currentMonthOtherItems, listRentBreakup);
     }
 
     /**
@@ -2409,11 +2192,7 @@ public class CustomersService {
         }
 
         if (customers.getAdvance() != null) {
-            totalDeductions = customers.getAdvance()
-                    .getDeductions()
-                    .stream()
-                    .mapToDouble(Deductions::getAmount)
-                    .sum();
+            totalDeductions = customers.getAdvance().getDeductions().stream().mapToDouble(Deductions::getAmount).sum();
         }
 
         if (customers.getWallet() != null) {
@@ -2423,11 +2202,7 @@ public class CustomersService {
             }
         }
 
-        StayInfo stayInfo = new StayInfo(Utils.dateToString(bookingDetails.getBookingDate()),
-                Utils.dateToString(bookingDetails.getNoticeDate()),
-                Utils.dateToString(bookingDetails.getLeavingDate()),
-                Utils.dateToString(bookingDetails.getLeavingDate()),
-                Utils.dateToString(leavingDate));
+        StayInfo stayInfo = new StayInfo(Utils.dateToString(bookingDetails.getBookingDate()), Utils.dateToString(bookingDetails.getNoticeDate()), Utils.dateToString(bookingDetails.getLeavingDate()), Utils.dateToString(bookingDetails.getLeavingDate()), Utils.dateToString(leavingDate));
 
         List<InvoicesV1> listUnpaidInvoices = invoiceService.listAllOldUnpaidInvoices(customers.getCustomerId(), customers.getHostelId());
 
@@ -2447,14 +2222,8 @@ public class CustomersService {
 
         advancePaidAmount = advancePaidAmount + bookingAmount;
 
-        double oldTotalInvoiceAmount = listUnpaidInvoices
-                .stream()
-                .mapToDouble(InvoicesV1::getTotalAmount)
-                .sum();
-        double oldInvoicesPaidAmounts = listUnpaidInvoices
-                .stream()
-                .mapToDouble(InvoicesV1::getPaidAmount)
-                .sum();
+        double oldTotalInvoiceAmount = listUnpaidInvoices.stream().mapToDouble(InvoicesV1::getTotalAmount).sum();
+        double oldInvoicesPaidAmounts = listUnpaidInvoices.stream().mapToDouble(InvoicesV1::getPaidAmount).sum();
         double oldInvoiceBalanceAmount = oldTotalInvoiceAmount - oldInvoicesPaidAmounts;
 
         Date currentMonthInvoiceStartDate = bookingDetails.getJoiningDate();
@@ -2467,10 +2236,7 @@ public class CustomersService {
         InvoicesV1 findLatestInvoice = invoiceService.findRunningInvoice(customers.getCustomerId(), billDate);
 
 
-        List<InvoicesV1> currentMonthInvoicesBeforeBedChange = currentMonthInvoices
-                .stream()
-                .filter(i -> !i.getInvoiceId().equalsIgnoreCase(findLatestInvoice.getInvoiceId()))
-                .toList();
+        List<InvoicesV1> currentMonthInvoicesBeforeBedChange = currentMonthInvoices.stream().filter(i -> !i.getInvoiceId().equalsIgnoreCase(findLatestInvoice.getInvoiceId())).toList();
 
         List<CurrentMonthOtherItems> currentMonthOtherItems = new ArrayList<>();
         AtomicReference<Double> currentMonthOtherItemAmount = new AtomicReference<>(0.0);
@@ -2498,42 +2264,23 @@ public class CustomersService {
             });
         });
 
-        double currentMonthRentBeforeChangingBed = currentMonthInvoicesBeforeBedChange
-                .stream()
-                .mapToDouble(i -> {
-                    return i.getInvoiceItems()
-                            .stream()
-                            .filter(i2 -> i2.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name()))
-                            .mapToDouble(com.smartstay.smartstay.dao.InvoiceItems::getAmount)
-                            .sum();
-                })
-                .sum();
-        List<InvoicesV1> discountAppliedInvoices = currentMonthInvoices
-                .stream()
-                .filter(InvoicesV1::isDiscounted)
-                .toList();
+        double currentMonthRentBeforeChangingBed = currentMonthInvoicesBeforeBedChange.stream().mapToDouble(i -> {
+            return i.getInvoiceItems().stream().filter(i2 -> i2.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name())).mapToDouble(com.smartstay.smartstay.dao.InvoiceItems::getAmount).sum();
+        }).sum();
+        List<InvoicesV1> discountAppliedInvoices = currentMonthInvoices.stream().filter(InvoicesV1::isDiscounted).toList();
         if (!discountAppliedInvoices.isEmpty()) {
             isDiscounted = true;
-            List<String> discountedInvoices = discountAppliedInvoices
-                    .stream()
-                    .map(InvoicesV1::getInvoiceId)
-                    .toList();
+            List<String> discountedInvoices = discountAppliedInvoices.stream().map(InvoicesV1::getInvoiceId).toList();
             List<InvoiceDiscounts> invoiceDiscounts = invoiceService.getDiscountAmountForInvoice(customers.getHostelId(), discountedInvoices);
 
-            discountAmount = invoiceDiscounts
-                    .stream()
-                    .mapToDouble(InvoiceDiscounts::discountAmount)
-                    .sum();
+            discountAmount = invoiceDiscounts.stream().mapToDouble(InvoiceDiscounts::discountAmount).sum();
         }
-        double currentMonthPaidAmountBeforeChangingBed = currentMonthInvoicesBeforeBedChange
-                .stream()
-                .mapToDouble(i -> {
-                    if (i.getPaidAmount() != null) {
-                        return i.getPaidAmount();
-                    }
-                    return 0.0;
-                })
-                .sum();
+        double currentMonthPaidAmountBeforeChangingBed = currentMonthInvoicesBeforeBedChange.stream().mapToDouble(i -> {
+            if (i.getPaidAmount() != null) {
+                return i.getPaidAmount();
+            }
+            return 0.0;
+        }).sum();
 
         double currentRunningInvoicePaidAmount = 0.0;
         if (findLatestInvoice != null && findLatestInvoice.getPaidAmount() != null) {
@@ -2543,18 +2290,11 @@ public class CustomersService {
         currentMonthPaidRent = currentMonthPaidAmountBeforeChangingBed + currentRunningInvoicePaidAmount;
 
 
-        List<String> partialPaymentInvoices = listUnpaidInvoices
-                .stream()
-                .filter(invoicesV1 -> invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
-                .map(InvoicesV1::getInvoiceId)
-                .toList();
+        List<String> partialPaymentInvoices = listUnpaidInvoices.stream().filter(invoicesV1 -> invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())).map(InvoicesV1::getInvoiceId).toList();
 
         List<PartialPaidInvoiceInfo> lisPartialPayments = transactionService.getTransactionInfo(partialPaymentInvoices);
 
-        List<UnpaidInvoices> unpaidInvoices = listUnpaidInvoices
-                .stream()
-                .map(item -> new UnpaidInvoicesMapper().apply(item))
-                .toList();
+        List<UnpaidInvoices> unpaidInvoices = listUnpaidInvoices.stream().map(item -> new UnpaidInvoicesMapper().apply(item)).toList();
 
         long totalNoOfDaysStayedIncludeOldAndNewBed = Utils.findNumberOfDays(currentMonthInvoiceStartDate, leavingDate);
         long totalNoOfDaysInCurrentMonth = Utils.findNumberOfDays(currentMonthInvoiceStartDate, billDate.currentBillEndDate());
@@ -2574,8 +2314,7 @@ public class CustomersService {
             refundableRent = -1 * refundableRent;
         }
 
-        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService
-                .getInvoicePendingByCustomerId(customers.getCustomerId());
+        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService.getInvoicePendingByCustomerId(customers.getCustomerId());
 
         com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
@@ -2596,50 +2335,25 @@ public class CustomersService {
                 bookingAmount, null);
 
         List<CustomersBedHistory> listCustomerBedHistories = bedHistory.getByCustomerIdAndStartAndEndDate(customers.getCustomerId(), billDate.currentBillStartDate(), billDate.currentBillEndDate());
-        List<Integer> bedIds = listCustomerBedHistories
-                .stream()
-                .map(CustomersBedHistory::getBedId)
-                .toList();
+        List<Integer> bedIds = listCustomerBedHistories.stream().map(CustomersBedHistory::getBedId).toList();
         List<BedDetails> listBedDetails = bedsService.getBedDetails(bedIds);
-        List<Integer> roomIds = listBedDetails
-                .stream()
-                .map(BedDetails::getRoomId)
-                .toList();
+        List<Integer> roomIds = listBedDetails.stream().map(BedDetails::getRoomId).toList();
 
 
-        List<RentBreakUp> breakUpList = new ArrayList<>(currentMonthInvoicesBeforeBedChange
-                .stream()
-                .map(i -> new FinalSettlementMapper(listCustomerBedHistories, listBedDetails).apply(i))
-                .toList());
-        CustomersBedHistory runningBed = listCustomerBedHistories
-                .stream()
-                .filter(i -> Utils.compareWithTwoDates(i.getStartDate(), findLatestInvoice.getInvoiceStartDate()) <= 0 && i.getEndDate() == null)
-                .findFirst()
-                .orElse(null);
+        List<RentBreakUp> breakUpList = new ArrayList<>(currentMonthInvoicesBeforeBedChange.stream().map(i -> new FinalSettlementMapper(listCustomerBedHistories, listBedDetails).apply(i)).toList());
+        CustomersBedHistory runningBed = listCustomerBedHistories.stream().filter(i -> Utils.compareWithTwoDates(i.getStartDate(), findLatestInvoice.getInvoiceStartDate()) <= 0 && i.getEndDate() == null).findFirst().orElse(null);
         String bedName = null;
         String floorName = null;
         String roomName = null;
         if (runningBed != null) {
-            BedDetails details = listBedDetails
-                    .stream()
-                    .filter(i -> i.getBedId().equals(runningBed.getBedId()))
-                    .findFirst()
-                    .orElse(null);
+            BedDetails details = listBedDetails.stream().filter(i -> i.getBedId().equals(runningBed.getBedId())).findFirst().orElse(null);
             if (details != null) {
                 bedName = details.getBedName();
                 roomName = details.getRoomName();
                 floorName = details.getFloorName();
             }
         }
-        RentBreakUp rentBreakUpForNewInvoice = new RentBreakUp(Utils.dateToString(findLatestInvoice.getInvoiceStartDate()),
-                Utils.dateToString(leavingDate),
-                findNoOfDaysStayedInNewBedAsOfToday,
-                Utils.roundOffWithTwoDigit(newRentPerDay),
-                Utils.roundOffWithTwoDigit(payableRentAsOfToday),
-                Utils.roundOffWithTwoDigit(payableRentAsOfToday),
-                bedName,
-                roomName,
-                floorName);
+        RentBreakUp rentBreakUpForNewInvoice = new RentBreakUp(Utils.dateToString(findLatestInvoice.getInvoiceStartDate()), Utils.dateToString(leavingDate), findNoOfDaysStayedInNewBedAsOfToday, Utils.roundOffWithTwoDigit(newRentPerDay), Utils.roundOffWithTwoDigit(payableRentAsOfToday), Utils.roundOffWithTwoDigit(payableRentAsOfToday), bedName, roomName, floorName);
 
         if (breakUpList != null) {
             breakUpList.add(rentBreakUpForNewInvoice);
@@ -2709,16 +2423,7 @@ public class CustomersService {
         }
 
 
-        SettlementInfo settlementInfo = new SettlementInfo(Utils.roundOffWithTwoDigit(totalAmountToBePaid),
-                Utils.roundOfDouble(totalDeductions),
-                Utils.roundOfDouble(oldInvoiceBalanceAmount),
-                Utils.roundOfDouble(refundableRent),
-                Utils.roundOffWithTwoDigit(refundableAdvance),
-                electricityAmount,
-                Utils.roundOfDouble(oldInvoiceBalanceAmount),
-                isRefundable,
-                label,
-                Utils.roundOffWithTwoDigit(payableAmount));
+        SettlementInfo settlementInfo = new SettlementInfo(Utils.roundOffWithTwoDigit(totalAmountToBePaid), Utils.roundOfDouble(totalDeductions), Utils.roundOfDouble(oldInvoiceBalanceAmount), Utils.roundOfDouble(refundableRent), Utils.roundOffWithTwoDigit(refundableAdvance), electricityAmount, Utils.roundOfDouble(oldInvoiceBalanceAmount), isRefundable, label, Utils.roundOffWithTwoDigit(payableAmount));
 //        SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountIncludePreviousBed), Utils.roundOfDouble(totalDeductions), Utils.roundOfDouble(oldInvoiceBalanceAmount), Utils.roundOfDouble(refundableRent), Utils.roundOffWithTwoDigit(refundableAdvance), electricityAmount, Utils.roundOfDouble(oldInvoiceBalanceAmount), isRefundable);
 
 //        SettlementInfo settlementInfo = new SettlementInfo((double)Math.round(totalAmountToBePaid),
@@ -2833,11 +2538,7 @@ public class CustomersService {
         }
 
         if (customers.getAdvance() != null) {
-            totalDeductions = customers.getAdvance()
-                    .getDeductions()
-                    .stream()
-                    .mapToDouble(Deductions::getAmount)
-                    .sum();
+            totalDeductions = customers.getAdvance().getDeductions().stream().mapToDouble(Deductions::getAmount).sum();
 
             listDeductions = customers.getAdvance().getDeductions();
         }
@@ -2851,15 +2552,9 @@ public class CustomersService {
 
         List<InvoicesV1> listUnpaidInvoices = invoiceService.listAllUnpaidInvoices(customerId, customers.getHostelId());
 
-        List<InvoicesV1> listUnpaidRentalInvoices = listUnpaidInvoices
-                .stream()
-                .filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
-                .toList();
+        List<InvoicesV1> listUnpaidRentalInvoices = listUnpaidInvoices.stream().filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0).toList();
 
-        List<InvoicesV1> currentMonthInvoice = listUnpaidInvoices
-                .stream()
-                .filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) >= 0)
-                .toList();
+        List<InvoicesV1> currentMonthInvoice = listUnpaidInvoices.stream().filter(item -> (item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || item.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) >= 0).toList();
 
 //        Calendar calStartDate = Calendar.getInstance();
 //        calStartDate.setTime();
@@ -2890,23 +2585,16 @@ public class CustomersService {
             List<String> currentMonthInfo = new ArrayList<>();
             currentMonthInfo.add(currentInvoice.getInvoiceId());
 
-            currentRentPaid = transactionService.getTransactionInfo(currentMonthInfo)
-                    .stream()
-                    .mapToDouble(PartialPaidInvoiceInfo::paidAmount)
-                    .sum();
+            currentRentPaid = transactionService.getTransactionInfo(currentMonthInfo).stream().mapToDouble(PartialPaidInvoiceInfo::paidAmount).sum();
             if (currentRentPaid > 0) {
                 isCurrentRentPaid = true;
             }
-            currentMonthOtherPayableAmount = currentInvoice.getInvoiceItems()
-                    .stream()
-                    .filter(i -> !i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name()))
-                    .mapToDouble(i -> {
-                        if (i.getAmount() == null) {
-                            return 0.0;
-                        }
-                        return i.getAmount();
-                    })
-                    .sum();
+            currentMonthOtherPayableAmount = currentInvoice.getInvoiceItems().stream().filter(i -> !i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name())).mapToDouble(i -> {
+                if (i.getAmount() == null) {
+                    return 0.0;
+                }
+                return i.getAmount();
+            }).sum();
         } else {
             //current month invoice is paid rent
             InvoicesV1 invoicesV1 = invoiceService.getCurrentMonthRentInvoice(customerId);
@@ -2920,16 +2608,12 @@ public class CustomersService {
 
                 isCurrentRentPaid = true;
 
-                currentMonthOtherPayableAmount = invoicesV1.getInvoiceItems()
-                        .stream()
-                        .filter(i -> !i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name()))
-                        .mapToDouble(i -> {
-                            if (i.getAmount() == null) {
-                                return 0.0;
-                            }
-                            return i.getAmount();
-                        })
-                        .sum();
+                currentMonthOtherPayableAmount = invoicesV1.getInvoiceItems().stream().filter(i -> !i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name())).mapToDouble(i -> {
+                    if (i.getAmount() == null) {
+                        return 0.0;
+                    }
+                    return i.getAmount();
+                }).sum();
             }
 
         }
@@ -2941,10 +2625,7 @@ public class CustomersService {
         currentMonthPayableRent = Math.round(noOfDaySatayed * rentPerDay);
         currentMonthTotalPayableAmount = currentMonthPayableRent + currentMonthOtherPayableAmount;
 
-        List<InvoicesV1> advanceInvoice = listUnpaidInvoices
-                .stream()
-                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
-                .toList();
+        List<InvoicesV1> advanceInvoice = listUnpaidInvoices.stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())).toList();
         InvoicesV1 invAdvanceInvoice = null;
 
         if (!advanceInvoice.isEmpty()) {
@@ -2978,24 +2659,12 @@ public class CustomersService {
         advancePaidAmount = advancePaidAmount + bookingAmount;
 
 
-        List<String> partialPaymentInvoices = listUnpaidRentalInvoices
-                .stream()
-                .filter(invoicesV1 -> invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
-                .map(InvoicesV1::getInvoiceId)
-                .toList();
+        List<String> partialPaymentInvoices = listUnpaidRentalInvoices.stream().filter(invoicesV1 -> invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())).map(InvoicesV1::getInvoiceId).toList();
 
 //        List<PartialPaidInvoiceInfo> lisPartialPayments = transactionService.getTransactionInfo(partialPaymentInvoices);
 
-        partialPaidAmount = listUnpaidRentalInvoices
-                .stream()
-                .filter(i -> !i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
-                .mapToDouble(InvoicesV1::getPaidAmount)
-                .sum();
-        unpaidInvoiceAmount = listUnpaidInvoices
-                .stream()
-                .filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0)
-                .mapToDouble(InvoicesV1::getTotalAmount)
-                .sum();
+        partialPaidAmount = listUnpaidRentalInvoices.stream().filter(i -> !i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())).mapToDouble(InvoicesV1::getPaidAmount).sum();
+        unpaidInvoiceAmount = listUnpaidInvoices.stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) && Utils.compareWithTwoDates(item.getInvoiceStartDate(), billDate.currentBillStartDate()) < 0).mapToDouble(InvoicesV1::getTotalAmount).sum();
 
         double invoiceBalance = unpaidInvoiceAmount - partialPaidAmount;
 
@@ -3019,19 +2688,13 @@ public class CustomersService {
         }
 
         if (deductions != null && !deductions.isEmpty()) {
-            double finalDeductions = deductions
-                    .stream()
-                    .mapToDouble(Settlement::amount)
-                    .sum();
-            List<Deductions> newDeductions = deductions
-                    .stream()
-                    .map(i -> {
-                        Deductions d = new Deductions();
-                        d.setType(i.item());
-                        d.setAmount(i.amount());
-                        return d;
-                    })
-                    .toList();
+            double finalDeductions = deductions.stream().mapToDouble(Settlement::amount).sum();
+            List<Deductions> newDeductions = deductions.stream().map(i -> {
+                Deductions d = new Deductions();
+                d.setType(i.item());
+                d.setAmount(i.amount());
+                return d;
+            }).toList();
             listDeductions.addAll(newDeductions);
 
             totalAmountToBePaid = totalAmountToBePaid + finalDeductions;
@@ -3039,10 +2702,7 @@ public class CustomersService {
         }
 
 
-        List<InvoicesV1> unpaidUpdated = listUnpaidInvoices
-                .stream()
-                .peek(item -> item.setCancelled(true))
-                .toList();
+        List<InvoicesV1> unpaidUpdated = listUnpaidInvoices.stream().peek(item -> item.setCancelled(true)).toList();
 
 
         totalAmountToBePaid = Math.round(totalAmountToBePaid);
@@ -3094,11 +2754,7 @@ public class CustomersService {
         if (advance != null) {
             List<Deductions> advanceDeductionList = advance.getDeductions();
             if (advanceDeductionList != null) {
-                advanceDeductionAmount = advance
-                        .getDeductions()
-                        .stream()
-                        .mapToDouble(Deductions::getAmount)
-                        .sum();
+                advanceDeductionAmount = advance.getDeductions().stream().mapToDouble(Deductions::getAmount).sum();
             }
         }
 
@@ -3114,10 +2770,7 @@ public class CustomersService {
         if (settlement != null) {
             List<Settlement> listSettlementDeducitons = settlement.deductions();
             if (listSettlementDeducitons != null) {
-                settlementDeductionAmount = listSettlementDeducitons
-                        .stream()
-                        .mapToDouble(Settlement::amount)
-                        .sum();
+                settlementDeductionAmount = listSettlementDeducitons.stream().mapToDouble(Settlement::amount).sum();
             }
 
             if (settlement.discountAmount() != null) {
@@ -3128,10 +2781,7 @@ public class CustomersService {
             if (unpaidInvoices != null) {
                 List<UnpaidInvoices> unpaidInvoicesList = unpaidInvoices.listUnpaidInvoices();
                 if (unpaidInvoicesList != null) {
-                    listUnpaidInvoices.addAll(unpaidInvoicesList
-                            .stream()
-                            .map(UnpaidInvoices::invoiceId)
-                            .toList());
+                    listUnpaidInvoices.addAll(unpaidInvoicesList.stream().map(UnpaidInvoices::invoiceId).toList());
                 }
 
                 List<String> listCurrentMonthInvoicesIds = invoiceService.findUnpaidCurrentMonthInvoicesIds(customers.getHostelId(), customers.getCustomerId(), billDate);
@@ -3160,13 +2810,9 @@ public class CustomersService {
 
         totalAmountToBePaid = totalAmountToBePaid - finalDiscountAmount;
 
-        List<Deductions> lisDeductions = customers.getAdvance()
-                .getDeductions();
+        List<Deductions> lisDeductions = customers.getAdvance().getDeductions();
         if (deductions != null && !deductions.isEmpty()) {
-            lisDeductions.addAll(deductions
-                    .stream()
-                    .map(i -> new Deductions(i.item(), i.amount()))
-                    .toList());
+            lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount())).toList());
         }
         //no need to add advance deduction amount. Already added in advance deductions.
         totalAmountToBePaid = totalAmountToBePaid + settlementDeductionAmount;
@@ -3202,10 +2848,7 @@ public class CustomersService {
         FinalSettlement settlement = getSettlementInfoForJoiningBased(customers, leavingDate, bookingDetails);
 
         List<InvoicesV1> currentMonthUnpaidInvoices = invoiceService.findAllCurrentMonthRentalInvoice(customers.getCustomerId(), customers.getHostelId(), currentMonthBillingDates.currentBillStartDate());
-        List<InvoicesV1> currentMonthUnPaid = currentMonthUnpaidInvoices
-                .stream()
-                .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
-                .toList();
+        List<InvoicesV1> currentMonthUnPaid = currentMonthUnpaidInvoices.stream().filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())).toList();
         List<String> listUnpaidInvoices = new ArrayList<>();
         List<Settlement> deductions = stml.deductions();
         if (deductions == null) {
@@ -3217,15 +2860,12 @@ public class CustomersService {
         double discountAmountFromInvoice = 0.0;
         double discountAmountFromSettlement = 0.0;
         double finalDiscount = 0.0;
-        double deductionAmount = deductions
-                .stream()
-                .mapToDouble(i -> {
-                    if (i.amount() != null) {
-                        return i.amount();
-                    }
-                    return 0.0;
-                })
-                .sum();
+        double deductionAmount = deductions.stream().mapToDouble(i -> {
+            if (i.amount() != null) {
+                return i.amount();
+            }
+            return 0.0;
+        }).sum();
         InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), customers.getHostelId());
         if (advanceInvoice != null) {
             if (advanceInvoice.getPaymentStatus() == null) {
@@ -3238,9 +2878,7 @@ public class CustomersService {
         if (unpaidInvoices != null) {
             List<UnpaidInvoices> unpaid = unpaidInvoices.listUnpaidInvoices();
             if (unpaid != null) {
-                listUnpaidInvoices.addAll(unpaid.stream()
-                        .map(UnpaidInvoices::invoiceId)
-                        .toList());
+                listUnpaidInvoices.addAll(unpaid.stream().map(UnpaidInvoices::invoiceId).toList());
             }
         }
 
@@ -3248,10 +2886,7 @@ public class CustomersService {
             if (listUnpaidInvoices == null) {
                 listUnpaidInvoices = new ArrayList<>();
             }
-            listUnpaidInvoices.addAll(currentMonthUnPaid
-                    .stream()
-                    .map(InvoicesV1::getInvoiceId)
-                    .toList());
+            listUnpaidInvoices.addAll(currentMonthUnPaid.stream().map(InvoicesV1::getInvoiceId).toList());
         }
 
         if (stml != null) {
@@ -3282,13 +2917,9 @@ public class CustomersService {
         }
 
 
-        List<Deductions> lisDeductions = customers.getAdvance()
-                .getDeductions();
+        List<Deductions> lisDeductions = customers.getAdvance().getDeductions();
         if (deductions != null && !deductions.isEmpty()) {
-            lisDeductions.addAll(deductions
-                    .stream()
-                    .map(i -> new Deductions(i.item(), i.amount()))
-                    .toList());
+            lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount())).toList());
         }
 
         amountToBePaid = amountToBePaid - finalDiscount;
@@ -3322,15 +2953,12 @@ public class CustomersService {
         boolean isAdvancePaid = false;
         double amountToBePaid = 0.0;
         double amoutToBePaidWithoutDeductions = 0.0;
-        double deductionAmount = deductions
-                .stream()
-                .mapToDouble(i -> {
-                    if (i.amount() != null) {
-                        return i.amount();
-                    }
-                    return 0.0;
-                })
-                .sum();
+        double deductionAmount = deductions.stream().mapToDouble(i -> {
+            if (i.amount() != null) {
+                return i.amount();
+            }
+            return 0.0;
+        }).sum();
         if (advanceInvoice != null) {
             if (advanceInvoice.getPaymentStatus() == null) {
                 isAdvancePaid = false;
@@ -3342,9 +2970,7 @@ public class CustomersService {
         if (unpaidInvoices != null) {
             List<UnpaidInvoices> unpaid = unpaidInvoices.listUnpaidInvoices();
             if (unpaid != null) {
-                listUnpaidInvoices = unpaid.stream()
-                        .map(UnpaidInvoices::invoiceId)
-                        .toList();
+                listUnpaidInvoices = unpaid.stream().map(UnpaidInvoices::invoiceId).toList();
             }
         }
 
@@ -3358,13 +2984,9 @@ public class CustomersService {
             }
         }
 
-        List<Deductions> lisDeductions = customers.getAdvance()
-                .getDeductions();
+        List<Deductions> lisDeductions = customers.getAdvance().getDeductions();
         if (deductions != null && !deductions.isEmpty()) {
-            lisDeductions.addAll(deductions
-                    .stream()
-                    .map(i -> new Deductions(i.item(), i.amount()))
-                    .toList());
+            lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount())).toList());
         }
 
 
@@ -3509,15 +3131,12 @@ public class CustomersService {
             currentMonthTotalAmount = currentMonthTotalAmount + rentForOldBeds;
             currentPayableRent = rentForOldBeds;
 
-            double rentPaidForOldBeds = currentMonthInvoices
-                    .stream()
-                    .mapToDouble(i -> {
-                        if (i.getPaidAmount() != null) {
-                            return i.getPaidAmount();
-                        }
-                        return 0.0;
-                    })
-                    .sum();
+            double rentPaidForOldBeds = currentMonthInvoices.stream().mapToDouble(i -> {
+                if (i.getPaidAmount() != null) {
+                    return i.getPaidAmount();
+                }
+                return 0.0;
+            }).sum();
 
             currentMonthPaidAmount = currentMonthPaidAmount + rentPaidForOldBeds;
 
@@ -3532,16 +3151,12 @@ public class CustomersService {
             long stayedDays = Utils.findNumberOfDays(currentRunningInvoice.getInvoiceStartDate(), settlementDetails.getLeavingDate());
             long noOfDaysInTheMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
 
-            double invoiceRentAmount = currentRunningInvoice.getInvoiceItems()
-                    .stream()
-                    .filter(i -> i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name()))
-                    .mapToDouble(i -> {
-                        if (i.getAmount() != null) {
-                            return i.getAmount();
-                        }
-                        return 0.0;
-                    })
-                    .sum();
+            double invoiceRentAmount = currentRunningInvoice.getInvoiceItems().stream().filter(i -> i.getInvoiceItem().equalsIgnoreCase(InvoiceItems.RENT.name())).mapToDouble(i -> {
+                if (i.getAmount() != null) {
+                    return i.getAmount();
+                }
+                return 0.0;
+            }).sum();
             double rentPerDays = rentPerMonth / noOfDaysInTheMonth;
             double rentForStayedDays = rentPerDays * stayedDays;
 
@@ -3670,9 +3285,7 @@ public class CustomersService {
         bedsService.unassignBed(bookingsV1.getBedId());
         bedsService.reassignBed(customerId, request.bedId());
 
-        BedRoomFloor bedRoomFloor = bedsService.findRoomAndFloorByBedIdAndHostelId(
-                request.bedId(), hostelId
-        );
+        BedRoomFloor bedRoomFloor = bedsService.findRoomAndFloorByBedIdAndHostelId(request.bedId(), hostelId);
 
         bookingsService.reassignBed(bedRoomFloor, bookingsV1, request);
 
@@ -3737,6 +3350,16 @@ public class CustomersService {
 
         if (Utils.compareWithTwoDates(reCheckInDate, bookingsV1.getJoiningDate()) < 0) {
             return new ResponseEntity<>(Utils.RECHECK_DATE_SHOULD_BE_GREATER_THAN_JOINING_DATE, HttpStatus.BAD_REQUEST);
+        }
+
+        CustomersBedHistory latestBed = bedHistory.getLatestCustomerBed(customerId);
+        if (latestBed == null) {
+            return new ResponseEntity<>("Customer bed history not found", HttpStatus.BAD_REQUEST);
+        }
+
+        BookingsV1 otherCheckIn = bookingsService.checkBedIsBookedByOthers(latestBed.getBedId(), customerId);
+        if (otherCheckIn != null) {
+            return new ResponseEntity<>(Utils.BED_ALREADY_OCCUPIED, HttpStatus.BAD_REQUEST);
         }
 
         InvoicesV1 invoicesV1 = invoiceService.getFinalSettlementStatus(customers.getCustomerId());
@@ -3922,10 +3545,10 @@ public class CustomersService {
             canCancel = false;
         }
         InvoicesV1 invoicesV1 = invoiceService.findSettlementInvoiceByCustomerId(customerId, hostelId);
-        if (invoicesV1 == null) {
+        if (invoicesV1 == null && canCancel) {
             canRecheckIn = true;
         } else {
-            if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
+            if (invoicesV1 != null && invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name())) {
                 isSettlementPaid = true;
             }
         }
@@ -4008,15 +3631,7 @@ public class CustomersService {
             customerStatus.add(CustomerStatus.INACTIVE.name());
             List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
             if (listCustomers != null) {
-                List<WalkInCustomers> listWalkInCustomers = listCustomers
-                        .stream()
-                        .map(i -> new WalkInCustomers(i.getCustomerId(),
-                                NameUtils.getFullName(i.getFirstName(), i.getLastName()),
-                                i.getProfilePic(),
-                                NameUtils.getInitials(i.getFirstName(), i.getLastName()),
-                                "+91 " + i.getMobile(),
-                                i.getEmailId()))
-                        .toList();
+                List<WalkInCustomers> listWalkInCustomers = listCustomers.stream().map(i -> new WalkInCustomers(i.getCustomerId(), NameUtils.getFullName(i.getFirstName(), i.getLastName()), i.getProfilePic(), NameUtils.getInitials(i.getFirstName(), i.getLastName()), "+91 " + i.getMobile(), i.getEmailId())).toList();
 
                 return new ResponseEntity<>(listWalkInCustomers, HttpStatus.OK);
             }
@@ -4029,16 +3644,10 @@ public class CustomersService {
             customerStatus.add(CustomerStatus.CHECK_IN.name());
 
             List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
-            List<String> customerIds = listCustomers
-                    .stream()
-                    .map(Customers::getCustomerId)
-                    .toList();
+            List<String> customerIds = listCustomers.stream().map(Customers::getCustomerId).toList();
             List<BookingsV1> cusotmerBookings = bookingsService.findByCustomerIds(customerIds);
 
-            List<GetCustomersForBills> customerForBills = listCustomers
-                    .stream()
-                    .map(i -> new CustomerMapperForBills(cusotmerBookings).apply(i))
-                    .toList();
+            List<GetCustomersForBills> customerForBills = listCustomers.stream().map(i -> new CustomerMapperForBills(cusotmerBookings).apply(i)).toList();
 
             return new ResponseEntity<>(customerForBills, HttpStatus.OK);
         } else {
@@ -4048,15 +3657,7 @@ public class CustomersService {
             customerStatus.add(CustomerStatus.CHECK_IN.name());
 
             List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
-            List<CustomersForComplaints> listCustomersForComplaint = listCustomers
-                    .stream()
-                    .map(i -> new CustomersForComplaints(i.getCustomerId(),
-                            NameUtils.getFullName(i.getFirstName(), i.getLastName()),
-                            i.getFirstName(),
-                            i.getLastName(),
-                            i.getProfilePic(),
-                            NameUtils.getInitials(i.getFirstName(), i.getLastName())))
-                    .toList();
+            List<CustomersForComplaints> listCustomersForComplaint = listCustomers.stream().map(i -> new CustomersForComplaints(i.getCustomerId(), NameUtils.getFullName(i.getFirstName(), i.getLastName()), i.getFirstName(), i.getLastName(), i.getProfilePic(), NameUtils.getInitials(i.getFirstName(), i.getLastName()))).toList();
 
             return new ResponseEntity<>(listCustomersForComplaint, HttpStatus.OK);
 
@@ -4075,10 +3676,7 @@ public class CustomersService {
         }
         List<Deductions> deductions = advance.getDeductions();
         if (deductions != null && !deductions.isEmpty()) {
-            double dedctionAmount = deductions
-                    .stream()
-                    .mapToDouble(Deductions::getAmount)
-                    .sum();
+            double dedctionAmount = deductions.stream().mapToDouble(Deductions::getAmount).sum();
             return dedctionAmount;
         }
 

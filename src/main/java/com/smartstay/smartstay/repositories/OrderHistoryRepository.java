@@ -18,6 +18,7 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
 
     @Query("""
             SELECT oh FROM OrderHistory oh WHERE oh.hostelId=:hostelId AND oh.orderStatus='PAID'
+            ORDER BY oh.createdAt DESC
             """)
     List<OrderHistory> findByHostelIdOrderByCreatedAtDesc(String hostelId);
 }

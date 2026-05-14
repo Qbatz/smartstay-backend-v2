@@ -17,5 +17,6 @@ public record PlanDetails(String planId,
                           String renewalDate,
                           String paymentMethod,
                           String status,
+                          boolean isTrial,
                           List<BillingHistoryItem> billingHistory) {
 }
