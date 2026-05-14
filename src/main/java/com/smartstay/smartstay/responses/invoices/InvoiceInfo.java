@@ -23,6 +23,8 @@ public record InvoiceInfo(Double subTotal,
                           double totalDeduction,
                           boolean canRedeem,
                           Double avilableAmountToRedeem,
+                          boolean isAvanceAvailableForRedeem,
+                          Double advanceAvailableAmount,
                           List<InvoiceItems> invoiceItems,
                           List<Deductions> listDeductions,
                           AmountSettled redemptionInfo) {

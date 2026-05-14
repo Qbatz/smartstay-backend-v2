@@ -30,12 +30,13 @@ import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.InvoiceRedemption.AvailableInvoices;
+import com.smartstay.smartstay.responses.InvoiceRedemption.SelectedInvoiceInfo;
 import com.smartstay.smartstay.responses.bookings.*;
-import com.smartstay.smartstay.responses.customer.RentBreakUp;
-import com.smartstay.smartstay.responses.customer.RentInfo;
-import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
+import com.smartstay.smartstay.responses.bookings.AdvanceInfo;
+import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.responses.invoices.CustomerInfo;
+import com.smartstay.smartstay.responses.invoices.StayInfo;
 import com.smartstay.smartstay.util.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1213,20 +1214,30 @@ public class InvoiceV1Service {
 
         boolean isInvoicesAvailableForRedeem = false;
         double availableCreditAmount = 0.0;
+        boolean isAdvanceAvailableForRedeem = false;
+        Double availableAdvanceAmount = 0.0;
 
-        List<InvoicesV1> listInvoicesAvailableForReddem = invoicesV1Repository.findAllAdvanceInvoices(hostelId, customers.getCustomerId());
-        if (!listInvoicesAvailableForReddem.isEmpty()) {
-            isInvoicesAvailableForRedeem = true;
 
-            availableCreditAmount = listInvoicesAvailableForReddem
-                    .stream()
-                    .mapToDouble(i -> {
-                        if (i.getBalanceAmount() != null) {
-                            return i.getBalanceAmount();
-                        }
-                        return 0.0;
-                    })
-                    .sum();
+        InvoicesV1 bookingInvoice = invoicesV1Repository.findBookingInvoice(hostelId, customers.getCustomerId());
+        if (bookingInvoice != null) {
+            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                if (bookingInvoice.getBalanceAmount() != null) {
+                    if (bookingInvoice.getBalanceAmount() > 0) {
+                        isInvoicesAvailableForRedeem = true;
+                        availableCreditAmount = bookingInvoice.getBalanceAmount();
+                    }
+                }
+            }
+        }
+
+        InvoicesV1 advanceInvoices = invoicesV1Repository.findAdvanceInvoiceByCustomerId(customers.getCustomerId());
+        if (advanceInvoices != null) {
+            if (advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                if (advanceInvoices.getBalanceAmount() != null && advanceInvoices.getBalanceAmount() > 0) {
+                    isAdvanceAvailableForRedeem = true;
+                    availableAdvanceAmount = advanceInvoices.getBalanceAmount();
+                }
+            }
         }
 
         if (isInvoicesAvailableForRedeem) {
@@ -1236,6 +1247,18 @@ public class InvoiceV1Service {
             }
             if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
                 isInvoicesAvailableForRedeem = false;
+                availableCreditAmount = 0.0;
+            }
+
+        }
+
+        if (isAdvanceAvailableForRedeem) {
+            if (invoicesV1.isCancelled()) {
+                isAdvanceAvailableForRedeem = false;
+                availableCreditAmount = 0.0;
+            }
+            if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                isAdvanceAvailableForRedeem = false;
                 availableCreditAmount = 0.0;
             }
 
@@ -1287,7 +1310,7 @@ public class InvoiceV1Service {
                     invoiceRentalPeriod.toString(),
                     invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
                     discountReason,
-                    Utils.roundOffWithTwoDigit(totalDeductionAmount), false, 0.0, listInvoiceItems, listDeductions, null);
+                    Utils.roundOffWithTwoDigit(totalDeductionAmount), false, 0.0, false, 0.0, listInvoiceItems, listDeductions, null);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1367,6 +1390,8 @@ public class InvoiceV1Service {
                 0.0,
                 isInvoicesAvailableForRedeem,
                 availableCreditAmount,
+                isAdvanceAvailableForRedeem,
+                availableAdvanceAmount,
                 listInvoiceItems, null,
                 amountSettled);
 
@@ -3564,7 +3589,7 @@ public class InvoiceV1Service {
                     currentMonthPaidRent,
                     (int) noOfDaysStayed,
                     Utils.roundOffWithTwoDigit(monthlyRent),
-                    currentMonthTotalAmount,
+                    Utils.roundOffWithTwoDigit(currentMonthTotalAmount),
                     Utils.roundOffWithTwoDigit(currentMonthPayableAmount),
                     Utils.dateToString(currentMonthStartDate),
                     Utils.dateToString(billingDates.currentBillEndDate()),
@@ -4097,7 +4122,7 @@ public class InvoiceV1Service {
         return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
     }
 
-    public ResponseEntity<?> getAdvanceInvoicesForRedemption(String hostelId, int page, int size) {
+    public ResponseEntity<?> getAdvanceInvoicesForRedemptionOld(String hostelId, int page, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -4286,8 +4311,7 @@ public class InvoiceV1Service {
         }
 
         List<String> invoiceTypes = new ArrayList<>();
-        invoiceTypes.add(InvoiceType.BOOKING.name());
-        invoiceTypes.add(InvoiceType.ADVANCE.name());
+
 
         InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
         if (invoicesV1 == null) {
@@ -4300,6 +4324,23 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
+            invoiceTypes.add(InvoiceType.BOOKING.name());
+        }
+
+        double pendingAmount = 0.0;
+        if (invoicesV1.getPaidAmount() != null) {
+            pendingAmount = invoicesV1.getTotalAmount() - invoicesV1.getPaidAmount();
+        }
+
+        SelectedInvoiceInfo selectedInvoiceInfo = new SelectedInvoiceInfo(invoicesV1.getInvoiceId(),
+                invoicesV1.getInvoiceNumber(),
+                invoicesV1.getPaidAmount(),
+                pendingAmount,
+                invoicesV1.getTotalAmount(),
+                invoicesV1.getPaymentStatus(),
+                invoicesV1.getInvoiceType(),
+                Utils.dateToString(invoicesV1.getInvoiceStartDate()));
         com.smartstay.smartstay.responses.InvoiceRedemption.CustomerInfo customerInfo = null;
         Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());
         if (customers != null) {
@@ -4318,23 +4359,184 @@ public class InvoiceV1Service {
                 }
             }
         }
-        List<com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo> invoiceInfoList = null;
-        List<InvoicesV1> listInvoices = invoicesV1Repository.findAllAdvanceInvoices(hostelId, invoicesV1.getCustomerId());
-        if (listInvoices != null && !listInvoices.isEmpty()) {
-            invoiceInfoList = listInvoices
-                    .stream()
-                    .map(i -> new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(i.getInvoiceId(),
-                            i.getInvoiceNumber(),
-                            i.getInvoiceType(),
-                            i.getTotalAmount(),
-                            i.getPaidAmount(),
-                            i.getBalanceAmount(),
-                            Utils.dateToString(i.getInvoiceStartDate()))).toList();
+        com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo invoiceInfoList = null;
+        InvoicesV1 bookingInvoice = invoicesV1Repository.findBookingInvoice(hostelId, invoicesV1.getCustomerId());
+        if (bookingInvoice != null) {
+
+            invoiceInfoList = new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(bookingInvoice.getInvoiceId(),
+                    bookingInvoice.getInvoiceNumber(),
+                    bookingInvoice.getInvoiceType(),
+                    bookingInvoice.getTotalAmount(),
+                    bookingInvoice.getPaidAmount(),
+                    bookingInvoice.getBalanceAmount(),
+                    Utils.dateToString(bookingInvoice.getInvoiceStartDate()));
+
+            AvailableInvoices availableInvoices = new AvailableInvoices(customerInfo, invoiceInfoList, selectedInvoiceInfo);
+
+            return new ResponseEntity<>(availableInvoices, HttpStatus.OK);
 
         }
 
-        AvailableInvoices availableInvoices = new AvailableInvoices(customerInfo, invoiceInfoList);
+        return new ResponseEntity<>(Utils.NO_BOOKING_INFORMATION_FOUND, HttpStatus.BAD_REQUEST);
 
-        return new ResponseEntity<>(availableInvoices, HttpStatus.OK);
+
+    }
+
+    public AdvanceItems getRedeemedListFromAdvance(String hostelId, String customerId) {
+        InvoicesV1 advanceInvoice = invoicesV1Repository.findAdvanceInvoiceByCustomerId(customerId);
+        if (advanceInvoice == null) {
+            return new AdvanceItems("Refundable Advance",
+                    0.0,
+                    0.0,
+                    0.0,
+                    "NA",
+                    null);
+        }
+        if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+            return new AdvanceItems("Refundable Advance",
+                    0.0,
+                    0.0,
+                    0.0,
+                    advanceInvoice.getInvoiceNumber(),
+                    null);
+        }
+
+        Double paidAmount = 0.0;
+        Double availableAmount = 0.0;
+        if (advanceInvoice.getPaidAmount() != null) {
+            paidAmount = advanceInvoice.getPaidAmount();
+        }
+        if (availableAmount != null) {
+            availableAmount = advanceInvoice.getBalanceAmount();
+        }
+
+        List<RedeemedInfo> listRedeemedInfo = invoiceRedemptionService.findRedeemedItemsFromAdvance(hostelId, advanceInvoice.getInvoiceId());
+
+        return new AdvanceItems("Refundable Advance",
+                availableAmount,
+                paidAmount - availableAmount,
+                paidAmount,
+                advanceInvoice.getInvoiceNumber(),
+                listRedeemedInfo);
+    }
+
+    public AdvanceItems getRedeemedListFromBookings(String hostelId, String customerId) {
+        InvoicesV1 advanceInvoice = invoicesV1Repository.findBookingInvoice(hostelId, customerId);
+        if (advanceInvoice == null) {
+            return new AdvanceItems("Refundable Bookings",
+                    0.0,
+                    0.0,
+                    0.0,
+                    "NA",
+                    null);
+        }
+        if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+            return new AdvanceItems("Refundable Bookings",
+                    0.0,
+                    0.0,
+                    0.0,
+                    advanceInvoice.getInvoiceNumber(),
+                    null);
+        }
+
+        Double paidAmount = 0.0;
+        Double availableAmount = 0.0;
+        if (advanceInvoice.getPaidAmount() != null) {
+            paidAmount = advanceInvoice.getPaidAmount();
+        }
+        if (availableAmount != null) {
+            availableAmount = advanceInvoice.getBalanceAmount();
+        }
+
+        List<RedeemedInfo> listRedeemedInfo = invoiceRedemptionService.findRedeemedItemsFromAdvance(hostelId, advanceInvoice.getInvoiceId());
+
+        return new AdvanceItems("Refundable Bookings",
+                availableAmount,
+                paidAmount - availableAmount,
+                paidAmount,
+                advanceInvoice.getInvoiceNumber(),
+                listRedeemedInfo);
+    }
+
+    public ResponseEntity<?> getAdvanceInvoicesForRedemption(String hostelId, String name, String period, String floor, String room, String minAmount, String maxAmount, int page, int size) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        List<BookingsV1> listAllCheckedInCustomers = new ArrayList<>();
+
+        if (room != null && !room.trim().equalsIgnoreCase("")) {
+            int roomId = Integer.parseInt(room);
+            listAllCheckedInCustomers = bookingsService.getAllCheckedInCustomer(hostelId, roomId);
+        }
+        else if (floor != null && !floor.trim().equalsIgnoreCase("")) {
+            int floorId = Integer.parseInt(floor);
+
+            listAllCheckedInCustomers = bookingsService.getAllCheckedInCustomersByHostelIdAndFloorId(hostelId, floorId);
+        }
+        else {
+            listAllCheckedInCustomers = bookingsService.getAllCheckedInCustomer(hostelId);
+        }
+
+
+        if (listAllCheckedInCustomers != null && !listAllCheckedInCustomers.isEmpty()) {
+            List<String> listCustomerIds = listAllCheckedInCustomers
+                    .stream()
+                    .map(BookingsV1::getCustomerId)
+                    .toList();
+
+            List<Customers> listCustomers = customersService.getCustomerDetails(listCustomerIds, name);
+            List<String> customerIds = null;
+            if (listCustomers != null) {
+                customerIds = listCustomers
+                        .stream()
+                        .map(Customers::getCustomerId)
+                        .toList();
+            }
+
+            List<String> invoiceTypes = new ArrayList<>();
+            invoiceTypes.add(InvoiceType.BOOKING.name());
+
+            Integer minimumAmount = null;
+            Integer maximumAmount = null;
+            if (minAmount != null && !minAmount.trim().equalsIgnoreCase("")) {
+                minimumAmount = Integer.parseInt(minAmount);
+            }
+            if (maxAmount != null && !maxAmount.trim().equalsIgnoreCase("")) {
+                maximumAmount = Integer.parseInt(maxAmount);
+            }
+
+            int totalAdvanceInvoice = 0;
+            int currentPage = 1;
+            int noOfItemsPerPage = 10;
+            int totalPages = 1;
+
+
+            Pageable pageableRequest = PageRequest.of(page-1, size);
+
+            Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, listCustomerIds, invoiceTypes, minimumAmount, maximumAmount, pageableRequest);
+            if (pagebleAdvances != null) {
+                totalAdvanceInvoice = pagebleAdvances.getNumberOfElements();
+                currentPage = pagebleAdvances.getPageable().getPageNumber() + 1;
+                totalPages = pagebleAdvances.getTotalPages();
+                noOfItemsPerPage = pagebleAdvances.getSize();
+
+                List<InvoicesV1> listAdvanceInvoices = pagebleAdvances.getContent();
+            }
+
+        }
+
+        return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN, HttpStatus.BAD_REQUEST);
     }
 }

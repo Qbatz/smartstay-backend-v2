@@ -60,12 +60,12 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     );
 
     @Query(value = """
-            SELECT c FROM Customers c, BookingsV1 b 
-            WHERE c.customerId = b.customerId AND c.hostelId=:hostelId AND 
+            SELECT c FROM Customers c, BookingsV1 b, Rooms r, Beds bed  
+            WHERE c.customerId = b.customerId AND bed.bedId = b.bedId AND r.roomId = bed.roomId AND c.hostelId=:hostelId AND 
             (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR 
             LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND 
             c.currentStatus IN (:type) AND (:customerIds IS NULL OR c.customerId IN (:customerIds)) 
-            ORDER BY b.floorId ASC
+            ORDER BY b.floorId, r.roomId, bed.bedId ASC
             """,
             countQuery = """
                      SELECT count(*) FROM Customers c, BookingsV1 b WHERE c.customerId = b.customerId AND c.hostelId=:hostelId AND 
@@ -151,7 +151,11 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     @Query("SELECT c.advance FROM Customers c WHERE c.hostelId = :hostelId AND c.advance IS NOT NULL")
     List<com.smartstay.smartstay.dao.Advance> findAdvancesByHostelId(@Param("hostelId") String hostelId);
 
-
+    @Query("""
+            SELECT c FROM Customers c WHERE c.customerId IN (:customerId) AND (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
+                                   OR LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%')))
+            """)
+    List<Customers> findByCustomerIdsAndName(List<String> customerId, String name);
     List<Customers> findByXuid(String xuid);
 
     @Query("SELECT c FROM Customers c WHERE c.hostelId = :hostelId AND c.mobile LIKE CONCAT('%', :mobile, '%')")

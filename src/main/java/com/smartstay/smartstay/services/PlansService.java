@@ -63,7 +63,17 @@ public class PlansService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        List<Plans> listAllPlansExceptTrial = plansRepository.findAll()
+        List<String> planType = new ArrayList<>();
+        planType.add(PlanType.TRIAL.name());
+        planType.add("EXPANDABLE_TRIAL");
+
+        List<Plans> trialPlans = plansRepository.findPlansByPlanType(planType);
+        List<String> planCodes = trialPlans
+                .stream()
+                .map(Plans::getPlanCode)
+                .toList();
+
+        List<Plans> listAllPlansExceptTrial = plansRepository.findActivePayablePlans(planCodes)
                 .stream().filter(item -> !item.getPlanType().equalsIgnoreCase(PlanType.TRIAL.name()) && item.isShouldShow())
                 .toList();
 
@@ -141,6 +151,9 @@ public class PlansService {
         } else {
             status = "EXPIRED";
         }
+
+        boolean isTrial = hostelPlan.isTrial()
+                || (plans != null && PlanType.TRIAL.name().equalsIgnoreCase(plans.getPlanType()));
 
         List<OrderHistory> orderHistoryList = orderHistoryRepository.findByHostelIdOrderByCreatedAtDesc(hostelId);
         List<String> listPlanCodes = orderHistoryList.stream()
@@ -223,6 +236,7 @@ public class PlansService {
                 renewalDate,
                 currentPaymentMethod,
                 status,
+                isTrial,
                 billingHistory
         );
 

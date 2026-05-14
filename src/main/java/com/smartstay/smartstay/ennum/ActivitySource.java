@@ -25,5 +25,6 @@ public enum ActivitySource {
     ROOMS,
     SUBSCRIPTION,
     TEMPLATES,
-    TRANSACTIONS
+    TRANSACTIONS,
+    PAYMENTS
 }
