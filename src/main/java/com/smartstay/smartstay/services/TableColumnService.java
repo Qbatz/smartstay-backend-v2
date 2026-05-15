@@ -45,6 +45,18 @@ public class TableColumnService {
                 .toList();
     }
 
+    public List<ColumnFilters> getBookingsColumns(String hostelId, String moduleName) {
+        TableColumns customerTableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, authentication.getName(), moduleName);
+        if (customerTableColumns == null) {
+            return filterOptionsService.findBookingsBasicFilters();
+        }
+
+        return customerTableColumns.getColumns()
+                .stream()
+                .sorted(Comparator.comparing(ColumnFilters::getOrder))
+                .toList();
+    }
+
     public ResponseEntity<?> updateCustomerTableFields(String hostelId, List<CustomersTablesColumn> customersTables) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);

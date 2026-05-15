@@ -25,4 +25,15 @@ public class FilterOptionsService {
         }
         return new ArrayList<>();
     }
+
+    public List<ColumnFilters> findBookingsBasicFilters() {
+        FilterOptions filterOptions = filterOptionsRepositories.findByModuleName(FilterOptionsModule.MODULE_BOOKINGS.name());
+        if (filterOptions != null) {
+            return filterOptions.getFilterOptions()
+                    .stream()
+                    .sorted(Comparator.comparing(ColumnFilters::getOrder))
+                    .toList();
+        }
+        return new ArrayList<>();
+    }
 }

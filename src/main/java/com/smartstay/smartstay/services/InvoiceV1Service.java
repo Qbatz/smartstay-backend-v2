@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.booking.AdvanceInvoicesMapper;
+import com.smartstay.smartstay.Wrappers.booking.BookingsTableMapper;
 import com.smartstay.smartstay.Wrappers.booking.InitializeRedemptionMapper;
 import com.smartstay.smartstay.Wrappers.invoices.*;
 import com.smartstay.smartstay.Wrappers.transactions.TransactionsListMapper;
@@ -24,6 +25,7 @@ import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.RecurringEvents;
+import com.smartstay.smartstay.filterOptions.bookings.BookingsFilterOptions;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
 import com.smartstay.smartstay.payloads.invoice.*;
@@ -31,6 +33,7 @@ import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.InvoiceRedemption.AvailableInvoices;
 import com.smartstay.smartstay.responses.InvoiceRedemption.SelectedInvoiceInfo;
+import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.bookings.*;
 import com.smartstay.smartstay.responses.bookings.AdvanceInfo;
 import com.smartstay.smartstay.responses.customer.*;
@@ -100,11 +103,15 @@ public class InvoiceV1Service {
     private InvoiceDiscountService invoiceDiscountService;
     @Autowired
     private InvoiceRedemptionService invoiceRedemptionService;
+    @Autowired
+    private TableColumnService tableColumnService;
     private TransactionService transactionService;
 
     private BookingsService bookingsService;
     private HostelService hostelService;
     private BedsService bedService;
+    private RoomsService roomsService;
+    private FloorsService floorsService;
 
     @Autowired
     private SubscriptionService subscriptionService;
@@ -132,6 +139,15 @@ public class InvoiceV1Service {
     @Autowired
     public void setBedsService(@Lazy BedsService bedsService) {
         this.bedService = bedsService;
+    }
+
+    @Autowired
+    public void setRoomsService(@Lazy RoomsService roomsService) {
+        this.roomsService = roomsService;
+    }
+    @Autowired
+    public void setFloorsService(@Lazy FloorsService floorsService) {
+        this.floorsService = floorsService;
     }
 
     @Autowired
@@ -1398,6 +1414,29 @@ public class InvoiceV1Service {
                 availableAdvanceAmount,
                 listInvoiceItems, null,
                 amountSettled);
+
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            boolean canRedeemBooking = false;
+            if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                if (invoicesV1.getBalanceAmount() != null && invoicesV1.getBalanceAmount() > 0) {
+                    canRedeemBooking = true;
+                }
+            }
+            invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
+                    Utils.roundOffWithTwoDigit(discountedAmount),
+                    discountedPercentage,
+                    invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus,
+                    invoicesV1.isCancelled(),
+                    invoicesV1.isDiscounted(),
+                    discountReason,
+                    0.0,
+                    canRedeemBooking,
+                    availableCreditAmount,
+                    isAdvanceAvailableForRedeem,
+                    availableAdvanceAmount,
+                    listInvoiceItems, null,
+                    amountSettled);
+        }
 
 
         InvoiceDetails details = new InvoiceDetails(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", customers.getHostelId(), customerInfo, stayInfo, invoiceInfo, accountDetails, paymentHistoryList, signatureInfo);
@@ -4348,9 +4387,11 @@ public class InvoiceV1Service {
                 invoicesV1.getTotalAmount(),
                 invoicesV1.getPaymentStatus(),
                 invoicesV1.getInvoiceType(),
-                Utils.dateToString(invoicesV1.getInvoiceStartDate()));
+                Utils.dateToString(invoicesV1.getInvoiceStartDate()),
+                Utils.dateToString(invoicesV1.getInvoiceDueDate()));
         com.smartstay.smartstay.responses.InvoiceRedemption.CustomerInfo customerInfo = null;
         Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());
+        //for bed details
         if (customers != null) {
             BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(customers.getCustomerId());
             if (bookingsV1 != null) {
@@ -4378,7 +4419,8 @@ public class InvoiceV1Service {
                         bookingInvoice.getTotalAmount(),
                         bookingInvoice.getPaidAmount(),
                         bookingInvoice.getBalanceAmount(),
-                        Utils.dateToString(bookingInvoice.getInvoiceStartDate()));
+                        Utils.dateToString(bookingInvoice.getInvoiceStartDate()),
+                        Utils.dateToString(bookingInvoice.getInvoiceDueDate()));
 
                 AvailableInvoices availableInvoices = new AvailableInvoices(customerInfo, invoiceInfoList, selectedInvoiceInfo);
 
@@ -4388,21 +4430,44 @@ public class InvoiceV1Service {
         }
         else {
             InvoicesV1 advanceInvoice = invoicesV1Repository.findAdvanceInvoiceByCustomerId(invoicesV1.getCustomerId());
-            if (advanceInvoice != null) {
+            if (!advanceInvoice.getInvoiceId().equalsIgnoreCase(invoiceId)) {
+                if (advanceInvoice != null) {
 
-                invoiceInfoList = new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(advanceInvoice.getInvoiceId(),
-                        advanceInvoice.getInvoiceNumber(),
-                        advanceInvoice.getInvoiceType(),
-                        advanceInvoice.getTotalAmount(),
-                        advanceInvoice.getPaidAmount(),
-                        advanceInvoice.getBalanceAmount(),
-                        Utils.dateToString(advanceInvoice.getInvoiceStartDate()));
+                    invoiceInfoList = new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(advanceInvoice.getInvoiceId(),
+                            advanceInvoice.getInvoiceNumber(),
+                            advanceInvoice.getInvoiceType(),
+                            advanceInvoice.getTotalAmount(),
+                            advanceInvoice.getPaidAmount(),
+                            advanceInvoice.getBalanceAmount(),
+                            Utils.dateToString(advanceInvoice.getInvoiceStartDate()),
+                            Utils.dateToString(advanceInvoice.getInvoiceDueDate()));
 
-                AvailableInvoices availableInvoices = new AvailableInvoices(customerInfo, invoiceInfoList, selectedInvoiceInfo);
+                    AvailableInvoices availableInvoices = new AvailableInvoices(customerInfo, invoiceInfoList, selectedInvoiceInfo);
 
-                return new ResponseEntity<>(availableInvoices, HttpStatus.OK);
+                    return new ResponseEntity<>(availableInvoices, HttpStatus.OK);
 
+                }
             }
+            else {
+                InvoicesV1 bookingInvoice = invoicesV1Repository.findBookingInvoice(hostelId, invoicesV1.getCustomerId());
+                if (bookingInvoice != null) {
+
+                    invoiceInfoList = new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(bookingInvoice.getInvoiceId(),
+                            bookingInvoice.getInvoiceNumber(),
+                            bookingInvoice.getInvoiceType(),
+                            bookingInvoice.getTotalAmount(),
+                            bookingInvoice.getPaidAmount(),
+                            bookingInvoice.getBalanceAmount(),
+                            Utils.dateToString(bookingInvoice.getInvoiceStartDate()),
+                            Utils.dateToString(bookingInvoice.getInvoiceDueDate()));
+
+                    AvailableInvoices availableInvoices = new AvailableInvoices(customerInfo, invoiceInfoList, selectedInvoiceInfo);
+
+                    return new ResponseEntity<>(availableInvoices, HttpStatus.OK);
+
+                }
+            }
+
         }
 
 
@@ -4503,7 +4568,48 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
+        if (authentication.getSource().equalsIgnoreCase("web")) {
+            return getBookingWebResponse(hostelId, name, period, floor, room, minAmount, maxAmount, page, size);
+        }
+
+
+
+        return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN, HttpStatus.BAD_REQUEST);
+    }
+
+
+    private ResponseEntity<?> getBookingWebResponse(String hostelId, String name, String period, String floor, String room, String minAmount, String maxAmount, int page, int size) {
         List<BookingsV1> listAllCheckedInCustomers = new ArrayList<>();
+        List<Floors> listFloor = floorsService.findByHostelId(hostelId);
+        List<Rooms> roomsList = roomsService.findByHostelId(hostelId);
+        List<Beds> listBeds = bedService.findByHostelId(hostelId);
+        List<BedDetails> listBedDetails = new ArrayList<>();
+        if (!listBeds.isEmpty()) {
+            List<Integer> bedIds = listBeds
+                    .stream()
+                    .map(Beds::getBedId)
+                    .toList();
+            listBedDetails = bedService.getBedDetails(bedIds);
+        }
+
+
+        List<BookingsFilterOptions.FilterItems> floorsFilterItem = new ArrayList<>();
+        List<BookingsFilterOptions.RoomsItem> roomsFilterItem = new ArrayList<>();
+        if (!listFloor.isEmpty()) {
+            floorsFilterItem = listFloor
+                    .stream()
+                    .map(i -> new BookingsFilterOptions.FilterItems(i.getFloorName(), String.valueOf(i.getFloorId())))
+                    .toList();
+        }
+
+        if (!roomsList.isEmpty()) {
+            roomsFilterItem = roomsList
+                    .stream()
+                    .map(i -> new BookingsFilterOptions.RoomsItem(i.getRoomName(), String.valueOf(i.getRoomId()), String.valueOf(i.getFloorId())))
+                    .toList();
+        }
+
+        BookingsFilterOptions bookingsFilterOptions = new BookingsFilterOptions(floorsFilterItem, roomsFilterItem);
 
         if (room != null && !room.trim().equalsIgnoreCase("")) {
             int roomId = Integer.parseInt(room);
@@ -4526,13 +4632,13 @@ public class InvoiceV1Service {
                     .toList();
 
             List<Customers> listCustomers = customersService.getCustomerDetails(listCustomerIds, name);
-            List<String> customerIds = null;
-            if (listCustomers != null) {
-                customerIds = listCustomers
-                        .stream()
-                        .map(Customers::getCustomerId)
-                        .toList();
-            }
+//            List<String> customerIds = null;
+//            if (listCustomers != null) {
+//                customerIds = listCustomers
+//                        .stream()
+//                        .map(Customers::getCustomerId)
+//                        .toList();
+//            }
 
             List<String> invoiceTypes = new ArrayList<>();
             invoiceTypes.add(InvoiceType.BOOKING.name());
@@ -4562,10 +4668,35 @@ public class InvoiceV1Service {
                 noOfItemsPerPage = pagebleAdvances.getSize();
 
                 List<InvoicesV1> listAdvanceInvoices = pagebleAdvances.getContent();
+
+                List<ColumnFilters> listColumns = tableColumnService.getBookingsColumns(hostelId, FilterOptionsModule.MODULE_BOOKINGS.name());
+                List<ColumnFilters> activeColumns = listColumns.stream().filter(ColumnFilters::isSelected).sorted(Comparator.comparingInt(ColumnFilters::getOrder)).toList();
+                List<String> tableColumns = activeColumns.stream().map(ColumnFilters::getFieldName).toList();
+
+
+                List<BookingsV1> finalListAllCheckedInCustomers = listAllCheckedInCustomers;
+                List<BedDetails> finalListBedDetails = listBedDetails;
+                List<List<Object>> listBookingInvoices = listAdvanceInvoices
+                        .stream()
+                        .map(i -> new BookingsTableMapper(tableColumns, listCustomers, roomsList, listFloor, finalListAllCheckedInCustomers, finalListBedDetails).apply(i))
+                        .toList();
+
+                BookingsWebResponse bookingsWebResponse = new BookingsWebResponse(totalAdvanceInvoice,
+                        currentPage,
+                        totalPages,
+                        noOfItemsPerPage,
+                        bookingsFilterOptions,
+                        tableColumns,
+                        listColumns,
+                        listBookingInvoices);
+
+                return new ResponseEntity<>(bookingsWebResponse, HttpStatus.OK);
             }
 
         }
 
-        return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(Utils.NO_BOOKINGS_FOUND, HttpStatus.OK);
     }
+
+
 }

@@ -310,7 +310,11 @@ public class RoomsService {
     }
 
     public List<Rooms> findByHostelId(String hostelId) {
-        return roomRepository.findByHostelIdAndIsDeletedFalse(hostelId);
+        List<Rooms> listRooms = roomRepository.findByHostelIdAndIsDeletedFalse(hostelId);
+        if (listRooms == null) {
+            listRooms = new ArrayList<>();
+        }
+        return listRooms;
     }
 
     public List<Rooms> findByHostelIdAndShareType(String hostelId, List<Integer> shareTypes) {

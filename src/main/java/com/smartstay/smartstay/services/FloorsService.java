@@ -22,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -220,4 +221,12 @@ public class FloorsService {
         return floorRepository.findFloorCountsBasedOnHostelId(hostelId).getCount().intValue();
     }
 
+    public List<Floors> findByHostelId(String hostelId) {
+        List<Floors> listFloors = floorRepository.findAllByHostelId(hostelId);
+
+        if (listFloors == null) {
+            listFloors = new ArrayList<>();
+        }
+        return listFloors;
+    }
 }

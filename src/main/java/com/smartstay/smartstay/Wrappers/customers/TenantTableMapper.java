@@ -7,12 +7,11 @@ import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.responses.customer.HeaderAdditionalFields;
 import com.smartstay.smartstay.util.NameUtils;
-import com.smartstay.smartstay.util.TenantColumnUtils;
+import com.smartstay.smartstay.util.columnOptions.TenantColumnUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
 public class TenantTableMapper implements Function<Customers, List<Object>> {

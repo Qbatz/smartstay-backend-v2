@@ -949,8 +949,9 @@ public class BookingsService {
             Date currentRentEndDate = null;
             if (updateInfo.effectiveDate() != null && !updateInfo.effectiveDate().trim().equalsIgnoreCase("")) {
                 Date startsFrom = Utils.stringToDate(updateInfo.effectiveDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT_DD_MM);
+                Date lastDayOfMonth = Utils.findLastDate(1, startsFrom);
                 if (Utils.compareWithTwoDates(startsFrom, billingDates.currentBillEndDate()) > 0) {
-                    BillingDates futureBillDates = hostelService.getBillingRuleOnDate(hostelId, startsFrom);
+                    BillingDates futureBillDates = hostelService.getBillingRuleOnDate(hostelId, lastDayOfMonth);
                     startDate = futureBillDates.currentBillStartDate();
 
                     Calendar calendar = Calendar.getInstance();

@@ -7,5 +7,6 @@ public record SelectedInvoiceInfo(String invoiceId,
                                   Double totalAmount,
                                   String paymentStatus,
                                   String invoiceType,
-                                  String invoiceDate) {
+                                  String invoiceDate,
+                                  String dueDate) {
 }
