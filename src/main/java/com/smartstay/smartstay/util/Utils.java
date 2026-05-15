@@ -276,6 +276,7 @@ public class Utils {
     public static final String CANNOT_MODIFY_BILLING_TYPE = "Cannot modify billing type, Check in tenant exist";
     public static final String CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED = "Cannot delete receipts for settlement generated customers";
     public static final String CANNOT_DELETE_REFUNDED_BOOKING_RECEIPT = "Cannot delete receipts for refunded booking invoices";
+    public static final String CANNOT_DELETE_REDEEMED_RECEIPT = "Cannot delete receipt as the amount has already been redeemed";
     public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
     public static final String CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL = "Only manual invoices are allowed to mark unpaid";
     public static final String CANNOT_MARK_UNPAID_DISCOUNT_APPLIED = "Cannot mark as unpaid for discounted invoices";

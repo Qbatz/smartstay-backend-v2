@@ -20,6 +20,7 @@ import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
+import com.smartstay.smartstay.repositories.InvoiceRedemptionRepository;
 import com.smartstay.smartstay.responses.invoices.AccountDetails;
 import com.smartstay.smartstay.responses.invoices.CustomerInfo;
 import com.smartstay.smartstay.responses.invoices.StayInfo;
@@ -93,6 +94,9 @@ public class TransactionService {
 
     @Autowired
     private SubscriptionService subscriptionService;
+
+    @Autowired
+    private InvoiceRedemptionRepository invoiceRedemptionRepository;
 
     /**
      * not using it
@@ -865,6 +869,15 @@ public class TransactionService {
                 && invoicesV1.getPaymentStatus() != null
                 && (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name()))) {
             return new ResponseEntity<>(Utils.CANNOT_DELETE_REFUNDED_BOOKING_RECEIPT, HttpStatus.BAD_REQUEST);
+        }
+
+        if (invoicesV1.getInvoiceType() != null
+                && (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())
+                || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))) {
+            List<InvoiceRedemption> redemptions = invoiceRedemptionRepository.findByHostelIdAndSourceId(hostelId, invoicesV1.getInvoiceId());
+            if (redemptions != null && !redemptions.isEmpty()) {
+                return new ResponseEntity<>(Utils.CANNOT_DELETE_REDEEMED_RECEIPT, HttpStatus.BAD_REQUEST);
+            }
         }
 
 
