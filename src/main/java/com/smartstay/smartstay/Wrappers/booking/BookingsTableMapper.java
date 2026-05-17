@@ -65,7 +65,8 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
         }
         BookingTableHeader bookingTableHeader = new BookingTableHeader(invoicesV1.getInvoiceId(),
                 canApplyToOtherInvoices,
-                invoicesV1.getBalanceAmount());
+                invoicesV1.getBalanceAmount(),
+                invoicesV1.getCustomerId());
 
         columnItems.add(bookingTableHeader);
         return columnItems;

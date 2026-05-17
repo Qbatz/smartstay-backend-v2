@@ -158,4 +158,21 @@ public class InvoiceRedemptionService {
                 .map(i -> new RedeemedInvoiceMapper(listInvoices).apply(i))
                 .toList();
     }
+
+    public double getAdvanceAmountFromBookingInvoice(String hostelId, String invoiceId) {
+        List<InvoiceRedemption> listRedeemedInvoices = invoiceRedemptionRepository.findByHostelIdAndTargetId(hostelId, invoiceId);
+        if (listRedeemedInvoices == null) {
+            return 0.0;
+        }
+
+        return listRedeemedInvoices
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getRedemptionAmount() == null) {
+                        return 0.0;
+                    }
+                    return i.getRedemptionAmount();
+                })
+                .sum();
+    }
 }

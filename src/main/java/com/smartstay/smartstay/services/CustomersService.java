@@ -1662,6 +1662,7 @@ public class CustomersService {
 
         double totalAdvanceAmount = 0.0;
         double totalAmountToRedeem = 0.0;
+        double advanceAmountRedeemedFromBookingInvoice = 0.0;
 
 
         if (advanceInvoice != null) {
@@ -2023,15 +2024,18 @@ public class CustomersService {
         double availableAmountToRedeem = 0.0;
         double availableAdvanceAmountToRedeem = 0.0;
         double availableBookingAmountToReddem = 0.0;
+        double advanceAmountRedeemedFromBookingInvoice = 0.0;
 
         InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), customers.getHostelId());
         InvoicesV1 bookingInvoice = invoiceService.getBookingInvoice(customers.getCustomerId(), customers.getHostelId());
 
         if (advanceInvoice != null) {
+            advanceAmountRedeemedFromBookingInvoice = invoiceService.getAdvanceAmountFromBookingInvoice(advanceInvoice.getHostelId(), advanceInvoice.getInvoiceId());
             if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                 if (advanceInvoice.getPaidAmount() != null) {
                     isAdvancePaid = true;
                     totalAdvanceAmount = totalAdvanceAmount + advanceInvoice.getPaidAmount();
+                    totalAdvanceAmount = totalAdvanceAmount - advanceAmountRedeemedFromBookingInvoice;
                 }
                 if (advanceInvoice.getBalanceAmount() != null) {
                     availableAdvanceAmountToRedeem = advanceInvoice.getBalanceAmount();

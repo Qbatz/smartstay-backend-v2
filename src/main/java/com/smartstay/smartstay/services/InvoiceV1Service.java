@@ -145,6 +145,7 @@ public class InvoiceV1Service {
     public void setRoomsService(@Lazy RoomsService roomsService) {
         this.roomsService = roomsService;
     }
+
     @Autowired
     public void setFloorsService(@Lazy FloorsService floorsService) {
         this.floorsService = floorsService;
@@ -568,8 +569,21 @@ public class InvoiceV1Service {
             }
             if (invoice.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
                 double deductionAmount = customersService.getDeductionAmount(invoice.getCustomerId());
-                if ((paidAmount + amount) > deductionAmount) {
-                    invoice.setBalanceAmount((paidAmount + amount) - deductionAmount);
+                if (deductionAmount > 0) {
+                    double paidAfterDeduction = (paidAmount + amount) - deductionAmount;
+                    if (paidAfterDeduction > 0) {
+                        if (invoice.getBalanceAmount() != null) {
+                            invoice.setBalanceAmount(paidAfterDeduction - invoice.getBalanceAmount());
+                        }
+                    }
+                } else {
+                    if (invoice.getBalanceAmount() != null) {
+                        invoice.setBalanceAmount(paidAmount + amount - invoice.getBalanceAmount());
+                    }
+                    else {
+                        invoice.setBalanceAmount(paidAmount + amount);
+                    }
+
                 }
             }
             invoice.setPaymentStatus(status);
@@ -770,10 +784,10 @@ public class InvoiceV1Service {
 
         if (Utils.compareWithTwoDates(filteredBooking.getJoiningDate(), invoiceBillingDate.currentBillStartDate()) <= 0) {
             invoiceStartDate = invoiceBillingDate.currentBillStartDate();
-            invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, invoiceBillingDate.dueDays() -1);
+            invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, invoiceBillingDate.dueDays() - 1);
         } else {
             invoiceStartDate = filteredBooking.getJoiningDate();
-            invoiceDueDate = Utils.addDaysToDate(filteredBooking.getJoiningDate(), invoiceBillingDate.dueDays()-1);
+            invoiceDueDate = Utils.addDaysToDate(filteredBooking.getJoiningDate(), invoiceBillingDate.dueDays() - 1);
         }
 
 
@@ -821,8 +835,7 @@ public class InvoiceV1Service {
             if (item.amount() != null) {
                 if (itemName.equalsIgnoreCase("RENT") || itemName.equalsIgnoreCase("ROOM RENT")) {
                     totalAmount = totalAmount + invoiceAmount;
-                }
-                else {
+                } else {
                     totalAmount = totalAmount + item.amount();
                 }
             }
@@ -981,8 +994,7 @@ public class InvoiceV1Service {
             if (item.amount() != null) {
                 if (itemName.equalsIgnoreCase("RENT") || itemName.equalsIgnoreCase("ROOM RENT")) {
                     totalAmount = totalAmount + rentAmount;
-                }
-                else {
+                } else {
                     totalAmount = totalAmount + item.amount();
                 }
             }
@@ -1252,10 +1264,12 @@ public class InvoiceV1Service {
 
         InvoicesV1 advanceInvoices = invoicesV1Repository.findAdvanceInvoiceByCustomerId(customers.getCustomerId());
         if (advanceInvoices != null) {
-            if (advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                if (advanceInvoices.getBalanceAmount() != null && advanceInvoices.getBalanceAmount() > 0) {
-                    isAdvanceAvailableForRedeem = true;
-                    availableAdvanceAmount = advanceInvoices.getBalanceAmount();
+            if (!invoicesV1.getInvoiceId().equalsIgnoreCase(advanceInvoices.getInvoiceId())) {
+                if (advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                    if (advanceInvoices.getBalanceAmount() != null && advanceInvoices.getBalanceAmount() > 0) {
+                        isAdvanceAvailableForRedeem = true;
+                        availableAdvanceAmount = advanceInvoices.getBalanceAmount();
+                    }
                 }
             }
         }
@@ -1277,9 +1291,11 @@ public class InvoiceV1Service {
                 isAdvanceAvailableForRedeem = false;
                 availableCreditAmount = 0.0;
             }
-            if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-                isAdvanceAvailableForRedeem = false;
-                availableCreditAmount = 0.0;
+            if (!invoicesV1.getInvoiceId().equalsIgnoreCase(advanceInvoices.getInvoiceId())) {
+                if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                    isAdvanceAvailableForRedeem = false;
+                    availableCreditAmount = 0.0;
+                }
             }
 
         }
@@ -1325,7 +1341,7 @@ public class InvoiceV1Service {
             }
 
             InvoiceInfo invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(invoicesV1.getBasePrice()),
-                    0.0, 0.0, Utils.roundOffWithTwoDigit( invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
+                    0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
                     Utils.roundOffWithTwoDigit(discountedAmount), discountedPercentage,
                     invoiceRentalPeriod.toString(),
                     invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
@@ -1334,7 +1350,7 @@ public class InvoiceV1Service {
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
-            FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", InvoiceType.SETTLEMENT.name(), customers.getHostelId(), customerInfo, stayInfo, accountDetails, signatureInfo, invoiceSummaries, invoiceInfo, historyMap.get("refundHistory"),  historyMap.get("paymentHistory"));
+            FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", InvoiceType.SETTLEMENT.name(), customers.getHostelId(), customerInfo, stayInfo, accountDetails, signatureInfo, invoiceSummaries, invoiceInfo, historyMap.get("refundHistory"), historyMap.get("paymentHistory"));
             return new ResponseEntity<>(finalSettlementResponse, HttpStatus.OK);
 
         }
@@ -1467,11 +1483,9 @@ public class InvoiceV1Service {
             settlementInvoice.setTotalAmount(Utils.roundOfDouble(totalAmountToBePaid));
             if (Utils.roundOfDouble(totalAmountToBePaid) == 0) {
                 settlementInvoice.setPaymentStatus(PaymentStatus.PAID.name());
-            }
-            else if (Utils.roundOfDouble(totalAmountToBePaid) > 0) {
+            } else if (Utils.roundOfDouble(totalAmountToBePaid) > 0) {
                 settlementInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
-            }
-            else if (Utils.roundOfDouble(totalAmountToBePaid) < 0) {
+            } else if (Utils.roundOfDouble(totalAmountToBePaid) < 0) {
                 settlementInvoice.setPaymentStatus(PaymentStatus.PENDING_REFUND.name());
             }
             settlementInvoice.setInvoiceStartDate(leavingDate);
@@ -1754,14 +1768,13 @@ public class InvoiceV1Service {
                     invoicesV1Repository.save(latestInvoice);
                     return new ReassignRent(latestInvoice.getInvoiceId(), latestInvoice.getInvoiceId(), newBalanceAmount, latestInvoice.getInvoiceStartDate());
 
-                }
-                else {
+                } else {
                     long noOfDaysInCurrentMonth = Utils.findNumberOfDays(joiningBasedBillingRule.currentBillStartDate(), joiningBasedBillingRule.currentBillEndDate());
                     double rentPerday = rent / noOfDaysInCurrentMonth;
 
                     Calendar lastDayCal = Calendar.getInstance();
                     lastDayCal.setTime(joiningDate);
-                    lastDayCal.add(Calendar.DAY_OF_MONTH,-1);
+                    lastDayCal.add(Calendar.DAY_OF_MONTH, -1);
 
                     long noOfDaysInOldInvoice = Utils.findNumberOfDays(startDate, lastDayCal.getTime());
                     latestInvoice.setInvoiceEndDate(lastDayCal.getTime());
@@ -1860,7 +1873,7 @@ public class InvoiceV1Service {
         }
 
         invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(Utils.addDaysToDate(dateJoiningDate, billingDates.dueDays()-1)));
+        invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(Utils.addDaysToDate(dateJoiningDate, billingDates.dueDays() - 1)));
         invoicesV1.setCustomerMobile(invoicesV1.getCustomerMobile());
         invoicesV1.setCustomerMailId(invoicesV1.getCustomerMailId());
         invoicesV1.setGst(0.0);
@@ -2057,7 +2070,7 @@ public class InvoiceV1Service {
             BillingDates billingDates = hostelService.getBillingRuleOnDate(invoicesV1.get(0).getHostelId(), joiningDate);
             InvoicesV1 inv1 = invoicesV1.get(0);
             inv1.setInvoiceStartDate(joiningDate);
-            Date dueDate = Utils.addDaysToDate(joiningDate, billingDates.dueDays()-1);
+            Date dueDate = Utils.addDaysToDate(joiningDate, billingDates.dueDays() - 1);
             inv1.setInvoiceDueDate(dueDate);
 
             invoicesV1Repository.save(inv1);
@@ -2212,7 +2225,7 @@ public class InvoiceV1Service {
                 double rentAmount = rentHistoryService.findRent(customerId, invoicesV1.getInvoiceStartDate());
                 double newRent = 0.0;
                 if (billingDates.hasGracePeriod()) {
-                    Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays()-1);
+                    Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays() - 1);
                     if (Utils.compareWithTwoDates(newJoiningDate, gracePeriodEndingDate) <= 0) {
                         newRent = rentAmount;
                     }
@@ -2230,7 +2243,7 @@ public class InvoiceV1Service {
 
                     newRent = Math.round(noDaysStayingBasedOnNewJoiningDate * rentPerDay);
                 }
-                Date dueDate = Utils.addDaysToDate(newJoiningDate, billingDates.dueDays()-1);
+                Date dueDate = Utils.addDaysToDate(newJoiningDate, billingDates.dueDays() - 1);
 
                 Double totalAmount = invoicesV1.getTotalAmount();
                 double oldRent = invoicesV1.getInvoiceItems().stream().filter(i -> i.getInvoiceItem().equalsIgnoreCase(InvoiceType.RENT.name())).mapToDouble(InvoiceItems::getAmount).sum();
@@ -2297,15 +2310,13 @@ public class InvoiceV1Service {
                     findAndUpdateAdvanceInvoice(customers.getCustomerId(), hostelId, joinigDate, currentMonthBillingDates);
                     return true;
                 }
-            }
-            else {
+            } else {
                 //old joining date is less than current month
                 if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBillingDates.currentBillStartDate()) >= 0) {
                     //checking new joining date is less than month start
                     if (Utils.compareWithTwoDates(newJoiningDate, currentMonthBillingDates.currentBillStartDate()) < 0) {
                         findAndDeleteRentalInvoice(customers.getCustomerId(), oldJoiningDate);
-                    }
-                    else {
+                    } else {
                         //current month to current month
                         findAndUpdateRentalInvoice(customers.getCustomerId(), oldJoiningDate, joinigDate, currentMonthBillingDates, rent);
                     }
@@ -2314,8 +2325,7 @@ public class InvoiceV1Service {
                     return true;
                 }
             }
-        }
-        else {
+        } else {
             //joined in current month
             if (Utils.compareWithTwoDates(currentMonthBillingDates.currentBillStartDate(), oldJoiningDate) <= 0) {
                 List<InvoicesV1> listALlCurrentMonthInvoices = invoicesV1Repository.findAllCurrentMonthInvoices(customers.getCustomerId(), hostelId, currentMonthBillingDates.currentBillStartDate());
@@ -2328,8 +2338,7 @@ public class InvoiceV1Service {
                 if (listALlCurrentMonthInvoices.size() > 1) {
                     return false;
                 }
-            }
-            else if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBillingDates.currentBillStartDate()) < 0) {
+            } else if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBillingDates.currentBillStartDate()) < 0) {
                 List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesFromDate(customers.getCustomerId(), hostelId, oldJoiningDate);
 
                 if (!listInvoices.isEmpty()) {
@@ -2541,7 +2550,7 @@ public class InvoiceV1Service {
         invoicesV1.setPaidAmount(0.0);
 
         invoicesV1.setCreatedBy(authentication.getName());
-        invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joinigDate, billingDates.dueDays()-1));
+        invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joinigDate, billingDates.dueDays() - 1));
         invoicesV1.setGst(0.0);
         invoicesV1.setCgst(0.0);
         invoicesV1.setSgst(0.0);
@@ -2642,7 +2651,7 @@ public class InvoiceV1Service {
             invoicesV1.setPaidAmount(0.0);
 
             invoicesV1.setCreatedBy(authentication.getName());
-            invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joiningDate, billingDates.dueDays()-1));
+            invoicesV1.setInvoiceDueDate(Utils.addDaysToDate(joiningDate, billingDates.dueDays() - 1));
             invoicesV1.setGst(0.0);
             invoicesV1.setCgst(0.0);
             invoicesV1.setSgst(0.0);
@@ -3157,8 +3166,7 @@ public class InvoiceV1Service {
                                 item.getPaidAmount() != null ? item.getPaidAmount() : 0.0,
                                 paymentMode,
                                 paymentMode));
-                    }
-                    else {
+                    } else {
                         paymentHistory.add(new InvoiceRefundHistory(
                                 transactionMap.get(settlementInvoice.getInvoiceId()).getTransactionReferenceId(),
                                 Utils.dateToString(item.getPaymentDate()),
@@ -3169,7 +3177,6 @@ public class InvoiceV1Service {
                                 paymentMode));
                     }
                 }
-
 
 
             });
@@ -3242,26 +3249,26 @@ public class InvoiceV1Service {
         if (!invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
             return new ResponseEntity<>(Utils.CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL, HttpStatus.BAD_REQUEST);
         }
-       if (!invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
-           return new ResponseEntity<>(Utils.CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL, HttpStatus.BAD_REQUEST);
-       }
+        if (!invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL, HttpStatus.BAD_REQUEST);
+        }
 
-       List<TransactionV1> listTransactions = transactionService.getTransactionsByInvoiceId(invoiceId);
-       if (!listTransactions.isEmpty()) {
-           return new ResponseEntity<>(Utils.REEIPTS_EXISTS_CANNOT_MARK_UNPAID, HttpStatus.BAD_REQUEST);
-       }
+        List<TransactionV1> listTransactions = transactionService.getTransactionsByInvoiceId(invoiceId);
+        if (!listTransactions.isEmpty()) {
+            return new ResponseEntity<>(Utils.REEIPTS_EXISTS_CANNOT_MARK_UNPAID, HttpStatus.BAD_REQUEST);
+        }
 
-       invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
-       invoicesV1.setPaidAmount(0.0);
-       invoicesV1.setUpdatedAt(new Date());
-       invoicesV1.setUpdatedBy(authentication.getName());
+        invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        invoicesV1.setPaidAmount(0.0);
+        invoicesV1.setUpdatedAt(new Date());
+        invoicesV1.setUpdatedBy(authentication.getName());
 
-       transactionService.markInvoiceUnpaid(invoicesV1.getCustomerId(), invoicesV1.getTotalAmount(), invoiceId);
+        transactionService.markInvoiceUnpaid(invoicesV1.getCustomerId(), invoicesV1.getTotalAmount(), invoiceId);
 
-       invoicesV1Repository.save(invoicesV1);
-       usersService.addUserLog(hostelId, invoicesV1.getInvoiceId(), ActivitySource.INVOICE, ActivitySourceType.MARK_UNPAID, users);
+        invoicesV1Repository.save(invoicesV1);
+        usersService.addUserLog(hostelId, invoicesV1.getInvoiceId(), ActivitySource.INVOICE, ActivitySourceType.MARK_UNPAID, users);
 
-       return new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     public ResponseEntity<?> applyinvoiceDiscount(String hostelId, String invoiceId, ApplyDiscount discount) {
@@ -3326,8 +3333,7 @@ public class InvoiceV1Service {
             double percentage = 1;
             try {
                 percentage = Double.parseDouble(String.valueOf(discount.discountPercentage()));
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 return new ResponseEntity<>(Utils.INVALID_DISCOUNT_PERCENTAGE, HttpStatus.BAD_REQUEST);
             }
             discountAmount = Utils.roundOfDouble(((double) percentage / 100) * invoicesV1.getBasePrice());
@@ -3343,7 +3349,7 @@ public class InvoiceV1Service {
         }
         invoicesV1Repository.save(invoicesV1);
 
-        invoiceDiscountService.applyDiscount(hostelId, invoiceId,  invoicesV1.getCustomerId(), discount, discountAmount, invoiceTotalAmount);
+        invoiceDiscountService.applyDiscount(hostelId, invoiceId, invoicesV1.getCustomerId(), discount, discountAmount, invoiceTotalAmount);
         paymentSummaryService.applyDiscount(invoicesV1.getCustomerId(), discountAmount);
         usersService.addUserLog(hostelId, invoiceId, ActivitySource.INVOICE, ActivitySourceType.DISCOUNT, users);
         return new ResponseEntity<>(HttpStatus.OK);
@@ -3520,7 +3526,6 @@ public class InvoiceV1Service {
     }
 
     /**
-     *
      * this is for generating current month info
      *
      * @param hostelId
@@ -3540,8 +3545,7 @@ public class InvoiceV1Service {
         Date currentMonthStartDate = null;
         if (Utils.compareWithTwoDates(customers.getJoiningDate(), billingDates.currentBillStartDate()) < 0) {
             currentMonthStartDate = billingDates.currentBillStartDate();
-        }
-        else {
+        } else {
             currentMonthStartDate = customers.getJoiningDate();
         }
         AtomicBoolean isDiscountApplied = new AtomicBoolean(false);
@@ -3568,12 +3572,10 @@ public class InvoiceV1Service {
                         String itemName = null;
                         if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name())) {
                             itemName = i.getOtherItem();
-                        }
-                        else {
+                        } else {
                             if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
                                 itemName = "Electricity";
-                            }
-                            else if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
+                            } else if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
                                 itemName = "Amenities";
                             }
                         }
@@ -3593,7 +3595,7 @@ public class InvoiceV1Service {
             payableAmountForCurrentInvoiceRent = oldInvoices
                     .stream()
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount()!= null) {
+                        if (i.getTotalAmount() != null) {
                             return i.getTotalAmount();
                         }
                         return 0.0;
@@ -3602,7 +3604,7 @@ public class InvoiceV1Service {
             currentMonthPaidRent = oldInvoices
                     .stream()
                     .mapToDouble(i -> {
-                        if (i.getPaidAmount()!= null) {
+                        if (i.getPaidAmount() != null) {
                             return i.getPaidAmount();
                         }
                         return 0.0;
@@ -3662,8 +3664,7 @@ public class InvoiceV1Service {
                 .mapToDouble(i -> {
                     if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
                         return i.getTotalAmount();
-                    }
-                    else if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                    } else if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                         double paidAmount = 0.0;
                         if (i.getPaidAmount() != null) {
                             paidAmount = i.getPaidAmount();
@@ -3714,8 +3715,7 @@ public class InvoiceV1Service {
                 .mapToDouble(i -> {
                     if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
                         return i.getTotalAmount();
-                    }
-                    else if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                    } else if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                         double paidAmount = 0.0;
                         if (i.getPaidAmount() != null) {
                             paidAmount = i.getPaidAmount();
@@ -3800,22 +3800,20 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_VALIDATION, HttpStatus.BAD_REQUEST);
         }
 
-        InvoiceDiscountDto isDiscountApplied =  invoiceDiscountService.editDiscount(hostelId, invoiceId, discount);
+        InvoiceDiscountDto isDiscountApplied = invoiceDiscountService.editDiscount(hostelId, invoiceId, discount);
         if (isDiscountApplied == null) {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
-        if(invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())){
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
             return new ResponseEntity<>(Utils.CANNOT_APPLY_DISCOUNT_PAID_INVOICES, HttpStatus.BAD_REQUEST);
         }
 
         if ((invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference()) == 0) {
             invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
-        }
-        else if (invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference() < 0) {
+        } else if (invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference() < 0) {
             invoicesV1.setPaymentStatus(PaymentStatus.PENDING_REFUND.name());
-        }
-        else {
+        } else {
             invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
         }
         invoicesV1.setTotalAmount(Utils.roundOfDouble(invoicesV1.getTotalAmount() + isDiscountApplied.invoiceDifference()));
@@ -3971,6 +3969,7 @@ public class InvoiceV1Service {
 
         return new ArrayList<>();
     }
+
     public boolean hasInvoicesInRange(String customerId, Date date) {
         List<String> types = Arrays.asList(InvoiceType.RENT.name(), InvoiceType.REASSIGN_RENT.name());
         List<InvoicesV1> invoices = invoicesV1Repository.findInvoicesByCustomerIdAndTypeInAndDate1(customerId, types, date);
@@ -4128,35 +4127,33 @@ public class InvoiceV1Service {
 
             List<InvoicesV1> listNewInvoices = listInvoices
                     .stream()
-                            .map(i -> {
-                                if (i.getPaidAmount() != null) {
-                                    com.smartstay.smartstay.dao.InvoiceRedemption invoiceRedemption1 = ir.stream()
-                                            .filter(i2 -> i.getInvoiceId().equalsIgnoreCase(i2.getTargetInvoiceId()))
-                                            .findFirst()
-                                            .orElse(null);
-                                    if (invoiceRedemption1 != null) {
-                                        i.setPaidAmount(i.getPaidAmount() + invoiceRedemption1.getRedemptionAmount());
-                                    }
-                                }
-                                else {
-                                    com.smartstay.smartstay.dao.InvoiceRedemption invoiceRedemption1 = ir.stream()
-                                            .filter(i2 -> i.getInvoiceId().equalsIgnoreCase(i2.getTargetInvoiceId()))
-                                            .findFirst()
-                                            .orElse(null);
-                                    if (invoiceRedemption1 != null) {
-                                        i.setPaidAmount(invoiceRedemption1.getRedemptionAmount());
-                                    }
-                                }
+                    .map(i -> {
+                        if (i.getPaidAmount() != null) {
+                            com.smartstay.smartstay.dao.InvoiceRedemption invoiceRedemption1 = ir.stream()
+                                    .filter(i2 -> i.getInvoiceId().equalsIgnoreCase(i2.getTargetInvoiceId()))
+                                    .findFirst()
+                                    .orElse(null);
+                            if (invoiceRedemption1 != null) {
+                                i.setPaidAmount(i.getPaidAmount() + invoiceRedemption1.getRedemptionAmount());
+                            }
+                        } else {
+                            com.smartstay.smartstay.dao.InvoiceRedemption invoiceRedemption1 = ir.stream()
+                                    .filter(i2 -> i.getInvoiceId().equalsIgnoreCase(i2.getTargetInvoiceId()))
+                                    .findFirst()
+                                    .orElse(null);
+                            if (invoiceRedemption1 != null) {
+                                i.setPaidAmount(invoiceRedemption1.getRedemptionAmount());
+                            }
+                        }
 
-                                if (i.getPaidAmount().equals(i.getTotalAmount())) {
-                                    i.setPaymentStatus(PaymentStatus.PAID.name());
-                                }
-                                else {
-                                    i.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
-                                }
-                                return i;
-                            })
-                                    .toList();
+                        if (i.getPaidAmount().equals(i.getTotalAmount())) {
+                            i.setPaymentStatus(PaymentStatus.PAID.name());
+                        } else {
+                            i.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+                        }
+                        return i;
+                    })
+                    .toList();
 
 
             invoicesV1Repository.saveAll(listNewInvoices);
@@ -4202,7 +4199,7 @@ public class InvoiceV1Service {
         }
 
 
-        Pageable pageableRequest = PageRequest.of(page-1, size);
+        Pageable pageableRequest = PageRequest.of(page - 1, size);
 
         Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, listCustomerIds, invoiceTypes, pageableRequest);
         if (pagebleAdvances != null) {
@@ -4236,7 +4233,6 @@ public class InvoiceV1Service {
                                 .apply(i)).toList();
 
             }
-
 
 
             AdvanceList advanceList = new AdvanceList(totalAdvanceInvoice,
@@ -4295,8 +4291,7 @@ public class InvoiceV1Service {
         if (advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
             status = false;
             message = "Cannot redeem this invoice";
-        }
-        else if (advanceInvoices.getBalanceAmount() <= 0) {
+        } else if (advanceInvoices.getBalanceAmount() <= 0) {
             status = false;
             message = "Insufficient balance amount to redeem";
         }
@@ -4427,8 +4422,7 @@ public class InvoiceV1Service {
                 return new ResponseEntity<>(availableInvoices, HttpStatus.OK);
 
             }
-        }
-        else {
+        } else {
             InvoicesV1 advanceInvoice = invoicesV1Repository.findAdvanceInvoiceByCustomerId(invoicesV1.getCustomerId());
             if (!advanceInvoice.getInvoiceId().equalsIgnoreCase(invoiceId)) {
                 if (advanceInvoice != null) {
@@ -4447,8 +4441,7 @@ public class InvoiceV1Service {
                     return new ResponseEntity<>(availableInvoices, HttpStatus.OK);
 
                 }
-            }
-            else {
+            } else {
                 InvoicesV1 bookingInvoice = invoicesV1Repository.findBookingInvoice(hostelId, invoicesV1.getCustomerId());
                 if (bookingInvoice != null) {
 
@@ -4573,7 +4566,6 @@ public class InvoiceV1Service {
         }
 
 
-
         return new ResponseEntity<>(Utils.CUSTOMER_NOT_CHECKED_IN, HttpStatus.BAD_REQUEST);
     }
 
@@ -4614,13 +4606,11 @@ public class InvoiceV1Service {
         if (room != null && !room.trim().equalsIgnoreCase("")) {
             int roomId = Integer.parseInt(room);
             listAllCheckedInCustomers = bookingsService.getAllCheckedInCustomer(hostelId, roomId);
-        }
-        else if (floor != null && !floor.trim().equalsIgnoreCase("")) {
+        } else if (floor != null && !floor.trim().equalsIgnoreCase("")) {
             int floorId = Integer.parseInt(floor);
 
             listAllCheckedInCustomers = bookingsService.getAllCheckedInCustomersByHostelIdAndFloorId(hostelId, floorId);
-        }
-        else {
+        } else {
             listAllCheckedInCustomers = bookingsService.getAllCheckedInCustomer(hostelId);
         }
 
@@ -4658,7 +4648,7 @@ public class InvoiceV1Service {
             int totalPages = 1;
 
 
-            Pageable pageableRequest = PageRequest.of(page-1, size);
+            Pageable pageableRequest = PageRequest.of(page - 1, size);
 
             Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, listCustomerIds, invoiceTypes, minimumAmount, maximumAmount, pageableRequest);
             if (pagebleAdvances != null) {
@@ -4699,4 +4689,7 @@ public class InvoiceV1Service {
     }
 
 
+    public double getAdvanceAmountFromBookingInvoice(String hostelId, String invoiceId) {
+        return invoiceRedemptionService.getAdvanceAmountFromBookingInvoice(hostelId, invoiceId);
+    }
 }
