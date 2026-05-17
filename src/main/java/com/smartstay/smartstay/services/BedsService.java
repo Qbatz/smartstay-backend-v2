@@ -1016,7 +1016,11 @@ public class BedsService {
     }
 
     public List<Beds> findByHostelId(String hostelId) {
-        return bedsRepository.findByHostelIdAndIsDeletedFalse(hostelId);
+        List<Beds> listBeds = bedsRepository.findByHostelIdAndIsDeletedFalse(hostelId);
+        if (listBeds == null) {
+            listBeds = new ArrayList<>();
+        }
+        return listBeds;
     }
 
     public List<Beds> findFilledBeds(String hostelId) {

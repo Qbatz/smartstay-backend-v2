@@ -50,6 +50,7 @@ public class RedeemedInvoiceMapper implements Function<InvoiceRedemption, Redeem
                 invoiceNumber,
                 invoiceDate,
                 invoiceType,
+                Utils.dateToString(invoiceRedemption.getRedeemedAt()),
                 invoiceRedemption.getRedemptionAmount(),
                 invoiceAmount);
     }

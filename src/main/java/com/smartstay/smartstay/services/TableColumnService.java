@@ -45,6 +45,18 @@ public class TableColumnService {
                 .toList();
     }
 
+    public List<ColumnFilters> getBookingsColumns(String hostelId, String moduleName) {
+        TableColumns customerTableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, authentication.getName(), moduleName);
+        if (customerTableColumns == null) {
+            return filterOptionsService.findBookingsBasicFilters();
+        }
+
+        return customerTableColumns.getColumns()
+                .stream()
+                .sorted(Comparator.comparing(ColumnFilters::getOrder))
+                .toList();
+    }
+
     public ResponseEntity<?> updateCustomerTableFields(String hostelId, List<CustomersTablesColumn> customersTables) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -131,5 +143,92 @@ public class TableColumnService {
 
        return new ResponseEntity<>(HttpStatus.OK);
 
+    }
+
+    public ResponseEntity<?> updateBookingTableFields(String hostelId, List<CustomersTablesColumn> customersTables) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (customersTables == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (customersTables.isEmpty()) {
+            return new ResponseEntity<>(Utils.ATLEAST_ONE_COLUMN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        TableColumns tableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, users.getUserId(), FilterOptionsModule.MODULE_BOOKINGS.name());
+        if (tableColumns == null) {
+            List<ColumnFilters> listDefaultColumns = filterOptionsService.findBookingsBasicFilters();
+            tableColumns = new TableColumns();
+            tableColumns.setHostelId(hostelId);
+            tableColumns.setUserId(users.getUserId());
+            tableColumns.setModuleName(FilterOptionsModule.MODULE_BOOKINGS.name());
+            tableColumns.setActive(true);
+            tableColumns.setCreatedAt(new Date());
+
+            boolean isAnySelected = customersTables
+                    .stream().anyMatch(CustomersTablesColumn::isSelected);
+            if (!isAnySelected) {
+                tableColumns.setColumns(listDefaultColumns);
+            }
+            else {
+                List<ColumnFilters> listNewColumns = customersTables
+                        .stream()
+                        .map(i -> {
+                            ColumnFilters newFilters = new ColumnFilters();
+                            newFilters.setSelected(i.isSelected());
+                            newFilters.setFieldName(i.fieldName());
+                            newFilters.setOrder(i.order());
+
+                            return newFilters;
+                        })
+                        .toList();
+
+
+                tableColumns.setColumns(listNewColumns);
+            }
+
+
+
+            tableColumnsRepositories.save(tableColumns);
+
+        }
+        else {
+            List<ColumnFilters> listDefaultColumns = filterOptionsService.findBookingsBasicFilters();
+            boolean isAnySelected = customersTables
+                    .stream().anyMatch(CustomersTablesColumn::isSelected);
+            if (!isAnySelected) {
+                tableColumns.setColumns(listDefaultColumns);
+            }
+            else {
+
+                List<ColumnFilters> listNewColumns = customersTables
+                        .stream()
+                        .map(i -> {
+                            ColumnFilters newFilters = new ColumnFilters();
+                            newFilters.setSelected(i.isSelected());
+                            newFilters.setFieldName(i.fieldName());
+                            newFilters.setOrder(i.order());
+
+                            return newFilters;
+                        })
+                        .toList();
+
+
+                tableColumns.setColumns(listNewColumns);
+            }
+
+            tableColumnsRepositories.save(tableColumns);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

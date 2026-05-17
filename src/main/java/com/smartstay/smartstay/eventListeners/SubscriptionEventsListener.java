@@ -33,7 +33,7 @@ public class SubscriptionEventsListener {
         boolean shouldActivateToday = false;
 
         Subscription runningSubscription = subscriptionService.findLatestSubscription(oh.getHostelId());
-        Date startDate = runningSubscription.getPlanEndsAt();
+        Date startDate = Utils.addDaysToDate(runningSubscription.getPlanEndsAt(), 1);
 
         if (Utils.compareWithTwoDates(runningSubscription.getPlanEndsAt(), new Date()) < 0) {
             startDate = new Date();

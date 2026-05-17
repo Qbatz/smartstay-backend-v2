@@ -182,36 +182,47 @@ public class SmartstayApplication {
                 filters3.setFieldName("Tenant Name");
                 filters3.setOrder(3);
 
-
                 ColumnFilters filters4 = new ColumnFilters();
                 filters4.setSelected(true);
-                filters4.setFieldName("Mobile No");
+                filters4.setFieldName("Profile Pic");
                 filters4.setOrder(4);
+
 
                 ColumnFilters filters5 = new ColumnFilters();
                 filters5.setSelected(true);
-                filters5.setFieldName("Floor");
+                filters5.setFieldName("Mobile No");
                 filters5.setOrder(5);
 
                 ColumnFilters filters6 = new ColumnFilters();
                 filters6.setSelected(true);
-                filters6.setFieldName("Room");
+                filters6.setFieldName("Amount");
                 filters6.setOrder(6);
+
+//                ColumnFilters filters7 = new ColumnFilters();
+//                filters7.setSelected(true);
+//                filters7.setFieldName("Status");
+//                filters7.setOrder(7);
 
                 ColumnFilters filters7 = new ColumnFilters();
                 filters7.setSelected(true);
-                filters7.setFieldName("Bed");
+                filters7.setFieldName("Joining Date");
                 filters7.setOrder(7);
 
                 ColumnFilters filters8 = new ColumnFilters();
                 filters8.setSelected(true);
-                filters8.setFieldName("Amount");
+                filters8.setFieldName("Floor Name");
                 filters8.setOrder(8);
 
                 ColumnFilters filters9 = new ColumnFilters();
                 filters9.setSelected(true);
-                filters9.setFieldName("Status");
+                filters9.setFieldName("Room Name");
                 filters9.setOrder(9);
+
+                ColumnFilters filters10 = new ColumnFilters();
+                filters10.setSelected(false);
+                filters10.setFieldName("Bed Name");
+                filters10.setOrder(11);
+
 
                 defaultColumnFilters.add(filters1);
                 defaultColumnFilters.add(filters2);
@@ -222,6 +233,7 @@ public class SmartstayApplication {
                 defaultColumnFilters.add(filters7);
                 defaultColumnFilters.add(filters8);
                 defaultColumnFilters.add(filters9);
+                defaultColumnFilters.add(filters10);
 
                 bookingsFilterOptions.setFilterOptions(defaultColumnFilters);
 
