@@ -31,7 +31,7 @@ public class JoiningBasedBillingSchedular {
     private ApplicationEventPublisher applicationEventPublisher;
 //    @Scheduled(cron = "* 30 3 * * *") for production
 //@Scheduled(cron = "0 30 2 * * *") for dev
-    @Scheduled(cron = "0 30 2 * * *")
+    @Scheduled(cron = "0 30 3 * * *")
     public void joiningDateInvoiceScheduler() {
         int dayFromDate = Utils.findDateFromDate(new Date());
 //        int dayFromDate = 29;
@@ -85,7 +85,7 @@ public class JoiningBasedBillingSchedular {
         List<CustomerBillingRules> listBilling = customerBillingRulesService.findCustomersHavingBillingToday(hostelIds, billingDays);
 
         listBilling.forEach(item -> {
-//            applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this, item.getHostelId(), item.getCustomerId()));
+            applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this, item.getHostelId(), item.getCustomerId()));
         });
 
 

@@ -33,7 +33,7 @@ public class InvoiceScheduler {
     private RecurringTrackerService recurringTrackerService;
 
 //    @Scheduled(cron = "0 0 2 * * *") for productions
-    @Scheduled(cron = "0 20 2 * * *")
+    @Scheduled(cron = "0 0 2 * * *")
     public void generateInvoice() {
 
         List<com.smartstay.smartstay.dao.BillingRules> listBillingRules = hostelConfigService.findAllHostelsHavingBillingToday();
@@ -46,7 +46,7 @@ public class InvoiceScheduler {
         if (listHostels != null && !listHostels.isEmpty()) {
             listHostels.forEach(item -> {
                 if (recurringTrackerService.canGenerateInvoice(item.getHostelId(), new Date())) {
-//                    applicationEventPublisher.publishEvent(new RecurringEvents(this, item.getHostelId()));
+                    applicationEventPublisher.publishEvent(new RecurringEvents(this, item.getHostelId()));
                 }
             });
         }
