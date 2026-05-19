@@ -684,6 +684,12 @@ public class BookingsService {
         return bookingsRepository.findByCustomerId(customerId);
     }
 
+    public boolean isCustomerCurrentlyCheckedIn(String customerId,Integer bedId) {
+        return bookingsRepository.existsByCustomerIdNotAndBedIdAndCurrentStatusIn(customerId,
+                bedId,
+                List.of(BookingStatus.CHECKIN.name(), BookingStatus.NOTICE.name()));
+    }
+
     public List<BookedCustomerInfoElectricity> getAllCheckInCustomers(Integer roomId, Date startDate, Date endDate) {
         return bookingsRepository.getBookingInfoForElectricity(roomId, startDate, endDate);
     }

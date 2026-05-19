@@ -3286,7 +3286,7 @@ public class CustomersService {
         if (reassignRent != null) {
             balanceAmount = reassignRent.balanceAmount() * -1;
         }
-        bedsService.unassignBed(bookingsV1.getBedId());
+        bedsService.unassignBed(customerId,bookingsV1.getBedId());
         bedsService.reassignBed(customerId, request.bedId());
 
         BedRoomFloor bedRoomFloor = bedsService.findRoomAndFloorByBedIdAndHostelId(request.bedId(), hostelId);
