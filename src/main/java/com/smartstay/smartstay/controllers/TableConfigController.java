@@ -24,4 +24,9 @@ public class TableConfigController {
     public ResponseEntity<?> modifyCustomerTables(@PathVariable("hostelId") String hostelId, @RequestBody List<CustomersTablesColumn> customersTables) {
         return tableColumnService.updateCustomerTableFields(hostelId, customersTables);
     }
+
+    @PutMapping("/bookings/{hostelId}")
+    public ResponseEntity<?> modifyBookingTableColumns(@PathVariable("hostelId") String hostelId, @RequestBody List<CustomersTablesColumn> customersTables) {
+        return tableColumnService.updateBookingTableFields(hostelId, customersTables);
+    }
 }

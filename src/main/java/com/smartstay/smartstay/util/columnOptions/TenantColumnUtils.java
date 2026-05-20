@@ -1,4 +1,4 @@
-package com.smartstay.smartstay.util;
+package com.smartstay.smartstay.util.columnOptions;
 
 public class TenantColumnUtils {
     public static final String PROFILE_PIC = "Profile Pic";

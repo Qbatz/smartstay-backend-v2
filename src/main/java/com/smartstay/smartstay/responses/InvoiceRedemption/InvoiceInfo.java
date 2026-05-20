@@ -6,5 +6,6 @@ public record InvoiceInfo(String invoiceId,
                           Double invoiceAmount,
                           Double paidAmount,
                           Double availableBalance,
-                          String invoiceDate) {
+                          String invoiceDate,
+                          String dueDate) {
 }

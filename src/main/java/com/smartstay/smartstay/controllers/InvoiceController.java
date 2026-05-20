@@ -111,14 +111,14 @@ public class InvoiceController {
 
     @GetMapping("/advances/new/{hostelId}")
     public ResponseEntity<?> getAdvancesNew(@PathVariable("hostelId") String hostelId,
-                                            @RequestParam(value = "page", defaultValue = "1") int page,
-                                            @RequestParam(value = "size", defaultValue = "10") int size,
-                                            @RequestParam(value = "name") String name,
-                                            @RequestParam(value = "period") String period,
-                                            @RequestParam(value = "floor") String floor,
-                                            @RequestParam(value = "room") String room,
-                                            @RequestParam(value = "minAmount") String minimumAmount,
-                                            @RequestParam(value = "maxAmount") String maxAmount) {
+                                            @RequestParam(value = "page", defaultValue = "1", required = false) int page,
+                                            @RequestParam(value = "size", defaultValue = "10", required = false) int size,
+                                            @RequestParam(value = "name", required = false) String name,
+                                            @RequestParam(value = "period", required = false) String period,
+                                            @RequestParam(value = "floor", required = false) String floor,
+                                            @RequestParam(value = "room",required = false) String room,
+                                            @RequestParam(value = "minAmount", required = false) String minimumAmount,
+                                            @RequestParam(value = "maxAmount", required = false) String maxAmount) {
         return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, name, period, floor, room, minimumAmount, maxAmount, page, size);
     }
 
@@ -128,7 +128,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/advances/{hostelId}/{invoiceId}")
-    public ResponseEntity<?> getAdvanceInvoicesForCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
-        return invoiceV1Service.getAvailableInvoicesToApply(hostelId, invoiceId);
+    public ResponseEntity<?> getAdvanceInvoicesForCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestParam(value = "type", required = false) String type) {
+        return invoiceV1Service.getAvailableInvoicesToApply(hostelId, invoiceId, type);
     }
 }

@@ -684,6 +684,12 @@ public class BookingsService {
         return bookingsRepository.findByCustomerId(customerId);
     }
 
+    public boolean isCustomerCurrentlyCheckedIn(String customerId,Integer bedId) {
+        return bookingsRepository.existsByCustomerIdNotAndBedIdAndCurrentStatusIn(customerId,
+                bedId,
+                List.of(BookingStatus.CHECKIN.name(), BookingStatus.NOTICE.name()));
+    }
+
     public List<BookedCustomerInfoElectricity> getAllCheckInCustomers(Integer roomId, Date startDate, Date endDate) {
         return bookingsRepository.getBookingInfoForElectricity(roomId, startDate, endDate);
     }
@@ -949,8 +955,9 @@ public class BookingsService {
             Date currentRentEndDate = null;
             if (updateInfo.effectiveDate() != null && !updateInfo.effectiveDate().trim().equalsIgnoreCase("")) {
                 Date startsFrom = Utils.stringToDate(updateInfo.effectiveDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT_DD_MM);
+                Date lastDayOfMonth = Utils.findLastDate(1, startsFrom);
                 if (Utils.compareWithTwoDates(startsFrom, billingDates.currentBillEndDate()) > 0) {
-                    BillingDates futureBillDates = hostelService.getBillingRuleOnDate(hostelId, startsFrom);
+                    BillingDates futureBillDates = hostelService.getBillingRuleOnDate(hostelId, lastDayOfMonth);
                     startDate = futureBillDates.currentBillStartDate();
 
                     Calendar calendar = Calendar.getInstance();
@@ -961,6 +968,13 @@ public class BookingsService {
                 } else {
                     currentRentEndDate = billingDates.currentBillEndDate();
                     startDate = newBillingCalendar.getTime();
+                }
+
+                if (billingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                    Calendar postpaidCalendar = Calendar.getInstance();
+                    postpaidCalendar.setTime(startDate);
+                    postpaidCalendar.add(Calendar.MONTH, 1);
+                    startDate = postpaidCalendar.getTime();
                 }
 
                 rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate(), currentRentEndDate);

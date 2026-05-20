@@ -1459,7 +1459,17 @@ public class CustomersService {
             }
         }
 
-        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, customers.getProfilePic(), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic);
+        List<EffectiveMonth> effectiveFromMonth = null;
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(customers.getHostelId());
+        if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
+            billingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), new Date());
+        }
+        if (billingDates != null && billingDates.currentBillStartDate() != null) {
+            int billingStartDay = Utils.findDateFromDate(billingDates.currentBillStartDate());
+            effectiveFromMonth = Utils.getEffectiveBillingMonths(new Date(), customers.getJoiningDate(), billingStartDay);
+        }
+
+        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, customers.getProfilePic(), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic, effectiveFromMonth);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -1686,6 +1696,7 @@ public class CustomersService {
 
         double totalAdvanceAmount = 0.0;
         double totalAmountToRedeem = 0.0;
+        double advanceAmountRedeemedFromBookingInvoice = 0.0;
 
 
         if (advanceInvoice != null) {
@@ -2047,15 +2058,18 @@ public class CustomersService {
         double availableAmountToRedeem = 0.0;
         double availableAdvanceAmountToRedeem = 0.0;
         double availableBookingAmountToReddem = 0.0;
+        double advanceAmountRedeemedFromBookingInvoice = 0.0;
 
         InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), customers.getHostelId());
         InvoicesV1 bookingInvoice = invoiceService.getBookingInvoice(customers.getCustomerId(), customers.getHostelId());
 
         if (advanceInvoice != null) {
+            advanceAmountRedeemedFromBookingInvoice = invoiceService.getAdvanceAmountFromBookingInvoice(advanceInvoice.getHostelId(), advanceInvoice.getInvoiceId());
             if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                 if (advanceInvoice.getPaidAmount() != null) {
                     isAdvancePaid = true;
                     totalAdvanceAmount = totalAdvanceAmount + advanceInvoice.getPaidAmount();
+                    totalAdvanceAmount = totalAdvanceAmount - advanceAmountRedeemedFromBookingInvoice;
                 }
                 if (advanceInvoice.getBalanceAmount() != null) {
                     availableAdvanceAmountToRedeem = advanceInvoice.getBalanceAmount();
@@ -3306,7 +3320,7 @@ public class CustomersService {
         if (reassignRent != null) {
             balanceAmount = reassignRent.balanceAmount() * -1;
         }
-        bedsService.unassignBed(bookingsV1.getBedId());
+        bedsService.unassignBed(customerId,bookingsV1.getBedId());
         bedsService.reassignBed(customerId, request.bedId());
 
         BedRoomFloor bedRoomFloor = bedsService.findRoomAndFloorByBedIdAndHostelId(request.bedId(), hostelId);

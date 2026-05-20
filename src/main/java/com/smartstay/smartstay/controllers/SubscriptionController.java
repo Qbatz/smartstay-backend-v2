@@ -33,5 +33,9 @@ public class SubscriptionController {
     public ResponseEntity<?> addMobileSubscription(@PathVariable("hostelId") String hostelId, @RequestBody @Valid Subscription subscription) {
         return subscriptionService.addSubscriptionMobile(hostelId, subscription);
     }
+    @GetMapping("/payment/verify/{hostelId}/{paymentId}")
+    public ResponseEntity<?> verifyPayment(@PathVariable("hostelId") String hostelId, @PathVariable("paymentId") String paymentId) {
+        return subscriptionService.verifyPayment(hostelId, paymentId);
+    }
 
 }
