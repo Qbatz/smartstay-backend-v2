@@ -970,6 +970,13 @@ public class BookingsService {
                     startDate = newBillingCalendar.getTime();
                 }
 
+                if (billingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                    Calendar postpaidCalendar = Calendar.getInstance();
+                    postpaidCalendar.setTime(startDate);
+                    postpaidCalendar.add(Calendar.MONTH, 1);
+                    startDate = postpaidCalendar.getTime();
+                }
+
                 rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate(), currentRentEndDate);
 
                 RentHistory existing = rentHistoryService.findByCustomerIdAndStartsFrom(customers.getCustomerId(), new Date());
