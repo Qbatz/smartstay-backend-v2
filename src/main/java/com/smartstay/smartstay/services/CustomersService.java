@@ -1870,14 +1870,14 @@ public class CustomersService {
         double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
         double totalDeductions = 0.0;
         double payableRent = unpaidInvoicesInfo.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
-        if (customers.getAdvance() != null) {
-            Advance advance = customers.getAdvance();
-            if (advance.getDeductions() != null) {
-                totalDeductions = advance.getDeductions().stream().mapToDouble(i -> i.getAmount()).sum();
-            }
-        }
+//        if (customers.getAdvance() != null) {
+//            Advance advance = customers.getAdvance();
+//            if (advance.getDeductions() != null) {
+//                totalDeductions = advance.getDeductions().stream().mapToDouble(i -> i.getAmount()).sum();
+//            }
+//        }
 
-        totalAmountToBePaid = totalAmountToBePaid + totalDeductions - paidAmount;
+        totalAmountToBePaid = totalAmountToBePaid - availableTotalAmountToReddem - paidAmount;
         if (isAdvancePaid) {
             totalAmountToBePaid = totalAmountToBePaid - totalAdvanceAmount;
         }
@@ -1885,7 +1885,7 @@ public class CustomersService {
 
         double totalRefundableAdvance = 0.0;
         if (isAdvancePaid) {
-            totalRefundableAdvance = totalAdvanceAmount - totalDeductions;
+            totalRefundableAdvance = availableTotalAmountToReddem;
         }
 
 
@@ -2988,7 +2988,7 @@ public class CustomersService {
             }
         }
 
-        List<Deductions> lisDeductions = customers.getAdvance().getDeductions();
+        List<Deductions> lisDeductions = new ArrayList<>();
         if (deductions != null && !deductions.isEmpty()) {
             lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount())).toList());
         }
