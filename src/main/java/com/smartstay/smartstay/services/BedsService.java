@@ -4,14 +4,12 @@ import com.smartstay.smartstay.Wrappers.BedsMapper;
 import com.smartstay.smartstay.Wrappers.FreeBedsMapper;
 import com.smartstay.smartstay.Wrappers.beds.BedInitializationMapper;
 import com.smartstay.smartstay.Wrappers.beds.CustomersTenantMapper;
-import com.smartstay.smartstay.Wrappers.beds.InitializeBedsMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.Beds;
-import com.smartstay.smartstay.dto.Bookings;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
-import com.smartstay.smartstay.dto.beds.*;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
+import com.smartstay.smartstay.dto.beds.*;
 import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.dashboard.BedsStatus;
 import com.smartstay.smartstay.dto.invoices.InvoiceCustomer;
@@ -23,8 +21,8 @@ import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.EditBedRent;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
-import com.smartstay.smartstay.responses.beds.*;
 import com.smartstay.smartstay.responses.beds.BedDetails;
+import com.smartstay.smartstay.responses.beds.*;
 import com.smartstay.smartstay.responses.customer.InitializeBooking;
 import com.smartstay.smartstay.responses.hostel.IBedSummary;
 import com.smartstay.smartstay.util.Utils;
@@ -32,7 +30,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -91,23 +88,15 @@ public class BedsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentIdAndIsDeletedFalse(roomId, user.getParentId());
-        List<Integer> listBedId = listBeds
-                .stream()
-                .map(Beds::getBedId)
-                .toList();
+        List<Integer> listBedId = listBeds.stream().map(Beds::getBedId).toList();
         List<FloorNameRoomName> nameMapping = bedsRepository.getBedNameRoomName(listBedId);
         List<BedBookingStatus> bedsCurrentStatus = bookingService.getBookingDetailsByBedIds(listBedId);
 
-        List<String> lisCustomerIds = bedsCurrentStatus
-                .stream()
-                .map(BedBookingStatus::customerId)
-                .toList();
+        List<String> lisCustomerIds = bedsCurrentStatus.stream().map(BedBookingStatus::customerId).toList();
 
         List<InvoiceCustomer> listInvoiceIdCustomerId = bookingService.findDueCustomers(lisCustomerIds);
 
-        List<BedsResponse> bedsResponses = listBeds
-                .stream()
-                .map(item -> new BedsMapper(nameMapping, bedsCurrentStatus, listInvoiceIdCustomerId).apply(item)).toList();
+        List<BedsResponse> bedsResponses = listBeds.stream().map(item -> new BedsMapper(nameMapping, bedsCurrentStatus, listInvoiceIdCustomerId).apply(item)).toList();
         return new ResponseEntity<>(bedsResponses, HttpStatus.OK);
     }
 
@@ -155,11 +144,7 @@ public class BedsService {
             isOccupied = true;
             List<BookingsV1> bookingsV1 = bookingService.checkOccupiedByBedId(beds.getBedId());
             if (bookingsV1 != null) {
-                BookingsV1 currentCheckIn = bookingsV1
-                        .stream()
-                        .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()))
-                        .findFirst()
-                        .orElse(null);
+                BookingsV1 currentCheckIn = bookingsV1.stream().filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())).findFirst().orElse(null);
                 if (currentCheckIn != null) {
                     Customers customers = customersService.getCustomerInformation(currentCheckIn.getCustomerId());
                     String tenantId = null;
@@ -219,8 +204,7 @@ public class BedsService {
                             fullName.append(" ");
                             fullName.append(customers.getLastName());
                             initials.append(customers.getLastName().toUpperCase().charAt(0));
-                        }
-                        else if (customers.getFirstName() != null) {
+                        } else if (customers.getFirstName() != null) {
                             if (customers.getFirstName().length() > 1) {
                                 initials.append(customers.getFirstName().toUpperCase().charAt(1));
                             }
@@ -228,34 +212,12 @@ public class BedsService {
 
                     }
 
-                    TenantInfo checkInTenantInfo = new TenantInfo(tenantId,
-                            firstName,
-                            lastName,
-                            fullName.toString(),
-                            profilePic,
-                            initials.toString(),
-                            joiningDate,
-                            bookingDate,
-                            bookingAmount,
-                            mobile,
-                            advance,
-                            rentAmount,
-                            lastInvoiceAmount,
-                            lastInvoiceNumber,
-                            totalInvoice,
-                            leavingDate,
-                            requestedLeavingDate,
-                            currentStatus,
-                            Utils.COUNTRY_CODE);
+                    TenantInfo checkInTenantInfo = new TenantInfo(tenantId, firstName, lastName, fullName.toString(), profilePic, initials.toString(), joiningDate, bookingDate, bookingAmount, mobile, advance, rentAmount, lastInvoiceAmount, lastInvoiceNumber, totalInvoice, leavingDate, requestedLeavingDate, currentStatus, Utils.COUNTRY_CODE);
 
                     currentTenantInfo.add(checkInTenantInfo);
                 }
 
-                BookingsV1 noticeTenant = bookingsV1
-                        .stream()
-                        .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name()))
-                        .findFirst()
-                        .orElse(null);
+                BookingsV1 noticeTenant = bookingsV1.stream().filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())).findFirst().orElse(null);
 
                 if (noticeTenant != null) {
                     Customers customers = customersService.getCustomerInformation(noticeTenant.getCustomerId());
@@ -316,8 +278,7 @@ public class BedsService {
                             fullName.append(" ");
                             fullName.append(customers.getLastName());
                             initials.append(customers.getLastName().toUpperCase().charAt(0));
-                        }
-                        else if (customers.getFirstName() != null) {
+                        } else if (customers.getFirstName() != null) {
                             if (customers.getFirstName().length() > 1) {
                                 initials.append(customers.getFirstName().toUpperCase().charAt(1));
                             }
@@ -325,25 +286,7 @@ public class BedsService {
 
                     }
 
-                    TenantInfo noticeTenantInfo = new TenantInfo(tenantId,
-                            firstName,
-                            lastName,
-                            fullName.toString(),
-                            profilePic,
-                            initials.toString(),
-                            joiningDate,
-                            bookingDate,
-                            bookingAmount,
-                            mobile,
-                            advance,
-                            rentAmount,
-                            lastInvoiceAmount,
-                            lastInvoiceNumber,
-                            totalInvoice,
-                            leavingDate,
-                            requestedLeavingDate,
-                            currentStatus,
-                            Utils.COUNTRY_CODE);
+                    TenantInfo noticeTenantInfo = new TenantInfo(tenantId, firstName, lastName, fullName.toString(), profilePic, initials.toString(), joiningDate, bookingDate, bookingAmount, mobile, advance, rentAmount, lastInvoiceAmount, lastInvoiceNumber, totalInvoice, leavingDate, requestedLeavingDate, currentStatus, Utils.COUNTRY_CODE);
 
                     currentTenantInfo.add(noticeTenantInfo);
                 }
@@ -353,35 +296,16 @@ public class BedsService {
             hasBooking = true;
             List<BookingsV1> bookingsV1 = bookingService.getBookingInfoByBedId(beds.getBedId());
             if (bookingsV1 != null) {
-                List<String> customerIds = bookingsV1
-                        .stream()
-                        .map(BookingsV1::getCustomerId)
-                        .toList();
+                List<String> customerIds = bookingsV1.stream().map(BookingsV1::getCustomerId).toList();
                 List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
                 if (listCustomers != null) {
-                    newTenantInfo.addAll(listCustomers
-                            .stream()
-                            .map(i -> new CustomersTenantMapper(bookingsV1).apply(i))
-                            .toList());
+                    newTenantInfo.addAll(listCustomers.stream().map(i -> new CustomersTenantMapper(bookingsV1).apply(i)).toList());
                 }
 
             }
         }
 
-        BedDetails bedDetails = new BedDetails(beds.getBedName(),
-                beds.getBedId(),
-                beds.getHostelId(),
-                hasBooking,
-                onNotice,
-                isOccupied,
-                beds.getRentAmount(),
-                beds.getRoomId(),
-                freeFrom,
-                floorId,
-                floorName,
-                roomName,
-                currentTenantInfo,
-                newTenantInfo);
+        BedDetails bedDetails = new BedDetails(beds.getBedName(), beds.getBedId(), beds.getHostelId(), hasBooking, onNotice, isOccupied, beds.getRentAmount(), beds.getRoomId(), freeFrom, floorId, floorName, roomName, currentTenantInfo, newTenantInfo);
 
         return new ResponseEntity<>(bedDetails, HttpStatus.OK);
 
@@ -415,9 +339,7 @@ public class BedsService {
         }
 
         if (updateBed.bedName() != null && !updateBed.bedName().isEmpty()) {
-            int duplicateCount = bedsRepository.countByBedNameAndBedId(
-                    updateBed.bedName(), bedId, existingBed.getRoomId()
-            );
+            int duplicateCount = bedsRepository.countByBedNameAndBedId(updateBed.bedName(), bedId, existingBed.getRoomId());
             if (duplicateCount > 0) {
                 return new ResponseEntity<>("Bed name already exists in this room", HttpStatus.CONFLICT);
             }
@@ -459,18 +381,12 @@ public class BedsService {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
-        boolean exists = roomRepository.checkRoomExistInTable(addBed.roomId(), user.getParentId(),
-                addBed.hostelId()) == 1;
+        boolean exists = roomRepository.checkRoomExistInTable(addBed.roomId(), user.getParentId(), addBed.hostelId()) == 1;
         if (!exists) {
             return new ResponseEntity<>("Room Doesn't exist for this hostel", HttpStatus.BAD_REQUEST);
         }
 
-        int duplicateCount = bedsRepository.countByBedNameAndRoomAndHostelAndParent(
-                addBed.bedName(),
-                addBed.roomId(),
-                addBed.hostelId(),
-                user.getParentId()
-        );
+        int duplicateCount = bedsRepository.countByBedNameAndRoomAndHostelAndParent(addBed.bedName(), addBed.roomId(), addBed.hostelId(), user.getParentId());
         if (duplicateCount > 0) {
             return new ResponseEntity<>("Bed name already exists in this room", HttpStatus.CONFLICT);
         }
@@ -544,12 +460,7 @@ public class BedsService {
                 existingBed.setBooked(true);
             } else {
                 boolean isOtherBooingExist = bookingService.checkOtherBookings(existingBed.getBedId(), customerId);
-                if (isOtherBooingExist) {
-                    existingBed.setBooked(true);
-                }
-                else {
-                    existingBed.setBooked(false);
-                }
+                existingBed.setBooked(isOtherBooingExist);
                 existingBed.setStatus(BedStatus.OCCUPIED.name());
                 existingBed.setCurrentStatus(BedStatus.OCCUPIED.name());
                 existingBed.setFreeFrom(null);
@@ -606,27 +517,16 @@ public class BedsService {
         } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
             //check if the bed is checked in on this date
             List<BookingsV1> bookingsV1 = bookingService.findAvailableBookingOnDate(bedId, joiningDate);
-            if (bookingsV1 != null && !bookingsV1.isEmpty()) {
-                return false;
-            }
-            return true;
+            return bookingsV1 == null || bookingsV1.isEmpty();
         } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
 
             if (bookingsV1 != null) {
                 if (bookingsV1.getLeavingDate() != null) {
-                    if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), joiningDate) > 0) {
-                        return true;
-                    } else {
-                        return false;
-                    }
+                    return Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), joiningDate) > 0;
                 }
                 if (bookingsV1.getExpectedJoiningDate() != null) {
-                    if (Utils.compareWithTwoDates(bookingsV1.getExpectedJoiningDate(), joiningDate) > 0) {
-                        return true;
-                    } else {
-                        return false;
-                    }
+                    return Utils.compareWithTwoDates(bookingsV1.getExpectedJoiningDate(), joiningDate) > 0;
                 }
             } else {
                 return true;
@@ -641,23 +541,11 @@ public class BedsService {
         Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
 
         if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
-           return true;
-        }
-        else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
-            if (bookingService.isBedAvailableForCheckIn(bedId, joiningDate)) {
-                return true;
-            }
-            else {
-                return false;
-            }
-        }
-        else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-            if (bookingService.isBedAvailableForCheckIn(bedId, joiningDate)) {
-                return true;
-            }
-            else {
-                return false;
-            }
+            return true;
+        } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
+            return bookingService.isBedAvailableForCheckIn(bedId, joiningDate);
+        } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+            return bookingService.isBedAvailableForCheckIn(bedId, joiningDate);
         }
 
         return false;
@@ -671,7 +559,6 @@ public class BedsService {
     public boolean checkIsBedExsits(Integer bedId, String parentId, String hostelId) {
         return bedsRepository.findByBedIdAndParentIdAndHostelId(bedId, parentId, hostelId) != null;
     }
-
 
 
     public int updateBedToNotice(int bedId, String relievingDate) {
@@ -710,10 +597,7 @@ public class BedsService {
         }
 
         List<FreeBeds> freeBeds = bedsRepository.getFreeBeds(hostelId);
-        List<com.smartstay.smartstay.responses.beds.FreeBeds> beds = freeBeds
-                .stream()
-                .map(item -> new FreeBedsMapper().apply(item))
-                .toList();
+        List<com.smartstay.smartstay.responses.beds.FreeBeds> beds = freeBeds.stream().map(item -> new FreeBedsMapper().apply(item)).toList();
         return new ResponseEntity<>(beds, HttpStatus.OK);
     }
 
@@ -757,15 +641,11 @@ public class BedsService {
 
 //        List<BookingsV1> listLatestBookingInfo = bookingService.getBookingInfoByListOfBeds(bedIdsToGetBookingDetails);
 //        Date dtJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-        List<com.smartstay.smartstay.dto.beds.InitializeBooking> freeBeds = bedsRepository
-                .getFreeBeds(hostelId, Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        List<com.smartstay.smartstay.dto.beds.InitializeBooking> freeBeds = bedsRepository.getFreeBeds(hostelId, Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
 
         List<BookingBankInfo> listBanks = bankingService.getAllAccounts(hostelId);
 
-        List<Integer> bookedBedIds = freeBeds
-                .stream()
-                .map(com.smartstay.smartstay.dto.beds.InitializeBooking::getBedId)
-                .toList();
+        List<Integer> bookedBedIds = freeBeds.stream().map(com.smartstay.smartstay.dto.beds.InitializeBooking::getBedId).toList();
         List<BookingsV1> bookedBeds = bookingService.getBookingInfoByListOfBeds(bookedBedIds);
 
 //        List<com.smartstay.smartstay.responses.beds.FreeBeds> listFreeBeds = listAllBeds
@@ -773,9 +653,7 @@ public class BedsService {
 //                .map(i -> new InitializeBedsMapper(listBedDetails, listLatestBookingInfo, dtJoiningDate).apply(i))
 //                .toList();
 
-        List<BedInitializations> initializations = freeBeds.stream()
-                .map(i -> new BedInitializationMapper(bookedBeds).apply(i))
-                .toList();
+        List<BedInitializations> initializations = freeBeds.stream().map(i -> new BedInitializationMapper(bookedBeds).apply(i)).toList();
 
         InitializeBooking initializeBooking = new InitializeBooking(initializations, listBanks);
         return new ResponseEntity<>(initializeBooking, HttpStatus.OK);
@@ -852,19 +730,18 @@ public class BedsService {
         return true;
     }
 
-    public void unassignBed(Integer bedId) {
+    public void unassignBed(String customerId, Integer bedId) {
 
         bedsRepository.findById(bedId).ifPresent(currentBed -> {
-            if (currentBed.getStatus().equalsIgnoreCase(BedStatus.BOOKED.name()) && currentBed.isBooked()) {
+            boolean hasActiveBooking = bookingService.isCustomerCurrentlyCheckedIn(customerId, bedId);
+
+            if (!hasActiveBooking) {
                 currentBed.setCurrentStatus(BedStatus.VACANT.name());
+                if (BedStatus.NOTICE.name().equalsIgnoreCase(currentBed.getCurrentStatus())) {
+                    currentBed.setFreeFrom(null);
+                }
+                bedsRepository.save(currentBed);
             }
-            else {
-                currentBed.setCurrentStatus(BedStatus.VACANT.name());
-            }
-            if (currentBed.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-                currentBed.setFreeFrom(null);
-            }
-            bedsRepository.save(currentBed);
         });
     }
 
@@ -876,8 +753,7 @@ public class BedsService {
                 if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
                     beds.setCurrentStatus(BedStatus.NOTICE.name());
                     beds.setFreeFrom(bookingsV1.getLeavingDate());
-                }
-                else {
+                } else {
                     beds.setCurrentStatus(BedStatus.OCCUPIED.name());
                     beds.setFreeFrom(null);
                 }
@@ -901,12 +777,12 @@ public class BedsService {
         bed.setCurrentStatus(BedStatus.VACANT.name());
         if (settlementDetails != null && settlementDetails.getLeavingDate() != null) {
             bed.setFreeFrom(settlementDetails.getLeavingDate());
-        }
-        else {
+        } else {
             bed.setFreeFrom(null);
         }
         return bedsRepository.save(bed);
     }
+
     public BedsStatus getBedCountsForDashboard(String hostelId) {
         List<Beds> listBeds = bedsRepository.findByHostelIdAndIsDeletedFalse(hostelId);
 
@@ -919,25 +795,16 @@ public class BedsService {
             boolean isBooked = Boolean.TRUE.equals(bed.isBooked());
 
 
-            if (status.equalsIgnoreCase(BedStatus.OCCUPIED.name()) ||
-                    status.equalsIgnoreCase(BedStatus.BOOKED.name()) || isBooked) {
+            if (status.equalsIgnoreCase(BedStatus.OCCUPIED.name()) || status.equalsIgnoreCase(BedStatus.BOOKED.name()) || isBooked) {
                 occupiedCount++;
-            }
-
-            else if (status.equalsIgnoreCase(BedStatus.VACANT.name()) ||
-                    status.equalsIgnoreCase(BedStatus.NOTICE.name())) {
+            } else if (status.equalsIgnoreCase(BedStatus.VACANT.name()) || status.equalsIgnoreCase(BedStatus.NOTICE.name())) {
                 availableCount++;
             }
         }
 
         Integer bookedBedCount = bookingService.getBookedBedCount(hostelId);
 
-        return new BedsStatus(
-                totalBeds,
-                availableCount,
-                occupiedCount,
-                bookedBedCount
-        );
+        return new BedsStatus(totalBeds, availableCount, occupiedCount, bookedBedCount);
     }
 
 
@@ -1005,13 +872,10 @@ public class BedsService {
     }
 
     public void deleteBedsByRoomId(Integer roomId, String parentId) {
-        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentIdAndIsDeletedFalse(roomId, parentId)
-                .stream()
-                .map(i -> {
-                    i.setIsDeleted(true);
-                    return i;
-                })
-                .toList();
+        List<Beds> listBeds = bedsRepository.findAllByRoomIdAndParentIdAndIsDeletedFalse(roomId, parentId).stream().map(i -> {
+            i.setIsDeleted(true);
+            return i;
+        }).toList();
         bedsRepository.saveAll(listBeds);
     }
 
@@ -1029,13 +893,10 @@ public class BedsService {
 
     public void deleteBedsForFloorDeletion(List<Integer> roomIds, String hostelId) {
         List<Beds> listBeds = bedsRepository.findByHostelIdAndRoomIdIn(hostelId, roomIds);
-        List<Beds> deletableBeds = listBeds
-                .stream()
-                .map(i -> {
-                    i.setIsDeleted(true);
-                    return i;
-                })
-                .toList();
+        List<Beds> deletableBeds = listBeds.stream().map(i -> {
+            i.setIsDeleted(true);
+            return i;
+        }).toList();
 
         bedsRepository.saveAll(deletableBeds);
     }

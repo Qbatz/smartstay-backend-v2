@@ -1435,7 +1435,17 @@ public class CustomersService {
             }
         }
 
-        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, customers.getProfilePic(), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic);
+        List<EffectiveMonth> effectiveFromMonth = null;
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(customers.getHostelId());
+        if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
+            billingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), new Date());
+        }
+        if (billingDates != null && billingDates.currentBillStartDate() != null) {
+            int billingStartDay = Utils.findDateFromDate(billingDates.currentBillStartDate());
+            effectiveFromMonth = Utils.getEffectiveBillingMonths(new Date(), customers.getJoiningDate(), billingStartDay);
+        }
+
+        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, customers.getProfilePic(), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic, effectiveFromMonth);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -3286,7 +3296,7 @@ public class CustomersService {
         if (reassignRent != null) {
             balanceAmount = reassignRent.balanceAmount() * -1;
         }
-        bedsService.unassignBed(bookingsV1.getBedId());
+        bedsService.unassignBed(customerId,bookingsV1.getBedId());
         bedsService.reassignBed(customerId, request.bedId());
 
         BedRoomFloor bedRoomFloor = bedsService.findRoomAndFloorByBedIdAndHostelId(request.bedId(), hostelId);

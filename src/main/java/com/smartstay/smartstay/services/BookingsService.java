@@ -684,6 +684,12 @@ public class BookingsService {
         return bookingsRepository.findByCustomerId(customerId);
     }
 
+    public boolean isCustomerCurrentlyCheckedIn(String customerId,Integer bedId) {
+        return bookingsRepository.existsByCustomerIdNotAndBedIdAndCurrentStatusIn(customerId,
+                bedId,
+                List.of(BookingStatus.CHECKIN.name(), BookingStatus.NOTICE.name()));
+    }
+
     public List<BookedCustomerInfoElectricity> getAllCheckInCustomers(Integer roomId, Date startDate, Date endDate) {
         return bookingsRepository.getBookingInfoForElectricity(roomId, startDate, endDate);
     }
@@ -962,6 +968,13 @@ public class BookingsService {
                 } else {
                     currentRentEndDate = billingDates.currentBillEndDate();
                     startDate = newBillingCalendar.getTime();
+                }
+
+                if (billingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                    Calendar postpaidCalendar = Calendar.getInstance();
+                    postpaidCalendar.setTime(startDate);
+                    postpaidCalendar.add(Calendar.MONTH, 1);
+                    startDate = postpaidCalendar.getTime();
                 }
 
                 rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate(), currentRentEndDate);

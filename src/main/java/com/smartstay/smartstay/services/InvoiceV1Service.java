@@ -2292,7 +2292,7 @@ public class InvoiceV1Service {
             invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
 
             List<InvoicesV1> listInvoices = invoicesV1Repository.findInvoicesByCustomerIdAndTypeIn(customers.getCustomerId(), invoicesTypes);
-            if (listInvoices.size() > 1) {
+            if (exceedsJoiningDateChangeInvoiceLimit(listInvoices, currentMonthBillingDates)) {
                 return false;
             }
             List<InvoicesV1> findPaidOrParialyPaidInvoices = listInvoices
@@ -2316,7 +2316,9 @@ public class InvoiceV1Service {
                     if (!listInvoices.isEmpty()) {
                         return false;
                     }
-                    createNewInvoiceForCurrentMonthForJoiningBasedBilling(customers, hostelId, joinigDate, rent, currentMonthBillingDates);
+                    if (!currentMonthBillingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                        createNewInvoiceForCurrentMonthForJoiningBasedBilling(customers, hostelId, joinigDate, rent, currentMonthBillingDates);
+                    }
                     findAndUpdateAdvanceInvoice(customers.getCustomerId(), hostelId, joinigDate, currentMonthBillingDates);
                     return true;
                 }
@@ -2345,7 +2347,7 @@ public class InvoiceV1Service {
                     return false;
                 }
 
-                if (listALlCurrentMonthInvoices.size() > 1) {
+                if (exceedsJoiningDateChangeInvoiceLimit(listALlCurrentMonthInvoices, currentMonthBillingDates)) {
                     return false;
                 }
             } else if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBillingDates.currentBillStartDate()) < 0) {
@@ -2380,6 +2382,13 @@ public class InvoiceV1Service {
 
         return true;
 
+    }
+
+    private boolean exceedsJoiningDateChangeInvoiceLimit(List<InvoicesV1> invoices, BillingDates billingDates) {
+        if (billingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+            return invoices != null && !invoices.isEmpty();
+        }
+        return invoices != null && invoices.size() > 1;
     }
 
     private void findAndDeleteRentalInvoice(String customerId, Date oldJoiningDate) {
