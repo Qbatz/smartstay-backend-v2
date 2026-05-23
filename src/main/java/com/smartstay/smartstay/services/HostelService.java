@@ -382,7 +382,9 @@ public class HostelService {
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(requestedDate);
-        calendar.set(Calendar.DAY_OF_MONTH, Utils.dateToDate(joiningDate));
+        if (joiningDate != null) {
+            calendar.set(Calendar.DAY_OF_MONTH, Utils.dateToDate(joiningDate));
+        }
         if (Utils.compareWithTwoDates(requestedDate, calendar.getTime()) < 0) {
             calendar.add(Calendar.MONTH, -1);
         }
