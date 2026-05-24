@@ -81,7 +81,7 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.PROFILE_PIC)) {
             if (customers.getProfilePic() != null) {
-                return customers.getCustomerId();
+                return customers.getProfilePic();
             }
             return NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
         }

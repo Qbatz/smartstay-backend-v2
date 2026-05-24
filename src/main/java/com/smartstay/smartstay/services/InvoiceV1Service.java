@@ -4317,6 +4317,7 @@ public class InvoiceV1Service {
                             }
                         }
 
+
                         if (i.getPaidAmount().equals(i.getTotalAmount())) {
                             i.setPaymentStatus(PaymentStatus.PAID.name());
                         } else {
@@ -4324,19 +4325,19 @@ public class InvoiceV1Service {
                         }
 
                         if (i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
-//                            double deductions = customersService.getDeductionAmount(i.getCustomerId());
+                            double deductions = customersService.getDeductionAmount(i.getCustomerId());
                             if (i.getBalanceAmount() != null) {
                                 com.smartstay.smartstay.dao.InvoiceRedemption invoiceRedemption1 = ir.stream()
                                         .filter(i2 -> i.getInvoiceId().equalsIgnoreCase(i2.getTargetInvoiceId()))
                                         .findFirst()
                                         .orElse(null);
                                 if (invoiceRedemption1 != null) {
-//                                    double amountAfterDeduction = i.getPaidAmount() - deductions;
+                                    double amountAfterDeduction = i.getPaidAmount() - deductions;
                                     if (i.getBalanceAmount() != null) {
-                                        i.setBalanceAmount(i.getBalanceAmount() + invoiceRedemption1.getRedemptionAmount());
+                                        i.setBalanceAmount(amountAfterDeduction);
                                     }
                                     else {
-                                        i.setBalanceAmount(invoiceRedemption1.getRedemptionAmount());
+                                        i.setBalanceAmount(amountAfterDeduction);
                                     }
 
 
