@@ -545,7 +545,44 @@ public class CustomersServiceV2 {
             }
         }
 
-        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, customers.getProfilePic(), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic);
+        CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
+                customers.getHostelId(),
+                customers.getFirstName(),
+                customers.getLastName(),
+                fullName,
+                customers.getEmailId(),
+                customers.getMobile(),
+                "91",
+                initials,
+                customers.getProfilePic(),
+                bookingId,
+                isNewRentAvailable,
+                newRentAmount,
+                newRentLabelHint,
+                customers.getCurrentStatus(),
+                address,
+                hostelInformation,
+                kycInfo,
+                advanceInfo,
+                checkoutInfo,
+                bookingInfo,
+                invoiceResponseList,
+                listBeds,
+                listTransactionResponse,
+                amenities,
+                listRequestedAmenities,
+                walletInfo,
+                customerFiles,
+                additionalContacts,
+                isJoiningDateEditable,
+                createdDate,
+                createdTime,
+                createdAt,
+                createdBy,
+                createdByName,
+                createdByInitials,
+                createdByPic,
+                null);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
