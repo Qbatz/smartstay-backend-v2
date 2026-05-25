@@ -60,7 +60,10 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             paidAmount = invoicesV1.getPaidAmount();
         }
 
-        double totalAmount = invoicesV1.getTotalAmount();
+        double totalAmount = 0.0;
+        if (invoicesV1.getSubTotal() != null) {
+            totalAmount = invoicesV1.getSubTotal();
+        }
         long gstAmount = 0;
         if (invoicesV1.getGst() != null) {
             totalAmount = totalAmount + invoicesV1.getGst();
