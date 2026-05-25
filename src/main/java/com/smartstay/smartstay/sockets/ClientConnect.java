@@ -63,11 +63,11 @@ public class ClientConnect {
                 if (payload instanceof ZohoPaymentResponse paymentDetails) {
                     ZohoPaymentResponse paymentResponse = (ZohoPaymentResponse) payload;
                     if (paymentResponse.linkId() == null) {
-                        orderHistoryService.successfullMobilePayment(payload);
+//                        orderHistoryService.successfullMobilePayment(payload);
                         messagingTemplate.convertAndSend("/payments/" + paymentDetails.paymentSessionId(), "success");
                     }
                     else {
-                        orderHistoryService.successfullPayment(payload);
+//                        orderHistoryService.successfullPayment(payload);
                         messagingTemplate.convertAndSend("/payments/" + paymentDetails.linkId(), "success");
                     }
 

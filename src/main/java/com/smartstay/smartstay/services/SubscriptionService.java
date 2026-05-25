@@ -16,6 +16,7 @@ import com.smartstay.smartstay.responses.subscriptions.PaymentSessionResponse;
 import com.smartstay.smartstay.sockets.ClientConnect;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -49,6 +50,12 @@ public class SubscriptionService {
     private OrderHistoryService orderHistoryService;
     @Autowired
     private PaymentSessionService paymentSessionService;
+    @Value("${PAYMENT_URL}")
+    private String paymentUrl;
+    @Value("${PAYMENT_API_KEY}")
+    private String paymentApiKey;
+    @Value("${PAYMENT_ENVIRONMENT}")
+    private String paymentEnvironment;
     private final RestTemplate restTemplate;
 
     @Autowired
@@ -290,12 +297,12 @@ public class SubscriptionService {
         requestBody.put("currency", "INR");
         requestBody.put("description", "Plan renewal");
 
-        String paymentUrl = "https://payment.qbatz.com/v2/payments/generate/" + hostelId ;
+        String paymentLink = paymentUrl + "/v2/payments/generate/" + hostelId ;
 
 //        String paymentUrl = "http://localhost:8083/v2/payments/generate/" + hostelId ;
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody);
 
-        ResponseEntity<PaymentLinks> responseEntity = restTemplate.exchange(paymentUrl, HttpMethod.POST, entity, PaymentLinks.class);
+        ResponseEntity<PaymentLinks> responseEntity = restTemplate.exchange(paymentLink, HttpMethod.POST, entity, PaymentLinks.class);
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
             PaymentLinks details = responseEntity.getBody();
             orderHistoryService.createOrder(hostelId, details, finalAmount, plans.getPlanCode(), discountAmount, plans.getPrice());
@@ -369,6 +376,8 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.INVALID_SUBSCRIPTION, HttpStatus.BAD_REQUEST);
         }
 
+//        return new ResponseEntity<>("Please use web application for subscribing", HttpStatus.BAD_REQUEST);
+
         double discountAmount = 0.0;
         double discountPercentage = 0.0;
         double totalAmount = plans.getFinalPrice();
@@ -387,21 +396,21 @@ public class SubscriptionService {
         requestBody.put("currency", "INR");
         requestBody.put("description", "Plan renewal");
 
-        String paymentUrl = "https://payment.qbatz.com/v2/payments/session/" + hostelId ;
+        String paymentLink = paymentUrl +  "/v2/payments/session/" + hostelId ;
 
 //        String paymentUrl = "http://localhost:8083/v2/payments/session/" + hostelId ;
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody);
 
-        ResponseEntity<PaymentSession> responseEntity = restTemplate.exchange(paymentUrl, HttpMethod.POST, entity, PaymentSession.class);
+        ResponseEntity<PaymentSession> responseEntity = restTemplate.exchange(paymentLink, HttpMethod.POST, entity, PaymentSession.class);
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
             PaymentSession session = responseEntity.getBody();
             if (session != null) {
                 //values are hard coded. Front end SDK needs this is order to collect payments
                 PaymentSessionResponse response = new PaymentSessionResponse(session.getSessionId(),
                         session.getAmount(),
-                        "1003.b2a3acfd49c278e09485f9d3a07e6728.07ecfeb8627ef8e907173b524a161bee",
+                        paymentApiKey,
                         "60035196766",
-                        "live");
+                        paymentEnvironment);
                 PaymentSessions paymentSessions = paymentSessionService.addPaymentSession(session.getSessionId(), session.getAmount(), hostelId, discountAmount, plans.getFinalPrice(), plans.getPlanCode());
                 try {
                     clientConnect.connect(hostelId + "-" + session.getSessionId());
@@ -440,7 +449,7 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
         }
 
-        String paymentStatusUrl = "https://payment.qbatz.com//v2/payments/" + paymentId ;
+        String paymentStatusUrl = paymentUrl + "/v2/payments/" + paymentId ;
         ResponseEntity<String> responseEntity = restTemplate.getForEntity(paymentStatusUrl, String.class);
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
             return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);

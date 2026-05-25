@@ -15,16 +15,12 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
 
     private List<String> tableColumns = null;
     private List<Customers> listCustomers = null;
-    private List<Rooms> listRooms = null;
-    private List<Floors> listFloors = null;
     private List<BookingsV1> listBookings = null;
     private List<BedDetails> listBedDetails = null;
 
-    public BookingsTableMapper(List<String> tableColumns, List<Customers> listCustomers, List<Rooms> listRooms, List<Floors> listFloors, List<BookingsV1> listBookings, List<BedDetails> listBedDetails) {
+    public BookingsTableMapper(List<String> tableColumns, List<Customers> listCustomers,  List<BookingsV1> listBookings, List<BedDetails> listBedDetails) {
         this.tableColumns = tableColumns;
         this.listCustomers = listCustomers;
-        this.listRooms = listRooms;
-        this.listFloors = listFloors;
         this.listBookings = listBookings;
         this.listBedDetails = listBedDetails;
     }
@@ -66,7 +62,8 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
         BookingTableHeader bookingTableHeader = new BookingTableHeader(invoicesV1.getInvoiceId(),
                 canApplyToOtherInvoices,
                 invoicesV1.getBalanceAmount(),
-                invoicesV1.getCustomerId());
+                invoicesV1.getCustomerId(),
+                BookingColumnUtils.STATUS);
 
         columnItems.add(bookingTableHeader);
         return columnItems;
@@ -84,7 +81,7 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.PROFILE_PIC)) {
             if (customers.getProfilePic() != null) {
-                return customers.getCustomerId();
+                return customers.getProfilePic();
             }
             return NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
         }
@@ -92,10 +89,10 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
             return "+91 " + customers.getMobile();
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.AMOUNT)) {
-            return String.valueOf(invoicesV1.getTotalAmount());
+            return "₹" + invoicesV1.getTotalAmount();
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.JOINING_DATE)) {
-            return Utils.dateToString(bookingsV1.getExpectedJoiningDate());
+            return Utils.dateToString(bookingsV1.getJoiningDate());
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.FLOOR)) {
             return bedDetails.getFloorName();
@@ -105,6 +102,23 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.BED)) {
             return bedDetails.getBedName();
+        }
+        else if (columnName.equalsIgnoreCase(BookingColumnUtils.BALANCE_AMOUNT)) {
+            return "₹" + invoicesV1.getBalanceAmount();
+        }
+        else if (columnName.equalsIgnoreCase(BookingColumnUtils.STATUS)) {
+            if (invoicesV1.getBalanceAmount() != null) {
+                if (invoicesV1.getBalanceAmount() == invoicesV1.getTotalAmount()) {
+                    return "Available";
+                }
+                else if (invoicesV1.getBalanceAmount() < invoicesV1.getTotalAmount()) {
+                    return "Partially Redeemed";
+                }
+                else {
+                    return "Redeemed";
+                }
+            }
+            return "Redeemed";
         }
         return "NA";
     }

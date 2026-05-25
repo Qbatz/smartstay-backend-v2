@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
@@ -46,6 +47,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         Double discountAmount = 0.0;
         boolean canEdit = false;
         boolean isInvoicesApplied = false;
+        String customerStatus = null;
         //should used for advance invoices.
         boolean canRedeem = false;
         boolean canApplyFromAdvance = false;
@@ -58,7 +60,10 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             paidAmount = invoicesV1.getPaidAmount();
         }
 
-        double totalAmount = invoicesV1.getTotalAmount();
+        double totalAmount = 0.0;
+        if (invoicesV1.getSubTotal() != null) {
+            totalAmount = invoicesV1.getSubTotal();
+        }
         long gstAmount = 0;
         if (invoicesV1.getGst() != null) {
             totalAmount = totalAmount + invoicesV1.getGst();
@@ -81,6 +86,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             firstName = customers.getFirstName();
             lastName = customers.getLastName();
             profilePic = customers.getProfilePic();
+            customerStatus = customers.getCurrentStatus();
             if (customers.getFirstName() != null) {
                 fullName.append(customers.getFirstName());
                 initials.append(customers.getFirstName().toUpperCase().charAt(0));
@@ -121,6 +127,9 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
 
             if (canApplyFromAdvance) {
                 if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                    canApplyFromAdvance = false;
+                }
+                if (invoicesV1.isCancelled()) {
                     canApplyFromAdvance = false;
                 }
             }
@@ -254,6 +263,29 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 canEdit = false;
             }
         }
+
+       if (canRedeem) {
+           if (customerStatus.equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()) || customerStatus.equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+               canRedeem = false;
+           }
+       }
+
+       if (canApplyFromAdvance) {
+           if (customerStatus.equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()) || customerStatus.equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+               canApplyFromAdvance = false;
+           }
+       }
+       if (canApplyFromAdvance) {
+           if (isRefundable) {
+               canApplyFromAdvance = false;
+           }
+       }
+
+       if (canRedeem) {
+           if (isRefundable) {
+               canRedeem = false;
+           }
+       }
 
         return new InvoicesList(firstName,
                 lastName,

@@ -27,7 +27,10 @@ public class DeductionsConverter implements AttributeConverter<List<Deductions>,
     @Override
     public List<Deductions> convertToEntityAttribute(String s) {
         try {
-            return objectMapper.readValue(s, new TypeReference<List<Deductions>>() {});
+            if (s != null) {
+                return objectMapper.readValue(s, new TypeReference<List<Deductions>>() {});
+            }
+            return null;
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error reading the values");
         }

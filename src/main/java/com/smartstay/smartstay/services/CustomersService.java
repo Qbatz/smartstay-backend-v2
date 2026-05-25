@@ -328,7 +328,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
         if (authentication.getSource().equalsIgnoreCase("web")) {
@@ -707,6 +707,9 @@ public class CustomersService {
                 listDeductions = new ArrayList<>();
             } else {
                 listDeductions = advance.getDeductions();
+                if (listDeductions == null) {
+                    listDeductions = new ArrayList<>();
+                }
             }
 
             listDeductions.addAll(payloads.deductions().stream().map(item -> new Deductions(item.type(), item.amount())).toList());
@@ -735,7 +738,7 @@ public class CustomersService {
             customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
 
             if (payloads.advanceAmount() > 0) {
-                invoiceService.addInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount);
+                invoiceService.addAdvanceInvoice(customerId, payloads.advanceAmount(), InvoiceType.ADVANCE.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
             }
 
 //            Calendar cal = Calendar.getInstance();
@@ -905,7 +908,7 @@ public class CustomersService {
 //            }
 
             if (checkinRequest.advanceAmount() > 0) {
-                invoiceService.addInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date, billingDates, deductionAmount);
+                invoiceService.addAdvanceInvoice(customerId, checkinRequest.advanceAmount(), InvoiceType.ADVANCE.name(), booking.getHostelId(), customers.getMobile(), customers.getEmailId(), date, billingDates, deductionAmount, listDeductions);
             }
 
 
@@ -1666,7 +1669,9 @@ public class CustomersService {
 
 
         if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-            return calculateFinalSettlemtForBedChange(customers, bookingDetails, billDate, lDate);
+            FinalSettlement finalSettlement = getFinalSettlementInfoForBedChange(customers, bookingDetails, billDate, lDate);
+
+            return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
         }
 
         FinalSettlement finalSettlement = getFinalSettlementForPrepaidFixed(customers, bookingDetails, billDate, lDate);
@@ -1700,7 +1705,7 @@ public class CustomersService {
 
 
         if (advanceInvoice != null) {
-            if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+            if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                 if (advanceInvoice.getPaidAmount() != null) {
                     isAdvancePaid = true;
                     advanceAmount = advanceInvoice.getPaidAmount();
@@ -1715,7 +1720,7 @@ public class CustomersService {
         }
 
         if (bookingInvoice != null) {
-            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
+            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                 if (bookingInvoice.getPaidAmount() != null) {
                     isAdvancePaid = true;
                     bookingAmount = bookingInvoice.getPaidAmount();
@@ -1815,16 +1820,19 @@ public class CustomersService {
         double availableAdvanceAmountToReddem = 0.0;
         double availableBookingAmountToRedeem = 0.0;
         double availableTotalAmountToReddem = 0.0;
+        double advanceAmountRedeemedFromBookingInvoice = 0.0;
 
         InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), customers.getHostelId());
         InvoicesV1 bookingInvoice = invoiceService.getBookingInvoice(customers.getCustomerId(), customers.getHostelId());
 
         if (advanceInvoice != null) {
+            advanceAmountRedeemedFromBookingInvoice = invoiceService.getAdvanceAmountFromBookingInvoice(advanceInvoice.getHostelId(), advanceInvoice.getInvoiceId());
             if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                 if (advanceInvoice.getPaidAmount() != null) {
                     advancePaidAmount = advanceInvoice.getPaidAmount();
                     isAdvancePaid = true;
                     totalAdvancePaid = totalAdvancePaid + advanceInvoice.getPaidAmount();
+                    totalAdvancePaid = totalAdvancePaid - advanceAmountRedeemedFromBookingInvoice;
                 }
                 if (advanceInvoice.getBalanceAmount() != null) {
                     availableAdvanceAmountToReddem = advanceInvoice.getBalanceAmount();
@@ -1904,14 +1912,14 @@ public class CustomersService {
         double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
         double totalDeductions = 0.0;
         double payableRent = unpaidInvoicesInfo.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
-        if (customers.getAdvance() != null) {
-            Advance advance = customers.getAdvance();
-            if (advance.getDeductions() != null) {
-                totalDeductions = advance.getDeductions().stream().mapToDouble(i -> i.getAmount()).sum();
-            }
-        }
+//        if (customers.getAdvance() != null) {
+//            Advance advance = customers.getAdvance();
+//            if (advance.getDeductions() != null) {
+//                totalDeductions = advance.getDeductions().stream().mapToDouble(i -> i.getAmount()).sum();
+//            }
+//        }
 
-        totalAmountToBePaid = totalAmountToBePaid + totalDeductions - paidAmount;
+        totalAmountToBePaid = totalAmountToBePaid - availableTotalAmountToReddem - paidAmount;
         if (isAdvancePaid) {
             totalAmountToBePaid = totalAmountToBePaid - totalAdvanceAmount;
         }
@@ -1919,7 +1927,7 @@ public class CustomersService {
 
         double totalRefundableAdvance = 0.0;
         if (isAdvancePaid) {
-            totalRefundableAdvance = totalAdvanceAmount - totalDeductions;
+            totalRefundableAdvance = availableTotalAmountToReddem;
         }
 
 
@@ -1959,15 +1967,46 @@ public class CustomersService {
         double bookingAmount = invoiceService.invoicesPaidAmountByType(customers.getCustomerId(), InvoiceType.BOOKING.name());
         double totalAdvanceAmount = 0.0;
         double totalAdvancePaid = 0.0;
-        if (advancePaidAmount > 0) {
-            isAdvancePaid = true;
-            totalAdvanceAmount = totalAdvanceAmount + advancePaidAmount;
-            totalAdvancePaid = advancePaidAmount;
+
+        InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), customers.getHostelId());
+        InvoicesV1 bookingInvoice = invoiceService.getBookingInvoice(customers.getCustomerId(), customers.getHostelId());
+
+        double advanceAmount = 0.0;
+        double availableAdvanceAmount = 0.0;
+        double availableBookingAmount = 0.0;
+
+        double totalAmountToRedeem = 0.0;
+        double advanceAmountRedeemedFromBookingInvoice = 0.0;
+
+
+        if (advanceInvoice != null) {
+            if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                if (advanceInvoice.getPaidAmount() != null) {
+                    isAdvancePaid = true;
+                    advanceAmount = advanceInvoice.getPaidAmount();
+                    totalAdvanceAmount = totalAdvanceAmount + advanceInvoice.getPaidAmount();;
+                    totalAdvanceAmount = totalAdvanceAmount - advanceAmountRedeemedFromBookingInvoice;
+                }
+                if (advanceInvoice.getBalanceAmount() != null) {
+                    availableAdvanceAmount = advanceInvoice.getBalanceAmount();
+                    totalAmountToRedeem = totalAmountToRedeem +  advanceInvoice.getBalanceAmount();
+                }
+            }
+
         }
-        if (bookingAmount > 0) {
-            isAdvancePaid = true;
-            totalAdvanceAmount = totalAdvanceAmount + bookingAmount;
-            totalAdvancePaid = totalAdvancePaid + bookingAmount;
+
+        if (bookingInvoice != null) {
+            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                if (bookingInvoice.getPaidAmount() != null) {
+                    isAdvancePaid = true;
+                    bookingAmount = bookingInvoice.getPaidAmount();
+                    totalAdvanceAmount = totalAdvanceAmount + bookingInvoice.getPaidAmount();;
+                }
+                if (bookingInvoice.getBalanceAmount() != null) {
+                    availableBookingAmount = bookingInvoice.getBalanceAmount();
+                    totalAmountToRedeem = totalAmountToRedeem + bookingInvoice.getBalanceAmount();
+                }
+            }
         }
 
 
@@ -2008,31 +2047,31 @@ public class CustomersService {
 
         double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentMonthTotalAmount();
         double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
-        double totalDeductions = 0.0;
+//        double totalDeductions = 0.0;
         double payableRent = unpaidInvoicesInfo.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
         if (customers.getAdvance() != null) {
-            Advance advance = customers.getAdvance();
-            if (advance.getDeductions() != null) {
-                totalDeductions = advance.getDeductions().stream().mapToDouble(i -> i.getAmount()).sum();
-            }
+//            Advance advance = customers.getAdvance();
+//            if (advance.getDeductions() != null) {
+//                totalDeductions = advance.getDeductions().stream().mapToDouble(i -> i.getAmount()).sum();
+//            }
         }
 
-        totalAmountToBePaid = totalAmountToBePaid + totalDeductions - paidAmount;
+        totalAmountToBePaid = totalAmountToBePaid  - paidAmount;
         if (isAdvancePaid) {
-            totalAmountToBePaid = totalAmountToBePaid - totalAdvanceAmount;
+            totalAmountToBePaid = totalAmountToBePaid - totalAmountToRedeem;
         }
         boolean isRefundable = totalAmountToBePaid < 0;
 
         double totalRefundableAdvance = 0.0;
         if (isAdvancePaid) {
-            totalRefundableAdvance = totalAdvanceAmount - totalDeductions;
+            totalRefundableAdvance = totalAmountToRedeem ;
         }
 
 
         SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountToBePaid),
-                totalDeductions,
+                0.0,
                 payableRent,
-                Utils.roundOffWithTwoDigit(totalDeductions),
+                Utils.roundOffWithTwoDigit(0.0),
                 Utils.roundOffWithTwoDigit(totalRefundableAdvance),
                 Utils.roundOffWithTwoDigit(ebAmount),
                 Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
@@ -2192,6 +2231,7 @@ public class CustomersService {
         return invoiceService.getRentInfoForSettlement(hostelId, customers, leavingDate, monthlyRent);
     }
 
+    @Deprecated
     private ResponseEntity<?> calculateFinalSettlemtForBedChange(Customers customers, BookingsV1 bookingDetails, BillingDates billDate, Date leavingDate) {
         double bookingAmount = 0.0;
         if (bookingDetails.getBookingAmount() != null) {
@@ -2487,6 +2527,122 @@ public class CustomersService {
                 settlementInfo);
 
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
+    }
+
+    public FinalSettlement getFinalSettlementInfoForBedChange(Customers customers, BookingsV1 bookingsV1, BillingDates billingDates, Date leavingDate) {
+        CustomerInformations customerInformations = getCustomerInformations(customers, bookingsV1);
+        StayInfo stayInfo = bookingsService.getStayInfo(customers, bookingsV1, leavingDate);
+        EBInfo ebInfo = electricityService.getEbInfoForSettlement(customers, customers.getHostelId(), leavingDate);
+        com.smartstay.smartstay.responses.settlement.UnpaidInvoices unpaidInvoicesInfo = invoiceService.getUnpaidInvoicesInfo(customers.getCustomerId(), customers.getHostelId(), leavingDate);
+        RentInfo currentMonthRentInfo = invoiceService.getRentInfoForBedChange(customers.getCustomerId(), customers, leavingDate, billingDates);
+
+        List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService.getInvoicePendingByCustomerId(customers.getCustomerId());
+        AdvanceItems advanceItems = invoiceService.getRedeemedListFromAdvance(customers.getHostelId(), customers.getCustomerId());
+        AdvanceItems bookingItems = invoiceService.getRedeemedListFromBookings(customers.getHostelId(), customers.getCustomerId());
+
+        InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), customers.getHostelId());
+        InvoicesV1 bookingInvoice = invoiceService.getBookingInvoice(customers.getCustomerId(), customers.getHostelId());
+
+        boolean isAdvancePaid = false;
+        double advancePaidAmount = 0.0;
+        double bookingAmount = 0.0;
+        double totalAdvanceAmount = 0.0;
+        double totalAdvancePaid = 0.0;
+        double availableAdvanceAmountToReddem = 0.0;
+        double availableBookingAmountToRedeem = 0.0;
+        double availableTotalAmountToReddem = 0.0;
+
+        if (advanceInvoice != null) {
+            if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                if (advanceInvoice.getPaidAmount() != null) {
+                    advancePaidAmount = advanceInvoice.getPaidAmount();
+                    isAdvancePaid = true;
+                    totalAdvancePaid = totalAdvancePaid + advanceInvoice.getPaidAmount();
+                }
+                if (advanceInvoice.getBalanceAmount() != null) {
+                    availableAdvanceAmountToReddem = advanceInvoice.getBalanceAmount();
+                    availableTotalAmountToReddem = availableTotalAmountToReddem + advanceInvoice.getBalanceAmount();
+                }
+            }
+        }
+
+        if (bookingInvoice != null) {
+            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                if (bookingInvoice.getPaidAmount() != null) {
+                    bookingAmount = bookingInvoice.getPaidAmount();
+                    isAdvancePaid = true;
+                    totalAdvancePaid = totalAdvancePaid + bookingInvoice.getPaidAmount();
+                }
+                if (bookingInvoice.getBalanceAmount() != null) {
+                    availableBookingAmountToRedeem = bookingInvoice.getBalanceAmount();
+                    availableTotalAmountToReddem = availableTotalAmountToReddem + bookingInvoice.getBalanceAmount();
+                }
+            }
+        }
+
+
+        String label = null;
+        double payableAmount = 0.0;
+        if (currentMonthRentInfo.currentRentPaid() > currentMonthRentInfo.currentPayableRent()) {
+            label = "Refundable rent";
+            payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+        } else {
+            label = "Payable rent";
+            payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+        }
+        double walletAmount = 0.0;
+        if (customers.getWallet() != null) {
+            CustomerWallet wallet = customers.getWallet();
+            if (wallet.getAmount() != null) {
+                walletAmount = wallet.getAmount();
+            }
+        }
+
+        double ebAmount = 0.0;
+        if (ebInfo != null) {
+            ebAmount = ebInfo.pendingEbAmount();
+        }
+
+        com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
+
+        double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentMonthPayableAmount();
+        double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
+        double totalDeductions = 0.0;
+        double payableRent = unpaidInvoicesInfo.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
+
+        totalAmountToBePaid = totalAmountToBePaid - availableTotalAmountToReddem - paidAmount;
+        if (isAdvancePaid) {
+            totalAmountToBePaid = totalAmountToBePaid - totalAdvanceAmount;
+        }
+        boolean isRefundable = totalAmountToBePaid < 0;
+
+        double totalRefundableAdvance = 0.0;
+        if (isAdvancePaid) {
+            totalRefundableAdvance = availableTotalAmountToReddem;
+        }
+
+
+        SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountToBePaid),
+                totalDeductions,
+                payableRent,
+                Utils.roundOffWithTwoDigit(totalDeductions),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
+                Utils.roundOffWithTwoDigit(ebAmount),
+                Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
+                isRefundable,
+                label,
+                Utils.roundOffWithTwoDigit(payableAmount));
+
+        return new FinalSettlement(customerInformations,
+                stayInfo,
+                ebInfo,
+                null,
+                unpaidInvoicesInfo,
+                currentMonthRentInfo,
+                walletInfo,
+                advanceItems,
+                bookingItems,
+                settlementInfo);
     }
 
     public ResponseEntity<?> generateFinalSettlement(String customerId, com.smartstay.smartstay.payloads.settlement.Settlement settlement) {
@@ -3022,7 +3178,7 @@ public class CustomersService {
             }
         }
 
-        List<Deductions> lisDeductions = customers.getAdvance().getDeductions();
+        List<Deductions> lisDeductions = new ArrayList<>();
         if (deductions != null && !deductions.isEmpty()) {
             lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount())).toList());
         }
