@@ -38,20 +38,29 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
                                                @Param("statuses") List<String> statuses);
 
     @Query(value = """
-            SELECT cus.first_name AS firstName, cus.last_name as lastName, cus.city, cus.mobile, cus.state, cus.joining_date, 
-            cus.created_at, cus.country, cus.current_status AS currentStatus, 
-            cus.customer_id as customerId, cus.email_id AS emailId, 
-            cus.profile_pic AS profilePic, cus.joining_date as actualJoiningDate, cus.exp_joining_date as joiningDate, 
-            ct.country_code as countryCode, booking.floor_id as floorId, booking.room_id as roomId, booking.bed_id as bedId, flr.floor_name as floorName,
-            rms.room_name as roomName, bed.bed_name as bedName, booking.expected_joining_date as expectedJoiningDate,
+            SELECT cus.first_name AS firstName, cus.last_name as lastName, cus.city, cus.mobile, cus.state, cus.joining_date,
+            cus.created_at, cus.country, cus.current_status AS currentStatus,
+            cus.customer_id as customerId, cus.email_id AS emailId,
+            cus.profile_pic AS profilePic, cus.joining_date as actualJoiningDate, cus.exp_joining_date as joiningDate,
+            ct.country_code as countryCode,
+            COALESCE(booking.floor_id, d.floor_id) as floorId,
+            COALESCE(booking.room_id, d.room_id) as roomId,
+            COALESCE(booking.bed_id, d.bed_id) as bedId,
+            flr.floor_name as floorName,
+            rms.room_name as roomName,
+            bed.bed_name as bedName,
+            COALESCE(booking.expected_joining_date, d.joining_date) as expectedJoiningDate,
             cus.created_at as createdAt FROM customers cus inner join countries as ct on ct.country_id = cus.country
-            left outer join bookingsv1 booking on booking.customer_id=cus.customer_id left outer join floors flr on flr.floor_id=booking.floor_id
-            left outer join rooms rms on rms.room_id=booking.room_id left outer join beds bed on bed.bed_id=booking.bed_id
+            left outer join bookingsv1 booking on booking.customer_id=cus.customer_id
+            left outer join drafts d on d.customer_id = cus.customer_id
+            left outer join floors flr on flr.floor_id = COALESCE(booking.floor_id, d.floor_id)
+            left outer join rooms rms on rms.room_id = COALESCE(booking.room_id, d.room_id)
+            left outer join beds bed on bed.bed_id = COALESCE(booking.bed_id, d.bed_id)
             WHERE cus.hostel_id = :hostelId
             AND (:name IS NULL OR LOWER(cus.first_name) LIKE LOWER(CONCAT('%', :name, '%'))
                                    OR LOWER(cus.last_name) LIKE LOWER(CONCAT('%', :name, '%')))
               AND  cus.current_status in (:status)
-               order by booking.floor_id asc, booking.room_id asc, booking.bed_id asc, cus.created_at desc
+               order by COALESCE(booking.floor_id, d.floor_id) asc, COALESCE(booking.room_id, d.room_id) asc, COALESCE(booking.bed_id, d.bed_id) asc, cus.created_at desc
             """, nativeQuery = true)
     List<CustomerData> getCustomerData(
             @Param("hostelId") String hostelId,
@@ -60,17 +69,20 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     );
 
     @Query(value = """
-            SELECT c FROM Customers c, BookingsV1 b, Rooms r, Beds bed  
-            WHERE c.customerId = b.customerId AND bed.bedId = b.bedId AND r.roomId = bed.roomId AND c.hostelId=:hostelId AND 
-            (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR 
-            LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND 
-            c.currentStatus IN (:type) AND (:customerIds IS NULL OR c.customerId IN (:customerIds)) 
-            ORDER BY b.floorId, r.roomId, bed.bedId ASC
+            SELECT DISTINCT c FROM Customers c
+            LEFT JOIN BookingsV1 b ON c.customerId = b.customerId
+            WHERE c.hostelId=:hostelId AND
+            (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR
+            LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND
+            c.currentStatus IN (:type) AND (:customerIds IS NULL OR c.customerId IN (:customerIds))
+            ORDER BY b.floorId ASC
             """,
             countQuery = """
-                     SELECT count(*) FROM Customers c, BookingsV1 b WHERE c.customerId = b.customerId AND c.hostelId=:hostelId AND 
-                    (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR 
-                    LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND 
+                    SELECT COUNT(DISTINCT c) FROM Customers c
+                    LEFT JOIN BookingsV1 b ON c.customerId = b.customerId
+                    WHERE c.hostelId=:hostelId AND
+                    (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR
+                    LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND
                     c.currentStatus IN (:type) AND (:customerIds IS NULL OR c.customerId IN (:customerIds))
                     """)
     Page<Customers> listCustomers(String hostelId, String name, List<String> type, List<String> customerIds, Pageable pageable);
@@ -157,4 +169,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             """)
     List<Customers> findByCustomerIdsAndName(List<String> customerId, String name);
     List<Customers> findByXuid(String xuid);
+
+    @Query("SELECT c FROM Customers c WHERE c.hostelId = :hostelId AND c.mobile LIKE CONCAT('%', :mobile, '%')")
+    List<Customers> searchByMobileAndHostelId(@Param("hostelId") String hostelId, @Param("mobile") String mobile);
 }

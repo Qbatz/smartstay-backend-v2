@@ -5,6 +5,7 @@ import com.smartstay.smartstay.Wrappers.customers.FinalSettlementMapper;
 import com.smartstay.smartstay.Wrappers.customers.TenantTableMapper;
 import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
 import com.smartstay.smartstay.Wrappers.invoices.UnpaidInvoicesMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
@@ -37,6 +38,7 @@ import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.CustomersRepository;
+import com.smartstay.smartstay.repositories.DraftsRepository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
@@ -57,6 +59,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -68,6 +71,8 @@ public class CustomersService {
     private UploadFileToS3 uploadToS3;
     @Autowired
     private CustomersRepository customersRepository;
+    @Autowired
+    private DraftsRepository draftsRepository;
     @Autowired
     private BookingsService bookingsService;
     @Autowired
@@ -305,6 +310,7 @@ public class CustomersService {
             typeArray.add(CustomerStatus.CHECK_IN.name());
             typeArray.add(CustomerStatus.BOOKED.name());
             typeArray.add(CustomerStatus.SETTLEMENT_GENERATED.name());
+            typeArray.add(CustomerStatus.DRAFT.name());
         } else {
             typeArray.add(type.toUpperCase());
         }
@@ -365,6 +371,8 @@ public class CustomersService {
                 currentStatus = "Cancelled";
             } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
                 currentStatus = "Settlement Generated";
+            } else if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.DRAFT.name())) {
+                currentStatus = "Draft";
             }
 
             if (!filterOption.containsKey(currentStatus)) {
@@ -387,6 +395,7 @@ public class CustomersService {
             typeArray.add(CustomerStatus.CHECK_IN.name());
             typeArray.add(CustomerStatus.BOOKED.name());
             typeArray.add(CustomerStatus.SETTLEMENT_GENERATED.name());
+            typeArray.add(CustomerStatus.DRAFT.name());
         } else {
             typeArray.add(type.toUpperCase());
         }
@@ -437,6 +446,7 @@ public class CustomersService {
         listStatus.add(CustomerStatus.NOTICE.name());
         listStatus.add(CustomerStatus.BOOKED.name());
         listStatus.add(CustomerStatus.SETTLEMENT_GENERATED.name());
+        listStatus.add(CustomerStatus.DRAFT.name());
 
 
         List<Customers> listAllCustomersForCount = customersRepository.findCustomerByHostelId(hostelId, listStatus);
@@ -473,7 +483,20 @@ public class CustomersService {
 
         List<String> listCustomerIds = listCustomers.stream().map(Customers::getCustomerId).toList();
         List<BookingsV1> listBookings = bookingsService.findByCustomerIds(listCustomerIds);
-        List<Integer> bedIds = listBookings.stream().map(BookingsV1::getBedId).toList();
+        List<Draft> draftRows = draftsRepository.findByCustomerIdIn(listCustomerIds);
+        Map<String, Draft> draftByCustomerId = draftRows.stream()
+                .collect(Collectors.toMap(Draft::getCustomerId, Function.identity(), (a, b) -> a));
+        List<Integer> bedIds = new ArrayList<>();
+        for (BookingsV1 b : listBookings) {
+            if (b.getBedId() > 0) {
+                bedIds.add(b.getBedId());
+            }
+        }
+        for (Draft d : draftRows) {
+            if (d.getBedId() != null && d.getBedId() > 0) {
+                bedIds.add(d.getBedId());
+            }
+        }
         List<BedDetails> listBedDetails;
         if (floorRoomBedNameIncluded) {
             listBedDetails = bedsService.getBedDetails(bedIds);
@@ -481,7 +504,7 @@ public class CustomersService {
             listBedDetails = new ArrayList<>();
         }
 
-        List<List<Object>> listTenants = customersList.stream().map(i -> new TenantTableMapper(listBedDetails, listBookings, tableColumns).apply(i)).toList();
+        List<List<Object>> listTenants = customersList.stream().map(i -> new TenantTableMapper(listBedDetails, listBookings, tableColumns, draftByCustomerId).apply(i)).toList();
 
         FilterOptions filterOptions = getTenantFilterOptions(hostelId);
 
@@ -492,6 +515,7 @@ public class CustomersService {
     private FilterOptions getTenantFilterOptions(String hostelId) {
         FilterOptions filterOptions = new FilterOptions();
         List<FilterOptions.FilterItems> statusFilterItems = new ArrayList<>();
+        statusFilterItems.add(new FilterOptions.FilterItems("Draft", CustomerStatus.DRAFT.name()));
         statusFilterItems.add(new FilterOptions.FilterItems("Booked", CustomerStatus.BOOKED.name()));
         statusFilterItems.add(new FilterOptions.FilterItems("Checked In", CustomerStatus.CHECK_IN.name()));
         statusFilterItems.add(new FilterOptions.FilterItems("Settlement Generated", CustomerStatus.SETTLEMENT_GENERATED.name()));

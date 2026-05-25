@@ -14,6 +14,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.*;
@@ -240,6 +241,36 @@ public class SmartstayApplication {
                 filterOptionsRepositories.save(bookingsFilterOptions);
 
             }
+        };
+    }
+
+
+    @Bean
+    CommandLineRunner createDraftsTable(JdbcTemplate jdbcTemplate) {
+        return args -> {
+            jdbcTemplate.execute("""
+                    CREATE TABLE IF NOT EXISTS drafts (
+                        customer_id VARCHAR(36) NOT NULL,
+                        hostel_id VARCHAR(36) NOT NULL,
+                        joining_date DATE NULL,
+                        booking_date DATE NULL,
+                        booking_amount DOUBLE NULL,
+                        floor_id INT NULL,
+                        room_id INT NULL,
+                        bed_id INT NULL,
+                        bank_id VARCHAR(64) NULL,
+                        reference_number VARCHAR(255) NULL,
+                        advance_amount DOUBLE NULL,
+                        rental_amount DOUBLE NULL,
+                        stay_type VARCHAR(32) NULL,
+                        deductions_json LONGTEXT NULL,
+                        pro_rate TINYINT(1) NULL,
+                        created_at DATETIME NOT NULL,
+                        updated_at DATETIME NOT NULL,
+                        PRIMARY KEY (customer_id),
+                        KEY idx_drafts_hostel (hostel_id)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                    """);
         };
     }
 
