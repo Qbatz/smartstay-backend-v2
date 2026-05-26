@@ -712,7 +712,7 @@ public class CustomersService {
                 }
             }
 
-            listDeductions.addAll(payloads.deductions().stream().map(item -> new Deductions(item.type(), item.amount())).toList());
+            listDeductions.addAll(payloads.deductions().stream().map(item -> new Deductions(item.type(), item.amount(), 0.0)).toList());
 
             deductionAmount = listDeductions.stream().mapToDouble(Deductions::getAmount).sum();
 
@@ -870,7 +870,7 @@ public class CustomersService {
             } else {
                 listDeductions = advance.getDeductions();
             }
-            listDeductions.addAll(checkinRequest.deductions().stream().map(item -> new Deductions(item.type(), item.amount())).toList());
+            listDeductions.addAll(checkinRequest.deductions().stream().map(item -> new Deductions(item.type(), item.amount(), 0.0)).toList());
 
             double deductionAmount = listDeductions.stream().mapToDouble(Deductions::getAmount).sum();
 
@@ -3006,7 +3006,7 @@ public class CustomersService {
 
         List<Deductions> lisDeductions = customers.getAdvance().getDeductions();
         if (deductions != null && !deductions.isEmpty()) {
-            lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount())).toList());
+            lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount(), 0.0)).toList());
         }
         //no need to add advance deduction amount. Already added in advance deductions.
         totalAmountToBePaid = totalAmountToBePaid + settlementDeductionAmount;
@@ -3113,7 +3113,7 @@ public class CustomersService {
 
         List<Deductions> lisDeductions = customers.getAdvance().getDeductions();
         if (deductions != null && !deductions.isEmpty()) {
-            lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount())).toList());
+            lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount(), 0.0)).toList());
         }
 
         amountToBePaid = amountToBePaid - finalDiscount;
@@ -3180,7 +3180,7 @@ public class CustomersService {
 
         List<Deductions> lisDeductions = new ArrayList<>();
         if (deductions != null && !deductions.isEmpty()) {
-            lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount())).toList());
+            lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount(), 0.0)).toList());
         }
 
 

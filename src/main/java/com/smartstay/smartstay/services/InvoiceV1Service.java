@@ -682,6 +682,39 @@ public class InvoiceV1Service {
             if (invoice.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
                 double deductionAmount = customersService.getDeductionAmount(invoice.getCustomerId());
                 if (deductionAmount > 0) {
+                    List<Deductions> listDeductions = invoice.getDeductions();
+                    if (listDeductions != null) {
+                        final double[] tempAmount = {amount};
+                       List<Deductions> newDeductions = listDeductions
+                               .stream()
+                               .map(i -> {
+                                   if (Objects.equals(i.getPaidAmount(), i.getAmount())) {
+                                       return i;
+                                   }
+                                   if (i.getPaidAmount() < i.getAmount()) {
+                                       if (tempAmount[0] > 0) {
+                                           double pAmount = i.getPaidAmount();
+                                           double balanceAmount = i.getAmount() - i.getPaidAmount();
+                                           if (balanceAmount > tempAmount[0]) {
+                                               double paidNow =  balanceAmount - tempAmount[0];
+                                               i.setPaidAmount(pAmount + paidNow);
+                                               tempAmount[0] = tempAmount[0] - balanceAmount;
+                                               if (tempAmount[0] <= 0) {
+                                                   tempAmount[0] = 0;
+                                               }
+                                           }
+                                           else {
+                                               i.setPaidAmount(balanceAmount);
+                                               tempAmount[0] = tempAmount[0] - balanceAmount;
+                                           }
+                                       }
+                                   }
+                                   return i;
+                               })
+                               .toList();
+
+                       invoice.setDeductions(newDeductions);
+                    }
                     double paidAfterDeduction = (paidAmount + amount) - deductionAmount;
                     if (paidAfterDeduction > 0) {
                         double redeemedAmount = invoiceRedemptionService.getRedeemedAmountFromINvoiceId(invoice.getHostelId(), invoice.getInvoiceId());
