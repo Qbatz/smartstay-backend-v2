@@ -704,7 +704,8 @@ public class InvoiceV1Service {
                                                }
                                            }
                                            else {
-                                               i.setPaidAmount(balanceAmount);
+                                               double pA = i.getPaidAmount();
+                                               i.setPaidAmount(balanceAmount + pA);
                                                tempAmount[0] = tempAmount[0] - balanceAmount;
                                            }
                                        }
