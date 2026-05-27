@@ -12,7 +12,7 @@ import java.util.List;
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
     List<Subscription> findByHostelId(String hostelId);
-    Subscription findBySubscriptionId(String subscriptionId);
+    Subscription findBySubscriptionId(Long subscriptionId);
 
     @Query(value = """
             SELECT * FROM subscription WHERE hostel_id=:hostelId and DATE(plan_starts_at) <= DATE(:todaysDate) 

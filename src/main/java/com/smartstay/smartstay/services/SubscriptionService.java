@@ -469,7 +469,7 @@ public class SubscriptionService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        Subscription subscription = subscriptionRepository.findBySubscriptionId(subscriptionId);
+        Subscription subscription = subscriptionRepository.findBySubscriptionId(Long.valueOf(subscriptionId));
         if (subscription == null) {
             return new ResponseEntity<>(Utils.INVALID_SUBSCRIPTION_ID, HttpStatus.BAD_REQUEST);
         }
