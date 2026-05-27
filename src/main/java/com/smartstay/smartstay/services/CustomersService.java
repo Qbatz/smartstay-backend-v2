@@ -42,6 +42,8 @@ import com.smartstay.smartstay.repositories.DraftsRepository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
+import com.smartstay.smartstay.responses.settlement.DeductionsInfo;
+import com.smartstay.smartstay.responses.settlement.DeductionsItem;
 import com.smartstay.smartstay.util.FilterKeywords;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
@@ -1674,9 +1676,9 @@ public class CustomersService {
             return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
         }
 
+        settlementDetailsService.addSettlementForCustomer(customerId, lDate);
         FinalSettlement finalSettlement = getFinalSettlementForPrepaidFixed(customers, bookingDetails, billDate, lDate);
 
-        settlementDetailsService.addSettlementForCustomer(customerId, lDate);
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
     }
 
@@ -1702,6 +1704,9 @@ public class CustomersService {
         double totalAdvanceAmount = 0.0;
         double totalAmountToRedeem = 0.0;
         double advanceAmountRedeemedFromBookingInvoice = 0.0;
+        DeductionsInfo deductionsInfo = null;
+        double deductionAmount = 0.0;
+
 
 
         if (advanceInvoice != null) {
@@ -1714,6 +1719,41 @@ public class CustomersService {
                 if (advanceInvoice.getBalanceAmount() != null) {
                     availableAdvanceAmount = advanceInvoice.getBalanceAmount();
                     totalAmountToRedeem = totalAmountToRedeem +  advanceInvoice.getBalanceAmount();
+                }
+            }
+            if (advanceInvoice.getDeductions() != null && advanceInvoice.getDeductionAmount() > 0) {
+                double paidDeductionAmount = 0.0;
+                double totalDeductionAmount = 0.0;
+                double pendingDeductionAmount = 0.0;
+                List<Deductions> listDeductions = advanceInvoice.getDeductions();
+                if (listDeductions != null) {
+
+                    List<DeductionsItem> listDeductionItem = listDeductions
+                            .stream()
+                            .filter(i -> i.getPaidAmount() == null || i.getPaidAmount() < i.getAmount())
+                            .map(i -> {
+                                double pendingAmount = 0.0;
+                                if (i.getPaidAmount() != null) {
+                                    pendingAmount = i.getAmount() - i.getPaidAmount();
+                                }
+                                return new DeductionsItem(i.getType(), i.getPaidAmount(), i.getAmount(), pendingAmount);
+                            })
+                            .toList();
+                    paidDeductionAmount = listDeductions
+                            .stream()
+                            .mapToDouble(Deductions::getPaidAmount)
+                            .sum();
+                    totalDeductionAmount = listDeductions
+                            .stream()
+                            .mapToDouble(Deductions::getAmount)
+                            .sum();
+                    pendingDeductionAmount = totalDeductionAmount - paidDeductionAmount;
+                    deductionAmount =  totalDeductionAmount - paidDeductionAmount;
+
+                    deductionsInfo = new DeductionsInfo(totalDeductionAmount,
+                            paidDeductionAmount,
+                            pendingDeductionAmount,
+                            listDeductionItem);
                 }
             }
 
@@ -1770,6 +1810,7 @@ public class CustomersService {
         payableRent = unpaidInvoices.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
 
         amountToBePaid = amountToBePaid - paidAmount;
+        amountToBePaid = amountToBePaid + deductionAmount;
         if (isAdvancePaid) {
             amountToBePaid = amountToBePaid - totalAmountToRedeem;
         }
@@ -1781,7 +1822,7 @@ public class CustomersService {
             totalRefundableAdvance = totalAmountToRedeem;
         }
         SettlementInfo settlementInfo = new SettlementInfo(Utils.roundOffWithTwoDigit(amountToBePaid),
-                0.0,
+                deductionAmount,
                 Utils.roundOffWithTwoDigit(payableRent),
                 Utils.roundOffWithTwoDigit(payableRent),
                 Utils.roundOffWithTwoDigit(totalRefundableAdvance),
@@ -1800,6 +1841,7 @@ public class CustomersService {
                 walletInfo,
                 advanceItems,
                 bookingItems,
+                deductionsInfo,
                 settlementInfo);
 
     }
@@ -1951,6 +1993,7 @@ public class CustomersService {
                 walletInfo,
                 advanceItems,
                 bookingItems,
+                null,
                 settlementInfo);
     }
 
@@ -2049,12 +2092,6 @@ public class CustomersService {
         double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
 //        double totalDeductions = 0.0;
         double payableRent = unpaidInvoicesInfo.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
-        if (customers.getAdvance() != null) {
-//            Advance advance = customers.getAdvance();
-//            if (advance.getDeductions() != null) {
-//                totalDeductions = advance.getDeductions().stream().mapToDouble(i -> i.getAmount()).sum();
-//            }
-        }
 
         totalAmountToBePaid = totalAmountToBePaid  - paidAmount;
         if (isAdvancePaid) {
@@ -2087,6 +2124,7 @@ public class CustomersService {
                 walletInfo,
                 advanceItems,
                 bookingItems,
+                null,
                 settlementInfo);
     }
 
@@ -2524,6 +2562,7 @@ public class CustomersService {
                 walletInfo,
                 advanceItems,
                 bookingItems,
+                null,
                 settlementInfo);
 
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
@@ -2642,6 +2681,7 @@ public class CustomersService {
                 walletInfo,
                 advanceItems,
                 bookingItems,
+                null,
                 settlementInfo);
     }
 
