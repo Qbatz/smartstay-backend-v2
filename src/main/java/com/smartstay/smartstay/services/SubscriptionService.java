@@ -8,6 +8,7 @@ import com.smartstay.smartstay.dto.subscription.PaymentSession;
 import com.smartstay.smartstay.dto.subscription.SubscriptionDto;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
+import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.PlanType;
 import com.smartstay.smartstay.payloads.subscription.PaymentLinks;
 import com.smartstay.smartstay.repositories.SubscriptionRepository;
@@ -18,10 +19,7 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -57,6 +55,8 @@ public class SubscriptionService {
     @Value("${PAYMENT_ENVIRONMENT}")
     private String paymentEnvironment;
     private final RestTemplate restTemplate;
+    @Value("${REPORTS_URL}")
+    private String reportsUrl;
 
     @Autowired
     public void setHostelService(@Lazy HostelService hostelService) {
@@ -456,5 +456,52 @@ public class SubscriptionService {
         }
 
         return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+    }
+
+    public ResponseEntity<?> downloadInvoice(String hostelId, String subscriptionId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        Subscription subscription = subscriptionRepository.findBySubscriptionId(Long.valueOf(subscriptionId));
+        if (subscription == null) {
+            return new ResponseEntity<>(Utils.INVALID_SUBSCRIPTION_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!subscription.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+
+//        if (subscription.getPaymentStatus().equalsIgnoreCase(com.smartstay.smartstay.ennum.PaymentStatus.PAID.name())) {
+            if (subscription.getInvoiceUrl() != null) {
+                return new ResponseEntity<>(subscription.getInvoiceUrl(), HttpStatus.OK);
+            }
+//        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        String endpoint = reportsUrl + "/v2/reports/subscriptions/" + hostelId + "/" + subscriptionId;
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(endpoint, HttpMethod.GET, request, String.class);
+        if (response.getStatusCode() == HttpStatus.OK) {
+//            if (subscription.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                subscription.setInvoiceUrl(response.getBody());
+                subscriptionRepository.save(subscription);
+//            }
+            return new ResponseEntity<>(response.getBody(), HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+
     }
 }

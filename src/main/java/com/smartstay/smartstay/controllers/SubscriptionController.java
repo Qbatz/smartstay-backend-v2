@@ -38,4 +38,9 @@ public class SubscriptionController {
         return subscriptionService.verifyPayment(hostelId, paymentId);
     }
 
+    @GetMapping("/download/{hostelId}/{subscriptionId}")
+    public ResponseEntity<?> downloadInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("subscriptionId") String subscriptionId) {
+        return subscriptionService.downloadInvoice(hostelId, subscriptionId);
+    }
+
 }
