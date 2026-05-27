@@ -696,7 +696,7 @@ public class CustomersService {
 
             Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), joiningDate);
-            BillingDates currentBillDate = hostelService.getCurrentBillStartAndEndDates(hostelV1.getHostelId());
+            BillingDates currentBillDate = getCurrentBillDateForCheckin(hostelV1.getHostelId(), joiningDate, billingDates);
 
             Advance advance = customers.getAdvance();
             double deductionAmount = 0.0;
@@ -746,18 +746,12 @@ public class CustomersService {
 
 //            Date startateOfCurrentCycle = cal.getTime();
 
-            if (!billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
-                //checking joining date is fall under current billing cycle
-                if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
-                    return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
-                }
-            }
-
             if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                     return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, payloads.rentalAmount());
                 } else {
-                    calculateRentAndCreateRentalInvoice(customers, payloads);
+                    CheckInRequest invoiceRequest = getCurrentCycleInvoiceRequest(payloads, joiningDate, currentBillDate);
+                    calculateRentAndCreateRentalInvoice(customers, invoiceRequest);
                     whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
                     userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -785,6 +779,11 @@ public class CustomersService {
                 whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
             }
 
+        } else if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
+            invoiceService.createNewInvoiceCurrentMonthJoining(customers, currentBillDate.currentBillStartDate(), rentalAmount, currentBillDate);
+            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+            }
         }
 //        else {
 //            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
@@ -797,6 +796,31 @@ public class CustomersService {
         userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, users);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+    }
+
+    private BillingDates getCurrentBillDateForCheckin(String hostelId, Date joiningDate, BillingDates billingDates) {
+        if (billingDates != null && billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
+            return hostelService.getJoiningBasedCurrentMonthBillingDate(joiningDate, hostelId, new Date());
+        }
+        return hostelService.getCurrentBillStartAndEndDates(hostelId);
+    }
+
+    private CheckInRequest getCurrentCycleInvoiceRequest(CheckInRequest request, Date joiningDate, BillingDates currentBillDate) {
+        if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
+            String currentCycleStartDate = Utils.dateToString(currentBillDate.currentBillStartDate());
+            return new CheckInRequest(
+                    request.floorId(),
+                    request.bedId(),
+                    request.roomId(),
+                    currentCycleStartDate,
+                    request.advanceAmount(),
+                    request.rentalAmount(),
+                    request.stayType(),
+                    request.deductions(),
+                    Boolean.TRUE.equals(request.proRate())
+            );
+        }
+        return request;
     }
 
     public ResponseEntity<?> checkinBookedCustomer(String customerId, CheckInBookedCustomer checkinRequest) {
@@ -897,7 +921,7 @@ public class CustomersService {
             bookingsService.checkInBookedCustomer(customers, request);
 
             BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), joiningDate);
-            BillingDates currentBillDate = hostelService.getCurrentBillStartAndEndDates(hostelV1.getHostelId());
+            BillingDates currentBillDate = getCurrentBillDateForCheckin(hostelV1.getHostelId(), joiningDate, billingDates);
 
 //            Calendar calendar = Calendar.getInstance();
 //            int dueDate = calendar.get(Calendar.DAY_OF_MONTH) + 5;
@@ -915,18 +939,12 @@ public class CustomersService {
             bedsService.addUserToBed(booking.getBedId(), date, savedCustomer.getCustomerId());
             customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
 
-            if (!billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
-                //checking joining date is fall under current billing cycle
-                if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
-                    return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
-                }
-            }
-
             if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
                     return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, checkinRequest.rentalAmount());
                 } else {
-                    calculateRentAndCreateRentalInvoice(customers, request);
+                    CheckInRequest invoiceRequest = getCurrentCycleInvoiceRequest(request, joiningDate, currentBillDate);
+                    calculateRentAndCreateRentalInvoice(customers, invoiceRequest);
                     whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
                     userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
