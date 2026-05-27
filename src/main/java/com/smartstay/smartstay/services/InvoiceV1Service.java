@@ -3872,7 +3872,7 @@ public class InvoiceV1Service {
             List<RentBreakUp> listRentBreakup = customersBedHistoryService.getBreakupBasedOnRentHistory(customers, leavingDate, billingDates);
 
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
-                    currentMonthPaidRent,
+                    Utils.roundOffWithTwoDigit(currentMonthPaidRent),
                     (int) noOfDaysStayed,
                     Utils.roundOffWithTwoDigit(monthlyRent),
                     Utils.roundOffWithTwoDigit(currentMonthTotalAmount),

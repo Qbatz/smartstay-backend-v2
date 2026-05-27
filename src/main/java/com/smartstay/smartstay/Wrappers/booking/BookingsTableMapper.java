@@ -27,6 +27,7 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
 
     @Override
     public List<Object> apply(InvoicesV1 invoicesV1) {
+        String status = getStatus(invoicesV1);
         List<Object> columnItems = new ArrayList<>();
         BookingsV1 bookingsV1 = listBookings
                 .stream()
@@ -63,7 +64,7 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
                 canApplyToOtherInvoices,
                 invoicesV1.getBalanceAmount(),
                 invoicesV1.getCustomerId(),
-                BookingColumnUtils.STATUS);
+                status);
 
         columnItems.add(bookingTableHeader);
         return columnItems;
@@ -121,5 +122,20 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
             return "Redeemed";
         }
         return "NA";
+    }
+
+    public String getStatus(InvoicesV1 invoicesV1) {
+        if (invoicesV1.getBalanceAmount() != null) {
+            if (invoicesV1.getBalanceAmount() == invoicesV1.getTotalAmount()) {
+                return "Available";
+            }
+            else if (invoicesV1.getBalanceAmount() < invoicesV1.getTotalAmount()) {
+                return "Partially Redeemed";
+            }
+            else {
+                return "Redeemed";
+            }
+        }
+        return "Redeemed";
     }
 }
