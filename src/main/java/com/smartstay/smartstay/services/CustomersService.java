@@ -83,7 +83,8 @@ public class CustomersService {
     private RolesService rolesService;
     @Autowired
     private UsersService userService;
-
+    @Autowired
+    private SettlementItemService settlementItemService;
     @Autowired
     private WhatsAppService whatsappService;
 
@@ -2561,16 +2562,20 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                //done
                 return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users);
             } else {
                 if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
+                    //done need fix
                     return calculateAndGenerateFinalSettlemtForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users);
                 }
+                //done
                 return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users);
             }
         } else {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 BillingDates customerBillingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), settlementDetails.getLeavingDate());
+                //done
                 return generateFinalSettlementForJoininBasedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, customerBillingDates, settlement, users);
             }
         }
@@ -2773,7 +2778,7 @@ public class CustomersService {
 //        if (invAdvanceInvoice != null) {
         InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
 
-
+        SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), invoicesV1.getInvoiceId(), null);
         if (cw != null) {
             cw.setAmount(0.0);
             cw.setCustomers(customers);
@@ -2788,7 +2793,7 @@ public class CustomersService {
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
         if (electricityConfig != null) {
             if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
-                eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customerId, settlementDetails.getLeavingDate(), authentication.getName()));
+                eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customerId, settlementDetails.getLeavingDate(), authentication.getName(), settlementItems.getInvoiceId()));
             }
         }
 //        }
@@ -2879,6 +2884,7 @@ public class CustomersService {
 
         double amountToBePaidWithoutDeductions = totalAmountToBePaid - deductionAmount;
 //        leavingDate, users, isAdvancePaid
+
         InvoicesV1 settlementInvoice = invoiceService.createSettlementInvoiceForFixedPrepaid(customers, customers.getHostelId(), totalAmountToBePaid, listUnpaidInvoices, lisDeductions, amountToBePaidWithoutDeductions, leavingDate, users, isAdvancePaid);
 
         CustomerWallet cw = customers.getWallet();
@@ -2891,12 +2897,14 @@ public class CustomersService {
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
 
+        SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), settlementInvoice.getInvoiceId(), settlementInfo);
+
         userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.SETTLEMENT, users);
 
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
         if (electricityConfig != null) {
             if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
-                eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customers.getCustomerId(), leavingDate, authentication.getName()));
+                eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customers.getCustomerId(), leavingDate, authentication.getName(), settlementItems.getInvoiceId()));
             }
         }
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -2985,6 +2993,7 @@ public class CustomersService {
 
         InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoiceForPostpaid(customers, customers.getHostelId(), Math.round(amountToBePaid), listUnpaidInvoices, lisDeductions, amoutToBePaidWithoutDeductions, leavingDate, users, isAdvancePaid);
 
+        SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), invoicesV1.getInvoiceId(), settlement);
         CustomerWallet cw = customers.getWallet();
         if (cw != null) {
             cw.setAmount(0.0);
@@ -3051,6 +3060,7 @@ public class CustomersService {
 
         InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoiceForPostpaid(customers, customers.getHostelId(), Math.round(amountToBePaid), listUnpaidInvoices, lisDeductions, amoutToBePaidWithoutDeductions, leavingDate, users, isAdvancePaid);
 
+        SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), invoicesV1.getInvoiceId(), settlement);
         CustomerWallet cw = customers.getWallet();
         if (cw != null) {
             cw.setAmount(0.0);
@@ -3066,7 +3076,7 @@ public class CustomersService {
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
         if (electricityConfig != null) {
             if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
-                eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customers.getCustomerId(), leavingDate, authentication.getName()));
+                eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customers.getCustomerId(), leavingDate, authentication.getName(), settlementItems.getInvoiceId()));
             }
         }
 
@@ -3261,6 +3271,7 @@ public class CustomersService {
 //        if (advaceInvoice != null) {
         InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(totalAmountToBePaid), cancellInvoices, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
 
+        SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), invoicesV1.getInvoiceId(), null);
         if (cw != null) {
             cw.setAmount(0.0);
             cw.setCustomers(customers);
@@ -3275,7 +3286,7 @@ public class CustomersService {
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
         if (electricityConfig != null) {
             if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
-                eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customers.getCustomerId(), settlementDetails.getLeavingDate(), authentication.getName()));
+                eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customers.getCustomerId(), settlementDetails.getLeavingDate(), authentication.getName(), settlementItems.getInvoiceId()));
             }
         }
 
