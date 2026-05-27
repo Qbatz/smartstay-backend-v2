@@ -35,6 +35,7 @@ public class WalletSettlement implements Function<CustomerWalletHistory, WalletT
                 source,
                 String.valueOf(customerWalletHistory.getSourceId()),
                 fromDate,
-                toDate);
+                toDate,
+                customerWalletHistory.getHistoryId());
     }
 }

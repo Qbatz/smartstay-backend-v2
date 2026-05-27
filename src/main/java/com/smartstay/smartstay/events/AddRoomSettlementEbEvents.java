@@ -9,12 +9,14 @@ public class AddRoomSettlementEbEvents extends ApplicationEvent {
     private String customerId;
     private Date endDate = null;
     private String createdBy = null;
+    private String invoiceId = null;
 
-    public AddRoomSettlementEbEvents(Object source, String hostelId, String customerId, Date endDate, String createdBy) {
+    public AddRoomSettlementEbEvents(Object source, String hostelId, String customerId, Date endDate, String createdBy, String invoiceId) {
         super(source);
         this.hostelId = hostelId;
         this.customerId = customerId;
         this.endDate = endDate;
+        this.invoiceId = invoiceId;
         this.createdBy = createdBy;
     }
 
@@ -48,5 +50,13 @@ public class AddRoomSettlementEbEvents extends ApplicationEvent {
 
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public String getInvoiceId() {
+        return invoiceId;
+    }
+
+    public void setInvoiceId(String invoiceId) {
+        this.invoiceId = invoiceId;
     }
 }
