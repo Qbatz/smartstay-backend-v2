@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.dao;
 
+import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.handlers.DeductionsConverter;
 import com.smartstay.smartstay.handlers.StringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,11 +30,13 @@ public class InvoicesV1 {
     Double paidAmount;
     //this is for redemption.
     Double balanceAmount;
+    Double subTotal;
     Double gst;
     Double cgst;
     Double sgst;
     Double gstPercentile;
     String paymentStatus;
+    Double deductionAmount;
     //will be applicable only for additional amount deduction when invoice type is others
     String othersDescription;
     //Mode will be manual and automatic
@@ -42,6 +46,9 @@ public class InvoicesV1 {
     @Convert(converter = StringListConverter.class)
     @Column(columnDefinition = "TEXT")
     List<String> cancelledInvoices;
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = DeductionsConverter.class)
+    List<Deductions> deductions;
     String invoiceUrl;
     String createdBy;
     String updatedBy;

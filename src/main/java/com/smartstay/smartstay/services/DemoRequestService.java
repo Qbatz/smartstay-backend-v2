@@ -1,5 +1,8 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.dao.DemoRequestActivity;
+import com.smartstay.smartstay.ennum.DemoRequestSource;
+import com.smartstay.smartstay.ennum.RequestStatus;
 import com.smartstay.smartstay.payloads.demo.DemoRequest;
 import com.smartstay.smartstay.repositories.DemoRequestRepository;
 import com.smartstay.smartstay.util.Utils;
@@ -12,7 +15,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class DemoRequestService {
@@ -76,9 +81,20 @@ public class DemoRequestService {
         request.setState(demoRequest.state());
         request.setBookedFor(requestedDate);
         request.setRequestedTime(demoRequest.requestedTime());
+        request.setDemoRequestStatus(RequestStatus.NEW.name());
+        request.setSource(DemoRequestSource.WEB.name());
+        request.setCreatedAt(new Date());
         request.setCountry("India");
-        request.setDemoRequestStatus(com.smartstay.smartstay.ennum.DemoRequest.REQUESTED.name());
+//        request.setDemoRequestStatus(com.smartstay.smartstay.ennum.DemoRequest.REQUESTED.name());
         request.setIsDemoCompleted(false);
+        DemoRequestActivity dra = new DemoRequestActivity();
+        dra.setDescription(RequestStatus.NEW.getDescription());
+        dra.setStatus(RequestStatus.NEW.name());
+        dra.setCreatedAt(new Date());
+
+        List<DemoRequestActivity> listDRA = new ArrayList<>();
+        listDRA.add(dra);
+        request.setDemoRequestActivities(listDRA);
 
         demoRequestRepository.save(request);
 

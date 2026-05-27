@@ -205,8 +205,8 @@ public class ReportService {
         // Requests
         int requestCount = amenityRequestService.countByHostelIdAndDateRange(hostelId, startDate, endDate);
         int requestActiveCount = amenityRequestService.countActiveByHostelIdAndDateRange(hostelId,
-                Arrays.asList(RequestStatus.PENDING.name(), RequestStatus.OPEN.name(),
-                        RequestStatus.INPROGRESS.name()),
+                Arrays.asList(AmenityRequestStatus.PENDING.name(), AmenityRequestStatus.OPEN.name(),
+                        AmenityRequestStatus.INPROGRESS.name()),
                 startDate, endDate);
         ReportResponse.RequestReport requestReport = ReportResponse.RequestReport.builder()
                 .totalRequests(requestCount)

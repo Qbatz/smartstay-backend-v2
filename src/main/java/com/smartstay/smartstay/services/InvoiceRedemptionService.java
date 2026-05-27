@@ -175,4 +175,18 @@ public class InvoiceRedemptionService {
                 })
                 .sum();
     }
+
+    public double getRedeemedAmountFromINvoiceId(String hostelId, String invoiceId) {
+        double redeemedAmount = 0.0;
+
+        List<InvoiceRedemption> listInvoiceRedeemed = invoiceRedemptionRepository.findByHostelIdAndSourceId(hostelId, invoiceId);
+        if (listInvoiceRedeemed != null) {
+            redeemedAmount = listInvoiceRedeemed
+                    .stream()
+                    .mapToDouble(InvoiceRedemption::getRedemptionAmount)
+                    .sum();
+        }
+        return redeemedAmount;
+
+    }
 }

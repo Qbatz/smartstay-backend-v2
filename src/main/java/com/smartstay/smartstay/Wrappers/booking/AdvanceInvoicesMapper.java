@@ -103,12 +103,17 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
             }
         }
 
+        double availableAmount = 0.0;
+        if (invoicesV1.getBalanceAmount() != null) {
+            availableAmount = invoicesV1.getBalanceAmount();
+        }
+
 
         return new AdvanceListItems(invoicesV1.getInvoiceId(),
                 invoicesV1.getInvoiceNumber(),
                 invoicesV1.getInvoiceType(),
                 invoicesV1.getTotalAmount(),
-                invoicesV1.getBalanceAmount(),
+                Utils.roundOffWithTwoDigit(availableAmount),
                 Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                 bookingDate,
                 firstName,

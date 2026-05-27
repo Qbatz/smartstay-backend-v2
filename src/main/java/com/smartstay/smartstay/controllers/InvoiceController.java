@@ -102,15 +102,27 @@ public class InvoiceController {
         return invoiceV1Service.redeeemAdvanceAmount(hostelId, invoiceId, invoiceRedemption);
     }
 
-    @GetMapping("/advances/{hostelId}")
+    @GetMapping("/advances/old/{hostelId}")
     public ResponseEntity<?> getAdvanceInvoices(@PathVariable("hostelId") String hostelId,
                                                 @RequestParam(value = "page", defaultValue = "1") int page,
                                                 @RequestParam(value = "size", defaultValue = "10") int size) {
         return invoiceV1Service.getAdvanceInvoicesForRedemptionOld(hostelId, page, size);
     }
 
-    @GetMapping("/advances/new/{hostelId}")
+    @GetMapping("/advances/{hostelId}")
     public ResponseEntity<?> getAdvancesNew(@PathVariable("hostelId") String hostelId,
+                                            @RequestParam(value = "page", defaultValue = "1", required = false) int page,
+                                            @RequestParam(value = "size", defaultValue = "10", required = false) int size,
+                                            @RequestParam(value = "name", required = false) String name,
+                                            @RequestParam(value = "period", required = false) String period,
+                                            @RequestParam(value = "floor", required = false) String floor,
+                                            @RequestParam(value = "room",required = false) String room,
+                                            @RequestParam(value = "minAmount", required = false) String minimumAmount,
+                                            @RequestParam(value = "maxAmount", required = false) String maxAmount) {
+        return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, name, period, floor, room, minimumAmount, maxAmount, page, size);
+    }
+    @GetMapping("/advances/new/{hostelId}")
+    public ResponseEntity<?> getAdvancesNewDuplicate(@PathVariable("hostelId") String hostelId,
                                             @RequestParam(value = "page", defaultValue = "1", required = false) int page,
                                             @RequestParam(value = "size", defaultValue = "10", required = false) int size,
                                             @RequestParam(value = "name", required = false) String name,

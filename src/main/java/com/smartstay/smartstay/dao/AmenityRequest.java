@@ -23,6 +23,7 @@ public class AmenityRequest {
     String amenityId;
     Date requestedDate;
     Date startFrom;
+    //From amenity request status Enum
     String currentStatus;
     Boolean isActive;
     String updatedBy;
