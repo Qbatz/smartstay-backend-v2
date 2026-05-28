@@ -123,6 +123,7 @@ public interface UserRepository extends JpaRepository<Users, String> {
     Users findByEmailIdAndPasswordAndIsDeletedFalse(String emailId, String password);
 
     List<Users> findAllByUserIdIn(List<String> userIds);
+    List<Users> findAllByUserIdInAndIsActiveTrue(List<String> userIds);
 
     @Query(value = """
                 SELECT

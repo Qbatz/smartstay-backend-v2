@@ -4,5 +4,6 @@ public record WalletTransactions(double amount,
                                  String source,
                                  String sourceId,
                                  String billStartDate,
-                                 String billEndDate) {
+                                 String billEndDate,
+                                 Long walletId) {
 }

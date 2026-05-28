@@ -1330,11 +1330,11 @@ public class UsersService {
 
     public List<Users> findAllUsersByHostelId(String hostelId) {
         List<String> userIds = userHostelService.listAllUsersFromHostelId(hostelId);
-        return userRepository.findAllByUserIdIn(userIds);
+        return userRepository.findAllByUserIdInAndIsActiveTrue(userIds);
     }
 
     public List<Users> findAllUsersFromUserId(List<String> userIds) {
-        return userRepository.findAllByUserIdIn(userIds);
+        return userRepository.findAllByUserIdInAndIsActiveTrue(userIds);
     }
 
     //this for resetting pin

@@ -20,6 +20,8 @@ public class InvoiceItems {
     private Double amount;
     private Date fromDate;
     private Date toDate;
+    private String sourceId;
+    private String sourceType;
 
     @ManyToOne
     @JoinColumn(name = "invoice_id")

@@ -138,7 +138,7 @@ public class RolesService {
 
 
         if (updatedRole.roleName() != null && !updatedRole.roleName().isEmpty()) {
-            if (rolesRepository.existsByParentIdAndRole(roleId,updatedRole.roleName(), user.getParentId()) > 0) {
+            if (rolesRepository.existsByParentIdAndRole(roleId,updatedRole.roleName(), user.getParentId(), existingRole.getHostelId()) > 0) {
                 return new ResponseEntity<>(Utils.ROLE_NAME_EXISTS, HttpStatus.BAD_REQUEST);
             }
             existingRole.setRoleName(updatedRole.roleName());

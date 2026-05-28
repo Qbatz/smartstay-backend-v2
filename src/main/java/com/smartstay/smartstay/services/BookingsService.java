@@ -977,6 +977,29 @@ public class BookingsService {
                     startDate = postpaidCalendar.getTime();
                 }
 
+                if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name()) && billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+                    Calendar joiningDateCal = Calendar.getInstance();
+                    joiningDateCal.setTime(customers.getJoiningDate());
+
+                    Date parsedEffectiveDate = Utils.stringToDate(updateInfo.effectiveDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT_DD_MM);
+                    Calendar effectiveDateCal = Calendar.getInstance();
+                    effectiveDateCal.setTime(parsedEffectiveDate);
+
+                    Calendar desiredStartDateCal = Calendar.getInstance();
+                    desiredStartDateCal.set(Calendar.YEAR, effectiveDateCal.get(Calendar.YEAR));
+                    desiredStartDateCal.set(Calendar.MONTH, effectiveDateCal.get(Calendar.MONTH));
+                    desiredStartDateCal.set(Calendar.DAY_OF_MONTH, joiningDateCal.get(Calendar.DAY_OF_MONTH));
+
+                    desiredStartDateCal.set(Calendar.HOUR_OF_DAY, 0);
+                    desiredStartDateCal.set(Calendar.MINUTE, 0);
+                    desiredStartDateCal.set(Calendar.SECOND, 0);
+                    desiredStartDateCal.set(Calendar.MILLISECOND, 0);
+
+                    startDate = desiredStartDateCal.getTime();
+
+                }
+
+
                 rentHistoryService.updateOldRentEndDate(customers.getCustomerId(), billingDates.currentBillStartDate(), billingDates.currentBillEndDate(), currentRentEndDate);
 
                 RentHistory existing = rentHistoryService.findByCustomerIdAndStartsFrom(customers.getCustomerId(), new Date());
