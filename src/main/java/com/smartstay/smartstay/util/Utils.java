@@ -744,4 +744,14 @@ public class Utils {
 
         return effectiveMonths;
     }
+
+    public static boolean isCurrentMonth(Date date) {
+        if (date == null) {
+            return false;
+        }
+        LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate now = LocalDate.now();
+        return localDate.getYear() == now.getYear() && localDate.getMonth() == now.getMonth();
+    }
 }
+

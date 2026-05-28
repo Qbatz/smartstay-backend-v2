@@ -755,12 +755,16 @@ public class CustomersService {
                 } else {
                     CheckInRequest invoiceRequest = getCurrentCycleInvoiceRequest(payloads, joiningDate, currentBillDate);
                     calculateRentAndCreateRentalInvoice(customers, invoiceRequest);
-                    whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                    if (Utils.isCurrentMonth(joiningDate)) {
+                        whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                    }
                     userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             } else {
-                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                if (Utils.isCurrentMonth(joiningDate)) {
+                    whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                }
                 userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
             }
@@ -778,13 +782,13 @@ public class CustomersService {
             //should generate the invoice
             //send welcome message on whatsapp
             invoiceService.createNewInvoiceCurrentMonthJoining(customers, joiningDate, rentalAmount, currentBillDate);
-            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL) && Utils.isCurrentMonth(joiningDate)) {
                 whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
             }
 
         } else if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
             invoiceService.createNewInvoiceCurrentMonthJoining(customers, currentBillDate.currentBillStartDate(), rentalAmount, currentBillDate);
-            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL)) {
+            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL) && Utils.isCurrentMonth(joiningDate)) {
                 whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
             }
         }
@@ -948,12 +952,16 @@ public class CustomersService {
                 } else {
                     CheckInRequest invoiceRequest = getCurrentCycleInvoiceRequest(request, joiningDate, currentBillDate);
                     calculateRentAndCreateRentalInvoice(customers, invoiceRequest);
-                    whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                    if (Utils.isCurrentMonth(joiningDate)) {
+                        whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                    }
                     userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             } else {
-                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                if (Utils.isCurrentMonth(joiningDate)) {
+                    whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                }
                 userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
             }
