@@ -75,4 +75,10 @@ public class Draft {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated_at", nullable = false)
     private Date updatedAt;
+
+    @Column(name = "aadhar_pic")
+    private String aadharPic;
+
+    @Column(name = "pan_pic")
+    private String panPic;
 }

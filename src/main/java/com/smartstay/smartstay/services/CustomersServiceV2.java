@@ -5,6 +5,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.config.FilesConfig;
+import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.Advance;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.CustomerCredentials;
@@ -50,6 +52,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.Date;
@@ -131,6 +134,9 @@ public class CustomersServiceV2 {
     @Autowired
     private AdditionalContactService additionalContactService;
 
+    @Autowired
+    private UploadFileToS3 uploadToS3;
+
     public ResponseEntity<?> searchCustomersByMobile(String hostelId, String search) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -168,7 +174,11 @@ public class CustomersServiceV2 {
     }
 
     @Transactional
-    public ResponseEntity<?> saveDraft(String hostelId, SaveDraftCustomerRequest payloads) {
+    public ResponseEntity<?> saveDraft(String hostelId,
+                                       MultipartFile profilePic,
+                                       MultipartFile aadharPic,
+                                       MultipartFile panPic,
+                                       SaveDraftCustomerRequest payloads) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -223,6 +233,11 @@ public class CustomersServiceV2 {
             }
         }
 
+        String profileImage = null;
+        if (profilePic != null && !profilePic.isEmpty()) {
+            profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(profilePic), "users/profile");
+        }
+
         Customers customers = new Customers();
         customers.setFirstName(payloads.firstName());
         customers.setLastName(payloads.lastName());
@@ -235,7 +250,7 @@ public class CustomersServiceV2 {
         customers.setCreatedBy(loginId);
         customers.setCreatedAt(new Date());
         customers.setKycStatus(KycStatus.NOT_AVAILABLE.name());
-        customers.setProfilePic(null);
+        customers.setProfilePic(profileImage);
 
         if (Utils.checkNullOrEmpty(payloads.joiningDate())) {
             Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -256,6 +271,16 @@ public class CustomersServiceV2 {
             } catch (JsonProcessingException e) {
                 return new ResponseEntity<>("Invalid deductions payload", HttpStatus.BAD_REQUEST);
             }
+        }
+
+        String aadharImage = null;
+        if (aadharPic != null && !aadharPic.isEmpty()) {
+            aadharImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(aadharPic), "users/profile");
+        }
+
+        String panImage = null;
+        if (panPic != null && !panPic.isEmpty()) {
+            panImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(panPic), "users/profile");
         }
 
         Date now = new Date();
@@ -281,6 +306,8 @@ public class CustomersServiceV2 {
         draft.setProRate(payloads.proRate());
         draft.setCreatedAt(now);
         draft.setUpdatedAt(now);
+        draft.setAadharPic(aadharImage);
+        draft.setPanPic(panImage);
 
         draftsRepository.save(draft);
 
