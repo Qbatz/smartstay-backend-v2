@@ -309,6 +309,26 @@ public class CustomersServiceV2 {
         draft.setAadharPic(aadharImage);
         draft.setPanPic(panImage);
 
+        try {
+            if (payloads.idProof() != null) {
+                draft.setIdProofJson(objectMapper.writeValueAsString(payloads.idProof()));
+            }
+            if (payloads.address() != null) {
+                draft.setAddressJson(objectMapper.writeValueAsString(payloads.address()));
+            }
+            if (payloads.booking() != null) {
+                draft.setBookingJson(objectMapper.writeValueAsString(payloads.booking()));
+            }
+            if (payloads.jobDetails() != null) {
+                draft.setJobDetailsJson(objectMapper.writeValueAsString(payloads.jobDetails()));
+            }
+            if (payloads.guardians() != null) {
+                draft.setGuardiansJson(objectMapper.writeValueAsString(payloads.guardians()));
+            }
+        } catch (JsonProcessingException e) {
+            return new ResponseEntity<>("Invalid JSON payload", HttpStatus.BAD_REQUEST);
+        }
+
         draftsRepository.save(draft);
 
         return new ResponseEntity<>(Map.of(

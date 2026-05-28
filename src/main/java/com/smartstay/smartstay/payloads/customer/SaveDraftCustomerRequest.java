@@ -47,6 +47,10 @@ public record SaveDraftCustomerRequest(
         String stayType,
         @Valid
         List<NonRefundable> deductions,
-        Boolean proRate
+        Boolean proRate,
+        IdProof idProof,
+        Address address,
+        Booking booking,
+        JobDetails jobDetails,
+        List<Guardian> guardians
 ) {}
-

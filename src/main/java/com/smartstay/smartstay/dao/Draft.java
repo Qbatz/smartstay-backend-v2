@@ -81,4 +81,19 @@ public class Draft {
 
     @Column(name = "pan_pic")
     private String panPic;
+
+    @Column(name = "id_proof_json", columnDefinition = "LONGTEXT")
+    private String idProofJson;
+
+    @Column(name = "address_json", columnDefinition = "LONGTEXT")
+    private String addressJson;
+
+    @Column(name = "booking_json", columnDefinition = "LONGTEXT")
+    private String bookingJson;
+
+    @Column(name = "job_details_json", columnDefinition = "LONGTEXT")
+    private String jobDetailsJson;
+
+    @Column(name = "guardians_json", columnDefinition = "LONGTEXT")
+    private String guardiansJson;
 }
