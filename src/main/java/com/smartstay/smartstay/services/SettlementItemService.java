@@ -86,4 +86,12 @@ public class SettlementItemService {
         }
         return settlementItemsRepository.save(settlementItems);
     }
+
+    public SettlementItems getSettlemtItems(String invoiceId) {
+        return settlementItemsRepository.findByInvoiceId(invoiceId);
+    }
+
+    public void updateEBItemsFromSettlement(SettlementItems settlementItems) {
+        settlementItemsRepository.save(settlementItems);
+    }
 }

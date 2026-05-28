@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SettlementItemsRepository extends JpaRepository<SettlementItems, Long> {
+    SettlementItems findByInvoiceId(String invoiceId);
 }

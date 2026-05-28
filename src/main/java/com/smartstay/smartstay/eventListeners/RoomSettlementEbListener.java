@@ -1,9 +1,11 @@
 package com.smartstay.smartstay.eventListeners;
 
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.settlement.EBItems;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
 import com.smartstay.smartstay.events.AddRoomSettlementEbEvents;
 import com.smartstay.smartstay.services.*;
+import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
@@ -31,16 +33,21 @@ public class RoomSettlementEbListener {
     private CustomersService customersService;
     @Autowired
     private CustomerWalletHistoryService walletHistoryService;
+    @Autowired
+    private SettlementItemService settlementItemService;
 
     @Async
     @EventListener
     public void addRoomSettlementEbListener(AddRoomSettlementEbEvents ebEvents) {
         String customerId = ebEvents.getCustomerId();
         String createdBy = ebEvents.getCreatedBy();
+        SettlementItems settlementItems = settlementItemService.getSettlemtItems(ebEvents.getInvoiceId());
+
         if (customerId != null) {
             List<CustomersBedHistory> listBedHistory = customerBedHistory.getCustomersBedHistoryList(customerId);
+            List<ElectricityReadings> electricityReadingsForInvoice = new ArrayList<>();
             if (!listBedHistory.isEmpty()) {
-                List<ElectricityReadings> electricityReadingsForInvoice = new ArrayList<>();
+
                 listBedHistory.forEach(item -> {
                     Date endDate = item.getEndDate();
                     if (item.getEndDate() == null) {
@@ -138,6 +145,28 @@ public class RoomSettlementEbListener {
 
                         if (!customerWallets.isEmpty()) {
                             customersService.updateCustomerWallets(customerWallets);
+                        }
+                    }
+                }
+
+            }
+
+            if (!electricityReadingsForInvoice.isEmpty()) {
+                List<Integer> readingIds = electricityReadingsForInvoice
+                        .stream()
+                        .map(ElectricityReadings::getId)
+                        .toList();
+                if (readingIds != null && !readingIds.isEmpty()) {
+                    List<CustomersEbHistory> listCustomerEbs = ebHistoryService.findHistoryByCustomerIdAndReadingId(customerId, readingIds);
+                    if (listCustomerEbs != null) {
+                        List<EBItems> listEbItems = listCustomerEbs
+                                .stream()
+                                .map(i -> new EBItems(i.getReadingId(), i.getId(), i.getStartDate(), i.getEndDate(), Utils.roundOffWithTwoDigit(i.getAmount()), i.getUnits()))
+                                .toList();
+
+                        if (settlementItems != null) {
+                            settlementItems.setEbItems(listEbItems);
+                            settlementItemService.updateEBItemsFromSettlement(settlementItems);
                         }
                     }
                 }
