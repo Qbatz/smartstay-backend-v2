@@ -1647,6 +1647,7 @@ public class InvoiceV1Service {
             settlementInvoice.setDeductions(listDeductions);
             settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
             settlementInvoice.setBasePrice(Utils.roundOfDouble(totalAmountWithoutDeduction));
+            settlementInvoice.setSubTotal(Utils.roundOfDouble(totalAmountToBePaid));
             settlementInvoice.setTotalAmount(Utils.roundOfDouble(totalAmountToBePaid));
             if (Utils.roundOfDouble(totalAmountToBePaid) == 0) {
                 settlementInvoice.setPaymentStatus(PaymentStatus.PAID.name());
@@ -1706,6 +1707,7 @@ public class InvoiceV1Service {
             settlementInvoice.setInvoiceType(InvoiceType.SETTLEMENT.name());
             settlementInvoice.setBasePrice(Utils.roundOfDouble(totalAmountToBePaid));
             settlementInvoice.setTotalAmount(Utils.roundOfDouble(totalAmountToBePaid));
+            settlementInvoice.setSubTotal(Utils.roundOfDouble(totalAmountToBePaid));
             settlementInvoice.setGst(0.0);
             settlementInvoice.setCgst(0.0);
             settlementInvoice.setSgst(0.0);

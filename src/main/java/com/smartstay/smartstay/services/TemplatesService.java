@@ -104,7 +104,7 @@ public class TemplatesService {
         templateType.setGstPercentage(0.0);
         templateType.setCgst(0.0);
         templateType.setSgst(0.0);
-        templateType.setInvoiceNotes("Welcome to " + tmpl.hostelName() + ". Wishing you happy stay");
+        templateType.setInvoiceNotes("Welcome to " + tmpl.hostelName() + ". Wishing you a happy stay");
         templateType.setReceiptNotes("Thanks for choosing " + tmpl.hostelName());
         templateType.setInvoiceTemplateColor("rgb(30, 69, 225)");
         templateType.setReceiptTemplateColor("rgb(30, 69, 225)");
