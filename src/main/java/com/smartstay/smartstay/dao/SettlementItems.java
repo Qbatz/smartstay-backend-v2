@@ -1,13 +1,7 @@
 package com.smartstay.smartstay.dao;
 
-import com.smartstay.smartstay.converters.CurrentOtherItemConverter;
-import com.smartstay.smartstay.converters.CurrentRentBreakUpConverter;
-import com.smartstay.smartstay.converters.SettlementUnpaidInvoicesConverter;
-import com.smartstay.smartstay.converters.SettlementWalletConverter;
-import com.smartstay.smartstay.dto.settlement.CurrentOtherItems;
-import com.smartstay.smartstay.dto.settlement.CurrentRentBreakUp;
-import com.smartstay.smartstay.dto.settlement.SettlementUnpaidInvoices;
-import com.smartstay.smartstay.dto.settlement.WalltetItems;
+import com.smartstay.smartstay.converters.*;
+import com.smartstay.smartstay.dto.settlement.*;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -36,6 +30,9 @@ public class SettlementItems {
     @Column(columnDefinition = "TEXT")
     @Convert(converter = CurrentOtherItemConverter.class)
     private List<CurrentOtherItems> currentMonthOtherItems;
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = SettlementEBItemsConverter.class)
+    private List<EBItems> ebItems;
 
     private Double currentMonthPayableAmount;
     private Double currentMonthPaidAmount;
