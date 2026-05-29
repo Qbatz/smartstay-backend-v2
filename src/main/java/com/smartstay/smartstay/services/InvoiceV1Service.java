@@ -2977,6 +2977,8 @@ public class InvoiceV1Service {
                                 return i;
                             })
                             .toList();
+
+                    invoicesV1.setDeductions(listDeductions);
                 }
             }
         }
@@ -4552,11 +4554,47 @@ public class InvoiceV1Service {
                                     if (invoiceRedemption1 != null) {
                                         double amountAfterDeduction = i.getPaidAmount() - deductions;
                                         if (amountAfterDeduction > 0) {
-                                            if (i.getBalanceAmount() != null) {
-                                                i.setBalanceAmount(amountAfterDeduction);
-                                            } else {
+                                            double unpaidDeductionAmount = i.
+                                                    getDeductions()
+                                                    .stream()
+                                                    .filter(i2 -> i.getPaidAmount() == null || i2.getPaidAmount() < i2.getAmount())
+                                                    .mapToDouble(i2 -> i2.getAmount() - i2.getPaidAmount())
+                                                    .sum();
+                                            if (unpaidDeductionAmount > 0) {
+                                                final double[] tempAmount = {unpaidDeductionAmount};
+                                                List<Deductions> newDeductions = i.getDeductions()
+                                                        .stream()
+                                                        .map(i2 -> {
+                                                            if (tempAmount[0] > 0) {
+                                                                double balance = i2.getAmount() - i2.getPaidAmount();
+                                                                if (i2.getPaidAmount() < i2.getAmount()) {
+                                                                    if (tempAmount[0] >= balance) {
+                                                                        i2.setPaidAmount(i2.getAmount());
+                                                                        tempAmount[0] = tempAmount[0] - balance;
+                                                                    }
+                                                                    else if (balance > tempAmount[0]) {
+                                                                        i2.setPaidAmount(i2.getPaidAmount() + tempAmount[0]);
+                                                                        tempAmount[0] = 0;
+                                                                    }
+                                                                }
+
+                                                            }
+                                                            return i2;
+                                                        })
+                                                        .toList();
+
+                                                i.setDeductions(newDeductions);
+
                                                 i.setBalanceAmount(amountAfterDeduction);
                                             }
+                                            else {
+                                                if (i.getBalanceAmount() != null) {
+                                                    i.setBalanceAmount(amountAfterDeduction);
+                                                } else {
+                                                    i.setBalanceAmount(amountAfterDeduction);
+                                                }
+                                            }
+
                                         }
                                         else {
                                             final double[] tempAmount = {invoiceRedemption1.getRedemptionAmount()};
