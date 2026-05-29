@@ -71,7 +71,7 @@ public class RolesService {
         List<RolesV1> listRoles = rolesRepository.findAllByHostelId(hostelId);
         listRoles.addAll(0, getCommonRoles);
 
-        Map<Integer, Long> userCountMap = buildUserCountMap(listRoles);
+        Map<Integer, Long> userCountMap = buildUserCountMap(listRoles, hostelId);
 
         List<Roles> rolesList = listRoles.stream().map(item -> new RolesMapper(modulesRepository, userCountMap).apply(item)).toList();
         return new ResponseEntity<>(rolesList, HttpStatus.OK);
@@ -103,7 +103,7 @@ public class RolesService {
 
         }
         if (v1 != null) {
-            Map<Integer, Long> userCountMap = buildUserCountMap(List.of(v1));
+            Map<Integer, Long> userCountMap = buildUserCountMap(List.of(v1), v1.getHostelId());
             Roles rolesData = new RolesMapper(modulesRepository, userCountMap).apply(v1);
             return new ResponseEntity<>(rolesData, HttpStatus.OK);
         }
@@ -323,12 +323,12 @@ public class RolesService {
         return new ResponseEntity<>(listModules, HttpStatus.OK);
     }
 
-    private Map<Integer, Long> buildUserCountMap(List<RolesV1> roles) {
+    private Map<Integer, Long> buildUserCountMap(List<RolesV1> roles, String hostelId) {
         List<Integer> roleIds = roles.stream().map(RolesV1::getRoleId).toList();
         if (roleIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<Object[]> results = userRepository.countUsersByRoleIds(roleIds);
+        List<Object[]> results = userRepository.countUsersByRoleIdsAndHostelId(roleIds, hostelId);
         Map<Integer, Long> map = new HashMap<>();
         for (Object[] row : results) {
             Integer roleId = ((Number) row[0]).intValue();
