@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("v3/customers")
@@ -33,8 +34,11 @@ public class CustomersControllerV2 {
 
     @PostMapping("/saveDraft/{hostelId}")
     public ResponseEntity<?> saveDraft(@PathVariable("hostelId") String hostelId,
-                                       @Valid @RequestBody SaveDraftCustomerRequest payloads) {
-        return customersServiceV2.saveDraft(hostelId, payloads);
+                                       @RequestPart(value = "profilePic", required = false) MultipartFile profilePic,
+                                       @RequestPart(value = "aadharPic", required = false) MultipartFile aadharPic,
+                                       @RequestPart(value = "panPic", required = false) MultipartFile panPic,
+                                       @Valid @RequestPart SaveDraftCustomerRequest request) {
+        return customersServiceV2.saveDraft(hostelId, profilePic, aadharPic, panPic, request);
     }
 
     @DeleteMapping("/draft/{hostelId}/{customerId}")

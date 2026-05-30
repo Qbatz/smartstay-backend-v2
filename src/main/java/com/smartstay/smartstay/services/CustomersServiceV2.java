@@ -5,6 +5,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.config.FilesConfig;
+import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.Advance;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.CustomerCredentials;
@@ -14,12 +16,6 @@ import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.KycDetails;
 import com.smartstay.smartstay.dao.RentHistory;
 import com.smartstay.smartstay.dao.Users;
-import com.smartstay.smartstay.ennum.CustomerBedStatus;
-import com.smartstay.smartstay.ennum.CustomerStatus;
-import com.smartstay.smartstay.ennum.KycStatus;
-import com.smartstay.smartstay.ennum.ModuleId;
-import com.smartstay.smartstay.ennum.ActivitySource;
-import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.customer.BookingInfo;
@@ -28,20 +24,32 @@ import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.customer.TransactionDto;
 import com.smartstay.smartstay.dto.customer.WalletTransactions;
 import com.smartstay.smartstay.dto.documents.CustomerFiles;
+import com.smartstay.smartstay.payloads.customer.Address;
+import com.smartstay.smartstay.payloads.customer.Booking;
+import com.smartstay.smartstay.payloads.customer.Guardian;
+import com.smartstay.smartstay.payloads.customer.IdProof;
+import com.smartstay.smartstay.payloads.customer.JobDetails;
 import com.smartstay.smartstay.payloads.customer.SaveDraftCustomerRequest;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.repositories.DraftsRepository;
 import com.smartstay.smartstay.responses.customer.AdditionalContacts;
+import com.smartstay.smartstay.responses.customer.AdvanceInfo;
 import com.smartstay.smartstay.responses.customer.Amenities;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CustomerAddress;
 import com.smartstay.smartstay.responses.customer.CustomerDetails;
 import com.smartstay.smartstay.responses.customer.CustomerSearchResponse;
+import com.smartstay.smartstay.responses.customer.DraftDetails;
 import com.smartstay.smartstay.responses.customer.HostelInformation;
 import com.smartstay.smartstay.responses.customer.KycInformations;
-import com.smartstay.smartstay.responses.customer.AdvanceInfo;
 import com.smartstay.smartstay.dto.customer.WalletInfo;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
+import com.smartstay.smartstay.ennum.CustomerBedStatus;
+import com.smartstay.smartstay.ennum.CustomerStatus;
+import com.smartstay.smartstay.ennum.KycStatus;
+import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +58,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.Date;
@@ -131,6 +140,9 @@ public class CustomersServiceV2 {
     @Autowired
     private AdditionalContactService additionalContactService;
 
+    @Autowired
+    private UploadFileToS3 uploadToS3;
+
     public ResponseEntity<?> searchCustomersByMobile(String hostelId, String search) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -168,7 +180,11 @@ public class CustomersServiceV2 {
     }
 
     @Transactional
-    public ResponseEntity<?> saveDraft(String hostelId, SaveDraftCustomerRequest payloads) {
+    public ResponseEntity<?> saveDraft(String hostelId,
+                                       MultipartFile profilePic,
+                                       MultipartFile aadharPic,
+                                       MultipartFile panPic,
+                                       SaveDraftCustomerRequest payloads) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -223,6 +239,11 @@ public class CustomersServiceV2 {
             }
         }
 
+        String profileImage = null;
+        if (profilePic != null && !profilePic.isEmpty()) {
+            profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(profilePic), "users/profile");
+        }
+
         Customers customers = new Customers();
         customers.setFirstName(payloads.firstName());
         customers.setLastName(payloads.lastName());
@@ -235,7 +256,7 @@ public class CustomersServiceV2 {
         customers.setCreatedBy(loginId);
         customers.setCreatedAt(new Date());
         customers.setKycStatus(KycStatus.NOT_AVAILABLE.name());
-        customers.setProfilePic(null);
+        customers.setProfilePic(profileImage);
 
         if (Utils.checkNullOrEmpty(payloads.joiningDate())) {
             Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -256,6 +277,16 @@ public class CustomersServiceV2 {
             } catch (JsonProcessingException e) {
                 return new ResponseEntity<>("Invalid deductions payload", HttpStatus.BAD_REQUEST);
             }
+        }
+
+        String aadharImage = null;
+        if (aadharPic != null && !aadharPic.isEmpty()) {
+            aadharImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(aadharPic), "users/profile");
+        }
+
+        String panImage = null;
+        if (panPic != null && !panPic.isEmpty()) {
+            panImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(panPic), "users/profile");
         }
 
         Date now = new Date();
@@ -281,6 +312,28 @@ public class CustomersServiceV2 {
         draft.setProRate(payloads.proRate());
         draft.setCreatedAt(now);
         draft.setUpdatedAt(now);
+        draft.setAadharPic(aadharImage);
+        draft.setPanPic(panImage);
+
+        try {
+            if (payloads.idProof() != null) {
+                draft.setIdProofJson(objectMapper.writeValueAsString(payloads.idProof()));
+            }
+            if (payloads.address() != null) {
+                draft.setAddressJson(objectMapper.writeValueAsString(payloads.address()));
+            }
+            if (payloads.booking() != null) {
+                draft.setBookingJson(objectMapper.writeValueAsString(payloads.booking()));
+            }
+            if (payloads.jobDetails() != null) {
+                draft.setJobDetailsJson(objectMapper.writeValueAsString(payloads.jobDetails()));
+            }
+            if (payloads.guardians() != null) {
+                draft.setGuardiansJson(objectMapper.writeValueAsString(payloads.guardians()));
+            }
+        } catch (JsonProcessingException e) {
+            return new ResponseEntity<>("Invalid JSON payload", HttpStatus.BAD_REQUEST);
+        }
 
         draftsRepository.save(draft);
 
@@ -374,76 +427,26 @@ public class CustomersServiceV2 {
         String fullName = NameUtils.getFullName(customers.getFirstName(), customers.getLastName());
         String initials = NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
 
-        boolean isNewRentAvailable = false;
-        double newRentAmount = 0.0;
-        String newRentLabelHint = null;
-        List<RentHistory> rentHistories = bookingsService.getNewRentAmount(customerId, new Date());
-        List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
-        InvoiceResponse advanceInvoice = invoiceResponseList.stream().filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType())).limit(1).findFirst().orElse(null);
-        if (rentHistories != null) {
-            List<RentHistory> listNewRentHistory = rentHistories.stream().filter(i -> Utils.compareWithTwoDates(i.getStartsFrom(), new Date()) > 0).toList();
-            if (!listNewRentHistory.isEmpty()) {
-                isNewRentAvailable = true;
-                RentHistory rh = listNewRentHistory.get(listNewRentHistory.size() - 1);
-                if (rh != null) {
-                    newRentAmount = rh.getRent();
-                    newRentLabelHint = "Rent Update Scheduled, Effective from " + Utils.dateToString(rh.getStartsFrom());
-                }
-            }
-        }
-
-        HostelInformation hostelInformation = null;
-        BookingInfo bookingInfo = null;
-        Advance advance = customers.getAdvance();
-        List<Deductions> listDeductionFromAdvance = advance != null ? advance.getDeductions() : null;
         List<Deductions> listDeductionFromDraft = parseDraftDeductionsJson(draft != null ? draft.getDeductionsJson() : null);
-        List<Deductions> deductionSource = (listDeductionFromAdvance != null && !listDeductionFromAdvance.isEmpty())
-                ? listDeductionFromAdvance
-                : listDeductionFromDraft;
 
-        AdvanceInfo advanceInfo = null;
         List<Deductions> otherDeductionBreakup = null;
-        String bookingId = null;
         double maintenance = 0;
         double otherDeductions = 0;
-        double advanceAmount = 0;
-        if (advance != null) {
-            advanceAmount = advance.getAdvanceAmount();
-            if (deductionSource != null) {
-                maintenance = deductionSource.stream()
-                        .filter(item -> item.getType() != null && item.getType().equalsIgnoreCase("maintenance"))
-                        .mapToDouble(item -> item.getAmount() != null ? item.getAmount() : 0.0)
-                        .sum();
-                otherDeductions = deductionSource.stream()
-                        .filter(item -> item.getType() != null && !item.getType().equalsIgnoreCase("maintenance"))
-                        .mapToDouble(item -> item.getAmount() != null ? item.getAmount() : 0.0)
-                        .sum();
-                otherDeductionBreakup = deductionSource.stream().filter(item -> item.getType() != null && !item.getType().equalsIgnoreCase("maintenance")).collect(Collectors.toList());
-            }
-            advanceInfo = CustomersService.toAdvanceInfoResponse(advance, advanceInvoice, draft != null && draft.getBookingAmount() != null ? draft.getBookingAmount() : 0.0);
-        } else if (draft != null && draft.getAdvanceAmount() != null && draft.getAdvanceAmount() > 0) {
-            advanceAmount = draft.getAdvanceAmount();
-            if (deductionSource != null) {
-                maintenance = deductionSource.stream()
-                        .filter(item -> item.getType() != null && item.getType().equalsIgnoreCase("maintenance"))
-                        .mapToDouble(item -> item.getAmount() != null ? item.getAmount() : 0.0)
-                        .sum();
-                otherDeductions = deductionSource.stream()
-                        .filter(item -> item.getType() != null && !item.getType().equalsIgnoreCase("maintenance"))
-                        .mapToDouble(item -> item.getAmount() != null ? item.getAmount() : 0.0)
-                        .sum();
-                otherDeductionBreakup = deductionSource.stream().filter(item -> item.getType() != null && !item.getType().equalsIgnoreCase("maintenance")).collect(Collectors.toList());
-            }
+        if (listDeductionFromDraft != null) {
+            maintenance = listDeductionFromDraft.stream()
+                    .filter(item -> item.getType() != null && item.getType().equalsIgnoreCase("maintenance"))
+                    .mapToDouble(item -> item.getAmount() != null ? item.getAmount() : 0.0)
+                    .sum();
+            otherDeductions = listDeductionFromDraft.stream()
+                    .filter(item -> item.getType() != null && !item.getType().equalsIgnoreCase("maintenance"))
+                    .mapToDouble(item -> item.getAmount() != null ? item.getAmount() : 0.0)
+                    .sum();
+            otherDeductionBreakup = listDeductionFromDraft.stream().filter(item -> item.getType() != null && !item.getType().equalsIgnoreCase("maintenance")).collect(Collectors.toList());
         }
 
         BedDetails bedDetails = null;
         if (draft != null && draft.getBedId() != null) {
             bedDetails = bedsService.getBedDetails(draft.getBedId());
-        }
-
-        double advanceForHostel = advanceAmount;
-        if (advanceForHostel == 0 && draft != null && draft.getAdvanceAmount() != null) {
-            advanceForHostel = draft.getAdvanceAmount();
         }
 
         String joiningDateStr = "";
@@ -453,6 +456,8 @@ public class CustomersServiceV2 {
             joiningDateStr = Utils.dateToString(customers.getExpJoiningDate());
         }
 
+        HostelInformation hostelInformation = null;
+        BookingInfo bookingInfo = null;
         if (draft != null) {
             Integer roomId = draft.getRoomId();
             Integer floorId = draft.getFloorId();
@@ -479,7 +484,7 @@ public class CustomersServiceV2 {
                     bedId,
                     joiningDateStr,
                     CustomerStatus.DRAFT.name(),
-                    advanceForHostel,
+                    draft.getAdvanceAmount(),
                     otherDeductions,
                     maintenance,
                     draft.getRentalAmount(),
@@ -492,60 +497,25 @@ public class CustomersServiceV2 {
             bookingInfo = new BookingInfo(bookingDateStr, draft.getBookingAmount(), bookedBed, bookedFloor, bookedRoom);
         }
 
-        CustomerAddress address = new CustomerAddress(customers.getStreet(), customers.getHouseNo(), customers.getLandmark(), customers.getPincode(), customers.getCity(), customers.getState());
-        KycDetails kycDetails = customers.getKycDetails();
-        KycInformations kycInfo;
-        if (kycDetails == null) {
-            kycInfo = new KycInformations(customers.getKycStatus(), null, null, null);
-        } else {
-            kycInfo = new KycInformations(kycDetails.getCurrentStatus(), null, null, null);
-        }
-
-        CheckoutInfo checkoutInfo = null;
-
-        List<BedHistory> listBeds = bedHistory.getCustomersBedHistory(customers.getCustomerId());
-        List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customerId);
-        List<TransactionDto> listTransactions = transactionService.getTranactionInfoByCustomerId(customerId);
-        List<AmenityRequestDTO> listRequestedAmenities = amenityRequestService.getRequestedAmenities(customerId, customers.getHostelId());
-
-        List<String> invoicesIds = listTransactions.stream().map(TransactionDto::invoiceId).toList();
-        Set<String> bankIds = listTransactions.stream().map(TransactionDto::bankId).collect(Collectors.toSet());
-        List<InvoicesV1> listOfInvoices = invoiceService.findInvoices(invoicesIds);
-        List<BankingV1> listOFBankings = bankingService.findAllBanksById(bankIds);
-        List<String> userIds = listOFBankings.stream().map(BankingV1::getUserId).toList();
-        List<Users> listUsers = userService.findAllUsersFromUserId(userIds);
-
-        List<com.smartstay.smartstay.responses.customer.TransactionDto> listTransactionResponse = listTransactions.stream().map(i -> new TransctionsForCustomerDetails(listOfInvoices, listOFBankings, listUsers).apply(i)).toList();
-
-        List<WalletTransactions> walletTransactions = customerWalletHistoryService.getWalletTransactions(customerId);
-        double walletAmount = 0.0;
-        if (customers.getWallet() != null && customers.getWallet().getAmount() != null) {
-            walletAmount = Utils.roundOffWithTwoDigit(customers.getWallet().getAmount());
-        }
-
-        WalletInfo walletInfo = new WalletInfo(walletAmount, walletTransactions);
-        CustomerFiles customerFiles = customerDocumentsService.getCustomerFiles(customerId);
-        List<AdditionalContacts> additionalContacts = additionalContactService.getAdditionalContact(customers.getHostelId(), customerId);
-
-        boolean isJoiningDateEditable = !bedHistory.hasReassignedHistory(customerId);
-
-        String createdDate = Utils.dateToString(customers.getCreatedAt());
-        String createdTime = Utils.dateToTime(customers.getCreatedAt());
-        String createdAt = Utils.dateToDateTime(customers.getCreatedAt());
-        String createdBy = customers.getCreatedBy();
-        String createdByName = null;
-        String createdByInitials = null;
-        String createdByPic = null;
-        if (createdBy != null && !createdBy.isEmpty()) {
-            Users createdByUser = userService.findUserByUserId(createdBy);
-            if (createdByUser != null) {
-                createdByName = Utils.fullName(createdByUser.getFirstName(), createdByUser.getLastName());
-                createdByInitials = Utils.getInitials(createdByUser.getFirstName(), createdByUser.getLastName());
-                createdByPic = createdByUser.getProfileUrl();
+        IdProof idProof = null;
+        Address address = null;
+        Booking booking = null;
+        JobDetails jobDetails = null;
+        List<Guardian> guardians = null;
+        if (draft != null) {
+            try {
+                idProof = draft.getIdProofJson() != null ? objectMapper.readValue(draft.getIdProofJson(), IdProof.class) : null;
+                address = draft.getAddressJson() != null ? objectMapper.readValue(draft.getAddressJson(), Address.class) : null;
+                booking = draft.getBookingJson() != null ? objectMapper.readValue(draft.getBookingJson(), Booking.class) : null;
+                jobDetails = draft.getJobDetailsJson() != null ? objectMapper.readValue(draft.getJobDetailsJson(), JobDetails.class) : null;
+                guardians = draft.getGuardiansJson() != null ? objectMapper.readValue(draft.getGuardiansJson(), new TypeReference<List<Guardian>>() {}) : null;
+            } catch (JsonProcessingException e) {
+                // Handle exception
             }
         }
 
-        CustomerDetails details = new CustomerDetails(customers.getCustomerId(),
+        DraftDetails details = new DraftDetails(
+                customers.getCustomerId(),
                 customers.getHostelId(),
                 customers.getFirstName(),
                 customers.getLastName(),
@@ -555,34 +525,18 @@ public class CustomersServiceV2 {
                 "91",
                 initials,
                 customers.getProfilePic(),
-                bookingId,
-                isNewRentAvailable,
-                newRentAmount,
-                newRentLabelHint,
                 customers.getCurrentStatus(),
-                address,
                 hostelInformation,
-                kycInfo,
-                advanceInfo,
-                checkoutInfo,
                 bookingInfo,
-                invoiceResponseList,
-                listBeds,
-                listTransactionResponse,
-                amenities,
-                listRequestedAmenities,
-                walletInfo,
-                customerFiles,
-                additionalContacts,
-                isJoiningDateEditable,
-                createdDate,
-                createdTime,
-                createdAt,
-                createdBy,
-                createdByName,
-                createdByInitials,
-                createdByPic,
-                null);
+                bedDetails,
+                idProof,
+                address,
+                booking,
+                jobDetails,
+                guardians,
+                draft.getPanPic(),
+                draft.getAadharPic(),
+                listDeductionFromDraft);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }

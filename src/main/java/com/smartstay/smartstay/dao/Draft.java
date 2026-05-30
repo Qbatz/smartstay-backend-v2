@@ -75,4 +75,25 @@ public class Draft {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated_at", nullable = false)
     private Date updatedAt;
+
+    @Column(name = "aadhar_pic")
+    private String aadharPic;
+
+    @Column(name = "pan_pic")
+    private String panPic;
+
+    @Column(name = "id_proof_json", columnDefinition = "LONGTEXT")
+    private String idProofJson;
+
+    @Column(name = "address_json", columnDefinition = "LONGTEXT")
+    private String addressJson;
+
+    @Column(name = "booking_json", columnDefinition = "LONGTEXT")
+    private String bookingJson;
+
+    @Column(name = "job_details_json", columnDefinition = "LONGTEXT")
+    private String jobDetailsJson;
+
+    @Column(name = "guardians_json", columnDefinition = "LONGTEXT")
+    private String guardiansJson;
 }
