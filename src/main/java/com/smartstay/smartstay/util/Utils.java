@@ -753,5 +753,74 @@ public class Utils {
         LocalDate now = LocalDate.now();
         return localDate.getYear() == now.getYear() && localDate.getMonth() == now.getMonth();
     }
+
+    public static int compareNumericIds(String first, String second) {
+        if (first == null && second == null) {
+            return 0;
+        }
+        if (first == null) {
+            return -1;
+        }
+        if (second == null) {
+            return 1;
+        }
+        try {
+            return Integer.compare(Integer.parseInt(first.trim()), Integer.parseInt(second.trim()));
+        } catch (NumberFormatException ex) {
+            return compareAlphanumeric(first, second);
+        }
+    }
+
+    public static int compareAlphanumeric(String first, String second) {
+        if (first == null && second == null) {
+            return 0;
+        }
+        if (first == null) {
+            return -1;
+        }
+        if (second == null) {
+            return 1;
+        }
+
+        int firstIndex = 0;
+        int secondIndex = 0;
+        while (firstIndex < first.length() && secondIndex < second.length()) {
+            char firstChar = first.charAt(firstIndex);
+            char secondChar = second.charAt(secondIndex);
+
+            if (Character.isDigit(firstChar) && Character.isDigit(secondChar)) {
+                int firstNumberStart = firstIndex;
+                int secondNumberStart = secondIndex;
+                while (firstIndex < first.length() && Character.isDigit(first.charAt(firstIndex))) {
+                    firstIndex++;
+                }
+                while (secondIndex < second.length() && Character.isDigit(second.charAt(secondIndex))) {
+                    secondIndex++;
+                }
+                String firstNumber = first.substring(firstNumberStart, firstIndex);
+                String secondNumber = second.substring(secondNumberStart, secondIndex);
+                int numberCompare = compareNumericToken(firstNumber, secondNumber);
+                if (numberCompare != 0) {
+                    return numberCompare;
+                }
+                continue;
+            }
+
+            if (Character.toLowerCase(firstChar) != Character.toLowerCase(secondChar)) {
+                return Character.compare(Character.toLowerCase(firstChar), Character.toLowerCase(secondChar));
+            }
+            firstIndex++;
+            secondIndex++;
+        }
+        return Integer.compare(first.length(), second.length());
+    }
+
+    private static int compareNumericToken(String first, String second) {
+        try {
+            return Long.compare(Long.parseLong(first), Long.parseLong(second));
+        } catch (NumberFormatException ex) {
+            return first.compareTo(second);
+        }
+    }
 }
 

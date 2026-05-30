@@ -75,7 +75,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR
             LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND
             c.currentStatus IN (:type) AND (:customerIds IS NULL OR c.customerId IN (:customerIds))
-            ORDER BY b.floorId ASC
+            ORDER BY b.floorId ASC, b.roomId ASC, b.bedId ASC
             """,
             countQuery = """
                     SELECT COUNT(DISTINCT c) FROM Customers c

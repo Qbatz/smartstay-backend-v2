@@ -301,6 +301,47 @@ public class CustomersService {
         return customersRepository.findAdvancesByHostelId(hostelId);
     }
 
+    private void sortCustomersByFloorRoomBed(List<Customers> customers,
+                                             Map<String, BookingsV1> bookingByCustomerId,
+                                             Map<String, Draft> draftByCustomerId) {
+        customers.sort((first, second) -> {
+            int[] firstLocation = resolveFloorRoomBedIds(first.getCustomerId(), bookingByCustomerId, draftByCustomerId);
+            int[] secondLocation = resolveFloorRoomBedIds(second.getCustomerId(), bookingByCustomerId, draftByCustomerId);
+            int compare = Integer.compare(firstLocation[0], secondLocation[0]);
+            if (compare != 0) {
+                return compare;
+            }
+            compare = Integer.compare(firstLocation[1], secondLocation[1]);
+            if (compare != 0) {
+                return compare;
+            }
+            return Integer.compare(firstLocation[2], secondLocation[2]);
+        });
+    }
+
+    private int[] resolveFloorRoomBedIds(String customerId,
+                                         Map<String, BookingsV1> bookingByCustomerId,
+                                         Map<String, Draft> draftByCustomerId) {
+        int missingOrder = Integer.MAX_VALUE;
+        BookingsV1 booking = bookingByCustomerId.get(customerId);
+        if (booking != null && booking.getBedId() > 0) {
+            return new int[]{
+                    booking.getFloorId() > 0 ? booking.getFloorId() : missingOrder,
+                    booking.getRoomId() > 0 ? booking.getRoomId() : missingOrder,
+                    booking.getBedId()
+            };
+        }
+        Draft draft = draftByCustomerId.get(customerId);
+        if (draft != null && draft.getBedId() != null && draft.getBedId() > 0) {
+            return new int[]{
+                    draft.getFloorId() != null && draft.getFloorId() > 0 ? draft.getFloorId() : missingOrder,
+                    draft.getRoomId() != null && draft.getRoomId() > 0 ? draft.getRoomId() : missingOrder,
+                    draft.getBedId()
+            };
+        }
+        return new int[]{missingOrder, missingOrder, missingOrder};
+    }
+
     public List<CustomerData> searchAndGetCustomers(String hostelId, String name, String type) {
         List<String> typeArray = new ArrayList<>();
         if (type == null || (type != null && type.trim().equalsIgnoreCase(""))) {
@@ -380,7 +421,11 @@ public class CustomersService {
             return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(), item.getLastName(), fullName.toString(), item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), item.getProfilePic(), item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName());
         }).collect(Collectors.toList());
 
-        listCustomers.sort(Comparator.comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorName, Comparator.nullsFirst(String::compareTo)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomName, Comparator.nullsFirst(String::compareTo)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedName, Comparator.nullsFirst(String::compareTo)));
+        listCustomers.sort(Comparator
+                .comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorName, Comparator.nullsFirst(String::compareToIgnoreCase))
+                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomName, Comparator.nullsFirst(String::compareToIgnoreCase))
+                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds))
+                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedName, Comparator.nullsFirst(Utils::compareAlphanumeric)));
 
         CustomersList response = new CustomersList(hostelId, listCustomers.size(), null, listCustomers);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -473,7 +518,7 @@ public class CustomersService {
 
         Summary summary = new Summary(totalCustomers, vacatedCount, bookedCount, settlementGeneratedCount, noticePeriodCounts, checkedInCounts);
 
-        List<Customers> customersList = listCustomers.getContent();
+        List<Customers> customersList = new ArrayList<>(listCustomers.getContent());
         List<ColumnFilters> activeColumns = listColumns.stream().filter(ColumnFilters::isSelected).sorted(Comparator.comparingInt(ColumnFilters::getOrder)).toList();
         List<String> tableColumns = activeColumns.stream().map(ColumnFilters::getFieldName).toList();
 
@@ -484,6 +529,9 @@ public class CustomersService {
         List<BookingsV1> listBookings = bookingsService.findByCustomerIds(listCustomerIds);
         List<Draft> draftRows = draftsRepository.findByCustomerIdIn(listCustomerIds);
         Map<String, Draft> draftByCustomerId = draftRows.stream().collect(Collectors.toMap(Draft::getCustomerId, Function.identity(), (a, b) -> a));
+        Map<String, BookingsV1> bookingByCustomerId = listBookings.stream()
+                .collect(Collectors.toMap(BookingsV1::getCustomerId, Function.identity(), (a, b) -> a));
+        sortCustomersByFloorRoomBed(customersList, bookingByCustomerId, draftByCustomerId);
         List<Integer> bedIds = new ArrayList<>();
         for (BookingsV1 b : listBookings) {
             if (b.getBedId() > 0) {
@@ -519,7 +567,7 @@ public class CustomersService {
             if (cmp != 0) return cmp;
             String be1 = bedIdx >= 0 ? (String) a.get(bedIdx) : null;
             String be2 = bedIdx >= 0 ? (String) b.get(bedIdx) : null;
-            return Comparator.nullsFirst(String::compareTo).compare(be1, be2);
+            return Comparator.nullsFirst(Utils::compareAlphanumeric).compare(be1, be2);
         });
 
         FilterOptions filterOptions = getTenantFilterOptions(hostelId);
