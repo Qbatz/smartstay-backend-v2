@@ -136,6 +136,6 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
                 return "Redeemed";
             }
         }
-        return "Redeemed";
+        return "Not Available";
     }
 }

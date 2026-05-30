@@ -21,6 +21,7 @@ import com.smartstay.smartstay.repositories.BankingRepository;
 import com.smartstay.smartstay.responses.banking.BankList;
 import com.smartstay.smartstay.responses.beds.Bank;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
+import com.smartstay.smartstay.responses.banking.SelfTransferInitialize;
 import com.smartstay.smartstay.responses.invoices.RefundableBanks;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -548,6 +551,105 @@ public class BankingService {
         usersService.addUserLog(hostelId, bankingV1.getBankId(), ActivitySource.BANKING, ActivitySourceType.ADD_MONEY, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> initializeSelfTransfer(String hostelId, String bankId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        BankingV1 fromBank = bankingV1Repository.findBankingRecordByAccountType(
+                hostelId,
+                bankId,
+                List.of(BankAccountType.BANK.name(), BankAccountType.CASH.name(), BankAccountType.UPI.name())
+        );
+        if (fromBank == null) {
+            return new ResponseEntity<>(Utils.NO_FROM_ACCOUNT_NO_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!fromBank.getTransactionType().equalsIgnoreCase(BankPurpose.BOTH.name())
+                && !fromBank.getTransactionType().equalsIgnoreCase(BankPurpose.DEBIT.name())) {
+            return new ResponseEntity<>(Utils.INVALID_TRANSACTION_TYPE_FROM_ACC, HttpStatus.BAD_REQUEST);
+        }
+
+        List<Bank> toBanks = bankingV1Repository.findActiveCreditAccountsByHostelId(hostelId)
+                .stream()
+                .filter(bank -> isEligibleSelfTransferDestination(fromBank, bank))
+                .map(bank -> mapBankWithLatestBalance(bank, hostelId))
+                .toList();
+
+        SelfTransferInitialize response = new SelfTransferInitialize(
+                mapBankWithLatestBalance(fromBank, hostelId),
+                toBanks
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private boolean isEligibleSelfTransferDestination(BankingV1 fromBank, BankingV1 toBank) {
+        if (fromBank.getBankId().equalsIgnoreCase(toBank.getBankId())) {
+            return false;
+        }
+
+        if (!List.of(BankAccountType.BANK.name(), BankAccountType.CASH.name(), BankAccountType.UPI.name())
+                .contains(toBank.getAccountType())) {
+            return false;
+        }
+
+        if (fromBank.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())
+                && toBank.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())
+                && fromBank.getUpiId() != null
+                && fromBank.getUpiId().equalsIgnoreCase(toBank.getUpiId())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private Bank mapBankWithLatestBalance(BankingV1 bankingV1, String hostelId) {
+        Bank bank = new BankingListMapper().apply(bankingV1);
+        BankTransactionsV1 latestTransaction = transactionService.getLatestTransaction(bankingV1.getBankId(), hostelId);
+        if (latestTransaction != null && latestTransaction.getAccountBalance() != null) {
+            BigDecimal balance = BigDecimal.valueOf(latestTransaction.getAccountBalance())
+                    .setScale(2, RoundingMode.HALF_UP);
+            return new Bank(
+                    bank.bankingId(),
+                    bank.bankName(),
+                    bank.accountNumber(),
+                    bank.ifscCode(),
+                    bank.branchName(),
+                    bank.branchCode(),
+                    bank.accountHolderName(),
+                    bank.transactionType(),
+                    bank.upiId(),
+                    bank.creditCardNumber(),
+                    bank.debitCardNumber(),
+                    bank.accountType(),
+                    bank.isDefault(),
+                    bank.description(),
+                    bank.cardType(),
+                    bank.isDeleted(),
+                    balance
+            );
+        }
+        return bank;
     }
 
     public ResponseEntity<?>  selfTransfer(String hostelId, SelfTransfer selfTransfer)  {
