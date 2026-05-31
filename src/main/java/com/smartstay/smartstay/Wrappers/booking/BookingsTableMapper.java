@@ -113,6 +113,9 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
                     return "Available";
                 }
                 else if (invoicesV1.getBalanceAmount() < invoicesV1.getTotalAmount()) {
+                    if (invoicesV1.getBalanceAmount() == 0) {
+                        return "Redeemed";
+                    }
                     return "Partially Redeemed";
                 }
                 else {

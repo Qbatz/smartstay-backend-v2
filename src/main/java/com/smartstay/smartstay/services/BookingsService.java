@@ -1370,6 +1370,7 @@ public class BookingsService {
         statuses.add(BookingStatus.NOTICE.name());
         statuses.add(BookingStatus.CHECKIN.name());
         statuses.add(BookingStatus.BOOKED.name());
+        statuses.add(BookingStatus.VACATED.name());
         return bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
     }
 

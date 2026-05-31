@@ -5,6 +5,7 @@ import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.ennum.BookingStatus;
+import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.responses.bookings.AdvanceListItems;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
@@ -53,6 +54,15 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
                 profilePic = customers.getProfilePic();
                 customerMobile = customers.getMobile();
 
+                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+                    canRedeem = false;
+                }
+                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+                    canRedeem = false;
+                }
+                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
+                    canRedeem = false;
+                }
             }
         }
 
