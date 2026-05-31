@@ -2433,7 +2433,7 @@ public class CustomersService {
             } else {
                 if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
                     //done need fix
-                    return calculateAndGenerateFinalSettlemtForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users);
+                    return generateFinalSettlementForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users);
                 }
                 //done
                 return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users);
@@ -2949,6 +2949,91 @@ public class CustomersService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
+
+    public ResponseEntity<?> generateFinalSettlementForBedChange(Customers customers, BookingsV1 bookingsV1, BillingDates billingDates, CustomersBedHistory latestBed, com.smartstay.smartstay.payloads.settlement.Settlement stml, SettlementDetails settlementDetails, Users users) {
+        FinalSettlement settlement = getFinalSettlementInfoForBedChange(customers, bookingsV1, billingDates, settlementDetails.getLeavingDate());
+
+        List<String> listUnPaidIds = new ArrayList<>();
+        List<InvoicesV1> listUnpaidInvoices = new ArrayList<>();
+
+        InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), customers.getHostelId());
+        List<Settlement> deductions = stml.deductions();
+        if (deductions == null) {
+            deductions = new ArrayList<>();
+        }
+        boolean isAdvancePaid = false;
+        double amountToBePaid = 0.0;
+        double amoutToBePaidWithoutDeductions = 0.0;
+        double deductionAmount = deductions.stream().mapToDouble(i -> {
+            if (i.amount() != null) {
+                return i.amount();
+            }
+            return 0.0;
+        }).sum();
+        if (advanceInvoice != null) {
+            if (advanceInvoice.getPaymentStatus() == null) {
+                isAdvancePaid = false;
+            } else if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                isAdvancePaid = true;
+            }
+        }
+        com.smartstay.smartstay.responses.settlement.UnpaidInvoices unpaidInvoices = settlement.unpaidInvoiceInfo();
+        if (unpaidInvoices != null) {
+            List<UnpaidInvoices> unpaid = unpaidInvoices.listUnpaidInvoices();
+            if (unpaid != null) {
+                listUnPaidIds = unpaid.stream().map(UnpaidInvoices::invoiceId).toList();
+                listUnpaidInvoices = invoiceService.findInvoices(listUnPaidIds);
+
+                List<InvoicesV1> cancellInvoices = listUnpaidInvoices.stream().peek(item -> item.setCancelled(true)).toList();
+
+                if (cancellInvoices != null && !cancellInvoices.isEmpty()) {
+                    invoiceService.cancelActiveInvoice(cancellInvoices);
+                }
+            }
+        }
+
+        SettlementInfo info = settlement.settlementInfo();
+        if (info != null) {
+            amountToBePaid = info.amountTobePaid();
+            amoutToBePaidWithoutDeductions = info.amountTobePaid();
+            amountToBePaid = amountToBePaid + deductionAmount;
+            if (stml.discountAmount() != null) {
+                amountToBePaid = amountToBePaid - stml.discountAmount();
+            }
+        }
+
+        List<Deductions> lisDeductions = new ArrayList<>();
+        if (deductions != null && !deductions.isEmpty()) {
+            lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount(), 0.0)).toList());
+        }
+
+
+        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), listUnpaidInvoices, lisDeductions, amoutToBePaidWithoutDeductions, settlementDetails.getLeavingDate(), users);
+//        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
+        SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), invoicesV1.getInvoiceId(), settlement);
+        CustomerWallet cw = customers.getWallet();
+        if (cw != null) {
+            cw.setAmount(0.0);
+            cw.setCustomers(customers);
+            customers.setWallet(cw);
+            customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
+        }
+        customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
+        customersRepository.save(customers);
+
+        userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.SETTLEMENT, users);
+
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(customers.getHostelId());
+        if (electricityConfig != null) {
+            if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
+                eventPublisher.publishEvent(new AddRoomSettlementEbEvents(this, customers.getHostelId(), customers.getCustomerId(), settlementDetails.getLeavingDate(), authentication.getName(), settlementItems.getInvoiceId()));
+            }
+        }
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+    }
+
+    @Deprecated
     public ResponseEntity<?> calculateAndGenerateFinalSettlemtForBedChange(Customers customers, BookingsV1 bookings, BillingDates billingDates, CustomersBedHistory latestBed, com.smartstay.smartstay.payloads.settlement.Settlement stml, SettlementDetails settlementDetails, Users users) {
         Double advanceAmount = 0.0;
         Double bookingAmount = 0.0;
