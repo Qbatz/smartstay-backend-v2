@@ -30,7 +30,7 @@ public class SettlementItemService {
                 if (listUnpaidInvoices != null) {
                     List<SettlementUnpaidInvoices> settlementUnpaidInvoicesList = listUnpaidInvoices
                             .stream()
-                            .map(i -> new SettlementUnpaidInvoices(i.invoiceNumber(), i.type(), i.invoiceId(), i.payableAmount()))
+                            .map(i -> new SettlementUnpaidInvoices(i.invoiceNumber(), i.invoiceTotalAmount(), i.type(), i.invoiceId(), i.payableAmount()))
                             .toList();
                     settlementItems.setUnpaidInvoices(settlementUnpaidInvoicesList);
                 }
@@ -52,7 +52,7 @@ public class SettlementItemService {
                             .currentMonthRentInfo()
                             .rentLists()
                             .stream()
-                            .map(i -> new CurrentRentBreakUp(i.bedName(), i.dStartDate(), i.dEndDate(), i.rent()))
+                            .map(i -> new CurrentRentBreakUp(i.bedName(), i.roomName(), i.floorName(), i.dStartDate(), i.dEndDate(),i.rentPerDay(),  i.rent(), false))
                             .toList();
                     settlementItems.setCurrentRentBreakUps(listCurrentRentBreakUp);
                 }

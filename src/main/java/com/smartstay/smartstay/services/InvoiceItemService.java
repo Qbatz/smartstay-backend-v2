@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dao.InvoicesV1;
+import com.smartstay.smartstay.dao.SettlementItems;
 import com.smartstay.smartstay.payloads.invoice.UpdateRecurringInvoice;
 import com.smartstay.smartstay.repositories.InvoiceItemsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -159,4 +160,5 @@ public class InvoiceItemService {
 
         return newInvoiceAmount.get();
     }
+
 }
