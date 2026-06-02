@@ -317,6 +317,14 @@ public class RoomsService {
         return listRooms;
     }
 
+    public List<Rooms> findByHostelIdDeletedRooms(String hostelId) {
+        List<Rooms> listRooms = roomRepository.findByHostelIdAndIsDeletedTrue(hostelId);
+        if (listRooms == null) {
+            listRooms = new ArrayList<>();
+        }
+        return listRooms;
+    }
+
     public List<Rooms> findByHostelIdAndShareType(String hostelId, List<Integer> shareTypes) {
         List<Rooms> listRooms = roomRepository.findByHostelIdAndSharingTypeIn(hostelId, shareTypes);
         if (listRooms == null) {

@@ -5,5 +5,7 @@ public record Subscription(Long id,
                            String currentPlanEndingAt,
                            String subscriptionNumber,
                            String planName,
-                           String planCode) {
+                           String planCode,
+
+                           String invoiceUrl) {
 }
