@@ -1472,10 +1472,10 @@ public class InvoiceV1Service {
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
 
-            SettlementItems settlementItems = settlementItemService.getSettlemtItems(invoiceId);
-            if (settlementItems != null) {
-                return getSettlementInvoiceDetails(settlementItems, signatureInfo, stayInfo, accountDetails, customerInfo, invoicesV1);
-            }
+//            SettlementItems settlementItems = settlementItemService.getSettlemtItems(invoiceId);
+//            if (settlementItems != null) {
+//                return getSettlementInvoiceDetails(settlementItems, signatureInfo, stayInfo, accountDetails, customerInfo, invoicesV1);
+//            }
             double paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
 
             double balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
