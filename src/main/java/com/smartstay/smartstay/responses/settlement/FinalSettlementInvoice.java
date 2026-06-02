@@ -7,7 +7,8 @@ import com.smartstay.smartstay.responses.customer.AdvanceItems;
 import com.smartstay.smartstay.responses.customer.RentInfo;
 import com.smartstay.smartstay.responses.invoices.*;
 
-public record FinalSettlementInvoice(StayInfo stayInfo,
+public record FinalSettlementInvoice(HeaderInfo headerInfo,
+                                     StayInfo stayInfo,
                                      AccountDetails accountDetails,
                                      ConfigInfo configInfo,
                                      CustomerInfo customerInfo,
@@ -16,5 +17,6 @@ public record FinalSettlementInvoice(StayInfo stayInfo,
                                      AdvanceItems advanceItems,
                                      AdvanceItems bookingItems,
                                      CurrentRentInfo currentMonthRentInfo,
-                                     CurrentMonthEbInfo currentMonthEbInfo) {
+                                     CurrentMonthEbInfo currentMonthEbInfo,
+                                     InvoiceInfo invoiceInfo) {
 }

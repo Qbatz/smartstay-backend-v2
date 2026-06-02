@@ -5,7 +5,8 @@ import com.smartstay.smartstay.responses.customer.RentBreakUp;
 
 import java.util.List;
 
-public record CurrentRentInfo(double curentMonthRentPaidAmount,
+public record CurrentRentInfo(double currentMonthPaidAmount,
+                              double currentMonthPayableAmount,
                               double currentMonthStayDays,
                               double currentMonthRentPayableAmount,
                               double currentMonthOtherItemAmount,

@@ -43,6 +43,7 @@ import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
 import com.smartstay.smartstay.responses.invoices.*;
 import com.smartstay.smartstay.responses.invoices.CustomerInfo;
+import com.smartstay.smartstay.responses.invoices.InvoiceInfo;
 import com.smartstay.smartstay.responses.invoices.StayInfo;
 import com.smartstay.smartstay.responses.settlement.*;
 import com.smartstay.smartstay.util.*;
@@ -1472,10 +1473,10 @@ public class InvoiceV1Service {
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
 
-//            SettlementItems settlementItems = settlementItemService.getSettlemtItems(invoiceId);
-//            if (settlementItems != null) {
-//                return getSettlementInvoiceDetails(settlementItems, signatureInfo, stayInfo, accountDetails, customerInfo, invoicesV1);
-//            }
+            SettlementItems settlementItems = settlementItemService.getSettlemtItems(invoiceId);
+            if (settlementItems != null) {
+                return getSettlementInvoiceDetails(settlementItems, signatureInfo, stayInfo, accountDetails, customerInfo, invoicesV1, hostelV1);
+            }
             double paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
 
             double balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
@@ -1520,7 +1521,7 @@ public class InvoiceV1Service {
                     invoiceRentalPeriod.toString(),
                     invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
                     discountReason,
-                    Utils.roundOffWithTwoDigit(totalDeductionAmount), false, 0.0, false, false, 0.0, listInvoiceItems, listDeductions, null);
+                    Utils.roundOffWithTwoDigit(totalDeductionAmount), false, false, 0.0, false, false, 0.0, listInvoiceItems, listDeductions, null);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1600,6 +1601,7 @@ public class InvoiceV1Service {
                 discountReason,
                 0.0,
                 isInvoicesAvailableForRedeem,
+                false,
                 availableCreditAmount,
                 isAdvanceAvailableForRedeem,
                 canApplyToOtherInvoice,
@@ -1624,6 +1626,7 @@ public class InvoiceV1Service {
                     discountReason,
                     0.0,
                     canRedeemBooking,
+                    false,
                     availableCreditAmount,
                     isAdvanceAvailableForRedeem,
                     false,
@@ -1638,7 +1641,13 @@ public class InvoiceV1Service {
 
     }
 
-    private ResponseEntity<?> getSettlementInvoiceDetails(SettlementItems settlementItems, ConfigInfo signatureInfo, StayInfo stayInfo, AccountDetails accountDetails, CustomerInfo customerInfo, InvoicesV1 invoicesV1) {
+    private ResponseEntity<?> getSettlementInvoiceDetails(SettlementItems settlementItems, ConfigInfo signatureInfo, StayInfo stayInfo, AccountDetails accountDetails, CustomerInfo customerInfo, InvoicesV1 invoicesV1, HostelV1 hostelV1) {
+
+        double subTotal = 0.0;
+        double deductionAmount = 0.0;
+        double unpaidInvoiceAmount = 0.0;
+        double electricityAmount = 0.0;
+        double finalAmount = 0.0;
 
         double currentPayablemount = 0.0;
         double currentPaidAmount = 0.0;
@@ -1660,6 +1669,7 @@ public class InvoiceV1Service {
                             return 0.0;
                         })
                         .sum();
+                unpaidInvoiceAmount = unpaidInvoiceTotalAmount;
                 List<UnpaidInvoiceItem> listUnpaidInvoiceItems = settlementItems
                         .getUnpaidInvoices()
                         .stream()
@@ -1687,6 +1697,7 @@ public class InvoiceV1Service {
                             return 0.0;
                         })
                         .sum();
+
                 double paidAmount = invoicesV1
                         .getDeductions()
                         .stream()
@@ -1698,6 +1709,7 @@ public class InvoiceV1Service {
                         })
                         .sum();
                 double pendingAmount = totalDeductionAmount - paidAmount;
+                deductionAmount = pendingAmount;
                 List<DeductionsItem> listDeductionItems = invoicesV1
                         .getDeductions()
                         .stream()
@@ -1722,6 +1734,16 @@ public class InvoiceV1Service {
         AdvanceItems advanceItems = getRedeemedListFromAdvance(invoicesV1.getHostelId(), invoicesV1.getCustomerId());
         AdvanceItems bookingItems = getRedeemedListFromBookings(invoicesV1.getHostelId(), invoicesV1.getCustomerId());
 
+        if (advanceItems != null) {
+            if (advanceItems.availableAdvanceBalance() != null) {
+                subTotal = subTotal - advanceItems.availableAdvanceBalance();
+            }
+        }
+        if (bookingItems != null) {
+            if (bookingItems.availableAdvanceBalance() != null) {
+                subTotal = subTotal - bookingItems.availableAdvanceBalance();
+            }
+        }
         RentInfo rentInfo = null;
         CurrentRentInfo currentRentInfo = null;
         List<RentBreakUp> listRentBreakUp = null;
@@ -1739,9 +1761,11 @@ public class InvoiceV1Service {
 
         if (settlementItems.getCurrentMonthPayableAmount() != null) {
             currentPayablemount = settlementItems.getCurrentMonthPayableAmount();
+            subTotal = subTotal + currentPayablemount;
         }
         if (settlementItems.getCurrentMonthPaidAmount() != null) {
             currentPaidAmount = settlementItems.getCurrentMonthPaidAmount();
+            subTotal = subTotal - currentPaidAmount;
         }
         if (listRentBreakUp != null) {
             if (!listRentBreakUp.isEmpty()) {
@@ -1795,19 +1819,57 @@ public class InvoiceV1Service {
                            return i.getTotalAmount();
                        })
                        .sum();
+               electricityAmount = ebTotalAmount;
 
               currentMonthEbInfo = new CurrentMonthEbInfo(ebTotalAmount, ebItemsList);
            }
        }
 
        currentRentInfo = new CurrentRentInfo(currentPaidAmount,
+               currentPayablemount,
                stayDays,
                currentMonthPayableRent,
                currentMonthOtherAmounts,
                listRentBreakUp,
                listCurrentMonthOtherItems);
 
-        FinalSettlementInvoice finalSettlementResponse = new FinalSettlementInvoice(stayInfo,
+       HeaderInfo headerInfo = null;
+       if (hostelV1 != null) {
+           headerInfo = new HeaderInfo(invoicesV1.getInvoiceNumber(),
+                   hostelV1.getHouseNo(),
+                   hostelV1.getStreet(),
+                   hostelV1.getCity(),
+                   hostelV1.getState(),
+                   hostelV1.getPincode(),
+                   null,
+                   hostelV1.getMobile(),
+                   "91",
+                   hostelV1.getMainImage(),
+                   hostelV1.getEmailId());
+       }
+
+       finalAmount = subTotal + deductionAmount;
+       finalAmount = finalAmount + unpaidInvoiceAmount + electricityAmount ;
+
+
+        com.smartstay.smartstay.responses.settlement.InvoiceInfo invoiceInfo = null;
+       if (invoicesV1 != null) {
+           invoiceInfo = new com.smartstay.smartstay.responses.settlement.InvoiceInfo(invoicesV1.getInvoiceNumber(),
+                   Utils.dateToString(invoicesV1.getInvoiceStartDate()),
+                   Utils.dateToString(invoicesV1.getInvoiceDueDate()),
+                   null,
+                   null,
+                   subTotal,
+                   deductionAmount,
+                   unpaidInvoiceAmount,
+                   electricityAmount,
+                   finalAmount,
+                   true,
+                   invoicesV1.getPaymentStatus());
+       }
+
+        FinalSettlementInvoice finalSettlementResponse = new FinalSettlementInvoice(headerInfo,
+                stayInfo,
                 accountDetails,
                 signatureInfo,
                 customerInfo,
@@ -1816,7 +1878,10 @@ public class InvoiceV1Service {
                 advanceItems,
                 bookingItems,
                 currentRentInfo,
-                currentMonthEbInfo);
+                currentMonthEbInfo,
+                invoiceInfo);
+
+
 
         return new ResponseEntity<>(finalSettlementResponse, HttpStatus.OK);
     }
