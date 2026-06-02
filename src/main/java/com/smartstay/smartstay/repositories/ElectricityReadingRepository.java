@@ -1,13 +1,10 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dto.electricity.CurrentReadings;
-import com.smartstay.smartstay.dto.electricity.ElectricityReadingForRoom;
-import com.smartstay.smartstay.dto.electricity.ElectricityReadings;
 import com.smartstay.smartstay.dto.electricity.ElectricityRoomIdFromPreviousEntry;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
 import java.util.Date;
@@ -20,9 +17,15 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
     com.smartstay.smartstay.dao.ElectricityReadings findTopByRoomIdAndHostelIdOrderByEntryDateDesc(Integer roomId, String hostelId);
 
     @Query(value = """
-            SELECT er.room_id as roomId FROM electricity_readings er where er.hostel_id=:hostelId GROUP by er.room_id
-            """, nativeQuery = true)
-    List<Integer> getRoomIds(@Param("hostelId") String hostelId);
+        SELECT er.room_id AS roomId
+        FROM electricity_readings er
+        WHERE er.hostel_id = :hostelId
+          AND er.room_id NOT IN (:roomIds)
+        GROUP BY er.room_id
+        """, nativeQuery = true)
+    List<Integer> getRoomIds(
+            @Param("hostelId") String hostelId,
+            @Param("roomIds") List<Integer> roomIds);
 
     @Query(value = """
             SELECT * FROM electricity_readings er WHERE er.room_id=:roomId ORDER BY er.entry_date DESC
@@ -56,9 +59,10 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
     @Query(value = """
             SELECT * FROM electricity_readings er WHERE er.entry_date=(SELECT MAX(er2.entry_date) 
             FROM electricity_readings er2 WHERE er2.room_id = er.room_id) AND hostel_id=:hostelId 
+            and room_id not in (:roomIds)
             ORDER BY er.entry_date DESC
             """, nativeQuery = true)
-    List<com.smartstay.smartstay.dao.ElectricityReadings> getLatestReadingOfAllRooms(@Param("hostelId") String hostelId);
+    List<com.smartstay.smartstay.dao.ElectricityReadings> getLatestReadingOfAllRooms(@Param("hostelId") String hostelId, @Param("roomIds") List<Integer> roomIds);
 
     @Query(value = """
             SELECT room_id as roomId FROM electricity_readings where hostel_id = :hostelId and entry_date=DATE(:entryDate)
@@ -82,8 +86,8 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
     Double getLastReading(@Param("hostelId") String hostelId);
 
     @Query(value = """
-           SELECT * FROM electricity_readings WHERE hostel_id=:hostelId and bill_status='INVOICE_NOT_GENERATED'
-            """, nativeQuery = true)
+            SELECT * FROM electricity_readings WHERE hostel_id=:hostelId and bill_status='INVOICE_NOT_GENERATED'
+             """, nativeQuery = true)
     List<com.smartstay.smartstay.dao.ElectricityReadings> getNotInvoiceGeneratedInvoices(@Param("hostelId") String hostelId);
 
     List<com.smartstay.smartstay.dao.ElectricityReadings> findByHostelId(String hostelId);

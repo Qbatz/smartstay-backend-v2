@@ -52,6 +52,12 @@ public class BankingController {
         return bankingService.addMoney(hostelId, payloads);
     }
 
+    @GetMapping("/transfer/initialize/{hostelId}/{bankId}")
+    public ResponseEntity<?> initializeSelfTransfer(@PathVariable(value = "hostelId") String hostelId,
+            @PathVariable(value = "bankId") String bankId) {
+        return bankingService.initializeSelfTransfer(hostelId, bankId);
+    }
+
     @PutMapping("/transfer/{hostelId}")
     public ResponseEntity<?> selfTransfer(@PathVariable(value = "hostelId") String hostelId,
             @RequestBody(required = false) SelfTransfer payloads) {

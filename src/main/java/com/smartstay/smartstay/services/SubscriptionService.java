@@ -118,7 +118,8 @@ public class SubscriptionService {
                         Utils.dateToString(i.getPlanEndsAt()),
                         i.getSubscriptionNumber(),
                         i.getPlanName(),
-                        i.getPlanCode()))
+                        i.getPlanCode(),
+                        i.getInvoiceUrl()))
                 .toList();
 
         return new ResponseEntity<>(listSubscriptionResponse, HttpStatus.OK);
