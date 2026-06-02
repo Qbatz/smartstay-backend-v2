@@ -247,4 +247,12 @@ public class CustomersBedHistoryService {
         }
         return new ArrayList<>();
     }
+
+    public double getRentBasedOnDate(String customerId, Date invoiceStartDate) {
+        CustomersBedHistory history = customerBedHistoryRepository.findByCustomerIdAndDate(customerId, invoiceStartDate);
+        if (history != null) {
+            return history.getRentAmount();
+        }
+        return 0.0;
+    }
 }

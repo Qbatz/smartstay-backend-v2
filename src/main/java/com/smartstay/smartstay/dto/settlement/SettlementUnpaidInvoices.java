@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SettlementUnpaidInvoices {
     private String invoiceNo;
+    private Double invoiceAmount;
     private String invoiceType;
     private String invoiceId;
     private Double pendingAmount;

@@ -117,5 +117,12 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
                                        @Param("customerId") String customerId, 
                                        @Param("joiningDate") Date joiningDate);
 
+    @Query(value = """
+            SELECT * FROM customers_bed_history WHERE customer_id=:customerId and DATE(start_date) <= DATE(:startDate) 
+            ORDER BY start_date DESC LIMIT 1
+            """, nativeQuery = true)
+    CustomersBedHistory findByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate);
+
+
 }
 
