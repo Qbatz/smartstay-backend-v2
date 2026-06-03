@@ -56,7 +56,7 @@ public class SettlementItemService {
                             .toList();
                     settlementItems.setCurrentRentBreakUps(listCurrentRentBreakUp);
                 }
-                settlementItems.setCurrentMonthPayableAmount(settlementInfo.currentMonthRentInfo().currentMonthPayableAmount());
+                settlementItems.setCurrentMonthPayableAmount(settlementInfo.currentMonthRentInfo().currentMonthTotalAmount());
                 settlementItems.setCurrentMonthPaidAmount(settlementInfo.currentMonthRentInfo().currentRentPaid());
 
                 if (settlementInfo.currentMonthRentInfo().currentMonthOtherItems() != null) {

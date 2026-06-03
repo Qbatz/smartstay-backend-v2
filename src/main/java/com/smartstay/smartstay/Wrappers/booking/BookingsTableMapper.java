@@ -3,6 +3,7 @@ package com.smartstay.smartstay.Wrappers.booking;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.booking.BookingTableHeader;
+import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import com.smartstay.smartstay.util.columnOptions.BookingColumnUtils;
@@ -60,6 +61,19 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
                 canApplyToOtherInvoices = true;
             }
         }
+        if (canApplyToOtherInvoices) {
+            if (customers != null) {
+                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+                    canApplyToOtherInvoices = false;
+                }
+                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+                    canApplyToOtherInvoices = false;
+                }
+                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
+                    canApplyToOtherInvoices = false;
+                }
+            }
+        }
         BookingTableHeader bookingTableHeader = new BookingTableHeader(invoicesV1.getInvoiceId(),
                 canApplyToOtherInvoices,
                 invoicesV1.getBalanceAmount(),
@@ -109,7 +123,7 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.STATUS)) {
             if (invoicesV1.getBalanceAmount() != null) {
-                if (invoicesV1.getBalanceAmount() == invoicesV1.getTotalAmount()) {
+                if (invoicesV1.getBalanceAmount().equals(invoicesV1.getTotalAmount())) {
                     return "Available";
                 }
                 else if (invoicesV1.getBalanceAmount() < invoicesV1.getTotalAmount()) {

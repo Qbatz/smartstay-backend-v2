@@ -690,7 +690,7 @@ public class InvoiceV1Service {
             }
             if (invoice.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
                 double deductionAmount = customersService.getDeductionAmount(invoice.getCustomerId());
-                if (deductionAmount > 0 && paidAmount < deductionAmount) {
+                if (deductionAmount > 0 && (paidAmount + amount) < deductionAmount) {
                     List<Deductions> listDeductions = invoice.getDeductions();
                     if (listDeductions != null) {
                         final double[] tempAmount = {amount};
@@ -731,11 +731,78 @@ public class InvoiceV1Service {
 //                        }
                     }
                 } else {
-                    if (invoice.getBalanceAmount() != null) {
-                        invoice.setBalanceAmount(amount + invoice.getBalanceAmount());
-                    } else {
-                        invoice.setBalanceAmount(paidAmount + amount);
+                    if (deductionAmount > 0) {
+                        double pendingAmount = invoice.getDeductions()
+                                .stream()
+                                .filter(i -> {
+                                    if (i.getPaidAmount() != null) {
+                                        if (!i.getPaidAmount().equals(i.getAmount())) {
+                                            return true;
+                                        }
+                                        return false;
+                                    }
+                                    return false;
+                                })
+                                .mapToDouble(i1 -> i1.getAmount() - i1.getPaidAmount())
+                                .sum();
+                        if (pendingAmount > 0) {
+                            double pAmount = 0.0;
+                            if (invoice.getPaidAmount() != null) {
+                                pAmount = invoice.getPaidAmount();
+                            }
+                            AtomicReference<Double> newDeductionAmount = new AtomicReference<>(amount);
+
+                            List<Deductions> listDeductions = invoice.getDeductions();
+                            List<Deductions> newDeductions = listDeductions
+                                    .stream()
+                                    .map(i -> {
+                                        if (Objects.equals(i.getPaidAmount(), i.getAmount())) {
+                                            return i;
+                                        }
+                                        if (i.getPaidAmount() < i.getAmount()) {
+                                            if (newDeductionAmount.get() > 0) {
+                                                double balance = i.getAmount() - i.getPaidAmount();
+                                                if (balance > 0) {
+                                                    if (newDeductionAmount.get() >= balance) {
+                                                        i.setPaidAmount(i.getAmount());
+                                                        newDeductionAmount.set(newDeductionAmount.get() - balance);
+                                                    }
+                                                    else {
+                                                        i.setPaidAmount(i.getPaidAmount() + newDeductionAmount.get());
+                                                       newDeductionAmount.set(0.0);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        return i;
+                                    })
+                                    .toList();
+
+                            invoice.setDeductions(newDeductions);
+                            if (newDeductionAmount.get() > 0) {
+                                if (invoice.getBalanceAmount() != null) {
+                                    invoice.setBalanceAmount(newDeductionAmount.get() + invoice.getBalanceAmount());
+                                } else {
+                                    invoice.setBalanceAmount(newDeductionAmount.get());
+                                }
+                            }
+                        }
+                        else {
+                            if (invoice.getBalanceAmount() != null) {
+                                invoice.setBalanceAmount(amount + invoice.getBalanceAmount());
+                            } else {
+                                invoice.setBalanceAmount(paidAmount + amount);
+                            }
+                        }
                     }
+                    else {
+                        if (invoice.getBalanceAmount() != null) {
+                            invoice.setBalanceAmount(amount + invoice.getBalanceAmount());
+                        } else {
+                            invoice.setBalanceAmount(paidAmount + amount);
+                        }
+                    }
+
 
                 }
             }
@@ -3192,10 +3259,7 @@ public class InvoiceV1Service {
         double receiptAmount = transactionV1.getPaidAmount();
         double newPaidAmount = invoicesV1.getPaidAmount() - receiptAmount;
         double newAvailableAmount = 0.0;
-        if (invoicesV1.getBalanceAmount() != null) {
-            newAvailableAmount = invoicesV1.getBalanceAmount() - receiptAmount;
-        }
-        invoicesV1.setBalanceAmount(newAvailableAmount);
+
         invoicesV1.setPaidAmount(newPaidAmount);
         if (newPaidAmount > 0) {
             invoicesV1.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
@@ -3207,6 +3271,8 @@ public class InvoiceV1Service {
             bookingsService.deleteBookingReceipt(invoicesV1.getCustomerId(), receiptAmount);
         }
 
+        boolean isBalanceAvailable = false;
+        double balanceAmount = receiptAmount;
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
             Double deductionAmount = invoicesV1.getDeductionAmount();
             if (deductionAmount != null && deductionAmount > 0) {
@@ -3233,10 +3299,19 @@ public class InvoiceV1Service {
                             })
                             .toList();
 
+
                     invoicesV1.setDeductions(listDeductions);
+                    //no need to validate already paid mount is less than deduction amount
+                    invoicesV1.setBalanceAmount(0.0);
+                }
+                else {
+                    //paid amount is greater than deduction amount
+                    double newBalance = invoicesV1.getPaidAmount() - deductionAmount;
+                    invoicesV1.setBalanceAmount(newBalance);
                 }
             }
         }
+
 
 
         return invoicesV1Repository.save(invoicesV1);
@@ -5298,59 +5373,7 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        List<BookingsV1> listAllCheckedInCustomers = new ArrayList<>();
-        List<Floors> listFloor = floorsService.findByHostelId(hostelId);
-        List<Rooms> roomsList = roomsService.findByHostelId(hostelId);
-        List<Beds> listBeds = bedService.findByHostelId(hostelId);
-        List<BedDetails> listBedDetails = new ArrayList<>();
-        if (!listBeds.isEmpty()) {
-            List<Integer> bedIds = listBeds
-                    .stream()
-                    .map(Beds::getBedId)
-                    .toList();
-            listBedDetails = bedService.getBedDetails(bedIds);
-        }
 
-
-        List<BookingsFilterOptions.FilterItems> floorsFilterItem = new ArrayList<>();
-        List<BookingsFilterOptions.RoomsItem> roomsFilterItem = new ArrayList<>();
-        if (!listFloor.isEmpty()) {
-            floorsFilterItem = listFloor
-                    .stream()
-                    .map(i -> new BookingsFilterOptions.FilterItems(i.getFloorName(), String.valueOf(i.getFloorId())))
-                    .toList();
-        }
-
-        if (!roomsList.isEmpty()) {
-            roomsFilterItem = roomsList
-                    .stream()
-                    .map(i -> new BookingsFilterOptions.RoomsItem(i.getRoomName(), String.valueOf(i.getRoomId()), String.valueOf(i.getFloorId())))
-                    .toList();
-        }
-
-
-        if (listAllCheckedInCustomers != null && !listAllCheckedInCustomers.isEmpty()) {
-            List<String> listCustomerIds = listAllCheckedInCustomers
-                    .stream()
-                    .map(BookingsV1::getCustomerId)
-                    .toList();
-
-            List<Customers> listCustomers = customersService.getCustomerDetails(listCustomerIds, name);
-
-            List<String> invoiceTypes = new ArrayList<>();
-            invoiceTypes.add(InvoiceType.BOOKING.name());
-
-            Integer minimumAmount = null;
-            Integer maximumAmount = null;
-            if (minAmount != null && !minAmount.trim().equalsIgnoreCase("")) {
-                minimumAmount = Integer.parseInt(minAmount);
-            }
-            if (maxAmount != null && !maxAmount.trim().equalsIgnoreCase("")) {
-                maximumAmount = Integer.parseInt(maxAmount);
-            }
-
-
-        }
         if (authentication.getSource().equalsIgnoreCase("web")) {
             return getBookingWebResponse(hostelId, name, period, floor, room, minAmount, maxAmount, page, size);
         }
@@ -5440,7 +5463,7 @@ public class InvoiceV1Service {
 
             Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, minimumAmount, maximumAmount, pageableRequest);
 
-            totalAdvanceInvoice = pagebleAdvances.getNumberOfElements();
+            totalAdvanceInvoice = (int) pagebleAdvances.getTotalElements();
             currentPage = pagebleAdvances.getPageable().getPageNumber() + 1;
             totalPages = pagebleAdvances.getTotalPages();
             noOfItemsPerPage = pagebleAdvances.getSize();
