@@ -690,7 +690,7 @@ public class InvoiceV1Service {
             }
             if (invoice.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
                 double deductionAmount = customersService.getDeductionAmount(invoice.getCustomerId());
-                if (deductionAmount > 0) {
+                if (deductionAmount > 0 && paidAmount < deductionAmount) {
                     List<Deductions> listDeductions = invoice.getDeductions();
                     if (listDeductions != null) {
                         final double[] tempAmount = {amount};
@@ -702,20 +702,16 @@ public class InvoiceV1Service {
                                    }
                                    if (i.getPaidAmount() < i.getAmount()) {
                                        if (tempAmount[0] > 0) {
-                                           double pAmount = i.getPaidAmount();
-                                           double balanceAmount = i.getAmount() - i.getPaidAmount();
-                                           if (balanceAmount > tempAmount[0]) {
-                                               double paidNow =  balanceAmount - tempAmount[0];
-                                               i.setPaidAmount(pAmount + paidNow);
-                                               tempAmount[0] = tempAmount[0] - balanceAmount;
-                                               if (tempAmount[0] <= 0) {
+                                           double balance = i.getAmount() - i.getPaidAmount();
+                                           if (balance > 0) {
+                                               if (tempAmount[0] >= balance) {
+                                                    i.setPaidAmount(i.getAmount());
+                                                    tempAmount[0] = tempAmount[0] - balance;
+                                               }
+                                               else {
+                                                   i.setPaidAmount(i.getPaidAmount() + tempAmount[0]);
                                                    tempAmount[0] = 0;
                                                }
-                                           }
-                                           else {
-                                               double pA = i.getPaidAmount();
-                                               i.setPaidAmount(balanceAmount + pA);
-                                               tempAmount[0] = tempAmount[0] - balanceAmount;
                                            }
                                        }
                                    }
@@ -3215,24 +3211,21 @@ public class InvoiceV1Service {
             Double deductionAmount = invoicesV1.getDeductionAmount();
             if (deductionAmount != null && deductionAmount > 0) {
                 if (invoicesV1.getPaidAmount() < deductionAmount) {
-                    final double[] amountShouldRevert = {invoicesV1.getPaidAmount() - deductionAmount};
+                    final double[] amountShouldRevert = { deductionAmount - invoicesV1.getPaidAmount()};
                     List<Deductions> listDeductions = invoicesV1.getDeductions()
                             .stream()
                             .map(i -> {
                                 if (amountShouldRevert[0] > 0) {
-                                    if (i.getPaidAmount() > 0) {
-                                        if (i.getPaidAmount() > amountShouldRevert[0]) {
-                                            i.setPaidAmount(i.getPaidAmount() - amountShouldRevert[0]);
-                                            amountShouldRevert[0] = 0;
-
-                                            return i;
-                                        }
-                                        else {
-                                            double balance = amountShouldRevert[0] - i.getPaidAmount();
-                                            i.setPaidAmount(0.0);
-                                            amountShouldRevert[0] = balance;
-                                            return i;
-                                        }
+                                    if (i.getPaidAmount() >= 0) {
+                                       if (amountShouldRevert[0] > i.getPaidAmount()) {
+                                           double balance = amountShouldRevert[0] - i.getPaidAmount();
+                                           i.setPaidAmount(0.0);
+                                           amountShouldRevert[0] = balance;
+                                       }
+                                       else {
+                                           i.setPaidAmount(i.getPaidAmount() - amountShouldRevert[0]);
+                                           amountShouldRevert[0] = 0;
+                                       }
                                     }
                                 }
 
