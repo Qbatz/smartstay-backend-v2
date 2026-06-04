@@ -36,6 +36,8 @@ public class SettlementItems {
 
     private Double currentMonthPayableAmount;
     private Double currentMonthPaidAmount;
+    private Double fullRent;
+    private Boolean isFullRentCollected;
     private String hostelId;
     private String customerId;
     private String invoiceId;

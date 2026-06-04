@@ -1926,7 +1926,7 @@ public class InvoiceV1Service {
                    deductionAmount,
                    unpaidInvoiceAmount,
                    electricityAmount,
-                   finalAmount,
+                   Utils.roundOfDouble(finalAmount),
                    true,
                    invoicesV1.getPaymentStatus());
        }
@@ -4218,7 +4218,29 @@ public class InvoiceV1Service {
             double currentMonthTotalAmount = payableAmountForCurrentInvoiceRent + otherItemAmount.get();
 
             List<RentBreakUp> listRentBreakup = customersBedHistoryService.getBreakupBasedOnRentHistory(customers, leavingDate, billingDates);
+            double fullRent = 0.0;
+            double priceDifference = 0.0;
 
+            if (listRentBreakup != null) {
+                if (listRentBreakup.size() > 1) {
+                    RentBreakUp rbu = listRentBreakup
+                            .stream()
+                            .max(Comparator.comparing(RentBreakUp::rent))
+                            .orElse(null);
+                    if (rbu != null) {
+                        fullRent = rbu.rent();
+                    }
+                }
+                else if (!listRentBreakup.isEmpty()) {
+                    fullRent = listRentBreakup
+                            .getFirst().rent();
+
+                }
+            }
+            priceDifference = fullRent - payableAmountForCurrentInvoiceRent;
+            if (priceDifference < 0) {
+                priceDifference = priceDifference * (-1);
+            }
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
                     Utils.roundOffWithTwoDigit(currentMonthPaidRent),
                     (int) noOfDaysStayed,
@@ -4231,6 +4253,8 @@ public class InvoiceV1Service {
                     otherItemAmount.get(),
                     isDiscountApplied.get(),
                     discountAmount,
+                    fullRent,
+                    Utils.roundOffWithTwoDigit(priceDifference),
                     otherItems,
                     listRentBreakup);
 
@@ -4361,9 +4385,31 @@ public class InvoiceV1Service {
             currentMonthPaidRent = currentMonthPaidRent + runningInvoicePaidAmount;
             currentMonthPayableAmount = payableAmountForCurrentInvoiceRent - currentMonthPaidRent + otherItemAmount.get();
             double currentMonthTotalAmount = payableAmountForCurrentInvoiceRent + otherItemAmount.get();
+            double fullRent = 0.0;
+            double priceDifference = 0.0;
 
             List<RentBreakUp> listRentBreakup = customersBedHistoryService.getBreakupBasedOnRentHistory(customers, leavingDate, billingDates);
+            if (listRentBreakup != null) {
+                if (listRentBreakup.size() > 1) {
+                    RentBreakUp rbu = listRentBreakup
+                            .stream()
+                            .max(Comparator.comparing(RentBreakUp::rent))
+                            .orElse(null);
+                    if (rbu != null) {
+                        fullRent = rbu.rent();
+                    }
+                }
+                else if (!listRentBreakup.isEmpty()) {
+                    fullRent = listRentBreakup
+                            .getFirst().rent();
 
+                }
+            }
+
+            priceDifference = fullRent - payableAmountForCurrentInvoiceRent;
+            if (priceDifference < 0) {
+                priceDifference = priceDifference * (-1);
+            }
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
                     currentMonthPaidRent,
                     (int) noOfDaysStayed,
@@ -4376,6 +4422,8 @@ public class InvoiceV1Service {
                     otherItemAmount.get(),
                     isDiscountApplied.get(),
                     discountAmount,
+                    fullRent,
+                    Utils.roundOffWithTwoDigit(priceDifference),
                     otherItems,
                     listRentBreakup);
 

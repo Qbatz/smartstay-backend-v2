@@ -22,8 +22,10 @@ public class SettlementItemService {
     @Autowired
     private SettlementItemsRepository settlementItemsRepository;
 
-    public SettlementItems generateSettlementItems(String customerId, String hostelId, String invoiceId, FinalSettlement settlementInfo) {
+    public SettlementItems generateSettlementItems(String customerId, String hostelId, String invoiceId, FinalSettlement settlementInfo, boolean isFullRentCollected, double fullRent) {
         SettlementItems settlementItems = new SettlementItems();
+        settlementItems.setIsFullRentCollected(isFullRentCollected);
+        settlementItems.setFullRent(fullRent);
         if (settlementInfo != null) {
             if (settlementInfo.unpaidInvoiceInfo() != null) {
                 List<UnpaidInvoices> listUnpaidInvoices = settlementInfo.unpaidInvoiceInfo().listUnpaidInvoices();

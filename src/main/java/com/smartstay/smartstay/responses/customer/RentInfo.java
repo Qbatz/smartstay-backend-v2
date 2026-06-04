@@ -16,6 +16,8 @@ public record RentInfo(Double currentPayableRent,
                        Double otherItemAmount,
                        boolean isDiscountApplied,
                        Double discountAmount,
+                       Double fullRent,
+                       Double rentDifference,
                        List<CurrentMonthOtherItems> currentMonthOtherItems,
                        List<RentBreakUp> rentLists) {
 }
