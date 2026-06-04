@@ -1473,10 +1473,10 @@ public class InvoiceV1Service {
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
 
-            SettlementItems settlementItems = settlementItemService.getSettlemtItems(invoiceId);
-            if (settlementItems != null) {
-                return getSettlementInvoiceDetails(settlementItems, signatureInfo, stayInfo, accountDetails, customerInfo, invoicesV1, hostelV1);
-            }
+//            SettlementItems settlementItems = settlementItemService.getSettlemtItems(invoiceId);
+//            if (settlementItems != null) {
+//                return getSettlementInvoiceDetails(settlementItems, signatureInfo, stayInfo, accountDetails, customerInfo, invoicesV1, hostelV1);
+//            }
             double paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
 
             double balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
@@ -3661,7 +3661,7 @@ public class InvoiceV1Service {
                     if (settlementInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name()) ||
                             settlementInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
                         refundHistory.add(new InvoiceRefundHistory(
-                                transactionMap.get(settlementInvoice.getInvoiceId()).getTransactionReferenceId(),
+                                item.getTransactionReferenceId(),
                                 Utils.dateToString(item.getPaymentDate()),
                                 Utils.dateToTime(item.getPaymentDate()),
                                 paymentMode,
@@ -3670,7 +3670,7 @@ public class InvoiceV1Service {
                                 paymentMode));
                     } else {
                         paymentHistory.add(new InvoiceRefundHistory(
-                                transactionMap.get(settlementInvoice.getInvoiceId()).getTransactionReferenceId(),
+                                item.getTransactionReferenceId(),
                                 Utils.dateToString(item.getPaymentDate()),
                                 Utils.dateToTime(item.getPaymentDate()),
                                 paymentMode,
