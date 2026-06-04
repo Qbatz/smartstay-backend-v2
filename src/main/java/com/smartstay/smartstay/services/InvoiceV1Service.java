@@ -1961,15 +1961,22 @@ public class InvoiceV1Service {
         invoicesV1Repository.saveAll(unpaidUpdated);
     }
 
-    public InvoicesV1 createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate, Users users) {
+    public InvoicesV1 createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate, Users users, List<Deductions> checkInDeductions) {
         List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customers.getCustomerId(), InvoiceType.SETTLEMENT.name());
+        List<Deductions> settlementDeductions = listDeductions;
+        if (checkInDeductions != null) {
+            settlementDeductions.addAll(checkInDeductions);
+        }
+        if (settlementDeductions == null) {
+            settlementDeductions = new ArrayList<>();
+        }
         if (!invoicesV1.isEmpty()) {
             InvoicesV1 settlementInvoice = invoicesV1.get(0);
 
             List<String> listUnpaidInvoicesId = new ArrayList<>(unpaidInvoices.stream().map(InvoicesV1::getInvoiceId).toList());
 
             settlementInvoice.setSubTotal(Utils.roundOfDouble(totalAmountToBePaid));
-            settlementInvoice.setDeductions(listDeductions);
+            settlementInvoice.setDeductions(settlementDeductions);
             settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
             settlementInvoice.setBasePrice(Utils.roundOfDouble(totalAmountWithoutDeduction));
             settlementInvoice.setSubTotal(Utils.roundOfDouble(totalAmountToBePaid));
@@ -1986,7 +1993,7 @@ public class InvoiceV1Service {
             settlementInvoice.setInvoiceEndDate(leavingDate);
             settlementInvoice.setUpdatedAt(new Date());
 
-            double deductionAmount = listDeductions
+            double deductionAmount = settlementDeductions
                     .stream()
                     .mapToDouble(Deductions::getAmount)
                     .sum();
@@ -2022,6 +2029,11 @@ public class InvoiceV1Service {
             usersService.finalSettlementGenetated(hostelId, settlementInvoice.getInvoiceId(), ActivitySource.SETTLEMENT, ActivitySourceType.UPDATE, customers.getCustomerId(), users);
             return settlementInvoice;
         } else {
+            double deductionAmount = settlementDeductions
+                    .stream()
+                    .mapToDouble(Deductions::getAmount)
+                    .sum();
+
             List<String> listUnpaidInvoicesId = unpaidInvoices.stream().map(InvoicesV1::getInvoiceId).toList();
             InvoicesV1 settlementInvoice = new InvoicesV1();
             settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
@@ -2033,6 +2045,8 @@ public class InvoiceV1Service {
             settlementInvoice.setBasePrice(Utils.roundOfDouble(totalAmountToBePaid));
             settlementInvoice.setTotalAmount(Utils.roundOfDouble(totalAmountToBePaid));
             settlementInvoice.setSubTotal(Utils.roundOfDouble(totalAmountToBePaid));
+            settlementInvoice.setDeductions(settlementDeductions);
+            settlementInvoice.setDeductionAmount(Utils.roundOffWithTwoDigit(deductionAmount));
             settlementInvoice.setGst(0.0);
             settlementInvoice.setCgst(0.0);
             settlementInvoice.setSgst(0.0);
@@ -2057,7 +2071,7 @@ public class InvoiceV1Service {
             settlementInvoice.setCreatedAt(new Date());
             settlementInvoice.setUpdatedAt(new Date());
 
-            List<InvoiceItems> listInvoiceItems = listDeductions.stream().map(i -> {
+            List<InvoiceItems> listInvoiceItems = settlementDeductions.stream().map(i -> {
                 InvoiceItems invoiceItems = new InvoiceItems();
                 invoiceItems.setAmount(i.getAmount());
                 if (i.getType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.MAINTENANCE.name())) {
@@ -4602,7 +4616,7 @@ public class InvoiceV1Service {
     //multipurpose - Rename
 
     @Deprecated
-    public InvoicesV1 createSettlementInvoiceForPostpaid(Customers customers, String hostelId, long round, List<String> listUnpaidInvoices, List<Deductions> deductions, double amoutToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid) {
+    public InvoicesV1 createSettlementInvoiceForPostpaid(Customers customers, String hostelId, long round, List<String> listUnpaidInvoices, List<Deductions> deductions, double amoutToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid, List<Deductions> checkInDeductions) {
         InvoicesV1 advanceInvoice = null;
 
         List<InvoicesV1> listInvoices = new ArrayList<>();
@@ -4630,10 +4644,10 @@ public class InvoiceV1Service {
 
         cancelActiveInvoice(invoicesHasToBeCancelled);
 
-        return createSettlementInvoice(customers, hostelId, round, listInvoices, deductions, amoutToBePaidWithoutDeductions, leavingDate, users);
+        return createSettlementInvoice(customers, hostelId, round, listInvoices, deductions, amoutToBePaidWithoutDeductions, leavingDate, users, checkInDeductions);
     }
 
-    public InvoicesV1 createSettlementInvoiceForFixedPrepaid(Customers customers, String hostelId, double totalAmountToBePaid, List<String> listUnpaidInvoices, List<Deductions> lisDeductions, double amountToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid) {
+    public InvoicesV1 createSettlementInvoiceForFixedPrepaid(Customers customers, String hostelId, double totalAmountToBePaid, List<String> listUnpaidInvoices, List<Deductions> lisDeductions, double amountToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid, List<Deductions> checkInDeductions) {
         InvoicesV1 advanceInvoice = null;
 
         List<InvoicesV1> listInvoices = new ArrayList<>();
@@ -4657,7 +4671,7 @@ public class InvoiceV1Service {
                 .toList();
 
         cancelActiveInvoice(invoicesHasToBeCancelled);
-        return createSettlementInvoice(customers, hostelId, totalAmountToBePaid, listInvoices, lisDeductions, amountToBePaidWithoutDeductions, leavingDate, users);
+        return createSettlementInvoice(customers, hostelId, totalAmountToBePaid, listInvoices, lisDeductions, amountToBePaidWithoutDeductions, leavingDate, users, checkInDeductions);
     }
 
     public void modifyCurrentMonthDiscount(String customerId, String hostelId, double discountAmount, BillingDates billDate) {
