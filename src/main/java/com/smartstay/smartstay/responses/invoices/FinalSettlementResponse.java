@@ -17,7 +17,6 @@ public record FinalSettlementResponse(String invoiceNumber,
                                       StayInfo stayInfo,
                                       AccountDetails accountDetails,
                                       ConfigInfo configurations,
-
                                       List<InvoiceSummary> invoiceSummaries,
                                       InvoiceInfo invoiceInfo,
                                       List<InvoiceRefundHistory> refundHistory,
