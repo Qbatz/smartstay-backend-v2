@@ -44,6 +44,7 @@ public class Utils {
     public static final String AMENITY_ALREADY_DELETED = "Amenity already deleted";
     public static final String DOCUMENT_ALREADY_DELETED = "Document is already deleted";
     public static final String CANNOT_DELETE_ASSIGNED_AMENITIES = "Amenities that are currently assigned cannot be deleted.";
+    public static final String CANNOT_DELETE_ASSIGNED_ASSETS = "Assets that are currently assigned cannot be deleted.";
     public static final String INVALID_FLOOR = "Invalid Floor";
     public static final String INVALID_USER = "Invalid User";
     public static final String INVALID_USER_NAME_PASSWORD = "Invalid username/password";

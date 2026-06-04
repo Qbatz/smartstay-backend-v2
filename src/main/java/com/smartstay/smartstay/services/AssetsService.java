@@ -325,6 +325,9 @@ public class AssetsService {
         if (!subscriptionService.validateSubscription(existingAsset.getHostelId())) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
+        if (existingAsset.getFloorId() != null || existingAsset.getRoomId() != null || existingAsset.getBedId() != null) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_ASSIGNED_ASSETS, HttpStatus.BAD_REQUEST);
+        }
         existingAsset.setIsDeleted(true);
         existingAsset.setUpdatedAt(new Date());
         assetsRepository.save(existingAsset);
