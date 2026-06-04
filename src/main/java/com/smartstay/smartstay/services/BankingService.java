@@ -749,6 +749,20 @@ public class BankingService {
         toBankTransactions.setCreatedBy(authentication.getName());
         BankTransactionsV1 bankTransactionsV1 = transactionService.saveTransaction(toBankTransactions);
 
+        // Update the balance field on the FROM account (BankingV1 entity)
+        Double fromOldBalance = bankingV1.getBalance() != null ? bankingV1.getBalance() : 0.0;
+        bankingV1.setBalance(fromOldBalance - selfTransfer.balance());
+        bankingV1.setUpdatedAt(new Date());
+        bankingV1.setUpdatedBy(authentication.getName());
+        bankingV1Repository.save(bankingV1);
+
+        // Update the balance field on the TO account (BankingV1 entity)
+        Double toOldBalance = toAccount.getBalance() != null ? toAccount.getBalance() : 0.0;
+        toAccount.setBalance(toOldBalance + selfTransfer.balance());
+        toAccount.setUpdatedAt(new Date());
+        toAccount.setUpdatedBy(authentication.getName());
+        bankingV1Repository.save(toAccount);
+
         usersService.addUserLog(hostelId, bankTransactionsV1.getBankId(), ActivitySource.BANKING, ActivitySourceType.TRANSFER, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
