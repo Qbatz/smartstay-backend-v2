@@ -56,6 +56,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -1536,10 +1537,10 @@ public class InvoiceV1Service {
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
 
-//            SettlementItems settlementItems = settlementItemService.getSettlemtItems(invoiceId);
-//            if (settlementItems != null) {
-//                return getSettlementInvoiceDetails(settlementItems, signatureInfo, stayInfo, accountDetails, customerInfo, invoicesV1, hostelV1);
-//            }
+            SettlementItems settlementItems = settlementItemService.getSettlemtItems(invoiceId);
+            if (settlementItems != null) {
+                return getSettlementInvoiceDetails(settlementItems, signatureInfo, stayInfo, accountDetails, customerInfo, invoicesV1, hostelV1);
+            }
             double paidAmount = transactionService.findPaidAmountForInvoice(invoiceId);
 
             double balanceAmount = invoicesV1.getTotalAmount() - paidAmount;
@@ -1823,11 +1824,21 @@ public class InvoiceV1Service {
         }
 
         if (settlementItems.getCurrentMonthPayableAmount() != null) {
-            currentPayablemount = settlementItems.getCurrentMonthPayableAmount();
-            subTotal = subTotal + currentPayablemount;
+            if (settlementItems.getIsFullRentCollected() != null) {
+                if (settlementItems.getIsFullRentCollected()) {
+                    currentPayablemount = settlementItems.getFullRent();
+                }
+                else {
+                    currentPayablemount = settlementItems.getCurrentMonthPayableAmount();
+                }
+            }
+            else {
+                currentPayablemount = settlementItems.getCurrentMonthPayableAmount();
+            }
         }
         if (settlementItems.getCurrentMonthPaidAmount() != null) {
             currentPaidAmount = settlementItems.getCurrentMonthPaidAmount();
+            currentPayablemount = currentPayablemount - currentPaidAmount;
             subTotal = subTotal - currentPaidAmount;
         }
         if (listRentBreakUp != null) {
@@ -1839,7 +1850,6 @@ public class InvoiceV1Service {
             }
         }
 
-        double currentMonthRent = customersBedHistoryService.getRentBasedOnDate(invoicesV1.getCustomerId(), invoicesV1.getInvoiceStartDate());
        if (settlementItems.getCurrentMonthOtherItems() != null) {
            currentMonthOtherAmounts = settlementItems
                    .getCurrentMonthOtherItems()
@@ -1911,6 +1921,7 @@ public class InvoiceV1Service {
                    hostelV1.getEmailId());
        }
 
+        subTotal = subTotal + currentPayablemount;
        finalAmount = subTotal + deductionAmount;
        finalAmount = finalAmount + unpaidInvoiceAmount + electricityAmount ;
 
@@ -1922,7 +1933,7 @@ public class InvoiceV1Service {
                    Utils.dateToString(invoicesV1.getInvoiceDueDate()),
                    null,
                    null,
-                   subTotal,
+                   Utils.roundOffWithTwoDigit(subTotal),
                    deductionAmount,
                    unpaidInvoiceAmount,
                    electricityAmount,
@@ -4237,10 +4248,20 @@ public class InvoiceV1Service {
 
                 }
             }
-            priceDifference = fullRent - payableAmountForCurrentInvoiceRent;
-            if (priceDifference < 0) {
-                priceDifference = priceDifference * (-1);
+
+
+//            priceDifference = fullRent - payableAmountForCurrentInvoiceRent - currentMonthPaidRent;
+            if (currentMonthPaidRent == fullRent) {
+                priceDifference = 0;
             }
+            else {
+                double r = fullRent - payableAmountForCurrentInvoiceRent;
+                double np = payableAmountForCurrentInvoiceRent + r;
+                priceDifference = fullRent - np;
+            }
+//            if (priceDifference < 0) {
+//                priceDifference = priceDifference * (-1);
+//            }
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
                     Utils.roundOffWithTwoDigit(currentMonthPaidRent),
                     (int) noOfDaysStayed,
@@ -4406,12 +4427,12 @@ public class InvoiceV1Service {
                 }
             }
 
-            priceDifference = fullRent - payableAmountForCurrentInvoiceRent;
+            priceDifference = fullRent - payableAmountForCurrentInvoiceRent - currentMonthPaidRent;
             if (priceDifference < 0) {
                 priceDifference = priceDifference * (-1);
             }
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
-                    currentMonthPaidRent,
+                    Utils.roundOffWithTwoDigit(currentMonthPaidRent),
                     (int) noOfDaysStayed,
                     Utils.roundOffWithTwoDigit(monthlyRent),
                     Utils.roundOffWithTwoDigit(currentMonthTotalAmount),

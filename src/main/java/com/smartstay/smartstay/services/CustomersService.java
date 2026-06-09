@@ -2300,7 +2300,7 @@ public class CustomersService {
             }
         }
 
-        priceDifference = fullRent - currentMonthPayableAmount;
+        priceDifference = fullRent - currentMonthPayableAmount - currentRentPaid;
         if (priceDifference < 0) {
             priceDifference = priceDifference * (-1);
         }
@@ -2919,6 +2919,9 @@ public class CustomersService {
                 if (customRent == 0) {
                     RentInfo rentInfo = settlementInfo.currentMonthRentInfo();
                     if (rentInfo != null) {
+                        if (rentInfo.fullRent() != null) {
+                            customRent = rentInfo.fullRent();
+                        }
                         differenceAmount = rentInfo.rentDifference();
                     }
                 }
@@ -3217,6 +3220,9 @@ public class CustomersService {
             if (fullRent == 0) {
                 RentInfo rentInfo = settlement.currentMonthRentInfo();
                 if (rentInfo != null) {
+                    if (rentInfo.fullRent() != null) {
+                        customRent = rentInfo.fullRent();
+                    }
                     fullRent = rentInfo.fullRent();
                     difference = rentInfo.rentDifference();
                 }
