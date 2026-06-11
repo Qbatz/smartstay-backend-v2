@@ -73,4 +73,19 @@ public class ExpenseController {
         return expenseService.deleteExpense(hostelId, expenseId);
     }
 
+    @PostMapping("/units")
+    public ResponseEntity<?> addUnit(@Valid @RequestBody AddUnit payLoads) {
+        return expenseService.addUnit(payLoads);
+    }
+
+    @GetMapping("/units")
+    public ResponseEntity<?> getAllUnits() {
+        return expenseService.getAllUnits();
+    }
+
+    @PutMapping("/units/{unitId}")
+    public ResponseEntity<?> updateUnit(@PathVariable("unitId") int unitId, @Valid @RequestBody AddUnit payLoads) {
+        return expenseService.updateUnit(unitId, payLoads);
+    }
+
 }

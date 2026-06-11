@@ -5,14 +5,18 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.ExpensesV1;
+import com.smartstay.smartstay.dao.Units;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.expenses.ExpensesCategory;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.*;
+import com.smartstay.smartstay.payloads.expense.AddUnit;
 import com.smartstay.smartstay.payloads.expense.Expense;
 import com.smartstay.smartstay.payloads.expense.UpdateExpense;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
+import com.smartstay.smartstay.repositories.UnitsRepository;
+import com.smartstay.smartstay.responses.expenses.UnitResponse;
 import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.expenses.ExpenseList;
@@ -55,6 +59,90 @@ public class ExpenseService {
 
     @Autowired
     private SubscriptionService subscriptionService;
+
+    @Autowired
+    private UnitsRepository unitsRepository;
+
+    public ResponseEntity<?> addUnit(AddUnit payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        String unitName = payloads.unitName().trim();
+        Units existingUnit = unitsRepository.findByUnitNameIgnoreCase(unitName);
+        if (existingUnit != null) {
+            if (existingUnit.isEnabled()) {
+                return new ResponseEntity<>(Utils.UNIT_ALREADY_ADDED, HttpStatus.BAD_REQUEST);
+            }
+            existingUnit.setEnabled(true);
+            existingUnit.setModifiedAt(new Date());
+            existingUnit.setModifiedBy(userId);
+            unitsRepository.save(existingUnit);
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        }
+
+        Units units = new Units();
+        units.setUnitName(unitName);
+        units.setEnabled(true);
+        units.setAddedBy(userId);
+        units.setCreatedAt(new Date());
+        units.setModifiedAt(new Date());
+        units.setModifiedBy(userId);
+        unitsRepository.save(units);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+    }
+
+    public ResponseEntity<?> updateUnit(int unitId, AddUnit payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Units existingUnit = unitsRepository.findByUnitId(unitId);
+        if (existingUnit == null || !existingUnit.isEnabled()) {
+            return new ResponseEntity<>(Utils.INVALID_UNIT, HttpStatus.BAD_REQUEST);
+        }
+
+        String unitName = payloads.unitName().trim();
+        Units duplicateUnit = unitsRepository.findByUnitNameIgnoreCase(unitName);
+        if (duplicateUnit != null && duplicateUnit.isEnabled() && !duplicateUnit.getUnitId().equals(unitId)) {
+            return new ResponseEntity<>(Utils.UNIT_ALREADY_ADDED, HttpStatus.BAD_REQUEST);
+        }
+
+        existingUnit.setUnitName(unitName);
+        existingUnit.setModifiedAt(new Date());
+        existingUnit.setModifiedBy(userId);
+        unitsRepository.save(existingUnit);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllUnits() {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<UnitResponse> units = unitsRepository.findAllEnabledUnits();
+        return new ResponseEntity<>(units, HttpStatus.OK);
+    }
 
     public ResponseEntity<?> initializeToAddExpense(String hostelId) {
         if (!authentication.isAuthenticated()) {
