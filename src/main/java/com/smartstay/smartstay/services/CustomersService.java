@@ -1764,6 +1764,7 @@ public class CustomersService {
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
     }
 
+    //no bed change
     private FinalSettlement getFinalSettlementForPrepaidFixed(Customers customers, BookingsV1 bookingDetails, BillingDates billDate, Date lDate) {
         Double amountToBePaid = 0.0;
         Double payableRent = 0.0;
@@ -2300,10 +2301,12 @@ public class CustomersService {
             }
         }
 
-        priceDifference = fullRent - currentMonthPayableAmount - currentRentPaid;
-        if (priceDifference < 0) {
-            priceDifference = priceDifference * (-1);
-        }
+//        priceDifference = fullRent - currentMonthPayableAmount - currentRentPaid;
+//        if (priceDifference < 0) {
+//            priceDifference = priceDifference * (-1);
+//        }
+
+        priceDifference = fullRent - currentPayableRent;
 
         return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent), currentRentPaid, stayDays, currentMonthRent, currentMonthPayableAmount, Utils.roundOffWithTwoDigit(currentMonthPayableAmount), currentInvoiceStartDate, currentInvoiceEndDate, null, Utils.roundOffWithTwoDigit(otherItemAMount[0]), false, 0.0, fullRent, Utils.roundOffWithTwoDigit(priceDifference), currentMonthOtherItems, listRentBreakup);
     }
@@ -2928,10 +2931,16 @@ public class CustomersService {
                 else {
                     RentInfo rentInfo = settlementInfo.currentMonthRentInfo();
                     if (rentInfo != null) {
-                        differenceAmount = customRent - rentInfo.currentMonthRent();
-                        if (differenceAmount < 0) {
-                            differenceAmount = differenceAmount * -1;
+                        if (!customRent.equals(rentInfo.currentMonthRent())) {
+                            differenceAmount = customRent - rentInfo.currentMonthRent();
+                            if (differenceAmount < 0) {
+                                differenceAmount = differenceAmount * -1;
+                            }
                         }
+                        else {
+                            differenceAmount =  rentInfo.rentDifference();
+                        }
+
                     }
                 }
             }

@@ -4249,19 +4249,8 @@ public class InvoiceV1Service {
                 }
             }
 
+            priceDifference = fullRent - payableAmountForCurrentInvoiceRent;
 
-//            priceDifference = fullRent - payableAmountForCurrentInvoiceRent - currentMonthPaidRent;
-            if (currentMonthPaidRent == fullRent) {
-                priceDifference = 0;
-            }
-            else {
-                double r = fullRent - payableAmountForCurrentInvoiceRent;
-                double np = payableAmountForCurrentInvoiceRent + r;
-                priceDifference = fullRent - np;
-            }
-//            if (priceDifference < 0) {
-//                priceDifference = priceDifference * (-1);
-//            }
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
                     Utils.roundOffWithTwoDigit(currentMonthPaidRent),
                     (int) noOfDaysStayed,
@@ -4427,10 +4416,11 @@ public class InvoiceV1Service {
                 }
             }
 
-            priceDifference = fullRent - payableAmountForCurrentInvoiceRent - currentMonthPaidRent;
-            if (priceDifference < 0) {
-                priceDifference = priceDifference * (-1);
-            }
+//            priceDifference = fullRent - payableAmountForCurrentInvoiceRent - currentMonthPaidRent;
+//            if (priceDifference < 0) {
+//                priceDifference = priceDifference * (-1);
+//            }
+            priceDifference = fullRent - payableAmountForCurrentInvoiceRent;
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
                     Utils.roundOffWithTwoDigit(currentMonthPaidRent),
                     (int) noOfDaysStayed,
