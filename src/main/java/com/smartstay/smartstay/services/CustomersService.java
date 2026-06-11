@@ -1803,7 +1803,7 @@ public class CustomersService {
                     totalAmountToRedeem = totalAmountToRedeem + advanceInvoice.getBalanceAmount();
                 }
             }
-            if (advanceInvoice.getDeductions() != null && advanceInvoice.getDeductionAmount() > 0) {
+            if (advanceInvoice.getDeductions() != null && advanceInvoice.getDeductionAmount() != null && advanceInvoice.getDeductionAmount() > 0) {
                 double paidDeductionAmount = 0.0;
                 double totalDeductionAmount = 0.0;
                 double pendingDeductionAmount = 0.0;
@@ -1934,7 +1934,7 @@ public class CustomersService {
                 }
             }
 
-            if (advanceInvoice.getDeductions() != null && advanceInvoice.getDeductionAmount() > 0) {
+            if (advanceInvoice.getDeductions() != null && advanceInvoice.getDeductionAmount() != null && advanceInvoice.getDeductionAmount() > 0) {
                 double paidDeductionAmount = 0.0;
                 double totalDeductionAmount = 0.0;
                 double pendingDeductionAmount = 0.0;
@@ -2078,7 +2078,7 @@ public class CustomersService {
                     totalAmountToRedeem = totalAmountToRedeem + advanceInvoice.getBalanceAmount();
                 }
             }
-            if (advanceInvoice.getDeductions() != null && advanceInvoice.getDeductionAmount() > 0) {
+            if (advanceInvoice.getDeductions() != null && advanceInvoice.getDeductionAmount() != null && advanceInvoice.getDeductionAmount() > 0) {
                 double paidDeductionAmount = 0.0;
                 double totalDeductionAmount = 0.0;
                 double pendingDeductionAmount = 0.0;
@@ -2361,7 +2361,7 @@ public class CustomersService {
                 }
             }
 
-            if (advanceInvoice.getDeductions() != null && advanceInvoice.getDeductionAmount() > 0) {
+            if (advanceInvoice.getDeductions() != null && advanceInvoice.getDeductionAmount() != null && advanceInvoice.getDeductionAmount() > 0) {
                 double paidDeductionAmount = 0.0;
                 double totalDeductionAmount = 0.0;
                 double pendingDeductionAmount = 0.0;
@@ -2786,6 +2786,12 @@ public class CustomersService {
             customers.setWallet(cw);
             customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
         }
+        bedsService.makeABedVacant(bookingDetails.getBedId(), settlementDetails);
+        bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
+        if (settlementDetails != null && settlementDetails.getLeavingDate() != null) {
+            bookingDetails.setLeavingDate(settlementDetails.getLeavingDate());
+        }
+        bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
 
         customersRepository.save(customers);
@@ -2966,6 +2972,10 @@ public class CustomersService {
             customers.setWallet(cw);
             customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), settlementInvoice.getInvoiceId());
         }
+        bedsService.makeABedVacant(bookingDetails.getBedId(), leavingDate);
+        bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
+        bookingDetails.setLeavingDate(leavingDate);
+        bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
 
@@ -3133,6 +3143,10 @@ public class CustomersService {
             customers.setWallet(cw);
             customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
         }
+        bedsService.makeABedVacant(bookingDetails.getBedId(), leavingDate);
+        bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
+        bookingDetails.setLeavingDate(leavingDate);
+        bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
 
@@ -3265,6 +3279,10 @@ public class CustomersService {
             customers.setWallet(cw);
             customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
         }
+        bedsService.makeABedVacant(bookingDetails.getBedId(), leavingDate);
+        bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
+        bookingDetails.setLeavingDate(leavingDate);
+        bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
 
@@ -3418,6 +3436,12 @@ public class CustomersService {
             customers.setWallet(cw);
             customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
         }
+        bedsService.makeABedVacant(bookingsV1.getBedId(), settlementDetails);
+        bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
+        if (settlementDetails != null && settlementDetails.getLeavingDate() != null) {
+            bookingsV1.setCheckoutDate(settlementDetails.getLeavingDate());
+        }
+        bookingsService.saveBooking(bookingsV1);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
 
