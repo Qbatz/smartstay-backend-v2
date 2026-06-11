@@ -172,6 +172,33 @@ public class VendorService {
         if (profileImage != null ) {
             existingVendor.setProfilePic(profileImage);
         }
+        if (updateVendor.vendorCategory() != null) {
+            existingVendor.setVendorCategory(updateVendor.vendorCategory());
+        }
+        if (updateVendor.contactPerson() != null) {
+            existingVendor.setContactPerson(updateVendor.contactPerson());
+        }
+        if (updateVendor.description() != null) {
+            existingVendor.setDescription(updateVendor.description());
+        }
+        if (updateVendor.vendorCode() != null) {
+            existingVendor.setVendorCode(updateVendor.vendorCode());
+        }
+        if (updateVendor.gst() != null) {
+            existingVendor.setGst(updateVendor.gst());
+        }
+        if (updateVendor.pan() != null) {
+            existingVendor.setPan(updateVendor.pan());
+        }
+        if (updateVendor.allowCredit() != null) {
+            existingVendor.setAllowCredit(updateVendor.allowCredit());
+        }
+        if (updateVendor.creditLimit() != null) {
+            existingVendor.setCreditLimit(updateVendor.creditLimit());
+        }
+        if (updateVendor.creditPeriod() != null) {
+            existingVendor.setCreditPeriod(updateVendor.creditPeriod());
+        }
 
         existingVendor.setUpdatedAt(new Date());
         vendorRepository.save(existingVendor);
@@ -226,6 +253,15 @@ public class VendorService {
         vendorV1.setBusinessName(payloads.businessName());
         vendorV1.setArea(payloads.area());
         vendorV1.setHostelId(payloads.hostelId());
+        vendorV1.setVendorCategory(payloads.vendorCategory());
+        vendorV1.setContactPerson(payloads.contactPerson());
+        vendorV1.setDescription(payloads.description());
+        vendorV1.setVendorCode(payloads.vendorCode());
+        vendorV1.setGst(payloads.gst());
+        vendorV1.setPan(payloads.pan());
+        vendorV1.setAllowCredit(payloads.allowCredit());
+        vendorV1.setCreditLimit(payloads.creditLimit());
+        vendorV1.setCreditPeriod(payloads.creditPeriod());
         vendorV1.setActive(true);
         vendorRepository.save(vendorV1);
 
