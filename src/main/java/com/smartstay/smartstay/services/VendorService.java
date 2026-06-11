@@ -5,12 +5,16 @@ import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.VendorCategories;
 import com.smartstay.smartstay.dao.VendorV1;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
+import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
 import com.smartstay.smartstay.repositories.RolesRepository;
+import com.smartstay.smartstay.repositories.VendorCategoriesRepository;
 import com.smartstay.smartstay.repositories.VendorRepository;
+import com.smartstay.smartstay.responses.vendor.VendorCategoryResponse;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +31,8 @@ public class VendorService {
 
     @Autowired
     VendorRepository vendorRepository;
+    @Autowired
+    VendorCategoriesRepository vendorCategoriesRepository;
     @Autowired
     RolesRepository rolesRepository;
     @Autowired
@@ -254,5 +260,80 @@ public class VendorService {
 
     public com.smartstay.smartstay.dao.VendorV1 getVendorObjectById(int id) {
         return vendorRepository.findByVendorId(id);
+    }
+
+    public ResponseEntity<?> addVendorCategory(AddVendorCategory payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        String categoryName = payloads.categoryName().trim();
+        VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryNameIgnoreCase(categoryName);
+        if (existingCategory != null) {
+            if (existingCategory.isEnabled()) {
+                return new ResponseEntity<>(Utils.CATEGORY_ALREADY_ADDED, HttpStatus.BAD_REQUEST);
+            }
+            existingCategory.setEnabled(true);
+            existingCategory.setModifiedAt(new Date());
+            existingCategory.setModifiedBy(userId);
+            vendorCategoriesRepository.save(existingCategory);
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        }
+
+        VendorCategories vendorCategories = new VendorCategories();
+        vendorCategories.setCategoryName(categoryName);
+        vendorCategories.setEnabled(true);
+        vendorCategories.setAddedBy(userId);
+        vendorCategories.setCreatedAt(new Date());
+        vendorCategories.setModifiedAt(new Date());
+        vendorCategories.setModifiedBy(userId);
+        vendorCategoriesRepository.save(vendorCategories);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+    }
+
+    public ResponseEntity<?> deleteVendorCategory(int categoryId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryId(categoryId);
+        if (existingCategory == null || !existingCategory.isEnabled()) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+
+        existingCategory.setEnabled(false);
+        existingCategory.setModifiedAt(new Date());
+        existingCategory.setModifiedBy(userId);
+        vendorCategoriesRepository.save(existingCategory);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllVendorCategories() {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<VendorCategoryResponse> categories = vendorCategoriesRepository.findAllEnabledCategories();
+        return new ResponseEntity<>(categories, HttpStatus.OK);
     }
 }
