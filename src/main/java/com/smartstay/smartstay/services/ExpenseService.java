@@ -4,18 +4,27 @@ import com.smartstay.smartstay.Wrappers.expenses.ExpenseListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dao.BankingV1;
+import com.smartstay.smartstay.dao.ExpenseItem;
+import com.smartstay.smartstay.dao.ExpensePayment;
 import com.smartstay.smartstay.dao.ExpensesV1;
 import com.smartstay.smartstay.dao.Units;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.VendorV1;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.expenses.ExpensesCategory;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.expense.AddUnit;
 import com.smartstay.smartstay.payloads.expense.Expense;
+import com.smartstay.smartstay.payloads.expense.ExpenseItemPayload;
 import com.smartstay.smartstay.payloads.expense.UpdateExpense;
+import com.smartstay.smartstay.repositories.ExpenseItemRepository;
+import com.smartstay.smartstay.repositories.ExpensePaymentRepository;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.UnitsRepository;
+import com.smartstay.smartstay.repositories.VendorRepository;
+import com.smartstay.smartstay.responses.expenses.ExpenseItemResponse;
+import com.smartstay.smartstay.responses.expenses.ExpensePaymentResponse;
 import com.smartstay.smartstay.responses.expenses.UnitResponse;
 import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
@@ -32,6 +41,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -62,6 +72,15 @@ public class ExpenseService {
 
     @Autowired
     private UnitsRepository unitsRepository;
+
+    @Autowired
+    private ExpenseItemRepository expenseItemRepository;
+
+    @Autowired
+    private ExpensePaymentRepository expensePaymentRepository;
+
+    @Autowired
+    private VendorRepository vendorRepository;
 
     public ResponseEntity<?> addUnit(AddUnit payloads) {
         if (!authentication.isAuthenticated()) {
@@ -245,6 +264,14 @@ public class ExpenseService {
         expensesV1.setCreatedBy(authentication.getName());
         expensesV1.setActive(true);
         expensesV1.setDescription(expense.description());
+        expensesV1.setTitle(expense.title());
+        expensesV1.setIsVendorExpense(expense.isVendorExpense());
+        expensesV1.setVendorId(expense.vendorId() == null ? null : String.valueOf(expense.vendorId()));
+        expensesV1.setPaymentStatus(ExpensePaymentStatus.fromString(expense.paymentStatus()));
+        expensesV1.setPaidAmount(expense.paidAmount());
+        expensesV1.setBalanceAmount(expense.balanceAmount());
+        expensesV1.setPaymentMethod(expense.paymentMethod());
+        expensesV1.setNote(expense.note());
 
         TransactionDto transactionDto = new TransactionDto(expense.bankId(),
                 expensesV1.getExpenseNumber(),
@@ -256,6 +283,31 @@ public class ExpenseService {
                 expenseNumber);
 
         ExpensesV1 expV1 = expensesRepository.save(expensesV1);
+
+        if (expense.expenseItems() != null) {
+            for (ExpenseItemPayload itemPayload : expense.expenseItems()) {
+                ExpenseItem expenseItem = new ExpenseItem();
+                expenseItem.setExpenseId(expV1.getExpenseId());
+                expenseItem.setItem(itemPayload.item());
+                expenseItem.setQuantity(itemPayload.quantity());
+                expenseItem.setUnitId(itemPayload.unitId());
+                expenseItem.setUnit(itemPayload.unit());
+                expenseItem.setUnitPrice(itemPayload.unitPrice());
+                expenseItem.setTotalAmount(itemPayload.totalAmount());
+                expenseItemRepository.save(expenseItem);
+            }
+        }
+
+        if (expense.paidAmount() != null && expense.paidAmount() > 0) {
+            ExpensePayment expensePayment = new ExpensePayment();
+            expensePayment.setExpenseId(expV1.getExpenseId());
+            expensePayment.setPaidAmount(expense.paidAmount());
+            expensePayment.setPaymentMethod(expense.paymentMethod());
+            expensePayment.setBankId(expense.bankId());
+            expensePayment.setPaymentDate(expensesV1.getTransactionDate());
+            expensePayment.setNotes(expense.note());
+            expensePaymentRepository.save(expensePayment);
+        }
 
         usersService.addUserLog(hostelId, expV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.CREATE, users);
         if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId())) {
@@ -288,6 +340,7 @@ public class ExpenseService {
         return false;
     }
 
+    @Transactional
     public ResponseEntity<?> getAllExpenses(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -306,13 +359,101 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<ExpenseList> listExpenses = expensesRepository.findAllExpensesByHostelId(hostelId)
-                .stream()
-                .map(item -> new ExpenseListMapper().apply(item))
+        List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections =
+                expensesRepository.findAllExpensesByHostelId(hostelId);
+
+        List<String> expenseIds = projections.stream()
+                .map(com.smartstay.smartstay.dto.expenses.ExpenseList::getExpenseId)
                 .toList();
 
+        Map<String, List<ExpenseItemResponse>> itemsByExpense = new HashMap<>();
+        Map<String, List<ExpensePaymentResponse>> paymentsByExpense = new HashMap<>();
+        if (!expenseIds.isEmpty()) {
+            itemsByExpense = expenseItemRepository.findByExpenseIdIn(expenseIds).stream()
+                    .collect(Collectors.groupingBy(ExpenseItem::getExpenseId,
+                            Collectors.mapping(item -> new ExpenseItemResponse(
+                                    item.getId(),
+                                    item.getItem(),
+                                    item.getQuantity(),
+                                    item.getUnitId(),
+                                    item.getUnit(),
+                                    item.getUnitPrice(),
+                                    item.getTotalAmount()), Collectors.toList())));
+
+            paymentsByExpense = expensePaymentRepository.findByExpenseIdIn(expenseIds).stream()
+                    .collect(Collectors.groupingBy(ExpensePayment::getExpenseId,
+                            Collectors.mapping(payment -> new ExpensePaymentResponse(
+                                    payment.getId(),
+                                    payment.getPaidAmount(),
+                                    payment.getPaymentMethod(),
+                                    payment.getBankId(),
+                                    Utils.dateToString(payment.getPaymentDate()),
+                                    payment.getTransactionId(),
+                                    payment.getNotes(),
+                                    payment.getImageUrl()), Collectors.toList())));
+        }
+
+        // Batch fetch vendors referenced by vendor expenses to evaluate overdue status
+        List<Integer> vendorIds = projections.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsVendorExpense()))
+                .map(p -> parseVendorId(p.getVendorId()))
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Integer, VendorV1> vendorMap = vendorIds.isEmpty()
+                ? Map.of()
+                : vendorRepository.findByVendorIdIn(vendorIds).stream()
+                        .collect(Collectors.toMap(VendorV1::getVendorId, v -> v, (a, b) -> a));
+
+        ExpenseListMapper mapper = new ExpenseListMapper();
+        Map<String, List<ExpenseItemResponse>> finalItemsByExpense = itemsByExpense;
+        Map<String, List<ExpensePaymentResponse>> finalPaymentsByExpense = paymentsByExpense;
+        List<String> overdueExpenseIds = new ArrayList<>();
+
+        List<ExpenseList> listExpenses = projections.stream()
+                .map(item -> {
+                    ExpensePaymentStatus status = ExpensePaymentStatus.fromString(item.getPaymentStatus());
+                    if (Boolean.TRUE.equals(item.getIsVendorExpense())) {
+                        Integer vendorId = parseVendorId(item.getVendorId());
+                        VendorV1 vendor = vendorId == null ? null : vendorMap.get(vendorId);
+                        if (vendor != null && vendor.getCreditPeriod() != null && vendor.getCreditPeriod() > 0
+                                && item.getCreatedAt() != null
+                                && daysSince(item.getCreatedAt()) > vendor.getCreditPeriod()) {
+                            status = ExpensePaymentStatus.Overdue;
+                            if (item.getPaymentStatus() == null
+                                    || !ExpensePaymentStatus.Overdue.name().equalsIgnoreCase(item.getPaymentStatus())) {
+                                overdueExpenseIds.add(item.getExpenseId());
+                            }
+                        }
+                    }
+                    return mapper.apply(item,
+                            finalItemsByExpense.getOrDefault(item.getExpenseId(), List.of()),
+                            finalPaymentsByExpense.getOrDefault(item.getExpenseId(), List.of()),
+                            status);
+                })
+                .toList();
+
+        if (!overdueExpenseIds.isEmpty()) {
+            expensesRepository.updatePaymentStatus(overdueExpenseIds, ExpensePaymentStatus.Overdue);
+        }
 
         return new ResponseEntity<>(listExpenses, HttpStatus.OK);
+    }
+
+    private Integer parseVendorId(String vendorId) {
+        if (vendorId == null || vendorId.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(vendorId.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private long daysSince(Date date) {
+        long diffMillis = System.currentTimeMillis() - date.getTime();
+        return diffMillis / (1000L * 60 * 60 * 24);
     }
 
     public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
@@ -686,6 +827,7 @@ public class ExpenseService {
 
     }
 
+    @Transactional
     public ResponseEntity<?> deleteExpense(String hostelId, String expenseId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -710,12 +852,11 @@ public class ExpenseService {
         }
 
         if (bankTransactionService.deleteExpnese(hostelId, expenseId)) {
-            expensesV1.setActive(false);
-            expensesV1.setUpdatedBy(authentication.getName());
-            expensesV1.setUpdatedAt(new Date());
-            expensesRepository.save(expensesV1);
+            expenseItemRepository.deleteByExpenseId(expenseId);
+            expensePaymentRepository.deleteByExpenseId(expenseId);
+            expensesRepository.delete(expensesV1);
 
-            usersService.addUserLog(hostelId, expensesV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.DELETE, users);
+            usersService.addUserLog(hostelId, expenseId, ActivitySource.EXPENSE, ActivitySourceType.DELETE, users);
 
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }

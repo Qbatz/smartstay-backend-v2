@@ -21,4 +21,12 @@ public interface ExpenseList {
     String getBankName();
     String getCategoryName();
     String getSubCategoryName();
+    String getTitle();
+    Boolean getIsVendorExpense();
+    String getPaymentStatus();
+    Double getPaidAmount();
+    Double getBalanceAmount();
+    String getPaymentMethod();
+    String getNote();
+    Date getCreatedAt();
 }

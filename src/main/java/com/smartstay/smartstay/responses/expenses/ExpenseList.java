@@ -1,5 +1,9 @@
 package com.smartstay.smartstay.responses.expenses;
 
+import com.smartstay.smartstay.ennum.ExpensePaymentStatus;
+
+import java.util.List;
+
 public record ExpenseList(String expenseId,
                           int itemsCount,
                           long categoryId,
@@ -15,5 +19,16 @@ public record ExpenseList(String expenseId,
                           String accountHolderName,
                           String bankName,
                           String categoryName,
-                          String subCategoryName) {
+                          String subCategoryName,
+                          String title,
+                          Boolean isVendorExpense,
+                          ExpensePaymentStatus paymentStatus,
+                          Double paidAmount,
+                          Double balanceAmount,
+                          String paymentMethod,
+                          String note,
+                          Double totalExpenseAmount,
+                          Double totalExpensePaidAmount,
+                          List<ExpenseItemResponse> expenseItems,
+                          List<ExpensePaymentResponse> expensePayments) {
 }
