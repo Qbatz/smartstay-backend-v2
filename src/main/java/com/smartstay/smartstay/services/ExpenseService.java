@@ -2,6 +2,8 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.expenses.ExpenseListMapper;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.config.FilesConfig;
+import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.ExpenseItem;
@@ -17,6 +19,7 @@ import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.expense.AddUnit;
 import com.smartstay.smartstay.payloads.expense.Expense;
 import com.smartstay.smartstay.payloads.expense.ExpenseItemPayload;
+import com.smartstay.smartstay.payloads.expense.RecordExpensePayment;
 import com.smartstay.smartstay.payloads.expense.UpdateExpense;
 import com.smartstay.smartstay.repositories.ExpenseItemRepository;
 import com.smartstay.smartstay.repositories.ExpensePaymentRepository;
@@ -42,6 +45,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -81,6 +85,9 @@ public class ExpenseService {
 
     @Autowired
     private VendorRepository vendorRepository;
+
+    @Autowired
+    private UploadFileToS3 uploadToS3;
 
     public ResponseEntity<?> addUnit(AddUnit payloads) {
         if (!authentication.isAuthenticated()) {
@@ -318,6 +325,77 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.INSUFFICIENT_FUND_ERROR, HttpStatus.BAD_REQUEST);
         }
 
+    }
+
+    @Transactional
+    public ResponseEntity<?> recordExpensePayment(MultipartFile file, RecordExpensePayment payload) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        ExpensesV1 expensesV1 = expensesRepository.findById(payload.expenseId()).orElse(null);
+        if (expensesV1 == null || !expensesV1.isActive()) {
+            return new ResponseEntity<>(Utils.INVALID_EXPENSE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), expensesV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(expensesV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        String imageUrl = null;
+        if (file != null) {
+            imageUrl = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "Expense/Payments");
+        }
+
+        Date paymentDate = Utils.checkNullOrEmpty(payload.paymentDate())
+                ? Utils.stringToDate(payload.paymentDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT)
+                : new Date();
+
+        ExpensePayment expensePayment = new ExpensePayment();
+        expensePayment.setExpenseId(expensesV1.getExpenseId());
+        expensePayment.setPaidAmount(payload.amount());
+        expensePayment.setPaymentMethod(payload.paymentMethod());
+        expensePayment.setBankId(payload.bankId());
+        expensePayment.setPaymentDate(paymentDate);
+        expensePayment.setTransactionId(payload.transactionId());
+        expensePayment.setNotes(payload.notes());
+        expensePayment.setImageUrl(imageUrl);
+        expensePaymentRepository.save(expensePayment);
+
+        Double totalPaid = expensePaymentRepository.sumPaidAmountByExpenseId(expensesV1.getExpenseId());
+        if (totalPaid == null) {
+            totalPaid = 0.0;
+        }
+        double totalAmount = expensesV1.getTotalPrice() == null ? 0.0 : expensesV1.getTotalPrice();
+
+        ExpensePaymentStatus status;
+        if (totalPaid <= 0) {
+            status = ExpensePaymentStatus.Pending;
+        } else if (totalPaid >= totalAmount) {
+            status = ExpensePaymentStatus.Full;
+        } else {
+            status = ExpensePaymentStatus.Partial;
+        }
+
+        expensesV1.setPaymentStatus(status);
+        expensesV1.setPaidAmount(totalPaid);
+        expensesV1.setBalanceAmount(totalAmount - totalPaid);
+        expensesV1.setUpdatedAt(new Date());
+        expensesV1.setUpdatedBy(authentication.getName());
+        expensesRepository.save(expensesV1);
+
+        usersService.addUserLog(expensesV1.getHostelId(), expensesV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
     public String generateExpenseNumber(String hostelId) {
