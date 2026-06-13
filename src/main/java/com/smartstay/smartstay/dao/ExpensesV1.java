@@ -65,4 +65,5 @@ public class ExpensesV1 {
     private Double balanceAmount;
     private String paymentMethod;
     private String note;
+    private Integer creditPeriod;
 }

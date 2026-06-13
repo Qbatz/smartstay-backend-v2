@@ -23,7 +23,7 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             exp.unit_price as unitPrice, exp.vendor_id as vendorId, exp.expense_number as referenceNumber,
             exp.title as title, exp.is_vendor_expense as isVendorExpense, exp.payment_status as paymentStatus,
             exp.paid_amount as paidAmount, exp.balance_amount as balanceAmount, exp.payment_method as paymentMethod, exp.note as note,
-            exp.created_at as createdAt,
+            exp.created_at as createdAt, exp.credit_period as creditPeriod,
             banking.account_holder_name as holderName, banking.account_type as accountType, banking.bank_name as bankName, expCat.category_name as categoryName,
             expSub.sub_category_name as subCategoryName  FROM expensesv1 exp LEFT OUTER JOIN
             bankingv1 banking on banking.bank_id=exp.bank_id LEFT OUTER JOIN expense_category expCat on expCat.category_id=exp.category_id

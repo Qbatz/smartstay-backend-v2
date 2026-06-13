@@ -29,4 +29,5 @@ public interface ExpenseList {
     String getPaymentMethod();
     String getNote();
     Date getCreatedAt();
+    Integer getCreditPeriod();
 }

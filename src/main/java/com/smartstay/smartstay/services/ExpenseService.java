@@ -275,6 +275,12 @@ public class ExpenseService {
         expensesV1.setIsVendorExpense(expense.isVendorExpense());
         expensesV1.setVendorId(expense.vendorId() == null ? null : String.valueOf(expense.vendorId()));
         expensesV1.setPaymentStatus(ExpensePaymentStatus.fromString(expense.paymentStatus()));
+        if (Boolean.TRUE.equals(expense.isVendorExpense()) && expense.vendorId() != null) {
+            VendorV1 vendor = vendorRepository.findByVendorId(expense.vendorId());
+            if (vendor != null) {
+                expensesV1.setCreditPeriod(vendor.getCreditPeriod());
+            }
+        }
         expensesV1.setPaidAmount(expense.paidAmount());
         expensesV1.setBalanceAmount(expense.balanceAmount());
         expensesV1.setPaymentMethod(expense.paymentMethod());
@@ -471,18 +477,6 @@ public class ExpenseService {
                                     payment.getImageUrl()), Collectors.toList())));
         }
 
-        // Batch fetch vendors referenced by vendor expenses to evaluate overdue status
-        List<Integer> vendorIds = projections.stream()
-                .filter(p -> Boolean.TRUE.equals(p.getIsVendorExpense()))
-                .map(p -> parseVendorId(p.getVendorId()))
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        Map<Integer, VendorV1> vendorMap = vendorIds.isEmpty()
-                ? Map.of()
-                : vendorRepository.findByVendorIdIn(vendorIds).stream()
-                        .collect(Collectors.toMap(VendorV1::getVendorId, v -> v, (a, b) -> a));
-
         ExpenseListMapper mapper = new ExpenseListMapper();
         Map<String, List<ExpenseItemResponse>> finalItemsByExpense = itemsByExpense;
         Map<String, List<ExpensePaymentResponse>> finalPaymentsByExpense = paymentsByExpense;
@@ -491,17 +485,16 @@ public class ExpenseService {
         List<ExpenseList> listExpenses = projections.stream()
                 .map(item -> {
                     ExpensePaymentStatus status = ExpensePaymentStatus.fromString(item.getPaymentStatus());
-                    if (Boolean.TRUE.equals(item.getIsVendorExpense())) {
-                        Integer vendorId = parseVendorId(item.getVendorId());
-                        VendorV1 vendor = vendorId == null ? null : vendorMap.get(vendorId);
-                        if (vendor != null && vendor.getCreditPeriod() != null && vendor.getCreditPeriod() > 0
-                                && item.getCreatedAt() != null
-                                && daysSince(item.getCreatedAt()) > vendor.getCreditPeriod()) {
-                            status = ExpensePaymentStatus.Overdue;
-                            if (item.getPaymentStatus() == null
-                                    || !ExpensePaymentStatus.Overdue.name().equalsIgnoreCase(item.getPaymentStatus())) {
-                                overdueExpenseIds.add(item.getExpenseId());
-                            }
+                    // Use the credit period snapshotted on the expense, so later vendor edits
+                    // do not retroactively change the overdue state of earlier expenses.
+                    if (Boolean.TRUE.equals(item.getIsVendorExpense())
+                            && item.getCreditPeriod() != null && item.getCreditPeriod() > 0
+                            && item.getCreatedAt() != null
+                            && daysSince(item.getCreatedAt()) > item.getCreditPeriod()) {
+                        status = ExpensePaymentStatus.Overdue;
+                        if (item.getPaymentStatus() == null
+                                || !ExpensePaymentStatus.Overdue.name().equalsIgnoreCase(item.getPaymentStatus())) {
+                            overdueExpenseIds.add(item.getExpenseId());
                         }
                     }
                     return mapper.apply(item,
@@ -516,17 +509,6 @@ public class ExpenseService {
         }
 
         return new ResponseEntity<>(listExpenses, HttpStatus.OK);
-    }
-
-    private Integer parseVendorId(String vendorId) {
-        if (vendorId == null || vendorId.isBlank()) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(vendorId.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 
     private long daysSince(Date date) {
