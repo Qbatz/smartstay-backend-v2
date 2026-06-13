@@ -4211,6 +4211,7 @@ public class InvoiceV1Service {
                 runningInvoicePaidAmount = runningInvoice.getPaidAmount();
             }
 
+            double currentMonthTotalPayableAmount = 0.0;
             long noOfDaysInCurrentMonth = Utils.findNoOfDaysInCurrentMonth(billingDates.currentBillStartDate());
             double rentPerDay = monthlyRent / noOfDaysInCurrentMonth;
             long noOfDaysStayed = Utils.findNumberOfDays(runningInvoice.getInvoiceStartDate(), leavingDate);
@@ -4248,8 +4249,23 @@ public class InvoiceV1Service {
 
                 }
             }
+            double currentMonthRentOnly = currentMonthTotalAmount - otherItemAmount.get();
+            priceDifference = fullRent - currentMonthRentOnly;
+            if (currentMonthPaidRent > 0) {
+                if (currentMonthPaidRent >= (fullRent + otherItemAmount.get())) {
 
-            priceDifference = fullRent - payableAmountForCurrentInvoiceRent;
+                    priceDifference = currentMonthPayableAmount * -1;
+                }
+                else if (currentMonthPaidRent <= currentMonthTotalAmount) {
+                    //do nothing
+//                    priceDifference = priceDifference + otherItemAmount.get();
+                }
+                else {
+                    double diff = (currentMonthPaidRent - otherItemAmount.get()) - currentMonthRentOnly;
+                    priceDifference = priceDifference + diff ;
+                }
+            }
+
 
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
                     Utils.roundOffWithTwoDigit(currentMonthPaidRent),
