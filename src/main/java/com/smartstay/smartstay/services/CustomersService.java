@@ -2306,7 +2306,22 @@ public class CustomersService {
 //            priceDifference = priceDifference * (-1);
 //        }
 
-        priceDifference = fullRent - currentPayableRent;
+        double currentMonthRentOnly = currentMonthPayableAmount - otherItemAMount[0];
+        priceDifference = fullRent - currentMonthRentOnly;
+        if (currentRentPaid > 0) {
+            if (currentRentPaid >= (fullRent + otherItemAMount[0])) {
+
+                priceDifference = currentMonthPayableAmount * -1;
+            }
+            else if (currentRentPaid <= currentMonthPayableAmount) {
+                //do nothing
+//                    priceDifference = priceDifference + otherItemAmount.get();
+            }
+            else {
+                double diff = (currentRentPaid - otherItemAMount[0]) - currentMonthRentOnly;
+                priceDifference = priceDifference + diff ;
+            }
+        }
 
         return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent), currentRentPaid, stayDays, currentMonthRent, currentMonthPayableAmount, Utils.roundOffWithTwoDigit(currentMonthPayableAmount), currentInvoiceStartDate, currentInvoiceEndDate, null, Utils.roundOffWithTwoDigit(otherItemAMount[0]), false, 0.0, fullRent, Utils.roundOffWithTwoDigit(priceDifference), currentMonthOtherItems, listRentBreakup);
     }
