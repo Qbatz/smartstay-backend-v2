@@ -20,6 +20,7 @@ public record ReceiptDetails(
         CustomerInfo customerInfo,
         StayInfo stayInfo,
         AccountDetails accountDetails,
-        ReceiptConfigInfo configurations
+        ReceiptConfigInfo configurations,
+        String paymentStatus
 ) {
 }

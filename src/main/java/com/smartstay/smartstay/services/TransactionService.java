@@ -28,6 +28,7 @@ import com.smartstay.smartstay.responses.receipt.ReceiptConfigInfo;
 import com.smartstay.smartstay.responses.receipt.ReceiptDetails;
 import com.smartstay.smartstay.responses.receipt.ReceiptInfo;
 import com.smartstay.smartstay.responses.transaction.TransactionReportResponse;
+import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -655,11 +656,20 @@ public class TransactionService {
             dueAmount = invoicesV1.getTotalAmount() - invoicesV1.getPaidAmount();
         }
 
+        String paymentStatus = null;
+        if (invoicesV1 != null) {
+            if (invoicesV1.isCancelled()) {
+                paymentStatus = "Refunded";
+            } else {
+                paymentStatus = InvoiceUtils.getInvoicePaymentStatusByInvoice(invoicesV1);
+            }
+        }
+
         ReceiptDetails details = new ReceiptDetails(invoicesV1.getInvoiceNumber(),
                 transactionV1.getTransactionReferenceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                 invoicesV1.getInvoiceId(), invoicesV1.getTotalAmount(), invoicesV1.getPaidAmount(), dueAmount,
                 hostelEmail, hostelPhone, "91", invoicesV1.getHostelId(), receiptInfo, customerInfo, stayInfo,
-                accountDetails, receiptConfigInfo);
+                accountDetails, receiptConfigInfo, paymentStatus);
         return new ResponseEntity<>(details, HttpStatus.OK);
 
     }
