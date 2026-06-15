@@ -736,6 +736,7 @@ public class BookingsService {
         previousEndDate.setTime(endDate);
         previousEndDate.set(Calendar.DAY_OF_MONTH, previousEndDate.get(Calendar.DAY_OF_MONTH) - 1);
 
+        Date bedStartDate = Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
         CustomersBedHistory currentBed = customersBedHistoryService.getLatestCustomerBed(bookingsV1.getCustomerId());
         currentBed.setEndDate(previousEndDate.getTime());

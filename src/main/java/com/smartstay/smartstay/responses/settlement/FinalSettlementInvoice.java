@@ -18,5 +18,6 @@ public record FinalSettlementInvoice(HeaderInfo headerInfo,
                                      AdvanceItems bookingItems,
                                      CurrentRentInfo currentMonthRentInfo,
                                      CurrentMonthEbInfo currentMonthEbInfo,
+                                     WalletInfo walletInfo,
                                      InvoiceInfo invoiceInfo) {
 }

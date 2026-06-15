@@ -505,4 +505,12 @@ public class SubscriptionService {
         }
 
     }
+
+    public List<Subscription> getSubscriptionList(String hostelId) {
+        List<Subscription> listSubscriptions = subscriptionRepository.findByHostelId(hostelId);
+        if (listSubscriptions == null) {
+            listSubscriptions = new ArrayList<>();
+        }
+        return listSubscriptions;
+    }
 }

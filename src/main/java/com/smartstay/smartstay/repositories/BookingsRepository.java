@@ -190,6 +190,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
             """, nativeQuery = true)
     List<BookingsV1> findAllBookingsBasedOnBedIdAndDate(@Param("bedId") Integer bedId, @Param("date") Date date);
 
+
     @Query(value = """
             SELECT * FROM bookingsv1 WHERE hostel_id = :hostelId
             AND (joining_date <= DATE(:endDate) AND (checkout_date IS NULL OR checkout_date >= DATE(:startDate)))
