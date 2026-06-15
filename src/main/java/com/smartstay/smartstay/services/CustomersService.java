@@ -2306,22 +2306,26 @@ public class CustomersService {
 //            priceDifference = priceDifference * (-1);
 //        }
 
+//        double currentMonthRentOnly = currentMonthPayableAmount - otherItemAMount[0];
+//        priceDifference = fullRent - currentMonthRentOnly;
+//        if (currentRentPaid > 0) {
+//            if (currentRentPaid >= (fullRent + otherItemAMount[0])) {
+//
+//                priceDifference = currentMonthPayableAmount * -1;
+//            }
+//            else if (currentRentPaid <= currentMonthPayableAmount) {
+//                //do nothing
+////                    priceDifference = priceDifference + otherItemAmount.get();
+//            }
+//            else {
+//                double diff = (currentRentPaid - otherItemAMount[0]) - currentMonthRentOnly;
+//                priceDifference = priceDifference + diff ;
+//            }
+//        }
+
         double currentMonthRentOnly = currentMonthPayableAmount - otherItemAMount[0];
         priceDifference = fullRent - currentMonthRentOnly;
-        if (currentRentPaid > 0) {
-            if (currentRentPaid >= (fullRent + otherItemAMount[0])) {
 
-                priceDifference = currentMonthPayableAmount * -1;
-            }
-            else if (currentRentPaid <= currentMonthPayableAmount) {
-                //do nothing
-//                    priceDifference = priceDifference + otherItemAmount.get();
-            }
-            else {
-                double diff = (currentRentPaid - otherItemAMount[0]) - currentMonthRentOnly;
-                priceDifference = priceDifference + diff ;
-            }
-        }
 
         return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent), currentRentPaid, stayDays, currentMonthRent, currentMonthPayableAmount, Utils.roundOffWithTwoDigit(currentMonthPayableAmount), currentInvoiceStartDate, currentInvoiceEndDate, null, Utils.roundOffWithTwoDigit(otherItemAMount[0]), false, 0.0, fullRent, Utils.roundOffWithTwoDigit(priceDifference), currentMonthOtherItems, listRentBreakup);
     }
@@ -2342,7 +2346,7 @@ public class CustomersService {
         StayInfo stayInfo = bookingsService.getStayInfo(customers, bookingsV1, leavingDate);
         EBInfo ebInfo = electricityService.getEbInfoForSettlement(customers, customers.getHostelId(), leavingDate);
         com.smartstay.smartstay.responses.settlement.UnpaidInvoices unpaidInvoicesInfo = invoiceService.getUnpaidInvoicesInfo(customers.getCustomerId(), customers.getHostelId(), leavingDate);
-        RentInfo currentMonthRentInfo = invoiceService.getRentInfoForBedChange(customers.getCustomerId(), customers, leavingDate, billingDates);
+        RentInfo currentMonthRentInfo = invoiceService.getRentInfoForBedChange(customers.getCustomerId(), customers, leavingDate, billingDates, bookingsV1);
 
         List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService.getInvoicePendingByCustomerId(customers.getCustomerId());
         AdvanceItems advanceItems = invoiceService.getRedeemedListFromAdvance(customers.getHostelId(), customers.getCustomerId());
@@ -3415,7 +3419,7 @@ public class CustomersService {
                 else {
                     RentInfo rentInfo = settlement.currentMonthRentInfo();
                     if (rentInfo != null) {
-                        differenceAmount = customRent - rentInfo.currentMonthRent();
+                        differenceAmount = customRent - rentInfo.currentPayableRent();
                         if (differenceAmount < 0) {
                             differenceAmount = differenceAmount * -1;
                         }

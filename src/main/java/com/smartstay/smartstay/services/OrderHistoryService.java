@@ -16,7 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class OrderHistoryService {
@@ -115,7 +117,6 @@ public class OrderHistoryService {
 
                 }
 
-
                 orderHistory.setOrderStatus(OrderStatus.PAID.name());
                 OrderHistory oh = orderHistoryRepository.save(orderHistory);
 
@@ -123,5 +124,21 @@ public class OrderHistoryService {
             }
 
         }
+    }
+
+    public List<OrderHistory> findByHostelIdOrderByCreatedAtDesc(String hostelId) {
+        List<OrderHistory> listOrderHistory = orderHistoryRepository.findByHostelIdOrderByCreatedAtDesc(hostelId);
+        if (listOrderHistory == null) {
+            listOrderHistory = new ArrayList<>();
+        }
+        return listOrderHistory;
+    }
+
+    public List<OrderHistory> findOrderHistoryByOrderHistoryId(List<Long> listOrderIds) {
+        List<OrderHistory> listOrderHistories = orderHistoryRepository.findAllById(listOrderIds);
+        if (listOrderHistories == null) {
+            listOrderHistories = new ArrayList<>();
+        }
+        return listOrderHistories;
     }
 }

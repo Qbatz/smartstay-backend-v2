@@ -105,6 +105,7 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.JOINING_DATE)) {
             if (bookingsV1 != null) {
+
                 if (bookingsV1.getCurrentStatus() != null && bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name())) {
                     if (bookingsV1.getJoiningDate() != null) {
                         return Utils.dateToString(bookingsV1.getJoiningDate());
@@ -116,6 +117,11 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
                     }
                 }
                 if (bookingsV1.getCurrentStatus() != null && bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
+                    if (bookingsV1.getJoiningDate() != null) {
+                        return Utils.dateToString(bookingsV1.getJoiningDate());
+                    }
+                }
+                if (bookingsV1.getCurrentStatus() != null && bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.VACATED.name())) {
                     if (bookingsV1.getJoiningDate() != null) {
                         return Utils.dateToString(bookingsV1.getJoiningDate());
                     }

@@ -29,22 +29,5 @@ public class SmartstayApplication {
         SpringApplication.run(SmartstayApplication.class, args);
     }
 
-//    @Bean
-//    public CommandLineRunner mapInvoiceSubTotal(InvoicesV1Repository invoicesV1Repository) {
-//        return args -> {
-//            List<InvoicesV1> listInvoices = invoicesV1Repository.findAll()
-//                    .stream()
-//                    .filter(i -> i.getSubTotal() == null)
-//                    .map(i -> {
-//                        i.setSubTotal(i.getTotalAmount());
-//                        return i;
-//                    })
-//                    .toList();
-//            invoicesV1Repository.saveAll(listInvoices);
-//
-//            invoicesV1Repository.saveAll(newAdvanceInvoices);
-//        };
-//    }
-
 
 }
