@@ -5168,6 +5168,9 @@ public class InvoiceV1Service {
         } else if (advanceInvoices.getBalanceAmount() <= 0) {
             status = false;
             message = "Insufficient balance amount to redeem";
+        }else if (invoiceItemsToShow.isEmpty()) {
+            status = false;
+            message = "No invoices available for redemption";
         }
 
         AdvanceInfo advanceInfo = new AdvanceInfo(advanceInvoices.getTotalAmount(),
@@ -5193,7 +5196,7 @@ public class InvoiceV1Service {
         Customers customers = customersService.getCustomerInformation(advanceInvoices.getCustomerId());
         com.smartstay.smartstay.responses.bookings.CustomerInfo customerInfo = null;
         if (customers != null) {
-            customerInfo = new com.smartstay.smartstay.responses.bookings.CustomerInfo(NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
+            customerInfo = new com.smartstay.smartstay.responses.bookings.CustomerInfo(customers.getCustomerId(),NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
                     customers.getProfilePic(),
                     NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
                     customers.getFirstName(),
