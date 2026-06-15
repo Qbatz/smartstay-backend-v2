@@ -7,6 +7,7 @@ import com.smartstay.smartstay.Wrappers.beds.CustomersTenantMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.Beds;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.beds.FreeBeds;
 import com.smartstay.smartstay.dto.beds.*;
@@ -517,6 +518,18 @@ public class BedsService {
         } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
             //check if the bed is checked in on this date
             List<BookingsV1> bookingsV1 = bookingService.findAvailableBookingOnDate(bedId, joiningDate);
+            if (bookingsV1 != null) {
+                if (bookingsV1.size() == 1) {
+                    List<BookingsV1> bookingStatusOtherThanVacant = bookingsV1.stream()
+                            .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.VACATED.name()))
+                            .toList();
+                    if (bookingStatusOtherThanVacant != null && !bookingStatusOtherThanVacant.isEmpty()) {
+                        return true;
+                    }
+                }
+
+
+            }
             return bookingsV1 == null || bookingsV1.isEmpty();
         } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.BOOKED.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);

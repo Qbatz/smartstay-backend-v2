@@ -72,6 +72,9 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
                 if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
                     canApplyToOtherInvoices = false;
                 }
+                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
+                    canApplyToOtherInvoices = false;
+                }
             }
         }
         BookingTableHeader bookingTableHeader = new BookingTableHeader(invoicesV1.getInvoiceId(),

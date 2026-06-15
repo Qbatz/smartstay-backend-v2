@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.plans.PlanListMapper;
+import com.smartstay.smartstay.Wrappers.subscription.SubscriptionOrderHistoryMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.PlanType;
@@ -17,10 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,15 +34,18 @@ public class PlansService {
     @Autowired
     private UserHostelService userHostelService;
     @Autowired
-    private SubscriptionRepository subscriptionRepository;
-    @Autowired
-    private OrderHistoryRepository orderHistoryRepository;
+    private OrderHistoryService orderHistoryService;
 
     private HostelService hostelService;
+    private SubscriptionService subscriptionService;
 
     @Autowired
     public void setHostelService(@Lazy HostelService hostelService) {
         this.hostelService = hostelService;
+    }
+    @Autowired
+    public void setSubscriptionService(@Lazy SubscriptionService subscriptionService) {
+        this.subscriptionService = subscriptionService;
     }
 
     public Plans getTrialPlan() {
@@ -121,7 +122,7 @@ public class PlansService {
                     .toList();
         }
 
-        Subscription latestSubscription = subscriptionRepository.findLatestSubscription(hostelId);
+        Subscription latestSubscription = subscriptionService.findLatestSubscription(hostelId);
 
         double resolvedPlanAmount = 0.0;
         if (latestSubscription != null && latestSubscription.getPlanAmount() != null) {
@@ -155,71 +156,59 @@ public class PlansService {
         boolean isTrial = hostelPlan.isTrial()
                 || (plans != null && PlanType.TRIAL.name().equalsIgnoreCase(plans.getPlanType()));
 
-        List<OrderHistory> orderHistoryList = orderHistoryRepository.findByHostelIdOrderByCreatedAtDesc(hostelId);
-        List<String> listPlanCodes = orderHistoryList.stream()
-                .map(OrderHistory::getPlanCode)
-                .distinct()
-                .toList();
 
-        List<Plans> listPlans = plansRepository.findPlansByPlanCodes(listPlanCodes);
 
-        List<String> paidByIds = orderHistoryList.stream()
-                .map(OrderHistory::getPaidBy)
-                .filter(id -> id != null && !id.isBlank())
-                .distinct()
-                .collect(Collectors.toList());
-
-        Map<String, Users> paidByUserMap = usersService.findAllUsersFromUserId(paidByIds)
+        List<Subscription> listSubscriptions = subscriptionService.getSubscriptionList(hostelId);
+        List<Subscription> subscriptionsWithOrderIds = listSubscriptions
                 .stream()
-                .collect(Collectors.toMap(Users::getUserId, u -> u));
+                .filter(i -> i.getOrderId() != null)
+                .toList();
+        List<Long> listOrderIds = new ArrayList<>();
+        if (subscriptionsWithOrderIds != null) {
+            listOrderIds = subscriptionsWithOrderIds
+                    .stream()
+                    .map(Subscription::getOrderId)
+                    .toList();
+        }
 
-        List<BillingHistoryItem> billingHistory = orderHistoryList.stream().map(oh -> {
+        List<OrderHistory> listOrderHistory;
+        String currentPaymentMethod = null;
+        Map<String, Users> paidByUserMap;
+        List<String> listPlanCodes = new ArrayList<>();
+        List<Plans> listPlans;
+        if (!listOrderIds.isEmpty()) {
 
-            String paymentMethod = resolvePaymentMethod(oh);
-            String subscriptionNo = hostelPlan.getSubscriptionNumber() != null
-                    ? hostelPlan.getSubscriptionNumber() : "";
+            listOrderHistory = orderHistoryService.findOrderHistoryByOrderHistoryId(listOrderIds);
 
-            String paidById = oh.getPaidBy();
-            String paidByName = "";
-            String planName = null;
-            if (paidById != null && paidByUserMap.containsKey(paidById)) {
-                Users paidByUser = paidByUserMap.get(paidById);
-                String firstName = paidByUser.getFirstName() != null ? paidByUser.getFirstName() : "";
-                String lastName = paidByUser.getLastName() != null ? paidByUser.getLastName() : "";
-                paidByName = (firstName + " " + lastName).trim();
-            }
+            listPlanCodes = listOrderHistory.stream()
+                    .map(OrderHistory::getPlanCode)
+                    .distinct()
+                    .toList();
 
-            Plans plans1 = listPlans.stream()
-                    .filter(i -> i.getPlanCode().equalsIgnoreCase(oh.getPlanCode()))
+            listPlans = plansRepository.findPlansByPlanCodes(listPlanCodes);
+
+            List<String> paidByIds = listOrderHistory.stream()
+                    .map(OrderHistory::getPaidBy)
+                    .filter(id -> id != null && !id.isBlank())
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            paidByUserMap = usersService.findAllUsersFromUserId(paidByIds)
+                    .stream()
+                    .collect(Collectors.toMap(Users::getUserId, u -> u));
+
+            currentPaymentMethod = listOrderHistory.stream()
+                    .filter(oh -> "PAID".equalsIgnoreCase(oh.getOrderStatus()))
                     .findFirst()
-                    .orElse(null);
-            if (plans1 != null) {
-                planName = plans1.getPlanName();
-            }
+                    .map(Utils::resolvePaymentMethod)
+                    .orElse("N/A");
+        } else {
+            listPlans = new ArrayList<>();
+            paidByUserMap = new HashMap<>();
+            listOrderHistory = new ArrayList<>();
+        }
 
-            return new BillingHistoryItem(
-                    oh.getHistoryId(),
-                    subscriptionNo,
-                    planName,
-                    oh.getPlanCode(),
-                    oh.getPlanAmount(),
-                    oh.getDiscountAmount(),
-                    oh.getTotalAmount(),
-                    oh.getOrderStatus(),
-                    oh.getPaymentType(),
-                    paymentMethod,
-                    paidById,
-                    paidByName,
-                    Utils.dateToDateTime(oh.getCreatedAt()),
-                    subscriptionNo
-            );
-        }).toList();
-
-        String currentPaymentMethod = orderHistoryList.stream()
-                .filter(oh -> "PAID".equalsIgnoreCase(oh.getOrderStatus()))
-                .findFirst()
-                .map(this::resolvePaymentMethod)
-                .orElse("N/A");
+        List<BillingHistoryItem> billingHistory = listSubscriptions.stream().map(sub -> new SubscriptionOrderHistoryMapper(listOrderHistory, paidByUserMap, listPlans).apply(sub)).toList();
 
 
         PlanDetails planDetails = new PlanDetails(
@@ -245,21 +234,7 @@ public class PlansService {
     }
 
 
-    private String resolvePaymentMethod(OrderHistory oh) {
-        if (oh.getPaymentType() == null) return "N/A";
-        if ("UPI".equalsIgnoreCase(oh.getPaymentType())) {
-            return oh.getUpiId() != null ? "UPI - " + oh.getUpiId() : "UPI";
-        }
-        if ("CARD".equalsIgnoreCase(oh.getPaymentType())) {
-            StringBuilder card = new StringBuilder();
-            if (oh.getCardBrand() != null) card.append(oh.getCardBrand()).append(" ");
-            if (oh.getCardType() != null) card.append(oh.getCardType()).append(" ");
-            if (oh.getCardNo() != null) card.append("****").append(oh.getCardNo());
-            String label = card.toString().trim();
-            return label.isEmpty() ? "Card" : label;
-        }
-        return oh.getPaymentType();
-    }
+
 
     public Plans findPlanByPlanCode(String s) {
         return plansRepository.findPlanByPlanCode(s);

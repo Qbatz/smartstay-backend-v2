@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.util;
 
+import com.smartstay.smartstay.dao.OrderHistory;
 import com.smartstay.smartstay.responses.customer.EffectiveMonth;
 
 import java.text.DecimalFormat;
@@ -822,6 +823,22 @@ public class Utils {
         } catch (NumberFormatException ex) {
             return first.compareTo(second);
         }
+    }
+
+    public static String resolvePaymentMethod(OrderHistory oh) {
+        if (oh.getPaymentType() == null) return "N/A";
+        if ("UPI".equalsIgnoreCase(oh.getPaymentType())) {
+            return oh.getUpiId() != null ? "UPI - " + oh.getUpiId() : "UPI";
+        }
+        if ("CARD".equalsIgnoreCase(oh.getPaymentType())) {
+            StringBuilder card = new StringBuilder();
+            if (oh.getCardBrand() != null) card.append(oh.getCardBrand()).append(" ");
+            if (oh.getCardType() != null) card.append(oh.getCardType()).append(" ");
+            if (oh.getCardNo() != null) card.append("****").append(oh.getCardNo());
+            String label = card.toString().trim();
+            return label.isEmpty() ? "Card" : label;
+        }
+        return oh.getPaymentType();
     }
 }
 

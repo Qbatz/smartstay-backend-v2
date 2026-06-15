@@ -1764,6 +1764,7 @@ public class CustomersService {
         return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
     }
 
+    //no bed change
     private FinalSettlement getFinalSettlementForPrepaidFixed(Customers customers, BookingsV1 bookingDetails, BillingDates billDate, Date lDate) {
         Double amountToBePaid = 0.0;
         Double payableRent = 0.0;
@@ -2300,10 +2301,31 @@ public class CustomersService {
             }
         }
 
-        priceDifference = fullRent - currentMonthPayableAmount;
-        if (priceDifference < 0) {
-            priceDifference = priceDifference * (-1);
-        }
+//        priceDifference = fullRent - currentMonthPayableAmount - currentRentPaid;
+//        if (priceDifference < 0) {
+//            priceDifference = priceDifference * (-1);
+//        }
+
+//        double currentMonthRentOnly = currentMonthPayableAmount - otherItemAMount[0];
+//        priceDifference = fullRent - currentMonthRentOnly;
+//        if (currentRentPaid > 0) {
+//            if (currentRentPaid >= (fullRent + otherItemAMount[0])) {
+//
+//                priceDifference = currentMonthPayableAmount * -1;
+//            }
+//            else if (currentRentPaid <= currentMonthPayableAmount) {
+//                //do nothing
+////                    priceDifference = priceDifference + otherItemAmount.get();
+//            }
+//            else {
+//                double diff = (currentRentPaid - otherItemAMount[0]) - currentMonthRentOnly;
+//                priceDifference = priceDifference + diff ;
+//            }
+//        }
+
+        double currentMonthRentOnly = currentMonthPayableAmount - otherItemAMount[0];
+        priceDifference = fullRent - currentMonthRentOnly;
+
 
         return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent), currentRentPaid, stayDays, currentMonthRent, currentMonthPayableAmount, Utils.roundOffWithTwoDigit(currentMonthPayableAmount), currentInvoiceStartDate, currentInvoiceEndDate, null, Utils.roundOffWithTwoDigit(otherItemAMount[0]), false, 0.0, fullRent, Utils.roundOffWithTwoDigit(priceDifference), currentMonthOtherItems, listRentBreakup);
     }
@@ -2324,7 +2346,7 @@ public class CustomersService {
         StayInfo stayInfo = bookingsService.getStayInfo(customers, bookingsV1, leavingDate);
         EBInfo ebInfo = electricityService.getEbInfoForSettlement(customers, customers.getHostelId(), leavingDate);
         com.smartstay.smartstay.responses.settlement.UnpaidInvoices unpaidInvoicesInfo = invoiceService.getUnpaidInvoicesInfo(customers.getCustomerId(), customers.getHostelId(), leavingDate);
-        RentInfo currentMonthRentInfo = invoiceService.getRentInfoForBedChange(customers.getCustomerId(), customers, leavingDate, billingDates);
+        RentInfo currentMonthRentInfo = invoiceService.getRentInfoForBedChange(customers.getCustomerId(), customers, leavingDate, billingDates, bookingsV1);
 
         List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService.getInvoicePendingByCustomerId(customers.getCustomerId());
         AdvanceItems advanceItems = invoiceService.getRedeemedListFromAdvance(customers.getHostelId(), customers.getCustomerId());
@@ -2925,16 +2947,25 @@ public class CustomersService {
                 if (customRent == 0) {
                     RentInfo rentInfo = settlementInfo.currentMonthRentInfo();
                     if (rentInfo != null) {
+                        if (rentInfo.fullRent() != null) {
+                            customRent = rentInfo.fullRent();
+                        }
                         differenceAmount = rentInfo.rentDifference();
                     }
                 }
                 else {
                     RentInfo rentInfo = settlementInfo.currentMonthRentInfo();
                     if (rentInfo != null) {
-                        differenceAmount = customRent - rentInfo.currentMonthRent();
-                        if (differenceAmount < 0) {
-                            differenceAmount = differenceAmount * -1;
+                        if (!customRent.equals(rentInfo.currentMonthRent())) {
+                            differenceAmount = customRent - rentInfo.currentMonthRent();
+                            if (differenceAmount < 0) {
+                                differenceAmount = differenceAmount * -1;
+                            }
                         }
+                        else {
+                            differenceAmount =  rentInfo.rentDifference();
+                        }
+
                     }
                 }
             }
@@ -3231,6 +3262,9 @@ public class CustomersService {
             if (fullRent == 0) {
                 RentInfo rentInfo = settlement.currentMonthRentInfo();
                 if (rentInfo != null) {
+                    if (rentInfo.fullRent() != null) {
+                        customRent = rentInfo.fullRent();
+                    }
                     fullRent = rentInfo.fullRent();
                     difference = rentInfo.rentDifference();
                 }
@@ -3385,7 +3419,7 @@ public class CustomersService {
                 else {
                     RentInfo rentInfo = settlement.currentMonthRentInfo();
                     if (rentInfo != null) {
-                        differenceAmount = customRent - rentInfo.currentMonthRent();
+                        differenceAmount = customRent - rentInfo.currentPayableRent();
                         if (differenceAmount < 0) {
                             differenceAmount = differenceAmount * -1;
                         }

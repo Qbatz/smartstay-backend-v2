@@ -81,4 +81,8 @@ public class RentHistoryService {
     public RentHistory getRentByDate(String customerId, Date leavingDate) {
         return rentHistoryRepository.findRentByCustomerIdAndDate(customerId, leavingDate);
     }
+
+    public void updateRentHistory(RentHistory rentHistory) {
+        rentHistoryRepository.save(rentHistory);
+    }
 }
