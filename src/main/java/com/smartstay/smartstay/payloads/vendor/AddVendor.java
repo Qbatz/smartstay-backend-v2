@@ -22,5 +22,15 @@ public record AddVendor(
 
         @NotNull(message = "BusinessName is required") @NotEmpty(message = "BusinessName is required") String businessName,
 
-        @NotNull(message = "HostelId is required") @NotEmpty(message = "HostelId is required") String hostelId) {
+        @NotNull(message = "HostelId is required") @NotEmpty(message = "HostelId is required") String hostelId,
+
+        Integer vendorCategory,
+        String contactPerson,
+        String description,
+        String vendorCode,
+        String gst,
+        String pan,
+        Boolean allowCredit,
+        Double creditLimit,
+        Integer creditPeriod) {
 }

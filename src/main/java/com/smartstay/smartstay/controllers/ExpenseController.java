@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/v2/expense/")
@@ -71,6 +72,27 @@ public class ExpenseController {
     @DeleteMapping("/{hostelId}/{expenseId}")
     public ResponseEntity<?> deleteExpense(@PathVariable("hostelId") String hostelId, @PathVariable("expenseId") String expenseId) {
         return expenseService.deleteExpense(hostelId, expenseId);
+    }
+
+    @PostMapping("/units")
+    public ResponseEntity<?> addUnit(@Valid @RequestBody AddUnit payLoads) {
+        return expenseService.addUnit(payLoads);
+    }
+
+    @GetMapping("/units")
+    public ResponseEntity<?> getAllUnits() {
+        return expenseService.getAllUnits();
+    }
+
+    @PutMapping("/units/{unitId}")
+    public ResponseEntity<?> updateUnit(@PathVariable("unitId") int unitId, @Valid @RequestBody AddUnit payLoads) {
+        return expenseService.updateUnit(unitId, payLoads);
+    }
+
+    @PostMapping("/payment")
+    public ResponseEntity<?> recordExpensePayment(@RequestPart(value = "transactionImage", required = false) MultipartFile file,
+                                                  @Valid @RequestPart RecordExpensePayment payLoads) {
+        return expenseService.recordExpensePayment(file, payLoads);
     }
 
 }

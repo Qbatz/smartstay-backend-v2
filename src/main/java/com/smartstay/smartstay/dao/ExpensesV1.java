@@ -1,6 +1,9 @@
 package com.smartstay.smartstay.dao;
 
+import com.smartstay.smartstay.ennum.ExpensePaymentStatus;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -51,4 +54,16 @@ public class ExpensesV1 {
     private String updatedBy;
     private boolean isActive;
     private String description;
+
+    private String title;
+    private Boolean isVendorExpense;
+
+    @Enumerated(EnumType.STRING)
+    private ExpensePaymentStatus paymentStatus;
+
+    private Double paidAmount;
+    private Double balanceAmount;
+    private String paymentMethod;
+    private String note;
+    private Integer creditPeriod;
 }
