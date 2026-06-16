@@ -1677,11 +1677,17 @@ public class InvoiceV1Service {
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
             boolean canRedeemBooking = false;
-            if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-                if (invoicesV1.getBalanceAmount() != null && invoicesV1.getBalanceAmount() > 0) {
-                    canRedeemBooking = true;
+            boolean isCustomerCheckedOut = customers != null &&
+                    customers.getCurrentStatus() != null &&
+                    customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name());
+            if (!isCustomerCheckedOut) {
+                if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+                    if (invoicesV1.getBalanceAmount() != null && invoicesV1.getBalanceAmount() > 0) {
+                        canRedeemBooking = true;
+                    }
                 }
             }
+
             invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
                     Utils.roundOffWithTwoDigit(discountedAmount),
                     discountedPercentage,

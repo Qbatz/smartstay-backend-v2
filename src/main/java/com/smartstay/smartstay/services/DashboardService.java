@@ -212,7 +212,10 @@ public class DashboardService {
             }
         }
 
-        return new AdvanceSummary(totalAdvance, advanceHolding, otherDeduction);
+        return new AdvanceSummary(
+                Utils.roundOffWithTwoDigit(totalAdvance),
+                Utils.roundOffWithTwoDigit(advanceHolding),
+                Utils.roundOffWithTwoDigit(otherDeduction));
     }
 
     private ExpenseSummary buildExpenseSummary(String hostelId, String filter) {
@@ -234,11 +237,11 @@ public class DashboardService {
                     String name = Utils.capitalize(catMap.getOrDefault(e.getKey(), "Unknown"));
                     Double amount = e.getValue();
                     Double percentage = total > 0 ? (amount / total) * 100 : 0.0;
-                    return new ExpenseBreakdown(name, amount, Utils.roundOffWithTwoDigit(percentage));
+                    return new ExpenseBreakdown(name, Utils.roundOffWithTwoDigit(amount), Utils.roundOffWithTwoDigit(percentage));
                 })
                 .collect(Collectors.toList());
 
-        return new ExpenseSummary(totalAmount, breakdown);
+        return new ExpenseSummary(Utils.roundOffWithTwoDigit(totalAmount), breakdown);
     }
 
     private RoomsAndBedInfo buildRoomsAndBedInfo(String hostelId) {
@@ -449,7 +452,13 @@ public class DashboardService {
         Double prevNetProfit = prevIncome - prevExpense - prevRefunded;
         Integer profitTrend = calculateTrend(netProfit, prevNetProfit);
 
-        return new FinanceSummary(income, incomeTrend, expense, expenseTrend, netProfit, profitTrend);
+        return new FinanceSummary(
+                Utils.roundOffWithTwoDigit(income),
+                incomeTrend,
+                Utils.roundOffWithTwoDigit(expense),
+                expenseTrend,
+                Utils.roundOffWithTwoDigit(netProfit),
+                profitTrend);
     }
 
     private RevenueSummary buildRevenueSummary(String hostelId, String filter) {
@@ -470,8 +479,8 @@ public class DashboardService {
         Double prevOutstanding = Math.max(0.0, prevTotalInvoiced - prevCollected);
 
         return new RevenueSummary(
-                new TrendValue(collected, calculateTrend(collected, prevCollected)),
-                new TrendValue(outstanding, calculateTrend(outstanding, prevOutstanding)));
+                new TrendValue(Utils.roundOffWithTwoDigit(collected), calculateTrend(collected, prevCollected)),
+                new TrendValue(Utils.roundOffWithTwoDigit(outstanding), calculateTrend(outstanding, prevOutstanding)));
     }
 
     private List<RevenueTrendPoint> buildRevenueTrend(String hostelId) {
@@ -493,7 +502,7 @@ public class DashboardService {
             Double totalInvoiced = summary.get("totalInvoiced") != null ? ((Number) summary.get("totalInvoiced")).doubleValue() : 0.0;
             Double outstanding = Math.max(0.0, totalInvoiced - collected);
 
-            trend.add(new RevenueTrendPoint(sdf.format(start), collected, outstanding));
+            trend.add(new RevenueTrendPoint(sdf.format(start), Utils.roundOffWithTwoDigit(collected), Utils.roundOffWithTwoDigit(outstanding)));
         }
         return trend;
     }
@@ -609,11 +618,11 @@ public class DashboardService {
                     inv.getCustomerId(),
                     profilePic,
                     initials,
-                    totalAmount,
-                    paidAmount,
+                    Utils.roundOffWithTwoDigit(totalAmount),
+                    Utils.roundOffWithTwoDigit(paidAmount),
                     dueDate,
                     Utils.dateToString(inv.getInvoiceStartDate()),
-                    balanceDue,
+                    Utils.roundOffWithTwoDigit(balanceDue),
                     status);
         }).collect(Collectors.toList());
     }
