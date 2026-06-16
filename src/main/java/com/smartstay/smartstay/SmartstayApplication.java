@@ -29,5 +29,31 @@ public class SmartstayApplication {
         SpringApplication.run(SmartstayApplication.class, args);
     }
 
+//    @Bean
+//    public CommandLineRunner mapAdvanceToInvoice(CustomersRepository customersRepository, InvoicesV1Repository invoicesV1Repository) {
+//        return args -> {
+//            Customers customers = customersRepository.findById("866f83ac-1f51-4d67-a2ca-1478aaa594c1").orElse(null);
+//            if (customers != null) {
+//                Advance advance = customers.getAdvance();
+//                if (advance != null) {
+//                    List<Deductions> deductionsList = advance.getDeductions();
+//                    if (deductionsList != null) {
+//                        InvoicesV1 invoicesV1 = invoicesV1Repository.findAdvanceInvoiceByCustomerId(customers.getCustomerId());
+//                        double deductionAmount = deductionsList
+//                                .stream()
+//                                .mapToDouble(Deductions::getAmount)
+//                                .sum();
+//                        invoicesV1.setDeductionAmount(deductionAmount);
+//                        invoicesV1.setDeductions(deductionsList);
+//
+//                        invoicesV1Repository.save(invoicesV1);
+//                    }
+//                }
+//
+//
+//            }
+//        };
+//    }
+
 
 }
