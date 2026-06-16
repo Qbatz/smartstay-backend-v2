@@ -2244,14 +2244,15 @@ public class CustomersService {
     private RentInfo getRentInfoForPostpaidHostels(Customers customers, BookingsV1 bookingsV1, Date leavingDate, BillingDates currentMonthBillingDates) {
         List<RentBreakUp> listRentBreakup = bookingsService.getRentBreakup(customers, bookingsV1, leavingDate, currentMonthBillingDates);
         List<CurrentMonthOtherItems> currentMonthOtherItems = new ArrayList<>();
-        List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customers.getCustomerId());
+
         Date startDate = null;
-        Date endDate = null;
         if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), currentMonthBillingDates.currentBillStartDate()) < 0) {
             startDate = currentMonthBillingDates.currentBillStartDate();
         } else {
             startDate = bookingsV1.getJoiningDate();
         }
+
+        List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customers.getCustomerId(), startDate, leavingDate);
         final double[] otherItemAMount = {0.0};
         long totalDaysStayed = Utils.findNumberOfDays(startDate, leavingDate);
         long totalDaysInAMonth = Utils.findNumberOfDays(currentMonthBillingDates.currentBillStartDate(), currentMonthBillingDates.currentBillEndDate());
