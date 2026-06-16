@@ -700,6 +700,9 @@ public class ElectricityService {
         ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
         List<Rooms> listRooms = roomsService.findByHostelId(hostelId);
         List<Integer> deletedRoomIds = Optional.ofNullable(roomsService.findByHostelIdDeletedRooms(hostelId)).orElse(Collections.emptyList()).stream().map(Rooms::getRoomId).toList();
+        if (deletedRoomIds.isEmpty()) {
+            deletedRoomIds = List.of(0);
+        }
         List<ElectricityReadings> latestReadings = electricityReadingRepository.getLatestReadingOfAllRooms(hostelId, deletedRoomIds);
 
 
