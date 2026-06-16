@@ -25,7 +25,17 @@ public class VendorMapper implements Function<VendorV1, VendorResponse> {
                 vendorV1.getState(),
                 vendorV1.getCountryCode(),
                 "",
-                1L
+                1L,
+                vendorV1.getVendorCategory(),
+                null,
+                vendorV1.getContactPerson(),
+                vendorV1.getDescription(),
+                vendorV1.getVendorCode(),
+                vendorV1.getGst(),
+                vendorV1.getPan(),
+                vendorV1.getAllowCredit(),
+                vendorV1.getCreditLimit(),
+                vendorV1.getCreditPeriod()
         );
     }
 }

@@ -19,6 +19,16 @@ public record UpdateVendor(
         String state,
         Long country,
 
-        String businessName
+        String businessName,
+
+        Integer vendorCategory,
+        String contactPerson,
+        String description,
+        String vendorCode,
+        String gst,
+        String pan,
+        Boolean allowCredit,
+        Double creditLimit,
+        Integer creditPeriod
 ) {
 }

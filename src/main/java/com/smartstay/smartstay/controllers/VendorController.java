@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
+import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
 import com.smartstay.smartstay.services.VendorService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -50,5 +51,20 @@ public class VendorController {
     @DeleteMapping("/{vendorId}")
     public ResponseEntity<?> deleteVendorById(@PathVariable("vendorId") int vendorId) {
         return vendorService.deleteVendorById(vendorId);
+    }
+
+    @PostMapping("/categories")
+    public ResponseEntity<?> addVendorCategory(@Valid @RequestBody AddVendorCategory payLoads) {
+        return vendorService.addVendorCategory(payLoads);
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<?> getAllVendorCategories() {
+        return vendorService.getAllVendorCategories();
+    }
+
+    @PostMapping("/categories/{categoryId}/delete")
+    public ResponseEntity<?> deleteVendorCategory(@PathVariable("categoryId") int categoryId) {
+        return vendorService.deleteVendorCategory(categoryId);
     }
 }

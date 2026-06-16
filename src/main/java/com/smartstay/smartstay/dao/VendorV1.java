@@ -39,4 +39,14 @@ public class VendorV1 {
     private String createdBy;
     private Date createdAt;
     private Date updatedAt;
+
+    private Integer vendorCategory;
+    private String contactPerson;
+    private String description;
+    private String vendorCode;
+    private String gst;
+    private String pan;
+    private Boolean allowCredit;
+    private Double creditLimit;
+    private Integer creditPeriod;
 }

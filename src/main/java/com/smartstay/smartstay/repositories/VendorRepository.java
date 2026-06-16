@@ -23,8 +23,11 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
     @Query("SELECT new com.smartstay.smartstay.responses.vendor.VendorResponse(" +
             "v.vendorId, v.firstName, v.lastName, CONCAT(v.firstName, ' ', v.lastName), " +
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
-            "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId) " +
+            "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId, " +
+            "vc.categoryId, vc.categoryName, v.contactPerson, v.description, v.vendorCode, v.gst, v.pan, " +
+            "v.allowCredit, v.creditLimit, v.creditPeriod) " +
             "FROM VendorV1 v JOIN Countries c ON v.country = c.countryId " +
+            "LEFT JOIN VendorCategories vc ON v.vendorCategory = vc.categoryId " +
             "WHERE v.hostelId = :hostelId " +
             "ORDER BY v.vendorId Desc")
     List<VendorResponse> findAllVendorsByHostelId(@Param("hostelId") String hostelId);
@@ -33,8 +36,11 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
     @Query("SELECT new com.smartstay.smartstay.responses.vendor.VendorResponse(" +
             "v.vendorId, v.firstName, v.lastName, CONCAT(v.firstName, ' ', v.lastName), " +
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
-            "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId) " +
+            "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId, " +
+            "vc.categoryId, vc.categoryName, v.contactPerson, v.description, v.vendorCode, v.gst, v.pan, " +
+            "v.allowCredit, v.creditLimit, v.creditPeriod) " +
             "FROM VendorV1 v JOIN Countries c ON v.country = c.countryId " +
+            "LEFT JOIN VendorCategories vc ON v.vendorCategory = vc.categoryId " +
             "WHERE v.vendorId = :vendorId")
     VendorResponse getVendor(@Param("vendorId") int vendorId);
 

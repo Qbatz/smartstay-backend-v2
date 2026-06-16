@@ -17,6 +17,16 @@ public record VendorResponse(
         String state,
         String countryCode,
         String country,
-        Long countryId
+        Long countryId,
+        Integer vendorCategoryId,
+        String vendorCategoryName,
+        String contactPerson,
+        String description,
+        String vendorCode,
+        String gst,
+        String pan,
+        Boolean allowCredit,
+        Double creditLimit,
+        Integer creditPeriod
 ) {
 }

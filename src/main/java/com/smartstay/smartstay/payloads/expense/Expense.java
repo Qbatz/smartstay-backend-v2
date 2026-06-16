@@ -2,6 +2,8 @@ package com.smartstay.smartstay.payloads.expense;
 
 import jakarta.validation.constraints.*;
 
+import java.util.List;
+
 public record Expense(
         @NotNull(message = "Category id required")
         @Positive(message = "Category id required")
@@ -20,5 +22,15 @@ public record Expense(
         @NotNull(message = "Bank id required")
         @NotBlank(message = "Bank id required")
         String bankId,
-        String description) {
+        String description,
+
+        String title,
+        Boolean isVendorExpense,
+        Integer vendorId,
+        String paymentStatus,
+        Double paidAmount,
+        Double balanceAmount,
+        String paymentMethod,
+        String note,
+        List<ExpenseItemPayload> expenseItems) {
 }
