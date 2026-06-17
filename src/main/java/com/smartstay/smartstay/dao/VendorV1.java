@@ -42,6 +42,7 @@ public class VendorV1 {
 
     private Integer vendorCategory;
     private String contactPerson;
+    private String contactPersonMobile;
     private String description;
     private String vendorCode;
     private String gst;

@@ -62,6 +62,16 @@ public class VendorService {
         return cleanedMobile;
     }
 
+    /**
+     * Builds a unique vendor code in the format {@code VND} + 8-digit identifier
+     * (e.g. {@code VND00000123}). The numeric part is the database-generated
+     * vendorId, which is guaranteed unique by the identity column, so the
+     * resulting code can never collide. IDs beyond 8 digits are not truncated.
+     */
+    private String generateVendorCode(Integer vendorId) {
+        return String.format("VEN%08d", vendorId);
+    }
+
     public ResponseEntity<?> getAllVendors(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -255,14 +265,20 @@ public class VendorService {
         vendorV1.setHostelId(payloads.hostelId());
         vendorV1.setVendorCategory(payloads.vendorCategory());
         vendorV1.setContactPerson(payloads.contactPerson());
+        vendorV1.setContactPersonMobile(payloads.contactPersonMobile());
         vendorV1.setDescription(payloads.description());
-        vendorV1.setVendorCode(payloads.vendorCode());
         vendorV1.setGst(payloads.gst());
         vendorV1.setPan(payloads.pan());
         vendorV1.setAllowCredit(payloads.allowCredit());
         vendorV1.setCreditLimit(payloads.creditLimit());
         vendorV1.setCreditPeriod(payloads.creditPeriod());
         vendorV1.setActive(true);
+
+        // Persist first so the database assigns the unique, auto-incremented vendorId,
+        // then derive the vendor code from it. Using the identity column guarantees
+        // uniqueness and avoids the collisions possible with random generation.
+        vendorV1 = vendorRepository.save(vendorV1);
+        vendorV1.setVendorCode(generateVendorCode(vendorV1.getVendorId()));
         vendorRepository.save(vendorV1);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
