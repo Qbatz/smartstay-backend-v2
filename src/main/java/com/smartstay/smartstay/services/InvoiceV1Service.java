@@ -1590,7 +1590,8 @@ public class InvoiceV1Service {
                 }
             }
 
-            InvoiceInfo invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(invoicesV1.getBasePrice()),
+            InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
+                    Utils.roundOffWithTwoDigit(invoicesV1.getBasePrice()),
                     0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
                     Utils.roundOffWithTwoDigit(discountedAmount), discountedPercentage,
                     invoiceRentalPeriod.toString(),
@@ -1667,7 +1668,8 @@ public class InvoiceV1Service {
         }
 
 
-        InvoiceInfo invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
+        InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
+                Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
                 Utils.roundOffWithTwoDigit(discountedAmount),
                 discountedPercentage,
                 invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus,
@@ -1692,7 +1694,13 @@ public class InvoiceV1Service {
                     canRedeemBooking = true;
                 }
             }
-            invoiceInfo = new InvoiceInfo(Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
+            invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
+                    Utils.roundOffWithTwoDigit(subTotal),
+                    0.0,
+                    0.0,
+                    Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()),
+                    Utils.roundOffWithTwoDigit(paidAmount),
+                    Utils.roundOffWithTwoDigit(balanceAmount),
                     Utils.roundOffWithTwoDigit(discountedAmount),
                     discountedPercentage,
                     invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus,
@@ -5675,4 +5683,11 @@ public class InvoiceV1Service {
         return invoiceRedemptionService.getAdvanceAmountFromBookingInvoice(hostelId, invoiceId);
     }
 
+    public List<InvoicesV1> findUnpaidInvoices(String customerId) {
+        List<InvoicesV1> unpaidInvoices = invoicesV1Repository.findUnpaidInvoices(customerId);
+        if (unpaidInvoices == null) {
+            return new ArrayList<>();
+        }
+        return unpaidInvoices;
+    }
 }
