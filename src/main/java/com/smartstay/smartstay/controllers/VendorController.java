@@ -29,8 +29,12 @@ public class VendorController {
     VendorService vendorService;
 
     @GetMapping("/all-vendors/{hostelId}")
-    public ResponseEntity<?> getAllVendors(@PathVariable("hostelId") String hostelId) {
-        return vendorService.getAllVendors(hostelId);
+    public ResponseEntity<?> getAllVendors(@PathVariable("hostelId") String hostelId,
+                                           @RequestParam(value = "name", required = false) String name,
+                                           @RequestParam(value = "categoryId", required = false) Integer categoryId,
+                                           @RequestParam(value = "page", defaultValue = "1") int page,
+                                           @RequestParam(value = "size", defaultValue = "10") int size) {
+        return vendorService.getAllVendors(hostelId, name, categoryId, page, size);
     }
 
     @GetMapping("/{vendorId}")

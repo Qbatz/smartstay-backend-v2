@@ -3,28 +3,47 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
+import com.smartstay.smartstay.Wrappers.vendor.VendorTableMapper;
+import com.smartstay.smartstay.dao.ColumnFilters;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dao.VendorCategories;
 import com.smartstay.smartstay.dao.VendorV1;
+import com.smartstay.smartstay.dto.vendor.VendorExpenseAggregate;
+import com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary;
+import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
+import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.VendorCategoriesRepository;
 import com.smartstay.smartstay.repositories.VendorRepository;
 import com.smartstay.smartstay.responses.vendor.VendorCategoryResponse;
+import com.smartstay.smartstay.responses.vendor.VendorFilterOptions;
+import com.smartstay.smartstay.responses.vendor.VendorListResponse;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
+import com.smartstay.smartstay.responses.vendor.VendorSummary;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class VendorService {
@@ -46,6 +65,12 @@ public class VendorService {
 
     @Autowired
     private SubscriptionService subscriptionService;
+
+    @Autowired
+    private TableColumnService columnService;
+
+    @Autowired
+    private ExpensesRepository expensesRepository;
 
     private String normalizeMobile(String countryCode, String mobile) {
         if (mobile == null) {
@@ -72,7 +97,7 @@ public class VendorService {
         return String.format("VEN%08d", vendorId);
     }
 
-    public ResponseEntity<?> getAllVendors(String hostelId) {
+    public ResponseEntity<?> getAllVendors(String hostelId, String name, Integer categoryId, Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -85,8 +110,74 @@ public class VendorService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<VendorResponse> vendorV1List = vendorRepository.findAllVendorsByHostelId(hostelId);
-        return new ResponseEntity<>(vendorV1List, HttpStatus.OK);
+
+        String searchName = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
+        int pageNumber = (page == null || page < 1) ? 1 : page;
+        int pageSize = (size == null || size < 1) ? 10 : size;
+        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
+
+        Page<VendorV1> vendorPage = vendorRepository.listVendors(hostelId, searchName, categoryId, pageable);
+        List<VendorV1> vendors = vendorPage.getContent();
+
+        // Resolve the user's configured columns for this hostel; only enabled columns are rendered.
+        List<ColumnFilters> listColumns = columnService.getVendorColumns(hostelId, FilterOptionsModule.MODULE_VENDOR.name());
+        List<String> tableColumns = listColumns.stream()
+                .filter(ColumnFilters::isSelected)
+                .sorted(Comparator.comparingInt(ColumnFilters::getOrder))
+                .map(ColumnFilters::getFieldName)
+                .toList();
+
+        // Per-vendor purchase/paid/last-transaction roll-up for the current page in a single query (no N+1).
+        List<String> pageVendorIds = vendors.stream().map(v -> String.valueOf(v.getVendorId())).toList();
+        Map<String, VendorExpenseAggregate> aggregatesByVendorId = new HashMap<>();
+        if (!pageVendorIds.isEmpty()) {
+            aggregatesByVendorId = expensesRepository.findVendorExpenseAggregates(hostelId, pageVendorIds).stream()
+                    .collect(Collectors.toMap(VendorExpenseAggregate::vendorId, Function.identity(), (a, b) -> a));
+        }
+
+        // Resolve category names for the current page in one bulk lookup.
+        Set<Integer> categoryIds = vendors.stream().map(VendorV1::getVendorCategory).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Integer, String> categoryNamesById = new HashMap<>();
+        if (!categoryIds.isEmpty()) {
+            vendorCategoriesRepository.findAllById(categoryIds)
+                    .forEach(c -> categoryNamesById.put(c.getCategoryId(), c.getCategoryName()));
+        }
+
+        VendorTableMapper mapper = new VendorTableMapper(tableColumns, categoryNamesById, aggregatesByVendorId);
+        List<List<Object>> listVendorRows = vendors.stream().map(mapper).collect(Collectors.toList());
+
+        // Summary reflects the full result set for the current search/filter, not just the page.
+        List<Integer> matchingVendorIds = vendorRepository.findVendorIdsByFilters(hostelId, searchName, categoryId);
+        double totalPurchase = 0.0;
+        double totalPaid = 0.0;
+        if (!matchingVendorIds.isEmpty()) {
+            List<String> matchingVendorIdStrings = matchingVendorIds.stream().map(String::valueOf).toList();
+            VendorPurchaseSummary purchaseSummary = expensesRepository.findVendorPurchaseSummary(hostelId, matchingVendorIdStrings);
+            if (purchaseSummary != null) {
+                totalPurchase = purchaseSummary.totalPurchase() != null ? purchaseSummary.totalPurchase() : 0.0;
+                totalPaid = purchaseSummary.totalPaid() != null ? purchaseSummary.totalPaid() : 0.0;
+            }
+        }
+
+        long totalVendors = vendorPage.getTotalElements();
+        VendorSummary vendorSummary = new VendorSummary(totalVendors, totalPurchase, totalPaid, totalPurchase - totalPaid);
+        VendorFilterOptions filterOptions = buildVendorFilterOptions(hostelId);
+
+        int currentPage = vendorPage.getPageable().getPageNumber() + 1;
+        int totalPages = vendorPage.getTotalPages();
+
+        VendorListResponse response = new VendorListResponse((int) totalVendors, currentPage, totalPages, pageSize,
+                vendorSummary, filterOptions, tableColumns, listColumns, listVendorRows);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private VendorFilterOptions buildVendorFilterOptions(String hostelId) {
+        List<VendorCategoryResponse> categories = vendorCategoriesRepository.findAllEnabledCategoriesByHostelId(hostelId);
+        List<VendorFilterOptions.FilterItems> categoryItems = categories.stream()
+                .map(c -> new VendorFilterOptions.FilterItems(c.categoryName(), String.valueOf(c.id())))
+                .collect(Collectors.toList());
+        return new VendorFilterOptions(categoryItems);
     }
 
     public ResponseEntity<?> getVendorById(Integer id) {

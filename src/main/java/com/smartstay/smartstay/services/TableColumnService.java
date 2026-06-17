@@ -57,6 +57,72 @@ public class TableColumnService {
                 .toList();
     }
 
+    public List<ColumnFilters> getVendorColumns(String hostelId, String moduleName) {
+        TableColumns vendorTableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, authentication.getName(), moduleName);
+        if (vendorTableColumns == null) {
+            return filterOptionsService.findVendorBasicFilters();
+        }
+
+        return vendorTableColumns.getColumns()
+                .stream()
+                .sorted(Comparator.comparing(ColumnFilters::getOrder))
+                .toList();
+    }
+
+    public ResponseEntity<?> updateVendorTableFields(String hostelId, List<CustomersTablesColumn> vendorTables) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (vendorTables == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (vendorTables.isEmpty()) {
+            return new ResponseEntity<>(Utils.ATLEAST_ONE_COLUMN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        List<ColumnFilters> listDefaultColumns = filterOptionsService.findVendorBasicFilters();
+        boolean isAnySelected = vendorTables.stream()
+                .anyMatch(i -> i != null && Boolean.TRUE.equals(i.isSelected()));
+
+        TableColumns tableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, users.getUserId(), FilterOptionsModule.MODULE_VENDOR.name());
+        if (tableColumns == null) {
+            tableColumns = new TableColumns();
+            tableColumns.setHostelId(hostelId);
+            tableColumns.setUserId(users.getUserId());
+            tableColumns.setModuleName(FilterOptionsModule.MODULE_VENDOR.name());
+            tableColumns.setActive(true);
+            tableColumns.setCreatedAt(new Date());
+        }
+
+        if (!isAnySelected) {
+            tableColumns.setColumns(listDefaultColumns);
+        } else {
+            List<ColumnFilters> listNewColumns = vendorTables
+                    .stream()
+                    .filter(i -> i != null && i.fieldName() != null)
+                    .map(i -> {
+                        ColumnFilters newFilters = new ColumnFilters();
+                        newFilters.setSelected(Boolean.TRUE.equals(i.isSelected()));
+                        newFilters.setFieldName(i.fieldName());
+                        newFilters.setOrder(i.order() != null ? i.order() : 0);
+                        return newFilters;
+                    })
+                    .toList();
+            tableColumns.setColumns(listNewColumns);
+        }
+        tableColumns.setUpdatedAt(new Date());
+        tableColumnsRepositories.save(tableColumns);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
     public ResponseEntity<?> updateCustomerTableFields(String hostelId, List<CustomersTablesColumn> customersTables) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);

@@ -2,6 +2,8 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.VendorV1;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +14,24 @@ import java.util.List;
 public interface VendorRepository extends JpaRepository<VendorV1, String> {
 
     List<VendorV1> findAllByHostelId(String hostelId);
+
+    @Query("SELECT v FROM VendorV1 v " +
+            "WHERE v.hostelId = :hostelId AND v.isActive = true " +
+            "AND (:name IS NULL OR LOWER(CONCAT(v.firstName, ' ', COALESCE(v.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))) " +
+            "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId) " +
+            "ORDER BY v.vendorId DESC")
+    Page<VendorV1> listVendors(@Param("hostelId") String hostelId,
+                               @Param("name") String name,
+                               @Param("categoryId") Integer categoryId,
+                               Pageable pageable);
+
+    @Query("SELECT v.vendorId FROM VendorV1 v " +
+            "WHERE v.hostelId = :hostelId AND v.isActive = true " +
+            "AND (:name IS NULL OR LOWER(CONCAT(v.firstName, ' ', COALESCE(v.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))) " +
+            "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId)")
+    List<Integer> findVendorIdsByFilters(@Param("hostelId") String hostelId,
+                                         @Param("name") String name,
+                                         @Param("categoryId") Integer categoryId);
 
     VendorV1 findByVendorId(int vendorId);
 
