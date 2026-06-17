@@ -24,7 +24,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "v.vendorId, v.firstName, v.lastName, CONCAT(v.firstName, ' ', v.lastName), " +
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
             "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId, " +
-            "vc.categoryId, vc.categoryName, v.contactPerson, v.description, v.vendorCode, v.gst, v.pan, " +
+            "vc.categoryId, vc.categoryName, v.contactPerson, v.contactPersonMobile, v.description, v.vendorCode, v.gst, v.pan, " +
             "v.allowCredit, v.creditLimit, v.creditPeriod) " +
             "FROM VendorV1 v JOIN Countries c ON v.country = c.countryId " +
             "LEFT JOIN VendorCategories vc ON v.vendorCategory = vc.categoryId " +
@@ -37,7 +37,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "v.vendorId, v.firstName, v.lastName, CONCAT(v.firstName, ' ', v.lastName), " +
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
             "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId, " +
-            "vc.categoryId, vc.categoryName, v.contactPerson, v.description, v.vendorCode, v.gst, v.pan, " +
+            "vc.categoryId, vc.categoryName, v.contactPerson, v.contactPersonMobile, v.description, v.vendorCode, v.gst, v.pan, " +
             "v.allowCredit, v.creditLimit, v.creditPeriod) " +
             "FROM VendorV1 v JOIN Countries c ON v.country = c.countryId " +
             "LEFT JOIN VendorCategories vc ON v.vendorCategory = vc.categoryId " +

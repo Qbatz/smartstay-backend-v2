@@ -21,6 +21,7 @@ public record VendorResponse(
         Integer vendorCategoryId,
         String vendorCategoryName,
         String contactPerson,
+        String contactPersonMobile,
         String description,
         String vendorCode,
         String gst,
