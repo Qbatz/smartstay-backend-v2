@@ -59,12 +59,12 @@ public class VendorController {
     }
 
     @GetMapping("/categories")
-    public ResponseEntity<?> getAllVendorCategories() {
-        return vendorService.getAllVendorCategories();
+    public ResponseEntity<?> getAllVendorCategories(@RequestParam("hostelId") String hostelId) {
+        return vendorService.getAllVendorCategories(hostelId);
     }
 
     @PostMapping("/categories/{categoryId}/delete")
-    public ResponseEntity<?> deleteVendorCategory(@PathVariable("categoryId") int categoryId) {
-        return vendorService.deleteVendorCategory(categoryId);
+    public ResponseEntity<?> deleteVendorCategory(@PathVariable("categoryId") int categoryId, @RequestParam("hostelId") String hostelId) {
+        return vendorService.deleteVendorCategory(categoryId, hostelId);
     }
 }

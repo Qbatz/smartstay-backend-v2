@@ -325,8 +325,9 @@ public class VendorService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        String hostelId = payloads.hostelId();
         String categoryName = payloads.categoryName().trim();
-        VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryNameIgnoreCase(categoryName);
+        VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryNameIgnoreCaseAndHostelId(categoryName, hostelId);
         if (existingCategory != null) {
             if (existingCategory.isEnabled()) {
                 return new ResponseEntity<>(Utils.CATEGORY_ALREADY_ADDED, HttpStatus.BAD_REQUEST);
@@ -340,6 +341,7 @@ public class VendorService {
 
         VendorCategories vendorCategories = new VendorCategories();
         vendorCategories.setCategoryName(categoryName);
+        vendorCategories.setHostelId(hostelId);
         vendorCategories.setEnabled(true);
         vendorCategories.setAddedBy(userId);
         vendorCategories.setCreatedAt(new Date());
@@ -350,7 +352,7 @@ public class VendorService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
-    public ResponseEntity<?> deleteVendorCategory(int categoryId) {
+    public ResponseEntity<?> deleteVendorCategory(int categoryId, String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -361,7 +363,7 @@ public class VendorService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryId(categoryId);
+        VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryIdAndHostelId(categoryId, hostelId);
         if (existingCategory == null || !existingCategory.isEnabled()) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
         }
@@ -374,7 +376,7 @@ public class VendorService {
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getAllVendorCategories() {
+    public ResponseEntity<?> getAllVendorCategories(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -385,7 +387,7 @@ public class VendorService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<VendorCategoryResponse> categories = vendorCategoriesRepository.findAllEnabledCategories();
+        List<VendorCategoryResponse> categories = vendorCategoriesRepository.findAllEnabledCategoriesByHostelId(hostelId);
         return new ResponseEntity<>(categories, HttpStatus.OK);
     }
 }
