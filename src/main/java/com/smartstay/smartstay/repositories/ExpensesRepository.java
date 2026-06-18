@@ -16,6 +16,22 @@ import java.util.List;
 public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
     ExpensesV1 findByExpenseNumberAndHostelId(String expenseNumber, String hostelId);
 
+    @Query("SELECT COALESCE(SUM(e.totalPrice), 0) FROM ExpensesV1 e " +
+            "WHERE e.vendorId = :vendorId AND e.isActive = true " +
+            "AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) " +
+            "AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate))")
+    Double sumVendorExpense(@Param("vendorId") String vendorId,
+                            @Param("startDate") Date startDate,
+                            @Param("endDate") Date endDate);
+
+    @Query("SELECT COUNT(e) FROM ExpensesV1 e " +
+            "WHERE e.vendorId = :vendorId AND e.isActive = true " +
+            "AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) " +
+            "AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate))")
+    long countVendorExpense(@Param("vendorId") String vendorId,
+                            @Param("startDate") Date startDate,
+                            @Param("endDate") Date endDate);
+
     @Query(value = """
             SELECT exp.expense_id as expenseId, exp.unit_count as noOfItems, exp.category_id as categoryId,
             exp.description, exp.hostel_id as hostelId, exp.bank_id as bankId, exp.sub_category_id as subCategoryId,

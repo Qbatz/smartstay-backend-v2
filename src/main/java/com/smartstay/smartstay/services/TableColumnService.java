@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class TableColumnService {
@@ -55,6 +57,89 @@ public class TableColumnService {
                 .stream()
                 .sorted(Comparator.comparing(ColumnFilters::getOrder))
                 .toList();
+    }
+
+    public List<ColumnFilters> getVendorColumns(String hostelId, String moduleName) {
+        List<ColumnFilters> defaults = filterOptionsService.findVendorBasicFilters();
+        TableColumns vendorTableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, authentication.getName(), moduleName);
+        if (vendorTableColumns == null || vendorTableColumns.getColumns() == null || vendorTableColumns.getColumns().isEmpty()) {
+            return defaults;
+        }
+
+        // Honour the user's saved preference, but append any newly-introduced default columns
+        // (e.g. "Payment Status") that aren't in the stored config yet, so they aren't lost.
+        List<ColumnFilters> merged = new ArrayList<>(vendorTableColumns.getColumns());
+        Set<String> savedNames = new LinkedHashSet<>();
+        for (ColumnFilters saved : merged) {
+            if (saved.getFieldName() != null) {
+                savedNames.add(saved.getFieldName().trim().toLowerCase());
+            }
+        }
+        int maxOrder = merged.stream().mapToInt(ColumnFilters::getOrder).max().orElse(0);
+        for (ColumnFilters def : defaults) {
+            String defName = def.getFieldName() == null ? "" : def.getFieldName().trim().toLowerCase();
+            if (!savedNames.contains(defName)) {
+                merged.add(new ColumnFilters(++maxOrder, def.getFieldName(), def.isSelected()));
+            }
+        }
+
+        return merged.stream()
+                .sorted(Comparator.comparing(ColumnFilters::getOrder))
+                .toList();
+    }
+
+    public ResponseEntity<?> updateVendorTableFields(String hostelId, List<CustomersTablesColumn> vendorTables) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (vendorTables == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (vendorTables.isEmpty()) {
+            return new ResponseEntity<>(Utils.ATLEAST_ONE_COLUMN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        List<ColumnFilters> listDefaultColumns = filterOptionsService.findVendorBasicFilters();
+        boolean isAnySelected = vendorTables.stream()
+                .anyMatch(i -> i != null && Boolean.TRUE.equals(i.isSelected()));
+
+        TableColumns tableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, users.getUserId(), FilterOptionsModule.MODULE_VENDOR.name());
+        if (tableColumns == null) {
+            tableColumns = new TableColumns();
+            tableColumns.setHostelId(hostelId);
+            tableColumns.setUserId(users.getUserId());
+            tableColumns.setModuleName(FilterOptionsModule.MODULE_VENDOR.name());
+            tableColumns.setActive(true);
+            tableColumns.setCreatedAt(new Date());
+        }
+
+        if (!isAnySelected) {
+            tableColumns.setColumns(listDefaultColumns);
+        } else {
+            List<ColumnFilters> listNewColumns = vendorTables
+                    .stream()
+                    .filter(i -> i != null && i.fieldName() != null)
+                    .map(i -> {
+                        ColumnFilters newFilters = new ColumnFilters();
+                        newFilters.setSelected(Boolean.TRUE.equals(i.isSelected()));
+                        newFilters.setFieldName(i.fieldName());
+                        newFilters.setOrder(i.order() != null ? i.order() : 0);
+                        return newFilters;
+                    })
+                    .toList();
+            tableColumns.setColumns(listNewColumns);
+        }
+        tableColumns.setUpdatedAt(new Date());
+        tableColumnsRepositories.save(tableColumns);
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     public ResponseEntity<?> updateCustomerTableFields(String hostelId, List<CustomersTablesColumn> customersTables) {

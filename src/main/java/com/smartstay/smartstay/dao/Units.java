@@ -27,6 +27,8 @@ public class Units {
 
     private String unitName;
 
+    private String hostelId;
+
     private String addedBy;
 
     private boolean isEnabled;
