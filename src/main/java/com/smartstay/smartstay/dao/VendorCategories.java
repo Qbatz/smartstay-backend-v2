@@ -27,6 +27,8 @@ public class VendorCategories {
 
     private String categoryName;
 
+    private String hostelId;
+
     private String addedBy;
 
     private boolean isEnabled;

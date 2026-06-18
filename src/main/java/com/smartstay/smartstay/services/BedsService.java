@@ -524,7 +524,18 @@ public class BedsService {
                             .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.VACATED.name()))
                             .toList();
                     if (bookingStatusOtherThanVacant != null && !bookingStatusOtherThanVacant.isEmpty()) {
-                        return true;
+
+                        Date leavingDate = bookingStatusOtherThanVacant.getFirst().getLeavingDate();
+
+                        if (leavingDate != null
+                                && Utils.compareWithTwoDates(joiningDate, leavingDate) >= 0) {
+
+                            return false;
+
+                        } else {
+
+                            return true;
+                        }
                     }
                 }
 

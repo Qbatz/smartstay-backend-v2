@@ -21,6 +21,8 @@ public class ExpenseItem {
     private Long id;
 
     private String expenseId;
+    private String hostelId;
+    private String vendorId;
     private String item;
     private Integer quantity;
     private Integer unitId;
