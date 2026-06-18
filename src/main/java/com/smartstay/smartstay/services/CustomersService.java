@@ -2945,6 +2945,12 @@ public class CustomersService {
         if (deductions != null && !deductions.isEmpty()) {
             lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount(), 0.0)).toList());
         }
+
+//        if (checkInDeductions != null) {
+//            if (!checkInDeductions.isEmpty()) {
+//                lisDeductions.addAll(checkInDeductions);
+//            }
+//        }
         //no need to add advance deduction amount. Already added in advance deductions.
         totalAmountToBePaid = totalAmountToBePaid + settlementDeductionAmount;
         deductionAmount = advanceDeductionAmount + settlementDeductionAmount;
