@@ -2542,16 +2542,16 @@ public class CustomersService {
                 return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             } else {
                 if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-                    //done full rent
+
                     return generateFinalSettlementForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users, isFullRentCollected, customRent);
                 }
-                //pending full rent
+
                 return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             }
         } else {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 BillingDates customerBillingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), settlementDetails.getLeavingDate());
-                //done rent full
+
                 return generateFinalSettlementForJoininBasedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, customerBillingDates, settlement, users, isFullRentCollected, customRent);
             }
         }
@@ -3273,30 +3273,69 @@ public class CustomersService {
             }
         }
 
+//        if (isFullRentCollected) {
+//            double difference = 0.0;
+//            if (fullRent == 0) {
+//                RentInfo rentInfo = settlement.currentMonthRentInfo();
+//                if (rentInfo != null) {
+//                    if (rentInfo.fullRent() != null) {
+//                        customRent = rentInfo.fullRent();
+//                    }
+//                    fullRent = rentInfo.fullRent();
+//                    difference = rentInfo.rentDifference();
+//                }
+//            }
+//            else {
+//                RentInfo rentInfo = settlement.currentMonthRentInfo();
+//                if (rentInfo != null) {
+//                    difference = fullRent - rentInfo.currentMonthTotalAmount();
+//                    if (difference < 0) {
+//                        difference = difference * -1;
+//                    }
+//                }
+//            }
+//
+//            amountToBePaid = amountToBePaid + difference;
+//        }
+
         if (isFullRentCollected) {
             double difference = 0.0;
-            if (fullRent == 0) {
-                RentInfo rentInfo = settlement.currentMonthRentInfo();
-                if (rentInfo != null) {
-                    if (rentInfo.fullRent() != null) {
-                        customRent = rentInfo.fullRent();
-                    }
-                    fullRent = rentInfo.fullRent();
-                    difference = rentInfo.rentDifference();
-                }
-            }
-            else {
-                RentInfo rentInfo = settlement.currentMonthRentInfo();
-                if (rentInfo != null) {
-                    difference = fullRent - rentInfo.currentMonthTotalAmount();
-                    if (difference < 0) {
-                        difference = difference * -1;
+                if (customRent == 0) {
+                    RentInfo rentInfo = settlement.currentMonthRentInfo();
+                    if (rentInfo != null) {
+                        if (rentInfo.fullRent() != null) {
+                            customRent = rentInfo.fullRent();
+                        }
+                        difference = rentInfo.rentDifference();
                     }
                 }
-            }
+                else {
+                    RentInfo rentInfo = settlement.currentMonthRentInfo();
+                    if (rentInfo != null) {
+                        if (!rentInfo.currentMonthRent().equals(fullRent)) {
+                            difference = customRent - rentInfo.fullRent() + rentInfo.rentDifference();
+                            if (difference < 0) {
+                                difference = difference * -1;
+                            }
+                        }
+                        else {
+                            difference =  rentInfo.rentDifference();
+                        }
+
+                    }
+                }
+//            }
+//            else {
+//                RentInfo rentInfo = settlementInfo.currentMonthRentInfo();
+//                if (rentInfo != null) {
+//                    differenceAmount = rentInfo.rentDifference();
+//                }
+//            }
 
             amountToBePaid = amountToBePaid + difference;
         }
+
+//        double amountToBePaidWithoutDeductions = totalAmountToBePaid - deductionAmount;
 
         List<Deductions> lisDeductions = new ArrayList<>();
         if (deductions != null && !deductions.isEmpty()) {
@@ -3425,32 +3464,57 @@ public class CustomersService {
 
         }
 
+//        if (isFullRentCollected) {
+//            if (customRent != null) {
+//                if (customRent == 0) {
+//                    RentInfo rentInfo = settlement.currentMonthRentInfo();
+//                    if (rentInfo != null) {
+//                        differenceAmount = rentInfo.rentDifference();
+//                    }
+//                }
+//                else {
+//                    RentInfo rentInfo = settlement.currentMonthRentInfo();
+//                    if (rentInfo != null) {
+//                        differenceAmount = customRent - rentInfo.currentPayableRent();
+//                        if (differenceAmount < 0) {
+//                            differenceAmount = differenceAmount * -1;
+//                        }
+//                    }
+//                }
+//            }
+//            else {
+//                RentInfo rentInfo = settlement.currentMonthRentInfo();
+//                if (rentInfo != null) {
+//                    differenceAmount = rentInfo.rentDifference();
+//                }
+//            }
+//
+//            amountToBePaid = amountToBePaid + differenceAmount;
+//        }
+
         if (isFullRentCollected) {
-            if (customRent != null) {
-                if (customRent == 0) {
-                    RentInfo rentInfo = settlement.currentMonthRentInfo();
-                    if (rentInfo != null) {
-                        differenceAmount = rentInfo.rentDifference();
+            double difference = 0.0;
+            if (customRent == 0) {
+                RentInfo rentInfo = settlement.currentMonthRentInfo();
+                if (rentInfo != null) {
+                    if (rentInfo.fullRent() != null) {
+                        customRent = rentInfo.fullRent();
                     }
-                }
-                else {
-                    RentInfo rentInfo = settlement.currentMonthRentInfo();
-                    if (rentInfo != null) {
-                        differenceAmount = customRent - rentInfo.currentPayableRent();
-                        if (differenceAmount < 0) {
-                            differenceAmount = differenceAmount * -1;
-                        }
-                    }
+                    customRent = rentInfo.fullRent();
+                    difference = rentInfo.rentDifference();
                 }
             }
             else {
                 RentInfo rentInfo = settlement.currentMonthRentInfo();
                 if (rentInfo != null) {
-                    differenceAmount = rentInfo.rentDifference();
+                    difference = customRent - rentInfo.currentMonthTotalAmount();
+                    if (difference < 0) {
+                        difference = difference * -1;
+                    }
                 }
             }
 
-            amountToBePaid = amountToBePaid + differenceAmount;
+            amountToBePaid = amountToBePaid + difference;
         }
 
 
