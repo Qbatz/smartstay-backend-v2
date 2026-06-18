@@ -44,6 +44,25 @@ public class VendorController {
         return vendorService.getVendorById(vendorId, period);
     }
 
+    @GetMapping("/expenses/{vendorId}")
+    public ResponseEntity<?> getVendorExpenses(@PathVariable("vendorId") int vendorId,
+                                               @RequestParam(value = "search", required = false) String search,
+                                               @RequestParam(value = "startDate", required = false) String startDate,
+                                               @RequestParam(value = "endDate", required = false) String endDate,
+                                               @RequestParam(value = "page", defaultValue = "1") int page,
+                                               @RequestParam(value = "size", defaultValue = "10") int size) {
+        return vendorService.getVendorExpenses(vendorId, search, startDate, endDate, page, size);
+    }
+
+    @GetMapping("/expense-payments/{vendorId}")
+    public ResponseEntity<?> getVendorExpensePayments(@PathVariable("vendorId") int vendorId,
+                                                      @RequestParam(value = "startDate", required = false) String startDate,
+                                                      @RequestParam(value = "endDate", required = false) String endDate,
+                                                      @RequestParam(value = "page", defaultValue = "1") int page,
+                                                      @RequestParam(value = "size", defaultValue = "10") int size) {
+        return vendorService.getVendorExpensePayments(vendorId, startDate, endDate, page, size);
+    }
+
     @PostMapping("")
     public ResponseEntity<?> addVendor(@RequestPart(value = "profilePic", required = false) MultipartFile file, @Valid @RequestPart AddVendor payLoads) {
         return vendorService.addVendor(file, payLoads);
