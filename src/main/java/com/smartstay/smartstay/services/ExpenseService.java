@@ -87,6 +87,9 @@ public class ExpenseService {
     private VendorRepository vendorRepository;
 
     @Autowired
+    private VendorFinancialService vendorFinancialService;
+
+    @Autowired
     private UploadFileToS3 uploadToS3;
 
     public ResponseEntity<?> addUnit(AddUnit payloads) {
@@ -224,6 +227,7 @@ public class ExpenseService {
 
     }
 
+    @Transactional
     public ResponseEntity<?> addExpense(String hostelId, Expense expense) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -354,6 +358,11 @@ public class ExpenseService {
             expensePaymentRepository.save(expensePayment);
         }
 
+        // Keep the vendor's denormalized financial summary in sync.
+        if (vendorId != null) {
+            vendorFinancialService.recalculate(vendorId);
+        }
+
         usersService.addUserLog(hostelId, expV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.CREATE, users);
         if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId())) {
 
@@ -432,6 +441,11 @@ public class ExpenseService {
         expensesV1.setUpdatedAt(new Date());
         expensesV1.setUpdatedBy(authentication.getName());
         expensesRepository.save(expensesV1);
+
+        // Keep the vendor's denormalized financial summary in sync with the new payment.
+        if (expensesV1.getVendorId() != null) {
+            vendorFinancialService.recalculate(expensesV1.getVendorId());
+        }
 
         usersService.addUserLog(expensesV1.getHostelId(), expensesV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
 
@@ -799,6 +813,7 @@ public class ExpenseService {
                 .build();
     }
 
+    @Transactional
     public ResponseEntity<?> updateExpense(String hostelId, String expenseId, UpdateExpense updateExpense) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -915,6 +930,11 @@ public class ExpenseService {
             bankTransactionService.updateExpenseTransactions(hostelId, expenseId, updateExpense.totalAmount(), priceDifference, updateExpense.purchaseDate());
         }
 
+        // Keep the vendor's denormalized financial summary in sync after an amount change.
+        if (expensesV1.getVendorId() != null) {
+            vendorFinancialService.recalculate(expensesV1.getVendorId());
+        }
+
         usersService.addUserLog(hostelId, expenseId, ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
@@ -945,10 +965,16 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
         }
 
+        String vendorId = expensesV1.getVendorId();
         if (bankTransactionService.deleteExpnese(hostelId, expenseId)) {
             expenseItemRepository.deleteByExpenseId(expenseId);
             expensePaymentRepository.deleteByExpenseId(expenseId);
             expensesRepository.delete(expensesV1);
+
+            // Recompute the vendor summary now that this expense and its payments are gone.
+            if (vendorId != null) {
+                vendorFinancialService.recalculate(vendorId);
+            }
 
             usersService.addUserLog(hostelId, expenseId, ActivitySource.EXPENSE, ActivitySourceType.DELETE, users);
 

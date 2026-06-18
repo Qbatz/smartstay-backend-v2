@@ -9,10 +9,10 @@ import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dao.VendorCategories;
 import com.smartstay.smartstay.dao.VendorV1;
-import com.smartstay.smartstay.dto.vendor.VendorExpenseAggregate;
 import com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary;
 import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.ennum.ModuleId;
+import com.smartstay.smartstay.ennum.VendorPaymentStatus;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
@@ -49,7 +49,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -107,7 +106,8 @@ public class VendorService {
         return String.format("VEN%08d", vendorId);
     }
 
-    public ResponseEntity<?> getAllVendors(String hostelId, String name, Integer categoryId, Integer page, Integer size) {
+    public ResponseEntity<?> getAllVendors(String hostelId, String name, Integer categoryId, String paymentStatus,
+                                           Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -122,11 +122,13 @@ public class VendorService {
         }
 
         String searchName = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
+        // Null => no status filter (covers both omitted and "ALL").
+        VendorPaymentStatus statusFilter = VendorPaymentStatus.fromFilter(paymentStatus);
         int pageNumber = (page == null || page < 1) ? 1 : page;
         int pageSize = (size == null || size < 1) ? 10 : size;
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
-        Page<VendorV1> vendorPage = vendorRepository.listVendors(hostelId, searchName, categoryId, pageable);
+        Page<VendorV1> vendorPage = vendorRepository.listVendors(hostelId, searchName, categoryId, statusFilter, pageable);
         List<VendorV1> vendors = vendorPage.getContent();
 
         // Resolve the user's configured columns for this hostel; only enabled columns are rendered.
@@ -137,12 +139,12 @@ public class VendorService {
                 .map(ColumnFilters::getFieldName)
                 .toList();
 
-        // Per-vendor purchase/paid/last-transaction roll-up for the current page in a single query (no N+1).
+        // Latest payment date per vendor (Last Transaction) for the current page in one bulk query (no N+1).
         List<String> pageVendorIds = vendors.stream().map(v -> String.valueOf(v.getVendorId())).toList();
-        Map<String, VendorExpenseAggregate> aggregatesByVendorId = new HashMap<>();
+        Map<String, Date> lastPaymentByVendorId = new HashMap<>();
         if (!pageVendorIds.isEmpty()) {
-            aggregatesByVendorId = expensesRepository.findVendorExpenseAggregates(hostelId, pageVendorIds).stream()
-                    .collect(Collectors.toMap(VendorExpenseAggregate::vendorId, Function.identity(), (a, b) -> a));
+            expensePaymentRepository.findLatestPaymentDates(pageVendorIds)
+                    .forEach(p -> lastPaymentByVendorId.put(p.vendorId(), p.lastPaymentDate()));
         }
 
         // Resolve category names for the current page in one bulk lookup.
@@ -154,20 +156,16 @@ public class VendorService {
                     .forEach(c -> categoryNamesById.put(c.getCategoryId(), c.getCategoryName()));
         }
 
-        VendorTableMapper mapper = new VendorTableMapper(tableColumns, categoryNamesById, aggregatesByVendorId);
+        VendorTableMapper mapper = new VendorTableMapper(tableColumns, categoryNamesById, lastPaymentByVendorId);
         List<List<Object>> listVendorRows = vendors.stream().map(mapper).collect(Collectors.toList());
 
-        // Summary reflects the full result set for the current search/filter, not just the page.
-        List<Integer> matchingVendorIds = vendorRepository.findVendorIdsByFilters(hostelId, searchName, categoryId);
+        // Summary reflects the full filtered result set, aggregated from the stored vendor columns.
         double totalPurchase = 0.0;
         double totalPaid = 0.0;
-        if (!matchingVendorIds.isEmpty()) {
-            List<String> matchingVendorIdStrings = matchingVendorIds.stream().map(String::valueOf).toList();
-            VendorPurchaseSummary purchaseSummary = expensesRepository.findVendorPurchaseSummary(hostelId, matchingVendorIdStrings);
-            if (purchaseSummary != null) {
-                totalPurchase = purchaseSummary.totalPurchase() != null ? purchaseSummary.totalPurchase() : 0.0;
-                totalPaid = purchaseSummary.totalPaid() != null ? purchaseSummary.totalPaid() : 0.0;
-            }
+        VendorPurchaseSummary purchaseSummary = vendorRepository.summarizeVendors(hostelId, searchName, categoryId, statusFilter);
+        if (purchaseSummary != null) {
+            totalPurchase = purchaseSummary.totalPurchase() != null ? purchaseSummary.totalPurchase() : 0.0;
+            totalPaid = purchaseSummary.totalPaid() != null ? purchaseSummary.totalPaid() : 0.0;
         }
 
         long totalVendors = vendorPage.getTotalElements();
@@ -187,7 +185,13 @@ public class VendorService {
         List<VendorFilterOptions.FilterItems> categoryItems = categories.stream()
                 .map(c -> new VendorFilterOptions.FilterItems(c.categoryName(), String.valueOf(c.id())))
                 .collect(Collectors.toList());
-        return new VendorFilterOptions(categoryItems);
+
+        List<String> paymentStatusOptions = new java.util.ArrayList<>();
+        paymentStatusOptions.add("All");
+        for (VendorPaymentStatus status : VendorPaymentStatus.values()) {
+            paymentStatusOptions.add(status.getDisplayName());
+        }
+        return new VendorFilterOptions(categoryItems, paymentStatusOptions);
     }
 
     public ResponseEntity<?> getVendorById(Integer id, String period) {
@@ -462,6 +466,11 @@ public class VendorService {
         vendorV1.setCreditLimit(payloads.creditLimit());
         vendorV1.setCreditPeriod(payloads.creditPeriod());
         vendorV1.setActive(true);
+        // A freshly created vendor has no expenses yet.
+        vendorV1.setTotalExpense(0.0);
+        vendorV1.setTotalPaid(0.0);
+        vendorV1.setBalance(0.0);
+        vendorV1.setPaymentStatus(VendorPaymentStatus.NO_TRANSACTION);
 
         // Persist first so the database assigns the unique, auto-incremented vendorId,
         // then derive the vendor code from it. Using the identity column guarantees

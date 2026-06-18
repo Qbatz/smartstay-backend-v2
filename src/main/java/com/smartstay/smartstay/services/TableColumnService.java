@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class TableColumnService {
@@ -58,13 +60,30 @@ public class TableColumnService {
     }
 
     public List<ColumnFilters> getVendorColumns(String hostelId, String moduleName) {
+        List<ColumnFilters> defaults = filterOptionsService.findVendorBasicFilters();
         TableColumns vendorTableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, authentication.getName(), moduleName);
-        if (vendorTableColumns == null) {
-            return filterOptionsService.findVendorBasicFilters();
+        if (vendorTableColumns == null || vendorTableColumns.getColumns() == null || vendorTableColumns.getColumns().isEmpty()) {
+            return defaults;
         }
 
-        return vendorTableColumns.getColumns()
-                .stream()
+        // Honour the user's saved preference, but append any newly-introduced default columns
+        // (e.g. "Payment Status") that aren't in the stored config yet, so they aren't lost.
+        List<ColumnFilters> merged = new ArrayList<>(vendorTableColumns.getColumns());
+        Set<String> savedNames = new LinkedHashSet<>();
+        for (ColumnFilters saved : merged) {
+            if (saved.getFieldName() != null) {
+                savedNames.add(saved.getFieldName().trim().toLowerCase());
+            }
+        }
+        int maxOrder = merged.stream().mapToInt(ColumnFilters::getOrder).max().orElse(0);
+        for (ColumnFilters def : defaults) {
+            String defName = def.getFieldName() == null ? "" : def.getFieldName().trim().toLowerCase();
+            if (!savedNames.contains(defName)) {
+                merged.add(new ColumnFilters(++maxOrder, def.getFieldName(), def.isSelected()));
+            }
+        }
+
+        return merged.stream()
                 .sorted(Comparator.comparing(ColumnFilters::getOrder))
                 .toList();
     }

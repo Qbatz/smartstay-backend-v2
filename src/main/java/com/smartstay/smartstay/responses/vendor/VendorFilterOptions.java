@@ -13,6 +13,8 @@ public class VendorFilterOptions {
 
     private List<FilterItems> category;
 
+    private List<String> paymentStatus;
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor

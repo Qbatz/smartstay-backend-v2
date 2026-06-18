@@ -3,8 +3,6 @@ package com.smartstay.smartstay.repositories;
 import com.smartstay.smartstay.dao.ExpensesV1;
 import com.smartstay.smartstay.dto.expenses.ExpenseList;
 import com.smartstay.smartstay.dto.expenses.ExpenseSummaryProjection;
-import com.smartstay.smartstay.dto.vendor.VendorExpenseAggregate;
-import com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary;
 import com.smartstay.smartstay.ennum.ExpensePaymentStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,21 +15,6 @@ import java.util.List;
 
 public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
     ExpensesV1 findByExpenseNumberAndHostelId(String expenseNumber, String hostelId);
-
-    @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorExpenseAggregate(" +
-            "e.vendorId, COALESCE(SUM(e.totalPrice), 0), COALESCE(SUM(e.paidAmount), 0), MAX(e.transactionDate)) " +
-            "FROM ExpensesV1 e " +
-            "WHERE e.hostelId = :hostelId AND e.isActive = true AND e.vendorId IN :vendorIds " +
-            "GROUP BY e.vendorId")
-    List<VendorExpenseAggregate> findVendorExpenseAggregates(@Param("hostelId") String hostelId,
-                                                             @Param("vendorIds") List<String> vendorIds);
-
-    @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary(" +
-            "COALESCE(SUM(e.totalPrice), 0), COALESCE(SUM(e.paidAmount), 0)) " +
-            "FROM ExpensesV1 e " +
-            "WHERE e.hostelId = :hostelId AND e.isActive = true AND e.vendorId IN :vendorIds")
-    VendorPurchaseSummary findVendorPurchaseSummary(@Param("hostelId") String hostelId,
-                                                    @Param("vendorIds") List<String> vendorIds);
 
     @Query("SELECT COALESCE(SUM(e.totalPrice), 0) FROM ExpensesV1 e " +
             "WHERE e.vendorId = :vendorId AND e.isActive = true " +

@@ -32,9 +32,10 @@ public class VendorController {
     public ResponseEntity<?> getAllVendors(@PathVariable("hostelId") String hostelId,
                                            @RequestParam(value = "name", required = false) String name,
                                            @RequestParam(value = "categoryId", required = false) Integer categoryId,
+                                           @RequestParam(value = "paymentStatus", required = false) String paymentStatus,
                                            @RequestParam(value = "page", defaultValue = "1") int page,
                                            @RequestParam(value = "size", defaultValue = "10") int size) {
-        return vendorService.getAllVendors(hostelId, name, categoryId, page, size);
+        return vendorService.getAllVendors(hostelId, name, categoryId, paymentStatus, page, size);
     }
 
     @GetMapping("/{vendorId}")

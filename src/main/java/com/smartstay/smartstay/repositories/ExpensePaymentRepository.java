@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.ExpensePayment;
+import com.smartstay.smartstay.dto.vendor.VendorLastPayment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,4 +35,8 @@ public interface ExpensePaymentRepository extends JpaRepository<ExpensePayment, 
     long countVendorPayments(@Param("vendorId") String vendorId,
                              @Param("startDate") Date startDate,
                              @Param("endDate") Date endDate);
+
+    @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorLastPayment(p.vendorId, MAX(p.paymentDate)) " +
+            "FROM ExpensePayment p WHERE p.vendorId IN :vendorIds GROUP BY p.vendorId")
+    List<VendorLastPayment> findLatestPaymentDates(@Param("vendorIds") List<String> vendorIds);
 }

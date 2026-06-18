@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.VendorV1;
+import com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary;
+import com.smartstay.smartstay.ennum.VendorPaymentStatus;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,19 +21,25 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "WHERE v.hostelId = :hostelId AND v.isActive = true " +
             "AND (:name IS NULL OR LOWER(CONCAT(v.firstName, ' ', COALESCE(v.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))) " +
             "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId) " +
+            "AND (:paymentStatus IS NULL OR v.paymentStatus = :paymentStatus) " +
             "ORDER BY v.vendorId DESC")
     Page<VendorV1> listVendors(@Param("hostelId") String hostelId,
                                @Param("name") String name,
                                @Param("categoryId") Integer categoryId,
+                               @Param("paymentStatus") VendorPaymentStatus paymentStatus,
                                Pageable pageable);
 
-    @Query("SELECT v.vendorId FROM VendorV1 v " +
+    @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary(" +
+            "COALESCE(SUM(v.totalExpense), 0), COALESCE(SUM(v.totalPaid), 0)) " +
+            "FROM VendorV1 v " +
             "WHERE v.hostelId = :hostelId AND v.isActive = true " +
             "AND (:name IS NULL OR LOWER(CONCAT(v.firstName, ' ', COALESCE(v.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))) " +
-            "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId)")
-    List<Integer> findVendorIdsByFilters(@Param("hostelId") String hostelId,
-                                         @Param("name") String name,
-                                         @Param("categoryId") Integer categoryId);
+            "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId) " +
+            "AND (:paymentStatus IS NULL OR v.paymentStatus = :paymentStatus)")
+    VendorPurchaseSummary summarizeVendors(@Param("hostelId") String hostelId,
+                                           @Param("name") String name,
+                                           @Param("categoryId") Integer categoryId,
+                                           @Param("paymentStatus") VendorPaymentStatus paymentStatus);
 
     VendorV1 findByVendorId(int vendorId);
 
