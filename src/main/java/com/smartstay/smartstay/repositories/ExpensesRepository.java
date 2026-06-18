@@ -47,6 +47,39 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             """, nativeQuery = true)
     List<ExpenseList> findAllExpensesByHostelId(@Param("hostelId") String hostelId);
 
+    @Query(value = """
+            SELECT exp.expense_id as expenseId, exp.unit_count as noOfItems, exp.category_id as categoryId,
+            exp.description, exp.hostel_id as hostelId, exp.bank_id as bankId, exp.sub_category_id as subCategoryId,
+            exp.total_price as totalAmount, exp.transaction_amount as transactionAmount, exp.transaction_date as transactionDate,
+            exp.unit_price as unitPrice, exp.vendor_id as vendorId, exp.expense_number as referenceNumber,
+            exp.title as title, exp.is_vendor_expense as isVendorExpense, exp.payment_status as paymentStatus,
+            exp.paid_amount as paidAmount, exp.balance_amount as balanceAmount, exp.payment_method as paymentMethod, exp.note as note,
+            exp.created_at as createdAt, exp.credit_period as creditPeriod,
+            banking.account_holder_name as holderName, banking.account_type as accountType, banking.bank_name as bankName, expCat.category_name as categoryName,
+            expSub.sub_category_name as subCategoryName FROM expensesv1 exp
+            LEFT OUTER JOIN bankingv1 banking on banking.bank_id=exp.bank_id
+            LEFT OUTER JOIN expense_category expCat on expCat.category_id=exp.category_id
+            LEFT OUTER JOIN expense_sub_category expSub on expSub.sub_category_id=exp.sub_category_id
+            WHERE exp.vendor_id=:vendorId AND exp.is_active=true
+            AND (:search IS NULL OR exp.expense_number LIKE CONCAT('%', :search, '%'))
+            AND (:startDate IS NULL OR DATE(exp.transaction_date) >= DATE(:startDate))
+            AND (:endDate IS NULL OR DATE(exp.transaction_date) <= DATE(:endDate))
+            ORDER BY exp.transaction_date DESC
+            """,
+            countQuery = """
+            SELECT COUNT(*) FROM expensesv1 exp
+            WHERE exp.vendor_id=:vendorId AND exp.is_active=true
+            AND (:search IS NULL OR exp.expense_number LIKE CONCAT('%', :search, '%'))
+            AND (:startDate IS NULL OR DATE(exp.transaction_date) >= DATE(:startDate))
+            AND (:endDate IS NULL OR DATE(exp.transaction_date) <= DATE(:endDate))
+            """,
+            nativeQuery = true)
+    org.springframework.data.domain.Page<ExpenseList> findVendorExpenses(@Param("vendorId") String vendorId,
+                                                                          @Param("search") String search,
+                                                                          @Param("startDate") Date startDate,
+                                                                          @Param("endDate") Date endDate,
+                                                                          Pageable pageable);
+
     @Modifying
     @Query("UPDATE ExpensesV1 e SET e.paymentStatus = :status WHERE e.expenseId IN :expenseIds")
     void updatePaymentStatus(@Param("expenseIds") List<String> expenseIds, @Param("status") ExpensePaymentStatus status);
