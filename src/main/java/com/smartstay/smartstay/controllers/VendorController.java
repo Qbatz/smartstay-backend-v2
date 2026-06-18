@@ -38,8 +38,9 @@ public class VendorController {
     }
 
     @GetMapping("/{vendorId}")
-    public ResponseEntity<?> getVendorById(@PathVariable("vendorId") int vendorId) {
-        return vendorService.getVendorById(vendorId);
+    public ResponseEntity<?> getVendorById(@PathVariable("vendorId") int vendorId,
+                                           @RequestParam(value = "period", required = false) String period) {
+        return vendorService.getVendorById(vendorId, period);
     }
 
     @PostMapping("")

@@ -16,15 +16,20 @@ import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
+import com.smartstay.smartstay.repositories.ExpensePaymentRepository;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.VendorCategoriesRepository;
 import com.smartstay.smartstay.repositories.VendorRepository;
 import com.smartstay.smartstay.responses.vendor.VendorCategoryResponse;
+import com.smartstay.smartstay.responses.vendor.VendorDetailsFilterOptions;
+import com.smartstay.smartstay.responses.vendor.VendorDetailsResponse;
 import com.smartstay.smartstay.responses.vendor.VendorFilterOptions;
+import com.smartstay.smartstay.responses.vendor.VendorFinancialSummary;
 import com.smartstay.smartstay.responses.vendor.VendorListResponse;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
 import com.smartstay.smartstay.responses.vendor.VendorSummary;
+import com.smartstay.smartstay.util.FilterKeywords;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -35,6 +40,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -71,6 +78,9 @@ public class VendorService {
 
     @Autowired
     private ExpensesRepository expensesRepository;
+
+    @Autowired
+    private ExpensePaymentRepository expensePaymentRepository;
 
     private String normalizeMobile(String countryCode, String mobile) {
         if (mobile == null) {
@@ -180,7 +190,7 @@ public class VendorService {
         return new VendorFilterOptions(categoryItems);
     }
 
-    public ResponseEntity<?> getVendorById(Integer id) {
+    public ResponseEntity<?> getVendorById(Integer id, String period) {
         if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
@@ -198,12 +208,100 @@ public class VendorService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         VendorResponse vendorResponse = vendorRepository.getVendor(id);
-        if (vendorResponse != null) {
-            return new ResponseEntity<>(vendorResponse, HttpStatus.OK);
+        if (vendorResponse == null) {
+            return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
 
-        return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
+        VendorV1 vendor = vendorRepository.findByVendorId(id);
 
+        // Null range => complete transaction history.
+        Date[] range = resolvePeriodRange(period);
+        Date startDate = range != null ? range[0] : null;
+        Date endDate = range != null ? range[1] : null;
+
+        String vendorId = String.valueOf(id);
+        double totalExpense = nullSafe(expensesRepository.sumVendorExpense(vendorId, startDate, endDate));
+        double totalPaid = nullSafe(expensePaymentRepository.sumVendorPaid(vendorId, startDate, endDate));
+        long expenseCount = expensesRepository.countVendorExpense(vendorId, startDate, endDate);
+        long paymentsCounts = expensePaymentRepository.countVendorPayments(vendorId, startDate, endDate);
+        VendorFinancialSummary summary = new VendorFinancialSummary(totalExpense, totalPaid,
+                totalExpense - totalPaid, expenseCount, paymentsCounts);
+
+        String createdAt = vendor != null ? toIsoDateTime(vendor.getCreatedAt()) : null;
+
+        VendorDetailsResponse response = new VendorDetailsResponse(vendorResponse, createdAt,
+                buildPeriodFilterOptions(), summary);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private double nullSafe(Double value) {
+        return value != null ? value : 0.0;
+    }
+
+    private String toIsoDateTime(Date date) {
+        if (date == null) {
+            return null;
+        }
+        return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(date);
+    }
+
+    private VendorDetailsFilterOptions buildPeriodFilterOptions() {
+        return new VendorDetailsFilterOptions(List.of(
+                new VendorDetailsFilterOptions.PeriodFilter("This Month", FilterKeywords.THIS_MONTH),
+                new VendorDetailsFilterOptions.PeriodFilter("Last Month", FilterKeywords.LAST_MONTH),
+                new VendorDetailsFilterOptions.PeriodFilter("Last 3 Months", FilterKeywords.LAST_3_MONTH),
+                new VendorDetailsFilterOptions.PeriodFilter("Last 6 Months", FilterKeywords.LAST_6_MONTH)));
+    }
+
+    /**
+     * Resolves the selected period into an inclusive [start, end] range over whole calendar months,
+     * so a record's timestamp component never excludes it (the repository compares on DATE()).
+     * Returns {@code null} when no (or an unrecognised) period is supplied, signalling that the full
+     * transaction history should be considered.
+     */
+    private Date[] resolvePeriodRange(String period) {
+        if (period == null || period.trim().isEmpty()) {
+            return null;
+        }
+        int monthsBack;
+        if (FilterKeywords.THIS_MONTH.equalsIgnoreCase(period)) {
+            monthsBack = 0;
+        } else if (FilterKeywords.LAST_MONTH.equalsIgnoreCase(period)) {
+            // Previous calendar month only.
+            Date start = startOfMonth(-1);
+            Date end = endOfMonth(-1);
+            return new Date[]{start, end};
+        } else if (FilterKeywords.LAST_3_MONTH.equalsIgnoreCase(period)) {
+            monthsBack = 2;
+        } else if (FilterKeywords.LAST_6_MONTH.equalsIgnoreCase(period)) {
+            monthsBack = 5;
+        } else {
+            return null;
+        }
+        // Last N calendar months, inclusive of the current month.
+        return new Date[]{startOfMonth(-monthsBack), endOfMonth(0)};
+    }
+
+    private Date startOfMonth(int monthOffset) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.MONTH, monthOffset);
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        return calendar.getTime();
+    }
+
+    private Date endOfMonth(int monthOffset) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.MONTH, monthOffset);
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
+        return calendar.getTime();
     }
 
     public ResponseEntity<?> updateVendorById(int vendorId, UpdateVendor updateVendor, MultipartFile file) {
