@@ -28,7 +28,8 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     BookingsV1 findLatestBooking(@Param("bedId") int bedId);
 
     @Query(value = """
-            SELECT * FROM bookingsv1 where bed_id=:bedId and current_status in ('CHECKIN', 'NOTICE')
+            SELECT * FROM bookingsv1 WHERE bed_id = :bedId AND (current_status IN ('CHECKIN', 'NOTICE') OR (
+            current_status = 'VACATED' AND checkout_date IS NULL AND leaving_date IS NOT NULL))
             """, nativeQuery = true)
     List<BookingsV1> findOccupiedDetails(@Param("bedId") Integer bedId);
 
