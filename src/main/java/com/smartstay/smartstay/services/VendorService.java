@@ -30,6 +30,8 @@ import com.smartstay.smartstay.responses.expenses.ExpensePaymentResponse;
 import com.smartstay.smartstay.responses.vendor.VendorCategoryResponse;
 import com.smartstay.smartstay.responses.vendor.VendorDetailsFilterOptions;
 import com.smartstay.smartstay.responses.vendor.VendorDetailsResponse;
+import com.smartstay.smartstay.responses.vendor.VendorExpensePaymentResponse;
+import com.smartstay.smartstay.responses.vendor.VendorExpensePaymentsResponse;
 import com.smartstay.smartstay.responses.vendor.VendorExpensesResponse;
 import com.smartstay.smartstay.responses.vendor.VendorFilterOptions;
 import com.smartstay.smartstay.responses.vendor.VendorFinancialSummary;
@@ -323,6 +325,56 @@ public class VendorService {
 
         VendorExpensesResponse response = new VendorExpensesResponse(expensePage.getTotalElements(), pageNumber,
                 expensePage.getTotalPages(), pageSize, expenses);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getVendorExpensePayments(Integer vendorId, String startDate, String endDate,
+                                                      Integer page, Integer size) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
+        if (rolesV1 == null) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        VendorV1 vendor = vendorRepository.findByVendorId(vendorId);
+        if (vendor == null) {
+            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.NO_CONTENT);
+        }
+
+        Date start = (startDate != null && !startDate.trim().isEmpty())
+                ? Utils.stringToDate(startDate.trim(), Utils.DATE_FORMAT_ZOHO) : null;
+        Date end = (endDate != null && !endDate.trim().isEmpty())
+                ? Utils.stringToDate(endDate.trim(), Utils.DATE_FORMAT_ZOHO) : null;
+
+        int pageNumber = (page == null || page < 1) ? 1 : page;
+        int pageSize = (size == null || size < 1) ? 10 : size;
+        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
+
+        Page<ExpensePayment> paymentPage =
+                expensePaymentRepository.findVendorPayments(String.valueOf(vendorId), start, end, pageable);
+
+        List<VendorExpensePaymentResponse> payments = paymentPage.getContent().stream()
+                .map(p -> new VendorExpensePaymentResponse(
+                        p.getId(),
+                        p.getPaidAmount(),
+                        p.getPaymentMethod(),
+                        p.getExpenseId(),
+                        p.getBankId(),
+                        p.getHostelId(),
+                        Utils.dateToString(p.getPaymentDate()),
+                        p.getTransactionId(),
+                        p.getNotes(),
+                        p.getImageUrl()))
+                .toList();
+
+        VendorExpensePaymentsResponse response = new VendorExpensePaymentsResponse(paymentPage.getTotalElements(),
+                pageNumber, paymentPage.getTotalPages(), pageSize, payments);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
