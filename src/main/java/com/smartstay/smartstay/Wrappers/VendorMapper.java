@@ -29,6 +29,7 @@ public class VendorMapper implements Function<VendorV1, VendorResponse> {
                 vendorV1.getVendorCategory(),
                 null,
                 vendorV1.getContactPerson(),
+                vendorV1.getContactPersonMobile(),
                 vendorV1.getDescription(),
                 vendorV1.getVendorCode(),
                 vendorV1.getGst(),

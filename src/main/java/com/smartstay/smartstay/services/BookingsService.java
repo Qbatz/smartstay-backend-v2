@@ -1394,4 +1394,15 @@ public class BookingsService {
 
         return listBookings;
     }
+
+    public double getCurrentRent(String customerId) {
+        BookingsV1 bookingsV1 = bookingsRepository.findByCustomerId(customerId);
+        if (bookingsV1 == null) {
+            return 0.0;
+        }
+        if (bookingsV1.getRentAmount() == null) {
+            return 0.0;
+        }
+        return bookingsV1.getRentAmount();
+    }
 }

@@ -29,13 +29,38 @@ public class VendorController {
     VendorService vendorService;
 
     @GetMapping("/all-vendors/{hostelId}")
-    public ResponseEntity<?> getAllVendors(@PathVariable("hostelId") String hostelId) {
-        return vendorService.getAllVendors(hostelId);
+    public ResponseEntity<?> getAllVendors(@PathVariable("hostelId") String hostelId,
+                                           @RequestParam(value = "name", required = false) String name,
+                                           @RequestParam(value = "categoryId", required = false) Integer categoryId,
+                                           @RequestParam(value = "paymentStatus", required = false) String paymentStatus,
+                                           @RequestParam(value = "page", defaultValue = "1") int page,
+                                           @RequestParam(value = "size", defaultValue = "10") int size) {
+        return vendorService.getAllVendors(hostelId, name, categoryId, paymentStatus, page, size);
     }
 
     @GetMapping("/{vendorId}")
-    public ResponseEntity<?> getVendorById(@PathVariable("vendorId") int vendorId) {
-        return vendorService.getVendorById(vendorId);
+    public ResponseEntity<?> getVendorById(@PathVariable("vendorId") int vendorId,
+                                           @RequestParam(value = "period", required = false) String period) {
+        return vendorService.getVendorById(vendorId, period);
+    }
+
+    @GetMapping("/expenses/{vendorId}")
+    public ResponseEntity<?> getVendorExpenses(@PathVariable("vendorId") int vendorId,
+                                               @RequestParam(value = "search", required = false) String search,
+                                               @RequestParam(value = "startDate", required = false) String startDate,
+                                               @RequestParam(value = "endDate", required = false) String endDate,
+                                               @RequestParam(value = "page", defaultValue = "1") int page,
+                                               @RequestParam(value = "size", defaultValue = "10") int size) {
+        return vendorService.getVendorExpenses(vendorId, search, startDate, endDate, page, size);
+    }
+
+    @GetMapping("/expense-payments/{vendorId}")
+    public ResponseEntity<?> getVendorExpensePayments(@PathVariable("vendorId") int vendorId,
+                                                      @RequestParam(value = "startDate", required = false) String startDate,
+                                                      @RequestParam(value = "endDate", required = false) String endDate,
+                                                      @RequestParam(value = "page", defaultValue = "1") int page,
+                                                      @RequestParam(value = "size", defaultValue = "10") int size) {
+        return vendorService.getVendorExpensePayments(vendorId, startDate, endDate, page, size);
     }
 
     @PostMapping("")
@@ -59,12 +84,12 @@ public class VendorController {
     }
 
     @GetMapping("/categories")
-    public ResponseEntity<?> getAllVendorCategories() {
-        return vendorService.getAllVendorCategories();
+    public ResponseEntity<?> getAllVendorCategories(@RequestParam("hostelId") String hostelId) {
+        return vendorService.getAllVendorCategories(hostelId);
     }
 
     @PostMapping("/categories/{categoryId}/delete")
-    public ResponseEntity<?> deleteVendorCategory(@PathVariable("categoryId") int categoryId) {
-        return vendorService.deleteVendorCategory(categoryId);
+    public ResponseEntity<?> deleteVendorCategory(@PathVariable("categoryId") int categoryId, @RequestParam("hostelId") String hostelId) {
+        return vendorService.deleteVendorCategory(categoryId, hostelId);
     }
 }

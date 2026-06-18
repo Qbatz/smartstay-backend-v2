@@ -80,13 +80,18 @@ public class ExpenseController {
     }
 
     @GetMapping("/units")
-    public ResponseEntity<?> getAllUnits() {
-        return expenseService.getAllUnits();
+    public ResponseEntity<?> getAllUnits(@RequestParam("hostelId") String hostelId) {
+        return expenseService.getAllUnits(hostelId);
     }
 
     @PutMapping("/units/{unitId}")
     public ResponseEntity<?> updateUnit(@PathVariable("unitId") int unitId, @Valid @RequestBody AddUnit payLoads) {
         return expenseService.updateUnit(unitId, payLoads);
+    }
+
+    @DeleteMapping("/units/{unitId}")
+    public ResponseEntity<?> deleteUnit(@PathVariable("unitId") int unitId, @RequestParam("hostelId") String hostelId) {
+        return expenseService.deleteUnit(unitId, hostelId);
     }
 
     @PostMapping("/payment")

@@ -1348,13 +1348,13 @@ public class CustomersService {
         }
 
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
-        if (Utils.compareWithTwoDates(checkoutDate, billingDates.currentBillStartDate()) < 0) {
-            return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
-        }
-
-        if (Utils.compareWithTwoDates(checkoutDate, requestDate) < 0) {
-            return new ResponseEntity<>(Utils.CHECKOUT_DATE_MUST_AFTER_REQUEST_DATE, HttpStatus.BAD_REQUEST);
-        }
+//        if (Utils.compareWithTwoDates(checkoutDate, billingDates.currentBillStartDate()) < 0) {
+//            return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
+//        }
+//
+//        if (Utils.compareWithTwoDates(checkoutDate, requestDate) < 0) {
+//            return new ResponseEntity<>(Utils.CHECKOUT_DATE_MUST_AFTER_REQUEST_DATE, HttpStatus.BAD_REQUEST);
+//        }
 
         customers.setCurrentStatus(CustomerStatus.NOTICE.name());
 
@@ -1720,9 +1720,9 @@ public class CustomersService {
             if (Utils.compareWithTwoDates(lDate, new Date()) > 0) {
                 return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
             }
-            if (Utils.compareWithTwoDates(lDate, billDate.currentBillStartDate()) < 0) {
-                return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
-            }
+//            if (Utils.compareWithTwoDates(lDate, billDate.currentBillStartDate()) < 0) {
+//                return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+//            }
         } else {
             lDate = new Date();
         }
@@ -1858,13 +1858,17 @@ public class CustomersService {
             }
         }
 
-        if (currentMonthRentInfo.currentRentPaid() > currentMonthRentInfo.currentPayableRent()) {
-            label = "Refundable rent";
-            payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
-        } else {
-            label = "Payable rent";
-            payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+        if (currentMonthRentInfo != null) {
+            if (currentMonthRentInfo.currentRentPaid() > currentMonthRentInfo.currentPayableRent()) {
+                label = "Refundable rent";
+                payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+            } else {
+                label = "Payable rent";
+                payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+            }
         }
+
+
         if (ebInfo != null) {
             ebAmount = ebInfo.pendingEbAmount();
         }
@@ -1872,10 +1876,14 @@ public class CustomersService {
         com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
         unpaidInvoiceAmount = unpaidInvoices.unpaidAmount();
-        amountToBePaid = unpaidInvoices.invoiceTotalAmount() + ebAmount + walletAmount + currentMonthRentInfo.currentMonthTotalAmount();
-        double paidAmount = unpaidInvoices.paidAmount() + currentMonthRentInfo.currentRentPaid();
-
-        payableRent = unpaidInvoices.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
+        amountToBePaid = unpaidInvoices.invoiceTotalAmount() + ebAmount + walletAmount;
+        double paidAmount = unpaidInvoices.paidAmount();
+        payableRent = unpaidInvoices.unpaidAmount();
+        if (currentMonthRentInfo != null) {
+            amountToBePaid = amountToBePaid + currentMonthRentInfo.currentMonthTotalAmount();
+            paidAmount = paidAmount + currentMonthRentInfo.currentRentPaid();
+            payableRent = payableRent + currentMonthRentInfo.currentMonthPayableAmount();
+        }
 
         amountToBePaid = amountToBePaid - paidAmount;
         amountToBePaid = amountToBePaid + deductionAmount;
@@ -2244,14 +2252,15 @@ public class CustomersService {
     private RentInfo getRentInfoForPostpaidHostels(Customers customers, BookingsV1 bookingsV1, Date leavingDate, BillingDates currentMonthBillingDates) {
         List<RentBreakUp> listRentBreakup = bookingsService.getRentBreakup(customers, bookingsV1, leavingDate, currentMonthBillingDates);
         List<CurrentMonthOtherItems> currentMonthOtherItems = new ArrayList<>();
-        List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customers.getCustomerId());
+
         Date startDate = null;
-        Date endDate = null;
         if (Utils.compareWithTwoDates(bookingsV1.getJoiningDate(), currentMonthBillingDates.currentBillStartDate()) < 0) {
             startDate = currentMonthBillingDates.currentBillStartDate();
         } else {
             startDate = bookingsV1.getJoiningDate();
         }
+
+        List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customers.getCustomerId(), startDate, leavingDate);
         final double[] otherItemAMount = {0.0};
         long totalDaysStayed = Utils.findNumberOfDays(startDate, leavingDate);
         long totalDaysInAMonth = Utils.findNumberOfDays(currentMonthBillingDates.currentBillStartDate(), currentMonthBillingDates.currentBillEndDate());
@@ -2533,16 +2542,16 @@ public class CustomersService {
                 return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             } else {
                 if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-                    //done full rent
+
                     return generateFinalSettlementForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users, isFullRentCollected, customRent);
                 }
-                //pending full rent
+
                 return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             }
         } else {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 BillingDates customerBillingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), settlementDetails.getLeavingDate());
-                //done rent full
+
                 return generateFinalSettlementForJoininBasedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, customerBillingDates, settlement, users, isFullRentCollected, customRent);
             }
         }
@@ -2957,7 +2966,7 @@ public class CustomersService {
                     RentInfo rentInfo = settlementInfo.currentMonthRentInfo();
                     if (rentInfo != null) {
                         if (!customRent.equals(rentInfo.currentMonthRent())) {
-                            differenceAmount = customRent - rentInfo.currentMonthRent();
+                            differenceAmount = customRent - rentInfo.fullRent() + rentInfo.rentDifference();
                             if (differenceAmount < 0) {
                                 differenceAmount = differenceAmount * -1;
                             }
@@ -2982,7 +2991,14 @@ public class CustomersService {
         double amountToBePaidWithoutDeductions = totalAmountToBePaid - deductionAmount;
 //        leavingDate, users, isAdvancePaid
 
-        InvoicesV1 settlementInvoice = invoiceService.createSettlementInvoiceForFixedPrepaid(customers, customers.getHostelId(), totalAmountToBePaid, listUnpaidInvoices, lisDeductions, amountToBePaidWithoutDeductions, leavingDate, users, isAdvancePaid, checkInDeductions);
+        List<InvoicesV1> unpaidInvoices = invoiceService.findUnpaidInvoices(customers.getCustomerId());
+        List<String> unpaidInvoiceIds = unpaidInvoices
+                .stream()
+                .map(InvoicesV1::getInvoiceId)
+                .toList();
+
+
+        InvoicesV1 settlementInvoice = invoiceService.createSettlementInvoiceForFixedPrepaid(customers, customers.getHostelId(), totalAmountToBePaid, unpaidInvoiceIds, lisDeductions, amountToBePaidWithoutDeductions, leavingDate, users, isAdvancePaid, checkInDeductions);
 
         CustomerWallet cw = customers.getWallet();
         if (cw != null) {
@@ -3117,7 +3133,7 @@ public class CustomersService {
                         }
                         else {
                             fullRent = customRent;
-                            rentDifference = customRent - currentMonthRentInfo.currentPayableRent();
+                            rentDifference = customRent - currentMonthRentInfo.fullRent() + currentMonthRentInfo.rentDifference();
                             if (rentDifference < 0) {
                                 rentDifference = rentDifference * -1;
                             }
@@ -3257,30 +3273,69 @@ public class CustomersService {
             }
         }
 
+//        if (isFullRentCollected) {
+//            double difference = 0.0;
+//            if (fullRent == 0) {
+//                RentInfo rentInfo = settlement.currentMonthRentInfo();
+//                if (rentInfo != null) {
+//                    if (rentInfo.fullRent() != null) {
+//                        customRent = rentInfo.fullRent();
+//                    }
+//                    fullRent = rentInfo.fullRent();
+//                    difference = rentInfo.rentDifference();
+//                }
+//            }
+//            else {
+//                RentInfo rentInfo = settlement.currentMonthRentInfo();
+//                if (rentInfo != null) {
+//                    difference = fullRent - rentInfo.currentMonthTotalAmount();
+//                    if (difference < 0) {
+//                        difference = difference * -1;
+//                    }
+//                }
+//            }
+//
+//            amountToBePaid = amountToBePaid + difference;
+//        }
+
         if (isFullRentCollected) {
             double difference = 0.0;
-            if (fullRent == 0) {
-                RentInfo rentInfo = settlement.currentMonthRentInfo();
-                if (rentInfo != null) {
-                    if (rentInfo.fullRent() != null) {
-                        customRent = rentInfo.fullRent();
-                    }
-                    fullRent = rentInfo.fullRent();
-                    difference = rentInfo.rentDifference();
-                }
-            }
-            else {
-                RentInfo rentInfo = settlement.currentMonthRentInfo();
-                if (rentInfo != null) {
-                    difference = fullRent - rentInfo.currentMonthTotalAmount();
-                    if (difference < 0) {
-                        difference = difference * -1;
+                if (customRent == 0) {
+                    RentInfo rentInfo = settlement.currentMonthRentInfo();
+                    if (rentInfo != null) {
+                        if (rentInfo.fullRent() != null) {
+                            customRent = rentInfo.fullRent();
+                        }
+                        difference = rentInfo.rentDifference();
                     }
                 }
-            }
+                else {
+                    RentInfo rentInfo = settlement.currentMonthRentInfo();
+                    if (rentInfo != null) {
+                        if (!rentInfo.currentMonthRent().equals(fullRent)) {
+                            difference = customRent - rentInfo.fullRent() + rentInfo.rentDifference();
+                            if (difference < 0) {
+                                difference = difference * -1;
+                            }
+                        }
+                        else {
+                            difference =  rentInfo.rentDifference();
+                        }
+
+                    }
+                }
+//            }
+//            else {
+//                RentInfo rentInfo = settlementInfo.currentMonthRentInfo();
+//                if (rentInfo != null) {
+//                    differenceAmount = rentInfo.rentDifference();
+//                }
+//            }
 
             amountToBePaid = amountToBePaid + difference;
         }
+
+//        double amountToBePaidWithoutDeductions = totalAmountToBePaid - deductionAmount;
 
         List<Deductions> lisDeductions = new ArrayList<>();
         if (deductions != null && !deductions.isEmpty()) {
@@ -3397,6 +3452,7 @@ public class CustomersService {
             }
         }
 
+
         SettlementInfo info = settlement.settlementInfo();
         if (info != null) {
             amountToBePaid = info.amountTobePaid();
@@ -3408,32 +3464,57 @@ public class CustomersService {
 
         }
 
+//        if (isFullRentCollected) {
+//            if (customRent != null) {
+//                if (customRent == 0) {
+//                    RentInfo rentInfo = settlement.currentMonthRentInfo();
+//                    if (rentInfo != null) {
+//                        differenceAmount = rentInfo.rentDifference();
+//                    }
+//                }
+//                else {
+//                    RentInfo rentInfo = settlement.currentMonthRentInfo();
+//                    if (rentInfo != null) {
+//                        differenceAmount = customRent - rentInfo.currentPayableRent();
+//                        if (differenceAmount < 0) {
+//                            differenceAmount = differenceAmount * -1;
+//                        }
+//                    }
+//                }
+//            }
+//            else {
+//                RentInfo rentInfo = settlement.currentMonthRentInfo();
+//                if (rentInfo != null) {
+//                    differenceAmount = rentInfo.rentDifference();
+//                }
+//            }
+//
+//            amountToBePaid = amountToBePaid + differenceAmount;
+//        }
+
         if (isFullRentCollected) {
-            if (customRent != null) {
-                if (customRent == 0) {
-                    RentInfo rentInfo = settlement.currentMonthRentInfo();
-                    if (rentInfo != null) {
-                        differenceAmount = rentInfo.rentDifference();
+            double difference = 0.0;
+            if (customRent == 0) {
+                RentInfo rentInfo = settlement.currentMonthRentInfo();
+                if (rentInfo != null) {
+                    if (rentInfo.fullRent() != null) {
+                        customRent = rentInfo.fullRent();
                     }
-                }
-                else {
-                    RentInfo rentInfo = settlement.currentMonthRentInfo();
-                    if (rentInfo != null) {
-                        differenceAmount = customRent - rentInfo.currentPayableRent();
-                        if (differenceAmount < 0) {
-                            differenceAmount = differenceAmount * -1;
-                        }
-                    }
+                    customRent = rentInfo.fullRent();
+                    difference = rentInfo.rentDifference();
                 }
             }
             else {
                 RentInfo rentInfo = settlement.currentMonthRentInfo();
                 if (rentInfo != null) {
-                    differenceAmount = rentInfo.rentDifference();
+                    difference = customRent - rentInfo.currentMonthTotalAmount();
+                    if (difference < 0) {
+                        difference = difference * -1;
+                    }
                 }
             }
 
-            amountToBePaid = amountToBePaid + differenceAmount;
+            amountToBePaid = amountToBePaid + difference;
         }
 
 
@@ -3444,8 +3525,9 @@ public class CustomersService {
             lisDeductions.addAll(deductions.stream().map(i -> new Deductions(i.item(), i.amount(), 0.0)).toList());
         }
 
+        List<InvoicesV1> unpaidInvoiceIds = invoiceService.findUnpaidInvoices(customers.getCustomerId());
 
-        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), listUnpaidInvoices, lisDeductions, amoutToBePaidWithoutDeductions, settlementDetails.getLeavingDate(), users, checkInDeductions);
+        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), unpaidInvoiceIds, lisDeductions, amoutToBePaidWithoutDeductions, settlementDetails.getLeavingDate(), users, checkInDeductions);
 //        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
         SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), invoicesV1.getInvoiceId(), settlement, isFullRentCollected, customRent);
         CustomerWallet cw = customers.getWallet();

@@ -25,6 +25,8 @@ public class ExpensePayment {
     private Long id;
 
     private String expenseId;
+    private String hostelId;
+    private String vendorId;
     private Double paidAmount;
     private String paymentMethod;
     private String bankId;

@@ -6,7 +6,8 @@ import com.smartstay.smartstay.dto.invoices.AppliedInvoices;
 
 import java.util.List;
 
-public record InvoiceInfo(Double subTotal,
+public record InvoiceInfo(String invoiceId,
+        Double subTotal,
                           Double taxAmount,
                           Double taxPercentage,
                           Double totalAmount,

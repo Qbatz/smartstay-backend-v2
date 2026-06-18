@@ -1,6 +1,11 @@
 package com.smartstay.smartstay.responses.vendor;
 
-public record VendorResponse(
+/**
+ * Flat, key-value vendor representation returned to mobile clients (as opposed to the dynamic
+ * column-based rows used by the web listing). Mirrors {@link VendorResponse} plus the denormalized
+ * financial summary stored on the vendor row.
+ */
+public record VendorMobileResponse(
         int id,
         String firstName,
         String lastName,
@@ -28,6 +33,10 @@ public record VendorResponse(
         String pan,
         Boolean allowCredit,
         Double creditLimit,
-        Integer creditPeriod
-) {
+        Integer creditPeriod,
+        String createdAt,
+        String paymentStatus,
+        double totalExpenseAmount,
+        double totalPaidAmount,
+        double totalBalance) {
 }

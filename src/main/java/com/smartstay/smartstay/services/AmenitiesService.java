@@ -392,8 +392,26 @@ public class AmenitiesService {
         );
     }
 
-    public List<CustomersAmenity> getAllAmenitiesByCustomerId(String customerId) {
-        return customerAmenityRepository.findByCustomerId(customerId);
+    /**
+     * this is mainly for final settlement.
+     *
+     * @param customerId
+     * @param startDate
+     * @param endDate
+     * @return
+     */
+    public List<Amenities> getAmenitiesByCustomerId(String customerId, Date startDate, Date endDate) {
+        List<CustomersAmenity> listCustomerAmenities = customerAmenityRepository.findCustomerAmenityForSettlement(customerId, startDate, endDate);
+        List<String> amenityIds = listCustomerAmenities
+                .stream()
+                .map(CustomersAmenity::getAmenityId)
+                .toList();
+        List<AmenitiesV1> amenities = amentityRepository.findAllById(amenityIds);
+
+        return listCustomerAmenities
+                .stream()
+                .map(i -> new CustomerAmenityMapper(amenities).apply(i))
+                .toList();
     }
 
     public List<Amenities> getAmenitiesByCustomerId(String customerId) {
@@ -409,6 +427,7 @@ public class AmenitiesService {
                 .map(i -> new CustomerAmenityMapper(amenities).apply(i))
                 .toList();
     }
+
 
     public ResponseEntity<?> assignToCustomer(String hostelId, AssignCustomer assignCustomer) {
         if (!authentication.isAuthenticated()) {

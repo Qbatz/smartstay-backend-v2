@@ -87,6 +87,9 @@ public class ExpenseService {
     private VendorRepository vendorRepository;
 
     @Autowired
+    private VendorFinancialService vendorFinancialService;
+
+    @Autowired
     private UploadFileToS3 uploadToS3;
 
     public ResponseEntity<?> addUnit(AddUnit payloads) {
@@ -100,8 +103,9 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        String hostelId = payloads.hostelId();
         String unitName = payloads.unitName().trim();
-        Units existingUnit = unitsRepository.findByUnitNameIgnoreCase(unitName);
+        Units existingUnit = unitsRepository.findByUnitNameIgnoreCaseAndHostelId(unitName, hostelId);
         if (existingUnit != null) {
             if (existingUnit.isEnabled()) {
                 return new ResponseEntity<>(Utils.UNIT_ALREADY_ADDED, HttpStatus.BAD_REQUEST);
@@ -115,6 +119,7 @@ public class ExpenseService {
 
         Units units = new Units();
         units.setUnitName(unitName);
+        units.setHostelId(hostelId);
         units.setEnabled(true);
         units.setAddedBy(userId);
         units.setCreatedAt(new Date());
@@ -136,13 +141,14 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        Units existingUnit = unitsRepository.findByUnitId(unitId);
+        String hostelId = payloads.hostelId();
+        Units existingUnit = unitsRepository.findByUnitIdAndHostelId(unitId, hostelId);
         if (existingUnit == null || !existingUnit.isEnabled()) {
             return new ResponseEntity<>(Utils.INVALID_UNIT, HttpStatus.BAD_REQUEST);
         }
 
         String unitName = payloads.unitName().trim();
-        Units duplicateUnit = unitsRepository.findByUnitNameIgnoreCase(unitName);
+        Units duplicateUnit = unitsRepository.findByUnitNameIgnoreCaseAndHostelId(unitName, hostelId);
         if (duplicateUnit != null && duplicateUnit.isEnabled() && !duplicateUnit.getUnitId().equals(unitId)) {
             return new ResponseEntity<>(Utils.UNIT_ALREADY_ADDED, HttpStatus.BAD_REQUEST);
         }
@@ -155,7 +161,7 @@ public class ExpenseService {
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getAllUnits() {
+    public ResponseEntity<?> getAllUnits(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -166,8 +172,32 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<UnitResponse> units = unitsRepository.findAllEnabledUnits();
+        List<UnitResponse> units = unitsRepository.findAllEnabledUnitsByHostelId(hostelId);
         return new ResponseEntity<>(units, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> deleteUnit(int unitId, String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Units existingUnit = unitsRepository.findByUnitIdAndHostelId(unitId, hostelId);
+        if (existingUnit == null || !existingUnit.isEnabled()) {
+            return new ResponseEntity<>(Utils.INVALID_UNIT, HttpStatus.BAD_REQUEST);
+        }
+
+        existingUnit.setEnabled(false);
+        existingUnit.setModifiedAt(new Date());
+        existingUnit.setModifiedBy(userId);
+        unitsRepository.save(existingUnit);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 
     public ResponseEntity<?> initializeToAddExpense(String hostelId) {
@@ -197,6 +227,7 @@ public class ExpenseService {
 
     }
 
+    @Transactional
     public ResponseEntity<?> addExpense(String hostelId, Expense expense) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -273,7 +304,8 @@ public class ExpenseService {
         expensesV1.setDescription(expense.description());
         expensesV1.setTitle(expense.title());
         expensesV1.setIsVendorExpense(expense.isVendorExpense());
-        expensesV1.setVendorId(expense.vendorId() == null ? null : String.valueOf(expense.vendorId()));
+        String vendorId = expense.vendorId() == null ? null : String.valueOf(expense.vendorId());
+        expensesV1.setVendorId(vendorId);
         expensesV1.setPaymentStatus(ExpensePaymentStatus.fromString(expense.paymentStatus()));
         if (Boolean.TRUE.equals(expense.isVendorExpense()) && expense.vendorId() != null) {
             VendorV1 vendor = vendorRepository.findByVendorId(expense.vendorId());
@@ -301,6 +333,8 @@ public class ExpenseService {
             for (ExpenseItemPayload itemPayload : expense.expenseItems()) {
                 ExpenseItem expenseItem = new ExpenseItem();
                 expenseItem.setExpenseId(expV1.getExpenseId());
+                expenseItem.setHostelId(hostelId);
+                expenseItem.setVendorId(vendorId);
                 expenseItem.setItem(itemPayload.item());
                 expenseItem.setQuantity(itemPayload.quantity());
                 expenseItem.setUnitId(itemPayload.unitId());
@@ -314,12 +348,19 @@ public class ExpenseService {
         if (expense.paidAmount() != null && expense.paidAmount() > 0) {
             ExpensePayment expensePayment = new ExpensePayment();
             expensePayment.setExpenseId(expV1.getExpenseId());
+            expensePayment.setHostelId(hostelId);
+            expensePayment.setVendorId(vendorId);
             expensePayment.setPaidAmount(expense.paidAmount());
             expensePayment.setPaymentMethod(expense.paymentMethod());
             expensePayment.setBankId(expense.bankId());
             expensePayment.setPaymentDate(expensesV1.getTransactionDate());
             expensePayment.setNotes(expense.note());
             expensePaymentRepository.save(expensePayment);
+        }
+
+        // Keep the vendor's denormalized financial summary in sync.
+        if (vendorId != null) {
+            vendorFinancialService.recalculate(vendorId);
         }
 
         usersService.addUserLog(hostelId, expV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.CREATE, users);
@@ -368,6 +409,8 @@ public class ExpenseService {
 
         ExpensePayment expensePayment = new ExpensePayment();
         expensePayment.setExpenseId(expensesV1.getExpenseId());
+        expensePayment.setHostelId(expensesV1.getHostelId());
+        expensePayment.setVendorId(expensesV1.getVendorId());
         expensePayment.setPaidAmount(payload.amount());
         expensePayment.setPaymentMethod(payload.paymentMethod());
         expensePayment.setBankId(payload.bankId());
@@ -398,6 +441,11 @@ public class ExpenseService {
         expensesV1.setUpdatedAt(new Date());
         expensesV1.setUpdatedBy(authentication.getName());
         expensesRepository.save(expensesV1);
+
+        // Keep the vendor's denormalized financial summary in sync with the new payment.
+        if (expensesV1.getVendorId() != null) {
+            vendorFinancialService.recalculate(expensesV1.getVendorId());
+        }
 
         usersService.addUserLog(expensesV1.getHostelId(), expensesV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
 
@@ -765,6 +813,7 @@ public class ExpenseService {
                 .build();
     }
 
+    @Transactional
     public ResponseEntity<?> updateExpense(String hostelId, String expenseId, UpdateExpense updateExpense) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -881,6 +930,11 @@ public class ExpenseService {
             bankTransactionService.updateExpenseTransactions(hostelId, expenseId, updateExpense.totalAmount(), priceDifference, updateExpense.purchaseDate());
         }
 
+        // Keep the vendor's denormalized financial summary in sync after an amount change.
+        if (expensesV1.getVendorId() != null) {
+            vendorFinancialService.recalculate(expensesV1.getVendorId());
+        }
+
         usersService.addUserLog(hostelId, expenseId, ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
@@ -911,10 +965,16 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
         }
 
+        String vendorId = expensesV1.getVendorId();
         if (bankTransactionService.deleteExpnese(hostelId, expenseId)) {
             expenseItemRepository.deleteByExpenseId(expenseId);
             expensePaymentRepository.deleteByExpenseId(expenseId);
             expensesRepository.delete(expensesV1);
+
+            // Recompute the vendor summary now that this expense and its payments are gone.
+            if (vendorId != null) {
+                vendorFinancialService.recalculate(vendorId);
+            }
 
             usersService.addUserLog(hostelId, expenseId, ActivitySource.EXPENSE, ActivitySourceType.DELETE, users);
 

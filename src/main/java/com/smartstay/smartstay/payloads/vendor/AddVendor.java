@@ -26,8 +26,8 @@ public record AddVendor(
 
         Integer vendorCategory,
         String contactPerson,
+        String contactPersonMobile,
         String description,
-        String vendorCode,
         String gst,
         String pan,
         Boolean allowCredit,
