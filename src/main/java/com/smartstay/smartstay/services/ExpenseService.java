@@ -40,6 +40,8 @@ import com.smartstay.smartstay.responses.expenses.ExpenseSummary;
 import com.smartstay.smartstay.responses.expenses.ExpensesMobileResponse;
 import com.smartstay.smartstay.responses.expenses.ExpensesWebResponse;
 import com.smartstay.smartstay.responses.expenses.UnitResponse;
+import com.smartstay.smartstay.responses.vendor.VendorExpenseSummary;
+import com.smartstay.smartstay.responses.vendor.VendorInitialize;
 import com.smartstay.smartstay.responses.vendor.VendorInitializeResponse;
 import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
@@ -259,6 +261,42 @@ public class ExpenseService {
 
         return new ResponseEntity<>(initializeExpenses, HttpStatus.OK);
 
+    }
+
+    /**
+     * Initialize data for settling a vendor's expenses: the hostel's banks (same source as
+     * {@link #initializeToAddExpense}) plus a lightweight summary of every expense raised against
+     * the vendor. The expense summaries are produced by a single projection query (no N+1).
+     */
+    public ResponseEntity<?> initializeVendorSettlement(String hostelId, int vendorId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        // Vendor must exist and belong to the supplied hostel.
+        VendorV1 vendor = vendorRepository.findByVendorId(vendorId);
+        if (vendor == null || !hostelId.equalsIgnoreCase(vendor.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.BAD_REQUEST);
+        }
+
+        List<DebitsBank> listBanks = bankingService.getAllBankForReturn(hostelId);
+        List<VendorExpenseSummary> expenses = expensesRepository.findVendorExpenseSummaries(String.valueOf(vendorId));
+
+        VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @Transactional

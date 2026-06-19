@@ -40,6 +40,12 @@ public class VendorController {
         return expenseService.settleVendorExpenses(vendorId, images, payLoads);
     }
 
+    @GetMapping("/initialize/{hostelId}/{vendorId}")
+    public ResponseEntity<?> initializeVendorSettlement(@PathVariable("hostelId") String hostelId,
+                                                        @PathVariable("vendorId") int vendorId) {
+        return expenseService.initializeVendorSettlement(hostelId, vendorId);
+    }
+
     @GetMapping("/all-vendors/{hostelId}")
     public ResponseEntity<?> getAllVendors(@PathVariable("hostelId") String hostelId,
                                            @RequestParam(value = "name", required = false) String name,
