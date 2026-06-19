@@ -80,6 +80,51 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
                                                                           @Param("endDate") Date endDate,
                                                                           Pageable pageable);
 
+    @Query(value = """
+            SELECT exp.expense_id as expenseId, exp.unit_count as noOfItems, exp.category_id as categoryId,
+            exp.description, exp.hostel_id as hostelId, exp.bank_id as bankId, exp.sub_category_id as subCategoryId,
+            exp.total_price as totalAmount, exp.transaction_amount as transactionAmount, exp.transaction_date as transactionDate,
+            exp.unit_price as unitPrice, exp.vendor_id as vendorId, exp.expense_number as referenceNumber,
+            exp.title as title, exp.is_vendor_expense as isVendorExpense, exp.payment_status as paymentStatus,
+            exp.paid_amount as paidAmount, exp.balance_amount as balanceAmount, exp.payment_method as paymentMethod, exp.note as note,
+            exp.created_at as createdAt, exp.credit_period as creditPeriod,
+            banking.account_holder_name as holderName, banking.account_type as accountType, banking.bank_name as bankName, expCat.category_name as categoryName,
+            expSub.sub_category_name as subCategoryName FROM expensesv1 exp
+            LEFT OUTER JOIN bankingv1 banking on banking.bank_id=exp.bank_id
+            LEFT OUTER JOIN expense_category expCat on expCat.category_id=exp.category_id
+            LEFT OUTER JOIN expense_sub_category expSub on expSub.sub_category_id=exp.sub_category_id
+            WHERE exp.hostel_id=:hostelId AND exp.is_active=true
+            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%'))
+            AND (:categoryId IS NULL OR exp.category_id=:categoryId)
+            ORDER BY exp.transaction_date DESC
+            """,
+            countQuery = """
+            SELECT COUNT(*) FROM expensesv1 exp
+            WHERE exp.hostel_id=:hostelId AND exp.is_active=true
+            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%'))
+            AND (:categoryId IS NULL OR exp.category_id=:categoryId)
+            """,
+            nativeQuery = true)
+    org.springframework.data.domain.Page<ExpenseList> findExpensesForHostel(@Param("hostelId") String hostelId,
+                                                                             @Param("name") String name,
+                                                                             @Param("categoryId") Long categoryId,
+                                                                             Pageable pageable);
+
+    @Query(value = """
+            SELECT
+              COALESCE(SUM(exp.total_price), 0) as totalExpenseAmount,
+              COALESCE(SUM(CASE WHEN exp.payment_status = 'Full' THEN exp.total_price ELSE 0 END), 0) as totalPaidAmount,
+              COALESCE(SUM(CASE WHEN exp.payment_status IN ('Pending', 'Overdue') THEN exp.total_price ELSE 0 END), 0) as totalUnPaidAmount,
+              COALESCE(SUM(CASE WHEN exp.payment_status = 'Partial' THEN exp.total_price ELSE 0 END), 0) as totalPartialPaidAmount
+            FROM expensesv1 exp
+            WHERE exp.hostel_id=:hostelId AND exp.is_active=true
+            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%'))
+            AND (:categoryId IS NULL OR exp.category_id=:categoryId)
+            """, nativeQuery = true)
+    com.smartstay.smartstay.dto.expenses.ExpenseSummaryView getExpenseListSummary(@Param("hostelId") String hostelId,
+                                                                                  @Param("name") String name,
+                                                                                  @Param("categoryId") Long categoryId);
+
     @Modifying
     @Query("UPDATE ExpensesV1 e SET e.paymentStatus = :status WHERE e.expenseId IN :expenseIds")
     void updatePaymentStatus(@Param("expenseIds") List<String> expenseIds, @Param("status") ExpensePaymentStatus status);
