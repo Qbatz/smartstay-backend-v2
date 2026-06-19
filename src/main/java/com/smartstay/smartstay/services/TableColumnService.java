@@ -142,6 +142,89 @@ public class TableColumnService {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    public List<ColumnFilters> getExpenseColumns(String hostelId, String moduleName) {
+        List<ColumnFilters> defaults = filterOptionsService.findExpenseBasicFilters();
+        TableColumns expenseTableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, authentication.getName(), moduleName);
+        if (expenseTableColumns == null || expenseTableColumns.getColumns() == null || expenseTableColumns.getColumns().isEmpty()) {
+            return defaults;
+        }
+
+        // Honour the user's saved preference, but append any newly-introduced default columns
+        // that aren't in the stored config yet, so they aren't lost.
+        List<ColumnFilters> merged = new ArrayList<>(expenseTableColumns.getColumns());
+        Set<String> savedNames = new LinkedHashSet<>();
+        for (ColumnFilters saved : merged) {
+            if (saved.getFieldName() != null) {
+                savedNames.add(saved.getFieldName().trim().toLowerCase());
+            }
+        }
+        int maxOrder = merged.stream().mapToInt(ColumnFilters::getOrder).max().orElse(0);
+        for (ColumnFilters def : defaults) {
+            String defName = def.getFieldName() == null ? "" : def.getFieldName().trim().toLowerCase();
+            if (!savedNames.contains(defName)) {
+                merged.add(new ColumnFilters(++maxOrder, def.getFieldName(), def.isSelected()));
+            }
+        }
+
+        return merged.stream()
+                .sorted(Comparator.comparing(ColumnFilters::getOrder))
+                .toList();
+    }
+
+    public ResponseEntity<?> updateExpenseTableFields(String hostelId, List<CustomersTablesColumn> expenseTables) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (expenseTables == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (expenseTables.isEmpty()) {
+            return new ResponseEntity<>(Utils.ATLEAST_ONE_COLUMN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        List<ColumnFilters> listDefaultColumns = filterOptionsService.findExpenseBasicFilters();
+        boolean isAnySelected = expenseTables.stream()
+                .anyMatch(i -> i != null && Boolean.TRUE.equals(i.isSelected()));
+
+        TableColumns tableColumns = tableColumnsRepositories.findByHostelIdAndUserId(hostelId, users.getUserId(), FilterOptionsModule.MODULE_EXPENSE.name());
+        if (tableColumns == null) {
+            tableColumns = new TableColumns();
+            tableColumns.setHostelId(hostelId);
+            tableColumns.setUserId(users.getUserId());
+            tableColumns.setModuleName(FilterOptionsModule.MODULE_EXPENSE.name());
+            tableColumns.setActive(true);
+            tableColumns.setCreatedAt(new Date());
+        }
+
+        if (!isAnySelected) {
+            tableColumns.setColumns(listDefaultColumns);
+        } else {
+            List<ColumnFilters> listNewColumns = expenseTables
+                    .stream()
+                    .filter(i -> i != null && i.fieldName() != null)
+                    .map(i -> {
+                        ColumnFilters newFilters = new ColumnFilters();
+                        newFilters.setSelected(Boolean.TRUE.equals(i.isSelected()));
+                        newFilters.setFieldName(i.fieldName());
+                        newFilters.setOrder(i.order() != null ? i.order() : 0);
+                        return newFilters;
+                    })
+                    .toList();
+            tableColumns.setColumns(listNewColumns);
+        }
+        tableColumns.setUpdatedAt(new Date());
+        tableColumnsRepositories.save(tableColumns);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
     public ResponseEntity<?> updateCustomerTableFields(String hostelId, List<CustomersTablesColumn> customersTables) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
