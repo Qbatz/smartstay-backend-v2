@@ -54,8 +54,10 @@ public class ExpenseController {
     }
 
     @PostMapping("/{hostelId}")
-    public ResponseEntity<?> addExpenses(@PathVariable("hostelId") String hostelId, @RequestBody @Valid Expense expense) {
-        return expenseService.addExpense(hostelId, expense);
+    public ResponseEntity<?> addExpenses(@PathVariable("hostelId") String hostelId,
+                                         @RequestPart(value = "images", required = false) MultipartFile[] images,
+                                         @Valid @RequestPart Expense expense) {
+        return expenseService.addExpense(hostelId, images, expense);
     }
 
     @GetMapping("/{hostelId}")
@@ -99,9 +101,16 @@ public class ExpenseController {
     }
 
     @PostMapping("/payment")
-    public ResponseEntity<?> recordExpensePayment(@RequestPart(value = "transactionImage", required = false) MultipartFile file,
+    public ResponseEntity<?> recordExpensePayment(@RequestPart(value = "images", required = false) MultipartFile[] images,
                                                   @Valid @RequestPart RecordExpensePayment payLoads) {
-        return expenseService.recordExpensePayment(file, payLoads);
+        return expenseService.recordExpensePayment(images, payLoads);
+    }
+
+    @PostMapping("/settle/{expenseId}")
+    public ResponseEntity<?> settleExpense(@PathVariable("expenseId") String expenseId,
+                                           @RequestPart(value = "images", required = false) MultipartFile[] images,
+                                           @Valid @RequestPart SettleExpensePayment payLoads) {
+        return expenseService.settleExpense(expenseId, images, payLoads);
     }
 
 }

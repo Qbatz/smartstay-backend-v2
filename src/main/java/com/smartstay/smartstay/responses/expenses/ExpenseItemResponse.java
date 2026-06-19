@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.responses.expenses;
 
+import com.smartstay.smartstay.ennum.ExpensePaymentStatus;
+
 public record ExpenseItemResponse(
         Long id,
         String item,
@@ -7,5 +9,7 @@ public record ExpenseItemResponse(
         Integer unitId,
         String unit,
         Double unitPrice,
-        Double totalAmount) {
+        Double totalAmount,
+        ExpensePaymentStatus paymentStatus,
+        Double paidAmount) {
 }

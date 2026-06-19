@@ -1,8 +1,13 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.expense.SettleVendorPayment;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
+import com.smartstay.smartstay.payloads.vendor.AddVendorComment;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
+import com.smartstay.smartstay.payloads.vendor.UpdateVendorComment;
+import com.smartstay.smartstay.services.ExpenseService;
+import com.smartstay.smartstay.services.VendorCommentService;
 import com.smartstay.smartstay.services.VendorService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,6 +32,48 @@ public class VendorController {
 
     @Autowired
     VendorService vendorService;
+
+    @Autowired
+    ExpenseService expenseService;
+
+    @Autowired
+    VendorCommentService vendorCommentService;
+
+    @PostMapping("/comments")
+    public ResponseEntity<?> addVendorComment(@Valid @RequestBody AddVendorComment payLoads) {
+        return vendorCommentService.addComment(payLoads);
+    }
+
+    @GetMapping("/comments/{vendorId}")
+    public ResponseEntity<?> getVendorComments(@PathVariable("vendorId") int vendorId,
+                                               @RequestParam(value = "page", defaultValue = "1") int page,
+                                               @RequestParam(value = "size", defaultValue = "10") int size) {
+        return vendorCommentService.getComments(vendorId, page, size);
+    }
+
+    @PutMapping("/comments/{commentId}")
+    public ResponseEntity<?> updateVendorComment(@PathVariable("commentId") Long commentId,
+                                                 @Valid @RequestBody UpdateVendorComment payLoads) {
+        return vendorCommentService.updateComment(commentId, payLoads);
+    }
+
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<?> deleteVendorComment(@PathVariable("commentId") Long commentId) {
+        return vendorCommentService.deleteComment(commentId);
+    }
+
+    @PostMapping("/settle/{vendorId}")
+    public ResponseEntity<?> settleVendorExpenses(@PathVariable("vendorId") String vendorId,
+                                                  @RequestPart(value = "images", required = false) MultipartFile[] images,
+                                                  @Valid @RequestPart SettleVendorPayment payLoads) {
+        return expenseService.settleVendorExpenses(vendorId, images, payLoads);
+    }
+
+    @GetMapping("/initialize/{hostelId}/{vendorId}")
+    public ResponseEntity<?> initializeVendorSettlement(@PathVariable("hostelId") String hostelId,
+                                                        @PathVariable("vendorId") int vendorId) {
+        return expenseService.initializeVendorSettlement(hostelId, vendorId);
+    }
 
     @GetMapping("/all-vendors/{hostelId}")
     public ResponseEntity<?> getAllVendors(@PathVariable("hostelId") String hostelId,

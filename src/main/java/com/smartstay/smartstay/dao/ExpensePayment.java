@@ -1,5 +1,8 @@
 package com.smartstay.smartstay.dao;
 
+import com.smartstay.smartstay.handlers.StringListConverter;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,6 +15,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table(name = "expense_payments")
@@ -25,6 +29,7 @@ public class ExpensePayment {
     private Long id;
 
     private String expenseId;
+    private Long expenseItemId;
     private String hostelId;
     private String vendorId;
     private Double paidAmount;
@@ -37,4 +42,17 @@ public class ExpensePayment {
     private String transactionId;
     private String notes;
     private String imageUrl;
+
+    // S3 URLs of all receipt/bill images uploaded with this payment.
+    @Convert(converter = StringListConverter.class)
+    @Column(columnDefinition = "TEXT")
+    private List<String> imageUrls;
+
+    // Audit fields, populated by the service on create/update.
+    private String createdBy;
+    private String updatedBy;
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date createdAt;
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date modifiedAt;
 }
