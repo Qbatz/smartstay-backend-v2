@@ -101,9 +101,9 @@ public class ExpenseController {
     }
 
     @PostMapping("/payment")
-    public ResponseEntity<?> recordExpensePayment(@RequestPart(value = "transactionImage", required = false) MultipartFile file,
+    public ResponseEntity<?> recordExpensePayment(@RequestPart(value = "images", required = false) MultipartFile[] images,
                                                   @Valid @RequestPart RecordExpensePayment payLoads) {
-        return expenseService.recordExpensePayment(file, payLoads);
+        return expenseService.recordExpensePayment(images, payLoads);
     }
 
     @PostMapping("/settle/{expenseId}")
