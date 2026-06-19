@@ -355,7 +355,8 @@ public class ExpenseService {
 
         ExpensesV1 expV1 = expensesRepository.save(expensesV1);
 
-        if (expense.expenseItems() != null) {
+        if (expense.expenseItems() != null && !expense.expenseItems().isEmpty()) {
+            List<ExpenseItem> expenseItems = new ArrayList<>();
             for (ExpenseItemPayload itemPayload : expense.expenseItems()) {
                 ExpenseItem expenseItem = new ExpenseItem();
                 expenseItem.setExpenseId(expV1.getExpenseId());
@@ -367,8 +368,11 @@ public class ExpenseService {
                 expenseItem.setUnit(itemPayload.unit());
                 expenseItem.setUnitPrice(itemPayload.unitPrice());
                 expenseItem.setTotalAmount(itemPayload.totalAmount());
-                expenseItemRepository.save(expenseItem);
+                expenseItems.add(expenseItem);
             }
+            // Seed each item's payment details from the parent expense, then persist in one batch.
+            initializeItemPayments(expenseItems, expensesV1.getPaymentStatus(), expense.paidAmount());
+            expenseItemRepository.saveAll(expenseItems);
         }
 
         if (expense.paidAmount() != null && expense.paidAmount() > 0) {
@@ -597,7 +601,9 @@ public class ExpenseService {
                                     item.getUnitId(),
                                     item.getUnit(),
                                     item.getUnitPrice(),
-                                    item.getTotalAmount()), Collectors.toList())));
+                                    item.getTotalAmount(),
+                                    item.getPaymentStatus(),
+                                    item.getPaidAmount()), Collectors.toList())));
 
             paymentsByExpense = expensePaymentRepository.findByExpenseIdIn(expenseIds).stream()
                     .collect(Collectors.groupingBy(ExpensePayment::getExpenseId,
@@ -664,6 +670,63 @@ public class ExpenseService {
     private long daysSince(Date date) {
         long diffMillis = System.currentTimeMillis() - date.getTime();
         return diffMillis / (1000L * 60 * 60 * 24);
+    }
+
+    /**
+     * Initializes each expense item's payment details from the parent expense:
+     * <ul>
+     *   <li>{@code paymentStatus} mirrors the parent expense status.</li>
+     *   <li>{@code Full} → paid amount equals the item's own total.</li>
+     *   <li>{@code Pending}/{@code Overdue} → paid amount is 0.</li>
+     *   <li>{@code Partial} → the parent's paid amount is split proportionally across items by their
+     *       individual totals (see {@link #distributePartialPaidAmount}).</li>
+     * </ul>
+     */
+    private void initializeItemPayments(List<ExpenseItem> items, ExpensePaymentStatus parentStatus, Double parentPaidAmount) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        ExpensePaymentStatus status = parentStatus != null ? parentStatus : ExpensePaymentStatus.Full;
+        items.forEach(item -> item.setPaymentStatus(status));
+
+        switch (status) {
+            case Full -> items.forEach(item ->
+                    item.setPaidAmount(item.getTotalAmount() != null ? item.getTotalAmount() : 0.0));
+            case Partial -> distributePartialPaidAmount(items, parentPaidAmount);
+            case Pending, Overdue -> items.forEach(item -> item.setPaidAmount(0.0));
+        }
+    }
+
+    /**
+     * Splits the parent expense's paid amount across its items proportionally to each item's total.
+     * Rounding is absorbed by the last item so the item paid amounts sum exactly to the parent's
+     * paid amount.
+     */
+    private void distributePartialPaidAmount(List<ExpenseItem> items, Double parentPaidAmount) {
+        double totalPaid = parentPaidAmount != null ? parentPaidAmount : 0.0;
+        double totalItemsAmount = items.stream()
+                .map(ExpenseItem::getTotalAmount)
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
+                .sum();
+
+        if (totalItemsAmount <= 0 || totalPaid <= 0) {
+            items.forEach(item -> item.setPaidAmount(0.0));
+            return;
+        }
+
+        double allocated = 0.0;
+        for (int i = 0; i < items.size(); i++) {
+            ExpenseItem item = items.get(i);
+            if (i == items.size() - 1) {
+                item.setPaidAmount(Utils.roundOffWithTwoDigit(totalPaid - allocated));
+            } else {
+                double itemAmount = item.getTotalAmount() != null ? item.getTotalAmount() : 0.0;
+                double share = Utils.roundOffWithTwoDigit((itemAmount / totalItemsAmount) * totalPaid);
+                item.setPaidAmount(share);
+                allocated += share;
+            }
+        }
     }
 
     public int countByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {

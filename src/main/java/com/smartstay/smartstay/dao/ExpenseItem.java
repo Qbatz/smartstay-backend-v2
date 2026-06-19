@@ -1,6 +1,9 @@
 package com.smartstay.smartstay.dao;
 
+import com.smartstay.smartstay.ennum.ExpensePaymentStatus;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -29,4 +32,9 @@ public class ExpenseItem {
     private String unit;
     private Double unitPrice;
     private Double totalAmount;
+
+    // Per-item payment details, initialized from the parent expense on creation.
+    @Enumerated(EnumType.STRING)
+    private ExpensePaymentStatus paymentStatus;
+    private Double paidAmount;
 }
