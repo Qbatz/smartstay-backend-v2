@@ -54,8 +54,10 @@ public class ExpenseController {
     }
 
     @PostMapping("/{hostelId}")
-    public ResponseEntity<?> addExpenses(@PathVariable("hostelId") String hostelId, @RequestBody @Valid Expense expense) {
-        return expenseService.addExpense(hostelId, expense);
+    public ResponseEntity<?> addExpenses(@PathVariable("hostelId") String hostelId,
+                                         @RequestPart(value = "images", required = false) MultipartFile[] images,
+                                         @Valid @RequestPart Expense expense) {
+        return expenseService.addExpense(hostelId, images, expense);
     }
 
     @GetMapping("/{hostelId}")

@@ -262,7 +262,7 @@ public class ExpenseService {
     }
 
     @Transactional
-    public ResponseEntity<?> addExpense(String hostelId, Expense expense) {
+    public ResponseEntity<?> addExpense(String hostelId, MultipartFile[] images, Expense expense) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -284,6 +284,10 @@ public class ExpenseService {
         }
         if (!subscriptionService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+        // Reject more than the configured number of images before doing any work / uploads.
+        if (exceedsImageLimit(images)) {
+            return new ResponseEntity<>(Utils.MAX_IMAGES_EXCEEDED + ". Allowed: " + maxPaymentImages, HttpStatus.BAD_REQUEST);
         }
 
 
@@ -351,6 +355,11 @@ public class ExpenseService {
         expensesV1.setBalanceAmount(expense.balanceAmount());
         expensesV1.setPaymentMethod(expense.paymentMethod());
         expensesV1.setNote(expense.note());
+        expensesV1.setTransactionId(expense.transactionId());
+        expensesV1.setTax(expense.tax());
+        expensesV1.setDiscount(expense.discount());
+        // Upload receipt images to S3; a failure aborts the (transactional) expense creation.
+        expensesV1.setImages(uploadImages(images, "Expense/Images"));
 
         TransactionDto transactionDto = new TransactionDto(expense.bankId(),
                 expensesV1.getExpenseNumber(),
@@ -374,7 +383,6 @@ public class ExpenseService {
                 expenseItem.setVendorId(vendorId);
                 expenseItem.setItem(itemPayload.item());
                 expenseItem.setQuantity(itemPayload.quantity());
-                expenseItem.setUnitId(itemPayload.unitId());
                 expenseItem.setUnit(itemPayload.unit());
                 expenseItem.setUnitPrice(itemPayload.unitPrice());
                 expenseItem.setTotalAmount(itemPayload.totalAmount());
@@ -784,13 +792,21 @@ public class ExpenseService {
     }
 
     private List<String> uploadPaymentImages(MultipartFile[] images) {
+        return uploadImages(images, "Expense/Payments");
+    }
+
+    /**
+     * Uploads the non-empty multipart images to the given S3 folder and returns their URLs.
+     * Empty/null files are ignored. Shared by the settlement and add-expense flows.
+     */
+    private List<String> uploadImages(MultipartFile[] images, String folder) {
         List<String> urls = new ArrayList<>();
         if (images == null) {
             return urls;
         }
         for (MultipartFile file : images) {
             if (file != null && !file.isEmpty()) {
-                urls.add(uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "Expense/Payments"));
+                urls.add(uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), folder));
             }
         }
         return urls;

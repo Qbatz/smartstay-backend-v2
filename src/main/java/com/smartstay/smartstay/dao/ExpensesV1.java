@@ -1,6 +1,9 @@
 package com.smartstay.smartstay.dao;
 
 import com.smartstay.smartstay.ennum.ExpensePaymentStatus;
+import com.smartstay.smartstay.handlers.StringListConverter;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -12,6 +15,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Data
@@ -66,4 +70,15 @@ public class ExpensesV1 {
     private String paymentMethod;
     private String note;
     private Integer creditPeriod;
+
+    // Payment/transaction reference for the expense.
+    private String transactionId;
+    // Tax amount applicable to the expense.
+    private Double tax;
+    // Discount amount applied to the expense.
+    private Double discount;
+    // S3 URLs of the images uploaded with the expense.
+    @Convert(converter = StringListConverter.class)
+    @Column(columnDefinition = "TEXT")
+    private List<String> images;
 }
