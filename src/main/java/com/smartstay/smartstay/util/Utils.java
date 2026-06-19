@@ -41,6 +41,7 @@ public class Utils {
     public static final String INVALID_TEMPLATE_ID = "Invalid template id";
     public static final String INVALID_TEMPLAYE_TYPE_ID = "Invalid template type id";
     public static final String INVALID_EXPENSE_ID = "Invalid expense id";
+    public static final String INVALID_COMMENT_ID = "Invalid comment id";
     public static final String INVALID_AMENITY = "Invalid Amenity";
     public static final String AMENITY_ALREADY_DELETED = "Amenity already deleted";
     public static final String DOCUMENT_ALREADY_DELETED = "Document is already deleted";
