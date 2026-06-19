@@ -104,4 +104,11 @@ public class ExpenseController {
         return expenseService.recordExpensePayment(file, payLoads);
     }
 
+    @PostMapping("/settle/{expenseId}")
+    public ResponseEntity<?> settleExpense(@PathVariable("expenseId") String expenseId,
+                                           @RequestPart(value = "images", required = false) MultipartFile[] images,
+                                           @Valid @RequestPart SettleExpensePayment payLoads) {
+        return expenseService.settleExpense(expenseId, images, payLoads);
+    }
+
 }

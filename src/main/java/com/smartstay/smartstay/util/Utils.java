@@ -122,6 +122,15 @@ public class Utils {
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
     public static final String AMOUNT_REQUIRED = "Amount required";
+    public static final String INVALID_EXPENSE_ITEM_ID = "Invalid expense item id";
+    public static final String DUPLICATE_EXPENSE_ITEM_ID = "Duplicate expense item id";
+    public static final String PAID_AMOUNT_NEGATIVE = "Paid amount cannot be negative";
+    public static final String PAID_AMOUNT_EXCEEDS_ITEM = "Paid amount cannot exceed the expense item total amount";
+    public static final String EXPENSE_OVERPAID = "Expense cannot be overpaid";
+    public static final String VENDOR_EXPENSE_MISMATCH = "Vendor does not match the expense";
+    public static final String MAX_IMAGES_EXCEEDED = "Maximum number of images exceeded";
+    public static final String PAYMENT_METHOD_REQUIRED = "Payment method is required";
+    public static final String TRANSACTION_ID_REQUIRED = "Transaction id is required for the selected payment method";
     public static final String NO_ACCOUNT_NO_FOUND = "No account number found";
     public static final String NO_FROM_ACCOUNT_NO_FOUND = "No 'from account' found for this hostel.";
     public static final String NO_TO_ACCOUNT_NO_FOUND = "No 'To account' found for this hostel.";
