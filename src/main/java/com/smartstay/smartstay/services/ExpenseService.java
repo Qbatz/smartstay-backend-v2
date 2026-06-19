@@ -1,7 +1,9 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.expenses.ExpenseListMapper;
+import com.smartstay.smartstay.Wrappers.expenses.ExpenseTableMapper;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.dao.ColumnFilters;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
@@ -14,6 +16,7 @@ import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dao.VendorV1;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.expenses.ExpensesCategory;
+import com.smartstay.smartstay.dto.expenses.ExpenseSummaryView;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.expense.AddUnit;
@@ -26,9 +29,14 @@ import com.smartstay.smartstay.repositories.ExpensePaymentRepository;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.UnitsRepository;
 import com.smartstay.smartstay.repositories.VendorRepository;
+import com.smartstay.smartstay.responses.expenses.ExpenseFilterOptions;
 import com.smartstay.smartstay.responses.expenses.ExpenseItemResponse;
 import com.smartstay.smartstay.responses.expenses.ExpensePaymentResponse;
+import com.smartstay.smartstay.responses.expenses.ExpenseSummary;
+import com.smartstay.smartstay.responses.expenses.ExpensesMobileResponse;
+import com.smartstay.smartstay.responses.expenses.ExpensesWebResponse;
 import com.smartstay.smartstay.responses.expenses.UnitResponse;
+import com.smartstay.smartstay.responses.vendor.VendorInitializeResponse;
 import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.expenses.ExpenseList;
@@ -37,8 +45,10 @@ import com.smartstay.smartstay.responses.expenseForReport.ExpenseReportResponse;
 import com.smartstay.smartstay.dto.expenses.ExpenseSummaryProjection;
 import com.smartstay.smartstay.dao.ExpenseCategory;
 import com.smartstay.smartstay.dao.ExpenseSubCategory;
+import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -88,6 +98,9 @@ public class ExpenseService {
 
     @Autowired
     private VendorFinancialService vendorFinancialService;
+
+    @Autowired
+    private TableColumnService columnService;
 
     @Autowired
     private UploadFileToS3 uploadToS3;
@@ -221,7 +234,20 @@ public class ExpenseService {
         List<ExpensesCategory> listExpensesCategory = expenseCategoryService.getAllActiveCategories(hostelId);
         List<DebitsBank> listBanks = bankingService.getAllBankForReturn(hostelId);
 
-        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks);
+        // Vendor financials are denormalized on the vendor row, so this is a single read with no
+        // per-vendor aggregation (no N+1). Only the fields needed by the picker are exposed.
+        List<VendorInitializeResponse> listVendors = vendorRepository
+                .findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(hostelId).stream()
+                .map(v -> new VendorInitializeResponse(
+                        v.getVendorId(),
+                        v.getBusinessName(),
+                        v.getPaymentStatus() != null ? v.getPaymentStatus().name() : null,
+                        nullSafe(v.getTotalExpense()),
+                        nullSafe(v.getTotalPaid()),
+                        nullSafe(v.getBalance())))
+                .toList();
+
+        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks, listVendors);
 
         return new ResponseEntity<>(initializeExpenses, HttpStatus.OK);
 
@@ -473,7 +499,7 @@ public class ExpenseService {
     }
 
     @Transactional
-    public ResponseEntity<?> getAllExpenses(String hostelId) {
+    public ResponseEntity<?> getAllExpenses(String hostelId, String name, Integer categoryId, Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -491,13 +517,74 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections =
-                expensesRepository.findAllExpensesByHostelId(hostelId);
+        String searchName = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
+        Long categoryFilter = categoryId != null ? categoryId.longValue() : null;
+        int pageNumber = (page == null || page < 1) ? 1 : page;
+        int pageSize = (size == null || size < 1) ? 10 : size;
+        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
+        // Pagination, the filtered page, and the summary are identical for web and mobile.
+        Page<com.smartstay.smartstay.dto.expenses.ExpenseList> expensePage =
+                expensesRepository.findExpensesForHostel(hostelId, searchName, categoryFilter, pageable);
+        List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections = expensePage.getContent();
+        ExpenseSummary expenseSummary = buildExpenseSummary(hostelId, searchName, categoryFilter);
+
+        int currentPage = expensePage.getPageable().getPageNumber() + 1;
+        int totalPages = expensePage.getTotalPages();
+        int totalExpenses = (int) expensePage.getTotalElements();
+
+        if ("web".equalsIgnoreCase(authentication.getSource())) {
+            return buildExpenseWebResponse(hostelId, projections, expenseSummary, totalExpenses, currentPage, totalPages, pageSize);
+        }
+        return buildExpenseMobileResponse(projections, expenseSummary, totalExpenses, currentPage, totalPages, pageSize);
+    }
+
+    private ExpenseSummary buildExpenseSummary(String hostelId, String name, Long categoryId) {
+        ExpenseSummaryView view = expensesRepository.getExpenseListSummary(hostelId, name, categoryId);
+        if (view == null) {
+            return new ExpenseSummary(0.0, 0.0, 0.0, 0.0);
+        }
+        return new ExpenseSummary(
+                nullSafe(view.getTotalExpenseAmount()),
+                nullSafe(view.getTotalPaidAmount()),
+                nullSafe(view.getTotalUnPaidAmount()),
+                nullSafe(view.getTotalPartialPaidAmount()));
+    }
+
+    private double nullSafe(Double value) {
+        return value != null ? value : 0.0;
+    }
+
+    private ResponseEntity<?> buildExpenseWebResponse(String hostelId,
+                                                      List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections,
+                                                      ExpenseSummary expenseSummary, int totalExpenses, int currentPage,
+                                                      int totalPages, int pageSize) {
+        // Resolve the user's configured columns for this hostel; only enabled columns are rendered.
+        List<ColumnFilters> listColumns = columnService.getExpenseColumns(hostelId, FilterOptionsModule.MODULE_EXPENSE.name());
+        List<String> tableColumns = listColumns.stream()
+                .filter(ColumnFilters::isSelected)
+                .sorted(Comparator.comparingInt(ColumnFilters::getOrder))
+                .map(ColumnFilters::getFieldName)
+                .toList();
+
+        Map<String, String> vendorNamesById = resolveVendorNames(projections);
+
+        ExpenseTableMapper mapper = new ExpenseTableMapper(tableColumns, vendorNamesById);
+        List<List<Object>> rows = projections.stream().map(mapper).collect(Collectors.toList());
+
+        ExpenseFilterOptions filterOptions = buildExpenseFilterOptions(hostelId);
+        ExpensesWebResponse response = new ExpensesWebResponse(totalExpenses, currentPage, totalPages, pageSize,
+                expenseSummary, filterOptions, tableColumns, listColumns, rows);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private ResponseEntity<?> buildExpenseMobileResponse(List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections,
+                                                         ExpenseSummary expenseSummary, int totalExpenses, int currentPage,
+                                                         int totalPages, int pageSize) {
+        // Bulk-load items and payments for the page in two queries (no N+1), grouped by expense id.
         List<String> expenseIds = projections.stream()
                 .map(com.smartstay.smartstay.dto.expenses.ExpenseList::getExpenseId)
                 .toList();
-
         Map<String, List<ExpenseItemResponse>> itemsByExpense = new HashMap<>();
         Map<String, List<ExpensePaymentResponse>> paymentsByExpense = new HashMap<>();
         if (!expenseIds.isEmpty()) {
@@ -528,35 +615,50 @@ public class ExpenseService {
         ExpenseListMapper mapper = new ExpenseListMapper();
         Map<String, List<ExpenseItemResponse>> finalItemsByExpense = itemsByExpense;
         Map<String, List<ExpensePaymentResponse>> finalPaymentsByExpense = paymentsByExpense;
-        List<String> overdueExpenseIds = new ArrayList<>();
-
-        List<ExpenseList> listExpenses = projections.stream()
-                .map(item -> {
-                    ExpensePaymentStatus status = ExpensePaymentStatus.fromString(item.getPaymentStatus());
-                    // Use the credit period snapshotted on the expense, so later vendor edits
-                    // do not retroactively change the overdue state of earlier expenses.
-                    if (Boolean.TRUE.equals(item.getIsVendorExpense())
-                            && item.getCreditPeriod() != null && item.getCreditPeriod() > 0
-                            && item.getCreatedAt() != null
-                            && daysSince(item.getCreatedAt()) > item.getCreditPeriod()) {
-                        status = ExpensePaymentStatus.Overdue;
-                        if (item.getPaymentStatus() == null
-                                || !ExpensePaymentStatus.Overdue.name().equalsIgnoreCase(item.getPaymentStatus())) {
-                            overdueExpenseIds.add(item.getExpenseId());
-                        }
-                    }
-                    return mapper.apply(item,
-                            finalItemsByExpense.getOrDefault(item.getExpenseId(), List.of()),
-                            finalPaymentsByExpense.getOrDefault(item.getExpenseId(), List.of()),
-                            status);
-                })
+        List<ExpenseList> expenses = projections.stream()
+                .map(item -> mapper.apply(item,
+                        finalItemsByExpense.getOrDefault(item.getExpenseId(), List.of()),
+                        finalPaymentsByExpense.getOrDefault(item.getExpenseId(), List.of())))
                 .toList();
 
-        if (!overdueExpenseIds.isEmpty()) {
-            expensesRepository.updatePaymentStatus(overdueExpenseIds, ExpensePaymentStatus.Overdue);
-        }
+        // filterOptions / tableHeaders / columnList are intentionally null for mobile.
+        ExpensesMobileResponse response = new ExpensesMobileResponse(totalExpenses, currentPage, totalPages, pageSize,
+                expenseSummary, null, null, null, expenses);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 
-        return new ResponseEntity<>(listExpenses, HttpStatus.OK);
+    private Map<String, String> resolveVendorNames(List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections) {
+        List<Integer> vendorIds = projections.stream()
+                .map(com.smartstay.smartstay.dto.expenses.ExpenseList::getVendorId)
+                .map(this::parseVendorId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<String, String> vendorNamesById = new HashMap<>();
+        if (!vendorIds.isEmpty()) {
+            vendorRepository.findByVendorIdIn(vendorIds).forEach(v ->
+                    vendorNamesById.put(String.valueOf(v.getVendorId()), NameUtils.getFullName(v.getFirstName(), v.getLastName())));
+        }
+        return vendorNamesById;
+    }
+
+    private Integer parseVendorId(String vendorId) {
+        if (vendorId == null || vendorId.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(vendorId.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private ExpenseFilterOptions buildExpenseFilterOptions(String hostelId) {
+        List<ExpensesCategory> categories = expenseCategoryService.getAllActiveCategories(hostelId);
+        List<ExpenseFilterOptions.FilterItems> categoryItems = categories.stream()
+                .map(c -> new ExpenseFilterOptions.FilterItems(c.categoryName(), String.valueOf(c.categoryId())))
+                .collect(Collectors.toList());
+        return new ExpenseFilterOptions(categoryItems);
     }
 
     private long daysSince(Date date) {

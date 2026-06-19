@@ -59,8 +59,12 @@ public class ExpenseController {
     }
 
     @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getExpenses(@PathVariable("hostelId") String hostelId) {
-        return expenseService.getAllExpenses(hostelId);
+    public ResponseEntity<?> getExpenses(@PathVariable("hostelId") String hostelId,
+                                         @RequestParam(value = "name", required = false) String name,
+                                         @RequestParam(value = "categoryId", required = false) Integer categoryId,
+                                         @RequestParam(value = "page", defaultValue = "1") int page,
+                                         @RequestParam(value = "size", defaultValue = "10") int size) {
+        return expenseService.getAllExpenses(hostelId, name, categoryId, page, size);
     }
 
     @PutMapping("/{hostelId}/{expenseId}")
