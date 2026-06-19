@@ -32,5 +32,8 @@ public record Expense(
         Double balanceAmount,
         String paymentMethod,
         String note,
+        String transactionId,
+        Double tax,
+        Double discount,
         List<ExpenseItemPayload> expenseItems) {
 }

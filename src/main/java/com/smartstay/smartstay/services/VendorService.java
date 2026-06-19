@@ -389,7 +389,9 @@ public class VendorService {
                                     item.getUnitId(),
                                     item.getUnit(),
                                     item.getUnitPrice(),
-                                    item.getTotalAmount()), Collectors.toList())));
+                                    item.getTotalAmount(),
+                                    item.getPaymentStatus(),
+                                    item.getPaidAmount()), Collectors.toList())));
 
             paymentsByExpense = expensePaymentRepository.findByExpenseIdIn(expenseIds).stream()
                     .collect(Collectors.groupingBy(ExpensePayment::getExpenseId,
