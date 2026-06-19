@@ -45,6 +45,8 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
 
     List<VendorV1> findByVendorIdIn(List<Integer> vendorIds);
 
+    List<VendorV1> findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(String hostelId);
+
     VendorV1 findByVendorIdAndHostelId(int vendorId,String hostelId);
 
     boolean existsByEmailId(String emailId);

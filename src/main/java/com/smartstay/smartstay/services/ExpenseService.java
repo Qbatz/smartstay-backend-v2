@@ -36,6 +36,7 @@ import com.smartstay.smartstay.responses.expenses.ExpenseSummary;
 import com.smartstay.smartstay.responses.expenses.ExpensesMobileResponse;
 import com.smartstay.smartstay.responses.expenses.ExpensesWebResponse;
 import com.smartstay.smartstay.responses.expenses.UnitResponse;
+import com.smartstay.smartstay.responses.vendor.VendorInitializeResponse;
 import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.expenses.ExpenseList;
@@ -233,7 +234,20 @@ public class ExpenseService {
         List<ExpensesCategory> listExpensesCategory = expenseCategoryService.getAllActiveCategories(hostelId);
         List<DebitsBank> listBanks = bankingService.getAllBankForReturn(hostelId);
 
-        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks);
+        // Vendor financials are denormalized on the vendor row, so this is a single read with no
+        // per-vendor aggregation (no N+1). Only the fields needed by the picker are exposed.
+        List<VendorInitializeResponse> listVendors = vendorRepository
+                .findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(hostelId).stream()
+                .map(v -> new VendorInitializeResponse(
+                        v.getVendorId(),
+                        v.getBusinessName(),
+                        v.getPaymentStatus() != null ? v.getPaymentStatus().name() : null,
+                        nullSafe(v.getTotalExpense()),
+                        nullSafe(v.getTotalPaid()),
+                        nullSafe(v.getBalance())))
+                .toList();
+
+        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks, listVendors);
 
         return new ResponseEntity<>(initializeExpenses, HttpStatus.OK);
 
