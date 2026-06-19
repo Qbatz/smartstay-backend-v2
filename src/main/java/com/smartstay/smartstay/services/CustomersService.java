@@ -2973,9 +2973,9 @@ public class CustomersService {
                     if (rentInfo != null) {
                         if (!customRent.equals(rentInfo.currentMonthRent())) {
                             differenceAmount = customRent - rentInfo.fullRent() + rentInfo.rentDifference();
-                            if (differenceAmount < 0) {
-                                differenceAmount = differenceAmount * -1;
-                            }
+//                            if (differenceAmount < 0) {
+//                                differenceAmount = differenceAmount * -1;
+//                            }
                         }
                         else {
                             differenceAmount =  rentInfo.rentDifference();
@@ -3140,9 +3140,9 @@ public class CustomersService {
                         else {
                             fullRent = customRent;
                             rentDifference = customRent - currentMonthRentInfo.fullRent() + currentMonthRentInfo.rentDifference();
-                            if (rentDifference < 0) {
-                                rentDifference = rentDifference * -1;
-                            }
+//                            if (rentDifference < 0) {
+//                                rentDifference = rentDifference * -1;
+//                            }
                         }
                     }
                     else {
@@ -3320,9 +3320,9 @@ public class CustomersService {
                     if (rentInfo != null) {
                         if (!rentInfo.currentMonthRent().equals(fullRent)) {
                             difference = customRent - rentInfo.fullRent() + rentInfo.rentDifference();
-                            if (difference < 0) {
-                                difference = difference * -1;
-                            }
+//                            if (difference < 0) {
+//                                difference = difference * -1;
+//                            }
                         }
                         else {
                             difference =  rentInfo.rentDifference();
@@ -3514,9 +3514,9 @@ public class CustomersService {
                 RentInfo rentInfo = settlement.currentMonthRentInfo();
                 if (rentInfo != null) {
                     difference = customRent - rentInfo.currentMonthTotalAmount();
-                    if (difference < 0) {
-                        difference = difference * -1;
-                    }
+//                    if (difference < 0) {
+//                        difference = difference * -1;
+//                    }
                 }
             }
 

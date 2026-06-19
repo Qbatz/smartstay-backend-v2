@@ -5269,6 +5269,15 @@ public class InvoiceV1Service {
 
         List<InvoicesV1> listPendingInvoices = invoicesV1Repository.findPendingByHostelIdAndCustomerId(hostelId, customerId);
         List<InvoicesV1> invoiceItemsToShow = listPendingInvoices;
+        List<TransactionV1> listTransactions = new ArrayList<>();
+        if (listPendingInvoices != null) {
+            List<String> invoiceIds = listPendingInvoices
+                    .stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList();
+
+            listTransactions = transactionService.findLatestTransactionsByInvoiceIds(hostelId, invoiceIds);
+        }
         if (advanceInvoices.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
             invoiceItemsToShow = listPendingInvoices
                     .stream()
