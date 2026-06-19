@@ -1,8 +1,10 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.expense.SettleVendorPayment;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
+import com.smartstay.smartstay.services.ExpenseService;
 import com.smartstay.smartstay.services.VendorService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,6 +29,16 @@ public class VendorController {
 
     @Autowired
     VendorService vendorService;
+
+    @Autowired
+    ExpenseService expenseService;
+
+    @PostMapping("/settle/{vendorId}")
+    public ResponseEntity<?> settleVendorExpenses(@PathVariable("vendorId") String vendorId,
+                                                  @RequestPart(value = "images", required = false) MultipartFile[] images,
+                                                  @Valid @RequestPart SettleVendorPayment payLoads) {
+        return expenseService.settleVendorExpenses(vendorId, images, payLoads);
+    }
 
     @GetMapping("/all-vendors/{hostelId}")
     public ResponseEntity<?> getAllVendors(@PathVariable("hostelId") String hostelId,

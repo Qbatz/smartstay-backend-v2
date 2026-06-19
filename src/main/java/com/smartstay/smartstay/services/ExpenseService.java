@@ -25,6 +25,8 @@ import com.smartstay.smartstay.payloads.expense.ExpenseItemPayload;
 import com.smartstay.smartstay.payloads.expense.RecordExpensePayment;
 import com.smartstay.smartstay.payloads.expense.SettleExpenseItem;
 import com.smartstay.smartstay.payloads.expense.SettleExpensePayment;
+import com.smartstay.smartstay.payloads.expense.SettleVendorExpense;
+import com.smartstay.smartstay.payloads.expense.SettleVendorPayment;
 import com.smartstay.smartstay.payloads.expense.UpdateExpense;
 import com.smartstay.smartstay.repositories.ExpenseItemRepository;
 import com.smartstay.smartstay.repositories.ExpensePaymentRepository;
@@ -494,10 +496,10 @@ public class ExpenseService {
     }
 
     /**
-     * Settles an existing expense at the item level: updates each requested expense item's paid
-     * amount and status, records a payment-history row per item (with the uploaded receipt images),
-     * and recomputes the parent expense's paid amount / balance / status. All writes happen in one
-     * transaction so a failure rolls everything back.
+     * Settles a single expense at the item level: each requested expense item's paid amount is added
+     * cumulatively to its existing paid amount, the item and parent expense statuses are recomputed,
+     * and a payment-history row is recorded per item (with the uploaded receipt images). All writes
+     * happen in one transaction so a failure rolls everything back.
      */
     @Transactional
     public ResponseEntity<?> settleExpense(String expenseId, MultipartFile[] images, SettleExpensePayment payload) {
@@ -536,12 +538,9 @@ public class ExpenseService {
         }
 
         // Payment-method based validation.
-        if (!Utils.checkNullOrEmpty(payload.paymentMethod())) {
-            return new ResponseEntity<>(Utils.PAYMENT_METHOD_REQUIRED, HttpStatus.BAD_REQUEST);
-        }
-        boolean isCash = "CASH".equalsIgnoreCase(payload.paymentMethod().trim());
-        if (!isCash && !Utils.checkNullOrEmpty(payload.transactionId())) {
-            return new ResponseEntity<>(Utils.TRANSACTION_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId());
+        if (methodError != null) {
+            return new ResponseEntity<>(methodError, HttpStatus.BAD_REQUEST);
         }
 
         List<SettleExpenseItem> requestedItems = payload.expenseItems();
@@ -596,9 +595,7 @@ public class ExpenseService {
         }
 
         // Validate image count before uploading anything to S3.
-        long imageCount = images == null ? 0 :
-                Arrays.stream(images).filter(f -> f != null && !f.isEmpty()).count();
-        if (imageCount > maxPaymentImages) {
+        if (exceedsImageLimit(images)) {
             return new ResponseEntity<>(Utils.MAX_IMAGES_EXCEEDED + ". Allowed: " + maxPaymentImages, HttpStatus.BAD_REQUEST);
         }
 
@@ -607,26 +604,15 @@ public class ExpenseService {
 
         expenseItemRepository.saveAll(updatedItems);
 
-        Date paymentDate = Utils.checkNullOrEmpty(payload.paymentDate())
-                ? Utils.stringToDate(payload.paymentDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT)
-                : new Date();
+        Date paymentDate = resolvePaymentDate(payload.paymentDate());
 
+        // One payment-history row per expense item in the request.
         List<ExpensePayment> payments = new ArrayList<>();
         for (SettleExpenseItem requested : requestedItems) {
-            ExpensePayment payment = new ExpensePayment();
-            payment.setExpenseId(expensesV1.getExpenseId());
-            payment.setExpenseItemId(requested.id());
-            payment.setHostelId(expensesV1.getHostelId());
-            payment.setVendorId(expensesV1.getVendorId());
-            payment.setPaidAmount(requested.paidAmount() != null ? requested.paidAmount() : 0.0);
-            payment.setPaymentMethod(payload.paymentMethod());
-            payment.setBankId(payload.bankId());
-            payment.setPaymentDate(paymentDate);
-            payment.setTransactionId(payload.transactionId());
-            payment.setNotes(payload.notes());
-            payment.setImageUrls(imageUrls);
-            stampCreate(payment, auditUser, auditNow);
-            payments.add(payment);
+            payments.add(buildPayment(expensesV1.getExpenseId(), requested.id(), expensesV1.getHostelId(),
+                    expensesV1.getVendorId(), requested.paidAmount() != null ? requested.paidAmount() : 0.0,
+                    payload.paymentMethod(), payload.bankId(), paymentDate, payload.transactionId(),
+                    payload.notes(), imageUrls, auditUser, auditNow));
         }
         expensePaymentRepository.saveAll(payments);
 
@@ -655,12 +641,144 @@ public class ExpenseService {
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
-    private ExpensePaymentStatus deriveItemStatus(double paid, double total) {
+    /**
+     * Settles one or more of a vendor's expenses in a single request: for each expense the incoming
+     * paid amount is added cumulatively to the existing paid amount, the balance and payment status
+     * are recomputed, and a payment-history row (with the uploaded receipt images) is recorded.
+     * {@code expense_items} are intentionally left untouched. All writes happen in one transaction
+     * so a failure rolls everything back.
+     */
+    @Transactional
+    public ResponseEntity<?> settleVendorExpenses(String vendorId, MultipartFile[] images, SettleVendorPayment payload) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        // Vendor must exist.
+        Integer vendorKey = parseVendorId(vendorId);
+        if (vendorKey == null || vendorRepository.findByVendorId(vendorKey) == null) {
+            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.BAD_REQUEST);
+        }
+        String vendorIdStr = String.valueOf(vendorKey);
+
+        // Payment-method based validation.
+        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId());
+        if (methodError != null) {
+            return new ResponseEntity<>(methodError, HttpStatus.BAD_REQUEST);
+        }
+
+        // Reject blank / duplicate expense ids.
+        List<SettleVendorExpense> requestedExpenses = payload.expenses();
+        List<String> requestedIds = requestedExpenses.stream().map(SettleVendorExpense::expenseId).toList();
+        if (requestedIds.stream().anyMatch(id -> id == null || id.isBlank())) {
+            return new ResponseEntity<>(Utils.INVALID_EXPENSE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (requestedIds.stream().distinct().count() != requestedIds.size()) {
+            return new ResponseEntity<>(Utils.DUPLICATE_EXPENSE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        // Bulk-load all requested expenses in one query (no N+1).
+        Map<String, ExpensesV1> expensesById = expensesRepository.findAllById(requestedIds).stream()
+                .collect(Collectors.toMap(ExpensesV1::getExpenseId, expense -> expense));
+
+        List<ExpensesV1> expensesToUpdate = new ArrayList<>();
+        for (SettleVendorExpense requested : requestedExpenses) {
+            ExpensesV1 expense = expensesById.get(requested.expenseId());
+            if (expense == null || !expense.isActive()) {
+                return new ResponseEntity<>(Utils.INVALID_EXPENSE_ID, HttpStatus.BAD_REQUEST);
+            }
+            // Must belong to the supplied vendor.
+            if (expense.getVendorId() == null || !expense.getVendorId().equals(vendorIdStr)) {
+                return new ResponseEntity<>(Utils.VENDOR_EXPENSE_MISMATCH, HttpStatus.BAD_REQUEST);
+            }
+            // A vendor's expenses could span hostels; guard access per expense.
+            if (!userHostelService.checkHostelAccess(users.getUserId(), expense.getHostelId())) {
+                return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+            }
+
+            double requestPaid = requested.paidAmount() != null ? requested.paidAmount() : 0.0;
+            if (requestPaid < 0) {
+                return new ResponseEntity<>(Utils.PAID_AMOUNT_NEGATIVE, HttpStatus.BAD_REQUEST);
+            }
+            double existingPaid = expense.getPaidAmount() != null ? expense.getPaidAmount() : 0.0;
+            double total = expense.getTotalPrice() != null ? expense.getTotalPrice() : 0.0;
+
+            // Already fully settled expenses cannot take further payment.
+            if (requestPaid > 0 && total > 0 && existingPaid - total >= -0.0001) {
+                return new ResponseEntity<>(Utils.EXPENSE_ALREADY_SETTLED, HttpStatus.BAD_REQUEST);
+            }
+
+            // Cumulative: never overwrite the existing paid amount.
+            double newPaid = existingPaid + requestPaid;
+            if (newPaid - total > 0.0001) {
+                return new ResponseEntity<>(Utils.EXPENSE_OVERPAID, HttpStatus.BAD_REQUEST);
+            }
+
+            expense.setPaidAmount(newPaid);
+            expense.setBalanceAmount(total - newPaid);
+            expense.setPaymentStatus(deriveExpenseStatus(newPaid, total, expense));
+            expensesToUpdate.add(expense);
+        }
+
+        // Validate image count before uploading anything to S3.
+        if (exceedsImageLimit(images)) {
+            return new ResponseEntity<>(Utils.MAX_IMAGES_EXCEEDED + ". Allowed: " + maxPaymentImages, HttpStatus.BAD_REQUEST);
+        }
+
+        // All validations passed — upload receipts, then persist everything transactionally.
+        List<String> imageUrls = uploadPaymentImages(images);
+
+        String auditUser = authentication.getName();
+        Date auditNow = new Date();
+        Date paymentDate = resolvePaymentDate(payload.paymentDate());
+
+        for (ExpensesV1 expense : expensesToUpdate) {
+            expense.setUpdatedAt(auditNow);
+            expense.setUpdatedBy(auditUser);
+        }
+        expensesRepository.saveAll(expensesToUpdate);
+
+        // One payment-history row per expense in the request (no expense item association).
+        List<ExpensePayment> payments = new ArrayList<>();
+        for (SettleVendorExpense requested : requestedExpenses) {
+            ExpensesV1 expense = expensesById.get(requested.expenseId());
+            payments.add(buildPayment(expense.getExpenseId(), null, expense.getHostelId(), vendorIdStr,
+                    requested.paidAmount() != null ? requested.paidAmount() : 0.0,
+                    payload.paymentMethod(), payload.bankId(), paymentDate, payload.transactionId(),
+                    payload.notes(), imageUrls, auditUser, auditNow));
+        }
+        expensePaymentRepository.saveAll(payments);
+
+        for (ExpensesV1 expense : expensesToUpdate) {
+            usersService.addUserLog(expense.getHostelId(), expense.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
+        }
+
+        // Keep the vendor's denormalized financial summary in sync.
+        vendorFinancialService.recalculate(vendorKey);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    private ExpensePaymentStatus deriveExpenseStatus(double paid, double total, ExpensesV1 expense) {
+        if (total > 0 && paid >= total - 0.0001) {
+            return ExpensePaymentStatus.Full;
+        }
+        // Not fully paid: a vendor expense past its credit period is overdue.
+        if (Boolean.TRUE.equals(expense.getIsVendorExpense())
+                && expense.getCreditPeriod() != null && expense.getCreditPeriod() > 0
+                && expense.getCreatedAt() != null
+                && daysSince(expense.getCreatedAt()) > expense.getCreditPeriod()) {
+            return ExpensePaymentStatus.Overdue;
+        }
         if (paid <= 0) {
             return ExpensePaymentStatus.Pending;
-        }
-        if (paid >= total) {
-            return ExpensePaymentStatus.Full;
         }
         return ExpensePaymentStatus.Partial;
     }
@@ -676,6 +794,69 @@ public class ExpenseService {
             }
         }
         return urls;
+    }
+
+    // ---- Settlement helpers shared by the expense-level and vendor-level settlement APIs ----
+
+    /**
+     * Validates the payment method. Returns an error message, or {@code null} when valid. A payment
+     * method is mandatory, and a transaction id is required for any non-cash method.
+     */
+    private String validatePaymentMethod(String paymentMethod, String transactionId) {
+        if (!Utils.checkNullOrEmpty(paymentMethod)) {
+            return Utils.PAYMENT_METHOD_REQUIRED;
+        }
+        if (!"CASH".equalsIgnoreCase(paymentMethod.trim()) && !Utils.checkNullOrEmpty(transactionId)) {
+            return Utils.TRANSACTION_ID_REQUIRED;
+        }
+        return null;
+    }
+
+    private boolean exceedsImageLimit(MultipartFile[] images) {
+        long imageCount = images == null ? 0 :
+                Arrays.stream(images).filter(file -> file != null && !file.isEmpty()).count();
+        return imageCount > maxPaymentImages;
+    }
+
+    private Date resolvePaymentDate(String paymentDate) {
+        return Utils.checkNullOrEmpty(paymentDate)
+                ? Utils.stringToDate(paymentDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT)
+                : new Date();
+    }
+
+    private ExpensePayment buildPayment(String expenseId, Long expenseItemId, String hostelId, String vendorId,
+                                        double paidAmount, String paymentMethod, String bankId, Date paymentDate,
+                                        String transactionId, String notes, List<String> imageUrls,
+                                        String auditUser, Date auditNow) {
+        ExpensePayment payment = new ExpensePayment();
+        payment.setExpenseId(expenseId);
+        payment.setExpenseItemId(expenseItemId);
+        payment.setHostelId(hostelId);
+        payment.setVendorId(vendorId);
+        payment.setPaidAmount(paidAmount);
+        payment.setPaymentMethod(paymentMethod);
+        payment.setBankId(bankId);
+        payment.setPaymentDate(paymentDate);
+        payment.setTransactionId(transactionId);
+        payment.setNotes(notes);
+        payment.setImageUrls(imageUrls);
+        stampCreate(payment, auditUser, auditNow);
+        return payment;
+    }
+
+    private ExpensePaymentStatus deriveItemStatus(double paid, double total) {
+        if (paid <= 0) {
+            return ExpensePaymentStatus.Pending;
+        }
+        if (paid >= total) {
+            return ExpensePaymentStatus.Full;
+        }
+        return ExpensePaymentStatus.Partial;
+    }
+
+    private void stampUpdate(ExpenseItem item, String userId, Date now) {
+        item.setUpdatedBy(userId);
+        item.setModifiedAt(now);
     }
 
     public String generateExpenseNumber(String hostelId) {
@@ -872,11 +1053,6 @@ public class ExpenseService {
         item.setCreatedBy(userId);
         item.setUpdatedBy(userId);
         item.setCreatedAt(now);
-        item.setModifiedAt(now);
-    }
-
-    private void stampUpdate(ExpenseItem item, String userId, Date now) {
-        item.setUpdatedBy(userId);
         item.setModifiedAt(now);
     }
 

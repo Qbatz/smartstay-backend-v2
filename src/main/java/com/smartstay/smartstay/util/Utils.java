@@ -124,6 +124,8 @@ public class Utils {
     public static final String AMOUNT_REQUIRED = "Amount required";
     public static final String INVALID_EXPENSE_ITEM_ID = "Invalid expense item id";
     public static final String DUPLICATE_EXPENSE_ITEM_ID = "Duplicate expense item id";
+    public static final String DUPLICATE_EXPENSE_ID = "Duplicate expense id";
+    public static final String EXPENSE_ALREADY_SETTLED = "Expense is already fully settled";
     public static final String PAID_AMOUNT_NEGATIVE = "Paid amount cannot be negative";
     public static final String PAID_AMOUNT_EXCEEDS_ITEM = "Paid amount cannot exceed the expense item total amount";
     public static final String EXPENSE_OVERPAID = "Expense cannot be overpaid";
