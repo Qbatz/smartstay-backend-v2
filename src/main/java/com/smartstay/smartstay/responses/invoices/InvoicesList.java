@@ -34,6 +34,7 @@ public record InvoicesList(String firstName,
                            String invoiceNumber,
                            boolean isCancelled,
                            boolean canEdit,
+                           boolean canUnpaid,
                            boolean isInvoicesApplied,
                            //to show apply to invoice
                            boolean canRedeem,

@@ -5369,7 +5369,7 @@ public class InvoiceV1Service {
 
         double pendingAmount = 0.0;
         if (invoicesV1.getPaidAmount() != null) {
-            pendingAmount = invoicesV1.getTotalAmount() - invoicesV1.getPaidAmount();
+            pendingAmount = Math.round((invoicesV1.getTotalAmount() - invoicesV1.getPaidAmount()) * 100.0) / 100.0;
         }
 
         SelectedInvoiceInfo selectedInvoiceInfo = new SelectedInvoiceInfo(invoicesV1.getInvoiceId(),
@@ -5410,7 +5410,7 @@ public class InvoiceV1Service {
                         bookingInvoice.getInvoiceType(),
                         bookingInvoice.getTotalAmount(),
                         bookingInvoice.getPaidAmount(),
-                        bookingInvoice.getBalanceAmount(),
+                        bookingInvoice.getBalanceAmount() != null ? Math.round(bookingInvoice.getBalanceAmount() * 100.0) / 100.0 : null,
                         Utils.dateToString(bookingInvoice.getInvoiceStartDate()),
                         Utils.dateToString(bookingInvoice.getInvoiceDueDate()));
 
@@ -5429,7 +5429,7 @@ public class InvoiceV1Service {
                             advanceInvoice.getInvoiceType(),
                             advanceInvoice.getTotalAmount(),
                             advanceInvoice.getPaidAmount(),
-                            advanceInvoice.getBalanceAmount(),
+                            advanceInvoice.getBalanceAmount() != null ? Math.round(advanceInvoice.getBalanceAmount() * 100.0) / 100.0 : null,
                             Utils.dateToString(advanceInvoice.getInvoiceStartDate()),
                             Utils.dateToString(advanceInvoice.getInvoiceDueDate()));
 
@@ -5447,7 +5447,7 @@ public class InvoiceV1Service {
                             bookingInvoice.getInvoiceType(),
                             bookingInvoice.getTotalAmount(),
                             bookingInvoice.getPaidAmount(),
-                            bookingInvoice.getBalanceAmount(),
+                            bookingInvoice.getBalanceAmount() != null ? Math.round(bookingInvoice.getBalanceAmount() * 100.0) / 100.0 : null,
                             Utils.dateToString(bookingInvoice.getInvoiceStartDate()),
                             Utils.dateToString(bookingInvoice.getInvoiceDueDate()));
 

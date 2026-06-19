@@ -46,6 +46,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         Double discountPercentage = 0.0;
         Double discountAmount = 0.0;
         boolean canEdit = false;
+        boolean canUnpaid = true;
         boolean isInvoicesApplied = false;
         String customerStatus = null;
         //should used for advance invoices.
@@ -287,6 +288,10 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
            }
        }
 
+       if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+           canUnpaid = false;
+       }
+
         return new InvoicesList(firstName,
                 lastName,
                 fullName.toString(),
@@ -317,6 +322,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 invoicesV1.getInvoiceNumber(),
                 isCancelled,
                 canEdit,
+                canUnpaid,
                 isInvoicesApplied,
                 canRedeem,
                 canApplyFromAdvance,
