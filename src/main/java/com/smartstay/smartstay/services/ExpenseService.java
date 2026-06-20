@@ -586,7 +586,8 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
-        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), true);
+        // Transaction id is optional for expense settlement.
+        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), false);
         if (methodError != null) {
             return new ResponseEntity<>(methodError, HttpStatus.BAD_REQUEST);
         }
