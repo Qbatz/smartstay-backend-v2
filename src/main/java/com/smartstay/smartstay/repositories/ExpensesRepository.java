@@ -24,11 +24,7 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
                             @Param("startDate") Date startDate,
                             @Param("endDate") Date endDate);
 
-    @Query("SELECT new com.smartstay.smartstay.responses.vendor.VendorExpenseSummary(" +
-            "e.expenseId, e.expenseNumber, e.totalPrice, e.balanceAmount, e.transactionId) " +
-            "FROM ExpensesV1 e WHERE e.vendorId = :vendorId AND e.isActive = true " +
-            "ORDER BY e.transactionDate DESC")
-    List<com.smartstay.smartstay.responses.vendor.VendorExpenseSummary> findVendorExpenseSummaries(@Param("vendorId") String vendorId);
+    List<ExpensesV1> findByVendorIdAndIsActiveTrueOrderByTransactionDateDesc(String vendorId);
 
     @Query("SELECT COUNT(e) FROM ExpensesV1 e " +
             "WHERE e.vendorId = :vendorId AND e.isActive = true " +

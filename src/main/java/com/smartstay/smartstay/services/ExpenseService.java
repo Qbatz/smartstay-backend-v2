@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.expenses.ExpenseListMapper;
 import com.smartstay.smartstay.Wrappers.expenses.ExpenseTableMapper;
+import com.smartstay.smartstay.Wrappers.expenses.VendorExpenseSummaryMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.ColumnFilters;
 import com.smartstay.smartstay.config.FilesConfig;
@@ -292,7 +293,14 @@ public class ExpenseService {
         }
 
         List<DebitsBank> listBanks = bankingService.getAllBankForReturn(hostelId);
-        List<VendorExpenseSummary> expenses = expensesRepository.findVendorExpenseSummaries(String.valueOf(vendorId));
+
+        // Map entities -> summary via a dedicated mapper (no JPQL constructor projection).
+        VendorExpenseSummaryMapper expenseSummaryMapper = new VendorExpenseSummaryMapper();
+        List<VendorExpenseSummary> expenses = expensesRepository
+                .findByVendorIdAndIsActiveTrueOrderByTransactionDateDesc(String.valueOf(vendorId))
+                .stream()
+                .map(expenseSummaryMapper)
+                .toList();
 
         VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses);
         return new ResponseEntity<>(response, HttpStatus.OK);
