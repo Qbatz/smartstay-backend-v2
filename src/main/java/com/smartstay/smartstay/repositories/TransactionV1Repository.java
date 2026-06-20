@@ -84,7 +84,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
 
     @Query(value = """
             SELECT * FROM transactionv1 transactionv1 where transactionv1.transaction_id = (SELECT trv1.transaction_id FROM transactionv1 trv1 
-                  where trv1.invoice_id=transactionv1.invoice_id ORDER BY trv1.payment_date DESC LIMIT 1) and transactionv1.hostel+id=:hostelId and transactionv1.invoice_id in (:invoiceIds)
+                  where trv1.invoice_id=transactionv1.invoice_id ORDER BY trv1.payment_date DESC LIMIT 1) and transactionv1.hostel_id=:hostelId and transactionv1.invoice_id in (:invoiceIds)
             """, nativeQuery = true)
     List<TransactionV1> findLatestTransactionByInvoicesId(@Param("hostelId") String hostelId, @Param("invoiceIds") List<String> invoiceIds);
 }

@@ -1986,6 +1986,11 @@ public class InvoiceV1Service {
                    invoicesV1.getPaymentStatus());
        }
 
+        List<String> invoicesList = invoicesV1.getCancelledInvoices();
+        List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(invoicesV1.getHostelId(), invoicesList);
+        Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
+                invoiceSummaries);
+
         FinalSettlementInvoice finalSettlementResponse = new FinalSettlementInvoice(headerInfo,
                 stayInfo,
                 accountDetails,
@@ -1998,7 +2003,9 @@ public class InvoiceV1Service {
                 currentRentInfo,
                 currentMonthEbInfo,
                 walletInfo,
-                invoiceInfo);
+                invoiceInfo,
+                historyMap.get("refundHistory"),
+                historyMap.get("paymentHistory"));
 
 
 
@@ -5269,7 +5276,8 @@ public class InvoiceV1Service {
 
         List<InvoicesV1> listPendingInvoices = invoicesV1Repository.findPendingByHostelIdAndCustomerId(hostelId, customerId);
         List<InvoicesV1> invoiceItemsToShow = listPendingInvoices;
-        List<TransactionV1> listTransactions = new ArrayList<>();
+        List<TransactionV1> listTransactions;
+        List<BankingV1> listBanks;
         if (listPendingInvoices != null) {
             List<String> invoiceIds = listPendingInvoices
                     .stream()
@@ -5277,6 +5285,22 @@ public class InvoiceV1Service {
                     .toList();
 
             listTransactions = transactionService.findLatestTransactionsByInvoiceIds(hostelId, invoiceIds);
+            if (listTransactions != null) {
+                Set<String> bankIds = listTransactions
+                        .stream()
+                        .map(TransactionV1::getBankId)
+                        .collect(Collectors.toSet());
+                if (bankIds != null) {
+                    listBanks = bankingService.findAllBanksById(bankIds);
+                } else {
+                    listBanks = new ArrayList<>();
+                }
+            } else {
+                listBanks = new ArrayList<>();
+            }
+        } else {
+            listBanks = new ArrayList<>();
+            listTransactions = new ArrayList<>();
         }
         if (advanceInvoices.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
             invoiceItemsToShow = listPendingInvoices
@@ -5336,7 +5360,7 @@ public class InvoiceV1Service {
 
         List<InitializeInvoiceItems> listInvoiceItems = invoiceItemsToShow
                 .stream()
-                .map(i -> new InitializeRedemptionMapper().apply(i))
+                .map(i -> new InitializeRedemptionMapper(listTransactions, listBanks).apply(i))
                 .toList();
 
         InitializeRedemption initializeRedemption = new InitializeRedemption(advanceInfo,

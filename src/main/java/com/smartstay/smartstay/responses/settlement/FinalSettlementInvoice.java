@@ -3,9 +3,12 @@ package com.smartstay.smartstay.responses.settlement;
 
 import com.smartstay.smartstay.Wrappers.settlement.CurrentMonthEbInfo;
 import com.smartstay.smartstay.Wrappers.settlement.CurrentRentInfo;
+import com.smartstay.smartstay.dto.customer.InvoiceRefundHistory;
 import com.smartstay.smartstay.responses.customer.AdvanceItems;
 import com.smartstay.smartstay.responses.customer.RentInfo;
 import com.smartstay.smartstay.responses.invoices.*;
+
+import java.util.List;
 
 public record FinalSettlementInvoice(HeaderInfo headerInfo,
                                      StayInfo stayInfo,
@@ -19,5 +22,7 @@ public record FinalSettlementInvoice(HeaderInfo headerInfo,
                                      CurrentRentInfo currentMonthRentInfo,
                                      CurrentMonthEbInfo currentMonthEbInfo,
                                      WalletInfo walletInfo,
-                                     InvoiceInfo invoiceInfo) {
+                                     InvoiceInfo invoiceInfo,
+                                     List<InvoiceRefundHistory> refundHistory,
+                                     List<InvoiceRefundHistory> paymentHistory) {
 }
