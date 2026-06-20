@@ -61,6 +61,7 @@ import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -102,6 +103,9 @@ public class VendorService {
 
     @Autowired
     private CountriesRepository countriesRepository;
+
+    @Autowired
+    private BankingService bankingService;
 
     private String normalizeMobile(String countryCode, String mobile) {
         if (mobile == null) {
@@ -505,14 +509,36 @@ public class VendorService {
 
         Page<ExpensePayment> paymentPage =
                 expensePaymentRepository.findVendorPayments(String.valueOf(vendorId), start, end, pageable);
+        List<ExpensePayment> pagePayments = paymentPage.getContent();
 
-        List<VendorExpensePaymentResponse> payments = paymentPage.getContent().stream()
+        // Resolve banks once for the page: paymentMethod may hold a bank id (-> account type) and
+        // bankId resolves to the bank name. Both come from a single bulk lookup (no N+1).
+        Set<String> bankLookupIds = new HashSet<>();
+        pagePayments.forEach(p -> {
+            if (p.getPaymentMethod() != null && !p.getPaymentMethod().trim().isEmpty()) {
+                bankLookupIds.add(p.getPaymentMethod());
+            }
+            if (p.getBankId() != null && !p.getBankId().trim().isEmpty()) {
+                bankLookupIds.add(p.getBankId());
+            }
+        });
+        Map<String, String> accountTypeById = new HashMap<>();
+        Map<String, String> bankNameById = new HashMap<>();
+        if (!bankLookupIds.isEmpty()) {
+            bankingService.findAllBanksById(bankLookupIds).forEach(b -> {
+                accountTypeById.put(b.getBankId(), b.getAccountType());
+                bankNameById.put(b.getBankId(), b.getBankName());
+            });
+        }
+
+        List<VendorExpensePaymentResponse> payments = pagePayments.stream()
                 .map(p -> new VendorExpensePaymentResponse(
                         p.getId(),
                         p.getPaidAmount(),
-                        p.getPaymentMethod(),
+                        resolvePaymentMethodName(p.getPaymentMethod(), accountTypeById),
                         p.getExpenseId(),
                         p.getBankId(),
+                        resolveBankName(p.getBankId(), bankNameById),
                         p.getHostelId(),
                         Utils.dateToString(p.getPaymentDate()),
                         p.getTransactionId(),
@@ -527,6 +553,30 @@ public class VendorService {
 
     private double nullSafe(Double value) {
         return value != null ? value : 0.0;
+    }
+
+    /**
+     * Resolves a stored {@code paymentMethod} value (which may be a bank id) to its payment method
+     * name. Falls back to the original value when it doesn't map to a bank.
+     */
+    private String resolvePaymentMethodName(String paymentMethod, Map<String, String> paymentMethodNames) {
+        if (paymentMethod == null) {
+            return null;
+        }
+        String resolved = paymentMethodNames.get(paymentMethod);
+        return (resolved != null && !resolved.trim().isEmpty()) ? resolved : paymentMethod;
+    }
+
+    /**
+     * Resolves a bank id to its bank name. Returns an empty string when the id is blank or no
+     * matching bank is found.
+     */
+    private String resolveBankName(String bankId, Map<String, String> bankNameById) {
+        if (bankId == null || bankId.trim().isEmpty()) {
+            return "";
+        }
+        String name = bankNameById.get(bankId);
+        return (name != null && !name.trim().isEmpty()) ? name : "";
     }
 
     private String toIsoDateTime(Date date) {
