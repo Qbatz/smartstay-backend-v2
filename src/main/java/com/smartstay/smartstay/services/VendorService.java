@@ -12,6 +12,7 @@ import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dao.VendorCategories;
 import com.smartstay.smartstay.dao.VendorV1;
+import com.smartstay.smartstay.dto.vendor.VendorMonthSummaryProjection;
 import com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary;
 import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.ennum.ModuleId;
@@ -37,6 +38,7 @@ import com.smartstay.smartstay.responses.vendor.VendorExpensesResponse;
 import com.smartstay.smartstay.responses.vendor.VendorFilterOptions;
 import com.smartstay.smartstay.responses.vendor.VendorFinancialSummary;
 import com.smartstay.smartstay.responses.vendor.VendorListResponse;
+import com.smartstay.smartstay.responses.vendor.VendorMonthSummary;
 import com.smartstay.smartstay.responses.vendor.VendorMobileListResponse;
 import com.smartstay.smartstay.responses.vendor.VendorMobileResponse;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
@@ -54,10 +56,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -99,6 +103,9 @@ public class VendorService {
 
     @Autowired
     private CountriesRepository countriesRepository;
+
+    @Autowired
+    private BankingService bankingService;
 
     private String normalizeMobile(String countryCode, String mobile) {
         if (mobile == null) {
@@ -335,9 +342,61 @@ public class VendorService {
 
         String createdAt = vendor != null ? toIsoDateTime(vendor.getCreatedAt()) : null;
 
+        // Month-wise breakdown for the selected range; defaults to the last 6 months when no
+        // (or an unrecognised) filter is supplied.
+        Date[] monthRange = range != null ? range : new Date[]{startOfMonth(-5), endOfMonth(0)};
+        List<VendorMonthSummary> monthSummary = buildMonthSummary(vendorId, monthRange[0], monthRange[1]);
+
         VendorDetailsResponse response = new VendorDetailsResponse(vendorResponse, createdAt,
-                buildPeriodFilterOptions(), summary);
+                buildPeriodFilterOptions(), summary, monthSummary);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    /**
+     * Builds one {@link VendorMonthSummary} per calendar month in [startDate, endDate], using a
+     * single grouped aggregate query. Months with no expenses are still returned, zero-filled, so the
+     * response structure is consistent across the whole range.
+     */
+    private List<VendorMonthSummary> buildMonthSummary(String vendorId, Date startDate, Date endDate) {
+        Map<Integer, VendorMonthSummaryProjection> byYearMonth = new HashMap<>();
+        for (VendorMonthSummaryProjection row : expensesRepository.findVendorMonthlyExpenseSummary(vendorId, startDate, endDate)) {
+            byYearMonth.put(yearMonthKey(row.getExpenseYear(), row.getExpenseMonth()), row);
+        }
+
+        List<VendorMonthSummary> monthSummaries = new ArrayList<>();
+        SimpleDateFormat monthNameFormat = new SimpleDateFormat("MMMM");
+        Calendar cursor = Calendar.getInstance();
+        cursor.setTime(startDate);
+        cursor.set(Calendar.DAY_OF_MONTH, 1);
+        Calendar end = Calendar.getInstance();
+        end.setTime(endDate);
+
+        while (cursor.get(Calendar.YEAR) < end.get(Calendar.YEAR)
+                || (cursor.get(Calendar.YEAR) == end.get(Calendar.YEAR)
+                && cursor.get(Calendar.MONTH) <= end.get(Calendar.MONTH))) {
+            String monthName = monthNameFormat.format(cursor.getTime());
+            VendorMonthSummaryProjection row = byYearMonth.get(
+                    yearMonthKey(cursor.get(Calendar.YEAR), cursor.get(Calendar.MONTH) + 1));
+            if (row != null) {
+                monthSummaries.add(new VendorMonthSummary(monthName,
+                        nullSafeLong(row.getTotalExpenseCount()), nullSafeLong(row.getTotalPaidCount()),
+                        nullSafeLong(row.getTotalUnpaidCount()), nullSafeLong(row.getTotalPartialCount()),
+                        nullSafe(row.getTotalPaidAmount()), nullSafe(row.getTotalUnpaidAmount()),
+                        nullSafe(row.getTotalPartialAmount())));
+            } else {
+                monthSummaries.add(new VendorMonthSummary(monthName, 0, 0, 0, 0, 0.0, 0.0, 0.0));
+            }
+            cursor.add(Calendar.MONTH, 1);
+        }
+        return monthSummaries;
+    }
+
+    private int yearMonthKey(int year, int month) {
+        return year * 100 + month;
+    }
+
+    private long nullSafeLong(Long value) {
+        return value != null ? value : 0L;
     }
 
     public ResponseEntity<?> getVendorExpenses(Integer vendorId, String search, String startDate, String endDate,
@@ -450,14 +509,36 @@ public class VendorService {
 
         Page<ExpensePayment> paymentPage =
                 expensePaymentRepository.findVendorPayments(String.valueOf(vendorId), start, end, pageable);
+        List<ExpensePayment> pagePayments = paymentPage.getContent();
 
-        List<VendorExpensePaymentResponse> payments = paymentPage.getContent().stream()
+        // Resolve banks once for the page: paymentMethod may hold a bank id (-> account type) and
+        // bankId resolves to the bank name. Both come from a single bulk lookup (no N+1).
+        Set<String> bankLookupIds = new HashSet<>();
+        pagePayments.forEach(p -> {
+            if (p.getPaymentMethod() != null && !p.getPaymentMethod().trim().isEmpty()) {
+                bankLookupIds.add(p.getPaymentMethod());
+            }
+            if (p.getBankId() != null && !p.getBankId().trim().isEmpty()) {
+                bankLookupIds.add(p.getBankId());
+            }
+        });
+        Map<String, String> accountTypeById = new HashMap<>();
+        Map<String, String> bankNameById = new HashMap<>();
+        if (!bankLookupIds.isEmpty()) {
+            bankingService.findAllBanksById(bankLookupIds).forEach(b -> {
+                accountTypeById.put(b.getBankId(), b.getAccountType());
+                bankNameById.put(b.getBankId(), b.getBankName());
+            });
+        }
+
+        List<VendorExpensePaymentResponse> payments = pagePayments.stream()
                 .map(p -> new VendorExpensePaymentResponse(
                         p.getId(),
                         p.getPaidAmount(),
-                        p.getPaymentMethod(),
+                        resolvePaymentMethodName(p.getPaymentMethod(), accountTypeById),
                         p.getExpenseId(),
                         p.getBankId(),
+                        resolveBankName(p.getBankId(), bankNameById),
                         p.getHostelId(),
                         Utils.dateToString(p.getPaymentDate()),
                         p.getTransactionId(),
@@ -472,6 +553,30 @@ public class VendorService {
 
     private double nullSafe(Double value) {
         return value != null ? value : 0.0;
+    }
+
+    /**
+     * Resolves a stored {@code paymentMethod} value (which may be a bank id) to its payment method
+     * name. Falls back to the original value when it doesn't map to a bank.
+     */
+    private String resolvePaymentMethodName(String paymentMethod, Map<String, String> paymentMethodNames) {
+        if (paymentMethod == null) {
+            return null;
+        }
+        String resolved = paymentMethodNames.get(paymentMethod);
+        return (resolved != null && !resolved.trim().isEmpty()) ? resolved : paymentMethod;
+    }
+
+    /**
+     * Resolves a bank id to its bank name. Returns an empty string when the id is blank or no
+     * matching bank is found.
+     */
+    private String resolveBankName(String bankId, Map<String, String> bankNameById) {
+        if (bankId == null || bankId.trim().isEmpty()) {
+            return "";
+        }
+        String name = bankNameById.get(bankId);
+        return (name != null && !name.trim().isEmpty()) ? name : "";
     }
 
     private String toIsoDateTime(Date date) {

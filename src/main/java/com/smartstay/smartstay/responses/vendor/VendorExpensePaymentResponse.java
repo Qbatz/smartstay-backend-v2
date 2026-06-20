@@ -6,6 +6,7 @@ public record VendorExpensePaymentResponse(
         String paymentMethod,
         String expenseId,
         String bankId,
+        String bankName,
         String hostelId,
         String paymentDate,
         String transactionId,

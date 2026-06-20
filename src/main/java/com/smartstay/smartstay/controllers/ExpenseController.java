@@ -69,6 +69,12 @@ public class ExpenseController {
         return expenseService.getAllExpenses(hostelId, name, categoryId, page, size);
     }
 
+    @GetMapping("/{hostelId}/{expenseId}")
+    public ResponseEntity<?> getExpenseDetails(@PathVariable("hostelId") String hostelId,
+                                               @PathVariable("expenseId") String expenseId) {
+        return expenseService.getExpenseDetails(hostelId, expenseId);
+    }
+
     @PutMapping("/{hostelId}/{expenseId}")
     public ResponseEntity<?> updateExpenseAmount(@PathVariable("hostelId") String hostelId, @PathVariable("expenseId") String expenseId,
                                                  @Valid @RequestBody UpdateExpense updateExpense) {
