@@ -579,7 +579,7 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
-        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId());
+        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), true);
         if (methodError != null) {
             return new ResponseEntity<>(methodError, HttpStatus.BAD_REQUEST);
         }
@@ -647,8 +647,8 @@ public class ExpenseService {
         }
         String vendorIdStr = String.valueOf(vendorKey);
 
-        // Payment-method based validation.
-        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId());
+        // Payment-method based validation (transaction id is optional for vendor settlement).
+        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), false);
         if (methodError != null) {
             return new ResponseEntity<>(methodError, HttpStatus.BAD_REQUEST);
         }
@@ -774,11 +774,13 @@ public class ExpenseService {
      * Validates the payment method. Returns an error message, or {@code null} when valid. A payment
      * method is mandatory, and a transaction id is required for any non-cash method.
      */
-    private String validatePaymentMethod(String paymentMethod, String transactionId) {
+    private String validatePaymentMethod(String paymentMethod, String transactionId, boolean transactionIdRequired) {
         if (!Utils.checkNullOrEmpty(paymentMethod)) {
             return Utils.PAYMENT_METHOD_REQUIRED;
         }
-        if (!"CASH".equalsIgnoreCase(paymentMethod.trim()) && !Utils.checkNullOrEmpty(transactionId)) {
+        if (transactionIdRequired
+                && !"CASH".equalsIgnoreCase(paymentMethod.trim())
+                && !Utils.checkNullOrEmpty(transactionId)) {
             return Utils.TRANSACTION_ID_REQUIRED;
         }
         return null;
