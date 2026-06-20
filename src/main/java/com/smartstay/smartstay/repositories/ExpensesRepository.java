@@ -45,6 +45,42 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
                             @Param("startDate") Date startDate,
                             @Param("endDate") Date endDate);
 
+    /**
+     * Month-wise expense aggregate for a vendor within a date range. Buckets are mutually exclusive:
+     *   paid    = paymentStatus 'Full' OR balance 0
+     *   partial = paymentStatus 'Partial' AND balance <> 0
+     *   unpaid  = everything else (Pending / NULL / Overdue with a balance)
+     * Returns one row per year+month that has expenses; missing months are zero-filled in the service.
+     */
+    @Query(value = """
+            SELECT YEAR(e.transaction_date)  AS expenseYear,
+                   MONTH(e.transaction_date) AS expenseMonth,
+                   COUNT(*)                  AS totalExpenseCount,
+                   SUM(CASE WHEN COALESCE(e.payment_status,'') = 'Full' OR COALESCE(e.balance_amount,0) = 0
+                            THEN 1 ELSE 0 END) AS totalPaidCount,
+                   SUM(CASE WHEN COALESCE(e.payment_status,'') = 'Partial' AND COALESCE(e.balance_amount,0) <> 0
+                            THEN 1 ELSE 0 END) AS totalPartialCount,
+                   SUM(CASE WHEN NOT (COALESCE(e.payment_status,'') = 'Full' OR COALESCE(e.balance_amount,0) = 0)
+                             AND NOT (COALESCE(e.payment_status,'') = 'Partial' AND COALESCE(e.balance_amount,0) <> 0)
+                            THEN 1 ELSE 0 END) AS totalUnpaidCount,
+                   COALESCE(SUM(CASE WHEN COALESCE(e.payment_status,'') = 'Full' OR COALESCE(e.balance_amount,0) = 0
+                                     THEN COALESCE(e.paid_amount,0) ELSE 0 END), 0) AS totalPaidAmount,
+                   COALESCE(SUM(CASE WHEN NOT (COALESCE(e.payment_status,'') = 'Full' OR COALESCE(e.balance_amount,0) = 0)
+                                      AND NOT (COALESCE(e.payment_status,'') = 'Partial' AND COALESCE(e.balance_amount,0) <> 0)
+                                     THEN COALESCE(e.balance_amount,0) ELSE 0 END), 0) AS totalUnpaidAmount,
+                   COALESCE(SUM(CASE WHEN COALESCE(e.payment_status,'') = 'Partial' AND COALESCE(e.balance_amount,0) <> 0
+                                     THEN COALESCE(e.balance_amount,0) ELSE 0 END), 0) AS totalPartialAmount
+            FROM expensesv1 e
+            WHERE e.vendor_id = :vendorId AND e.is_active = true
+              AND DATE(e.transaction_date) >= DATE(:startDate)
+              AND DATE(e.transaction_date) <= DATE(:endDate)
+            GROUP BY YEAR(e.transaction_date), MONTH(e.transaction_date)
+            """, nativeQuery = true)
+    List<com.smartstay.smartstay.dto.vendor.VendorMonthSummaryProjection> findVendorMonthlyExpenseSummary(
+            @Param("vendorId") String vendorId,
+            @Param("startDate") Date startDate,
+            @Param("endDate") Date endDate);
+
     @Query(value = """
             SELECT exp.expense_id as expenseId, exp.unit_count as noOfItems, exp.category_id as categoryId,
             exp.description, exp.hostel_id as hostelId, exp.bank_id as bankId, exp.sub_category_id as subCategoryId,

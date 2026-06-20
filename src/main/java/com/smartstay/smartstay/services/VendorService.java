@@ -12,6 +12,7 @@ import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dao.VendorCategories;
 import com.smartstay.smartstay.dao.VendorV1;
+import com.smartstay.smartstay.dto.vendor.VendorMonthSummaryProjection;
 import com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary;
 import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.ennum.ModuleId;
@@ -37,6 +38,7 @@ import com.smartstay.smartstay.responses.vendor.VendorExpensesResponse;
 import com.smartstay.smartstay.responses.vendor.VendorFilterOptions;
 import com.smartstay.smartstay.responses.vendor.VendorFinancialSummary;
 import com.smartstay.smartstay.responses.vendor.VendorListResponse;
+import com.smartstay.smartstay.responses.vendor.VendorMonthSummary;
 import com.smartstay.smartstay.responses.vendor.VendorMobileListResponse;
 import com.smartstay.smartstay.responses.vendor.VendorMobileResponse;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
@@ -54,6 +56,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
@@ -335,9 +338,61 @@ public class VendorService {
 
         String createdAt = vendor != null ? toIsoDateTime(vendor.getCreatedAt()) : null;
 
+        // Month-wise breakdown for the selected range; defaults to the last 6 months when no
+        // (or an unrecognised) filter is supplied.
+        Date[] monthRange = range != null ? range : new Date[]{startOfMonth(-5), endOfMonth(0)};
+        List<VendorMonthSummary> monthSummary = buildMonthSummary(vendorId, monthRange[0], monthRange[1]);
+
         VendorDetailsResponse response = new VendorDetailsResponse(vendorResponse, createdAt,
-                buildPeriodFilterOptions(), summary);
+                buildPeriodFilterOptions(), summary, monthSummary);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    /**
+     * Builds one {@link VendorMonthSummary} per calendar month in [startDate, endDate], using a
+     * single grouped aggregate query. Months with no expenses are still returned, zero-filled, so the
+     * response structure is consistent across the whole range.
+     */
+    private List<VendorMonthSummary> buildMonthSummary(String vendorId, Date startDate, Date endDate) {
+        Map<Integer, VendorMonthSummaryProjection> byYearMonth = new HashMap<>();
+        for (VendorMonthSummaryProjection row : expensesRepository.findVendorMonthlyExpenseSummary(vendorId, startDate, endDate)) {
+            byYearMonth.put(yearMonthKey(row.getExpenseYear(), row.getExpenseMonth()), row);
+        }
+
+        List<VendorMonthSummary> monthSummaries = new ArrayList<>();
+        SimpleDateFormat monthNameFormat = new SimpleDateFormat("MMMM");
+        Calendar cursor = Calendar.getInstance();
+        cursor.setTime(startDate);
+        cursor.set(Calendar.DAY_OF_MONTH, 1);
+        Calendar end = Calendar.getInstance();
+        end.setTime(endDate);
+
+        while (cursor.get(Calendar.YEAR) < end.get(Calendar.YEAR)
+                || (cursor.get(Calendar.YEAR) == end.get(Calendar.YEAR)
+                && cursor.get(Calendar.MONTH) <= end.get(Calendar.MONTH))) {
+            String monthName = monthNameFormat.format(cursor.getTime());
+            VendorMonthSummaryProjection row = byYearMonth.get(
+                    yearMonthKey(cursor.get(Calendar.YEAR), cursor.get(Calendar.MONTH) + 1));
+            if (row != null) {
+                monthSummaries.add(new VendorMonthSummary(monthName,
+                        nullSafeLong(row.getTotalExpenseCount()), nullSafeLong(row.getTotalPaidCount()),
+                        nullSafeLong(row.getTotalUnpaidCount()), nullSafeLong(row.getTotalPartialCount()),
+                        nullSafe(row.getTotalPaidAmount()), nullSafe(row.getTotalUnpaidAmount()),
+                        nullSafe(row.getTotalPartialAmount())));
+            } else {
+                monthSummaries.add(new VendorMonthSummary(monthName, 0, 0, 0, 0, 0.0, 0.0, 0.0));
+            }
+            cursor.add(Calendar.MONTH, 1);
+        }
+        return monthSummaries;
+    }
+
+    private int yearMonthKey(int year, int month) {
+        return year * 100 + month;
+    }
+
+    private long nullSafeLong(Long value) {
+        return value != null ? value : 0L;
     }
 
     public ResponseEntity<?> getVendorExpenses(Integer vendorId, String search, String startDate, String endDate,
