@@ -18,6 +18,8 @@ public class VendorExpenseSummaryMapper implements Function<ExpensesV1, VendorEx
         return new VendorExpenseSummary(
                 expense.getExpenseId(),
                 expense.getExpenseNumber(),
+                // Historical rows have no actualTotalPrice; fall back to totalPrice (no discount).
+                expense.getActualTotalPrice() != null ? expense.getActualTotalPrice() : expense.getTotalPrice(),
                 expense.getTotalPrice(),
                 expense.getBalanceAmount(),
                 expense.getTransactionId(),

@@ -369,6 +369,12 @@ public class ExpenseService {
             unitPrice = expense.totalAmount() / count;
         }
 
+        // Preserve the original total in actualTotalPrice; totalPrice is the payable amount after
+        // discount and remains the basis for all existing financial calculations.
+        double actualTotalPrice = expense.totalAmount() != null ? expense.totalAmount() : 0.0;
+        double discountAmount = expense.discount() != null ? expense.discount() : 0.0;
+        double payableAmount = actualTotalPrice - discountAmount;
+
         String expenseNumber = generateExpenseNumber(hostelId);
         ExpensesV1 expensesV1 = new ExpensesV1();
         expensesV1.setCategoryId(expense.categoryId());
@@ -378,7 +384,8 @@ public class ExpenseService {
         expensesV1.setBankId(expense.bankId());
         expensesV1.setUnitPrice(unitPrice);
         expensesV1.setUnitCount(count);
-        expensesV1.setTotalPrice(expense.totalAmount());
+        expensesV1.setActualTotalPrice(actualTotalPrice);
+        expensesV1.setTotalPrice(payableAmount);
         expensesV1.setExpenseNumber(expenseNumber);
 
         expensesV1.setTransactionAmount(expense.totalAmount());
@@ -1143,6 +1150,7 @@ public class ExpenseService {
                 expense.getHostelId(),
                 expense.getBankId(),
                 expenseBank != null ? expenseBank.getBankName() : null,
+                expense.getActualTotalPrice() != null ? expense.getActualTotalPrice() : expense.getTotalPrice(),
                 expense.getTotalPrice(),
                 expense.getTransactionDate() != null ? Utils.dateToString(expense.getTransactionDate()) : null,
                 expense.getUnitPrice(),
