@@ -5,10 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * Vendor details response. The existing {@link VendorResponse} fields are flattened to the top level
- * via {@link JsonUnwrapped} so the contract is fully preserved, with the new {@code filterOptions}
- * and {@code summary} blocks appended.
+ * via {@link JsonUnwrapped} so the contract is fully preserved, with the new {@code filterOptions},
+ * {@code summary} and {@code monthSummary} blocks appended.
  */
 @Data
 @AllArgsConstructor
@@ -23,4 +25,6 @@ public class VendorDetailsResponse {
     private VendorDetailsFilterOptions filterOptions;
 
     private VendorFinancialSummary summary;
+
+    private List<VendorMonthSummary> monthSummary;
 }

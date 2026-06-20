@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.expenses.ExpenseListMapper;
 import com.smartstay.smartstay.Wrappers.expenses.ExpenseTableMapper;
+import com.smartstay.smartstay.Wrappers.expenses.VendorExpenseSummaryMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.ColumnFilters;
 import com.smartstay.smartstay.config.FilesConfig;
@@ -32,6 +33,9 @@ import com.smartstay.smartstay.repositories.ExpensePaymentRepository;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.UnitsRepository;
 import com.smartstay.smartstay.repositories.VendorRepository;
+import com.smartstay.smartstay.responses.expenses.ExpenseDetailItem;
+import com.smartstay.smartstay.responses.expenses.ExpenseDetailPayment;
+import com.smartstay.smartstay.responses.expenses.ExpenseDetailResponse;
 import com.smartstay.smartstay.responses.expenses.ExpenseFilterOptions;
 import com.smartstay.smartstay.responses.expenses.ExpenseItemResponse;
 import com.smartstay.smartstay.responses.expenses.ExpensePaymentResponse;
@@ -292,7 +296,15 @@ public class ExpenseService {
         }
 
         List<DebitsBank> listBanks = bankingService.getAllBankForReturn(hostelId);
-        List<VendorExpenseSummary> expenses = expensesRepository.findVendorExpenseSummaries(String.valueOf(vendorId));
+
+        // Only outstanding expenses (not fully settled) are eligible for settlement; filtered at
+        // the query level. Map entities -> summary via a dedicated mapper (no JPQL projection).
+        VendorExpenseSummaryMapper expenseSummaryMapper = new VendorExpenseSummaryMapper();
+        List<VendorExpenseSummary> expenses = expensesRepository
+                .findOutstandingExpensesByVendorId(String.valueOf(vendorId), ExpensePaymentStatus.Full)
+                .stream()
+                .map(expenseSummaryMapper)
+                .toList();
 
         VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -567,7 +579,7 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
-        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId());
+        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), true);
         if (methodError != null) {
             return new ResponseEntity<>(methodError, HttpStatus.BAD_REQUEST);
         }
@@ -635,8 +647,8 @@ public class ExpenseService {
         }
         String vendorIdStr = String.valueOf(vendorKey);
 
-        // Payment-method based validation.
-        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId());
+        // Payment-method based validation (transaction id is optional for vendor settlement).
+        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), false);
         if (methodError != null) {
             return new ResponseEntity<>(methodError, HttpStatus.BAD_REQUEST);
         }
@@ -762,11 +774,13 @@ public class ExpenseService {
      * Validates the payment method. Returns an error message, or {@code null} when valid. A payment
      * method is mandatory, and a transaction id is required for any non-cash method.
      */
-    private String validatePaymentMethod(String paymentMethod, String transactionId) {
+    private String validatePaymentMethod(String paymentMethod, String transactionId, boolean transactionIdRequired) {
         if (!Utils.checkNullOrEmpty(paymentMethod)) {
             return Utils.PAYMENT_METHOD_REQUIRED;
         }
-        if (!"CASH".equalsIgnoreCase(paymentMethod.trim()) && !Utils.checkNullOrEmpty(transactionId)) {
+        if (transactionIdRequired
+                && !"CASH".equalsIgnoreCase(paymentMethod.trim())
+                && !Utils.checkNullOrEmpty(transactionId)) {
             return Utils.TRANSACTION_ID_REQUIRED;
         }
         return null;
@@ -1024,6 +1038,146 @@ public class ExpenseService {
                 .map(c -> new ExpenseFilterOptions.FilterItems(c.categoryName(), String.valueOf(c.categoryId())))
                 .collect(Collectors.toList());
         return new ExpenseFilterOptions(categoryItems);
+    }
+
+    /**
+     * Full detail of a single expense: the expense record plus its items and complete payment
+     * history. Bank, category and creator names are resolved through a handful of bulk lookups
+     * (one per related table) so there are no per-row queries.
+     */
+    public ResponseEntity<?> getExpenseDetails(String hostelId, String expenseId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        ExpensesV1 expense = expensesRepository.findById(expenseId).orElse(null);
+        if (expense == null || !expense.isActive() || !hostelId.equalsIgnoreCase(expense.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_EXPENSE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        List<ExpenseItem> items = expenseItemRepository.findByExpenseId(expenseId);
+        List<ExpensePayment> payments = expensePaymentRepository.findByExpenseId(expenseId);
+
+        // Bulk-resolve banks referenced by the expense and its payments.
+        Set<String> bankIds = new HashSet<>();
+        if (expense.getBankId() != null) {
+            bankIds.add(expense.getBankId());
+        }
+        payments.stream().map(ExpensePayment::getBankId).filter(Objects::nonNull).forEach(bankIds::add);
+        Map<String, BankingV1> bankMap = new HashMap<>();
+        if (!bankIds.isEmpty()) {
+            bankingService.findAllBanksById(bankIds).forEach(b -> bankMap.put(b.getBankId(), b));
+        }
+
+        // Resolve category + sub-category names.
+        ExpenseCategory category = expense.getCategoryId() != null
+                ? expenseCategoryService.getExpenseCategoryById(expense.getCategoryId()) : null;
+        String categoryName = category != null ? category.getCategoryName() : null;
+        String subCategoryName = null;
+        if (category != null && expense.getSubCategoryId() != null && category.getListSubCategories() != null) {
+            subCategoryName = category.getListSubCategories().stream()
+                    .filter(s -> expense.getSubCategoryId().equals(s.getSubCategoryId()))
+                    .map(ExpenseSubCategory::getSubCategoryName)
+                    .findFirst().orElse(null);
+        }
+
+        // Bulk-resolve creator names across the expense, items and payments.
+        Set<String> creatorIds = new HashSet<>();
+        if (expense.getCreatedBy() != null) {
+            creatorIds.add(expense.getCreatedBy());
+        }
+        items.stream().map(ExpenseItem::getCreatedBy).filter(Objects::nonNull).forEach(creatorIds::add);
+        payments.stream().map(ExpensePayment::getCreatedBy).filter(Objects::nonNull).forEach(creatorIds::add);
+        Map<String, String> creatorNamesById = new HashMap<>();
+        if (!creatorIds.isEmpty()) {
+            usersService.findAllUsersFromUserId(new ArrayList<>(creatorIds)).forEach(u ->
+                    creatorNamesById.put(u.getUserId(), NameUtils.getFullName(u.getFirstName(), u.getLastName())));
+        }
+
+        BankingV1 expenseBank = bankMap.get(expense.getBankId());
+
+        List<ExpenseDetailItem> itemDetails = items.stream()
+                .map(i -> new ExpenseDetailItem(
+                        i.getId(), i.getItem(), i.getQuantity(), i.getUnit(), i.getUnitPrice(), i.getTotalAmount(),
+                        i.getCreatedAt() != null ? Utils.dateToString(i.getCreatedAt()) : null,
+                        resolveCreatorName(i.getCreatedBy(), creatorNamesById)))
+                .toList();
+
+        List<ExpenseDetailPayment> paymentDetails = payments.stream()
+                .map(p -> {
+                    BankingV1 paymentBank = bankMap.get(p.getBankId());
+                    return new ExpenseDetailPayment(
+                            p.getId(), p.getPaidAmount(), p.getPaymentMethod(), p.getBankId(),
+                            paymentBank != null ? paymentBank.getBankName() : null,
+                            p.getPaymentDate() != null ? Utils.dateToString(p.getPaymentDate()) : null,
+                            p.getTransactionId(), p.getNotes(), p.getImageUrl(), p.getImageUrls(),
+                            p.getCreatedAt() != null ? Utils.dateToString(p.getCreatedAt()) : null,
+                            resolveCreatorName(p.getCreatedBy(), creatorNamesById));
+                })
+                .toList();
+
+        double totalExpenseAmount = items.stream()
+                .map(ExpenseItem::getTotalAmount).filter(Objects::nonNull).mapToDouble(Double::doubleValue).sum();
+        double totalExpensePaidAmount = payments.stream()
+                .map(ExpensePayment::getPaidAmount).filter(Objects::nonNull).mapToDouble(Double::doubleValue).sum();
+
+        ExpenseDetailResponse response = new ExpenseDetailResponse(
+                expense.getExpenseId(),
+                expense.getUnitCount(),
+                expense.getCategoryId(),
+                expense.getSubCategoryId() != null ? expense.getSubCategoryId() : 0L,
+                expense.getDescription(),
+                expense.getHostelId(),
+                expense.getBankId(),
+                expenseBank != null ? expenseBank.getBankName() : null,
+                expense.getTotalPrice(),
+                expense.getTransactionDate() != null ? Utils.dateToString(expense.getTransactionDate()) : null,
+                expense.getUnitPrice(),
+                expense.getVendorId(),
+                expense.getExpenseNumber(),
+                expenseBank != null ? expenseBank.getAccountHolderName() : null,
+                categoryName,
+                subCategoryName,
+                expense.getTitle(),
+                expense.getIsVendorExpense(),
+                expense.getPaymentStatus(),
+                expense.getPaidAmount(),
+                expense.getBalanceAmount(),
+                expense.getPaymentMethod(),
+                expense.getNote(),
+                totalExpenseAmount,
+                totalExpensePaidAmount,
+                expense.getCreditPeriod(),
+                expense.getDiscount(),
+                expense.getTax(),
+                expense.getTransactionId(),
+                expense.getCreatedAt() != null ? Utils.dateToString(expense.getCreatedAt()) : null,
+                resolveCreatorName(expense.getCreatedBy(), creatorNamesById),
+                expense.getImages() != null ? expense.getImages() : List.of(),
+                itemDetails,
+                paymentDetails);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private String resolveCreatorName(String createdBy, Map<String, String> creatorNamesById) {
+        if (createdBy == null) {
+            return null;
+        }
+        return creatorNamesById.getOrDefault(createdBy, createdBy);
     }
 
     private long daysSince(Date date) {
