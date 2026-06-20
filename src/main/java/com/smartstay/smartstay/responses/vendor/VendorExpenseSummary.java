@@ -9,5 +9,6 @@ public record VendorExpenseSummary(
         String expenseNo,
         Double totalAmount,
         Double totalBalance,
-        String referenceNo) {
+        String referenceNo,
+        String paymentStatus) {
 }

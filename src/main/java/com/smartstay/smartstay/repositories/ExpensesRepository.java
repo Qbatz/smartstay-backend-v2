@@ -24,7 +24,18 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
                             @Param("startDate") Date startDate,
                             @Param("endDate") Date endDate);
 
-    List<ExpensesV1> findByVendorIdAndIsActiveTrueOrderByTransactionDateDesc(String vendorId);
+    /**
+     * Active, outstanding expenses for a vendor — i.e. only those still eligible for settlement.
+     * Excludes fully-settled expenses (paymentStatus = Full) and those with a zero balance,
+     * leaving Pending / Partial / Overdue. Filtering is applied at the query level.
+     */
+    @Query("SELECT e FROM ExpensesV1 e " +
+            "WHERE e.vendorId = :vendorId AND e.isActive = true " +
+            "AND COALESCE(e.balanceAmount, 0) <> 0 " +
+            "AND (e.paymentStatus IS NULL OR e.paymentStatus <> :fullStatus) " +
+            "ORDER BY e.transactionDate DESC")
+    List<ExpensesV1> findOutstandingExpensesByVendorId(@Param("vendorId") String vendorId,
+                                                       @Param("fullStatus") ExpensePaymentStatus fullStatus);
 
     @Query("SELECT COUNT(e) FROM ExpensesV1 e " +
             "WHERE e.vendorId = :vendorId AND e.isActive = true " +

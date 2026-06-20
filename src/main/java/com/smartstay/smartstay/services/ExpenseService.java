@@ -297,10 +297,11 @@ public class ExpenseService {
 
         List<DebitsBank> listBanks = bankingService.getAllBankForReturn(hostelId);
 
-        // Map entities -> summary via a dedicated mapper (no JPQL constructor projection).
+        // Only outstanding expenses (not fully settled) are eligible for settlement; filtered at
+        // the query level. Map entities -> summary via a dedicated mapper (no JPQL projection).
         VendorExpenseSummaryMapper expenseSummaryMapper = new VendorExpenseSummaryMapper();
         List<VendorExpenseSummary> expenses = expensesRepository
-                .findByVendorIdAndIsActiveTrueOrderByTransactionDateDesc(String.valueOf(vendorId))
+                .findOutstandingExpensesByVendorId(String.valueOf(vendorId), ExpensePaymentStatus.Full)
                 .stream()
                 .map(expenseSummaryMapper)
                 .toList();

@@ -20,6 +20,7 @@ public class VendorExpenseSummaryMapper implements Function<ExpensesV1, VendorEx
                 expense.getExpenseNumber(),
                 expense.getTotalPrice(),
                 expense.getBalanceAmount(),
-                expense.getTransactionId());
+                expense.getTransactionId(),
+                expense.getPaymentStatus() != null ? expense.getPaymentStatus().name() : null);
     }
 }
