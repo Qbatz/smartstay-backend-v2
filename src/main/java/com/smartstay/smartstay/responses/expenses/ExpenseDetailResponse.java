@@ -13,6 +13,7 @@ public record ExpenseDetailResponse(
         String hostelId,
         String bankId,
         String bankName,
+        Double actualTotalPrice,
         Double totalAmount,
         String transactionDate,
         Double unitPrice,

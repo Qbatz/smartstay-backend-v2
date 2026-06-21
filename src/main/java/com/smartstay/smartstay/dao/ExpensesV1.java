@@ -35,7 +35,10 @@ public class ExpensesV1 {
 //    this is for single product amount
     private Double unitPrice;
     private Integer unitCount;
+    // Final payable amount (after discount); used by all existing financial calculations.
     private Double totalPrice;
+    // Original total amount before any discount; for display/reporting only.
+    private Double actualTotalPrice;
     private Double gst;
     private Double cgst;
     private Double sgst;
