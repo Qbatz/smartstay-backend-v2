@@ -6,5 +6,8 @@ public record InitializeInvoiceItems(String invoiceType,
                                      String invoiceDate,
                                      double invoiceAmount,
                                      double pendingAmount,
-                                     String invoiceId) {
+                                     String invoiceId,
+                                     String paymentMode,
+                                     Double latestPaidAmount,
+                                     String latestPaidDate) {
 }

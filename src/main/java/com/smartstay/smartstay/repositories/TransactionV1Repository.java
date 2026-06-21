@@ -65,18 +65,6 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId AND DATE(t.paidAt) >= DATE(:startDate) AND DATE(t.paidAt) <= DATE(:endDate)")
     Double sumPaidAmountByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
-    @Query(value = """
-            SELECT * FROM transactionv1 t
-            WHERE t.hostel_id = :hostelId
-            AND (:startDate IS NULL OR DATE(t.paid_at) >= DATE(:startDate))
-            AND (:endDate IS NULL OR DATE(t.paid_at) <= DATE(:endDate))
-            AND (:paymentStatus IS NULL OR t.status IN (:paymentStatus))
-            ORDER BY t.paid_at DESC
-            LIMIT :limit OFFSET :offset
-            """, nativeQuery = true)
-    List<TransactionV1> findTransactionsByFiltersNoJoin(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("paymentStatus") List<String> paymentStatus, @Param("limit") int limit, @Param("offset") int offset);
-
-
     @Query(value = "SELECT DISTINCT t.createdBy FROM TransactionV1 t WHERE t.hostelId = :hostelId")
     List<String> findDistinctCreatedByByHostelId(@Param("hostelId") String hostelId);
 
@@ -95,7 +83,8 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     List<TransactionV1> sumPaidAmountByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds);
 
     @Query(value = """
-            SELECT * FROM transactionv1 where hostel_id=:hostelId and bank_id=:bankId and type ='REFUND' and created_by=:createdBy and paid_amount=:paidAmount;
+            SELECT * FROM transactionv1 transactionv1 where transactionv1.transaction_id = (SELECT trv1.transaction_id FROM transactionv1 trv1 
+                  where trv1.invoice_id=transactionv1.invoice_id ORDER BY trv1.payment_date DESC LIMIT 1) and transactionv1.hostel_id=:hostelId and transactionv1.invoice_id in (:invoiceIds)
             """, nativeQuery = true)
-    List<TransactionV1> mapTransactionV1WithBankTransactions(@Param("hostelId") String hostelId, @Param("bankId") String bankId, @Param("type") String type, @Param("createdBy") String createdBy, @Param("paidAmount") String paidAmount);
+    List<TransactionV1> findLatestTransactionByInvoicesId(@Param("hostelId") String hostelId, @Param("invoiceIds") List<String> invoiceIds);
 }

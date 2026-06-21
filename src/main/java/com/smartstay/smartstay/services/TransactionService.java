@@ -1321,4 +1321,12 @@ public class TransactionService {
     public void markInvoiceUnpaid(String customerId, Double totalAmount, String invoiceId) {
         paymentSummaryService.markInvoiceUnpaid(customerId, totalAmount, invoiceId);
     }
+
+    public List<TransactionV1> findLatestTransactionsByInvoiceIds(String hostelId, List<String> invoiceIds) {
+        List<TransactionV1> listTransactions = transactionRespository.findLatestTransactionByInvoicesId(hostelId, invoiceIds);
+        if (listTransactions == null) {
+            listTransactions = new ArrayList<>();
+        }
+        return listTransactions;
+    }
 }
