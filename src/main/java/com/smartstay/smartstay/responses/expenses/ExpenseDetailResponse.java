@@ -18,6 +18,7 @@ public record ExpenseDetailResponse(
         String transactionDate,
         Double unitPrice,
         String vendorId,
+        String vendorAddress,
         String referenceNumber,
         String accountHolderName,
         String categoryName,

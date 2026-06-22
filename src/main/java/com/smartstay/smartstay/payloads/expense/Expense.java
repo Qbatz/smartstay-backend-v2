@@ -19,8 +19,7 @@ public record Expense(
         @NotNull(message = "Total amount required")
         @Positive(message = "Total amount required")
         Double totalAmount,
-        @NotNull(message = "Bank id required")
-        @NotBlank(message = "Bank id required")
+        // Mandatory for every payment status except PENDING; enforced conditionally in the service layer.
         String bankId,
         String description,
 
@@ -35,5 +34,7 @@ public record Expense(
         String transactionId,
         Double tax,
         Double discount,
+        // Optional explicit credit period (days); when > 0 it overrides the vendor-level credit period.
+        Integer creditPeriod,
         List<ExpenseItemPayload> expenseItems) {
 }
