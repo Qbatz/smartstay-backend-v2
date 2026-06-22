@@ -44,6 +44,7 @@ import com.smartstay.smartstay.responses.vendor.VendorMobileResponse;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
 import com.smartstay.smartstay.responses.vendor.VendorSummary;
 import com.smartstay.smartstay.util.FilterKeywords;
+import com.smartstay.smartstay.util.AddressUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -133,7 +134,7 @@ public class VendorService {
         return String.format("VEN%08d", vendorId);
     }
 
-    public ResponseEntity<?> getAllVendors(String hostelId, String name, Integer categoryId, String paymentStatus,
+    public ResponseEntity<?> getAllVendors(String hostelId, String name, Integer categoryId, List<String> paymentStatus,
                                            Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -149,16 +150,17 @@ public class VendorService {
         }
 
         String searchName = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
-        // Null => no status filter (covers both omitted and "ALL").
-        VendorPaymentStatus statusFilter = VendorPaymentStatus.fromFilter(paymentStatus);
+        // Maps the UI status values (display name or enum name, single or multiple) to the stored
+        // enum; null => no status filter (covers omitted, "ALL", and unrecognised values).
+        List<VendorPaymentStatus> statusFilters = parsePaymentStatuses(paymentStatus);
         int pageNumber = (page == null || page < 1) ? 1 : page;
         int pageSize = (size == null || size < 1) ? 10 : size;
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
         // Pagination, the filtered page, and the summary are identical for web and mobile.
-        Page<VendorV1> vendorPage = vendorRepository.listVendors(hostelId, searchName, categoryId, statusFilter, pageable);
+        Page<VendorV1> vendorPage = vendorRepository.listVendors(hostelId, searchName, categoryId, statusFilters, pageable);
         List<VendorV1> vendors = vendorPage.getContent();
-        VendorSummary vendorSummary = buildVendorSummary(hostelId, searchName, categoryId, statusFilter, vendorPage.getTotalElements());
+        VendorSummary vendorSummary = buildVendorSummary(hostelId, searchName, categoryId, statusFilters, vendorPage.getTotalElements());
         Map<Integer, String> categoryNamesById = resolveCategoryNames(vendors);
 
         int currentPage = vendorPage.getPageable().getPageNumber() + 1;
@@ -174,16 +176,34 @@ public class VendorService {
     }
 
     private VendorSummary buildVendorSummary(String hostelId, String searchName, Integer categoryId,
-                                             VendorPaymentStatus statusFilter, long totalVendors) {
+                                             List<VendorPaymentStatus> statusFilters, long totalVendors) {
         // Aggregated from the stored vendor columns over the full filtered result set.
         double totalPurchase = 0.0;
         double totalPaid = 0.0;
-        VendorPurchaseSummary purchaseSummary = vendorRepository.summarizeVendors(hostelId, searchName, categoryId, statusFilter);
+        VendorPurchaseSummary purchaseSummary = vendorRepository.summarizeVendors(hostelId, searchName, categoryId, statusFilters);
         if (purchaseSummary != null) {
             totalPurchase = purchaseSummary.totalPurchase() != null ? purchaseSummary.totalPurchase() : 0.0;
             totalPaid = purchaseSummary.totalPaid() != null ? purchaseSummary.totalPaid() : 0.0;
         }
         return new VendorSummary(totalVendors, totalPurchase, totalPaid, totalPurchase - totalPaid);
+    }
+
+    /**
+     * Maps the raw payment-status filter values from the request (display names or enum names, single
+     * or multiple) to distinct {@link VendorPaymentStatus} values. Returns {@code null} when nothing
+     * resolvable was supplied (omitted, "ALL", or only unrecognised values) so the query skips the
+     * status filter entirely — an empty list would otherwise produce an invalid SQL {@code IN ()}.
+     */
+    private List<VendorPaymentStatus> parsePaymentStatuses(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        List<VendorPaymentStatus> statuses = values.stream()
+                .map(VendorPaymentStatus::fromFilter)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        return statuses.isEmpty() ? null : statuses;
     }
 
     private Map<Integer, String> resolveCategoryNames(List<VendorV1> vendors) {
@@ -289,7 +309,9 @@ public class VendorService {
                 nullSafe(vendor.getTotalPaid()),
                 nullSafe(vendor.getBalance()),
                 vendor.getBusinessMobileCode(),
-                vendor.getContactPersonMobileCode());
+                vendor.getContactPersonMobileCode(),
+                AddressUtils.formatAddress(vendor.getHouseNo(), vendor.getArea(), vendor.getLandMark(),
+                        vendor.getCity(), vendor.getPinCode(), vendor.getState()));
     }
 
     private VendorFilterOptions buildVendorFilterOptions(String hostelId) {

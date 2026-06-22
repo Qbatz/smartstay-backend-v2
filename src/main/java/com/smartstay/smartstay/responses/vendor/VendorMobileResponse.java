@@ -40,5 +40,6 @@ public record VendorMobileResponse(
         double totalPaidAmount,
         double totalBalance,
         String businessMobileCode,
-        String contactPersonMobileCode) {
+        String contactPersonMobileCode,
+        String vendorAddress) {
 }

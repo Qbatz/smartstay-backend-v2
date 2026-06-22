@@ -21,12 +21,12 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "WHERE v.hostelId = :hostelId AND v.isActive = true " +
             "AND (:name IS NULL OR LOWER(CONCAT(v.firstName, ' ', COALESCE(v.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))) " +
             "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId) " +
-            "AND (:paymentStatus IS NULL OR v.paymentStatus = :paymentStatus) " +
+            "AND (:paymentStatuses IS NULL OR v.paymentStatus IN :paymentStatuses) " +
             "ORDER BY v.vendorId DESC")
     Page<VendorV1> listVendors(@Param("hostelId") String hostelId,
                                @Param("name") String name,
                                @Param("categoryId") Integer categoryId,
-                               @Param("paymentStatus") VendorPaymentStatus paymentStatus,
+                               @Param("paymentStatuses") List<VendorPaymentStatus> paymentStatuses,
                                Pageable pageable);
 
     @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary(" +
@@ -35,11 +35,11 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "WHERE v.hostelId = :hostelId AND v.isActive = true " +
             "AND (:name IS NULL OR LOWER(CONCAT(v.firstName, ' ', COALESCE(v.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))) " +
             "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId) " +
-            "AND (:paymentStatus IS NULL OR v.paymentStatus = :paymentStatus)")
+            "AND (:paymentStatuses IS NULL OR v.paymentStatus IN :paymentStatuses)")
     VendorPurchaseSummary summarizeVendors(@Param("hostelId") String hostelId,
                                            @Param("name") String name,
                                            @Param("categoryId") Integer categoryId,
-                                           @Param("paymentStatus") VendorPaymentStatus paymentStatus);
+                                           @Param("paymentStatuses") List<VendorPaymentStatus> paymentStatuses);
 
     VendorV1 findByVendorId(int vendorId);
 
