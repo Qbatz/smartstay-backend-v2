@@ -26,6 +26,8 @@ public class VendorV1 {
     private String firstName;
     private String lastName;
     private String countryCode;
+    // Country/dialing code for the business mobile number (e.g. "+91"). Mandatory.
+    private String businessMobileCode;
     private String mobile;
     private String emailId;
     private String businessName;
@@ -46,6 +48,8 @@ public class VendorV1 {
     private Integer vendorCategory;
     private String contactPerson;
     private String contactPersonMobile;
+    // Country/dialing code for the contact person's mobile (e.g. "+91"). Optional.
+    private String contactPersonMobileCode;
     private String description;
     private String vendorCode;
     private String gst;

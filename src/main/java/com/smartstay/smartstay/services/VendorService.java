@@ -287,7 +287,9 @@ public class VendorService {
                 paymentStatus,
                 nullSafe(vendor.getTotalExpense()),
                 nullSafe(vendor.getTotalPaid()),
-                nullSafe(vendor.getBalance()));
+                nullSafe(vendor.getBalance()),
+                vendor.getBusinessMobileCode(),
+                vendor.getContactPersonMobileCode());
     }
 
     private VendorFilterOptions buildVendorFilterOptions(String hostelId) {
@@ -785,6 +787,7 @@ public class VendorService {
         vendorV1.setFirstName(payloads.firstName());
         vendorV1.setLastName(payloads.lastName());
         vendorV1.setCountryCode(payloads.countryCode() == null ? null : payloads.countryCode().replace("+", "").trim());
+        vendorV1.setBusinessMobileCode(payloads.businessMobileCode() != null ? payloads.businessMobileCode().trim() : null);
         vendorV1.setMobile(normalizedMobile);
         vendorV1.setEmailId(email);
         vendorV1.setHouseNo(payloads.houseNo());
@@ -805,6 +808,10 @@ public class VendorService {
         vendorV1.setVendorCategory(payloads.vendorCategory());
         vendorV1.setContactPerson(payloads.contactPerson());
         vendorV1.setContactPersonMobile(payloads.contactPersonMobile());
+        // Optional: persist as-is, or null when not provided.
+        vendorV1.setContactPersonMobileCode(
+                (payloads.contactPersonMobileCode() != null && !payloads.contactPersonMobileCode().trim().isEmpty())
+                        ? payloads.contactPersonMobileCode().trim() : null);
         vendorV1.setDescription(payloads.description());
         vendorV1.setGst(payloads.gst());
         vendorV1.setPan(payloads.pan());

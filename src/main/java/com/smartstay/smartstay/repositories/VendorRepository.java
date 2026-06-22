@@ -58,7 +58,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
             "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId, " +
             "vc.categoryId, vc.categoryName, v.contactPerson, v.contactPersonMobile, v.description, v.vendorCode, v.gst, v.pan, " +
-            "v.allowCredit, v.creditLimit, v.creditPeriod) " +
+            "v.allowCredit, v.creditLimit, v.creditPeriod, v.businessMobileCode, v.contactPersonMobileCode) " +
             "FROM VendorV1 v JOIN Countries c ON v.country = c.countryId " +
             "LEFT JOIN VendorCategories vc ON v.vendorCategory = vc.categoryId " +
             "WHERE v.hostelId = :hostelId " +
@@ -71,7 +71,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
             "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId, " +
             "vc.categoryId, vc.categoryName, v.contactPerson, v.contactPersonMobile, v.description, v.vendorCode, v.gst, v.pan, " +
-            "v.allowCredit, v.creditLimit, v.creditPeriod) " +
+            "v.allowCredit, v.creditLimit, v.creditPeriod, v.businessMobileCode, v.contactPersonMobileCode) " +
             "FROM VendorV1 v JOIN Countries c ON v.country = c.countryId " +
             "LEFT JOIN VendorCategories vc ON v.vendorCategory = vc.categoryId " +
             "WHERE v.vendorId = :vendorId")
