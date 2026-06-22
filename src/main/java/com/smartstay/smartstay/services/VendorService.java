@@ -44,9 +44,11 @@ import com.smartstay.smartstay.responses.vendor.VendorMobileResponse;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
 import com.smartstay.smartstay.responses.vendor.VendorSummary;
 import com.smartstay.smartstay.util.FilterKeywords;
+import com.smartstay.smartstay.util.AddressUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -132,7 +134,7 @@ public class VendorService {
         return String.format("VEN%08d", vendorId);
     }
 
-    public ResponseEntity<?> getAllVendors(String hostelId, String name, Integer categoryId, String paymentStatus,
+    public ResponseEntity<?> getAllVendors(String hostelId, String name, Integer categoryId, List<String> paymentStatus,
                                            Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -148,16 +150,17 @@ public class VendorService {
         }
 
         String searchName = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
-        // Null => no status filter (covers both omitted and "ALL").
-        VendorPaymentStatus statusFilter = VendorPaymentStatus.fromFilter(paymentStatus);
+        // Maps the UI status values (display name or enum name, single or multiple) to the stored
+        // enum; null => no status filter (covers omitted, "ALL", and unrecognised values).
+        List<VendorPaymentStatus> statusFilters = parsePaymentStatuses(paymentStatus);
         int pageNumber = (page == null || page < 1) ? 1 : page;
         int pageSize = (size == null || size < 1) ? 10 : size;
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
         // Pagination, the filtered page, and the summary are identical for web and mobile.
-        Page<VendorV1> vendorPage = vendorRepository.listVendors(hostelId, searchName, categoryId, statusFilter, pageable);
+        Page<VendorV1> vendorPage = vendorRepository.listVendors(hostelId, searchName, categoryId, statusFilters, pageable);
         List<VendorV1> vendors = vendorPage.getContent();
-        VendorSummary vendorSummary = buildVendorSummary(hostelId, searchName, categoryId, statusFilter, vendorPage.getTotalElements());
+        VendorSummary vendorSummary = buildVendorSummary(hostelId, searchName, categoryId, statusFilters, vendorPage.getTotalElements());
         Map<Integer, String> categoryNamesById = resolveCategoryNames(vendors);
 
         int currentPage = vendorPage.getPageable().getPageNumber() + 1;
@@ -165,24 +168,46 @@ public class VendorService {
         int totalVendors = (int) vendorPage.getTotalElements();
 
         if ("web".equalsIgnoreCase(authentication.getSource())) {
-            return buildVendorWebResponse(hostelId, vendors, categoryNamesById, vendorSummary,
+            // Web "Last Transaction" column shows the latest payment date (one bulk query, no N+1).
+            Map<String, Date> lastPaymentDates = resolveLastPaymentDates(vendors);
+            return buildVendorWebResponse(hostelId, vendors, categoryNamesById, lastPaymentDates, vendorSummary,
                     totalVendors, currentPage, totalPages, pageSize);
         }
-        return buildVendorMobileResponse(vendors, categoryNamesById, vendorSummary,
+        // Mobile "Last Transaction" is the amount of the latest payment (one bulk query, no N+1).
+        Map<String, Double> lastPaymentAmounts = resolveLastPaymentAmounts(vendors);
+        return buildVendorMobileResponse(vendors, categoryNamesById, lastPaymentAmounts, vendorSummary,
                 totalVendors, currentPage, totalPages, pageSize);
     }
 
     private VendorSummary buildVendorSummary(String hostelId, String searchName, Integer categoryId,
-                                             VendorPaymentStatus statusFilter, long totalVendors) {
+                                             List<VendorPaymentStatus> statusFilters, long totalVendors) {
         // Aggregated from the stored vendor columns over the full filtered result set.
         double totalPurchase = 0.0;
         double totalPaid = 0.0;
-        VendorPurchaseSummary purchaseSummary = vendorRepository.summarizeVendors(hostelId, searchName, categoryId, statusFilter);
+        VendorPurchaseSummary purchaseSummary = vendorRepository.summarizeVendors(hostelId, searchName, categoryId, statusFilters);
         if (purchaseSummary != null) {
             totalPurchase = purchaseSummary.totalPurchase() != null ? purchaseSummary.totalPurchase() : 0.0;
             totalPaid = purchaseSummary.totalPaid() != null ? purchaseSummary.totalPaid() : 0.0;
         }
         return new VendorSummary(totalVendors, totalPurchase, totalPaid, totalPurchase - totalPaid);
+    }
+
+    /**
+     * Maps the raw payment-status filter values from the request (display names or enum names, single
+     * or multiple) to distinct {@link VendorPaymentStatus} values. Returns {@code null} when nothing
+     * resolvable was supplied (omitted, "ALL", or only unrecognised values) so the query skips the
+     * status filter entirely — an empty list would otherwise produce an invalid SQL {@code IN ()}.
+     */
+    private List<VendorPaymentStatus> parsePaymentStatuses(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        List<VendorPaymentStatus> statuses = values.stream()
+                .map(VendorPaymentStatus::fromFilter)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        return statuses.isEmpty() ? null : statuses;
     }
 
     private Map<Integer, String> resolveCategoryNames(List<VendorV1> vendors) {
@@ -196,8 +221,37 @@ public class VendorService {
         return categoryNamesById;
     }
 
+    /**
+     * Latest payment date per vendor (keyed by vendor id as String) for the given page, resolved in a
+     * single bulk query to avoid per-row lookups. Vendors with no payments are simply absent from the map.
+     */
+    private Map<String, Date> resolveLastPaymentDates(List<VendorV1> vendors) {
+        List<String> pageVendorIds = vendors.stream().map(v -> String.valueOf(v.getVendorId())).toList();
+        Map<String, Date> lastPaymentByVendorId = new HashMap<>();
+        if (!pageVendorIds.isEmpty()) {
+            expensePaymentRepository.findLatestPaymentDates(pageVendorIds)
+                    .forEach(p -> lastPaymentByVendorId.put(p.vendorId(), p.lastPaymentDate()));
+        }
+        return lastPaymentByVendorId;
+    }
+
+    /**
+     * Amount of the most recent payment per vendor (keyed by vendor id as String) for the given page,
+     * resolved in a single bulk query. Vendors with no payments are simply absent from the map.
+     */
+    private Map<String, Double> resolveLastPaymentAmounts(List<VendorV1> vendors) {
+        List<String> pageVendorIds = vendors.stream().map(v -> String.valueOf(v.getVendorId())).toList();
+        Map<String, Double> lastPaymentAmountByVendorId = new HashMap<>();
+        if (!pageVendorIds.isEmpty()) {
+            expensePaymentRepository.findLatestPaymentAmounts(pageVendorIds)
+                    .forEach(p -> lastPaymentAmountByVendorId.put(p.vendorId(), p.amount()));
+        }
+        return lastPaymentAmountByVendorId;
+    }
+
     private ResponseEntity<?> buildVendorWebResponse(String hostelId, List<VendorV1> vendors,
-                                                     Map<Integer, String> categoryNamesById, VendorSummary vendorSummary,
+                                                     Map<Integer, String> categoryNamesById,
+                                                     Map<String, Date> lastPaymentByVendorId, VendorSummary vendorSummary,
                                                      int totalVendors, int currentPage, int totalPages, int pageSize) {
         // Resolve the user's configured columns for this hostel; only enabled columns are rendered.
         List<ColumnFilters> listColumns = columnService.getVendorColumns(hostelId, FilterOptionsModule.MODULE_VENDOR.name());
@@ -206,14 +260,6 @@ public class VendorService {
                 .sorted(Comparator.comparingInt(ColumnFilters::getOrder))
                 .map(ColumnFilters::getFieldName)
                 .toList();
-
-        // Latest payment date per vendor (Last Transaction) for the current page in one bulk query (no N+1).
-        List<String> pageVendorIds = vendors.stream().map(v -> String.valueOf(v.getVendorId())).toList();
-        Map<String, Date> lastPaymentByVendorId = new HashMap<>();
-        if (!pageVendorIds.isEmpty()) {
-            expensePaymentRepository.findLatestPaymentDates(pageVendorIds)
-                    .forEach(p -> lastPaymentByVendorId.put(p.vendorId(), p.lastPaymentDate()));
-        }
 
         VendorTableMapper mapper = new VendorTableMapper(tableColumns, categoryNamesById, lastPaymentByVendorId);
         List<List<Object>> listVendorRows = vendors.stream().map(mapper).collect(Collectors.toList());
@@ -225,8 +271,8 @@ public class VendorService {
     }
 
     private ResponseEntity<?> buildVendorMobileResponse(List<VendorV1> vendors, Map<Integer, String> categoryNamesById,
-                                                        VendorSummary vendorSummary, int totalVendors, int currentPage,
-                                                        int totalPages, int pageSize) {
+                                                        Map<String, Double> lastPaymentAmounts, VendorSummary vendorSummary,
+                                                        int totalVendors, int currentPage, int totalPages, int pageSize) {
         // Resolve country names for the current page in one bulk lookup (no N+1).
         Set<Long> countryIds = vendors.stream().map(VendorV1::getCountry).filter(Objects::nonNull)
                 .collect(Collectors.toSet());
@@ -237,7 +283,7 @@ public class VendorService {
         }
 
         List<VendorMobileResponse> mobileVendors = vendors.stream()
-                .map(v -> toMobileResponse(v, categoryNamesById, countryNamesById))
+                .map(v -> toMobileResponse(v, categoryNamesById, countryNamesById, lastPaymentAmounts))
                 .toList();
 
         // filterOptions / tableHeaders / columnList are intentionally null for mobile.
@@ -247,11 +293,16 @@ public class VendorService {
     }
 
     private VendorMobileResponse toMobileResponse(VendorV1 vendor, Map<Integer, String> categoryNamesById,
-                                                  Map<Long, String> countryNamesById) {
+                                                  Map<Long, String> countryNamesById,
+                                                  Map<String, Double> lastPaymentAmounts) {
         Integer categoryId = vendor.getVendorCategory();
         String categoryName = categoryId != null ? categoryNamesById.get(categoryId) : null;
         String countryName = vendor.getCountry() != null ? countryNamesById.get(vendor.getCountry()) : null;
         String paymentStatus = vendor.getPaymentStatus() != null ? vendor.getPaymentStatus().name() : null;
+        // Outstanding mirrors the vendor's stored balance (same value surfaced as "Outstanding" on web).
+        double outstandingAmount = nullSafe(vendor.getBalance());
+        // Last Transaction = amount of this vendor's most recent payment; null when no payments yet.
+        Double lastTransaction = lastPaymentAmounts.get(String.valueOf(vendor.getVendorId()));
 
         return new VendorMobileResponse(
                 vendor.getVendorId(),
@@ -286,7 +337,13 @@ public class VendorService {
                 paymentStatus,
                 nullSafe(vendor.getTotalExpense()),
                 nullSafe(vendor.getTotalPaid()),
-                nullSafe(vendor.getBalance()));
+                nullSafe(vendor.getBalance()),
+                vendor.getBusinessMobileCode(),
+                vendor.getContactPersonMobileCode(),
+                AddressUtils.formatAddress(vendor.getHouseNo(), vendor.getArea(), vendor.getLandMark(),
+                        vendor.getCity(), vendor.getPinCode(), vendor.getState()),
+                outstandingAmount,
+                lastTransaction);
     }
 
     private VendorFilterOptions buildVendorFilterOptions(String hostelId) {
@@ -763,6 +820,14 @@ public class VendorService {
             return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
+        // Email must be unique across vendors (case-insensitive). Blank emails are stored as null so
+        // multiple vendors without an email remain allowed.
+        String email = (payloads.mailId() != null && !payloads.mailId().trim().isEmpty())
+                ? payloads.mailId().trim() : null;
+        if (email != null && vendorRepository.existsByEmailIdIgnoreCase(email)) {
+            return new ResponseEntity<>(Utils.VENDOR_EMAIL_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
         if (!subscriptionService.validateSubscription(payloads.hostelId())) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
@@ -776,8 +841,9 @@ public class VendorService {
         vendorV1.setFirstName(payloads.firstName());
         vendorV1.setLastName(payloads.lastName());
         vendorV1.setCountryCode(payloads.countryCode() == null ? null : payloads.countryCode().replace("+", "").trim());
+        vendorV1.setBusinessMobileCode(payloads.businessMobileCode() != null ? payloads.businessMobileCode().trim() : null);
         vendorV1.setMobile(normalizedMobile);
-        vendorV1.setEmailId(payloads.mailId());
+        vendorV1.setEmailId(email);
         vendorV1.setHouseNo(payloads.houseNo());
         vendorV1.setLandMark(payloads.landmark());
         vendorV1.setPinCode(payloads.pinCode());
@@ -796,6 +862,10 @@ public class VendorService {
         vendorV1.setVendorCategory(payloads.vendorCategory());
         vendorV1.setContactPerson(payloads.contactPerson());
         vendorV1.setContactPersonMobile(payloads.contactPersonMobile());
+        // Optional: persist as-is, or null when not provided.
+        vendorV1.setContactPersonMobileCode(
+                (payloads.contactPersonMobileCode() != null && !payloads.contactPersonMobileCode().trim().isEmpty())
+                        ? payloads.contactPersonMobileCode().trim() : null);
         vendorV1.setDescription(payloads.description());
         vendorV1.setGst(payloads.gst());
         vendorV1.setPan(payloads.pan());
@@ -812,9 +882,14 @@ public class VendorService {
         // Persist first so the database assigns the unique, auto-incremented vendorId,
         // then derive the vendor code from it. Using the identity column guarantees
         // uniqueness and avoids the collisions possible with random generation.
-        vendorV1 = vendorRepository.save(vendorV1);
-        vendorV1.setVendorCode(generateVendorCode(vendorV1.getVendorId()));
-        vendorRepository.save(vendorV1);
+        // The DB-level unique email index is the final guard against concurrent duplicate inserts.
+        try {
+            vendorV1 = vendorRepository.save(vendorV1);
+            vendorV1.setVendorCode(generateVendorCode(vendorV1.getVendorId()));
+            vendorRepository.save(vendorV1);
+        } catch (DataIntegrityViolationException ex) {
+            return new ResponseEntity<>(Utils.VENDOR_EMAIL_EXISTS, HttpStatus.BAD_REQUEST);
+        }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 

@@ -38,5 +38,10 @@ public record VendorMobileResponse(
         String paymentStatus,
         double totalExpenseAmount,
         double totalPaidAmount,
-        double totalBalance) {
+        double totalBalance,
+        String businessMobileCode,
+        String contactPersonMobileCode,
+        String vendorAddress,
+        double outstandingAmount,
+        Double lastTransaction) {
 }

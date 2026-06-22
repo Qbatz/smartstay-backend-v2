@@ -10,6 +10,8 @@ public record AddVendor(
 
         String countryCode,
 
+        @NotNull(message = "Business mobile code is required") @NotEmpty(message = "Business mobile code is required") String businessMobileCode,
+
         @NotNull(message = "Mobile no is required") @NotEmpty(message = "Mobile no is required") String mobile,
 
         String mailId, String houseNo, String landmark, String area,
@@ -27,6 +29,7 @@ public record AddVendor(
         Integer vendorCategory,
         String contactPerson,
         String contactPersonMobile,
+        String contactPersonMobileCode,
         String description,
         String gst,
         String pan,

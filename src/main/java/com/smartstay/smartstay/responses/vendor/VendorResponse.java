@@ -28,6 +28,8 @@ public record VendorResponse(
         String pan,
         Boolean allowCredit,
         Double creditLimit,
-        Integer creditPeriod
+        Integer creditPeriod,
+        String businessMobileCode,
+        String contactPersonMobileCode
 ) {
 }

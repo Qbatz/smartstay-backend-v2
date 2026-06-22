@@ -21,12 +21,12 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "WHERE v.hostelId = :hostelId AND v.isActive = true " +
             "AND (:name IS NULL OR LOWER(CONCAT(v.firstName, ' ', COALESCE(v.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))) " +
             "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId) " +
-            "AND (:paymentStatus IS NULL OR v.paymentStatus = :paymentStatus) " +
+            "AND (:paymentStatuses IS NULL OR v.paymentStatus IN :paymentStatuses) " +
             "ORDER BY v.vendorId DESC")
     Page<VendorV1> listVendors(@Param("hostelId") String hostelId,
                                @Param("name") String name,
                                @Param("categoryId") Integer categoryId,
-                               @Param("paymentStatus") VendorPaymentStatus paymentStatus,
+                               @Param("paymentStatuses") List<VendorPaymentStatus> paymentStatuses,
                                Pageable pageable);
 
     @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary(" +
@@ -35,11 +35,11 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "WHERE v.hostelId = :hostelId AND v.isActive = true " +
             "AND (:name IS NULL OR LOWER(CONCAT(v.firstName, ' ', COALESCE(v.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))) " +
             "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId) " +
-            "AND (:paymentStatus IS NULL OR v.paymentStatus = :paymentStatus)")
+            "AND (:paymentStatuses IS NULL OR v.paymentStatus IN :paymentStatuses)")
     VendorPurchaseSummary summarizeVendors(@Param("hostelId") String hostelId,
                                            @Param("name") String name,
                                            @Param("categoryId") Integer categoryId,
-                                           @Param("paymentStatus") VendorPaymentStatus paymentStatus);
+                                           @Param("paymentStatuses") List<VendorPaymentStatus> paymentStatuses);
 
     VendorV1 findByVendorId(int vendorId);
 
@@ -50,6 +50,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
     VendorV1 findByVendorIdAndHostelId(int vendorId,String hostelId);
 
     boolean existsByEmailId(String emailId);
+    boolean existsByEmailIdIgnoreCase(String emailId);
     boolean existsByMobile(String mobileNumber);
 
     @Query("SELECT new com.smartstay.smartstay.responses.vendor.VendorResponse(" +
@@ -57,7 +58,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
             "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId, " +
             "vc.categoryId, vc.categoryName, v.contactPerson, v.contactPersonMobile, v.description, v.vendorCode, v.gst, v.pan, " +
-            "v.allowCredit, v.creditLimit, v.creditPeriod) " +
+            "v.allowCredit, v.creditLimit, v.creditPeriod, v.businessMobileCode, v.contactPersonMobileCode) " +
             "FROM VendorV1 v JOIN Countries c ON v.country = c.countryId " +
             "LEFT JOIN VendorCategories vc ON v.vendorCategory = vc.categoryId " +
             "WHERE v.hostelId = :hostelId " +
@@ -70,7 +71,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
             "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId, " +
             "vc.categoryId, vc.categoryName, v.contactPerson, v.contactPersonMobile, v.description, v.vendorCode, v.gst, v.pan, " +
-            "v.allowCredit, v.creditLimit, v.creditPeriod) " +
+            "v.allowCredit, v.creditLimit, v.creditPeriod, v.businessMobileCode, v.contactPersonMobileCode) " +
             "FROM VendorV1 v JOIN Countries c ON v.country = c.countryId " +
             "LEFT JOIN VendorCategories vc ON v.vendorCategory = vc.categoryId " +
             "WHERE v.vendorId = :vendorId")

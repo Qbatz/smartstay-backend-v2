@@ -17,6 +17,8 @@ public class VendorColumnUtils {
     public static final String OUTSTANDING = "Outstanding";
     public static final String LAST_TRANSACTION = "Last Transaction";
     public static final String PAYMENT_STATUS = "Payment Status";
+    public static final String BUSINESS_NAME = "businessName";
+    public static final String VENDOR_ADDRESS = "vendorAddress";
 
     private VendorColumnUtils() {
     }
@@ -39,6 +41,8 @@ public class VendorColumnUtils {
                 new ColumnFilters(9, CREDIT_PERIOD, true),
                 new ColumnFilters(10, OUTSTANDING, true),
                 new ColumnFilters(11, LAST_TRANSACTION, true),
-                new ColumnFilters(12, PAYMENT_STATUS, true));
+                new ColumnFilters(12, PAYMENT_STATUS, true),
+                new ColumnFilters(13, BUSINESS_NAME, true),
+                new ColumnFilters(14, VENDOR_ADDRESS, true));
     }
 }
