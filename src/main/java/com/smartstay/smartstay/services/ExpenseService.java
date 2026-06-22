@@ -54,6 +54,7 @@ import com.smartstay.smartstay.responses.expenseForReport.ExpenseReportResponse;
 import com.smartstay.smartstay.dto.expenses.ExpenseSummaryProjection;
 import com.smartstay.smartstay.dao.ExpenseCategory;
 import com.smartstay.smartstay.dao.ExpenseSubCategory;
+import com.smartstay.smartstay.util.AddressUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -254,6 +255,7 @@ public class ExpenseService {
                 .map(v -> new VendorInitializeResponse(
                         v.getVendorId(),
                         v.getBusinessName(),
+                        NameUtils.getFullName(v.getFirstName(), v.getLastName()),
                         v.getPaymentStatus() != null ? v.getPaymentStatus().name() : null,
                         nullSafe(v.getTotalExpense()),
                         nullSafe(v.getTotalPaid()),
@@ -328,7 +330,14 @@ public class ExpenseService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!bankingService.checkBankExist(expense.bankId())) {
+        // bankId is mandatory for every payment status except PENDING — a pending expense can be created
+        // without a bank account. When a bank is supplied it must reference a real account.
+        ExpensePaymentStatus requestedStatus = ExpensePaymentStatus.fromString(expense.paymentStatus());
+        boolean bankProvided = Utils.checkNullOrEmpty(expense.bankId());
+        if (requestedStatus != ExpensePaymentStatus.Pending && !bankProvided) {
+            return new ResponseEntity<>(Utils.BANK_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (bankProvided && !bankingService.checkBankExist(expense.bankId())) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
         if (!subscriptionService.validateSubscription(hostelId)) {
@@ -369,6 +378,12 @@ public class ExpenseService {
             unitPrice = expense.totalAmount() / count;
         }
 
+        // Preserve the original total in actualTotalPrice; totalPrice is the payable amount after
+        // discount and remains the basis for all existing financial calculations.
+        double actualTotalPrice = expense.totalAmount() != null ? expense.totalAmount() : 0.0;
+        double discountAmount = expense.discount() != null ? expense.discount() : 0.0;
+        double payableAmount = actualTotalPrice - discountAmount;
+
         String expenseNumber = generateExpenseNumber(hostelId);
         ExpensesV1 expensesV1 = new ExpensesV1();
         expensesV1.setCategoryId(expense.categoryId());
@@ -378,7 +393,8 @@ public class ExpenseService {
         expensesV1.setBankId(expense.bankId());
         expensesV1.setUnitPrice(unitPrice);
         expensesV1.setUnitCount(count);
-        expensesV1.setTotalPrice(expense.totalAmount());
+        expensesV1.setActualTotalPrice(actualTotalPrice);
+        expensesV1.setTotalPrice(payableAmount);
         expensesV1.setExpenseNumber(expenseNumber);
 
         expensesV1.setTransactionAmount(expense.totalAmount());
@@ -393,8 +409,12 @@ public class ExpenseService {
         expensesV1.setIsVendorExpense(expense.isVendorExpense());
         String vendorId = expense.vendorId() == null ? null : String.valueOf(expense.vendorId());
         expensesV1.setVendorId(vendorId);
-        expensesV1.setPaymentStatus(ExpensePaymentStatus.fromString(expense.paymentStatus()));
-        if (Boolean.TRUE.equals(expense.isVendorExpense()) && expense.vendorId() != null) {
+        expensesV1.setPaymentStatus(requestedStatus);
+        // A positive creditPeriod in the request takes precedence over any vendor-level configuration.
+        // Otherwise fall back to the vendor's configured credit period for vendor expenses.
+        if (expense.creditPeriod() != null && expense.creditPeriod() > 0) {
+            expensesV1.setCreditPeriod(expense.creditPeriod());
+        } else if (Boolean.TRUE.equals(expense.isVendorExpense()) && expense.vendorId() != null) {
             VendorV1 vendor = vendorRepository.findByVendorId(expense.vendorId());
             if (vendor != null) {
                 expensesV1.setCreditPeriod(vendor.getCreditPeriod());
@@ -463,6 +483,11 @@ public class ExpenseService {
         }
 
         usersService.addUserLog(hostelId, expV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.CREATE, users);
+        // No bank account (allowed for PENDING expenses): there is nothing to debit, so skip the bank
+        // transaction and return success.
+        if (!bankProvided) {
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        }
         if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId())) {
 
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -579,7 +604,8 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
-        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), true);
+        // Transaction id is optional for expense settlement.
+        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), false);
         if (methodError != null) {
             return new ResponseEntity<>(methodError, HttpStatus.BAD_REQUEST);
         }
@@ -1134,6 +1160,9 @@ public class ExpenseService {
         double totalExpensePaidAmount = payments.stream()
                 .map(ExpensePayment::getPaidAmount).filter(Objects::nonNull).mapToDouble(Double::doubleValue).sum();
 
+        // Vendor's complete single-line address, reusing the shared formatter (same as the vendor APIs).
+        String vendorAddress = resolveVendorAddress(expense.getVendorId());
+
         ExpenseDetailResponse response = new ExpenseDetailResponse(
                 expense.getExpenseId(),
                 expense.getUnitCount(),
@@ -1143,10 +1172,12 @@ public class ExpenseService {
                 expense.getHostelId(),
                 expense.getBankId(),
                 expenseBank != null ? expenseBank.getBankName() : null,
+                expense.getActualTotalPrice() != null ? expense.getActualTotalPrice() : expense.getTotalPrice(),
                 expense.getTotalPrice(),
                 expense.getTransactionDate() != null ? Utils.dateToString(expense.getTransactionDate()) : null,
                 expense.getUnitPrice(),
                 expense.getVendorId(),
+                vendorAddress,
                 expense.getExpenseNumber(),
                 expenseBank != null ? expenseBank.getAccountHolderName() : null,
                 categoryName,
@@ -1178,6 +1209,27 @@ public class ExpenseService {
             return null;
         }
         return creatorNamesById.getOrDefault(createdBy, createdBy);
+    }
+
+    /**
+     * Builds the vendor's complete single-line address, reusing the shared {@link AddressUtils}
+     * formatter (the same logic used by the Vendor Details and Get All Vendors APIs). Returns
+     * {@code null} for non-vendor expenses or when the vendor id is missing/non-numeric/unknown.
+     */
+    private String resolveVendorAddress(String vendorId) {
+        if (vendorId == null || vendorId.isBlank()) {
+            return null;
+        }
+        try {
+            VendorV1 vendor = vendorRepository.findByVendorId(Integer.parseInt(vendorId.trim()));
+            if (vendor == null) {
+                return null;
+            }
+            return AddressUtils.formatAddress(vendor.getHouseNo(), vendor.getArea(), vendor.getLandMark(),
+                    vendor.getCity(), vendor.getPinCode(), vendor.getState());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private long daysSince(Date date) {

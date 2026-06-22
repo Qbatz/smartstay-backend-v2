@@ -7,6 +7,7 @@ package com.smartstay.smartstay.responses.vendor;
 public record VendorExpenseSummary(
         String expenseId,
         String expenseNo,
+        Double actualTotalPrice,
         Double totalAmount,
         Double totalBalance,
         String referenceNo,

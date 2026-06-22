@@ -36,7 +36,9 @@ public class VendorMapper implements Function<VendorV1, VendorResponse> {
                 vendorV1.getPan(),
                 vendorV1.getAllowCredit(),
                 vendorV1.getCreditLimit(),
-                vendorV1.getCreditPeriod()
+                vendorV1.getCreditPeriod(),
+                vendorV1.getBusinessMobileCode(),
+                vendorV1.getContactPersonMobileCode()
         );
     }
 }

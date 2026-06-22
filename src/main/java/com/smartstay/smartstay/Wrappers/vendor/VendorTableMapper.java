@@ -3,6 +3,7 @@ package com.smartstay.smartstay.Wrappers.vendor;
 import com.smartstay.smartstay.dao.VendorV1;
 import com.smartstay.smartstay.ennum.VendorPaymentStatus;
 import com.smartstay.smartstay.responses.vendor.VendorHeaderAdditionalFields;
+import com.smartstay.smartstay.util.AddressUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import com.smartstay.smartstay.util.columnOptions.VendorColumnUtils;
@@ -97,6 +98,15 @@ public class VendorTableMapper implements Function<VendorV1, List<Object>> {
         if (column.equalsIgnoreCase(VendorColumnUtils.LAST_TRANSACTION)) {
             Date lastPayment = lastPaymentByVendorId.get(String.valueOf(vendor.getVendorId()));
             return lastPayment != null ? Utils.dateToString(lastPayment) : "NA";
+        }
+        if (column.equalsIgnoreCase(VendorColumnUtils.BUSINESS_NAME)) {
+            return vendor.getBusinessName() != null && !vendor.getBusinessName().trim().isEmpty()
+                    ? vendor.getBusinessName() : "-";
+        }
+        if (column.equalsIgnoreCase(VendorColumnUtils.VENDOR_ADDRESS)) {
+            String address = AddressUtils.formatAddress(vendor.getHouseNo(), vendor.getArea(), vendor.getLandMark(),
+                    vendor.getCity(), vendor.getPinCode(), vendor.getState());
+            return address.isEmpty() ? "-" : address;
         }
         return "NA";
     }
