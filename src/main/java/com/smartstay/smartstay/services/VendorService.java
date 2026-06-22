@@ -47,6 +47,7 @@ import com.smartstay.smartstay.util.FilterKeywords;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -763,6 +764,14 @@ public class VendorService {
             return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
+        // Email must be unique across vendors (case-insensitive). Blank emails are stored as null so
+        // multiple vendors without an email remain allowed.
+        String email = (payloads.mailId() != null && !payloads.mailId().trim().isEmpty())
+                ? payloads.mailId().trim() : null;
+        if (email != null && vendorRepository.existsByEmailIdIgnoreCase(email)) {
+            return new ResponseEntity<>(Utils.VENDOR_EMAIL_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
         if (!subscriptionService.validateSubscription(payloads.hostelId())) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
@@ -777,7 +786,7 @@ public class VendorService {
         vendorV1.setLastName(payloads.lastName());
         vendorV1.setCountryCode(payloads.countryCode() == null ? null : payloads.countryCode().replace("+", "").trim());
         vendorV1.setMobile(normalizedMobile);
-        vendorV1.setEmailId(payloads.mailId());
+        vendorV1.setEmailId(email);
         vendorV1.setHouseNo(payloads.houseNo());
         vendorV1.setLandMark(payloads.landmark());
         vendorV1.setPinCode(payloads.pinCode());
@@ -812,9 +821,14 @@ public class VendorService {
         // Persist first so the database assigns the unique, auto-incremented vendorId,
         // then derive the vendor code from it. Using the identity column guarantees
         // uniqueness and avoids the collisions possible with random generation.
-        vendorV1 = vendorRepository.save(vendorV1);
-        vendorV1.setVendorCode(generateVendorCode(vendorV1.getVendorId()));
-        vendorRepository.save(vendorV1);
+        // The DB-level unique email index is the final guard against concurrent duplicate inserts.
+        try {
+            vendorV1 = vendorRepository.save(vendorV1);
+            vendorV1.setVendorCode(generateVendorCode(vendorV1.getVendorId()));
+            vendorRepository.save(vendorV1);
+        } catch (DataIntegrityViolationException ex) {
+            return new ResponseEntity<>(Utils.VENDOR_EMAIL_EXISTS, HttpStatus.BAD_REQUEST);
+        }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
 

@@ -72,6 +72,7 @@ public class Utils {
     public static final String DELETED = "Deleted Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
+    public static final String VENDOR_EMAIL_EXISTS = "A vendor with this email address already exists.";
     public static final String MOBILE_NO_REQUIRED = "Mobile number required";
     public static final String NAME_REQUIRED = "Name required";
     public static final String CITY_REQUIRED = "City required";
