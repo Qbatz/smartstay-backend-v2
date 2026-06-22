@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.transactions.InvoiceRefundMapper;
 import com.smartstay.smartstay.Wrappers.transactions.TransactionForCustomerDetailsMapper;
+import com.smartstay.smartstay.Wrappers.transactions.TransactionsListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.dao.*;
@@ -23,10 +24,12 @@ import com.smartstay.smartstay.repositories.TransactionV1Repository;
 import com.smartstay.smartstay.repositories.InvoiceRedemptionRepository;
 import com.smartstay.smartstay.responses.invoices.AccountDetails;
 import com.smartstay.smartstay.responses.invoices.CustomerInfo;
+import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.responses.invoices.StayInfo;
 import com.smartstay.smartstay.responses.receipt.ReceiptConfigInfo;
 import com.smartstay.smartstay.responses.receipt.ReceiptDetails;
 import com.smartstay.smartstay.responses.receipt.ReceiptInfo;
+import com.smartstay.smartstay.responses.receipt.ReceiptResponse;
 import com.smartstay.smartstay.responses.transaction.TransactionReportResponse;
 import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.NameUtils;
@@ -34,12 +37,14 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Period;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -1328,5 +1333,194 @@ public class TransactionService {
             listTransactions = new ArrayList<>();
         }
         return listTransactions;
+    }
+
+
+    public ResponseEntity<?> getAllReceiptsByHostelIdNew(String hostelId, String keyword, List<String> bankIds, Integer pageSize, Integer pageNumber, String period) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        int page = 1;
+        int size = 10;
+        if (pageNumber != null) {
+            try {
+                page = Integer.parseInt(pageNumber.toString());
+            }
+            catch (Exception e) {
+                page = 1;
+            }
+
+            try {
+                size = Integer.parseInt(pageSize.toString());
+            }
+            catch (Exception e) {
+                size = 10;
+            }
+        }
+
+        Pageable pageableRequest = PageRequest.of(page - 1, size);
+        Date startDate = null;
+        Date endDate = null;
+
+        if (period != null) {
+            if (period.equalsIgnoreCase("THIS_MONTH")) {
+                Calendar cal = Calendar.getInstance();
+                cal.set(Calendar.DAY_OF_MONTH, 1);
+
+                Calendar endDateCal = Calendar.getInstance();
+
+                startDate = cal.getTime();
+                endDate = endDateCal.getTime();
+            }
+            if (period.equalsIgnoreCase("LAST_MONTH")) {
+                Calendar cal = Calendar.getInstance();
+                cal.set(Calendar.DAY_OF_MONTH, 1);
+                cal.add(Calendar.MONTH, -1);
+
+
+                startDate = cal.getTime();
+                endDate = Utils.findLastDate(1, cal.getTime());
+            }
+            if (period.equalsIgnoreCase("LAST_3_MONTHS")) {
+                Calendar cal = Calendar.getInstance();
+                cal.set(Calendar.DAY_OF_MONTH, 1);
+                cal.add(Calendar.MONTH, -3);
+
+                Calendar endDateCal = Calendar.getInstance();
+
+                startDate = cal.getTime();
+                endDate = endDateCal.getTime();
+            }
+            if (period.equalsIgnoreCase("LAST_6_MONTHS")) {
+                Calendar cal = Calendar.getInstance();
+                cal.set(Calendar.DAY_OF_MONTH, 1);
+                cal.add(Calendar.MONTH, -6);
+
+                Calendar endDateCal = Calendar.getInstance();
+
+                startDate = cal.getTime();
+                endDate = endDateCal.getTime();
+            }
+        }
+        double totalAmount = 0.0;
+        double paidAmount = 0.0;
+        double refundAmount = 0.0;
+        List<TransactionV1> listAllTransactions = null;
+        Page<TransactionV1> listPagebleTransactions = null;
+        if (keyword != null) {
+            List<Customers> customersList = customersService.searchCustomerByHostelName(hostelId, keyword);
+            List<String> customerIds = customersList
+                    .stream()
+                    .map(Customers::getCustomerId)
+                    .toList();
+            List<String> invoiceId = invoiceService.getInvoiceNumbersBySearchKeyword(hostelId, keyword);
+
+            if (customerIds != null) {
+                if (customerIds.isEmpty()) {
+                    customerIds = null;
+                }
+            }
+            if (invoiceId != null) {
+                if (invoiceId.isEmpty()) {
+                    invoiceId = null;
+                }
+            }
+
+            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, customerIds, invoiceId, bankIds, startDate, endDate, pageableRequest);
+            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, customerIds, invoiceId, bankIds, startDate, endDate);
+
+        }
+        else {
+            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, null, null, bankIds, startDate, endDate, pageableRequest);
+            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, null, null, bankIds, startDate, endDate);
+        }
+
+        List<TransactionV1> listReceipts = listPagebleTransactions.toList();
+        if (listReceipts == null) {
+            return new ResponseEntity<>(Utils.NO_TRANSACTIONS_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (listAllTransactions != null) {
+            totalAmount = listAllTransactions
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getPaidAmount() != null) {
+                            if (i.getPaidAmount() <0) {
+                                return i.getPaidAmount() * -1;
+                            }
+                            return i.getPaidAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            paidAmount = listAllTransactions
+                    .stream()
+                    .filter(i -> i.getType() == null)
+                    .mapToDouble(i -> {
+                        if (i.getPaidAmount() != null) {
+                            if (i.getPaidAmount() <0) {
+                                return i.getPaidAmount() * -1;
+                            }
+                            return i.getPaidAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            refundAmount = listAllTransactions
+                    .stream()
+                    .filter(i -> i.getType() != null)
+                    .mapToDouble(i -> {
+                        if (i.getPaidAmount() != null) {
+                            if (i.getPaidAmount() <0) {
+                                return i.getPaidAmount() * -1;
+                            }
+                            return i.getPaidAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+        }
+
+        int totalReceipts = (int) listPagebleTransactions.getTotalElements();
+        int currentPage = listPagebleTransactions.getPageable().getPageNumber() + 1;
+        int totalPages = listPagebleTransactions.getTotalPages();
+        int noOfItemsPerPage = listPagebleTransactions.getSize();
+
+
+        List<String> customerIds = listReceipts.stream().map(TransactionV1::getCustomerId).toList();
+        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+        List<String> invoiceIds = listReceipts.stream().map(TransactionV1::getInvoiceId).toList();
+        List<InvoicesV1> invoices = invoiceService.findByInvoiceIdIn(invoiceIds);
+        Set<String> bankIdSet = listReceipts.stream().map(TransactionV1::getBankId).collect(Collectors.toSet());
+        List<BankingV1> listBanks = bankingService.findAllBanksById(bankIdSet);
+
+
+        List<ReceiptsList> receipts = listReceipts.stream().map(item -> new TransactionsListMapper(listCustomers, listBanks, invoices).apply(item)).toList();
+
+        ReceiptResponse receiptResponse = new ReceiptResponse(hostelId,
+                totalReceipts,
+                Utils.roundOffWithTwoDigit(totalAmount),
+                totalPages,
+                currentPage,
+                noOfItemsPerPage,
+                Utils.roundOffWithTwoDigit(paidAmount),
+                Utils.roundOffWithTwoDigit(refundAmount),
+                receipts);
+        return new ResponseEntity<>(receiptResponse, HttpStatus.OK);
     }
 }

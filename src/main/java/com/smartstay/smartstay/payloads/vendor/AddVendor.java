@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.payloads.vendor;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
@@ -9,14 +10,18 @@ public record AddVendor(
         String lastName,
 
         String countryCode,
-
-        @NotNull(message = "Mobile no is required") @NotEmpty(message = "Mobile no is required") String mobile,
-
-        String mailId, String houseNo, String landmark, String area,
+        @NotNull(message = "Mobile no is required")
+        @NotEmpty(message = "Mobile no is required") String mobile,
+        @Email(message = "Invalid Email")
+        String mailId,
+        String houseNo,
+        String landmark,
+        String area,
 
         @NotNull(message = "Pincode is required") Integer pinCode,
 
-        @NotNull(message = "City is required") @NotEmpty(message = "City is required") String city,
+        @NotNull(message = "City is required")
+        @NotEmpty(message = "City is required") String city,
 
         @NotNull(message = "State is required") @NotEmpty(message = "State is required") String state,
 
@@ -26,6 +31,7 @@ public record AddVendor(
 
         Integer vendorCategory,
         String contactPerson,
+        String secondaryContactCountryCode,
         String contactPersonMobile,
         String description,
         String gst,

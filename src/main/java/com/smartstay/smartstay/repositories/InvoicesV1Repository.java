@@ -129,7 +129,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findLatestInvoicesByCustomerIds(@Param("customerIds") List<String> customerIds);
 
     @Query("""
-            SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='BOOKING'
+            SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='BOOKING' AND inv.isCancelled=true
             """)
     List<InvoicesV1> findAllBookingInvoices();
 
@@ -403,4 +403,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND i.isCancelled=false
             """)
     List<InvoicesV1> findUnpaidInvoices(String customerId);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.invoiceType = 'SETTLEMENT'
+            """)
+    List<InvoicesV1> findSettlementInvoice();
+
+    List<InvoicesV1> findByHostelIdAndInvoiceNumberContainingIgnoreCase(String hostelId, String invoiceNumber);
 }

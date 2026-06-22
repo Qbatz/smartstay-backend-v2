@@ -796,6 +796,7 @@ public class VendorService {
         vendorV1.setVendorCategory(payloads.vendorCategory());
         vendorV1.setContactPerson(payloads.contactPerson());
         vendorV1.setContactPersonMobile(payloads.contactPersonMobile());
+        vendorV1.setContactPersonCountryCode(payloads.secondaryContactCountryCode());
         vendorV1.setDescription(payloads.description());
         vendorV1.setGst(payloads.gst());
         vendorV1.setPan(payloads.pan());

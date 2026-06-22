@@ -270,6 +270,7 @@ public class Utils {
     public static final String INVALID_RECEIPT_ID_PASSED = "Invalid receipt id passed";
     public static final String INVALID_REQUEST = "Invalid request";
     public static final String INVOICE_NOT_FOUND_TRANSACTION = "Invoice is not found for this transaction";
+    public static final String NO_TRANSACTIONS_FOUND = "No Transactions found";
     public static final String CANNOT_DELETE_OTHER_MODE_RECEIPTS = "Delete can be possible only for manually generated receipts";
     public static final String NO_BED_FOUND_ERROR = "No bed found";
     public static final String CANNOT_DELETE_OCCUPIED_BEDS = "Cannot delete the occupied beds";

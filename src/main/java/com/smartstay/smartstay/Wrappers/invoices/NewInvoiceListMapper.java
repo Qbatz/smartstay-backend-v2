@@ -43,6 +43,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         String invoiceMode = null;
         boolean isRefundable = false;
         boolean isCancelled = false;
+        String cancelledOn = null;
         Double discountPercentage = 0.0;
         Double discountAmount = 0.0;
         boolean canEdit = false;
@@ -181,6 +182,9 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             paymentStatus = "Cancelled";
             isCancelled = true;
             canEdit = false;
+            if (invoicesV1.getCancelledDate() != null) {
+                cancelledOn = Utils.dateToString(invoicesV1.getCancelledDate());
+            }
         }
 
         if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.RECURRING.name())) {
@@ -321,6 +325,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 Utils.dateToString(invoicesV1.getUpdatedAt()),
                 invoicesV1.getInvoiceNumber(),
                 isCancelled,
+                cancelledOn,
                 canEdit,
                 canUnpaid,
                 isInvoicesApplied,

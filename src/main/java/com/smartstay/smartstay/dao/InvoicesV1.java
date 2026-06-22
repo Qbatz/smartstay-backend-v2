@@ -53,6 +53,7 @@ public class InvoicesV1 {
     String createdBy;
     String updatedBy;
     Date invoiceGeneratedDate;
+    Date cancelledDate;
     Date invoiceDueDate;
     Date invoiceStartDate;
     Date invoiceEndDate;

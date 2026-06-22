@@ -828,13 +828,7 @@ public class InvoiceV1Service {
         return 0;
     }
 
-    public ResponseEntity<?> getAllReceiptsByHostelId(String hostelId) {
-        List<Receipts> listReceipts = transactionService.getAllReceiptsByHostelIdOld(hostelId);
-        List<ReceiptsList> receipts = listReceipts.stream().map(item -> new ReceiptMapper().apply(item)).toList();
-        return new ResponseEntity<>(receipts, HttpStatus.OK);
-    }
-
-    public ResponseEntity<?> getAllReceiptsByHostelIdNew(String hostelId) {
+    public ResponseEntity<?> getAllReceiptsByHostelIdOld(String hostelId) {
         List<TransactionV1> listReceipts = transactionService.getAllReceiptsByHostelId(hostelId);
         List<String> customerIds = listReceipts.stream().map(TransactionV1::getCustomerId).toList();
         List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
@@ -885,6 +879,7 @@ public class InvoiceV1Service {
 
     public String cancelBookingInvoice(InvoicesV1 invoicesV1, String bankId, Date cancelledDate, String referenceNumber) {
         invoicesV1.setPaymentStatus(PaymentStatus.CANCELLED.name());
+        invoicesV1.setCancelledDate(cancelledDate);
         invoicesV1.setCancelled(true);
         invoicesV1Repository.save(invoicesV1);
 
@@ -1317,12 +1312,16 @@ public class InvoiceV1Service {
 
 
         String paymentStatus = null;
+        String cancelledOn = null;
         if (invoicesV1.getPaymentStatus() != null) {
             paymentStatus = InvoiceUtils.getInvoicePaymentStatusByStatus(invoicesV1.getPaymentStatus());
         }
 
         if (invoicesV1.isCancelled()) {
             paymentStatus = "Cancelled";
+            if (invoicesV1.getCancelledDate() != null) {
+                cancelledOn = Utils.dateToString(invoicesV1.getCancelledDate());
+            }
         }
 
         StringBuilder invoiceMonth = new StringBuilder();
@@ -1595,7 +1594,9 @@ public class InvoiceV1Service {
                     0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
                     Utils.roundOffWithTwoDigit(discountedAmount), discountedPercentage,
                     invoiceRentalPeriod.toString(),
-                    invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(), invoicesV1.isDiscounted(),
+                    invoiceMonth.toString(), paymentStatus, invoicesV1.isCancelled(),
+                    cancelledOn,
+                    invoicesV1.isDiscounted(),
                     discountReason,
                     Utils.roundOffWithTwoDigit(totalDeductionAmount), false, false, 0.0, false, false, 0.0, listInvoiceItems, listDeductions, null);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
@@ -1674,6 +1675,7 @@ public class InvoiceV1Service {
                 discountedPercentage,
                 invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus,
                 invoicesV1.isCancelled(),
+                cancelledOn,
                 invoicesV1.isDiscounted(),
                 discountReason,
                 0.0,
@@ -1710,6 +1712,7 @@ public class InvoiceV1Service {
                     discountedPercentage,
                     invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus,
                     invoicesV1.isCancelled(),
+                    cancelledOn,
                     invoicesV1.isDiscounted(),
                     discountReason,
                     0.0,
@@ -1736,6 +1739,14 @@ public class InvoiceV1Service {
         double unpaidInvoiceAmount = 0.0;
         double electricityAmount = 0.0;
         double finalAmount = 0.0;
+        boolean isFullRentSelected;
+        double fullRentAmount;
+        double differenceAmount = 0.0;
+        double availableAdvanceBalance = 0.0;
+        double availableBookingBalance = 0.0;
+        double walletAmount = 0.0;
+        double currentMonthRefundableAmount = 0.0;
+        double currentMonthPayableAmount = 0.0;
 
         double currentPayablemount = 0.0;
         double currentPaidAmount = 0.0;
@@ -1743,6 +1754,8 @@ public class InvoiceV1Service {
         double currentMonthTotalAmount = 0.0;
         double stayDays = 0.0;
         double currentMonthPayableRent = 0.0;
+        String currentMonthLabelText = null;
+
         UnpaidInvoiceInfo unpaidInvoiceInfo = null;
         if (settlementItems.getUnpaidInvoices() != null) {
             if (!settlementItems.getUnpaidInvoices().isEmpty()) {
@@ -1771,6 +1784,14 @@ public class InvoiceV1Service {
                         unpaidInvoiceTotalAmount,
                         listUnpaidInvoiceItems);
             }
+        }
+
+        if (settlementItems.getIsFullRentCollected() != null && settlementItems.getIsFullRentCollected()) {
+            isFullRentSelected = true;
+            fullRentAmount = settlementItems.getFullRent();
+        } else {
+            fullRentAmount = 0.0;
+            isFullRentSelected = false;
         }
 
         DeductionsInfo deductionsInfo = null;
@@ -1825,11 +1846,13 @@ public class InvoiceV1Service {
         if (advanceItems != null) {
             if (advanceItems.availableAdvanceBalance() != null) {
 //                subTotal = subTotal - advanceItems.availableAdvanceBalance();
+                availableAdvanceBalance = advanceItems.availableAdvanceBalance();
             }
         }
         if (bookingItems != null) {
             if (bookingItems.availableAdvanceBalance() != null) {
 //                subTotal = subTotal - bookingItems.availableAdvanceBalance();
+                availableBookingBalance = bookingItems.availableAdvanceBalance();
             }
         }
         RentInfo rentInfo = null;
@@ -1840,10 +1863,15 @@ public class InvoiceV1Service {
         List<CurrentMonthOtherItems> listCurrentMonthOtherItems = null;
         if (settlementItems.getCurrentRentBreakUps() != null) {
             if (!settlementItems.getCurrentRentBreakUps().isEmpty()) {
+                com.smartstay.smartstay.dto.settlement.CurrentRentBreakUp latestRent = settlementItems.getCurrentRentBreakUps()
+                        .stream()
+                        .max(Comparator.comparing(com.smartstay.smartstay.dto.settlement.CurrentRentBreakUp::getFromDate))
+                        .orElse(null);
+
                 listRentBreakUp = settlementItems
                         .getCurrentRentBreakUps()
                         .stream()
-                        .map(i -> new CurrentRentBreakUp().apply(i))
+                        .map(i -> new CurrentRentBreakUp(latestRent, isFullRentSelected, fullRentAmount).apply(i))
                         .toList();
             }
         }
@@ -1860,11 +1888,16 @@ public class InvoiceV1Service {
             else {
                 currentPayablemount = settlementItems.getCurrentMonthPayableAmount();
             }
+
+            currentMonthPayableAmount = currentPayablemount;
         }
         if (settlementItems.getCurrentMonthPaidAmount() != null) {
             currentPaidAmount = settlementItems.getCurrentMonthPaidAmount();
             currentPayablemount = currentPayablemount - currentPaidAmount;
 //            subTotal = subTotal - currentPaidAmount;
+            if (currentPayablemount < currentPaidAmount) {
+                currentMonthRefundableAmount = currentPaidAmount - currentPayablemount;
+            }
         }
         if (listRentBreakUp != null) {
             if (!listRentBreakUp.isEmpty()) {
@@ -1926,7 +1959,7 @@ public class InvoiceV1Service {
        if (settlementItems.getWalltetItems() != null) {
            int noOfWalletItems = settlementItems.getWalltetItems().size();
            List<WalltetItems> listWalletItems = settlementItems.getWalltetItems();
-           double walletAmount = listWalletItems
+           walletAmount = listWalletItems
                    .stream()
                    .mapToDouble(i -> {
                        if (i.getAmount() != null) {
@@ -1942,7 +1975,15 @@ public class InvoiceV1Service {
            walletInfo = new WalletInfo(noOfWalletItems, Utils.roundOffWithTwoDigit(walletAmount), listwalletItems);
        }
 
-       currentRentInfo = new CurrentRentInfo(currentPaidAmount,
+       if (currentMonthPayableAmount < 0) {
+           currentMonthLabelText = "Refundable Rent";
+       }
+       else {
+           currentMonthLabelText = "Payable Rent";
+       }
+
+       currentRentInfo = new CurrentRentInfo(currentMonthLabelText,
+               currentPaidAmount,
                currentPayablemount,
                stayDays,
                currentMonthPayableRent,
@@ -1969,15 +2010,31 @@ public class InvoiceV1Service {
        finalAmount = Utils.roundOfDouble(invoicesV1.getTotalAmount()) + deductionAmount;
        finalAmount = finalAmount + unpaidInvoiceAmount + electricityAmount ;
 
+       double totalRefundable = 0.0;
+       double totalPayable = 0.0;
+       totalRefundable = availableAdvanceBalance + availableBookingBalance;
+       if (walletAmount <= 0) {
+           totalRefundable = totalRefundable + (walletAmount * -1);
+       }
+       else {
+           totalPayable = walletAmount;
+       }
+       totalRefundable = totalRefundable + currentPaidAmount;
+       totalPayable = totalPayable + unpaidInvoiceAmount + deductionAmount;
+       totalPayable = totalPayable + currentMonthPayableAmount;
+
 
         com.smartstay.smartstay.responses.settlement.InvoiceInfo invoiceInfo = null;
        if (invoicesV1 != null) {
-           invoiceInfo = new com.smartstay.smartstay.responses.settlement.InvoiceInfo(invoicesV1.getInvoiceNumber(),
+           invoiceInfo = new com.smartstay.smartstay.responses.settlement.InvoiceInfo(invoicesV1.getInvoiceId(),
+                   invoicesV1.getInvoiceNumber(),
                    Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                    Utils.dateToString(invoicesV1.getInvoiceDueDate()),
                    null,
                    null,
                    Utils.roundOffWithTwoDigit(subTotal),
+                   Utils.roundOffWithTwoDigit(totalRefundable),
+                   Utils.roundOffWithTwoDigit(totalPayable),
                    deductionAmount,
                    unpaidInvoiceAmount,
                    electricityAmount,
@@ -4813,6 +4870,7 @@ public class InvoiceV1Service {
                 .stream()
                 .map(i -> {
                     i.setCancelled(true);
+                    i.setCancelledDate(leavingDate);
                     return i;
                 })
                 .toList();
@@ -4841,6 +4899,7 @@ public class InvoiceV1Service {
                 .stream()
                 .map(i -> {
                     i.setCancelled(true);
+                    i.setCancelledDate(leavingDate);
                     return i;
                 })
                 .toList();
@@ -5727,5 +5786,16 @@ public class InvoiceV1Service {
             return new ArrayList<>();
         }
         return unpaidInvoices;
+    }
+
+    public List<String> getInvoiceNumbersBySearchKeyword(String hostelId, String keyword) {
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findByHostelIdAndInvoiceNumberContainingIgnoreCase(hostelId, keyword);
+        if (listInvoices == null) {
+            return new ArrayList<>();
+        }
+        return listInvoices
+                .stream()
+                .map(InvoicesV1::getInvoiceId)
+                .toList();
     }
 }
