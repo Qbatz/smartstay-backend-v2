@@ -41,5 +41,7 @@ public record VendorMobileResponse(
         double totalBalance,
         String businessMobileCode,
         String contactPersonMobileCode,
-        String vendorAddress) {
+        String vendorAddress,
+        double outstandingAmount,
+        Double lastTransaction) {
 }

@@ -2,6 +2,7 @@ package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.ExpensePayment;
 import com.smartstay.smartstay.dto.vendor.VendorLastPayment;
+import com.smartstay.smartstay.dto.vendor.VendorLastPaymentAmount;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -41,6 +42,11 @@ public interface ExpensePaymentRepository extends JpaRepository<ExpensePayment, 
     @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorLastPayment(p.vendorId, MAX(p.paymentDate)) " +
             "FROM ExpensePayment p WHERE p.vendorId IN :vendorIds GROUP BY p.vendorId")
     List<VendorLastPayment> findLatestPaymentDates(@Param("vendorIds") List<String> vendorIds);
+
+    @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorLastPaymentAmount(p.vendorId, p.paidAmount) " +
+            "FROM ExpensePayment p WHERE p.vendorId IN :vendorIds " +
+            "AND p.paymentDate = (SELECT MAX(p2.paymentDate) FROM ExpensePayment p2 WHERE p2.vendorId = p.vendorId)")
+    List<VendorLastPaymentAmount> findLatestPaymentAmounts(@Param("vendorIds") List<String> vendorIds);
 
     @Query("SELECT p FROM ExpensePayment p WHERE p.vendorId = :vendorId " +
             "AND (:startDate IS NULL OR DATE(p.paymentDate) >= DATE(:startDate)) " +
