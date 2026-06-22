@@ -255,6 +255,7 @@ public class ExpenseService {
                 .map(v -> new VendorInitializeResponse(
                         v.getVendorId(),
                         v.getBusinessName(),
+                        NameUtils.getFullName(v.getFirstName(), v.getLastName()),
                         v.getPaymentStatus() != null ? v.getPaymentStatus().name() : null,
                         nullSafe(v.getTotalExpense()),
                         nullSafe(v.getTotalPaid()),

@@ -8,6 +8,7 @@ package com.smartstay.smartstay.responses.vendor;
 public record VendorInitializeResponse(
         int id,
         String businessName,
+        String vendorName,
         String paymentStatus,
         double totalExpenseAmount,
         double totalPaidAmount,
