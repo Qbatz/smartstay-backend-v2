@@ -26,10 +26,7 @@ import com.smartstay.smartstay.responses.invoices.AccountDetails;
 import com.smartstay.smartstay.responses.invoices.CustomerInfo;
 import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.responses.invoices.StayInfo;
-import com.smartstay.smartstay.responses.receipt.ReceiptConfigInfo;
-import com.smartstay.smartstay.responses.receipt.ReceiptDetails;
-import com.smartstay.smartstay.responses.receipt.ReceiptInfo;
-import com.smartstay.smartstay.responses.receipt.ReceiptResponse;
+import com.smartstay.smartstay.responses.receipt.*;
 import com.smartstay.smartstay.responses.transaction.TransactionReportResponse;
 import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.NameUtils;
@@ -440,6 +437,7 @@ public class TransactionService {
         StringBuilder hostelFullAddress = new StringBuilder();
         String receiptSignatureUrl = null;
         String hostelLogo = null;
+        StringBuilder rentalPeriod = new StringBuilder();
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
             invoiceType = "Advance";
@@ -447,6 +445,12 @@ public class TransactionService {
             invoiceType = "Booking";
         } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             invoiceType = "Settlement";
+        }
+
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
+            rentalPeriod.append(Utils.dateToMonth(invoicesV1.getInvoiceStartDate()));
+            rentalPeriod.append("-");
+            rentalPeriod.append(Utils.dateToMonth(invoicesV1.getInvoiceEndDate()));
         }
 
         if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().equalsIgnoreCase("")) {
@@ -670,7 +674,7 @@ public class TransactionService {
             }
         }
 
-        ReceiptDetails details = new ReceiptDetails(invoicesV1.getInvoiceNumber(),
+        ReceiptDetails details = new ReceiptDetails(invoicesV1.getInvoiceNumber(), rentalPeriod.toString(),
                 transactionV1.getTransactionReferenceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                 invoicesV1.getInvoiceId(), invoicesV1.getTotalAmount(), invoicesV1.getPaidAmount(), dueAmount,
                 hostelEmail, hostelPhone, "91", invoicesV1.getHostelId(), receiptInfo, customerInfo, stayInfo,
@@ -1336,7 +1340,7 @@ public class TransactionService {
     }
 
 
-    public ResponseEntity<?> getAllReceiptsByHostelIdNew(String hostelId, String keyword, List<String> bankIds, Integer pageSize, Integer pageNumber, String period) {
+    public ResponseEntity<?> getAllReceiptsByHostelIdNew(String hostelId, String keyword, List<String> bankIds, String invoiceType, List<String> collectedBy, Integer pageSize, Integer pageNumber, String period, Integer minAmount, Integer maxAmount) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -1353,6 +1357,27 @@ public class TransactionService {
         }
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<String> invoiceTypeArr = null;
+        if (invoiceType != null) {
+            invoiceTypeArr = new ArrayList<>();
+            if (invoiceType.equalsIgnoreCase(InvoiceType.RENT.name())) {
+                invoiceTypeArr.add(InvoiceType.RENT.name());
+                invoiceTypeArr.add(InvoiceType.REASSIGN_RENT.name());
+            }
+            else if (invoiceType.equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                invoiceTypeArr.add(InvoiceType.BOOKING.name());
+            }
+            else if (invoiceType.equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+                invoiceTypeArr.add(InvoiceType.ADVANCE.name());
+            }
+            else if (invoiceType.equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+                invoiceTypeArr.add(InvoiceType.SETTLEMENT.name());
+            }
+            if (invoiceTypeArr.isEmpty()) {
+                invoiceTypeArr = null;
+            }
         }
 
         int page = 1;
@@ -1428,7 +1453,7 @@ public class TransactionService {
                     .stream()
                     .map(Customers::getCustomerId)
                     .toList();
-            List<String> invoiceId = invoiceService.getInvoiceNumbersBySearchKeyword(hostelId, keyword);
+            List<String> invoiceId = invoiceService.getInvoiceNumbersBySearchKeyword(hostelId, keyword, invoiceTypeArr);
 
             if (customerIds != null) {
                 if (customerIds.isEmpty()) {
@@ -1441,13 +1466,18 @@ public class TransactionService {
                 }
             }
 
-            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, customerIds, invoiceId, bankIds, startDate, endDate, pageableRequest);
-            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, customerIds, invoiceId, bankIds, startDate, endDate);
+            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
+            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
 
         }
+        else if (invoiceType != null) {
+            List<String> listInvoiceIds = invoiceService.findInvoiceIdsByHostelIdAndTypeIn(hostelId, invoiceTypeArr);
+            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, null, listInvoiceIds, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
+            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, null, listInvoiceIds, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
+        }
         else {
-            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, null, null, bankIds, startDate, endDate, pageableRequest);
-            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, null, null, bankIds, startDate, endDate);
+            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, null, null, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
+            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, null, null, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
         }
 
         List<TransactionV1> listReceipts = listPagebleTransactions.toList();
@@ -1508,6 +1538,12 @@ public class TransactionService {
         List<InvoicesV1> invoices = invoiceService.findByInvoiceIdIn(invoiceIds);
         Set<String> bankIdSet = listReceipts.stream().map(TransactionV1::getBankId).collect(Collectors.toSet());
         List<BankingV1> listBanks = bankingService.findAllBanksById(bankIdSet);
+        List<String> collectedByUsersIds = listReceipts.stream().map(TransactionV1::getCreatedBy).toList();
+        List<Users> collectedByUsers = usersService.findAllUsersFromUserId(collectedByUsersIds);
+
+        ReceiptFilterOptions filterOptions = new ReceiptFilterOptions();
+        filterOptions.setCollectedBy(collectedByUsers);
+        filterOptions.setPaymentMethod(listBanks);
 
 
         List<ReceiptsList> receipts = listReceipts.stream().map(item -> new TransactionsListMapper(listCustomers, listBanks, invoices).apply(item)).toList();
@@ -1520,6 +1556,7 @@ public class TransactionService {
                 noOfItemsPerPage,
                 Utils.roundOffWithTwoDigit(paidAmount),
                 Utils.roundOffWithTwoDigit(refundAmount),
+                filterOptions,
                 receipts);
         return new ResponseEntity<>(receiptResponse, HttpStatus.OK);
     }

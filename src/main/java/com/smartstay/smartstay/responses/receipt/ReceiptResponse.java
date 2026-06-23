@@ -12,5 +12,6 @@ public record ReceiptResponse(String hostelId,
                               int size,
                               Double paidAmount,
                               Double refundAmount,
+                              ReceiptFilterOptions filterOptions,
                               List<ReceiptsList> listReceipts) {
 }

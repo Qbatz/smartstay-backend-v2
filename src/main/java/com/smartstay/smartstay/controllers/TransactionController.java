@@ -35,8 +35,12 @@ public class TransactionController {
                                             @RequestParam(value = "size", required = false, defaultValue = "10") Integer size,
                                             @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
                                             @RequestParam(value = "period", required = false) String period,
-                                            @RequestParam(value = "bankIds", required = false) List<String> bankIds) {
-        return transactionService.getAllReceiptsByHostelIdNew(hostelId, keyword,bankIds, size, page, period);
+                                            @RequestParam(value = "bankIds", required = false) List<String> bankIds,
+                                            @RequestParam(value = "invoiceType", required = false) String invoiceType,
+                                            @RequestParam(value = "collectedBy", required = false) List<String> collectedBy,
+                                            @RequestParam(value = "minAmount", required = false) Integer minAmount,
+                                            @RequestParam(value = "maxAmount", required = false) Integer maxAmount) {
+        return transactionService.getAllReceiptsByHostelIdNew(hostelId, keyword, bankIds, invoiceType, collectedBy, size, page, period, minAmount, maxAmount);
     }
     @PostMapping("/{hostelId}/{invoiceId}")
     public ResponseEntity<?> recordPayment(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @Valid  @RequestBody AddPayment addPayment) {

@@ -17,5 +17,6 @@ public record ReceiptsList(String firstName,
                            String bankName,
                            String bankId,
                            String profilePic,
-                           String initials) {
+                           String initials,
+                           String rentalPeriod) {
 }

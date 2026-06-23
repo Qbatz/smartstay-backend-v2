@@ -37,6 +37,7 @@ public class TransactionsListMapper implements Function<TransactionV1, ReceiptsL
         StringBuilder fullName = new StringBuilder();
         StringBuilder bankName = new StringBuilder();
         StringBuilder initials = new StringBuilder();
+        StringBuilder rentalPeriod = new StringBuilder();
 
         InvoicesV1 invoice = invoices
                 .stream()
@@ -46,6 +47,12 @@ public class TransactionsListMapper implements Function<TransactionV1, ReceiptsL
 
         if (invoice != null) {
             invoiceNumber = invoice.getInvoiceNumber();
+            if (invoice.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || invoice.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
+                rentalPeriod.append(Utils.dateToMonth(invoice.getInvoiceStartDate()));
+                rentalPeriod.append("-");
+                rentalPeriod.append(Utils.dateToMonth(invoice.getInvoiceEndDate()));
+            }
+
 
             String type = switch (invoice.getInvoiceType()) {
                 case "ADVANCE" -> "Advance";
@@ -149,6 +156,7 @@ public class TransactionsListMapper implements Function<TransactionV1, ReceiptsL
                 bankName.toString(),
                 transactionV1.getBankId(),
                 profilePic,
-                initials.toString());
+                initials.toString(),
+                rentalPeriod.toString());
     }
 }

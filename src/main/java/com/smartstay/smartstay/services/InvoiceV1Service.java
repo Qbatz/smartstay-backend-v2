@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.Bills.ReceiptMapper;
 import com.smartstay.smartstay.Wrappers.booking.AdvanceInvoicesMapper;
 import com.smartstay.smartstay.Wrappers.booking.BookingsTableMapper;
 import com.smartstay.smartstay.Wrappers.booking.InitializeRedemptionMapper;
@@ -2019,9 +2018,9 @@ public class InvoiceV1Service {
        else {
            totalPayable = walletAmount;
        }
-       totalRefundable = totalRefundable + currentPaidAmount;
-       totalPayable = totalPayable + unpaidInvoiceAmount + deductionAmount;
-       totalPayable = totalPayable + currentMonthPayableAmount;
+//       totalRefundable = totalRefundable;
+//       totalPayable = totalPayable + unpaidInvoiceAmount + deductionAmount;
+       totalPayable = totalPayable + currentMonthPayableAmount - currentPaidAmount;
 
 
         com.smartstay.smartstay.responses.settlement.InvoiceInfo invoiceInfo = null;
@@ -3712,7 +3711,11 @@ public class InvoiceV1Service {
     }
 
     public List<String> findInvoiceIdsByHostelIdAndTypeIn(String hostelId, List<String> invoiceTypes) {
-        return invoicesV1Repository.findInvoiceIdsByHostelIdAndTypeIn(hostelId, invoiceTypes);
+        List<String> listInvoiceIds = invoicesV1Repository.findInvoiceIdsByHostelIdAndTypeIn(hostelId, invoiceTypes);
+        if (listInvoiceIds == null) {
+            return new ArrayList<>();
+        }
+        return listInvoiceIds;
     }
 
     public ResponseEntity<?> downloadInvoice(String hostelId, String invoiceId) {
@@ -5788,8 +5791,8 @@ public class InvoiceV1Service {
         return unpaidInvoices;
     }
 
-    public List<String> getInvoiceNumbersBySearchKeyword(String hostelId, String keyword) {
-        List<InvoicesV1> listInvoices = invoicesV1Repository.findByHostelIdAndInvoiceNumberContainingIgnoreCase(hostelId, keyword);
+    public List<String> getInvoiceNumbersBySearchKeyword(String hostelId, String keyword, List<String> invoiceType) {
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findByHostelIdAndInvoiceNumberContainingIgnoreCaseAndInvoiceTypeIn(hostelId, keyword, invoiceType);
         if (listInvoices == null) {
             return new ArrayList<>();
         }
