@@ -3,10 +3,13 @@ package com.smartstay.smartstay.responses.vendor;
 public record VendorMonthSummary(
         String month,
         long totalExpenseCount,
-        long totalPaidCount,
+        long totalFullPaidCount,
         long totalUnpaidCount,
-        long totalPartialCount,
-        double totalPaidAmount,
+        long totalPartialPaidCount,
+        double totalFullPaidAmount,
         double totalUnpaidAmount,
-        double totalPartialAmount) {
+        double totalPartialPaidAmount,
+        double totalAmount,
+        double balanceAmount,
+        double paidAmount) {
 }
