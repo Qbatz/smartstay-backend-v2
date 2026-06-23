@@ -41,6 +41,7 @@ import com.smartstay.smartstay.responses.vendor.VendorListResponse;
 import com.smartstay.smartstay.responses.vendor.VendorMonthSummary;
 import com.smartstay.smartstay.responses.vendor.VendorMobileListResponse;
 import com.smartstay.smartstay.responses.vendor.VendorMobileResponse;
+import com.smartstay.smartstay.responses.vendor.VendorValidationError;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
 import com.smartstay.smartstay.responses.vendor.VendorSummary;
 import com.smartstay.smartstay.util.FilterKeywords;
@@ -722,6 +723,11 @@ public class VendorService {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
+        // businessMobileCode is mandatory on update — reject null/empty/blank before doing any work.
+        if (updateVendor.businessMobileCode() == null || updateVendor.businessMobileCode().trim().isEmpty()) {
+            return new ResponseEntity<>(Utils.BUSINESS_MOBILE_CODE_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
         String profileImage = null;
         if (file != null) {
             profileImage = uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), "Vendor/Logo");
@@ -775,6 +781,16 @@ public class VendorService {
         if (updateVendor.contactPerson() != null) {
             existingVendor.setContactPerson(updateVendor.contactPerson());
         }
+        // businessMobileCode is mandatory (validated above); always persist the trimmed value.
+        existingVendor.setBusinessMobileCode(updateVendor.businessMobileCode().trim());
+        // contactPersonMobile is updateable; existing mobile-number handling is preserved.
+        if (updateVendor.contactPersonMobile() != null && !updateVendor.contactPersonMobile().trim().isEmpty()) {
+            existingVendor.setContactPersonMobile(updateVendor.contactPersonMobile().trim());
+        }
+        // contactPersonMobileCode is optional; persist the updated value when supplied.
+        if (updateVendor.contactPersonMobileCode() != null && !updateVendor.contactPersonMobileCode().trim().isEmpty()) {
+            existingVendor.setContactPersonMobileCode(updateVendor.contactPersonMobileCode().trim());
+        }
         if (updateVendor.description() != null) {
             existingVendor.setDescription(updateVendor.description());
         }
@@ -803,6 +819,23 @@ public class VendorService {
 
     }
 
+    /**
+     * Collects all hostel-scoped uniqueness failures for a vendor's email and mobile. Returns
+     * {@code null} when both are unique within the hostel; otherwise a {@link VendorValidationError}
+     * with only the offending field(s) populated. Email check is skipped when no email is supplied.
+     */
+    private VendorValidationError validateVendorUniqueness(String email, String normalizedMobile, String hostelId) {
+        String emailError = (email != null && vendorRepository.existsByEmailIdIgnoreCaseAndHostelId(email, hostelId))
+                ? Utils.VENDOR_EMAIL_EXISTS : null;
+        String mobileError = (Utils.checkNullOrEmpty(normalizedMobile)
+                && vendorRepository.existsByMobileAndHostelId(normalizedMobile, hostelId))
+                ? Utils.VENDOR_MOBILE_EXISTS : null;
+        if (emailError == null && mobileError == null) {
+            return null;
+        }
+        return new VendorValidationError(emailError, mobileError);
+    }
+
     public ResponseEntity<?> addVendor(MultipartFile file, AddVendor payloads) {
 
         if (!authentication.isAuthenticated()) {
@@ -815,17 +848,18 @@ public class VendorService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        String hostelId = payloads.hostelId();
         String normalizedMobile = normalizeMobile(payloads.countryCode(), payloads.mobile());
-        if (vendorRepository.existsByMobile(normalizedMobile)) {
-            return new ResponseEntity<>(Utils.MOBILE_NO_EXISTS, HttpStatus.BAD_REQUEST);
-        }
-
-        // Email must be unique across vendors (case-insensitive). Blank emails are stored as null so
+        // Email must be unique within the hostel (case-insensitive). Blank emails are stored as null so
         // multiple vendors without an email remain allowed.
         String email = (payloads.mailId() != null && !payloads.mailId().trim().isEmpty())
                 ? payloads.mailId().trim() : null;
-        if (email != null && vendorRepository.existsByEmailIdIgnoreCase(email)) {
-            return new ResponseEntity<>(Utils.VENDOR_EMAIL_EXISTS, HttpStatus.BAD_REQUEST);
+
+        // Uniqueness is scoped to the hostel: the same email/mobile may exist in other hostels. All
+        // field-level errors are collected so the caller can fix them in a single attempt.
+        VendorValidationError validationError = validateVendorUniqueness(email, normalizedMobile, hostelId);
+        if (validationError != null) {
+            return new ResponseEntity<>(validationError, HttpStatus.BAD_REQUEST);
         }
 
         if (!subscriptionService.validateSubscription(payloads.hostelId())) {
@@ -888,7 +922,13 @@ public class VendorService {
             vendorV1.setVendorCode(generateVendorCode(vendorV1.getVendorId()));
             vendorRepository.save(vendorV1);
         } catch (DataIntegrityViolationException ex) {
-            return new ResponseEntity<>(Utils.VENDOR_EMAIL_EXISTS, HttpStatus.BAD_REQUEST);
+            // A concurrent insert won the race on a per-hostel unique index. Re-evaluate to report the
+            // exact offending field(s); rethrow if it was some other integrity violation (don't mask it).
+            VendorValidationError raceError = validateVendorUniqueness(email, normalizedMobile, hostelId);
+            if (raceError == null) {
+                throw ex;
+            }
+            return new ResponseEntity<>(raceError, HttpStatus.BAD_REQUEST);
         }
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
