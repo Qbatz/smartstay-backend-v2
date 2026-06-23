@@ -437,12 +437,13 @@ public class VendorService {
                     yearMonthKey(cursor.get(Calendar.YEAR), cursor.get(Calendar.MONTH) + 1));
             if (row != null) {
                 monthSummaries.add(new VendorMonthSummary(monthName,
-                        nullSafeLong(row.getTotalExpenseCount()), nullSafeLong(row.getTotalPaidCount()),
-                        nullSafeLong(row.getTotalUnpaidCount()), nullSafeLong(row.getTotalPartialCount()),
-                        nullSafe(row.getTotalPaidAmount()), nullSafe(row.getTotalUnpaidAmount()),
-                        nullSafe(row.getTotalPartialAmount())));
+                        nullSafeLong(row.getTotalExpenseCount()), nullSafeLong(row.getTotalFullPaidCount()),
+                        nullSafeLong(row.getTotalUnpaidCount()), nullSafeLong(row.getTotalPartialPaidCount()),
+                        nullSafe(row.getTotalFullPaidAmount()), nullSafe(row.getTotalUnpaidAmount()),
+                        nullSafe(row.getTotalPartialPaidAmount()), nullSafe(row.getTotalAmount()),
+                        nullSafe(row.getBalanceAmount()), nullSafe(row.getPaidAmount())));
             } else {
-                monthSummaries.add(new VendorMonthSummary(monthName, 0, 0, 0, 0, 0.0, 0.0, 0.0));
+                monthSummaries.add(new VendorMonthSummary(monthName, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
             }
             cursor.add(Calendar.MONTH, 1);
         }
