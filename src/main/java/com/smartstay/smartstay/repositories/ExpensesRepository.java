@@ -46,10 +46,16 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
                             @Param("endDate") Date endDate);
 
     /**
-     * Month-wise expense aggregate for a vendor within a date range. Buckets are mutually exclusive:
-     *   paid    = paymentStatus 'Full' OR balance 0
-     *   partial = paymentStatus 'Partial' AND balance <> 0
-     *   unpaid  = everything else (Pending / NULL / Overdue with a balance)
+     * Month-wise expense aggregate for a vendor within a date range. Counts use mutually exclusive,
+     * exhaustive buckets (they sum to totalExpenseCount):
+     *   fullPaid = paymentStatus 'Full' OR balance 0
+     *   partial  = paymentStatus 'Partial' AND balance <> 0
+     *   unpaid   = everything else (Pending / NULL / Overdue with a balance)
+     * Amounts:
+     *   totalFullPaidAmount    = SUM(paid_amount)   over the fullPaid bucket
+     *   totalPartialPaidAmount = SUM(paid_amount)   over the partial bucket
+     *   totalUnpaidAmount      = SUM(total_price)   over the unpaid bucket
+     *   totalAmount/balanceAmount/paidAmount = SUM(total_price/balance_amount/paid_amount) over all rows
      * Returns one row per year+month that has expenses; missing months are zero-filled in the service.
      */
     @Query(value = """
@@ -57,19 +63,22 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
                    MONTH(e.transaction_date) AS expenseMonth,
                    COUNT(*)                  AS totalExpenseCount,
                    SUM(CASE WHEN COALESCE(e.payment_status,'') = 'Full' OR COALESCE(e.balance_amount,0) = 0
-                            THEN 1 ELSE 0 END) AS totalPaidCount,
+                            THEN 1 ELSE 0 END) AS totalFullPaidCount,
                    SUM(CASE WHEN COALESCE(e.payment_status,'') = 'Partial' AND COALESCE(e.balance_amount,0) <> 0
-                            THEN 1 ELSE 0 END) AS totalPartialCount,
+                            THEN 1 ELSE 0 END) AS totalPartialPaidCount,
                    SUM(CASE WHEN NOT (COALESCE(e.payment_status,'') = 'Full' OR COALESCE(e.balance_amount,0) = 0)
                              AND NOT (COALESCE(e.payment_status,'') = 'Partial' AND COALESCE(e.balance_amount,0) <> 0)
                             THEN 1 ELSE 0 END) AS totalUnpaidCount,
                    COALESCE(SUM(CASE WHEN COALESCE(e.payment_status,'') = 'Full' OR COALESCE(e.balance_amount,0) = 0
-                                     THEN COALESCE(e.paid_amount,0) ELSE 0 END), 0) AS totalPaidAmount,
+                                     THEN COALESCE(e.paid_amount,0) ELSE 0 END), 0) AS totalFullPaidAmount,
+                   COALESCE(SUM(CASE WHEN COALESCE(e.payment_status,'') = 'Partial' AND COALESCE(e.balance_amount,0) <> 0
+                                     THEN COALESCE(e.paid_amount,0) ELSE 0 END), 0) AS totalPartialPaidAmount,
                    COALESCE(SUM(CASE WHEN NOT (COALESCE(e.payment_status,'') = 'Full' OR COALESCE(e.balance_amount,0) = 0)
                                       AND NOT (COALESCE(e.payment_status,'') = 'Partial' AND COALESCE(e.balance_amount,0) <> 0)
-                                     THEN COALESCE(e.balance_amount,0) ELSE 0 END), 0) AS totalUnpaidAmount,
-                   COALESCE(SUM(CASE WHEN COALESCE(e.payment_status,'') = 'Partial' AND COALESCE(e.balance_amount,0) <> 0
-                                     THEN COALESCE(e.balance_amount,0) ELSE 0 END), 0) AS totalPartialAmount
+                                     THEN COALESCE(e.total_price,0) ELSE 0 END), 0) AS totalUnpaidAmount,
+                   COALESCE(SUM(COALESCE(e.total_price,0)),    0) AS totalAmount,
+                   COALESCE(SUM(COALESCE(e.balance_amount,0)), 0) AS balanceAmount,
+                   COALESCE(SUM(COALESCE(e.paid_amount,0)),    0) AS paidAmount
             FROM expensesv1 e
             WHERE e.vendor_id = :vendorId AND e.is_active = true
               AND DATE(e.transaction_date) >= DATE(:startDate)

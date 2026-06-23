@@ -8,10 +8,13 @@ public interface VendorMonthSummaryProjection {
     Integer getExpenseYear();
     Integer getExpenseMonth();
     Long getTotalExpenseCount();
-    Long getTotalPaidCount();
+    Long getTotalFullPaidCount();
     Long getTotalUnpaidCount();
-    Long getTotalPartialCount();
-    Double getTotalPaidAmount();
+    Long getTotalPartialPaidCount();
+    Double getTotalFullPaidAmount();
     Double getTotalUnpaidAmount();
-    Double getTotalPartialAmount();
+    Double getTotalPartialPaidAmount();
+    Double getTotalAmount();
+    Double getBalanceAmount();
+    Double getPaidAmount();
 }

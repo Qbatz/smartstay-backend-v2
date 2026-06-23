@@ -53,6 +53,10 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
     boolean existsByEmailIdIgnoreCase(String emailId);
     boolean existsByMobile(String mobileNumber);
 
+    // Uniqueness is scoped to a hostel: the same email/mobile may legitimately exist in other hostels.
+    boolean existsByEmailIdIgnoreCaseAndHostelId(String emailId, String hostelId);
+    boolean existsByMobileAndHostelId(String mobileNumber, String hostelId);
+
     @Query("SELECT new com.smartstay.smartstay.responses.vendor.VendorResponse(" +
             "v.vendorId, v.firstName, v.lastName, CONCAT(v.firstName, ' ', v.lastName), " +
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +

@@ -23,6 +23,9 @@ public record UpdateVendor(
 
         Integer vendorCategory,
         String contactPerson,
+        String contactPersonMobile,
+        String businessMobileCode,
+        String contactPersonMobileCode,
         String description,
         String vendorCode,
         String gst,
