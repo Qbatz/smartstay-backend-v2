@@ -1746,6 +1746,10 @@ public class InvoiceV1Service {
         double walletAmount = 0.0;
         double currentMonthRefundableAmount = 0.0;
         double currentMonthPayableAmount = 0.0;
+        double discountPercentage = 0.0;
+        double discountAmount = 0.0;
+        String discountReason = null;
+        boolean isDiscounted = false;
 
         double currentPayablemount = 0.0;
         double currentPaidAmount = 0.0;
@@ -1755,6 +1759,14 @@ public class InvoiceV1Service {
         double currentMonthPayableRent = 0.0;
         String currentMonthLabelText = null;
 
+        com.smartstay.smartstay.dto.invoices.InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelV1.getHostelId(), invoicesV1.getInvoiceId());
+
+        if (invoiceDiscounts != null) {
+            discountPercentage = invoiceDiscounts.discountPercentage();
+            discountAmount = invoiceDiscounts.discountAmount();
+            discountReason = invoiceDiscounts.reason();
+            isDiscounted = true;
+        }
         UnpaidInvoiceInfo unpaidInvoiceInfo = null;
         if (settlementItems.getUnpaidInvoices() != null) {
             if (!settlementItems.getUnpaidInvoices().isEmpty()) {
@@ -1876,6 +1888,7 @@ public class InvoiceV1Service {
         }
 
         if (settlementItems.getCurrentMonthPayableAmount() != null) {
+
             if (settlementItems.getIsFullRentCollected() != null) {
                 if (settlementItems.getIsFullRentCollected()) {
                     currentPayablemount = settlementItems.getFullRent();
@@ -2034,11 +2047,15 @@ public class InvoiceV1Service {
                    Utils.roundOffWithTwoDigit(subTotal),
                    Utils.roundOffWithTwoDigit(totalRefundable),
                    Utils.roundOffWithTwoDigit(totalPayable),
+                   discountAmount,
+                   discountPercentage,
                    deductionAmount,
                    unpaidInvoiceAmount,
                    electricityAmount,
                    Utils.roundOfDouble(invoicesV1.getTotalAmount()),
                    true,
+                   isDiscounted,
+                   discountReason,
                    invoicesV1.getPaymentStatus());
        }
 
@@ -3528,9 +3545,7 @@ public class InvoiceV1Service {
         invoicesV1.setTotalAmount(newInvoiceAmount);
         invoicesV1.setBasePrice(basePrice);
         invoicesV1.setSubTotal(basePrice);
-        invoicesV1.setDeductionAmount(0.0);
         invoicesV1.setGst(Utils.roundOfDouble(gstAmount));
-
         invoicesV1Repository.save(invoicesV1);
 
         return new ResponseEntity<>(HttpStatus.OK);

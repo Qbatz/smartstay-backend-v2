@@ -32,7 +32,8 @@ public class InvoiceScheduler {
     @Autowired
     private RecurringTrackerService recurringTrackerService;
 
-//    @Scheduled(cron = "0 0 2 * * *") for productions
+    //    @Scheduled(cron = "0 0 2 * * *") for productions
+//    @Scheduled(cron = "0 20 2 * * *")
     @Scheduled(cron = "0 20 2 * * *")
     public void generateInvoice() {
 
