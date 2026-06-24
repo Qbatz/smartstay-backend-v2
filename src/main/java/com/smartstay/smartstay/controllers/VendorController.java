@@ -87,6 +87,12 @@ public class VendorController {
         return vendorService.getAllVendors(hostelId, name, categoryId, paymentStatus, page, size);
     }
 
+    // Lightweight, unpaginated lookup of active vendors (id, name, business name) for a hostel.
+    @GetMapping("/hostel/{hostelId}/vendors")
+    public ResponseEntity<?> getVendorLookupByHostel(@PathVariable("hostelId") String hostelId) {
+        return vendorService.getVendorLookupByHostel(hostelId);
+    }
+
     @GetMapping("/{vendorId}")
     public ResponseEntity<?> getVendorById(@PathVariable("vendorId") int vendorId,
                                            @RequestParam(value = "period", required = false) String period) {

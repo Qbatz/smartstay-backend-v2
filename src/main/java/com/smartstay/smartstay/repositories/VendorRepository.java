@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.VendorV1;
+import com.smartstay.smartstay.dto.vendor.VendorLookupProjection;
 import com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary;
 import com.smartstay.smartstay.ennum.VendorPaymentStatus;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
@@ -16,6 +17,16 @@ import java.util.List;
 public interface VendorRepository extends JpaRepository<VendorV1, String> {
 
     List<VendorV1> findAllByHostelId(String hostelId);
+
+    /**
+     * Lightweight active-vendor lookup for a hostel: selects only id, name and business name (no full
+     * entity, no joins), ordered by business name. Backed by the (hostel_id, business_name) index.
+     */
+    @Query("SELECT v.vendorId AS vendorId, v.firstName AS firstName, v.lastName AS lastName, " +
+            "v.businessName AS businessName " +
+            "FROM VendorV1 v WHERE v.hostelId = :hostelId AND v.isActive = true " +
+            "ORDER BY v.businessName ASC")
+    List<VendorLookupProjection> findActiveVendorLookupByHostelId(@Param("hostelId") String hostelId);
 
     @Query("SELECT v FROM VendorV1 v " +
             "WHERE v.hostelId = :hostelId AND v.isActive = true " +
