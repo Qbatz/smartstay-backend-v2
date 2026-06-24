@@ -261,7 +261,8 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     @Query(value = """
                 SELECT COUNT(*) FROM bookingsv1
                 WHERE bed_id = :bedId AND customer_id != :customerId
-                AND current_status IN ('CHECKIN', 'NOTICE', 'BOOKED')
+                AND current_status IN ('CHECKIN', 'NOTICE', 'BOOKED', 'VACATED')
+                AND checkout_date IS NULL
                 AND (leaving_date IS NULL OR DATE(leaving_date) > DATE(:joiningDate))
             """, nativeQuery = true)
     int countOverlappingBookings(@Param("bedId") int bedId, @Param("customerId") String customerId, @Param("joiningDate") Date joiningDate);
