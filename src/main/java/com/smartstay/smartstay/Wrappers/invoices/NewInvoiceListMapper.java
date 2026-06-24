@@ -47,7 +47,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         Double discountPercentage = 0.0;
         Double discountAmount = 0.0;
         boolean canEdit = false;
-        boolean canUnpaid = true;
+        boolean canUnpaid = false; // computed below based on payment status
         boolean isInvoicesApplied = false;
         String customerStatus = null;
         //should used for advance invoices.
@@ -292,8 +292,14 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
            }
        }
 
-       if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
-           canUnpaid = false;
+       // canUnpaid = true only when amount has actually been paid (PAID or PARTIAL_PAYMENT)
+       // AND the customer is NOT settlement-generated (settlement invoices must not be reversed)
+       if (invoicesV1.getPaymentStatus() != null) {
+           boolean isPaidOrPartial = invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())
+                   || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name());
+           boolean isSettlementGenerated = customers != null
+                   && CustomerStatus.SETTLEMENT_GENERATED.name().equalsIgnoreCase(customers.getCurrentStatus());
+           canUnpaid = isPaidOrPartial && !isSettlementGenerated;
        }
 
         return new InvoicesList(firstName,
@@ -303,11 +309,11 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 initials.toString(),
                 profilePic,
                 isRefundable,
-                Utils.roundOfDouble(totalAmount),
-                Utils.roundOfDouble(invoicesV1.getTotalAmount()),
+                Utils.roundOffWithTwoDigit(totalAmount),
+                Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()),
                 invoicesV1.getInvoiceId(),
-                Utils.roundOfDouble(paidAmount),
-                Utils.roundOfDouble(dueAmount),
+                Utils.roundOffWithTwoDigit(paidAmount),
+                Utils.roundOffWithTwoDigit(dueAmount),
                 invoicesV1.isDiscounted(),
                 discountAmount,
                 discountPercentage,

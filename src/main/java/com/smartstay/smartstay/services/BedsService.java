@@ -531,15 +531,10 @@ public class BedsService {
 
                         Date leavingDate = bookingStatusOtherThanVacant.getFirst().getLeavingDate();
 
-                        if (leavingDate != null
-                                && Utils.compareWithTwoDates(joiningDate, leavingDate) >= 0) {
-
-                            return false;
-
-                        } else {
-
+                        if (leavingDate == null) {
                             return true;
                         }
+                        return Utils.compareWithTwoDates(joiningDate, leavingDate) >= 0;
                     }
                 }
 
