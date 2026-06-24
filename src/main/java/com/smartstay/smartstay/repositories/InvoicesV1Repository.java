@@ -403,4 +403,18 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND i.isCancelled=false
             """)
     List<InvoicesV1> findUnpaidInvoices(String customerId);
+
+    @Query("""
+    SELECT i
+    FROM InvoicesV1 i
+    WHERE i.customerId IN :customerIds
+      AND i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADVANCE')
+      AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT')
+      AND i.isCancelled = false
+    """)
+    List<InvoicesV1> findUnpaidInvoicesByCustomerIds(
+            @Param("customerIds") List<String> customerIds
+    );
+
+
 }

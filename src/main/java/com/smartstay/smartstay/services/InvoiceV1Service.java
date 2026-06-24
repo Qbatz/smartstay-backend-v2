@@ -671,13 +671,15 @@ public class InvoiceV1Service {
             listInvoiceDiscounts = new ArrayList<>();
         }
         List<String> customerIds = listAllInvoice.stream().map(InvoicesV1::getCustomerId).toList();
+        List<InvoicesV1> listAllInvoiceForCustomer = invoicesV1Repository.findUnpaidInvoicesByCustomerIds(customerIds);
         List<Customers> lisAllCustomersForInvoices = customersService.getCustomerDetails(customerIds);
         List<InvoicesV1> listAdvanceInvoice = listAllInvoice
                 .stream()
                 .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
                 .toList();
 
-        List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers, listInvoiceDiscounts, listInvoiceRedeemed, listAdvanceInvoice).apply(i)).toList();
+        List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers,
+                listInvoiceDiscounts, listInvoiceRedeemed, listAdvanceInvoice, listAllInvoiceForCustomer).apply(i)).toList();
 
         NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, invoiceFilterOptions, newInvoicesList);
         return new ResponseEntity<>(newInvoicesListResponse, HttpStatus.OK);
@@ -5227,10 +5229,11 @@ public class InvoiceV1Service {
 
                 List<BedDetails> listBedDetails = bedService.getBedDetails(bedIds);
                 List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+                List<InvoicesV1> listInvoiceList = invoicesV1Repository.findUnpaidInvoicesByCustomerIds(customerIds);
 
                 advanceListItems = listAdvanceInvoices
                         .stream()
-                        .map(i -> new AdvanceInvoicesMapper(listBookings, listBedDetails, listCustomers)
+                        .map(i -> new AdvanceInvoicesMapper(listBookings, listBedDetails, listCustomers, listInvoiceList)
                                 .apply(i)).toList();
 
             }

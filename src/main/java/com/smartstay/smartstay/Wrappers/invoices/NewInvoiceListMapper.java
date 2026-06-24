@@ -24,12 +24,15 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
     List<InvoiceRedemption> listAppliedInvoices = null;
     List<InvoicesV1> listAdvances = null;
 
-    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts, List<InvoiceRedemption> listAppliedInvoices, List<InvoicesV1> listAdvanceInvoices) {
+    List<InvoicesV1> pendingInvoices = null;
+
+    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts, List<InvoiceRedemption> listAppliedInvoices, List<InvoicesV1> listAdvanceInvoices, List<InvoicesV1> pendingInvoices) {
         this.listCustomers = customers;
         this.listCreatedBy = createdBy;
         this.listInvoiceDiscounts = listInvoiceDiscounts;
         this.listAppliedInvoices = listAppliedInvoices;
         this.listAdvances = listAdvanceInvoices;
+        this.pendingInvoices = pendingInvoices;
     }
 
     @Override
@@ -268,6 +271,18 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
        if (canRedeem) {
            if (customerStatus.equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()) || customerStatus.equalsIgnoreCase(CustomerStatus.VACATED.name())) {
                canRedeem = false;
+           }
+       }
+
+       if (canRedeem){
+           if (pendingInvoices != null) {
+               List<InvoicesV1> pendingInvoice = pendingInvoices
+                       .stream()
+                       .filter(i -> i.getCustomerId().equalsIgnoreCase(invoicesV1.getCustomerId()))
+                       .toList();
+               if (pendingInvoice.isEmpty()) {
+                   canRedeem = false;
+               }
            }
        }
 
