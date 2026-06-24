@@ -1664,7 +1664,7 @@ public class InvoiceV1Service {
                     .stream()
                     .mapToDouble(InvoiceRedemption::getRedemptionAmount)
                     .sum();
-            amountSettled = new AmountSettled(appliedAmount, listInvoicesApplied.size(), appliedInvoicesInfo);
+            amountSettled = new AmountSettled(Utils.roundOffWithTwoDigit(appliedAmount), listInvoicesApplied.size(), appliedInvoicesInfo);
 
 
         }
@@ -1681,10 +1681,10 @@ public class InvoiceV1Service {
                 0.0,
                 isInvoicesAvailableForRedeem,
                 false,
-                availableCreditAmount,
+                Utils.roundOffWithTwoDigit(availableCreditAmount),
                 isAdvanceAvailableForRedeem,
                 canApplyToOtherInvoice,
-                availableAdvanceAmount,
+                Utils.roundOffWithTwoDigit(availableAdvanceAmount),
                 listInvoiceItems,
                 listDeductions,
                 amountSettled);
@@ -1717,10 +1717,10 @@ public class InvoiceV1Service {
                     0.0,
                     canRedeemBooking,
                     false,
-                    availableCreditAmount,
+                    Utils.roundOffWithTwoDigit(availableCreditAmount),
                     isAdvanceAvailableForRedeem,
                     false,
-                    availableAdvanceAmount,
+                    Utils.roundOffWithTwoDigit(availableAdvanceAmount),
                     listInvoiceItems, null,
                     amountSettled);
         }
@@ -1766,11 +1766,11 @@ public class InvoiceV1Service {
                         .map(i -> {
                             double totalAmount = i.getInvoiceAmount();
                             double paidAmount = i.getInvoiceAmount() - i.getPendingAmount();
-                            return new UnpaidInvoiceItem(i.getInvoiceNo(), i.getInvoiceAmount(), paidAmount, i.getInvoiceAmount());
+                            return new UnpaidInvoiceItem(i.getInvoiceNo(), Utils.roundOffWithTwoDigit(i.getInvoiceAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(i.getInvoiceAmount()));
                         })
                         .toList();
                 unpaidInvoiceInfo = new UnpaidInvoiceInfo(noOfInvoiceInfo,
-                        unpaidInvoiceTotalAmount,
+                        Utils.roundOffWithTwoDigit(unpaidInvoiceTotalAmount),
                         listUnpaidInvoiceItems);
             }
         }
@@ -1811,12 +1811,12 @@ public class InvoiceV1Service {
                             else {
                                 pAmount = i.getAmount();
                             }
-                            return new DeductionsItem(i.getType(), i.getPaidAmount(), i.getAmount(), pAmount);
+                            return new DeductionsItem(i.getType(), i.getPaidAmount() != null ? Utils.roundOffWithTwoDigit(i.getPaidAmount()) : null, Utils.roundOffWithTwoDigit(i.getAmount()), Utils.roundOffWithTwoDigit(pAmount));
                         })
                         .toList();
 
-                deductionsInfo = new DeductionsInfo(totalDeductionAmount, paidAmount,
-                        pendingAmount,
+                deductionsInfo = new DeductionsInfo(Utils.roundOffWithTwoDigit(totalDeductionAmount), Utils.roundOffWithTwoDigit(paidAmount),
+                        Utils.roundOffWithTwoDigit(pendingAmount),
                         listDeductionItems);
             }
         }
@@ -1906,7 +1906,7 @@ public class InvoiceV1Service {
                        .getEbItems()
                        .stream()
                        .map(i -> {
-                           return new EBItems(i.getReadingId(), i.getCustomerEBId(), i.getFromDate(), i.getToDate(), i.getTotalAmount(), i.getConsumption());
+                           return new EBItems(i.getReadingId(), i.getCustomerEBId(), i.getFromDate(), i.getToDate(), i.getTotalAmount() != null ? Utils.roundOffWithTwoDigit(i.getTotalAmount()) : null, i.getConsumption() != null ? Utils.roundOffWithTwoDigit(i.getConsumption()) : null);
                        })
                        .toList();
                double ebTotalAmount = settlementItems
@@ -1921,7 +1921,7 @@ public class InvoiceV1Service {
                        .sum();
                electricityAmount = ebTotalAmount;
 
-              currentMonthEbInfo = new CurrentMonthEbInfo(ebTotalAmount, ebItemsList);
+              currentMonthEbInfo = new CurrentMonthEbInfo(Utils.roundOffWithTwoDigit(ebTotalAmount), ebItemsList);
            }
        }
 
@@ -1944,11 +1944,11 @@ public class InvoiceV1Service {
            walletInfo = new WalletInfo(noOfWalletItems, Utils.roundOffWithTwoDigit(walletAmount), listwalletItems);
        }
 
-       currentRentInfo = new CurrentRentInfo(currentPaidAmount,
-               currentPayablemount,
-               stayDays,
-               currentMonthPayableRent,
-               currentMonthOtherAmounts,
+       currentRentInfo = new CurrentRentInfo(Utils.roundOffWithTwoDigit(currentPaidAmount),
+               Utils.roundOffWithTwoDigit(currentPayablemount),
+               Utils.roundOffWithTwoDigit(stayDays),
+               Utils.roundOffWithTwoDigit(currentMonthPayableRent),
+               Utils.roundOffWithTwoDigit(currentMonthOtherAmounts),
                listRentBreakUp,
                listCurrentMonthOtherItems);
 
@@ -1980,9 +1980,9 @@ public class InvoiceV1Service {
                    null,
                    null,
                    Utils.roundOffWithTwoDigit(subTotal),
-                   deductionAmount,
-                   unpaidInvoiceAmount,
-                   electricityAmount,
+                   Utils.roundOffWithTwoDigit(deductionAmount),
+                   Utils.roundOffWithTwoDigit(unpaidInvoiceAmount),
+                   Utils.roundOffWithTwoDigit(electricityAmount),
                    Utils.roundOfDouble(invoicesV1.getTotalAmount()),
                    true,
                    invoicesV1.getPaymentStatus());
