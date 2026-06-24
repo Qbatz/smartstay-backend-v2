@@ -1409,6 +1409,13 @@ public class CustomersService {
         List<RentHistory> rentHistories = bookingsService.getNewRentAmount(customerId, new Date());
         CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
         List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
+        boolean isSettlementGenerated = CustomerStatus.SETTLEMENT_GENERATED.name().equalsIgnoreCase(customers.getCurrentStatus());
+        invoiceResponseList = invoiceResponseList.stream().map(inv -> {
+            boolean isPaidOrPartial = "PAID".equalsIgnoreCase(inv.paymentStatus())
+                    || "PARTIAL_PAYMENT".equalsIgnoreCase(inv.paymentStatus());
+            boolean canUnpaid = isPaidOrPartial && !isSettlementGenerated;
+            return new InvoiceResponse(inv.invoiceId(), inv.invoiceNumber(), inv.invoiceType(), inv.paymentStatus(), inv.totalAmount(), inv.dueAmount(), inv.paidAmount(), inv.dueDate(), inv.invoiceGeneratedDate(), inv.invoiceMode(), inv.isDiscounted(), inv.items(), canUnpaid);
+        }).toList();
         InvoiceResponse advanceInvoice = invoiceResponseList.stream().filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType())).limit(1).findFirst().orElse(null);
         if (rentHistories != null) {
             List<RentHistory> listNewRentHistory = rentHistories.stream().filter(i -> Utils.compareWithTwoDates(i.getStartsFrom(), new Date()) > 0).toList();

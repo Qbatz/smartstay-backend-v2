@@ -78,9 +78,9 @@ public class InvoiceMapper {
                 invoice.getInvoiceNumber(),
                 Utils.capitalize(invoice.getInvoiceType()),
                 paymentStatus,
-                Utils.roundOfDouble(invoice.getTotalAmount()),
-                Utils.roundOfDouble(dueAmount),
-                Utils.roundOfDouble(paidAmount),
+                Utils.roundOffWithTwoDigit(invoice.getTotalAmount()),
+                Utils.roundOffWithTwoDigit(dueAmount),
+                Utils.roundOffWithTwoDigit(paidAmount),
                 invoice.getInvoiceDueDate() != null
                         ? dateFormat.format(invoice.getInvoiceDueDate())
                         : null,
@@ -100,10 +100,11 @@ public class InvoiceMapper {
                                 displayName = Utils.capitalize(item.getInvoiceItem());
                             }
 
-                            return new ItemResponse(displayName, item.getAmount());
+                            return new ItemResponse(displayName, Utils.roundOffWithTwoDigit(item.getAmount()));
                         })
                         .toList()
-                        : List.of()
+                        : List.of(),
+                false
         );
     }
 }
