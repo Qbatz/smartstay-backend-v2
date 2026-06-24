@@ -129,7 +129,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findLatestInvoicesByCustomerIds(@Param("customerIds") List<String> customerIds);
 
     @Query("""
-            SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='BOOKING'
+            SELECT inv FROM InvoicesV1 inv WHERE inv.invoiceType='BOOKING' AND inv.isCancelled=true
             """)
     List<InvoicesV1> findAllBookingInvoices();
 
@@ -250,19 +250,19 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findCancelledBooking();
 
     @Query("""
-           SELECT i FROM InvoicesV1 i WHERE i.invoiceType = 'BOOKING' AND i.paymentStatus='PAID' AND i.isCancelled=false AND 
-           i.hostelId=:hostelId AND i.customerId=:customerId
-            """)
+            SELECT i FROM InvoicesV1 i WHERE i.invoiceType = 'BOOKING' AND i.paymentStatus='PAID' AND i.isCancelled=false AND 
+            i.hostelId=:hostelId AND i.customerId=:customerId
+             """)
     InvoicesV1 findBookingInvoice(String hostelId, String customerId);
 
     @Query("""
-            SELECT COUNT(i) as totalInvoiceGenerated, SUM(i.totalAmount) as totalInvoiced, SUM(i.paidAmount) as totalPaid
-            FROM InvoicesV1 i
-            WHERE i.hostelId = :hostelId AND i.isCancelled = false
-            AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
-            AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
-           AND i.invoiceType in ('RENT', 'REASSIGN_RENT')
-            """)
+             SELECT COUNT(i) as totalInvoiceGenerated, SUM(i.totalAmount) as totalInvoiced, SUM(i.paidAmount) as totalPaid
+             FROM InvoicesV1 i
+             WHERE i.hostelId = :hostelId AND i.isCancelled = false
+             AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
+             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
+            AND i.invoiceType in ('RENT', 'REASSIGN_RENT')
+             """)
     Map<String, Object> getBillingSummary(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
     @Query(value = """
@@ -361,9 +361,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false 
             ORDER BY b.floorId ASC, r.roomId ASC
             """,
-    countQuery = """
-            SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes)
-            """)
+            countQuery = """
+                    SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes)
+                    """)
     Page<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Pageable pageable);
 
     @Query(value = """
@@ -377,13 +377,13 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             ORDER BY f.floorId ASC, r.roomId ASC, bed.bedId ASC
             """,
             countQuery = """
-            SELECT COUNT(DISTINCT i.invoiceId) FROM InvoicesV1 i WHERE 
-            i.hostelId=:hostelId AND 
-            i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
-            i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false AND 
-            (:minAmount IS NULL OR i.balanceAmount >= :minAmount) AND 
-            (:maxAmount IS NULL OR i.balanceAmount <= :maxAmount)
-            """)
+                    SELECT COUNT(DISTINCT i.invoiceId) FROM InvoicesV1 i WHERE 
+                    i.hostelId=:hostelId AND 
+                    i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
+                    i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false AND 
+                    (:minAmount IS NULL OR i.balanceAmount >= :minAmount) AND 
+                    (:maxAmount IS NULL OR i.balanceAmount <= :maxAmount)
+                    """)
     Page<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Integer minAmount, Integer maxAmount, Pageable pageable);
 
     @Query("""
@@ -403,4 +403,18 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND i.isCancelled=false
             """)
     List<InvoicesV1> findUnpaidInvoices(String customerId);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.invoiceType = 'SETTLEMENT'
+            """)
+    List<InvoicesV1> findSettlementInvoice();
+
+    @Query("""
+                SELECT i
+                FROM InvoicesV1 i
+                WHERE i.hostelId = :hostelId
+                  AND LOWER(i.invoiceNumber) LIKE LOWER(CONCAT('%', :invoiceNumber, '%'))
+                  AND i.invoiceType IN :invoiceType
+            """)
+    List<InvoicesV1> findByHostelIdAndInvoiceNumberContainingIgnoreCaseAndInvoiceTypeIn(String hostelId, String invoiceNumber, List<String> invoiceType);
 }

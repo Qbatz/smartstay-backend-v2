@@ -13,7 +13,6 @@ public record BillingHistoryItem(
         String paymentMethod,
         String paidById,
         String paidByName,
-        String createdAt,
-        String invoiceUrl
+        String createdAt
 ) {
 }

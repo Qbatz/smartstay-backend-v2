@@ -1720,9 +1720,9 @@ public class CustomersService {
             if (Utils.compareWithTwoDates(lDate, new Date()) > 0) {
                 return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
             }
-//            if (Utils.compareWithTwoDates(lDate, billDate.currentBillStartDate()) < 0) {
-//                return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
-//            }
+            if (Utils.compareWithTwoDates(lDate, billDate.currentBillStartDate()) < 0) {
+                return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+            }
         } else {
             lDate = new Date();
         }
@@ -3016,6 +3016,7 @@ public class CustomersService {
         bedsService.makeABedVacant(bookingDetails.getBedId(), leavingDate);
         bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
         bookingDetails.setLeavingDate(leavingDate);
+        bookingDetails.setSettlementGeneratedDate(leavingDate);
         bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
@@ -3187,6 +3188,7 @@ public class CustomersService {
         bedsService.makeABedVacant(bookingDetails.getBedId(), leavingDate);
         bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
         bookingDetails.setLeavingDate(leavingDate);
+        bookingDetails.setSettlementGeneratedDate(leavingDate);
         bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
@@ -3279,31 +3281,6 @@ public class CustomersService {
             }
         }
 
-//        if (isFullRentCollected) {
-//            double difference = 0.0;
-//            if (fullRent == 0) {
-//                RentInfo rentInfo = settlement.currentMonthRentInfo();
-//                if (rentInfo != null) {
-//                    if (rentInfo.fullRent() != null) {
-//                        customRent = rentInfo.fullRent();
-//                    }
-//                    fullRent = rentInfo.fullRent();
-//                    difference = rentInfo.rentDifference();
-//                }
-//            }
-//            else {
-//                RentInfo rentInfo = settlement.currentMonthRentInfo();
-//                if (rentInfo != null) {
-//                    difference = fullRent - rentInfo.currentMonthTotalAmount();
-//                    if (difference < 0) {
-//                        difference = difference * -1;
-//                    }
-//                }
-//            }
-//
-//            amountToBePaid = amountToBePaid + difference;
-//        }
-
         if (isFullRentCollected) {
             double difference = 0.0;
                 if (customRent == 0) {
@@ -3362,6 +3339,7 @@ public class CustomersService {
         bedsService.makeABedVacant(bookingDetails.getBedId(), leavingDate);
         bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
         bookingDetails.setLeavingDate(leavingDate);
+        bookingDetails.setSettlementGeneratedDate(leavingDate);
         bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
@@ -3450,7 +3428,10 @@ public class CustomersService {
                 listUnPaidIds = unpaid.stream().map(UnpaidInvoices::invoiceId).toList();
                 listUnpaidInvoices = invoiceService.findInvoices(listUnPaidIds);
 
-                List<InvoicesV1> cancellInvoices = listUnpaidInvoices.stream().peek(item -> item.setCancelled(true)).toList();
+                List<InvoicesV1> cancellInvoices = listUnpaidInvoices.stream().peek(item -> {
+                    item.setCancelled(true);
+                    item.setCancelledDate(settlementDetails.getLeavingDate());
+                }).toList();
 
                 if (cancellInvoices != null && !cancellInvoices.isEmpty()) {
                     invoiceService.cancelActiveInvoice(cancellInvoices);
@@ -3469,34 +3450,6 @@ public class CustomersService {
             }
 
         }
-
-//        if (isFullRentCollected) {
-//            if (customRent != null) {
-//                if (customRent == 0) {
-//                    RentInfo rentInfo = settlement.currentMonthRentInfo();
-//                    if (rentInfo != null) {
-//                        differenceAmount = rentInfo.rentDifference();
-//                    }
-//                }
-//                else {
-//                    RentInfo rentInfo = settlement.currentMonthRentInfo();
-//                    if (rentInfo != null) {
-//                        differenceAmount = customRent - rentInfo.currentPayableRent();
-//                        if (differenceAmount < 0) {
-//                            differenceAmount = differenceAmount * -1;
-//                        }
-//                    }
-//                }
-//            }
-//            else {
-//                RentInfo rentInfo = settlement.currentMonthRentInfo();
-//                if (rentInfo != null) {
-//                    differenceAmount = rentInfo.rentDifference();
-//                }
-//            }
-//
-//            amountToBePaid = amountToBePaid + differenceAmount;
-//        }
 
         if (isFullRentCollected) {
             double difference = 0.0;
@@ -3547,6 +3500,7 @@ public class CustomersService {
         bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
         if (settlementDetails != null && settlementDetails.getLeavingDate() != null) {
             bookingsV1.setCheckoutDate(settlementDetails.getLeavingDate());
+            bookingsV1.setSettlementGeneratedDate(settlementDetails.getLeavingDate());
         }
         bookingsService.saveBooking(bookingsV1);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
@@ -3834,7 +3788,11 @@ public class CustomersService {
     }
 
     public List<Customers> searchCustomerByHostelName(String hostelId, String keyword) {
-        return customersRepository.findByHostelIdAndFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(hostelId, keyword, keyword);
+        List<Customers> listCustomers = customersRepository.findByHostelIdAndFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(hostelId, keyword, keyword);
+        if (listCustomers == null) {
+            return new ArrayList<>();
+        }
+        return listCustomers;
     }
 
     public ResponseEntity<?> initializeCancelCheckout(String hostelId, String customerId) {

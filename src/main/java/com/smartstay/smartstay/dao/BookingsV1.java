@@ -21,6 +21,7 @@ public class BookingsV1 {
     private Date expectedJoiningDate;
     private Date noticeDate;
     private Date bookingDate;
+    private Date settlementGeneratedDate;
     private Boolean isBooked;
     private Double rentAmount;
     private Double advanceAmount;
