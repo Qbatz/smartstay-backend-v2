@@ -1041,6 +1041,7 @@ public class VendorService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
+    @Transactional
     public ResponseEntity<?> deleteVendorCategory(int categoryId, String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -1055,6 +1056,16 @@ public class VendorService {
         VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryIdAndHostelId(categoryId, hostelId);
         if (existingCategory == null || !existingCategory.isEnabled()) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+
+        // A category is "in use" if any vendor assigned to it has expense records (category -> vendors
+        // -> expenses). Resolve the category's vendors, then run one efficient EXISTS check.
+        List<Integer> categoryVendorIds = vendorRepository.findVendorIdsByVendorCategory(categoryId);
+        if (!categoryVendorIds.isEmpty()) {
+            List<String> vendorIds = categoryVendorIds.stream().map(String::valueOf).toList();
+            if (expensesRepository.existsByVendorIdIn(vendorIds)) {
+                return new ResponseEntity<>(Utils.VENDOR_CATEGORY_IN_USE, HttpStatus.BAD_REQUEST);
+            }
         }
 
         existingCategory.setEnabled(false);

@@ -53,6 +53,13 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
     boolean existsByVendorId(String vendorId);
 
     /**
+     * Efficient existence check across a set of vendor ids (e.g. all vendors in a category). Spring Data
+     * issues a single EXISTS/LIMIT 1 query backed by the (vendor_id, ...) index — no rows are loaded and
+     * there is no N+1. Matches any expense row, active or not. Call only with a non-empty collection.
+     */
+    boolean existsByVendorIdIn(java.util.Collection<String> vendorIds);
+
+    /**
      * Month-wise expense aggregate for a vendor within a date range. Counts use mutually exclusive,
      * exhaustive buckets (they sum to totalExpenseCount):
      *   fullPaid = paymentStatus 'Full' OR balance 0
