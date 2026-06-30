@@ -58,6 +58,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.SimpleDateFormat;
@@ -968,6 +969,7 @@ public class VendorService {
 
     }
 
+    @Transactional
     public ResponseEntity<?> deleteVendorById(int vendorId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
@@ -981,6 +983,10 @@ public class VendorService {
         if (existingVendor != null) {
             if (!subscriptionService.validateSubscription(existingVendor.getHostelId())) {
                 return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+            }
+            // A vendor that is referenced by any expense record cannot be deleted (efficient EXISTS check).
+            if (expensesRepository.existsByVendorId(String.valueOf(vendorId))) {
+                return new ResponseEntity<>(Utils.VENDOR_HAS_EXPENSES, HttpStatus.BAD_REQUEST);
             }
             vendorRepository.delete(existingVendor);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);

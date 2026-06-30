@@ -46,6 +46,13 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
                             @Param("endDate") Date endDate);
 
     /**
+     * Efficient existence check used to guard vendor deletion. Spring Data issues a lightweight
+     * EXISTS/LIMIT 1 query (no rows loaded) and the leading column of the (vendor_id, transaction_date)
+     * index serves the vendor_id predicate. Matches any expense row for the vendor, active or not.
+     */
+    boolean existsByVendorId(String vendorId);
+
+    /**
      * Month-wise expense aggregate for a vendor within a date range. Counts use mutually exclusive,
      * exhaustive buckets (they sum to totalExpenseCount):
      *   fullPaid = paymentStatus 'Full' OR balance 0
