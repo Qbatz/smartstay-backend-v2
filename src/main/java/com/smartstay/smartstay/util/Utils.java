@@ -126,6 +126,9 @@ public class Utils {
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
     public static final String BANK_ID_REQUIRED = "Bank id required";
+    public static final String EXPENSE_FULL_PAYMENT_INVALID = "For FULL payment status, paidAmount must be equal to totalAmount.";
+    public static final String EXPENSE_PARTIAL_PAYMENT_INVALID = "For PARTIAL payment status, paidAmount must be greater than 0 and less than totalAmount.";
+    public static final String EXPENSE_PENDING_PAYMENT_INVALID = "For PENDING payment status, paidAmount must be 0 and totalAmount must be greater than 0.";
     public static final String AMOUNT_REQUIRED = "Amount required";
     public static final String INVALID_EXPENSE_ITEM_ID = "Invalid expense item id";
     public static final String DUPLICATE_EXPENSE_ITEM_ID = "Duplicate expense item id";
