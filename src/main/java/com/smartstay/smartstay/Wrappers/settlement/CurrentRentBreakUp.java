@@ -7,6 +7,17 @@ import java.util.Date;
 import java.util.function.Function;
 
 public class CurrentRentBreakUp implements Function<com.smartstay.smartstay.dto.settlement.CurrentRentBreakUp, RentBreakUp> {
+
+    private com.smartstay.smartstay.dto.settlement.CurrentRentBreakUp rentBreakUp = null;
+    private boolean isFullRentSelected = false;
+    private double fullRent = 0.0;
+
+    public CurrentRentBreakUp(com.smartstay.smartstay.dto.settlement.CurrentRentBreakUp rentBreakUp, boolean isFullRentSelected, double fullRent) {
+        this.rentBreakUp = rentBreakUp;
+        this.isFullRentSelected = isFullRentSelected;
+        this.fullRent = fullRent;
+    }
+
     @Override
     public RentBreakUp apply(com.smartstay.smartstay.dto.settlement.CurrentRentBreakUp currentRentBreakUp) {
         Date startDate = null;
@@ -41,6 +52,18 @@ public class CurrentRentBreakUp implements Function<com.smartstay.smartstay.dto.
         if (currentRentBreakUp.getRoomName() != null) {
             roomName = currentRentBreakUp.getRoomName();
         }
+
+        if (currentRentBreakUp.getFromDate() != null) {
+            if (rentBreakUp != null) {
+                if (Utils.compareWithTwoDates(rentBreakUp.getFromDate(), currentRentBreakUp.getFromDate()) == 0) {
+                    if (isFullRentSelected) {
+                        rentPerDay = fullRent / noOfDays;
+                        rent = fullRent;
+                    }
+                }
+            }
+        }
+
 
 
         return new RentBreakUp(Utils.dateToString(startDate),

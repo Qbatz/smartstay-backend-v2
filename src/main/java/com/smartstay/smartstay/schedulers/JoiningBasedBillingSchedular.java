@@ -29,7 +29,8 @@ public class JoiningBasedBillingSchedular {
     private NotificationService notificationService;
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
-//    @Scheduled(cron = "* 30 3 * * *") for production
+
+    //    @Scheduled(cron = "* 30 3 * * *") for production
 //@Scheduled(cron = "0 30 2 * * *") for dev
     @Scheduled(cron = "0 30 2 * * *")
     public void joiningDateInvoiceScheduler() {
@@ -50,35 +51,29 @@ public class JoiningBasedBillingSchedular {
         List<Integer> billingDays = new ArrayList<>();
         if (dayFromDate == 28) {
             if (lastDayOfCurrentMonth == 28) {
-                for (int i = 28; i<=31; i++) {
+                for (int i = 28; i <= 31; i++) {
                     billingDays.add(i);
                 }
-            }
-            else {
+            } else {
                 billingDays.add(dayFromDate);
             }
-        }
-        else if (dayFromDate == 29) {
+        } else if (dayFromDate == 29) {
             if (lastDayOfCurrentMonth == 29) {
-                for (int i = 29; i<=31; i++) {
+                for (int i = 29; i <= 31; i++) {
                     billingDays.add(i);
                 }
-            }
-            else {
+            } else {
                 billingDays.add(dayFromDate);
             }
-        }
-        else if (dayFromDate == 30) {
+        } else if (dayFromDate == 30) {
             if (lastDayOfCurrentMonth == 30) {
-                for (int i = 30; i<=31; i++) {
+                for (int i = 30; i <= 31; i++) {
                     billingDays.add(i);
                 }
-            }
-            else {
+            } else {
                 billingDays.add(dayFromDate);
             }
-        }
-        else {
+        } else {
             billingDays.add(dayFromDate);
         }
 

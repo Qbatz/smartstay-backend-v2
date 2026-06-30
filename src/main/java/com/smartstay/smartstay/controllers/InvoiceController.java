@@ -34,7 +34,7 @@ public class InvoiceController {
 
     @GetMapping("/receipts/{hostelId}")
     public ResponseEntity<?> getAllReceipt(@PathVariable("hostelId") String hostelId) {
-        return invoiceV1Service.getAllReceiptsByHostelIdNew(hostelId);
+        return invoiceV1Service.getAllReceiptsByHostelIdOld(hostelId);
     }
 
     @PostMapping("/manual/{customerId}")

@@ -47,6 +47,7 @@ public class VendorV1 {
 
     private Integer vendorCategory;
     private String contactPerson;
+    private String contactPersonCountryCode;
     private String contactPersonMobile;
     // Country/dialing code for the contact person's mobile (e.g. "+91"). Optional.
     private String contactPersonMobileCode;

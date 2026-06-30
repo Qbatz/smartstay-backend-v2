@@ -510,7 +510,11 @@ public class BedsService {
 
         if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name()) || beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
             BookingsV1 bookingsV1 = bookingService.checkLatestStatusForBed(bedId);
-            if (bookingsV1.getLeavingDate() != null) {
+            //check is settlement generated
+            if (bookingsV1.getSettlementGeneratedDate() != null) {
+                return Utils.compareWithTwoDates(bookingsV1.getSettlementGeneratedDate(), joiningDate) <= 0;
+            }
+            else if (bookingsV1.getLeavingDate() != null) {
                 return Utils.compareWithTwoDates(bookingsV1.getLeavingDate(), joiningDate) <= 0;
             }
         } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {

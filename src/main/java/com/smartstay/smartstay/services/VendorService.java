@@ -4,6 +4,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.Wrappers.expenses.ExpenseListMapper;
+import com.smartstay.smartstay.Wrappers.vendor.VendorLookupMapper;
 import com.smartstay.smartstay.Wrappers.vendor.VendorTableMapper;
 import com.smartstay.smartstay.dao.ColumnFilters;
 import com.smartstay.smartstay.dao.ExpenseItem;
@@ -40,6 +41,7 @@ import com.smartstay.smartstay.responses.vendor.VendorFinancialSummary;
 import com.smartstay.smartstay.responses.vendor.VendorListResponse;
 import com.smartstay.smartstay.responses.vendor.VendorMonthSummary;
 import com.smartstay.smartstay.responses.vendor.VendorMobileListResponse;
+import com.smartstay.smartstay.responses.vendor.VendorLookupResponse;
 import com.smartstay.smartstay.responses.vendor.VendorMobileResponse;
 import com.smartstay.smartstay.responses.vendor.VendorValidationError;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
@@ -178,6 +180,36 @@ public class VendorService {
         Map<String, Double> lastPaymentAmounts = resolveLastPaymentAmounts(vendors);
         return buildVendorMobileResponse(vendors, categoryNamesById, lastPaymentAmounts, vendorSummary,
                 totalVendors, currentPage, totalPages, pageSize);
+    }
+
+    /**
+     * Lightweight, unpaginated list of active vendors for a hostel — only id, name and business name.
+     * Intended for dropdowns / cross-module lookups: a single projection query (no full entity, no
+     * joins, no N+1), ordered by business name.
+     */
+    public ResponseEntity<?> getVendorLookupByHostel(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
+        if (rolesV1 == null) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        VendorLookupMapper mapper = new VendorLookupMapper();
+        List<VendorLookupResponse> vendors = vendorRepository.findActiveVendorLookupByHostelId(hostelId)
+                .stream().map(mapper).toList();
+        return new ResponseEntity<>(vendors, HttpStatus.OK);
     }
 
     private VendorSummary buildVendorSummary(String hostelId, String searchName, Integer categoryId,

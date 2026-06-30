@@ -8,8 +8,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/v2/transaction")
@@ -26,6 +29,19 @@ public class TransactionController {
     @Autowired
     TransactionService transactionService;
 
+    @GetMapping("/{hostelId}")
+    public ResponseEntity<?> getAllReceipts(@PathVariable("hostelId") String hostelId,
+                                            @RequestParam(value = "keyword", required = false) String keyword,
+                                            @RequestParam(value = "size", required = false, defaultValue = "10") Integer size,
+                                            @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
+                                            @RequestParam(value = "period", required = false) String period,
+                                            @RequestParam(value = "bankIds", required = false) List<String> bankIds,
+                                            @RequestParam(value = "invoiceType", required = false) String invoiceType,
+                                            @RequestParam(value = "collectedBy", required = false) List<String> collectedBy,
+                                            @RequestParam(value = "minAmount", required = false) Integer minAmount,
+                                            @RequestParam(value = "maxAmount", required = false) Integer maxAmount) {
+        return transactionService.getAllReceiptsByHostelIdNew(hostelId, keyword, bankIds, invoiceType, collectedBy, size, page, period, minAmount, maxAmount);
+    }
     @PostMapping("/{hostelId}/{invoiceId}")
     public ResponseEntity<?> recordPayment(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @Valid  @RequestBody AddPayment addPayment) {
         return transactionService.recordPayment(hostelId, invoiceId, addPayment);

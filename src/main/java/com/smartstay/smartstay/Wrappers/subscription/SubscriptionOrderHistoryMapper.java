@@ -37,7 +37,7 @@ public class SubscriptionOrderHistoryMapper implements Function<Subscription, Bi
         if (listOrderHistory != null) {
             oh = listOrderHistory
                     .stream()
-                    .filter(i -> subscription.getOrderId().equals(i.getHistoryId()))
+                    .filter(i -> subscription.getOrderId() != null && subscription.getOrderId().equals(i.getHistoryId()))
                     .findFirst()
                     .orElse(null);
 
@@ -82,8 +82,7 @@ public class SubscriptionOrderHistoryMapper implements Function<Subscription, Bi
                 paymentMethod,
                 paidById,
                 paidByName,
-                Utils.dateToString(subscription.getCreatedAt()),
-                subscriptionNo
+                Utils.dateToString(subscription.getCreatedAt())
         );
     }
 }
