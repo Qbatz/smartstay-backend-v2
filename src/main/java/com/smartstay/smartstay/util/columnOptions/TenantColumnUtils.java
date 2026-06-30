@@ -14,4 +14,6 @@ public class TenantColumnUtils {
     public static final String ADVANCE = "Advance";
     public static final String BOOKING_AMOUNT = "Booking Amount";
 
+    public static final String BOOKING_DATE = "Booking Date";
+
 }

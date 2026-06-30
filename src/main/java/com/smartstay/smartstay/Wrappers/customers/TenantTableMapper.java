@@ -199,6 +199,15 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
             return "-";
         }
 
+        if (columnItem.equalsIgnoreCase(TenantColumnUtils.BOOKING_DATE)) {
+            if (bookingsV1 != null && bookingsV1.getBookingDate() != null) {
+                return Utils.dateToString(bookingsV1.getBookingDate());
+            }
+            if (draft != null && draft.getBookingDate() != null) {
+                return Utils.dateToString(draft.getBookingDate());
+            }
+        }
+
         return "NA";
     }
 }
