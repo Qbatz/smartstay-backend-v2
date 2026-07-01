@@ -417,4 +417,16 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                   AND i.invoiceType IN :invoiceType
             """)
     List<InvoicesV1> findByHostelIdAndInvoiceNumberContainingIgnoreCaseAndInvoiceTypeIn(String hostelId, String invoiceNumber, List<String> invoiceType);
+
+    @Query("""
+    SELECT i
+    FROM InvoicesV1 i
+    WHERE i.customerId IN :customerIds
+      AND i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADVANCE')
+      AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT')
+      AND i.isCancelled = false
+    """)
+    List<InvoicesV1> findUnpaidInvoicesByCustomerIds(
+            @Param("customerIds") List<String> customerIds
+    );
 }
