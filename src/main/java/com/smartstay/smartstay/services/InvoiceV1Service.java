@@ -670,13 +670,15 @@ public class InvoiceV1Service {
             listInvoiceDiscounts = new ArrayList<>();
         }
         List<String> customerIds = listAllInvoice.stream().map(InvoicesV1::getCustomerId).toList();
+        List<InvoicesV1> listAllInvoiceForCustomer = invoicesV1Repository.findUnpaidInvoicesByCustomerIds(customerIds);
         List<Customers> lisAllCustomersForInvoices = customersService.getCustomerDetails(customerIds);
         List<InvoicesV1> listAdvanceInvoice = listAllInvoice
                 .stream()
                 .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
                 .toList();
 
-        List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers, listInvoiceDiscounts, listInvoiceRedeemed, listAdvanceInvoice).apply(i)).toList();
+        List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers,
+                listInvoiceDiscounts, listInvoiceRedeemed, listAdvanceInvoice, listAllInvoiceForCustomer).apply(i)).toList();
 
         NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, invoiceFilterOptions, newInvoicesList);
         return new ResponseEntity<>(newInvoicesListResponse, HttpStatus.OK);
@@ -1662,7 +1664,7 @@ public class InvoiceV1Service {
                     .stream()
                     .mapToDouble(InvoiceRedemption::getRedemptionAmount)
                     .sum();
-            amountSettled = new AmountSettled(appliedAmount, listInvoicesApplied.size(), appliedInvoicesInfo);
+            amountSettled = new AmountSettled(Utils.roundOffWithTwoDigit(appliedAmount), listInvoicesApplied.size(), appliedInvoicesInfo);
 
 
         }
@@ -1680,10 +1682,10 @@ public class InvoiceV1Service {
                 0.0,
                 isInvoicesAvailableForRedeem,
                 false,
-                availableCreditAmount,
+                Utils.roundOffWithTwoDigit(availableCreditAmount),
                 isAdvanceAvailableForRedeem,
                 canApplyToOtherInvoice,
-                availableAdvanceAmount,
+                Utils.roundOffWithTwoDigit(availableAdvanceAmount),
                 listInvoiceItems,
                 listDeductions,
                 amountSettled);
@@ -1717,10 +1719,10 @@ public class InvoiceV1Service {
                     0.0,
                     canRedeemBooking,
                     false,
-                    availableCreditAmount,
+                    Utils.roundOffWithTwoDigit(availableCreditAmount),
                     isAdvanceAvailableForRedeem,
                     false,
-                    availableAdvanceAmount,
+                    Utils.roundOffWithTwoDigit(availableAdvanceAmount),
                     listInvoiceItems, null,
                     amountSettled);
         }
@@ -1788,11 +1790,11 @@ public class InvoiceV1Service {
                         .map(i -> {
                             double totalAmount = i.getInvoiceAmount();
                             double paidAmount = i.getInvoiceAmount() - i.getPendingAmount();
-                            return new UnpaidInvoiceItem(i.getInvoiceNo(), i.getInvoiceAmount(), paidAmount, i.getInvoiceAmount());
+                            return new UnpaidInvoiceItem(i.getInvoiceNo(), Utils.roundOffWithTwoDigit(i.getInvoiceAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(i.getInvoiceAmount()));
                         })
                         .toList();
                 unpaidInvoiceInfo = new UnpaidInvoiceInfo(noOfInvoiceInfo,
-                        unpaidInvoiceTotalAmount,
+                        Utils.roundOffWithTwoDigit(unpaidInvoiceTotalAmount),
                         listUnpaidInvoiceItems);
             }
         }
@@ -1841,12 +1843,12 @@ public class InvoiceV1Service {
                             else {
                                 pAmount = i.getAmount();
                             }
-                            return new DeductionsItem(i.getType(), i.getPaidAmount(), i.getAmount(), pAmount);
+                            return new DeductionsItem(i.getType(), i.getPaidAmount() != null ? Utils.roundOffWithTwoDigit(i.getPaidAmount()) : null, Utils.roundOffWithTwoDigit(i.getAmount()), Utils.roundOffWithTwoDigit(pAmount));
                         })
                         .toList();
 
-                deductionsInfo = new DeductionsInfo(totalDeductionAmount, paidAmount,
-                        pendingAmount,
+                deductionsInfo = new DeductionsInfo(Utils.roundOffWithTwoDigit(totalDeductionAmount), Utils.roundOffWithTwoDigit(paidAmount),
+                        Utils.roundOffWithTwoDigit(pendingAmount),
                         listDeductionItems);
             }
         }
@@ -1949,7 +1951,7 @@ public class InvoiceV1Service {
                        .getEbItems()
                        .stream()
                        .map(i -> {
-                           return new EBItems(i.getReadingId(), i.getCustomerEBId(), i.getFromDate(), i.getToDate(), i.getTotalAmount(), i.getConsumption());
+                           return new EBItems(i.getReadingId(), i.getCustomerEBId(), i.getFromDate(), i.getToDate(), i.getTotalAmount() != null ? Utils.roundOffWithTwoDigit(i.getTotalAmount()) : null, i.getConsumption() != null ? Utils.roundOffWithTwoDigit(i.getConsumption()) : null);
                        })
                        .toList();
                double ebTotalAmount = settlementItems
@@ -1964,7 +1966,7 @@ public class InvoiceV1Service {
                        .sum();
                electricityAmount = ebTotalAmount;
 
-              currentMonthEbInfo = new CurrentMonthEbInfo(ebTotalAmount, ebItemsList);
+              currentMonthEbInfo = new CurrentMonthEbInfo(Utils.roundOffWithTwoDigit(ebTotalAmount), ebItemsList);
            }
        }
 
@@ -1995,11 +1997,11 @@ public class InvoiceV1Service {
        }
 
        currentRentInfo = new CurrentRentInfo(currentMonthLabelText,
-               currentPaidAmount,
-               currentPayablemount,
-               stayDays,
-               currentMonthPayableRent,
-               currentMonthOtherAmounts,
+               Utils.roundOffWithTwoDigit(currentPaidAmount),
+               Utils.roundOffWithTwoDigit(currentPayablemount),
+               Utils.roundOffWithTwoDigit(stayDays),
+               Utils.roundOffWithTwoDigit(currentMonthPayableRent),
+               Utils.roundOffWithTwoDigit(currentMonthOtherAmounts),
                listRentBreakUp,
                listCurrentMonthOtherItems);
 
@@ -2047,11 +2049,11 @@ public class InvoiceV1Service {
                    Utils.roundOffWithTwoDigit(subTotal),
                    Utils.roundOffWithTwoDigit(totalRefundable),
                    Utils.roundOffWithTwoDigit(totalPayable),
-                   discountAmount,
+                   Utils.roundOffWithTwoDigit(discountAmount),
                    discountPercentage,
-                   deductionAmount,
-                   unpaidInvoiceAmount,
-                   electricityAmount,
+                   Utils.roundOffWithTwoDigit(deductionAmount),
+                   Utils.roundOffWithTwoDigit(unpaidInvoiceAmount),
+                   Utils.roundOffWithTwoDigit(electricityAmount),
                    Utils.roundOfDouble(invoicesV1.getTotalAmount()),
                    true,
                    isDiscounted,
@@ -5304,10 +5306,11 @@ public class InvoiceV1Service {
 
                 List<BedDetails> listBedDetails = bedService.getBedDetails(bedIds);
                 List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+                List<InvoicesV1> listInvoiceList = invoicesV1Repository.findUnpaidInvoicesByCustomerIds(customerIds);
 
                 advanceListItems = listAdvanceInvoices
                         .stream()
-                        .map(i -> new AdvanceInvoicesMapper(listBookings, listBedDetails, listCustomers)
+                        .map(i -> new AdvanceInvoicesMapper(listBookings, listBedDetails, listCustomers, listInvoiceList)
                                 .apply(i)).toList();
 
             }

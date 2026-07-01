@@ -340,6 +340,12 @@ public class ExpenseService {
         if (bankProvided && !bankingService.checkBankExist(expense.bankId())) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
+        // Validate the paidAmount/totalAmount relationship for the selected payment status before
+        // doing any work or persisting the expense.
+        String paymentAmountError = validatePaymentAmounts(requestedStatus, expense.totalAmount(), expense.paidAmount());
+        if (paymentAmountError != null) {
+            return new ResponseEntity<>(paymentAmountError, HttpStatus.BAD_REQUEST);
+        }
         if (!subscriptionService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
@@ -808,6 +814,39 @@ public class ExpenseService {
                 && !"CASH".equalsIgnoreCase(paymentMethod.trim())
                 && !Utils.checkNullOrEmpty(transactionId)) {
             return Utils.TRANSACTION_ID_REQUIRED;
+        }
+        return null;
+    }
+
+    // Money comparisons use a sub-cent tolerance to avoid spurious floating-point mismatches.
+    private static final double AMOUNT_EPSILON = 0.001;
+
+    /**
+     * Validates the paidAmount/totalAmount relationship for the selected payment status. Returns a
+     * human-readable error message when invalid, or {@code null} when the amounts are consistent.
+     * Centralized and side-effect free so any create/update path can enforce identical rules.
+     *
+     *   FULL    -> paidAmount must equal totalAmount (and never exceed it)
+     *   PARTIAL -> paidAmount must be > 0 and < totalAmount (never equal to or exceeding it)
+     *   PENDING -> paidAmount must be 0 and totalAmount must be > 0
+     *   OVERDUE -> no paidAmount/totalAmount constraint
+     */
+    private String validatePaymentAmounts(ExpensePaymentStatus status, Double totalAmount, Double paidAmount) {
+        double total = totalAmount != null ? totalAmount : 0.0;
+        double paid = paidAmount != null ? paidAmount : 0.0;
+
+        if (status == ExpensePaymentStatus.Full) {
+            if (Math.abs(paid - total) > AMOUNT_EPSILON) {
+                return Utils.EXPENSE_FULL_PAYMENT_INVALID;
+            }
+        } else if (status == ExpensePaymentStatus.Partial) {
+            if (paid <= 0 || paid >= total) {
+                return Utils.EXPENSE_PARTIAL_PAYMENT_INVALID;
+            }
+        } else if (status == ExpensePaymentStatus.Pending) {
+            if (Math.abs(paid) > AMOUNT_EPSILON || total <= 0) {
+                return Utils.EXPENSE_PENDING_PAYMENT_INVALID;
+            }
         }
         return null;
     }

@@ -19,6 +19,15 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
     List<VendorV1> findAllByHostelId(String hostelId);
 
     /**
+     * Ids of vendors assigned to a vendor category. Used to determine whether a category is in use by
+     * any expense (a category is referenced indirectly: category -> vendors -> their expenses). Backed
+     * by the vendor_category index. Returns ids regardless of vendor active state, since a soft-deleted
+     * vendor's expenses still reference the category.
+     */
+    @Query("SELECT v.vendorId FROM VendorV1 v WHERE v.vendorCategory = :categoryId")
+    List<Integer> findVendorIdsByVendorCategory(@Param("categoryId") Integer categoryId);
+
+    /**
      * Lightweight active-vendor lookup for a hostel: selects only id, name and business name (no full
      * entity, no joins), ordered by business name. Backed by the (hostel_id, business_name) index.
      */

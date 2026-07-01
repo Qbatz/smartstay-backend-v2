@@ -18,10 +18,13 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
     private List<BedDetails> listBedDetails = null;
     private List<Customers> listCustomers = null;
 
-    public AdvanceInvoicesMapper(List<BookingsV1> listBookings, List<BedDetails> listBedDetails, List<Customers> listCustomers) {
+    private List<InvoicesV1> listInvoices = null;
+
+    public AdvanceInvoicesMapper(List<BookingsV1> listBookings, List<BedDetails> listBedDetails, List<Customers> listCustomers, List<InvoicesV1> listInvoices) {
         this.listBookings = listBookings;
         this.listBedDetails = listBedDetails;
         this.listCustomers = listCustomers;
+        this.listInvoices = listInvoices;
     }
 
     @Override
@@ -110,6 +113,17 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
         if (canRedeem) {
             if (invoicesV1.getBalanceAmount() == null || invoicesV1.getBalanceAmount() <= 0) {
                 canRedeem = false;
+            }
+        }
+
+        if (canRedeem){
+            if (listInvoices != null) {
+                List<InvoicesV1> invoicesV1Temp = listInvoices.stream()
+                        .filter(i -> i.getCustomerId().equalsIgnoreCase(invoicesV1.getCustomerId()))
+                        .toList();
+                if (invoicesV1Temp.isEmpty()) {
+                    canRedeem = false;
+                }
             }
         }
 
