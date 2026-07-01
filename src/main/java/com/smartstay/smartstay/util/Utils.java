@@ -2,11 +2,13 @@ package com.smartstay.smartstay.util;
 
 import com.smartstay.smartstay.dao.OrderHistory;
 import com.smartstay.smartstay.responses.customer.EffectiveMonth;
+import org.springframework.security.core.parameters.P;
 
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -28,6 +30,7 @@ public class Utils {
     public static final String OUTPUT_YEAR_FORMAT = "YYYY";
     public static final String OUTPUT_DATE_MONTH_FORMAT = "dd MMM";
     public static final String OUTPUT_DATE_TIME_FORMAT = "dd/MM/yyyy hh:mm:ss a";
+    public static final String INPUT_DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
     public static final String DATE_FORMAT_YY = "yyyy/MM/dd";
     public static final String DATE_FORMAT_ZOHO = "yyyy-MM-dd";
     public static final String ACCESS_RESTRICTED = "Access Restricted";
@@ -403,12 +406,24 @@ public class Utils {
         return new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(date);
     }
 
+    public static Date stringToDateTime(String date) {
+        if (date == null) {
+            return null;
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(INPUT_DATE_TIME_FORMAT);
+        LocalDateTime localDateTime = LocalDateTime.parse(date, formatter);
+
+        return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+    }
+
     public static String dateToDateTime(Date date) {
         if (date == null) {
             return "";
         }
         return new SimpleDateFormat(OUTPUT_DATE_TIME_FORMAT).format(date);
     }
+
+
 
     public static String dateToDateMonth(Date date) {
         if (date == null) {

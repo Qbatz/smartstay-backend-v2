@@ -3,8 +3,10 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.dao.Customers;
+import com.smartstay.smartstay.dao.KycDetails;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.kyc.RequestKyc;
+import com.smartstay.smartstay.dto.kyc.VerifyKyc;
 import com.smartstay.smartstay.ennum.KycStatus;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.repositories.KycRepository;
@@ -12,14 +14,12 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class KycServices {
@@ -44,7 +44,8 @@ public class KycServices {
     private UserHostelService userHostelService;
     @Autowired
     private RolesService rolesService;
-
+    @Autowired
+    private CustomerNotificationService customerNotificationService;
     @Autowired
     private SubscriptionService subscriptionService;
 
@@ -98,9 +99,37 @@ public class KycServices {
         requestBody.put("template_name", "SMARTSTAY-WORKFLOW");
         requestBody.put("generate_access_token", true);
 
-        requestKycApiCall(requestBody, 1);
+        RequestKyc requestKyc = requestKycApiCall(requestBody, 1);
 
-        return null;
+        if (requestKyc != null) {
+            RequestKyc.AccessToken kycAccessToken = requestKyc.getAccessToken();
+            KycDetails kycDetails = customers.getKycDetails();
+            if (kycDetails == null) {
+                kycDetails = new KycDetails();
+                kycDetails.setCustomers(customers);
+            }
+            kycDetails.setCurrentStatus(KycStatus.REQUESTED.name());
+            kycDetails.setTransactionId(requestKyc.getTransactionId());
+            kycDetails.setTemplateId(requestKyc.getTemplateId());
+            kycDetails.setReferenceId(requestKyc.getReferenceId());
+            kycDetails.setCreatedAt(new Date());
+            kycDetails.setCreatedBy(authentication.getName());
+
+            if (kycAccessToken != null) {
+                kycDetails.setEntityId(kycAccessToken.getEntityId());
+                kycDetails.setAccessTokenId(kycAccessToken.getId());
+                kycDetails.setExpireAt(Utils.stringToDateTime(kycAccessToken.getValidTill()));
+            }
+
+            kycRepository.save(kycDetails);
+
+            customerNotificationService.sendKycNotification(customers, kycDetails, users, customers.getHostelId());
+
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+
+
+        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
     }
 
     private RequestKyc requestKycApiCall(Map<String, Object> payloads, int code) {
@@ -136,6 +165,35 @@ public class KycServices {
                 return requestKycApiCall(payloads, code);
             }
             return null;
+        }
+    }
+
+    public void verifyStatus(Customers customers) {
+        if (!authentication.isAuthenticated()) {
+            return;
+        }
+        KycDetails kycDetails = customers.getKycDetails();
+        if (kycDetails == null) {
+            return;
+        }
+
+        String endPoint = "client/kyc/v2/" +kycDetails.getEntityId() + "/response";
+        String verifyKycUrl = KYC_BASE_URL + "/" + endPoint;
+        // Encode credentials to Base64
+        String auth = KYC_USER_NAME + ":" + KYC_PASSWORD;
+        String encodedAuth = Base64.getEncoder()
+                .encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Basic "+ encodedAuth);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<VerifyKyc> responseEntity = restTemplate.exchange(verifyKycUrl, HttpMethod.POST, entity, VerifyKyc.class);
+        System.out.println(responseEntity.getStatusCode());
+        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            
         }
     }
 }

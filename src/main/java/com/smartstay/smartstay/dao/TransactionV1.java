@@ -29,6 +29,7 @@ public class TransactionV1 {
     private String customerId;
     private Date paymentDate;
     private String transactionMode;
+    private String source;
     //auto generated
     private String transactionReferenceId;
     private String receiptUrl;

@@ -1,14 +1,13 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.ComplaintsV1;
-import com.smartstay.smartstay.dao.CustomerNotifications;
-import com.smartstay.smartstay.dao.Customers;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.reminders.DueReminders;
 import com.smartstay.smartstay.ennum.ComplaintStatus;
 import com.smartstay.smartstay.ennum.NotificationType;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.repositories.CustomerNotificationRepository;
+import com.smartstay.smartstay.util.NameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -107,5 +106,31 @@ public class CustomerNotificationService {
         fcmNotificationService.sendReminderNotification(listCustomers, customerReminders);
 
 
+    }
+
+    public void sendKycNotification(Customers customers, KycDetails kycDetails, Users users, String hostelId) {
+        if (authentication.isAuthenticated()) {
+            String titleMessage = "KYC request";
+            String description = "Your hostel owner " + NameUtils.getFullName(users.getFirstName(), users.getLastName()) + " wants you to complete your KYC verification. Please finish it at your earliest convenience.";
+            CustomerNotifications customerNotifications = new CustomerNotifications();
+            customerNotifications.setActive(true);
+            customerNotifications.setNotificationType(NotificationType.COMPLAINT.name());
+            customerNotifications.setUserId(customers.getCustomerId());
+            customerNotifications.setHostelId(hostelId);
+            customerNotifications.setDescription(description);
+            customerNotifications.setSourceId(String.valueOf(kycDetails.getId()));
+            customerNotifications.setTitle(titleMessage);
+            customerNotifications.setUserType(UserType.TENANT.name());
+            customerNotifications.setCreatedAt(new Date());
+            customerNotifications.setCreatedBy(authentication.getName());
+            customerNotifications.setActive(true);
+            customerNotifications.setDeleted(false);
+            customerNotifications.setRead(false);
+
+
+            customerNotificationRepository.save(customerNotifications);
+
+            fcmNotificationService.sendNotificationRequest(customers.getXuid(), kycDetails, users, hostelId);
+        }
     }
 }

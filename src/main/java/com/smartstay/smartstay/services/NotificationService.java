@@ -144,4 +144,5 @@ public class NotificationService {
         applicationEventPublisher.publishEvent(new ReminderEvents(this));
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
 }

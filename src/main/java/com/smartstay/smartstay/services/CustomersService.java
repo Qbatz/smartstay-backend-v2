@@ -82,7 +82,6 @@ public class CustomersService {
     private SettlementItemService settlementItemService;
     @Autowired
     private WhatsAppService whatsappService;
-
     @Autowired
     private FloorsService floorsService;
     @Autowired
@@ -119,6 +118,7 @@ public class CustomersService {
     private CustomerBillingRulesService customerBillingRulesService;
     @Autowired
     private TableColumnService columnService;
+    private KycServices kycServices;
     private ElectricityService electricityService;
 
     private AmenityRequestService amenityRequestService;
@@ -126,6 +126,11 @@ public class CustomersService {
     private CustomerDocumentsService customerDocumentsService;
     @Autowired
     private SubscriptionService subscriptionService;
+
+    @Autowired
+    public void setKycServices(@Lazy KycServices kycServices) {
+        this.kycServices = kycServices;
+    }
 
     public static AdvanceInfo toAdvanceInfoResponse(Advance advance, InvoiceResponse invoicesV1, double bookingAmount) {
         if (advance == null) return null;
@@ -1414,7 +1419,12 @@ public class CustomersService {
             boolean isPaidOrPartial = "PAID".equalsIgnoreCase(inv.paymentStatus())
                     || "PARTIAL_PAYMENT".equalsIgnoreCase(inv.paymentStatus());
             boolean canUnpaid = isPaidOrPartial && !isSettlementGenerated;
-            return new InvoiceResponse(inv.invoiceId(), inv.invoiceNumber(), inv.invoiceType(), inv.paymentStatus(), inv.totalAmount(), inv.dueAmount(), inv.paidAmount(), inv.dueDate(), inv.invoiceGeneratedDate(), inv.invoiceMode(), inv.isDiscounted(), inv.items(), canUnpaid);
+            boolean isCancelled = inv.isCancelled();
+            String cancelledDate = null;
+            if (inv.isCancelled()) {
+                cancelledDate = inv.cancelledOn();
+            }
+            return new InvoiceResponse(inv.invoiceId(), inv.invoiceNumber(), inv.invoiceType(), inv.paymentStatus(), inv.totalAmount(), inv.dueAmount(), inv.paidAmount(), inv.dueDate(), inv.invoiceGeneratedDate(), inv.invoiceMode(), inv.isDiscounted(), inv.items(), canUnpaid, isCancelled, cancelledDate);
         }).toList();
         InvoiceResponse advanceInvoice = invoiceResponseList.stream().filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType())).limit(1).findFirst().orElse(null);
         if (rentHistories != null) {
@@ -1483,8 +1493,11 @@ public class CustomersService {
         KycDetails kycDetails = customers.getKycDetails();
         KycInformations kycInfo = null;
         if (kycDetails == null) {
-            kycInfo = new KycInformations(customers.getKycStatus(), null, null, null);
+            kycInfo = new KycInformations("PENDING", null, null, null);
         } else {
+            if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.REQUESTED.name()) || kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
+                kycServices.verifyStatus(customers);
+            }
             kycInfo = new KycInformations(kycDetails.getCurrentStatus(), null, null, null);
         }
 
