@@ -61,8 +61,13 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
 
         Double dueAmount = 0.0;
         Double paidAmount = 0.0;
+        Double invoiceAmount = 0.0;
         if (invoicesV1.getPaidAmount() != null) {
             paidAmount = invoicesV1.getPaidAmount();
+        }
+
+        if (invoicesV1.getTotalAmount() != null) {
+            invoiceAmount = invoicesV1.getTotalAmount();
         }
 
         double totalAmount = 0.0;
@@ -324,8 +329,8 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 initials.toString(),
                 profilePic,
                 isRefundable,
+                Utils.roundOffWithTwoDigit(invoiceAmount),
                 Utils.roundOffWithTwoDigit(totalAmount),
-                Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()),
                 invoicesV1.getInvoiceId(),
                 Utils.roundOffWithTwoDigit(paidAmount),
                 Utils.roundOffWithTwoDigit(dueAmount),

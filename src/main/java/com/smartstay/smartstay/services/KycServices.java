@@ -3,10 +3,11 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.dao.Customers;
+import com.smartstay.smartstay.dao.KycAddressDetails;
 import com.smartstay.smartstay.dao.KycDetails;
 import com.smartstay.smartstay.dao.Users;
-import com.smartstay.smartstay.dto.kyc.RequestKyc;
-import com.smartstay.smartstay.dto.kyc.VerifyKyc;
+import com.smartstay.smartstay.dto.kyc.*;
+import com.smartstay.smartstay.ennum.KycDocumentType;
 import com.smartstay.smartstay.ennum.KycStatus;
 import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.repositories.KycRepository;
@@ -193,7 +194,65 @@ public class KycServices {
         ResponseEntity<VerifyKyc> responseEntity = restTemplate.exchange(verifyKycUrl, HttpMethod.POST, entity, VerifyKyc.class);
         System.out.println(responseEntity.getStatusCode());
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
-            
+            VerifyKyc verifyKycResponse = responseEntity.getBody();
+            if (verifyKycResponse != null) {
+                if (!kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.APPROVED.name())) {
+                    if (verifyKycResponse.getStatus().equalsIgnoreCase("APPROVED")) {
+                        kycDetails.setCurrentStatus(KycStatus.APPROVED.name());
+                    }
+                }
+
+                List<VerifyKycActions> listKycActions = verifyKycResponse.getActions();
+                if (listKycActions != null && !listKycActions.isEmpty()) {
+                    VerifyKycActions kycActions = listKycActions.get(0);
+                    kycDetails.setCompletedAt(Utils.stringToDateTime(kycActions.getCompletedAt()));
+                    VerifyKycActionDetails verifyKycActionDetails = kycActions.getDetails();
+                    if (verifyKycActionDetails != null) {
+                        AadhaarDetails aadhaarDetails = verifyKycActionDetails.getAadhaarDetails();
+                        if (aadhaarDetails != null ) {
+                            kycDetails.setAadhaarNumber(aadhaarDetails.getIdNumber());
+                            kycDetails.setDocumentType(KycDocumentType.AADHAAR.name());
+                            kycDetails.setNameInDocument(aadhaarDetails.getName());
+                            kycDetails.setDateOfBirth(aadhaarDetails.getDateOfBirth());
+                            kycDetails.setPermanentAddress(aadhaarDetails.getPermanentAddressString());
+                            kycDetails.setUpdatedAt(new Date());
+
+                            if (aadhaarDetails.getGender().equalsIgnoreCase("F")) {
+                                kycDetails.setGender("Female");
+                            }
+                            else if (aadhaarDetails.getGender().equalsIgnoreCase("M")) {
+                                kycDetails.setGender("Male");
+                            }
+                            else {
+                                kycDetails.setGender("Others");
+                            }
+
+                            KycAddressDetails addressDetails = kycDetails.getAddressDetails();
+                            if (addressDetails == null) {
+                                addressDetails = new KycAddressDetails();
+
+                            }
+                            addressDetails.setKycDetails(kycDetails);
+                            com.smartstay.smartstay.dto.kyc.KycAddressDetails responseAddress = aadhaarDetails.getPermanentAddress();
+                            if (responseAddress != null) {
+                                addressDetails.setCity(responseAddress.getDistrictOrCity());
+                                addressDetails.setAddress(responseAddress.getAddress());
+                                addressDetails.setLocality(responseAddress.getLocalityOrPostOffice());
+                                addressDetails.setPincode(responseAddress.getPincode());
+                                addressDetails.setState(responseAddress.getState());
+                            }
+                            addressDetails.setKycDetails(kycDetails);
+
+
+
+                        }
+                    }
+
+                }
+
+                kycRepository.save(kycDetails);
+            }
+
         }
     }
 }

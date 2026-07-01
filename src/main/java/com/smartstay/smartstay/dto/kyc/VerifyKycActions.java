@@ -19,6 +19,8 @@ public class VerifyKycActions {
     private String status;
     @JsonProperty("execution_request_id")
     private String executionRequestId;
+    @JsonProperty("completed_at")
+    private String completedAt;
     @JsonProperty("details")
     private VerifyKycActionDetails details;
 

@@ -27,10 +27,10 @@ public class AadhaarDetails {
     private String dateOfBirth;
     @JsonProperty("current_address")
     private String currentAddress;
+    @JsonProperty("permanent_address")
+    private String permanentAddressString;
     @JsonProperty("permanent_address_details")
     private KycAddressDetails permanentAddress;
-    @JsonProperty("current_address_details")
-    private KycAddressDetails presentAddress;
     @JsonProperty("completed_at")
     private String completedAt;
 

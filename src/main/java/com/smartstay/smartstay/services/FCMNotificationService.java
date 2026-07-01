@@ -142,7 +142,7 @@ public class FCMNotificationService {
 
     }
 
-    public void sendNotificationRequest(String xuid, KycDetails kycDetails, Users users, String hostelId) {
+    public void sendNotificationRequest(String xuid, KycDetails kycDetails, Users users, String hostelId, String phoneNumber) {
         CustomerCredentials customerCredentials = customerCredentialsService.findByXuid(xuid);
         if (customerCredentials != null) {
             if (customerCredentials.getFcmToken() != null) {
@@ -151,6 +151,7 @@ public class FCMNotificationService {
                 payloads.put("type", NotificationMessage.KYC_REQUESTS.name());
                 payloads.put("request_id", kycDetails.getEntityId());
                 payloads.put("token_id", kycDetails.getAccessTokenId());
+                payloads.put("mobile", phoneNumber);
                 payloads.put("description", "Your hostel owner wants to complete the KYC verifications. Please finish it at your earliest convenience");
 
                 Message message = Message.builder()

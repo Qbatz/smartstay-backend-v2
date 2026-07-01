@@ -130,7 +130,7 @@ public class CustomerNotificationService {
 
             customerNotificationRepository.save(customerNotifications);
 
-            fcmNotificationService.sendNotificationRequest(customers.getXuid(), kycDetails, users, hostelId);
+            fcmNotificationService.sendNotificationRequest(customers.getXuid(), kycDetails, users, hostelId, customers.getMobile());
         }
     }
 }
