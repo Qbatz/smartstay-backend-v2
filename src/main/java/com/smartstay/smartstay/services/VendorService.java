@@ -58,6 +58,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.SimpleDateFormat;
@@ -968,6 +969,7 @@ public class VendorService {
 
     }
 
+    @Transactional
     public ResponseEntity<?> deleteVendorById(int vendorId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
@@ -981,6 +983,10 @@ public class VendorService {
         if (existingVendor != null) {
             if (!subscriptionService.validateSubscription(existingVendor.getHostelId())) {
                 return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+            }
+            // A vendor that is referenced by any expense record cannot be deleted (efficient EXISTS check).
+            if (expensesRepository.existsByVendorId(String.valueOf(vendorId))) {
+                return new ResponseEntity<>(Utils.VENDOR_HAS_EXPENSES, HttpStatus.BAD_REQUEST);
             }
             vendorRepository.delete(existingVendor);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
@@ -1035,6 +1041,7 @@ public class VendorService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
+    @Transactional
     public ResponseEntity<?> deleteVendorCategory(int categoryId, String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -1049,6 +1056,16 @@ public class VendorService {
         VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryIdAndHostelId(categoryId, hostelId);
         if (existingCategory == null || !existingCategory.isEnabled()) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
+        }
+
+        // A category is "in use" if any vendor assigned to it has expense records (category -> vendors
+        // -> expenses). Resolve the category's vendors, then run one efficient EXISTS check.
+        List<Integer> categoryVendorIds = vendorRepository.findVendorIdsByVendorCategory(categoryId);
+        if (!categoryVendorIds.isEmpty()) {
+            List<String> vendorIds = categoryVendorIds.stream().map(String::valueOf).toList();
+            if (expensesRepository.existsByVendorIdIn(vendorIds)) {
+                return new ResponseEntity<>(Utils.VENDOR_CATEGORY_IN_USE, HttpStatus.BAD_REQUEST);
+            }
         }
 
         existingCategory.setEnabled(false);

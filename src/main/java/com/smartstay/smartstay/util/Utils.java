@@ -72,6 +72,8 @@ public class Utils {
     public static final String DELETED = "Deleted Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
+    public static final String VENDOR_HAS_EXPENSES = "Vendor cannot be deleted because it has associated expense records.";
+    public static final String VENDOR_CATEGORY_IN_USE = "Vendor category cannot be disabled because it is associated with existing expense records.";
     public static final String VENDOR_EMAIL_EXISTS = "A vendor with this email address already exists.";
     public static final String VENDOR_MOBILE_EXISTS = "A vendor with this mobile number already exists.";
     public static final String BUSINESS_MOBILE_CODE_REQUIRED = "Business mobile code is required";
@@ -126,6 +128,9 @@ public class Utils {
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
     public static final String BANK_ID_REQUIRED = "Bank id required";
+    public static final String EXPENSE_FULL_PAYMENT_INVALID = "For FULL payment status, paidAmount must be equal to totalAmount.";
+    public static final String EXPENSE_PARTIAL_PAYMENT_INVALID = "For PARTIAL payment status, paidAmount must be greater than 0 and less than totalAmount.";
+    public static final String EXPENSE_PENDING_PAYMENT_INVALID = "For PENDING payment status, paidAmount must be 0 and totalAmount must be greater than 0.";
     public static final String AMOUNT_REQUIRED = "Amount required";
     public static final String INVALID_EXPENSE_ITEM_ID = "Invalid expense item id";
     public static final String DUPLICATE_EXPENSE_ITEM_ID = "Duplicate expense item id";
