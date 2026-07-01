@@ -41,12 +41,19 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
     FloorsCount findFloorCountsBasedOnHostelId(@Param("hostelId") String hostelId);
 
     @Query("""
-       SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END
-       FROM BookingsV1 b
-       WHERE b.hostelId = :hostelId
-       AND b.floorId = :floorId
-       AND b.currentStatus IN (:statuses)
-       """)
+    SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END
+    FROM BookingsV1 b
+    WHERE b.hostelId = :hostelId
+      AND b.floorId = :floorId
+      AND (
+            b.currentStatus IN :statuses
+            OR (
+                b.currentStatus = 'VACATED'
+                AND b.leavingDate IS NOT NULL
+                AND b.checkoutDate IS NULL
+            )
+          )
+    """)
     boolean existsActiveBookingForFloor(@Param("hostelId") String hostelId,
                                         @Param("floorId") Integer floorId,
                                         @Param("statuses") List<String> statuses);
