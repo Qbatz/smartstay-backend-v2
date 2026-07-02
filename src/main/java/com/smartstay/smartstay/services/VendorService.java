@@ -1052,6 +1052,12 @@ public class VendorService {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
         }
 
+        // A category still assigned to any active vendor cannot be disabled (efficient EXISTS check,
+        // no entities loaded).
+        if (vendorRepository.existsByVendorCategoryAndIsActiveTrue(categoryId)) {
+            return new ResponseEntity<>(Utils.VENDOR_CATEGORY_ASSIGNED_TO_VENDORS, HttpStatus.BAD_REQUEST);
+        }
+
         // A category is "in use" if any vendor assigned to it has expense records (category -> vendors
         // -> expenses). Resolve the category's vendors, then run one efficient EXISTS check.
         List<Integer> categoryVendorIds = vendorRepository.findVendorIdsByVendorCategory(categoryId);
