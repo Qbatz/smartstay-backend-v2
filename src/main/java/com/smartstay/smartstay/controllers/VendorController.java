@@ -3,6 +3,7 @@ package com.smartstay.smartstay.controllers;
 import com.smartstay.smartstay.payloads.expense.SettleVendorPayment;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
+import com.smartstay.smartstay.payloads.vendor.UpdateVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.AddVendorComment;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendorComment;
@@ -141,6 +142,14 @@ public class VendorController {
     @GetMapping("/categories")
     public ResponseEntity<?> getAllVendorCategories(@RequestParam("hostelId") String hostelId) {
         return vendorService.getAllVendorCategories(hostelId);
+    }
+
+    // Rename a vendor category (name only); ownership is verified against the supplied hostelId.
+    @PutMapping("/categories/{categoryId}")
+    public ResponseEntity<?> updateVendorCategory(@PathVariable("categoryId") int categoryId,
+                                                  @RequestParam("hostelId") String hostelId,
+                                                  @Valid @RequestBody UpdateVendorCategory payLoads) {
+        return vendorService.updateVendorCategory(categoryId, hostelId, payLoads);
     }
 
     @PostMapping("/categories/{categoryId}/delete")

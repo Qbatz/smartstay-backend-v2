@@ -20,6 +20,7 @@ import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.ennum.VendorPaymentStatus;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
+import com.smartstay.smartstay.payloads.vendor.UpdateVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
 import com.smartstay.smartstay.repositories.CountriesRepository;
 import com.smartstay.smartstay.repositories.ExpenseItemRepository;
@@ -1064,6 +1065,47 @@ public class VendorService {
         vendorCategoriesRepository.save(existingCategory);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateVendorCategory(int categoryId, String hostelId, UpdateVendorCategory payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        // Only the name is updateable; reject a blank name (bean validation covers null/empty, this
+        // also guards a whitespace-only value).
+        String categoryName = payloads.categoryName() == null ? null : payloads.categoryName().trim();
+        if (categoryName == null || categoryName.isEmpty()) {
+            return new ResponseEntity<>(Utils.CATEGORY_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        // Ownership: the category must exist, be active, and belong to the supplied hostel. A category
+        // from another hostel is not found by this lookup, so cross-hostel updates are rejected.
+        VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryIdAndHostelId(categoryId, hostelId);
+        if (existingCategory == null || !existingCategory.isEnabled()) {
+            return new ResponseEntity<>(Utils.INVALID_CATEGORY_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        // Name must remain unique within the hostel (case-insensitive), ignoring this same category.
+        VendorCategories duplicate = vendorCategoriesRepository.findByCategoryNameIgnoreCaseAndHostelId(categoryName, hostelId);
+        if (duplicate != null && duplicate.getCategoryId() != categoryId) {
+            return new ResponseEntity<>(Utils.CATEGORY_NAME_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
+        }
+
+        existingCategory.setCategoryName(categoryName);
+        existingCategory.setModifiedAt(new Date());
+        existingCategory.setModifiedBy(userId);
+        vendorCategoriesRepository.save(existingCategory);
+
+        return new ResponseEntity<>(
+                new VendorCategoryResponse(existingCategory.getCategoryId(), existingCategory.getCategoryName()),
+                HttpStatus.OK);
     }
 
     public ResponseEntity<?> getAllVendorCategories(String hostelId) {

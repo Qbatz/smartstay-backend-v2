@@ -179,6 +179,7 @@ public class Utils {
     public static final String CATEGORY_NAME_CATEGORY_ID_ERROR = "Category name or Category id is required";
     public static final String CATEGORY_NAME_ALREADY_REGISTERED = "Category name is already exists";
     public static final String CATEGORY_ALREADY_ADDED = "Already added";
+    public static final String CATEGORY_NAME_REQUIRED = "Category name is required";
     public static final String UNIT_ALREADY_ADDED = "Already added";
     public static final String INVALID_UNIT = "Invalid unit";
     public static final String SUB_CATEGORY_NAME_ALREADY_REGISTERED = "Subcategory name is already exists";
