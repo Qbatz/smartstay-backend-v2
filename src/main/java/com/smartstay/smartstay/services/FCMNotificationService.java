@@ -4,10 +4,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.smartstay.smartstay.Exceptions.SmartStayException;
-import com.smartstay.smartstay.dao.ComplaintsV1;
-import com.smartstay.smartstay.dao.CustomerCredentials;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.CustomersConfig;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.reminders.DueReminders;
 import com.smartstay.smartstay.ennum.NotificationMessage;
 import com.smartstay.smartstay.util.NameUtils;
@@ -143,5 +140,31 @@ public class FCMNotificationService {
             }
         }
 
+    }
+
+    public void sendNotificationRequest(String xuid, KycDetails kycDetails, Users users, String hostelId, String phoneNumber) {
+        CustomerCredentials customerCredentials = customerCredentialsService.findByXuid(xuid);
+        if (customerCredentials != null) {
+            if (customerCredentials.getFcmToken() != null) {
+                HashMap<String, String> payloads = new HashMap<>();
+                payloads.put("title", "KYC request");
+                payloads.put("type", NotificationMessage.KYC_REQUESTS.name());
+                payloads.put("request_id", kycDetails.getEntityId());
+                payloads.put("token_id", kycDetails.getAccessTokenId());
+                payloads.put("mobile", phoneNumber);
+                payloads.put("description", "Your hostel owner wants to complete the KYC verifications. Please finish it at your earliest convenience");
+
+                Message message = Message.builder()
+                        .setToken(customerCredentials.getFcmToken())
+                        .putAllData(payloads)
+                        .build();
+
+                try {
+                    tenantMessaging.send(message);
+                } catch (FirebaseMessagingException e) {
+//                    throw new SmartStayException("Unable to send messages");
+                }
+            }
+        }
     }
 }

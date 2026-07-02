@@ -95,7 +95,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             ((:customerIds IS NULL AND :invoiceIds IS NULL) OR (:customerIds IS NOT NULL AND trns.customerId IN :customerIds) OR (:invoiceIds IS NOT NULL AND trns.invoiceId IN :invoiceIds)) AND 
             (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND 
             (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND 
-            (:collectedBy IS NULL OR trns.customerId IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
+            (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
             (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount)
             """,
     countQuery = """
@@ -103,7 +103,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             ((:customerIds IS NULL AND :invoiceIds IS NULL) OR (:customerIds IS NOT NULL AND trns.customerId IN :customerIds) OR (:invoiceIds IS NOT NULL AND trns.invoiceId IN :invoiceIds)) AND 
             (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND 
             (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND 
-            (:collectedBy IS NULL OR trns.customerId IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
+            (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
             (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount)
             """)
     Page<TransactionV1> findPagebleTransactions(String hostelId, List<String> customerIds, List<String> invoiceIds, List<String> bankIds, List<String> collectedBy, Date startDate, Date endDate, Integer minAmount, Integer maxAmount, Pageable pageable);
@@ -113,7 +113,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             ((:customerIds IS NULL AND :invoiceIds IS NULL) OR (:customerIds IS NOT NULL AND trns.customerId IN :customerIds) OR (:invoiceIds IS NOT NULL AND trns.invoiceId IN :invoiceIds)) AND 
             (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND 
             (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND 
-            (:collectedBy IS NULL OR trns.customerId IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
+            (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
             (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount)
             """)
     List<TransactionV1> findTransactionsByHostelId(String hostelId, List<String> customerIds, List<String> invoiceIds, List<String> bankIds, List<String> collectedBy, Date startDate, Date endDate, Integer minAmount, Integer maxAmount);

@@ -47,7 +47,7 @@ public class ReceiptFilterOptions {
         if (listBanks != null) {
             paymentMethod = listBanks
                     .stream()
-                    .map(i -> new CommonType(i.getAccountType() + " " + i.getAccountHolderName(), i.getBankId()))
+                    .map(i -> new CommonType( i.getAccountHolderName() + "-" + i.getAccountType(), i.getBankId()))
                     .toList();
         }
     }

@@ -70,10 +70,10 @@ public class CustomersBedHistoryService {
         return customerBedHistoryRepository.findByCustomerIdAndTypeBooking(customerId);
     }
 
-    public void checkoutCustomer(String customerId) {
+    public void checkoutCustomer(String customerId, Date endDate) {
         CustomersBedHistory bedHistory = customerBedHistoryRepository.findTopByCustomerIdOrderByCreatedAtDesc(customerId).orElse(null);
         if (bedHistory != null) {
-            bedHistory.setEndDate(new Date());
+            bedHistory.setEndDate(endDate);
             customerBedHistoryRepository.save(bedHistory);
         }
 

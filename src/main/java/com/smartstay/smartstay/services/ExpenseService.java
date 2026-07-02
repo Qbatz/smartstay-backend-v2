@@ -1366,10 +1366,12 @@ public class ExpenseService {
     public ExpenseReportResponse getExpenseReportDetails(String hostelId, String period, String customStartDate,
             String customEndDate, List<Long> categoryIds, List<Long> subCategoryIds,
             List<String> paymentModes, List<String> paidTo, List<String> createdBy,
-            int page, int size) {
+            int pageFromParam, int size) {
 
         Date startDate = null;
         Date endDate = null;
+
+        int page = pageFromParam + 1;
 
         if (customStartDate != null && customEndDate != null) {
             startDate = Utils.stringToDate(customStartDate, Utils.USER_INPUT_DATE_FORMAT);

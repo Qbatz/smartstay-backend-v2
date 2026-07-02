@@ -36,6 +36,9 @@ public class RequestKyc {
     @JsonProperty("access_token")
     AccessToken accessToken;
 
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class AccessToken {
         @JsonProperty("entity_id")
         String entityId;

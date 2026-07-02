@@ -17,6 +17,9 @@ public class InvoiceMapper {
 
     public static InvoiceResponse toResponse(InvoicesV1 invoice) {
         Double paidAmount = 0.0;
+        boolean isCancelled = false;
+        String cancelledDate = null;
+
         if (invoice.getPaidAmount() != null) {
             paidAmount = invoice.getPaidAmount();
         }
@@ -73,6 +76,11 @@ public class InvoiceMapper {
             }
         }
 
+        if (invoice.isCancelled()) {
+            isCancelled = true;
+            cancelledDate = Utils.dateToString(invoice.getCancelledDate());
+        }
+
         return new InvoiceResponse(
                 invoice.getInvoiceId(),
                 invoice.getInvoiceNumber(),
@@ -104,7 +112,9 @@ public class InvoiceMapper {
                         })
                         .toList()
                         : List.of(),
-                false
+                false,
+                isCancelled,
+                cancelledDate
         );
     }
 }

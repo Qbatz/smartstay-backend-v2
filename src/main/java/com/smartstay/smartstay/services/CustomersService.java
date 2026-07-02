@@ -38,6 +38,7 @@ import com.smartstay.smartstay.repositories.DraftsRepository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
+import com.smartstay.smartstay.responses.customer.KycAddressDetails;
 import com.smartstay.smartstay.responses.settlement.DeductionsInfo;
 import com.smartstay.smartstay.responses.settlement.DeductionsItem;
 import com.smartstay.smartstay.util.FilterKeywords;
@@ -82,7 +83,6 @@ public class CustomersService {
     private SettlementItemService settlementItemService;
     @Autowired
     private WhatsAppService whatsappService;
-
     @Autowired
     private FloorsService floorsService;
     @Autowired
@@ -119,6 +119,7 @@ public class CustomersService {
     private CustomerBillingRulesService customerBillingRulesService;
     @Autowired
     private TableColumnService columnService;
+    private KycServices kycServices;
     private ElectricityService electricityService;
 
     private AmenityRequestService amenityRequestService;
@@ -126,6 +127,11 @@ public class CustomersService {
     private CustomerDocumentsService customerDocumentsService;
     @Autowired
     private SubscriptionService subscriptionService;
+
+    @Autowired
+    public void setKycServices(@Lazy KycServices kycServices) {
+        this.kycServices = kycServices;
+    }
 
     public static AdvanceInfo toAdvanceInfoResponse(Advance advance, InvoiceResponse invoicesV1, double bookingAmount) {
         if (advance == null) return null;
@@ -1414,7 +1420,12 @@ public class CustomersService {
             boolean isPaidOrPartial = "PAID".equalsIgnoreCase(inv.paymentStatus())
                     || "PARTIAL_PAYMENT".equalsIgnoreCase(inv.paymentStatus());
             boolean canUnpaid = isPaidOrPartial && !isSettlementGenerated;
-            return new InvoiceResponse(inv.invoiceId(), inv.invoiceNumber(), inv.invoiceType(), inv.paymentStatus(), inv.totalAmount(), inv.dueAmount(), inv.paidAmount(), inv.dueDate(), inv.invoiceGeneratedDate(), inv.invoiceMode(), inv.isDiscounted(), inv.items(), canUnpaid);
+            boolean isCancelled = inv.isCancelled();
+            String cancelledDate = null;
+            if (inv.isCancelled()) {
+                cancelledDate = inv.cancelledOn();
+            }
+            return new InvoiceResponse(inv.invoiceId(), inv.invoiceNumber(), inv.invoiceType(), inv.paymentStatus(), inv.totalAmount(), inv.dueAmount(), inv.paidAmount(), inv.dueDate(), inv.invoiceGeneratedDate(), inv.invoiceMode(), inv.isDiscounted(), inv.items(), canUnpaid, isCancelled, cancelledDate);
         }).toList();
         InvoiceResponse advanceInvoice = invoiceResponseList.stream().filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType())).limit(1).findFirst().orElse(null);
         if (rentHistories != null) {
@@ -1483,9 +1494,29 @@ public class CustomersService {
         KycDetails kycDetails = customers.getKycDetails();
         KycInformations kycInfo = null;
         if (kycDetails == null) {
-            kycInfo = new KycInformations(customers.getKycStatus(), null, null, null);
+            kycInfo = new KycInformations("PENDING", null, null, null, null, null, null, null);
         } else {
-            kycInfo = new KycInformations(kycDetails.getCurrentStatus(), null, null, null);
+            if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.REQUESTED.name()) || kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
+                kycDetails = kycServices.verifyStatus(customers);
+            }
+            if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.VERIFIED.name())) {
+                com.smartstay.smartstay.dao.KycAddressDetails addressDetails = kycDetails.getAddressDetails();
+                KycAddressDetails currentAddress = null;
+                KycAddressDetails permanentAddress = null;
+                if (addressDetails != null) {
+                    currentAddress =  new KycAddressDetails(addressDetails.getCurrentLocality(), addressDetails.getCurrentCity(), addressDetails.getCurrentState(), addressDetails.getCurrentPincode(), addressDetails.getCurrentAddress());
+                    permanentAddress = new KycAddressDetails(addressDetails.getPermanentLocality(), addressDetails.getPermanentCity(), addressDetails.getPermanentState(), addressDetails.getPermanentPincode(), addressDetails.getPermanentAddress());
+                }
+
+                kycInfo = new KycInformations(KycStatus.VERIFIED.name(), kycDetails.getIdPic(), kycDetails.getAadhaarNumber(), Utils.dateToString(kycDetails.getCompletedAt()), kycDetails.getKycDocument(), kycDetails.getKycDocumentType(), currentAddress, permanentAddress);
+            }
+            else if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
+                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null);
+            }
+            else {
+                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null);
+            }
+
         }
 
         CheckoutInfo checkoutInfo = null;

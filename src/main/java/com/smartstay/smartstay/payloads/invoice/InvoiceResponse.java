@@ -15,7 +15,9 @@ public record InvoiceResponse(
         String invoiceMode,
         boolean isDiscounted,
         List<ItemResponse> items,
-        boolean canUnpaid
+        boolean canUnpaid,
+        boolean isCancelled,
+        String cancelledOn
 ) {
 }
 

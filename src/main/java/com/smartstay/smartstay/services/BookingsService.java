@@ -664,9 +664,13 @@ public class BookingsService {
         }
 
         customersService.markCustomerCheckedOut(customers);
-        customersBedHistoryService.checkoutCustomer(customerId);
         if (settlementDetails != null && settlementDetails.getLeavingDate() !=null) {
             bookingsV1.setCheckoutDate(settlementDetails.getLeavingDate());
+
+            customersBedHistoryService.checkoutCustomer(customerId, settlementDetails.getLeavingDate());
+        }
+        else {
+            customersBedHistoryService.checkoutCustomer(customerId, new Date());
         }
         bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
         bookingsRepository.save(bookingsV1);
