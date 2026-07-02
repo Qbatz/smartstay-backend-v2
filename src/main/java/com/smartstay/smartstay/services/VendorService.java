@@ -874,7 +874,9 @@ public class VendorService {
         }
 
         String hostelId = payloads.hostelId();
-        String normalizedMobile = normalizeMobile(payloads.countryCode(), payloads.mobile());
+        // countryCode is no longer collected from the request (single-country); the business dialing
+        // code drives mobile normalization.
+        String normalizedMobile = normalizeMobile(payloads.businessMobileCode(), payloads.mobile());
         // Email must be unique within the hostel (case-insensitive). Blank emails are stored as null so
         // multiple vendors without an email remain allowed.
         String email = (payloads.mailId() != null && !payloads.mailId().trim().isEmpty())
@@ -899,7 +901,8 @@ public class VendorService {
         VendorV1 vendorV1 = new VendorV1();
         vendorV1.setFirstName(payloads.firstName());
         vendorV1.setLastName(payloads.lastName());
-        vendorV1.setCountryCode(payloads.countryCode() == null ? null : payloads.countryCode().replace("+", "").trim());
+        // Single-country: countryCode is no longer client-supplied; default it for every vendor.
+        vendorV1.setCountryCode("1");
         vendorV1.setBusinessMobileCode(payloads.businessMobileCode() != null ? payloads.businessMobileCode().trim() : null);
         vendorV1.setMobile(normalizedMobile);
         vendorV1.setEmailId(email);
