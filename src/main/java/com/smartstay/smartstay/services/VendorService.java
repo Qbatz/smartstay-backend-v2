@@ -737,6 +737,15 @@ public class VendorService {
         return calendar.getTime();
     }
 
+    /**
+     * Normalizes an optional string for a (full-representation) update: returns the trimmed value, or
+     * {@code null} when the input is null/blank. Applied unconditionally so an optional field can be
+     * cleared — sending null or an empty string stores NULL instead of retaining the previous value.
+     */
+    private String clearableValue(String value) {
+        return (value == null || value.trim().isEmpty()) ? null : value.trim();
+    }
+
     public ResponseEntity<?> updateVendorById(int vendorId, UpdateVendor updateVendor, MultipartFile file) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
@@ -770,27 +779,20 @@ public class VendorService {
         if (updateVendor.firstName() != null && !updateVendor.firstName().isEmpty()) {
             existingVendor.setFirstName(updateVendor.firstName());
         }
-        if (updateVendor.lastName() != null && !updateVendor.lastName().isEmpty()) {
-            existingVendor.setLastName(updateVendor.lastName());
-        }
+        // Optional field: applied unconditionally so it can be cleared (null/blank -> NULL).
+        existingVendor.setLastName(clearableValue(updateVendor.lastName()));
         if (updateVendor.mobile() != null && !updateVendor.mobile().isEmpty()) {
             existingVendor.setMobile(normalizeMobile(updateVendor.countryCode(), updateVendor.mobile()));
         }
         if (updateVendor.countryCode() != null && !updateVendor.countryCode().isEmpty()) {
             existingVendor.setCountryCode(updateVendor.countryCode().replace("+", "").trim());
         }
-        if (updateVendor.mailId() != null && !updateVendor.mailId().isEmpty()) {
-            existingVendor.setEmailId(updateVendor.mailId());
-        }
-        if (updateVendor.houseNo() != null && !updateVendor.houseNo().isEmpty()) {
-            existingVendor.setHouseNo(updateVendor.houseNo());
-        }
-        if (updateVendor.landmark() != null && !updateVendor.landmark().isEmpty()) {
-            existingVendor.setLandMark(updateVendor.landmark());
-        }
-        if (updateVendor.area() != null && !updateVendor.area().isEmpty()) {
-            existingVendor.setArea(updateVendor.area());
-        }
+        // Optional fields: applied unconditionally so they can be cleared (null/blank -> NULL). Email is
+        // stored NULL when blank so it never collides on the per-hostel unique email index.
+        existingVendor.setEmailId(clearableValue(updateVendor.mailId()));
+        existingVendor.setHouseNo(clearableValue(updateVendor.houseNo()));
+        existingVendor.setLandMark(clearableValue(updateVendor.landmark()));
+        existingVendor.setArea(clearableValue(updateVendor.area()));
         if (updateVendor.pinCode() != null) {
             existingVendor.setPinCode(updateVendor.pinCode());
         }
@@ -812,31 +814,19 @@ public class VendorService {
         if (updateVendor.vendorCategory() != null) {
             existingVendor.setVendorCategory(updateVendor.vendorCategory());
         }
-        if (updateVendor.contactPerson() != null) {
-            existingVendor.setContactPerson(updateVendor.contactPerson());
-        }
         // businessMobileCode is mandatory (validated above); always persist the trimmed value.
         existingVendor.setBusinessMobileCode(updateVendor.businessMobileCode().trim());
-        // contactPersonMobile is updateable; existing mobile-number handling is preserved.
-        if (updateVendor.contactPersonMobile() != null && !updateVendor.contactPersonMobile().trim().isEmpty()) {
-            existingVendor.setContactPersonMobile(updateVendor.contactPersonMobile().trim());
-        }
-        // contactPersonMobileCode is optional; persist the updated value when supplied.
-        if (updateVendor.contactPersonMobileCode() != null && !updateVendor.contactPersonMobileCode().trim().isEmpty()) {
-            existingVendor.setContactPersonMobileCode(updateVendor.contactPersonMobileCode().trim());
-        }
-        if (updateVendor.description() != null) {
-            existingVendor.setDescription(updateVendor.description());
-        }
+        // Optional fields: applied unconditionally so they can be cleared (null/blank -> NULL).
+        existingVendor.setContactPerson(clearableValue(updateVendor.contactPerson()));
+        existingVendor.setContactPersonMobile(clearableValue(updateVendor.contactPersonMobile()));
+        existingVendor.setContactPersonMobileCode(clearableValue(updateVendor.contactPersonMobileCode()));
+        existingVendor.setDescription(clearableValue(updateVendor.description()));
         if (updateVendor.vendorCode() != null) {
             existingVendor.setVendorCode(updateVendor.vendorCode());
         }
-        if (updateVendor.gst() != null) {
-            existingVendor.setGst(updateVendor.gst());
-        }
-        if (updateVendor.pan() != null) {
-            existingVendor.setPan(updateVendor.pan());
-        }
+        // Optional fields: applied unconditionally so they can be cleared (null/blank -> NULL).
+        existingVendor.setGst(clearableValue(updateVendor.gst()));
+        existingVendor.setPan(clearableValue(updateVendor.pan()));
         if (updateVendor.allowCredit() != null) {
             existingVendor.setAllowCredit(updateVendor.allowCredit());
         }
