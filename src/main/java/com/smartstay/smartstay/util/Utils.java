@@ -69,6 +69,7 @@ public class Utils {
     public static final String ASSIGNED = "Asset Assigned Successfully";
     public static final String STATUS_UPDATED = "Status Updated Successfully";
     public static final String CREATED = "Created Successfully";
+    public static final String CUSTOMER_CREATED = "Customer created successfully.";
     public static final String DELETED = "Deleted Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";

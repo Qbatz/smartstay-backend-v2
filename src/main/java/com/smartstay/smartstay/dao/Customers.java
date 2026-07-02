@@ -43,6 +43,9 @@ public class Customers {
     private Date lastUpdatedAt;
     private String updatedBy;
     private String mobSerialNo;
+    // Optional ID proof details (e.g. "Aadhaar" / "1234-5678-9012"). Both nullable.
+    private String idProofType;
+    private String idProofNo;
 
 
     @OneToOne(mappedBy = "customers", cascade = CascadeType.ALL, orphanRemoval = true)

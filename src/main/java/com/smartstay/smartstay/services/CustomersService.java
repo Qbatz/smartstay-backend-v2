@@ -1072,6 +1072,9 @@ public class CustomersService {
             customers.setCountry(1L);
             customers.setMobile(customerInfo.mobileNumber());
             customers.setEmailId(customerInfo.emailId());
+            // Optional ID proof details; stored as-is (null when not provided).
+            customers.setIdProofType(customerInfo.idProofType());
+            customers.setIdProofNo(customerInfo.idProofNo());
             customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
             customers.setCurrentStatus(CustomerStatus.INACTIVE.name());
             customers.setHostelId(hostelId);
@@ -1108,7 +1111,10 @@ public class CustomersService {
 
             Customers savedCustomers = customersRepository.save(customers);
             userService.addUserLog(hostelId, savedCustomers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CREATE, user);
-            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+            // Return the generated customerId only after the record is successfully persisted.
+            return new ResponseEntity<>(
+                    new CreateCustomerResponse(Utils.CUSTOMER_CREATED, savedCustomers.getCustomerId()),
+                    HttpStatus.CREATED);
         } else {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -1559,7 +1565,7 @@ public class CustomersService {
             effectiveFromMonth = Utils.getEffectiveBillingMonths(new Date(), customers.getJoiningDate(), billingStartDay);
         }
 
-        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, customers.getProfilePic(), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic, effectiveFromMonth);
+        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, customers.getProfilePic(), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic, effectiveFromMonth, customers.getIdProofType(), customers.getIdProofNo());
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }

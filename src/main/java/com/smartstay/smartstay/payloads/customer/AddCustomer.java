@@ -12,6 +12,8 @@ public record AddCustomer(
         @NotEmpty(message = "Mobile number required")
         String mobileNumber,
         String emailId,
+        String idProofType,
+        String idProofNo,
         AddCustomerAddress address
 ) {
 
