@@ -330,9 +330,15 @@ public class ExpenseService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        // Non-vendor expenses are always treated as fully paid: their payment status is forced to FULL
+        // and the paidAmount/paymentStatus validations are skipped (the request values are ignored).
+        boolean isVendorExpense = Boolean.TRUE.equals(expense.isVendorExpense());
+
         // bankId is mandatory for every payment status except PENDING — a pending expense can be created
         // without a bank account. When a bank is supplied it must reference a real account.
-        ExpensePaymentStatus requestedStatus = ExpensePaymentStatus.fromString(expense.paymentStatus());
+        ExpensePaymentStatus requestedStatus = isVendorExpense
+                ? ExpensePaymentStatus.fromString(expense.paymentStatus())
+                : ExpensePaymentStatus.Full;
         boolean bankProvided = Utils.checkNullOrEmpty(expense.bankId());
         if (requestedStatus != ExpensePaymentStatus.Pending && !bankProvided) {
             return new ResponseEntity<>(Utils.BANK_ID_REQUIRED, HttpStatus.BAD_REQUEST);
@@ -340,11 +346,13 @@ public class ExpenseService {
         if (bankProvided && !bankingService.checkBankExist(expense.bankId())) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
-        // Validate the paidAmount/totalAmount relationship for the selected payment status before
-        // doing any work or persisting the expense.
-        String paymentAmountError = validatePaymentAmounts(requestedStatus, expense.totalAmount(), expense.paidAmount());
-        if (paymentAmountError != null) {
-            return new ResponseEntity<>(paymentAmountError, HttpStatus.BAD_REQUEST);
+        // Validate the paidAmount/totalAmount relationship only for vendor expenses; non-vendor expenses
+        // are auto-settled below so their request amounts are not validated.
+        if (isVendorExpense) {
+            String paymentAmountError = validatePaymentAmounts(requestedStatus, expense.totalAmount(), expense.paidAmount());
+            if (paymentAmountError != null) {
+                return new ResponseEntity<>(paymentAmountError, HttpStatus.BAD_REQUEST);
+            }
         }
         if (!subscriptionService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
@@ -426,8 +434,13 @@ public class ExpenseService {
                 expensesV1.setCreditPeriod(vendor.getCreditPeriod());
             }
         }
-        expensesV1.setPaidAmount(expense.paidAmount());
-        expensesV1.setBalanceAmount(expense.balanceAmount());
+        // Non-vendor expenses are auto-settled: paidAmount = payable amount, balanceAmount = 0 and status
+        // is FULL (set above) — the request's paidAmount/balanceAmount are ignored. Vendor expenses keep
+        // the request-driven amounts unchanged.
+        Double effectivePaidAmount = isVendorExpense ? expense.paidAmount() : payableAmount;
+        Double effectiveBalanceAmount = isVendorExpense ? expense.balanceAmount() : 0.0;
+        expensesV1.setPaidAmount(effectivePaidAmount);
+        expensesV1.setBalanceAmount(effectiveBalanceAmount);
         expensesV1.setPaymentMethod(expense.paymentMethod());
         expensesV1.setNote(expense.note());
         expensesV1.setTransactionId(expense.transactionId());
@@ -465,16 +478,16 @@ public class ExpenseService {
                 expenseItems.add(expenseItem);
             }
             // Seed each item's payment details from the parent expense, then persist in one batch.
-            initializeItemPayments(expenseItems, expensesV1.getPaymentStatus(), expense.paidAmount());
+            initializeItemPayments(expenseItems, expensesV1.getPaymentStatus(), effectivePaidAmount);
             expenseItemRepository.saveAll(expenseItems);
         }
 
-        if (expense.paidAmount() != null && expense.paidAmount() > 0) {
+        if (effectivePaidAmount != null && effectivePaidAmount > 0) {
             ExpensePayment expensePayment = new ExpensePayment();
             expensePayment.setExpenseId(expV1.getExpenseId());
             expensePayment.setHostelId(hostelId);
             expensePayment.setVendorId(vendorId);
-            expensePayment.setPaidAmount(expense.paidAmount());
+            expensePayment.setPaidAmount(effectivePaidAmount);
             expensePayment.setPaymentMethod(expense.paymentMethod());
             expensePayment.setBankId(expense.bankId());
             expensePayment.setPaymentDate(expensesV1.getTransactionDate());
