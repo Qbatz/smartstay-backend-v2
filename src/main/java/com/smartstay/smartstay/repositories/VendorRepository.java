@@ -28,6 +28,13 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
     List<Integer> findVendorIdsByVendorCategory(@Param("categoryId") Integer categoryId);
 
     /**
+     * Efficient existence check for active vendors mapped to a category — used to block disabling a
+     * category that is still in use. Spring Data issues a lightweight EXISTS/LIMIT 1 query (no entities
+     * loaded), backed by the vendor_category index.
+     */
+    boolean existsByVendorCategoryAndIsActiveTrue(Integer vendorCategory);
+
+    /**
      * Lightweight active-vendor lookup for a hostel: selects only id, name and business name (no full
      * entity, no joins), ordered by business name. Backed by the (hostel_id, business_name) index.
      */
