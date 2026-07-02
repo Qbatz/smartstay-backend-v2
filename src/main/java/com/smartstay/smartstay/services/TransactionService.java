@@ -1484,6 +1484,10 @@ public class TransactionService {
         if (listReceipts == null) {
             return new ResponseEntity<>(Utils.NO_TRANSACTIONS_FOUND, HttpStatus.BAD_REQUEST);
         }
+
+        if (!authentication.getSource().equalsIgnoreCase("web")) {
+            listReceipts = listAllTransactions;
+        }
         if (listAllTransactions != null) {
             totalAmount = listAllTransactions
                     .stream()
@@ -1538,8 +1542,9 @@ public class TransactionService {
         List<InvoicesV1> invoices = invoiceService.findByInvoiceIdIn(invoiceIds);
         Set<String> bankIdSet = listReceipts.stream().map(TransactionV1::getBankId).collect(Collectors.toSet());
         List<BankingV1> listBanks = bankingService.findAllBanksById(bankIdSet);
-        List<String> collectedByUsersIds = listReceipts.stream().map(TransactionV1::getCreatedBy).toList();
-        List<Users> collectedByUsers = usersService.findAllUsersFromUserId(collectedByUsersIds);
+//        List<String> collectedByUsersIds = listReceipts.stream().map(TransactionV1::getCreatedBy).toList();
+//        List<Users> collectedByUsers = usersService.findAllUsersFromUserId(collectedByUsersIds);
+        List<Users> collectedByUsers = usersService.findAllUsersByHostelId(hostelId);
 
         ReceiptFilterOptions filterOptions = new ReceiptFilterOptions();
         filterOptions.setCollectedBy(collectedByUsers);

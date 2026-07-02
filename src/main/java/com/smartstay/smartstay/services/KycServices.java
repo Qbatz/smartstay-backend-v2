@@ -1,24 +1,27 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
-import com.smartstay.smartstay.dao.Customers;
+import com.smartstay.smartstay.config.UploadFileToS3;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.KycAddressDetails;
-import com.smartstay.smartstay.dao.KycDetails;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dto.documents.UploadFiles;
 import com.smartstay.smartstay.dto.kyc.*;
+import com.smartstay.smartstay.ennum.CustomerStatus;
+import com.smartstay.smartstay.ennum.FileFormat;
 import com.smartstay.smartstay.ennum.KycDocumentType;
 import com.smartstay.smartstay.ennum.KycStatus;
-import com.smartstay.smartstay.payloads.ZohoSubscriptionRequest;
 import com.smartstay.smartstay.repositories.KycRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -33,6 +36,8 @@ public class KycServices {
     private String KYC_USER_NAME;
     @Value("${KYC_PASSWORD}")
     private String KYC_PASSWORD;
+    @Autowired
+    private UploadFileToS3 uploadFileToS3;
     @Autowired
     private KycRepository kycRepository;
     @Autowired
@@ -78,9 +83,20 @@ public class KycServices {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (customers.getKycStatus().equalsIgnoreCase(KycStatus.VERIFIED.name())) {
-            return new ResponseEntity<>(Utils.CUSTOMER_VERIFIED_KYC, HttpStatus.BAD_REQUEST);
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REQUEST_VACATED_TENANT, HttpStatus.BAD_REQUEST);
         }
+
+        KycDetails kycDetails = customers.getKycDetails();
+        if (kycDetails != null) {
+            if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.VERIFIED.name())) {
+                return new ResponseEntity<>(Utils.CUSTOMER_VERIFIED_KYC, HttpStatus.BAD_REQUEST);
+            }
+            if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
+                return new ResponseEntity<>(Utils.KYC_VERIFICATION_ALREADY_REQUESTED, HttpStatus.BAD_REQUEST);
+            }
+        }
+
 
         StringBuilder customerFullName = new StringBuilder();
         if (customers.getFirstName() != null) {
@@ -104,7 +120,6 @@ public class KycServices {
 
         if (requestKyc != null) {
             RequestKyc.AccessToken kycAccessToken = requestKyc.getAccessToken();
-            KycDetails kycDetails = customers.getKycDetails();
             if (kycDetails == null) {
                 kycDetails = new KycDetails();
                 kycDetails.setCustomers(customers);
@@ -169,13 +184,13 @@ public class KycServices {
         }
     }
 
-    public void verifyStatus(Customers customers) {
+    public KycDetails verifyStatus(Customers customers) {
         if (!authentication.isAuthenticated()) {
-            return;
+            return null;
         }
         KycDetails kycDetails = customers.getKycDetails();
         if (kycDetails == null) {
-            return;
+            return null;
         }
 
         String endPoint = "client/kyc/v2/" +kycDetails.getEntityId() + "/response";
@@ -196,9 +211,9 @@ public class KycServices {
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
             VerifyKyc verifyKycResponse = responseEntity.getBody();
             if (verifyKycResponse != null) {
-                if (!kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.APPROVED.name())) {
+                if (!kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.VERIFIED.name())) {
                     if (verifyKycResponse.getStatus().equalsIgnoreCase("APPROVED")) {
-                        kycDetails.setCurrentStatus(KycStatus.APPROVED.name());
+                        kycDetails.setCurrentStatus(KycStatus.VERIFIED.name());
                     }
                 }
 
@@ -206,8 +221,17 @@ public class KycServices {
                 if (listKycActions != null && !listKycActions.isEmpty()) {
                     VerifyKycActions kycActions = listKycActions.get(0);
                     kycDetails.setCompletedAt(Utils.stringToDateTime(kycActions.getCompletedAt()));
+                    if (kycActions.getExecutionRequestId() != null) {
+                        UploadFiles uploadFiles = getKycPdfDocument(customers.getCustomerId(), kycActions.getExecutionRequestId());
+
+                        if (uploadFiles != null) {
+                            kycDetails.setKycDocumentType(FileFormat.PDF.name());
+                            kycDetails.setKycDocument(uploadFiles.fileName());
+                        }
+                    }
                     VerifyKycActionDetails verifyKycActionDetails = kycActions.getDetails();
                     if (verifyKycActionDetails != null) {
+
                         AadhaarDetails aadhaarDetails = verifyKycActionDetails.getAadhaarDetails();
                         if (aadhaarDetails != null ) {
                             kycDetails.setAadhaarNumber(aadhaarDetails.getIdNumber());
@@ -232,18 +256,29 @@ public class KycServices {
                                 addressDetails = new KycAddressDetails();
 
                             }
-                            addressDetails.setKycDetails(kycDetails);
-                            com.smartstay.smartstay.dto.kyc.KycAddressDetails responseAddress = aadhaarDetails.getPermanentAddress();
+                            com.smartstay.smartstay.dto.kyc.KycAddressDetails responseAddress = aadhaarDetails.getCurrentAddressDetails();
                             if (responseAddress != null) {
-                                addressDetails.setCity(responseAddress.getDistrictOrCity());
-                                addressDetails.setAddress(responseAddress.getAddress());
-                                addressDetails.setLocality(responseAddress.getLocalityOrPostOffice());
-                                addressDetails.setPincode(responseAddress.getPincode());
-                                addressDetails.setState(responseAddress.getState());
+                                addressDetails.setCurrentCity(responseAddress.getDistrictOrCity());
+                                addressDetails.setCurrentAddress(responseAddress.getAddress());
+                                addressDetails.setCurrentLocality(responseAddress.getLocalityOrPostOffice());
+                                addressDetails.setCurrentPincode(responseAddress.getPincode());
+                                addressDetails.setCurrentState(responseAddress.getState());
+                            }
+                            com.smartstay.smartstay.dto.kyc.KycAddressDetails responsePermanentAddress = aadhaarDetails.getPermanentAddress();
+                            if (responsePermanentAddress != null) {
+                                addressDetails.setPermanentCity(responsePermanentAddress.getDistrictOrCity());
+                                addressDetails.setPermanentAddress(responsePermanentAddress.getAddress());
+                                addressDetails.setPermanentLocality(responsePermanentAddress.getLocalityOrPostOffice());
+                                addressDetails.setPermanentPincode(responsePermanentAddress.getPincode());
+                                addressDetails.setPermanentState(responsePermanentAddress.getState());
                             }
                             addressDetails.setKycDetails(kycDetails);
+                            kycDetails.setAddressDetails(addressDetails);
 
 
+
+                            String aadhaarImage = uploadFileToS3.uploadFileToS3(FilesConfig.base64ToImage(customers.getCustomerId(), aadhaarDetails.getImage()), "kyc-pic");
+                            kycDetails.setIdPic(aadhaarImage);
 
                         }
                     }
@@ -254,5 +289,43 @@ public class KycServices {
             }
 
         }
+
+        return kycDetails;
+    }
+
+    private UploadFiles getKycPdfDocument(String customerId, String executionRequestId) {
+        String endPoint = "client/kyc/v2/media/" + executionRequestId ;
+        String verifyKycUrl = KYC_BASE_URL + "/" + endPoint;
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(verifyKycUrl)
+                .queryParam("doc_type", "AADHAAR")
+                .queryParam("base64", true);
+
+
+        String auth = KYC_USER_NAME + ":" + KYC_PASSWORD;
+        String encodedAuth = Base64.getEncoder()
+                .encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Basic "+ encodedAuth);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<AadharMediaResponse> responseEntity = restTemplate.exchange(builder.toUriString(), HttpMethod.GET, entity, AadharMediaResponse.class);
+        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            AadharMediaResponse mediaResponse = responseEntity.getBody();
+            if (mediaResponse != null && mediaResponse.getFile() != null) {
+                byte[] pdfBytes = Base64.getDecoder().decode(mediaResponse.getFile().getBytes());
+
+                File aadhaarPdf = FilesConfig.writePdf(pdfBytes, customerId);
+                UploadFiles uploadFiles = uploadFileToS3.uploadCustomerFiles(aadhaarPdf, "kyc-docs");
+                return uploadFiles;
+            }
+
+
+        }
+
+        return null;
     }
 }

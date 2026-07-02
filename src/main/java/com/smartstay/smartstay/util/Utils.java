@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.OrderHistory;
 import com.smartstay.smartstay.responses.customer.EffectiveMonth;
 import org.springframework.security.core.parameters.P;
 
+import java.io.File;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -211,6 +212,8 @@ public class Utils {
     public static final String CANNOT_APPLY_DISCOUNT_CANCELLED = "Cannot apply discount for cancelled invoices";
     public static final String CANNOT_APPLY_DISCOUNT_ADVANCE = "Cannot apply discount for advance invoices";
     public static final String CUSTOMER_VERIFIED_KYC = "Customer is already verified";
+    public static final String KYC_VERIFICATION_ALREADY_REQUESTED = "Kyc verification is already requested";
+    public static final String CANNOT_REQUEST_VACATED_TENANT = "Cannot request for vacated tenant";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String INVALID_DUE_DYS = "Invalid due days";
     public static final String INVALID_NOTICE_DAYS = "Invalid notice days";
@@ -880,5 +883,6 @@ public class Utils {
         }
         return oh.getPaymentType();
     }
+
 }
 

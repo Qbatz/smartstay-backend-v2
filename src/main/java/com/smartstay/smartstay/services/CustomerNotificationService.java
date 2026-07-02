@@ -114,7 +114,7 @@ public class CustomerNotificationService {
             String description = "Your hostel owner " + NameUtils.getFullName(users.getFirstName(), users.getLastName()) + " wants you to complete your KYC verification. Please finish it at your earliest convenience.";
             CustomerNotifications customerNotifications = new CustomerNotifications();
             customerNotifications.setActive(true);
-            customerNotifications.setNotificationType(NotificationType.COMPLAINT.name());
+            customerNotifications.setNotificationType(NotificationType.KYC_REQUEST.name());
             customerNotifications.setUserId(customers.getCustomerId());
             customerNotifications.setHostelId(hostelId);
             customerNotifications.setDescription(description);

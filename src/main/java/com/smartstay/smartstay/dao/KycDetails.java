@@ -25,6 +25,8 @@ public class KycDetails {
     private Date createdAt;
     private Date completedAt;
     private String aadhaarNumber;
+    private String kycDocument;
+    private String kycDocumentType;
     private String documentType;
     private String gender;
     private String idPic;
@@ -37,6 +39,7 @@ public class KycDetails {
 
     @OneToOne(mappedBy = "kycDetails",  cascade = CascadeType.ALL, orphanRemoval = true)
     private KycAddressDetails addressDetails;
+
 
     @OneToOne()
     @JoinColumn(name = "customer_id", referencedColumnName = "customerId")

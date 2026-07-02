@@ -38,6 +38,7 @@ import com.smartstay.smartstay.repositories.DraftsRepository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
+import com.smartstay.smartstay.responses.customer.KycAddressDetails;
 import com.smartstay.smartstay.responses.settlement.DeductionsInfo;
 import com.smartstay.smartstay.responses.settlement.DeductionsItem;
 import com.smartstay.smartstay.util.FilterKeywords;
@@ -1493,12 +1494,29 @@ public class CustomersService {
         KycDetails kycDetails = customers.getKycDetails();
         KycInformations kycInfo = null;
         if (kycDetails == null) {
-            kycInfo = new KycInformations("PENDING", null, null, null);
+            kycInfo = new KycInformations("PENDING", null, null, null, null, null, null, null);
         } else {
             if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.REQUESTED.name()) || kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
-                kycServices.verifyStatus(customers);
+                kycDetails = kycServices.verifyStatus(customers);
             }
-            kycInfo = new KycInformations(kycDetails.getCurrentStatus(), null, null, null);
+            if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.VERIFIED.name())) {
+                com.smartstay.smartstay.dao.KycAddressDetails addressDetails = kycDetails.getAddressDetails();
+                KycAddressDetails currentAddress = null;
+                KycAddressDetails permanentAddress = null;
+                if (addressDetails != null) {
+                    currentAddress =  new KycAddressDetails(addressDetails.getCurrentLocality(), addressDetails.getCurrentCity(), addressDetails.getCurrentState(), addressDetails.getCurrentPincode(), addressDetails.getCurrentAddress());
+                    permanentAddress = new KycAddressDetails(addressDetails.getPermanentLocality(), addressDetails.getPermanentCity(), addressDetails.getPermanentState(), addressDetails.getPermanentPincode(), addressDetails.getPermanentAddress());
+                }
+
+                kycInfo = new KycInformations(KycStatus.VERIFIED.name(), kycDetails.getIdPic(), kycDetails.getAadhaarNumber(), Utils.dateToString(kycDetails.getCompletedAt()), kycDetails.getKycDocument(), kycDetails.getKycDocumentType(), currentAddress, permanentAddress);
+            }
+            else if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
+                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null);
+            }
+            else {
+                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null);
+            }
+
         }
 
         CheckoutInfo checkoutInfo = null;

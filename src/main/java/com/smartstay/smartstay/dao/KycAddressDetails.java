@@ -11,11 +11,19 @@ public class KycAddressDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String address;
-    private String locality;
-    private String city;
-    private String state;
-    private String pincode;
+    //full address
+    private String currentAddress;
+    private String currentLocality;
+    private String currentCity;
+    private String currentState;
+    private String currentPincode;
+
+    //full address
+    private String permanentAddress;
+    private String permanentLocality;
+    private String permanentCity;
+    private String permanentState;
+    private String permanentPincode;
 
     @OneToOne()
     @JoinColumn(name = "kyc_details_id", referencedColumnName = "id")

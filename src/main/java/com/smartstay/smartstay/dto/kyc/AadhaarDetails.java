@@ -31,6 +31,8 @@ public class AadhaarDetails {
     private String permanentAddressString;
     @JsonProperty("permanent_address_details")
     private KycAddressDetails permanentAddress;
+    @JsonProperty("current_address_details")
+    private KycAddressDetails currentAddressDetails;
     @JsonProperty("completed_at")
     private String completedAt;
 
