@@ -1,6 +1,7 @@
 package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.rentHistory.UpcomingRents;
 import com.smartstay.smartstay.ennum.*;
@@ -50,6 +51,29 @@ public class SmartstayApplication {
 //                    }
 //                }
 //
+//
+//            }
+//        };
+//    }
+
+//    @Bean
+//    public CommandLineRunner addEbToReassignInvoice(InvoicesV1Repository invoicesV1Repository, InvoiceItemsRepository invoiceItemsRepository) {
+//        return args -> {
+//            InvoicesV1 invoicesV1 = invoicesV1Repository.findById("5f8468e6-146c-4296-9f9d-35ab7bf6ce7e").orElse(null);
+//            if (invoicesV1 != null) {
+//
+//
+////                InvoiceItems items = new InvoiceItems();
+////                items.setInvoice(invoicesV1);
+////                items.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+////                items.setAmount(2085.0);
+////                invoiceItemsRepository.save(items);
+//
+////                invoicesV1.setTotalAmount(Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount() + 2085.0));
+//                invoicesV1.setBasePrice(Utils.roundOffWithTwoDigit(10885));
+//                invoicesV1.setSubTotal(Utils.roundOffWithTwoDigit(10885));
+//
+//                invoicesV1Repository.save(invoicesV1);
 //
 //            }
 //        };
