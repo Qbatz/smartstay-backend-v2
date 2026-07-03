@@ -1499,9 +1499,11 @@ public class CustomersService {
         CustomerAddress address = new CustomerAddress(customers.getStreet(), customers.getHouseNo(), customers.getLandmark(), customers.getPincode(), customers.getCity(), customers.getState());
         KycDetails kycDetails = customers.getKycDetails();
         KycInformations kycInfo = null;
+        String kycDocumentFromDigio = null;
         if (kycDetails == null) {
-            kycInfo = new KycInformations("PENDING", null, null, null, null, null, null, null);
-        } else {
+            kycInfo = new KycInformations("PENDING", null, null, null, null,  null, null, null, null, null);
+        }
+        else {
             if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.REQUESTED.name()) || kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
                 kycDetails = kycServices.verifyStatus(customers);
             }
@@ -1510,17 +1512,56 @@ public class CustomersService {
                 KycAddressDetails currentAddress = null;
                 KycAddressDetails permanentAddress = null;
                 if (addressDetails != null) {
-                    currentAddress =  new KycAddressDetails(addressDetails.getCurrentLocality(), addressDetails.getCurrentCity(), addressDetails.getCurrentState(), addressDetails.getCurrentPincode(), addressDetails.getCurrentAddress());
-                    permanentAddress = new KycAddressDetails(addressDetails.getPermanentLocality(), addressDetails.getPermanentCity(), addressDetails.getPermanentState(), addressDetails.getPermanentPincode(), addressDetails.getPermanentAddress());
+                    String houseNumber = null;
+                    String permanentStreetName = null;
+                    String currentStreetName = null;
+
+                    String permanentAddressHouseNumber = null;
+                    String[] currentAddressArray = new String[0];
+                    String[] permanentAddressArray = new String[0];
+
+                    if (addressDetails.getCurrentAddress() != null) {
+                        currentAddressArray = addressDetails.getCurrentAddress().split(",");
+                        if (currentAddressArray.length > 1) {
+                            houseNumber = currentAddressArray[1];
+                        }
+                        if (currentAddressArray.length > 2) {
+                            currentStreetName = currentAddressArray[2];
+                        }
+                    }
+
+                    if (addressDetails.getPermanentAddress() != null) {
+                        permanentAddressArray = addressDetails.getPermanentAddress().split(",");
+                        if (permanentAddressArray.length > 1) {
+                            permanentAddressHouseNumber = permanentAddressArray[1];
+                        }
+
+                        if (permanentAddressArray.length > 2) {
+                            permanentStreetName = permanentAddressArray[2];
+                        }
+                    }
+
+                    currentAddress =  new KycAddressDetails(houseNumber, currentStreetName, addressDetails.getCurrentLocality(), addressDetails.getCurrentState(), addressDetails.getCurrentPincode(), addressDetails.getCurrentAddress());
+                    permanentAddress = new KycAddressDetails(permanentAddressHouseNumber, permanentStreetName, addressDetails.getPermanentLocality(), addressDetails.getPermanentState(), addressDetails.getPermanentPincode(), addressDetails.getPermanentAddress());
                 }
 
-                kycInfo = new KycInformations(KycStatus.VERIFIED.name(), kycDetails.getIdPic(), kycDetails.getAadhaarNumber(), Utils.dateToString(kycDetails.getCompletedAt()), kycDetails.getKycDocument(), kycDetails.getKycDocumentType(), currentAddress, permanentAddress);
+                kycDocumentFromDigio = kycDetails.getKycDocument();
+                kycInfo = new KycInformations(KycStatus.VERIFIED.name(),
+                        kycDetails.getIdPic(),
+                        kycDetails.getAadhaarNumber(),
+                        kycDetails.getNameInDocument(),
+                        kycDetails.getDateOfBirth(),
+                        Utils.dateToString(kycDetails.getCompletedAt()),
+                        kycDetails.getKycDocument(),
+                        kycDetails.getKycDocumentType(),
+                        currentAddress,
+                        permanentAddress);
             }
             else if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
-                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null);
+                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null, null, null);
             }
             else {
-                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null);
+                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null,null, null, null, null, null, null);
             }
 
         }
@@ -1565,7 +1606,7 @@ public class CustomersService {
         }
 
         WalletInfo walletInfo = new WalletInfo(walletAmount, walletTransactions);
-        CustomerFiles customerFiles = customerDocumentsService.getCustomerFiles(customerId);
+        CustomerFiles customerFiles = customerDocumentsService.getCustomerFiles(customerId, kycDocumentFromDigio);
         List<AdditionalContacts> additionalContacts = additionalContactService.getAdditionalContact(customers.getHostelId(), customerId);
 
         boolean isJoiningDateEditable = !bedHistory.hasReassignedHistory(customerId);
