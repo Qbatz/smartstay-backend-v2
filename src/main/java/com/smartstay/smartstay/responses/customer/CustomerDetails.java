@@ -46,5 +46,7 @@ public record CustomerDetails(String customerId,
                               String createdByName,
                               String createdByInitials,
                               String createdByPic,
-                              List<EffectiveMonth> effectiveFromMonth) {
+                              List<EffectiveMonth> effectiveFromMonth,
+                              String idProofType,
+                              String idProofNo) {
 }

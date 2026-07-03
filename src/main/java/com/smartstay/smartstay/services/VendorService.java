@@ -20,6 +20,7 @@ import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.ennum.VendorPaymentStatus;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
+import com.smartstay.smartstay.payloads.vendor.UpdateVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
 import com.smartstay.smartstay.repositories.CountriesRepository;
 import com.smartstay.smartstay.repositories.ExpenseItemRepository;
@@ -737,6 +738,15 @@ public class VendorService {
         return calendar.getTime();
     }
 
+    /**
+     * Normalizes an optional string for a (full-representation) update: returns the trimmed value, or
+     * {@code null} when the input is null/blank. Applied unconditionally so an optional field can be
+     * cleared — sending null or an empty string stores NULL instead of retaining the previous value.
+     */
+    private String clearableValue(String value) {
+        return (value == null || value.trim().isEmpty()) ? null : value.trim();
+    }
+
     public ResponseEntity<?> updateVendorById(int vendorId, UpdateVendor updateVendor, MultipartFile file) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.UNAUTHORIZED);
@@ -770,27 +780,20 @@ public class VendorService {
         if (updateVendor.firstName() != null && !updateVendor.firstName().isEmpty()) {
             existingVendor.setFirstName(updateVendor.firstName());
         }
-        if (updateVendor.lastName() != null && !updateVendor.lastName().isEmpty()) {
-            existingVendor.setLastName(updateVendor.lastName());
-        }
+        // Optional field: applied unconditionally so it can be cleared (null/blank -> NULL).
+        existingVendor.setLastName(clearableValue(updateVendor.lastName()));
         if (updateVendor.mobile() != null && !updateVendor.mobile().isEmpty()) {
             existingVendor.setMobile(normalizeMobile(updateVendor.countryCode(), updateVendor.mobile()));
         }
         if (updateVendor.countryCode() != null && !updateVendor.countryCode().isEmpty()) {
             existingVendor.setCountryCode(updateVendor.countryCode().replace("+", "").trim());
         }
-        if (updateVendor.mailId() != null && !updateVendor.mailId().isEmpty()) {
-            existingVendor.setEmailId(updateVendor.mailId());
-        }
-        if (updateVendor.houseNo() != null && !updateVendor.houseNo().isEmpty()) {
-            existingVendor.setHouseNo(updateVendor.houseNo());
-        }
-        if (updateVendor.landmark() != null && !updateVendor.landmark().isEmpty()) {
-            existingVendor.setLandMark(updateVendor.landmark());
-        }
-        if (updateVendor.area() != null && !updateVendor.area().isEmpty()) {
-            existingVendor.setArea(updateVendor.area());
-        }
+        // Optional fields: applied unconditionally so they can be cleared (null/blank -> NULL). Email is
+        // stored NULL when blank so it never collides on the per-hostel unique email index.
+        existingVendor.setEmailId(clearableValue(updateVendor.mailId()));
+        existingVendor.setHouseNo(clearableValue(updateVendor.houseNo()));
+        existingVendor.setLandMark(clearableValue(updateVendor.landmark()));
+        existingVendor.setArea(clearableValue(updateVendor.area()));
         if (updateVendor.pinCode() != null) {
             existingVendor.setPinCode(updateVendor.pinCode());
         }
@@ -812,31 +815,19 @@ public class VendorService {
         if (updateVendor.vendorCategory() != null) {
             existingVendor.setVendorCategory(updateVendor.vendorCategory());
         }
-        if (updateVendor.contactPerson() != null) {
-            existingVendor.setContactPerson(updateVendor.contactPerson());
-        }
         // businessMobileCode is mandatory (validated above); always persist the trimmed value.
         existingVendor.setBusinessMobileCode(updateVendor.businessMobileCode().trim());
-        // contactPersonMobile is updateable; existing mobile-number handling is preserved.
-        if (updateVendor.contactPersonMobile() != null && !updateVendor.contactPersonMobile().trim().isEmpty()) {
-            existingVendor.setContactPersonMobile(updateVendor.contactPersonMobile().trim());
-        }
-        // contactPersonMobileCode is optional; persist the updated value when supplied.
-        if (updateVendor.contactPersonMobileCode() != null && !updateVendor.contactPersonMobileCode().trim().isEmpty()) {
-            existingVendor.setContactPersonMobileCode(updateVendor.contactPersonMobileCode().trim());
-        }
-        if (updateVendor.description() != null) {
-            existingVendor.setDescription(updateVendor.description());
-        }
+        // Optional fields: applied unconditionally so they can be cleared (null/blank -> NULL).
+        existingVendor.setContactPerson(clearableValue(updateVendor.contactPerson()));
+        existingVendor.setContactPersonMobile(clearableValue(updateVendor.contactPersonMobile()));
+        existingVendor.setContactPersonMobileCode(clearableValue(updateVendor.contactPersonMobileCode()));
+        existingVendor.setDescription(clearableValue(updateVendor.description()));
         if (updateVendor.vendorCode() != null) {
             existingVendor.setVendorCode(updateVendor.vendorCode());
         }
-        if (updateVendor.gst() != null) {
-            existingVendor.setGst(updateVendor.gst());
-        }
-        if (updateVendor.pan() != null) {
-            existingVendor.setPan(updateVendor.pan());
-        }
+        // Optional fields: applied unconditionally so they can be cleared (null/blank -> NULL).
+        existingVendor.setGst(clearableValue(updateVendor.gst()));
+        existingVendor.setPan(clearableValue(updateVendor.pan()));
         if (updateVendor.allowCredit() != null) {
             existingVendor.setAllowCredit(updateVendor.allowCredit());
         }
@@ -883,7 +874,9 @@ public class VendorService {
         }
 
         String hostelId = payloads.hostelId();
-        String normalizedMobile = normalizeMobile(payloads.countryCode(), payloads.mobile());
+        // countryCode is no longer collected from the request (single-country); the business dialing
+        // code drives mobile normalization.
+        String normalizedMobile = normalizeMobile(payloads.businessMobileCode(), payloads.mobile());
         // Email must be unique within the hostel (case-insensitive). Blank emails are stored as null so
         // multiple vendors without an email remain allowed.
         String email = (payloads.mailId() != null && !payloads.mailId().trim().isEmpty())
@@ -908,7 +901,8 @@ public class VendorService {
         VendorV1 vendorV1 = new VendorV1();
         vendorV1.setFirstName(payloads.firstName());
         vendorV1.setLastName(payloads.lastName());
-        vendorV1.setCountryCode(payloads.countryCode() == null ? null : payloads.countryCode().replace("+", "").trim());
+        // Single-country: countryCode is no longer client-supplied; default it for every vendor.
+        vendorV1.setCountryCode("1");
         vendorV1.setBusinessMobileCode(payloads.businessMobileCode() != null ? payloads.businessMobileCode().trim() : null);
         vendorV1.setMobile(normalizedMobile);
         vendorV1.setEmailId(email);
@@ -1058,6 +1052,12 @@ public class VendorService {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.BAD_REQUEST);
         }
 
+        // A category still assigned to any active vendor cannot be disabled (efficient EXISTS check,
+        // no entities loaded).
+        if (vendorRepository.existsByVendorCategoryAndIsActiveTrue(categoryId)) {
+            return new ResponseEntity<>(Utils.VENDOR_CATEGORY_ASSIGNED_TO_VENDORS, HttpStatus.BAD_REQUEST);
+        }
+
         // A category is "in use" if any vendor assigned to it has expense records (category -> vendors
         // -> expenses). Resolve the category's vendors, then run one efficient EXISTS check.
         List<Integer> categoryVendorIds = vendorRepository.findVendorIdsByVendorCategory(categoryId);
@@ -1074,6 +1074,47 @@ public class VendorService {
         vendorCategoriesRepository.save(existingCategory);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateVendorCategory(int categoryId, String hostelId, UpdateVendorCategory payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        // Only the name is updateable; reject a blank name (bean validation covers null/empty, this
+        // also guards a whitespace-only value).
+        String categoryName = payloads.categoryName() == null ? null : payloads.categoryName().trim();
+        if (categoryName == null || categoryName.isEmpty()) {
+            return new ResponseEntity<>(Utils.CATEGORY_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        // Ownership: the category must exist, be active, and belong to the supplied hostel. A category
+        // from another hostel is not found by this lookup, so cross-hostel updates are rejected.
+        VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryIdAndHostelId(categoryId, hostelId);
+        if (existingCategory == null || !existingCategory.isEnabled()) {
+            return new ResponseEntity<>(Utils.INVALID_CATEGORY_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        // Name must remain unique within the hostel (case-insensitive), ignoring this same category.
+        VendorCategories duplicate = vendorCategoriesRepository.findByCategoryNameIgnoreCaseAndHostelId(categoryName, hostelId);
+        if (duplicate != null && duplicate.getCategoryId() != categoryId) {
+            return new ResponseEntity<>(Utils.CATEGORY_NAME_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
+        }
+
+        existingCategory.setCategoryName(categoryName);
+        existingCategory.setModifiedAt(new Date());
+        existingCategory.setModifiedBy(userId);
+        vendorCategoriesRepository.save(existingCategory);
+
+        return new ResponseEntity<>(
+                new VendorCategoryResponse(existingCategory.getCategoryId(), existingCategory.getCategoryName()),
+                HttpStatus.OK);
     }
 
     public ResponseEntity<?> getAllVendorCategories(String hostelId) {

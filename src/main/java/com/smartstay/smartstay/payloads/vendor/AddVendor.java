@@ -8,8 +8,6 @@ public record AddVendor(
 
         String lastName,
 
-        String countryCode,
-
         @NotNull(message = "Business mobile code is required") @NotEmpty(message = "Business mobile code is required") String businessMobileCode,
 
         @NotNull(message = "Mobile no is required") @NotEmpty(message = "Mobile no is required") String mobile,

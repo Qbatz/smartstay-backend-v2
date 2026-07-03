@@ -73,11 +73,13 @@ public class Utils {
     public static final String ASSIGNED = "Asset Assigned Successfully";
     public static final String STATUS_UPDATED = "Status Updated Successfully";
     public static final String CREATED = "Created Successfully";
+    public static final String CUSTOMER_CREATED = "Customer created successfully.";
     public static final String DELETED = "Deleted Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
     public static final String VENDOR_HAS_EXPENSES = "Vendor cannot be deleted because it has associated expense records.";
     public static final String VENDOR_CATEGORY_IN_USE = "Vendor category cannot be disabled because it is associated with existing expense records.";
+    public static final String VENDOR_CATEGORY_ASSIGNED_TO_VENDORS = "Vendor category cannot be disabled because it is assigned to one or more vendors.";
     public static final String VENDOR_EMAIL_EXISTS = "A vendor with this email address already exists.";
     public static final String VENDOR_MOBILE_EXISTS = "A vendor with this mobile number already exists.";
     public static final String BUSINESS_MOBILE_CODE_REQUIRED = "Business mobile code is required";
@@ -183,6 +185,7 @@ public class Utils {
     public static final String CATEGORY_NAME_CATEGORY_ID_ERROR = "Category name or Category id is required";
     public static final String CATEGORY_NAME_ALREADY_REGISTERED = "Category name is already exists";
     public static final String CATEGORY_ALREADY_ADDED = "Already added";
+    public static final String CATEGORY_NAME_REQUIRED = "Category name is required";
     public static final String UNIT_ALREADY_ADDED = "Already added";
     public static final String INVALID_UNIT = "Invalid unit";
     public static final String SUB_CATEGORY_NAME_ALREADY_REGISTERED = "Subcategory name is already exists";
