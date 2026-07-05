@@ -428,10 +428,9 @@ public class CustomersService {
         }).collect(Collectors.toList());
 
         listCustomers.sort(Comparator
-                .comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorName, Comparator.nullsFirst(String::compareToIgnoreCase))
-                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomName, Comparator.nullsFirst(String::compareToIgnoreCase))
-                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds))
-                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedName, Comparator.nullsFirst(Utils::compareAlphanumeric)));
+                .comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds))
+                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds))
+                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
 
         CustomersList response = new CustomersList(hostelId, listCustomers.size(), null, listCustomers);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -559,22 +558,7 @@ public class CustomersService {
         List<List<Object>> listTenants = customersList.stream()
         .map(i -> new TenantTableMapper(listBedDetails, listBookings, tableColumns, draftByCustomerId).apply(i))
         .collect(Collectors.toCollection(ArrayList::new));
-        int floorIdx = tableColumns.indexOf("Floor");
-        int roomIdx = tableColumns.indexOf("Room");
-        int bedIdx = tableColumns.indexOf("Bed");
-        listTenants.sort((a, b) -> {
-            String f1 = floorIdx >= 0 ? (String) a.get(floorIdx) : null;
-            String f2 = floorIdx >= 0 ? (String) b.get(floorIdx) : null;
-            int cmp = Comparator.nullsFirst(String::compareTo).compare(f1, f2);
-            if (cmp != 0) return cmp;
-            String r1 = roomIdx >= 0 ? (String) a.get(roomIdx) : null;
-            String r2 = roomIdx >= 0 ? (String) b.get(roomIdx) : null;
-            cmp = Comparator.nullsFirst(String::compareTo).compare(r1, r2);
-            if (cmp != 0) return cmp;
-            String be1 = bedIdx >= 0 ? (String) a.get(bedIdx) : null;
-            String be2 = bedIdx >= 0 ? (String) b.get(bedIdx) : null;
-            return Comparator.nullsFirst(Utils::compareAlphanumeric).compare(be1, be2);
-        });
+
 
         FilterOptions filterOptions = getTenantFilterOptions(hostelId);
 

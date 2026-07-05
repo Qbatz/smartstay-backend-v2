@@ -71,15 +71,15 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     @Query(value = """
             SELECT DISTINCT c FROM Customers c
             LEFT JOIN BookingsV1 b ON c.customerId = b.customerId
+            LEFT JOIN Draft d ON c.customerId = d.customerId
             WHERE c.hostelId=:hostelId AND
             (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR
             LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND
             c.currentStatus IN (:type) AND (:customerIds IS NULL OR c.customerId IN (:customerIds))
-            ORDER BY b.floorId ASC, b.roomId ASC, b.bedId ASC
+            ORDER BY COALESCE(b.floorId, d.floorId) ASC, COALESCE(b.roomId, d.roomId) ASC, COALESCE(b.bedId, d.bedId) ASC, c.createdAt DESC
             """,
             countQuery = """
                     SELECT COUNT(DISTINCT c) FROM Customers c
-                    LEFT JOIN BookingsV1 b ON c.customerId = b.customerId
                     WHERE c.hostelId=:hostelId AND
                     (:name IS NULL OR LOWER(c.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR
                     LOWER(c.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND
