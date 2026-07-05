@@ -62,11 +62,19 @@ public class ExpenseController {
 
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getExpenses(@PathVariable("hostelId") String hostelId,
+                                         @RequestParam(value = "query", required = false) String query,
                                          @RequestParam(value = "name", required = false) String name,
+                                         @RequestParam(value = "category", required = false) Integer category,
                                          @RequestParam(value = "categoryId", required = false) Integer categoryId,
+                                         @RequestParam(value = "paymentStatus", required = false) String paymentStatus,
+                                         @RequestParam(value = "paymentDate", required = false) String paymentDate,
                                          @RequestParam(value = "page", defaultValue = "1") int page,
                                          @RequestParam(value = "size", defaultValue = "10") int size) {
-        return expenseService.getAllExpenses(hostelId, name, categoryId, page, size);
+        // Prefer the documented parameter names (query/category); fall back to the legacy names
+        // (name/categoryId) for backward compatibility.
+        String search = (query != null && !query.isBlank()) ? query : name;
+        Integer categoryFilter = category != null ? category : categoryId;
+        return expenseService.getAllExpenses(hostelId, search, categoryFilter, paymentStatus, paymentDate, page, size);
     }
 
     @GetMapping("/{hostelId}/{expenseId}")
