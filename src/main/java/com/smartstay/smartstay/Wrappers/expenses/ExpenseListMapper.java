@@ -37,13 +37,15 @@ public class ExpenseListMapper implements Function<ExpenseList, com.smartstay.sm
         String bankName = null;
 
 
-        if (expenseList.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+        // accountType is null for expenses with no bank (e.g. PENDING); compare null-safe with the
+        // constant on the left so a null account type simply leaves bankName unresolved here.
+        if (BankAccountType.CASH.name().equalsIgnoreCase(expenseList.getAccountType())) {
             bankName = "Cash";
         }
-        if (expenseList.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+        if (BankAccountType.CARD.name().equalsIgnoreCase(expenseList.getAccountType())) {
             bankName = "Card";
         }
-        if (expenseList.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
+        if (BankAccountType.UPI.name().equalsIgnoreCase(expenseList.getAccountType())) {
             bankName = "Upi";
         }
 
