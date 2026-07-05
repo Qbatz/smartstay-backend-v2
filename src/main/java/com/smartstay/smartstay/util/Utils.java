@@ -92,6 +92,7 @@ public class Utils {
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
     public static final String ACTIVE_USERS_FOUND = "Active users found";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
+    public static final String DRAFT_NOT_FOUND = "No draft found for the given customer";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
     public static final String INVALID_READING_ID = "Invalid Reading Id";
     public static final String INVALID_TRANSACTION_ID = "Invalid transaction id";

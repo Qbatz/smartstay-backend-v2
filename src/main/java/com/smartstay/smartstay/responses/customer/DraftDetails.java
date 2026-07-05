@@ -8,6 +8,7 @@ import com.smartstay.smartstay.payloads.customer.Booking;
 import com.smartstay.smartstay.payloads.customer.Guardian;
 import com.smartstay.smartstay.payloads.customer.IdProof;
 import com.smartstay.smartstay.payloads.customer.JobDetails;
+import com.smartstay.smartstay.payloads.customer.VehicleDetails;
 
 import java.util.List;
 
@@ -33,6 +34,7 @@ public record DraftDetails(
     List<Guardian> guardians,
     String panPic,
     String aadharPic,
-    List<Deductions> deductions
+    List<Deductions> deductions,
+    VehicleDetails vehicleDetails
 ) {
 }
