@@ -96,4 +96,14 @@ public class Draft {
 
     @Column(name = "guardians_json", columnDefinition = "LONGTEXT")
     private String guardiansJson;
+
+    // Optional vehicle details captured with the draft. All nullable.
+    @Column(name = "vehicle_type", length = 100)
+    private String vehicleType;
+
+    @Column(name = "vehicle_number", length = 50)
+    private String vehicleNumber;
+
+    @Column(name = "is_parking_space_required")
+    private Boolean isParkingSpaceRequired;
 }

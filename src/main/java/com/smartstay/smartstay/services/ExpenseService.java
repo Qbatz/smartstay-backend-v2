@@ -954,7 +954,8 @@ public class ExpenseService {
     }
 
     @Transactional
-    public ResponseEntity<?> getAllExpenses(String hostelId, String name, Integer categoryId, Integer page, Integer size) {
+    public ResponseEntity<?> getAllExpenses(String hostelId, String name, Integer categoryId,
+                                            String paymentStatus, String paymentDate, Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -974,15 +975,27 @@ public class ExpenseService {
 
         String searchName = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
         Long categoryFilter = categoryId != null ? categoryId.longValue() : null;
+        // Case-insensitive payment status (compared with LOWER() in SQL); blank => no status filter.
+        String statusFilter = (paymentStatus != null && !paymentStatus.trim().isEmpty()) ? paymentStatus.trim() : null;
+        // Date-only filter on created_at; parsed as yyyy-MM-dd (ISO). Blank => no date filter; a
+        // malformed value returns 400 rather than propagating a parse exception.
+        Date dateFilter = null;
+        if (paymentDate != null && !paymentDate.trim().isEmpty()) {
+            try {
+                dateFilter = Utils.stringToDate(paymentDate.trim(), Utils.DATE_FORMAT_ZOHO);
+            } catch (RuntimeException ex) {
+                return new ResponseEntity<>(Utils.INVALID_PAYMENT_DATE, HttpStatus.BAD_REQUEST);
+            }
+        }
         int pageNumber = (page == null || page < 1) ? 1 : page;
         int pageSize = (size == null || size < 1) ? 10 : size;
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
         // Pagination, the filtered page, and the summary are identical for web and mobile.
         Page<com.smartstay.smartstay.dto.expenses.ExpenseList> expensePage =
-                expensesRepository.findExpensesForHostel(hostelId, searchName, categoryFilter, pageable);
+                expensesRepository.findExpensesForHostel(hostelId, searchName, categoryFilter, statusFilter, dateFilter, pageable);
         List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections = expensePage.getContent();
-        ExpenseSummary expenseSummary = buildExpenseSummary(hostelId, searchName, categoryFilter);
+        ExpenseSummary expenseSummary = buildExpenseSummary(hostelId, searchName, categoryFilter, statusFilter, dateFilter);
 
         int currentPage = expensePage.getPageable().getPageNumber() + 1;
         int totalPages = expensePage.getTotalPages();
@@ -994,8 +1007,9 @@ public class ExpenseService {
         return buildExpenseMobileResponse(projections, expenseSummary, totalExpenses, currentPage, totalPages, pageSize);
     }
 
-    private ExpenseSummary buildExpenseSummary(String hostelId, String name, Long categoryId) {
-        ExpenseSummaryView view = expensesRepository.getExpenseListSummary(hostelId, name, categoryId);
+    private ExpenseSummary buildExpenseSummary(String hostelId, String name, Long categoryId,
+                                               String paymentStatus, Date paymentDate) {
+        ExpenseSummaryView view = expensesRepository.getExpenseListSummary(hostelId, name, categoryId, paymentStatus, paymentDate);
         if (view == null) {
             return new ExpenseSummary(0.0, 0.0, 0.0, 0.0);
         }

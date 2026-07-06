@@ -52,5 +52,8 @@ public record SaveDraftCustomerRequest(
         Address address,
         Booking booking,
         JobDetails jobDetails,
-        List<Guardian> guardians
+        List<Guardian> guardians,
+
+        // Optional vehicle details; all sub-fields are non-mandatory.
+        VehicleDetails vehicleDetails
 ) {}
