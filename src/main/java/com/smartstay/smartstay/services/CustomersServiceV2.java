@@ -7,7 +7,15 @@ import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.Advance;
+import com.smartstay.smartstay.dao.BankingV1;
+import com.smartstay.smartstay.dao.CustomerCredentials;
+import com.smartstay.smartstay.dao.Customers;
+import com.smartstay.smartstay.dao.Draft;
+import com.smartstay.smartstay.dao.InvoicesV1;
+import com.smartstay.smartstay.dao.KycDetails;
+import com.smartstay.smartstay.dao.RentHistory;
+import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.customer.BookingInfo;
@@ -23,6 +31,7 @@ import com.smartstay.smartstay.payloads.customer.IdProof;
 import com.smartstay.smartstay.payloads.customer.JobDetails;
 import com.smartstay.smartstay.payloads.customer.SaveDraftCustomerRequest;
 import com.smartstay.smartstay.payloads.drafts.UpdateDrafts;
+import com.smartstay.smartstay.payloads.customer.VehicleDetails;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.repositories.DraftsRepository;
@@ -278,6 +287,12 @@ public class CustomersServiceV2 {
         draft.setUpdatedAt(now);
         draft.setAadharPic(aadharImage);
         draft.setPanPic(panImage);
+        // Optional vehicle details; persisted only when provided (columns stay NULL otherwise).
+        if (payloads.vehicleDetails() != null) {
+            draft.setVehicleType(payloads.vehicleDetails().vehicleType());
+            draft.setVehicleNumber(payloads.vehicleDetails().vehicleNumber());
+            draft.setIsParkingSpaceRequired(payloads.vehicleDetails().isParkingSpaceRequired());
+        }
 
         try {
             if (payloads.idProof() != null) {
@@ -306,6 +321,157 @@ public class CustomersServiceV2 {
                 "customerId", savedCustomer.getCustomerId(),
                 "currentStatus", savedCustomer.getCurrentStatus()
         ), HttpStatus.CREATED);
+    }
+
+    /**
+     * Updates an existing customer draft (identified by hostelId + customerId). Unlike the standard
+     * update APIs, every field is applied as sent — null / empty / blank values overwrite existing data
+     * so the user can clear previously entered draft information. No mandatory-field validation is
+     * enforced (the controller omits {@code @Valid}); only entity-existence / data-integrity checks run.
+     * The draft is never created here — a missing draft returns an error.
+     */
+    @Transactional
+    public ResponseEntity<?> updateDraft(String hostelId, String customerId,
+                                         MultipartFile profilePic,
+                                         MultipartFile aadharPic,
+                                         MultipartFile panPic,
+                                         SaveDraftCustomerRequest payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (hostelId == null || hostelId.isBlank() || customerId == null || customerId.isBlank()) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        String loginId = authentication.getName();
+        Users user = userService.findUserByUserId(loginId);
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.WALK_IN.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(loginId, hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        // Locate the existing draft: the customer must exist, belong to this hostel, and still be a DRAFT.
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getHostelId() == null || !customers.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!CustomerStatus.DRAFT.name().equalsIgnoreCase(customers.getCurrentStatus())) {
+            return new ResponseEntity<>(Utils.DRAFT_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        Draft draft = draftsRepository.findById(customerId).orElse(null);
+        if (draft == null) {
+            return new ResponseEntity<>(Utils.DRAFT_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        // Data-integrity check (not a mandatory-field check): if a full bed selection is supplied it must
+        // reference a real floor/room/bed in this hostel.
+        if (payloads.floorId() != null && payloads.roomId() != null && payloads.bedId() != null) {
+            if (!floorsService.checkFloorExistForHostel(payloads.floorId(), hostelId)) {
+                return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.BAD_REQUEST);
+            }
+            if (!roomsService.checkRoomExistForFloor(payloads.floorId(), payloads.roomId())) {
+                return new ResponseEntity<>(Utils.N0_ROOM_FOUND_FLOOR, HttpStatus.BAD_REQUEST);
+            }
+            if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(), hostelId)) {
+                return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        // Images are binary, not clearable text fields: replace only when a new file is uploaded, otherwise
+        // keep the existing image.
+        if (profilePic != null && !profilePic.isEmpty()) {
+            customers.setProfilePic(uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(profilePic), "users/profile"));
+        }
+        if (aadharPic != null && !aadharPic.isEmpty()) {
+            draft.setAadharPic(uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(aadharPic), "users/profile"));
+        }
+        if (panPic != null && !panPic.isEmpty()) {
+            draft.setPanPic(uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(panPic), "users/profile"));
+        }
+
+        // Serialize the object fields up-front so a bad payload aborts before any partial state is applied.
+        String deductionsJson;
+        String idProofJson;
+        String addressJson;
+        String bookingJson;
+        String jobDetailsJson;
+        String guardiansJson;
+        try {
+            deductionsJson = (payloads.deductions() != null && !payloads.deductions().isEmpty())
+                    ? objectMapper.writeValueAsString(payloads.deductions()) : null;
+            idProofJson = payloads.idProof() != null ? objectMapper.writeValueAsString(payloads.idProof()) : null;
+            addressJson = payloads.address() != null ? objectMapper.writeValueAsString(payloads.address()) : null;
+            bookingJson = payloads.booking() != null ? objectMapper.writeValueAsString(payloads.booking()) : null;
+            jobDetailsJson = payloads.jobDetails() != null ? objectMapper.writeValueAsString(payloads.jobDetails()) : null;
+            guardiansJson = payloads.guardians() != null ? objectMapper.writeValueAsString(payloads.guardians()) : null;
+        } catch (JsonProcessingException e) {
+            return new ResponseEntity<>("Invalid JSON payload", HttpStatus.BAD_REQUEST);
+        }
+
+        // Basic customer fields on the draft — applied as sent so empty values clear the column.
+        customers.setFirstName(payloads.firstName());
+        customers.setLastName(payloads.lastName());
+        customers.setMobile(payloads.mobile());
+        customers.setEmailId(payloads.emailId());
+        customers.setExpJoiningDate(parseDraftDate(payloads.joiningDate()));
+        customers.setLastUpdatedAt(new Date());
+        customers.setUpdatedBy(loginId);
+
+        // Draft detail fields — every value applied as sent (null/empty clears).
+        draft.setJoiningDate(parseDraftDate(payloads.joiningDate()));
+        draft.setBookingDate(parseDraftDate(payloads.bookingDate()));
+        draft.setBookingAmount(payloads.bookingAmount());
+        draft.setFloorId(payloads.floorId());
+        draft.setRoomId(payloads.roomId());
+        draft.setBedId(payloads.bedId());
+        draft.setBankId(payloads.bankId());
+        draft.setReferenceNumber(payloads.referenceNumber());
+        draft.setAdvanceAmount(payloads.advanceAmount());
+        draft.setRentalAmount(payloads.rentalAmount());
+        draft.setStayType(payloads.stayType());
+        draft.setProRate(payloads.proRate());
+        draft.setDeductionsJson(deductionsJson);
+        draft.setIdProofJson(idProofJson);
+        draft.setAddressJson(addressJson);
+        draft.setBookingJson(bookingJson);
+        draft.setJobDetailsJson(jobDetailsJson);
+        draft.setGuardiansJson(guardiansJson);
+        // Vehicle details applied as sent; an omitted vehicleDetails object clears all three columns.
+        VehicleDetails vehicle = payloads.vehicleDetails();
+        draft.setVehicleType(vehicle != null ? vehicle.vehicleType() : null);
+        draft.setVehicleNumber(vehicle != null ? vehicle.vehicleNumber() : null);
+        draft.setIsParkingSpaceRequired(vehicle != null ? vehicle.isParkingSpaceRequired() : null);
+        draft.setUpdatedAt(new Date());
+
+        customersRepository.save(customers);
+        draftsRepository.save(draft);
+
+        return new ResponseEntity<>(Map.of(
+                "message", Utils.UPDATED,
+                "customerId", customers.getCustomerId(),
+                "currentStatus", customers.getCurrentStatus()
+        ), HttpStatus.OK);
+    }
+
+    /**
+     * Parses a user-supplied draft date, returning {@code null} for null/blank input so an empty value
+     * clears the stored date instead of failing.
+     */
+    private Date parseDraftDate(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return Utils.stringToDate(value.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
     }
 
     @Transactional
@@ -486,6 +652,16 @@ public class CustomersServiceV2 {
             }
         }
 
+        // Vehicle details returned only when the draft has any value stored (else null), consistent
+        // with the other optional draft sub-objects.
+        VehicleDetails vehicleDetails = (draft != null
+                && (draft.getVehicleType() != null
+                || draft.getVehicleNumber() != null
+                || draft.getIsParkingSpaceRequired() != null))
+                ? new VehicleDetails(draft.getVehicleType(), draft.getVehicleNumber(),
+                        draft.getIsParkingSpaceRequired())
+                : null;
+
         DraftDetails details = new DraftDetails(
                 customers.getCustomerId(),
                 customers.getHostelId(),
@@ -508,7 +684,8 @@ public class CustomersServiceV2 {
                 guardians,
                 draft.getPanPic(),
                 draft.getAadharPic(),
-                listDeductionFromDraft);
+                listDeductionFromDraft,
+                vehicleDetails);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }

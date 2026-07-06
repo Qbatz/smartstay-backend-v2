@@ -42,6 +42,18 @@ public class CustomersControllerV2 {
         return customersServiceV2.saveDraft(hostelId, profilePic, aadharPic, panPic, request);
     }
 
+    // Update an existing draft. No @Valid on the payload: a draft update enforces no mandatory fields,
+    // so every field (including null/empty) is applied to allow clearing previously entered data.
+    @PutMapping("/saveDraft/{hostelId}/{customerId}")
+    public ResponseEntity<?> updateDraft(@PathVariable("hostelId") String hostelId,
+                                         @PathVariable("customerId") String customerId,
+                                         @RequestPart(value = "profilePic", required = false) MultipartFile profilePic,
+                                         @RequestPart(value = "aadharPic", required = false) MultipartFile aadharPic,
+                                         @RequestPart(value = "panPic", required = false) MultipartFile panPic,
+                                         @RequestPart SaveDraftCustomerRequest request) {
+        return customersServiceV2.updateDraft(hostelId, customerId, profilePic, aadharPic, panPic, request);
+    }
+
     @DeleteMapping("/draft/{hostelId}/{customerId}")
     public ResponseEntity<?> deleteDraft(@PathVariable("hostelId") String hostelId,
                                          @PathVariable("customerId") String customerId) {

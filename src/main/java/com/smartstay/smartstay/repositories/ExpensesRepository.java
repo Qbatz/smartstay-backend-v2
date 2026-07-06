@@ -166,20 +166,26 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             LEFT OUTER JOIN expense_category expCat on expCat.category_id=exp.category_id
             LEFT OUTER JOIN expense_sub_category expSub on expSub.sub_category_id=exp.sub_category_id
             WHERE exp.hostel_id=:hostelId AND exp.is_active=true
-            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%'))
+            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%') OR exp.expense_id LIKE CONCAT('%', :name, '%'))
             AND (:categoryId IS NULL OR exp.category_id=:categoryId)
+            AND (:paymentStatus IS NULL OR exp.payment_status = :paymentStatus)
+            AND (:paymentDate IS NULL OR DATE(exp.created_at) = DATE(:paymentDate))
             ORDER BY exp.transaction_date DESC
             """,
             countQuery = """
             SELECT COUNT(*) FROM expensesv1 exp
             WHERE exp.hostel_id=:hostelId AND exp.is_active=true
-            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%'))
+            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%') OR exp.expense_id LIKE CONCAT('%', :name, '%'))
             AND (:categoryId IS NULL OR exp.category_id=:categoryId)
+            AND (:paymentStatus IS NULL OR exp.payment_status = :paymentStatus)
+            AND (:paymentDate IS NULL OR DATE(exp.created_at) = DATE(:paymentDate))
             """,
             nativeQuery = true)
     org.springframework.data.domain.Page<ExpenseList> findExpensesForHostel(@Param("hostelId") String hostelId,
                                                                              @Param("name") String name,
                                                                              @Param("categoryId") Long categoryId,
+                                                                             @Param("paymentStatus") String paymentStatus,
+                                                                             @Param("paymentDate") Date paymentDate,
                                                                              Pageable pageable);
 
     @Query(value = """
@@ -190,12 +196,16 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
               COALESCE(SUM(CASE WHEN exp.payment_status = 'Partial' THEN exp.total_price ELSE 0 END), 0) as totalPartialPaidAmount
             FROM expensesv1 exp
             WHERE exp.hostel_id=:hostelId AND exp.is_active=true
-            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%'))
+            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%') OR exp.expense_id LIKE CONCAT('%', :name, '%'))
             AND (:categoryId IS NULL OR exp.category_id=:categoryId)
+            AND (:paymentStatus IS NULL OR exp.payment_status = :paymentStatus)
+            AND (:paymentDate IS NULL OR DATE(exp.created_at) = DATE(:paymentDate))
             """, nativeQuery = true)
     com.smartstay.smartstay.dto.expenses.ExpenseSummaryView getExpenseListSummary(@Param("hostelId") String hostelId,
                                                                                   @Param("name") String name,
-                                                                                  @Param("categoryId") Long categoryId);
+                                                                                  @Param("categoryId") Long categoryId,
+                                                                                  @Param("paymentStatus") String paymentStatus,
+                                                                                  @Param("paymentDate") Date paymentDate);
 
     @Modifying
     @Query("UPDATE ExpensesV1 e SET e.paymentStatus = :status WHERE e.expenseId IN :expenseIds")

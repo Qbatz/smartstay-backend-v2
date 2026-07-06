@@ -74,6 +74,7 @@ public class Utils {
     public static final String STATUS_UPDATED = "Status Updated Successfully";
     public static final String CREATED = "Created Successfully";
     public static final String CUSTOMER_CREATED = "Customer created successfully.";
+    public static final String INVALID_PAYMENT_DATE = "Invalid paymentDate format. Expected yyyy-MM-dd.";
     public static final String DELETED = "Deleted Successfully";
     public static final String EMAIL_ID_EXISTS = "Email Id already registered";
     public static final String MOBILE_NO_EXISTS = "Mobile number already registered";
@@ -92,6 +93,7 @@ public class Utils {
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
     public static final String ACTIVE_USERS_FOUND = "Active users found";
     public static final String INVALID_CUSTOMER_ID = "Invalid customer id";
+    public static final String DRAFT_NOT_FOUND = "No draft found for the given customer";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
     public static final String INVALID_READING_ID = "Invalid Reading Id";
     public static final String INVALID_TRANSACTION_ID = "Invalid transaction id";

@@ -1,13 +1,15 @@
 package com.smartstay.smartstay.dao;
 
-import com.smartstay.smartstay.dto.customer.Deductions;
-import com.smartstay.smartstay.handlers.DeductionsConverter;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
-import java.util.List;
 
 /**
  * Draft-only fields linked 1:1 to {@link Customers} via {@code customerId}.
@@ -106,4 +108,14 @@ public class Draft {
     private String transactionId;
     private String createdBy;
     private String updatedBy;
+
+    // Optional vehicle details captured with the draft. All nullable.
+    @Column(name = "vehicle_type", length = 100)
+    private String vehicleType;
+
+    @Column(name = "vehicle_number", length = 50)
+    private String vehicleNumber;
+
+    @Column(name = "is_parking_space_required")
+    private Boolean isParkingSpaceRequired;
 }
