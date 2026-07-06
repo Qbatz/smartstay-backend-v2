@@ -1,15 +1,13 @@
 package com.smartstay.smartstay.dao;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
+import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.handlers.DeductionsConverter;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * Draft-only fields linked 1:1 to {@link Customers} via {@code customerId}.

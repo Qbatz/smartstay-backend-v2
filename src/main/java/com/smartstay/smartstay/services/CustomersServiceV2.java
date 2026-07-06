@@ -7,15 +7,7 @@ import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.Advance;
-import com.smartstay.smartstay.dao.BankingV1;
-import com.smartstay.smartstay.dao.CustomerCredentials;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.Draft;
-import com.smartstay.smartstay.dao.InvoicesV1;
-import com.smartstay.smartstay.dao.KycDetails;
-import com.smartstay.smartstay.dao.RentHistory;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.customer.BookingInfo;
@@ -399,16 +391,12 @@ public class CustomersServiceV2 {
             draft.setPanPic(uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(panPic), "users/profile"));
         }
 
-        // Serialize the object fields up-front so a bad payload aborts before any partial state is applied.
-        String deductionsJson;
         String idProofJson;
         String addressJson;
         String bookingJson;
         String jobDetailsJson;
         String guardiansJson;
         try {
-            deductionsJson = (payloads.deductions() != null && !payloads.deductions().isEmpty())
-                    ? objectMapper.writeValueAsString(payloads.deductions()) : null;
             idProofJson = payloads.idProof() != null ? objectMapper.writeValueAsString(payloads.idProof()) : null;
             addressJson = payloads.address() != null ? objectMapper.writeValueAsString(payloads.address()) : null;
             bookingJson = payloads.booking() != null ? objectMapper.writeValueAsString(payloads.booking()) : null;
@@ -417,6 +405,16 @@ public class CustomersServiceV2 {
         } catch (JsonProcessingException e) {
             return new ResponseEntity<>("Invalid JSON payload", HttpStatus.BAD_REQUEST);
         }
+        List<Deductions> deductionsList = null;
+
+        if (payloads.deductions() != null) {
+            deductionsList = payloads.deductions()
+                    .stream()
+                    .map(i -> new Deductions(i.type(), i.amount(), 0.0))
+                    .toList();
+        }
+
+
 
         // Basic customer fields on the draft — applied as sent so empty values clear the column.
         customers.setFirstName(payloads.firstName());
@@ -440,12 +438,12 @@ public class CustomersServiceV2 {
         draft.setRentalAmount(payloads.rentalAmount());
         draft.setStayType(payloads.stayType());
         draft.setProRate(payloads.proRate());
-        draft.setDeductionsJson(deductionsJson);
         draft.setIdProofJson(idProofJson);
         draft.setAddressJson(addressJson);
         draft.setBookingJson(bookingJson);
         draft.setJobDetailsJson(jobDetailsJson);
         draft.setGuardiansJson(guardiansJson);
+        draft.setDeductions(deductionsList);
         // Vehicle details applied as sent; an omitted vehicleDetails object clears all three columns.
         VehicleDetails vehicle = payloads.vehicleDetails();
         draft.setVehicleType(vehicle != null ? vehicle.vehicleType() : null);
