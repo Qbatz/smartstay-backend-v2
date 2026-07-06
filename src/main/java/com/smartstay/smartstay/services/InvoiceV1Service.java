@@ -3543,8 +3543,19 @@ public class InvoiceV1Service {
         double gstPercentile = invoicesV1.getGstPercentile() != null ? invoicesV1.getGstPercentile() : 0.0;
         double basePrice = Utils.roundOffWithTwoDigit(newInvoiceAmount / (1 + (gstPercentile / 100)));
         double gstAmount = newInvoiceAmount - basePrice;
+//        double subTotal = 0.0;
+//        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+//            double deductionAmount = 0.0;
+//            if (invoicesV1.getDeductions() != null) {
+//                deductionAmount = invoicesV1.getDeductionAmount();
+//            }
+//            subTotal = newInvoiceAmount - deductionAmount;
+//        }
+//        else {
+//            subTotal = basePrice;
+//        }
 
-        invoicesV1.setTotalAmount(newInvoiceAmount);
+        invoicesV1.setTotalAmount(Utils.roundOffWithTwoDigit(newInvoiceAmount));
         invoicesV1.setBasePrice(basePrice);
         invoicesV1.setSubTotal(basePrice);
         invoicesV1.setGst(Utils.roundOfDouble(gstAmount));

@@ -2,7 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dao.InvoicesV1;
-import com.smartstay.smartstay.dao.SettlementItems;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.payloads.invoice.UpdateRecurringInvoice;
 import com.smartstay.smartstay.repositories.InvoiceItemsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,67 +98,97 @@ public class InvoiceItemService {
     }
 
     public double updateInvoiceItems(List<UpdateRecurringInvoice> recurringInvoiceItems, List<InvoiceItems> invoiceItems, InvoicesV1 invoiceV1) {
-        AtomicReference<Double> newInvoiceAmount = new AtomicReference<>(0.0);
-        List<InvoiceItems> newInvoiceItemsToupdate = new ArrayList<>();
-        if (recurringInvoiceItems != null) {
+        if (invoiceV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            double deductionAmount = 0.0;
+            AtomicReference<Double> totalAmount = new AtomicReference<>(0.0);
+            if (invoiceV1.getDeductions() != null) {
+                deductionAmount = invoiceV1.getDeductionAmount();
+            }
+
+            List<InvoiceItems> invItems = new ArrayList<>();
+
             recurringInvoiceItems.forEach(item -> {
-                InvoiceItems invItem = invoiceItems
+                InvoiceItems items = invoiceItems
                         .stream()
                         .filter(i -> i.getInvoiceItem().equalsIgnoreCase(item.type()))
                         .findFirst()
                         .orElse(null);
-
-                if (invItem != null) {
-                    newInvoiceAmount.set(newInvoiceAmount.get() + item.amount());
-                    invItem.setAmount(item.amount());
-
-                    newInvoiceItemsToupdate.add(invItem);
-                }
-                else {
-                    InvoiceItems invOtherItems = invoiceItems
-                            .stream()
-                            .filter(i -> i.getOtherItem() != null && i.getOtherItem().equalsIgnoreCase(item.type()))
-                            .findFirst()
-                            .orElse(null);
-
-                    if (invOtherItems != null) {
-                        newInvoiceAmount.set(newInvoiceAmount.get() + item.amount());
-                        invOtherItems.setAmount(item.amount());
-                        newInvoiceItemsToupdate.add(invOtherItems);
-                    }
-                    else {
-                        InvoiceItems invItems = new InvoiceItems();
-                        invItems.setAmount(item.amount());
-                        if (item.type().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
-                            invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
-                        }
-                        else if (item.type().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
-                            invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
-                        }
-                        else if (item.type().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
-                            invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
-                        }
-                        else {
-                            invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
-                            invItems.setOtherItem(item.type());
-                        }
-
-
-                        invItems.setInvoice(invoiceV1);
-                        newInvoiceItemsToupdate.add(invItems);
-
-                        newInvoiceAmount.set(newInvoiceAmount.get() + item.amount());
-
-                    }
+                if (items != null) {
+                    items.setAmount(item.amount());
+                    invItems.add(items);
+                    totalAmount.set(totalAmount.get() + item.amount());
                 }
             });
 
-            if (!newInvoiceItemsToupdate.isEmpty()) {
-                invoiceItemsRepository.saveAll(newInvoiceItemsToupdate);
+            if (!invItems.isEmpty()) {
+                invoiceItemsRepository.saveAll(invItems);
             }
+            return totalAmount.get() + deductionAmount;
+        }
+        else {
+            AtomicReference<Double> newInvoiceAmount = new AtomicReference<>(0.0);
+            List<InvoiceItems> newInvoiceItemsToupdate = new ArrayList<>();
+            if (recurringInvoiceItems != null) {
+                recurringInvoiceItems.forEach(item -> {
+                    InvoiceItems invItem = invoiceItems
+                            .stream()
+                            .filter(i -> i.getInvoiceItem().equalsIgnoreCase(item.type()))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (invItem != null) {
+                        newInvoiceAmount.set(newInvoiceAmount.get() + item.amount());
+                        invItem.setAmount(item.amount());
+
+                        newInvoiceItemsToupdate.add(invItem);
+                    }
+                    else {
+                        InvoiceItems invOtherItems = invoiceItems
+                                .stream()
+                                .filter(i -> i.getOtherItem() != null && i.getOtherItem().equalsIgnoreCase(item.type()))
+                                .findFirst()
+                                .orElse(null);
+
+                        if (invOtherItems != null) {
+                            newInvoiceAmount.set(newInvoiceAmount.get() + item.amount());
+                            invOtherItems.setAmount(item.amount());
+                            newInvoiceItemsToupdate.add(invOtherItems);
+                        }
+                        else {
+                            InvoiceItems invItems = new InvoiceItems();
+                            invItems.setAmount(item.amount());
+                            if (item.type().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
+                                invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+                            }
+                            else if (item.type().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
+                                invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
+                            }
+                            else if (item.type().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
+                                invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+                            }
+                            else {
+                                invItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
+                                invItems.setOtherItem(item.type());
+                            }
+
+
+                            invItems.setInvoice(invoiceV1);
+                            newInvoiceItemsToupdate.add(invItems);
+
+                            newInvoiceAmount.set(newInvoiceAmount.get() + item.amount());
+
+                        }
+                    }
+                });
+
+                if (!newInvoiceItemsToupdate.isEmpty()) {
+                    invoiceItemsRepository.saveAll(newInvoiceItemsToupdate);
+                }
+            }
+
+            return newInvoiceAmount.get();
         }
 
-        return newInvoiceAmount.get();
     }
 
 }

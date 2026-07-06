@@ -1,15 +1,13 @@
 package com.smartstay.smartstay.dao;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
+import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.handlers.DeductionsConverter;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * Draft-only fields linked 1:1 to {@link Customers} via {@code customerId}.
@@ -55,6 +53,7 @@ public class Draft {
 
     @Column(name = "advance_amount")
     private Double advanceAmount;
+    private Double totalAdvanceAmount;
 
     @Column(name = "rental_amount")
     private Double rentalAmount;
@@ -62,8 +61,12 @@ public class Draft {
     @Column(name = "stay_type", length = 32)
     private String stayType;
 
-    @Column(name = "deductions_json", columnDefinition = "LONGTEXT")
-    private String deductionsJson;
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = DeductionsConverter.class)
+    private List<Deductions> deductions;
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = DeductionsConverter.class)
+    private List<Deductions> oneTimeDeductions;
 
     @Column(name = "pro_rate")
     private Boolean proRate;
@@ -96,4 +99,11 @@ public class Draft {
 
     @Column(name = "guardians_json", columnDefinition = "LONGTEXT")
     private String guardiansJson;
+    private Boolean hasRefundableAdvance;
+    //this will be Either booking or check in
+    //From Draft type enum
+    private String type;
+    private String transactionId;
+    private String createdBy;
+    private String updatedBy;
 }

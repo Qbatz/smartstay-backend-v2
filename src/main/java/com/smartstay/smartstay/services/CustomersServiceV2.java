@@ -7,15 +7,7 @@ import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.Advance;
-import com.smartstay.smartstay.dao.BankingV1;
-import com.smartstay.smartstay.dao.CustomerCredentials;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.Draft;
-import com.smartstay.smartstay.dao.InvoicesV1;
-import com.smartstay.smartstay.dao.KycDetails;
-import com.smartstay.smartstay.dao.RentHistory;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.customer.BookingInfo;
@@ -30,6 +22,7 @@ import com.smartstay.smartstay.payloads.customer.Guardian;
 import com.smartstay.smartstay.payloads.customer.IdProof;
 import com.smartstay.smartstay.payloads.customer.JobDetails;
 import com.smartstay.smartstay.payloads.customer.SaveDraftCustomerRequest;
+import com.smartstay.smartstay.payloads.drafts.UpdateDrafts;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.repositories.DraftsRepository;
@@ -79,9 +72,13 @@ public class CustomersServiceV2 {
 
     @Autowired
     private UserHostelService userHostelService;
+    @Autowired
+    private HostelService hostelService;
 
     @Autowired
     private CustomersRepository customersRepository;
+    @Autowired
+    private CustomerDraftService customerDraftService;
 
     @Autowired
     private DraftsRepository draftsRepository;
@@ -106,39 +103,6 @@ public class CustomersServiceV2 {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
-    private BookingsService bookingsService;
-
-    @Autowired
-    private InvoiceV1Service invoiceService;
-
-    @Autowired
-    private CustomersBedHistoryService bedHistory;
-
-    @Autowired
-    @Lazy
-    private AmenitiesService amenitiesService;
-
-    @Autowired
-    private TransactionService transactionService;
-
-    @Autowired
-    @Lazy
-    private AmenityRequestService amenityRequestService;
-
-    @Autowired
-    private BankingService bankingService;
-
-    @Autowired
-    private CustomerWalletHistoryService customerWalletHistoryService;
-
-    @Autowired
-    @Lazy
-    private CustomerDocumentsService customerDocumentsService;
-
-    @Autowired
-    private AdditionalContactService additionalContactService;
 
     @Autowired
     private UploadFileToS3 uploadToS3;
@@ -270,14 +234,14 @@ public class CustomersServiceV2 {
 
         Customers savedCustomer = customersRepository.save(customers);
 
-        String deductionsJson = null;
-        if (payloads.deductions() != null && !payloads.deductions().isEmpty()) {
-            try {
-                deductionsJson = objectMapper.writeValueAsString(payloads.deductions());
-            } catch (JsonProcessingException e) {
-                return new ResponseEntity<>("Invalid deductions payload", HttpStatus.BAD_REQUEST);
-            }
+        List<Deductions> deductionsList = null;
+        if (payloads.deductions() != null) {
+            deductionsList = payloads.deductions()
+                    .stream()
+                    .map(i -> new Deductions(i.type(), i.amount(), 0.0))
+                    .toList();
         }
+
 
         String aadharImage = null;
         if (aadharPic != null && !aadharPic.isEmpty()) {
@@ -308,7 +272,7 @@ public class CustomersServiceV2 {
         draft.setAdvanceAmount(payloads.advanceAmount());
         draft.setRentalAmount(payloads.rentalAmount());
         draft.setStayType(payloads.stayType());
-        draft.setDeductionsJson(deductionsJson);
+        draft.setDeductions(deductionsList);
         draft.setProRate(payloads.proRate());
         draft.setCreatedAt(now);
         draft.setUpdatedAt(now);
@@ -424,10 +388,18 @@ public class CustomersServiceV2 {
 
         Draft draft = draftsRepository.findById(customerId).orElse(null);
 
+//        List<Deductions> deductionsList = null;
+//        if (payloads.deductions() != null) {
+//            deductionsList = payloads.deductions()
+//                    .stream()
+//                    .map(i -> new Deductions(i.type(), i.amount(), 0.0))
+//                    .toList();
+//        }
+
         String fullName = NameUtils.getFullName(customers.getFirstName(), customers.getLastName());
         String initials = NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
 
-        List<Deductions> listDeductionFromDraft = parseDraftDeductionsJson(draft != null ? draft.getDeductionsJson() : null);
+        List<Deductions> listDeductionFromDraft = draft.getDeductions();
 
         List<Deductions> otherDeductionBreakup = null;
         double maintenance = 0;
@@ -541,15 +513,52 @@ public class CustomersServiceV2 {
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
 
-    private List<Deductions> parseDraftDeductionsJson(String json) {
-        if (json == null || json.isBlank()) {
-            return null;
+//    private List<Deductions> parseDraftDeductionsJson(String json) {
+//        if (json == null || json.isBlank()) {
+//            return null;
+//        }
+//        try {
+//            return objectMapper.readValue(json, new TypeReference<List<Deductions>>() {
+//            });
+//        } catch (Exception e) {
+//            return null;
+//        }
+//    }
+
+    public ResponseEntity<?> updateDraftInformations(String hostelId, String customerId, UpdateDrafts updateDrafts) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        try {
-            return objectMapper.readValue(json, new TypeReference<List<Deductions>>() {
-            });
-        } catch (Exception e) {
-            return null;
+        Users user = userService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.WALK_IN.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!hostelV1.getHostelId().equalsIgnoreCase(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        return customerDraftService.updateDraftInfo(customerId, updateDrafts);
+
+
     }
 }

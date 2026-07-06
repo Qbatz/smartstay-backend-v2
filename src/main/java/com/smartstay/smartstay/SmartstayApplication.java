@@ -39,5 +39,6 @@ public class SmartstayApplication {
 //    alter table smart_stay.kyc_address_details drop locality;
 //    alter table smart_stay.kyc_address_details drop pincode;
 //    alter table smart_stay.kyc_address_details drop state;
+//truncate smart_stay.drafts;
 
 }
