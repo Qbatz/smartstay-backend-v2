@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.customer.CheckInRequest;
+import com.smartstay.smartstay.payloads.customer.CheckInRequestNew;
 import com.smartstay.smartstay.payloads.customer.SaveDraftCustomerRequest;
 import com.smartstay.smartstay.payloads.drafts.UpdateDrafts;
 import com.smartstay.smartstay.services.CustomersServiceV2;
@@ -68,6 +70,11 @@ public class CustomersControllerV2 {
     @PutMapping("/draft/{hostelId}/{customerId}")
     public ResponseEntity<?> updateDraftInformations(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @Valid @RequestBody UpdateDrafts updateDrafts) {
         return customersServiceV2.updateDraftInformations(hostelId, customerId, updateDrafts);
+    }
+
+    @PostMapping("/check-in/{hostelId}/{customerId}")
+    public ResponseEntity<?> checkInCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @Valid @RequestBody CheckInRequestNew newCheckInRequest) {
+        return customersServiceV2.checkinCustomer(hostelId, customerId, newCheckInRequest);
     }
 
 }

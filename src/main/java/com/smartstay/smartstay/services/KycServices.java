@@ -329,4 +329,116 @@ public class KycServices {
 
         return null;
     }
+
+    public List<KycDetails> getAllRequestWithRequestedState() {
+        List<KycDetails> listKyc = kycRepository.findAllRequested();
+        if (listKyc == null) {
+            listKyc = new ArrayList<>();
+        }
+        return listKyc;
+    }
+
+    public void verifyKycStatusAndUpdate(KycDetails item) {
+        KycDetails kycDetails = item;
+        if (kycDetails == null) {
+            return;
+        }
+
+        String endPoint = "client/kyc/v2/" + kycDetails.getEntityId() + "/response";
+        String verifyKycUrl = KYC_BASE_URL + "/" + endPoint;
+        // Encode credentials to Base64
+        String auth = KYC_USER_NAME + ":" + KYC_PASSWORD;
+        String encodedAuth = Base64.getEncoder()
+                .encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Basic " + encodedAuth);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<VerifyKyc> responseEntity = restTemplate.exchange(verifyKycUrl, HttpMethod.POST, entity, VerifyKyc.class);
+        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            VerifyKyc verifyKycResponse = responseEntity.getBody();
+            if (verifyKycResponse != null) {
+                if (verifyKycResponse.getStatus().equalsIgnoreCase("approved")) {
+                    if (!kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.VERIFIED.name())) {
+                        if (verifyKycResponse.getStatus().equalsIgnoreCase("APPROVED")) {
+                            kycDetails.setCurrentStatus(KycStatus.VERIFIED.name());
+                        }
+                    }
+
+                    List<VerifyKycActions> listKycActions = verifyKycResponse.getActions();
+                    if (listKycActions != null && !listKycActions.isEmpty()) {
+                        VerifyKycActions kycActions = listKycActions.get(0);
+                        kycDetails.setCompletedAt(Utils.stringToDateTime(kycActions.getCompletedAt()));
+                        if (kycActions.getExecutionRequestId() != null) {
+                            Customers customers = item.getCustomers();
+                            UploadFiles uploadFiles = getKycPdfDocument(customers.getCustomerId(), kycActions.getExecutionRequestId());
+
+                            if (uploadFiles != null) {
+                                kycDetails.setKycDocumentType(FileFormat.PDF.name());
+                                kycDetails.setKycDocument(uploadFiles.fileName());
+                            }
+                        }
+                        VerifyKycActionDetails verifyKycActionDetails = kycActions.getDetails();
+                        if (verifyKycActionDetails != null) {
+
+                            AadhaarDetails aadhaarDetails = verifyKycActionDetails.getAadhaarDetails();
+                            if (aadhaarDetails != null) {
+                                kycDetails.setAadhaarNumber(aadhaarDetails.getIdNumber());
+                                kycDetails.setDocumentType(KycDocumentType.AADHAAR.name());
+                                kycDetails.setNameInDocument(aadhaarDetails.getName());
+                                kycDetails.setDateOfBirth(aadhaarDetails.getDateOfBirth());
+                                kycDetails.setPermanentAddress(aadhaarDetails.getPermanentAddressString());
+                                kycDetails.setUpdatedAt(new Date());
+
+                                if (aadhaarDetails.getGender().equalsIgnoreCase("F")) {
+                                    kycDetails.setGender("Female");
+                                } else if (aadhaarDetails.getGender().equalsIgnoreCase("M")) {
+                                    kycDetails.setGender("Male");
+                                } else {
+                                    kycDetails.setGender("Others");
+                                }
+
+                                KycAddressDetails addressDetails = kycDetails.getAddressDetails();
+                                if (addressDetails == null) {
+                                    addressDetails = new KycAddressDetails();
+
+                                }
+                                com.smartstay.smartstay.dto.kyc.KycAddressDetails responseAddress = aadhaarDetails.getCurrentAddressDetails();
+                                if (responseAddress != null) {
+                                    addressDetails.setCurrentCity(responseAddress.getDistrictOrCity());
+                                    addressDetails.setCurrentAddress(responseAddress.getAddress());
+                                    addressDetails.setCurrentLocality(responseAddress.getLocalityOrPostOffice());
+                                    addressDetails.setCurrentPincode(responseAddress.getPincode());
+                                    addressDetails.setCurrentState(responseAddress.getState());
+                                }
+                                com.smartstay.smartstay.dto.kyc.KycAddressDetails responsePermanentAddress = aadhaarDetails.getPermanentAddress();
+                                if (responsePermanentAddress != null) {
+                                    addressDetails.setPermanentCity(responsePermanentAddress.getDistrictOrCity());
+                                    addressDetails.setPermanentAddress(responsePermanentAddress.getAddress());
+                                    addressDetails.setPermanentLocality(responsePermanentAddress.getLocalityOrPostOffice());
+                                    addressDetails.setPermanentPincode(responsePermanentAddress.getPincode());
+                                    addressDetails.setPermanentState(responsePermanentAddress.getState());
+                                }
+                                addressDetails.setKycDetails(kycDetails);
+                                kycDetails.setAddressDetails(addressDetails);
+
+
+                                Customers customers = item.getCustomers();
+
+                                String aadhaarImage = uploadFileToS3.uploadFileToS3(FilesConfig.base64ToImage(customers.getCustomerId(), aadhaarDetails.getImage()), "kyc-pic");
+                                kycDetails.setIdPic(aadhaarImage);
+
+                            }
+                        }
+
+                    }
+
+                    kycRepository.save(kycDetails);
+                }
+            }
+        }
+    }
 }
