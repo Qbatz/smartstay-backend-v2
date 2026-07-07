@@ -902,7 +902,7 @@ public class VendorService {
         vendorV1.setFirstName(payloads.firstName());
         vendorV1.setLastName(payloads.lastName());
         // Single-country: countryCode is no longer client-supplied; default it for every vendor.
-        vendorV1.setCountryCode("1");
+        vendorV1.setCountryCode("+91");
         vendorV1.setBusinessMobileCode(payloads.businessMobileCode() != null ? payloads.businessMobileCode().trim() : null);
         vendorV1.setMobile(normalizedMobile);
         vendorV1.setEmailId(email);

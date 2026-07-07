@@ -679,7 +679,15 @@ public class CustomersServiceV2 {
                 draft.getPanPic(),
                 draft.getAadharPic(),
                 listDeductionFromDraft,
-                vehicleDetails);
+                vehicleDetails,
+                draft != null ? draft.getBankId() : null,
+                draft != null ? draft.getReferenceNumber() : null,
+                draft != null ? draft.getStayType() : null,
+                draft != null ? draft.getBookingAmount() : null,
+                booking != null ? booking.refuseAdvanceAmount() : null,
+                draft != null ? draft.getProRate() : null,
+                draft != null ? draft.getRentalAmount() : null,
+                draft != null ? draft.getAdvanceAmount() : null);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }

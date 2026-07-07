@@ -85,7 +85,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
     boolean existsByMobileAndHostelId(String mobileNumber, String hostelId);
 
     @Query("SELECT new com.smartstay.smartstay.responses.vendor.VendorResponse(" +
-            "v.vendorId, v.firstName, v.lastName, CONCAT(v.firstName, ' ', v.lastName), " +
+            "v.vendorId, v.firstName, v.lastName, TRIM(CONCAT(COALESCE(v.firstName, ''), ' ', COALESCE(v.lastName, ''))), " +
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
             "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId, " +
             "vc.categoryId, vc.categoryName, v.contactPerson, v.contactPersonMobile, v.description, v.vendorCode, v.gst, v.pan, " +
@@ -98,7 +98,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
 
 
     @Query("SELECT new com.smartstay.smartstay.responses.vendor.VendorResponse(" +
-            "v.vendorId, v.firstName, v.lastName, CONCAT(v.firstName, ' ', v.lastName), " +
+            "v.vendorId, v.firstName, v.lastName, TRIM(CONCAT(COALESCE(v.firstName, ''), ' ', COALESCE(v.lastName, ''))), " +
             "v.businessName, v.mobile, v.emailId, v.profilePic, " +
             "v.houseNo, v.area, v.landMark, v.city, v.pinCode, v.state, v.countryCode, c.countryName, c.countryId, " +
             "vc.categoryId, vc.categoryName, v.contactPerson, v.contactPersonMobile, v.description, v.vendorCode, v.gst, v.pan, " +
