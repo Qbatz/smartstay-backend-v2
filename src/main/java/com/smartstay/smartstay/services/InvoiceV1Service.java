@@ -1583,8 +1583,14 @@ public class InvoiceV1Service {
         }
 
         StayInfo stayInfo = null;
-        CustomersBedHistory bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+        CustomersBedHistory bedHistory = null;
 
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            bedHistory = customersBedHistoryService.getCustomerBookedBed(invoicesV1.getCustomerId());
+        }
+        else {
+            bedHistory = customersBedHistoryService.getCustomerBedByStartDate(customers.getCustomerId(), invoicesV1.getInvoiceStartDate(), invoicesV1.getInvoiceEndDate());
+        }
         if (bedHistory != null) {
             BedDetails bedDetails = bedService.getBedDetails(bedHistory.getBedId());
             if (bedDetails != null) {

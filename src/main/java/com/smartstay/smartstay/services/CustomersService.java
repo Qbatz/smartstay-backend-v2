@@ -2607,20 +2607,20 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                //done full rent
+                //done updating cbh
                 return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             } else {
                 if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-
+                    //done updating cbh
                     return generateFinalSettlementForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users, isFullRentCollected, customRent);
                 }
-
+                //done updating cbh
                 return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             }
         } else {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 BillingDates customerBillingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), settlementDetails.getLeavingDate());
-
+                //done updating cbh
                 return generateFinalSettlementForJoininBasedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, customerBillingDates, settlement, users, isFullRentCollected, customRent);
             }
         }
@@ -2887,6 +2887,7 @@ public class CustomersService {
         bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
         if (settlementDetails != null && settlementDetails.getLeavingDate() != null) {
             bookingDetails.setLeavingDate(settlementDetails.getLeavingDate());
+            bedHistory.generateSettlement(customers.getHostelId(), customers.getCustomerId(), settlementDetails.getLeavingDate());
         }
         bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
@@ -3082,6 +3083,7 @@ public class CustomersService {
             customers.setWallet(cw);
             customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), settlementInvoice.getInvoiceId());
         }
+        bedHistory.generateSettlement(customers.getHostelId(), customers.getCustomerId(), leavingDate);
         bedsService.makeABedVacant(bookingDetails.getBedId(), leavingDate);
         bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
         bookingDetails.setLeavingDate(leavingDate);
@@ -3255,6 +3257,7 @@ public class CustomersService {
             customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
         }
         bedsService.makeABedVacant(bookingDetails.getBedId(), leavingDate);
+        bedHistory.generateSettlement(customers.getHostelId(), customers.getCustomerId(), leavingDate);
         bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
         bookingDetails.setLeavingDate(leavingDate);
         bookingDetails.setSettlementGeneratedDate(leavingDate);
@@ -3406,6 +3409,7 @@ public class CustomersService {
             customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
         }
         bedsService.makeABedVacant(bookingDetails.getBedId(), leavingDate);
+        bedHistory.generateSettlement(customers.getHostelId(), customers.getCustomerId(), leavingDate);
         bookingDetails.setCurrentStatus(BookingStatus.VACATED.name());
         bookingDetails.setLeavingDate(leavingDate);
         bookingDetails.setSettlementGeneratedDate(leavingDate);
@@ -3566,10 +3570,12 @@ public class CustomersService {
             customerWalletHistoryService.makePendingToInvoiceGenerated(customers.getCustomerId(), invoicesV1.getInvoiceId());
         }
         bedsService.makeABedVacant(bookingsV1.getBedId(), settlementDetails);
+
         bookingsV1.setCurrentStatus(BookingStatus.VACATED.name());
         if (settlementDetails != null && settlementDetails.getLeavingDate() != null) {
             bookingsV1.setCheckoutDate(settlementDetails.getLeavingDate());
             bookingsV1.setSettlementGeneratedDate(settlementDetails.getLeavingDate());
+            bedHistory.generateSettlement(customers.getHostelId(), customers.getCustomerId(), settlementDetails.getLeavingDate());
         }
         bookingsService.saveBooking(bookingsV1);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());

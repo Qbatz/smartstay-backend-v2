@@ -1,9 +1,7 @@
 package com.smartstay.smartstay.eventListeners;
 
-import com.smartstay.smartstay.dao.CustomersBedHistory;
-import com.smartstay.smartstay.dao.CustomersEbHistory;
-import com.smartstay.smartstay.dao.ElectricityConfig;
-import com.smartstay.smartstay.dao.ElectricityReadings;
+import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
 import com.smartstay.smartstay.events.AddEbEvents;
 import com.smartstay.smartstay.services.*;
@@ -46,10 +44,13 @@ public class AddEbEventListeners {
         Date electricityEndDate = electricityReadings.getEntryDate();
 
         List<CustomersBedHistory> listCustomerBedHistory = customerBedHistory.getCustomersByRoomIdAndDates(ebEvents.getRoomId(), electricityStartDate, electricityEndDate);
+
         if (!listCustomerBedHistory.isEmpty()) {
             long personCount = listCustomerBedHistory
                     .stream()
-                    .filter(item -> Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0 && (item.getEndDate() == null || Utils.compareWithTwoDates(electricityEndDate, item.getEndDate()) <= 0)).count();
+                    .filter(item -> {
+                        return Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0 && (item.getEndDate() == null || Utils.compareWithTwoDates(electricityEndDate, item.getEndDate()) <= 0);
+                    }).count();
 
             if (listCustomerBedHistory.size() == personCount) {
 //                long noOfDaysBetweenStartAndEndDate = Utils.findNumberOfDays(startDate, endDate);
