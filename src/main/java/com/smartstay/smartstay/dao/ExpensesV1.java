@@ -80,6 +80,8 @@ public class ExpensesV1 {
     private Double tax;
     // Discount amount applied to the expense.
     private Double discount;
+    // Effective discount percentage (derived from the discount amount / total, or supplied directly).
+    private Double discountPercentage;
     // S3 URLs of the images uploaded with the expense.
     @Convert(converter = StringListConverter.class)
     @Column(columnDefinition = "TEXT")

@@ -12,9 +12,7 @@ public record Expense(
         @NotEmpty(message = "Purchase date is required")
         @NotNull(message = "Purchase date is required")
         String purchaseDate,
-        @NotNull(message = "Count is required")
-        @Positive(message = "Count is required")
-        @Min(value = 1, message = "Count is required")
+        // Optional; defaults to 1 in the service when absent or non-positive.
         Integer count,
         @NotNull(message = "Total amount required")
         @Positive(message = "Total amount required")
@@ -29,11 +27,15 @@ public record Expense(
         String paymentStatus,
         Double paidAmount,
         Double balanceAmount,
+        @NotNull(message = "Payment method is required")
+        @NotEmpty(message = "Payment method is required")
         String paymentMethod,
         String note,
         String transactionId,
         Double tax,
         Double discount,
+        // Optional discount percentage; used to derive the discount amount when `discount` is absent.
+        Double discountPercentage,
         // Optional explicit credit period (days); when > 0 it overrides the vendor-level credit period.
         Integer creditPeriod,
         List<ExpenseItemPayload> expenseItems) {

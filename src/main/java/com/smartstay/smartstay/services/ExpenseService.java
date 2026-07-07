@@ -340,20 +340,20 @@ public class ExpenseService {
                 ? ExpensePaymentStatus.fromString(expense.paymentStatus())
                 : ExpensePaymentStatus.Full;
         boolean bankProvided = Utils.checkNullOrEmpty(expense.bankId());
-        if (requestedStatus != ExpensePaymentStatus.Pending && !bankProvided) {
-            return new ResponseEntity<>(Utils.BANK_ID_REQUIRED, HttpStatus.BAD_REQUEST);
-        }
-        if (bankProvided && !bankingService.checkBankExist(expense.bankId())) {
-            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
-        }
+//        if (requestedStatus != ExpensePaymentStatus.Pending && !bankProvided) {
+//            return new ResponseEntity<>(Utils.BANK_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+//        }
+//        if (bankProvided && !bankingService.checkBankExist(expense.bankId())) {
+//            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+//        }
         // Validate the paidAmount/totalAmount relationship only for vendor expenses; non-vendor expenses
         // are auto-settled below so their request amounts are not validated.
-        if (isVendorExpense) {
-            String paymentAmountError = validatePaymentAmounts(requestedStatus, expense.totalAmount(), expense.paidAmount());
-            if (paymentAmountError != null) {
-                return new ResponseEntity<>(paymentAmountError, HttpStatus.BAD_REQUEST);
-            }
-        }
+//        if (isVendorExpense) {
+//            String paymentAmountError = validatePaymentAmounts(requestedStatus, expense.totalAmount(), expense.paidAmount());
+//            if (paymentAmountError != null) {
+//                return new ResponseEntity<>(paymentAmountError, HttpStatus.BAD_REQUEST);
+//            }
+//        }
         if (!subscriptionService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
@@ -363,30 +363,15 @@ public class ExpenseService {
         }
 
 
-        if (expense.count() == null) {
-            return new ResponseEntity<>(Utils.EXPENSE_COUNT_REQUIRED, HttpStatus.BAD_REQUEST);
-        }
-        try {
-            int count = Integer.parseInt(expense.count().toString());
-            if (count == 0) {
-                return new ResponseEntity<>(Utils.INVALID_COUNT, HttpStatus.BAD_REQUEST);
-            }
-        }
-        catch (Exception e){
-            return new ResponseEntity<>(Utils.INVALID_COUNT, HttpStatus.BAD_REQUEST);
-        }
+//        boolean hasSubCategory = expenseCategoryService.checkCategoryHavingSubCategory(hostelId, expense.categoryId());
+//        if (hasSubCategory) {
+//            if (!Utils.checkNullOrEmpty(expense.subCategory())) {
+//                return new ResponseEntity<>(Utils.SUB_CATEGORY_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+//            }
+//        }
 
-        boolean hasSubCategory = expenseCategoryService.checkCategoryHavingSubCategory(hostelId, expense.categoryId());
-        if (hasSubCategory) {
-            if (!Utils.checkNullOrEmpty(expense.subCategory())) {
-                return new ResponseEntity<>(Utils.SUB_CATEGORY_ID_REQUIRED, HttpStatus.BAD_REQUEST);
-            }
-        }
-
-        Integer count = 1;
-        if (Utils.checkNullOrEmpty(expense.count())) {
-            count = expense.count();
-        }
+        // count is optional; default to 1 when absent or non-positive (avoids divide-by-zero below).
+        int count = (expense.count() != null && expense.count() > 0) ? expense.count() : 1;
         double unitPrice = 0.0;
         if (expense.totalAmount() != null) {
             unitPrice = expense.totalAmount() / count;
@@ -395,8 +380,26 @@ public class ExpenseService {
         // Preserve the original total in actualTotalPrice; totalPrice is the payable amount after
         // discount and remains the basis for all existing financial calculations.
         double actualTotalPrice = expense.totalAmount() != null ? expense.totalAmount() : 0.0;
-        double discountAmount = expense.discount() != null ? expense.discount() : 0.0;
-        double payableAmount = actualTotalPrice - discountAmount;
+
+        // Discount resolution. The discount AMOUNT is always the primary value for calculations:
+        //  - discount present  -> use it; derive discount_percentage from it (scenarios 2 & 3).
+        //  - only percentage   -> derive the discount amount from totalAmount (scenario 1).
+        //  - neither           -> no discount; discount_percentage stays null (scenario 4).
+        Double effectiveDiscount;
+        Double effectiveDiscountPct;
+        if (expense.discount() != null) {
+            effectiveDiscount = expense.discount();
+            effectiveDiscountPct = actualTotalPrice > 0
+                    ? roundToTwo((expense.discount() / actualTotalPrice) * 100.0) : null;
+        } else if (expense.discountPercentage() != null) {
+            effectiveDiscount = roundToTwo((actualTotalPrice * expense.discountPercentage()) / 100.0);
+            effectiveDiscountPct = expense.discountPercentage();
+        } else {
+            effectiveDiscount = null;
+            effectiveDiscountPct = null;
+        }
+        double discountForCalc = effectiveDiscount != null ? effectiveDiscount : 0.0;
+        double payableAmount = actualTotalPrice - discountForCalc;
 
         String expenseNumber = generateExpenseNumber(hostelId);
         ExpensesV1 expensesV1 = new ExpensesV1();
@@ -445,7 +448,8 @@ public class ExpenseService {
         expensesV1.setNote(expense.note());
         expensesV1.setTransactionId(expense.transactionId());
         expensesV1.setTax(expense.tax());
-        expensesV1.setDiscount(expense.discount());
+        expensesV1.setDiscount(effectiveDiscount);
+        expensesV1.setDiscountPercentage(expense.discountPercentage());
         // Upload receipt images to S3; a failure aborts the (transactional) expense creation.
         expensesV1.setImages(uploadImages(images, "Expense/Images"));
 
@@ -1024,6 +1028,11 @@ public class ExpenseService {
         return value != null ? value : 0.0;
     }
 
+    // Rounds a monetary/percentage value to 2 decimal places to keep persisted values clean.
+    private double roundToTwo(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
+
     private ResponseEntity<?> buildExpenseWebResponse(String hostelId,
                                                       List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections,
                                                       ExpenseSummary expenseSummary, int totalExpenses, int currentPage,
@@ -1259,6 +1268,7 @@ public class ExpenseService {
                 totalExpensePaidAmount,
                 expense.getCreditPeriod(),
                 expense.getDiscount(),
+                expense.getDiscountPercentage(),
                 expense.getTax(),
                 expense.getTransactionId(),
                 expense.getCreatedAt() != null ? Utils.dateToString(expense.getCreatedAt()) : null,
