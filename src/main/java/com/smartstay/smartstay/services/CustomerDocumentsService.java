@@ -134,26 +134,29 @@ public class CustomerDocumentsService {
 
     }
 
-    public CustomerFiles getCustomerFiles(String customerId) {
+    public CustomerFiles getCustomerFiles(String customerId, String digioDocument) {
         List<CustomerDocuments> listDocuments = customerDocumentsRepositories.findByCustomerIdAndIsDeletedFalse(customerId);
 
-        List<FileDetails> kycDocs = listDocuments
+        List<FileDetails> kycDocs = new ArrayList<>(listDocuments
                 .stream()
                 .filter(i -> i.getDocumentType().equalsIgnoreCase(DocumentType.KYC.name()))
                 .map(i -> {
                     String type = null;
                     if (i.getDocumentFileType().equalsIgnoreCase(FileFormat.PDF.name())) {
                         type = FileFormat.PDF.name();
-                    }
-                    else if (i.getDocumentFileType().equalsIgnoreCase(FileFormat.DOC.name())) {
+                    } else if (i.getDocumentFileType().equalsIgnoreCase(FileFormat.DOC.name())) {
                         type = FileFormat.DOC.name();
-                    }
-                    else if (i.getDocumentFileType().equalsIgnoreCase(FileFormat.IMAGE.name())) {
+                    } else if (i.getDocumentFileType().equalsIgnoreCase(FileFormat.IMAGE.name())) {
                         type = FileFormat.IMAGE.name();
                     }
-                    return new FileDetails(i.getDocumentId(), i.getDocumentUrl(), type);
+                    return new FileDetails(i.getDocumentId(), i.getDocumentUrl(), type, true);
                 })
-                .toList();
+                .toList());
+        if (digioDocument != null) {
+            if (kycDocs != null) {
+                kycDocs.add(new FileDetails(0L, digioDocument, FileFormat.PDF.name(), false));
+            }
+        }
 
         List<FileDetails> checkIn = listDocuments
                 .stream()
@@ -169,7 +172,7 @@ public class CustomerDocumentsService {
                     else if (i.getDocumentFileType().equalsIgnoreCase(FileFormat.IMAGE.name())) {
                         type = FileFormat.IMAGE.name();
                     }
-                    return new FileDetails(i.getDocumentId(), i.getDocumentUrl(), type);
+                    return new FileDetails(i.getDocumentId(), i.getDocumentUrl(), type, true);
                 })
                 .toList();
 
@@ -187,7 +190,7 @@ public class CustomerDocumentsService {
                     else if (i.getDocumentFileType().equalsIgnoreCase(FileFormat.IMAGE.name())) {
                         type = FileFormat.IMAGE.name();
                     }
-                    return new FileDetails(i.getDocumentId(), i.getDocumentUrl(), type);
+                    return new FileDetails(i.getDocumentId(), i.getDocumentUrl(), type, true);
                 })
                 .toList();
 

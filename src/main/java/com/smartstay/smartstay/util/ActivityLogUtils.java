@@ -133,6 +133,9 @@ public class ActivityLogUtils {
         if (activitySource.equalsIgnoreCase(ActivitySource.PAYMENTS.name())) {
             return getPaymentsOperations(operationType);
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.DRAFTS.name())) {
+            return getDraftsOperations(operationType);
+        }
 
         return null;
     }
@@ -478,6 +481,13 @@ public class ActivityLogUtils {
             return "Payment session has been created for subscription";
         }
 
+        return null;
+    }
+
+    private static String getDraftsOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
+            return "Draft information has been updated";
+        }
         return null;
     }
 }

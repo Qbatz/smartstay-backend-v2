@@ -9,6 +9,7 @@ public enum ActivitySource {
     PROFILE,
     ASSETS,
     EXPENSE,
+    DRAFTS,
     EXPENSE_CATEGORY,
     EXPENSE_SUB_CATEGORY,
     BANKING,

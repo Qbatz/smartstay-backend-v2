@@ -255,4 +255,11 @@ public class CustomersBedHistoryService {
         }
         return 0.0;
     }
+
+    public void generateSettlement(String hostelId, String customerId, Date endDate) {
+        CustomersBedHistory cbh = customerBedHistoryRepository.findTopByCustomerIdOrderByCreatedAtDesc(customerId).orElse(null);
+        if (cbh != null) {
+            cbh.setEndDate(endDate);
+        }
+    }
 }

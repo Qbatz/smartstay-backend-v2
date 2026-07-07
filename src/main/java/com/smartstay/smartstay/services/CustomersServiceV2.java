@@ -7,15 +7,7 @@ import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.Advance;
-import com.smartstay.smartstay.dao.BankingV1;
-import com.smartstay.smartstay.dao.CustomerCredentials;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.Draft;
-import com.smartstay.smartstay.dao.InvoicesV1;
-import com.smartstay.smartstay.dao.KycDetails;
-import com.smartstay.smartstay.dao.RentHistory;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.customer.BookingInfo;
@@ -24,13 +16,11 @@ import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.customer.TransactionDto;
 import com.smartstay.smartstay.dto.customer.WalletTransactions;
 import com.smartstay.smartstay.dto.documents.CustomerFiles;
+import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.ennum.*;
+import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.payloads.customer.Address;
-import com.smartstay.smartstay.payloads.customer.Booking;
-import com.smartstay.smartstay.payloads.customer.Guardian;
-import com.smartstay.smartstay.payloads.customer.IdProof;
-import com.smartstay.smartstay.payloads.customer.JobDetails;
-import com.smartstay.smartstay.payloads.customer.SaveDraftCustomerRequest;
-import com.smartstay.smartstay.payloads.customer.VehicleDetails;
+import com.smartstay.smartstay.payloads.drafts.UpdateDrafts;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.repositories.DraftsRepository;
@@ -45,45 +35,47 @@ import com.smartstay.smartstay.responses.customer.DraftDetails;
 import com.smartstay.smartstay.responses.customer.HostelInformation;
 import com.smartstay.smartstay.responses.customer.KycInformations;
 import com.smartstay.smartstay.dto.customer.WalletInfo;
-import com.smartstay.smartstay.ennum.ActivitySource;
-import com.smartstay.smartstay.ennum.ActivitySourceType;
-import com.smartstay.smartstay.ennum.CustomerBedStatus;
-import com.smartstay.smartstay.ennum.CustomerStatus;
-import com.smartstay.smartstay.ennum.KycStatus;
-import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class CustomersServiceV2 {
 
+    @Value("${ENVIRONMENT}")
+    private String environment;
     @Autowired
     private Authentication authentication;
 
     @Autowired
     private UsersService userService;
-
+    @Autowired
+    private CustomerBillingRulesService customerBillingRulesService;
     @Autowired
     private UserHostelService userHostelService;
-
+    @Autowired
+    private HostelService hostelService;
+    @Autowired
+    private BookingsService bookingsService;
     @Autowired
     private CustomersRepository customersRepository;
-
+    @Autowired
+    private CustomerDraftService customerDraftService;
+    @Autowired
+    private CustomersConfigService customersConfigService;
+    @Autowired
+    private InvoiceV1Service invoiceV1Service;
     @Autowired
     private DraftsRepository draftsRepository;
 
@@ -109,40 +101,9 @@ public class CustomersServiceV2 {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private BookingsService bookingsService;
-
-    @Autowired
-    private InvoiceV1Service invoiceService;
-
-    @Autowired
-    private CustomersBedHistoryService bedHistory;
-
-    @Autowired
-    @Lazy
-    private AmenitiesService amenitiesService;
-
-    @Autowired
-    private TransactionService transactionService;
-
-    @Autowired
-    @Lazy
-    private AmenityRequestService amenityRequestService;
-
-    @Autowired
-    private BankingService bankingService;
-
-    @Autowired
-    private CustomerWalletHistoryService customerWalletHistoryService;
-
-    @Autowired
-    @Lazy
-    private CustomerDocumentsService customerDocumentsService;
-
-    @Autowired
-    private AdditionalContactService additionalContactService;
-
-    @Autowired
     private UploadFileToS3 uploadToS3;
+    @Autowired
+    private WhatsAppService whatsappService;
 
     public ResponseEntity<?> searchCustomersByMobile(String hostelId, String search) {
         if (!authentication.isAuthenticated()) {
@@ -271,14 +232,14 @@ public class CustomersServiceV2 {
 
         Customers savedCustomer = customersRepository.save(customers);
 
-        String deductionsJson = null;
-        if (payloads.deductions() != null && !payloads.deductions().isEmpty()) {
-            try {
-                deductionsJson = objectMapper.writeValueAsString(payloads.deductions());
-            } catch (JsonProcessingException e) {
-                return new ResponseEntity<>("Invalid deductions payload", HttpStatus.BAD_REQUEST);
-            }
+        List<Deductions> deductionsList = null;
+        if (payloads.deductions() != null) {
+            deductionsList = payloads.deductions()
+                    .stream()
+                    .map(i -> new Deductions(i.type(), i.amount(), 0.0))
+                    .toList();
         }
+
 
         String aadharImage = null;
         if (aadharPic != null && !aadharPic.isEmpty()) {
@@ -309,7 +270,7 @@ public class CustomersServiceV2 {
         draft.setAdvanceAmount(payloads.advanceAmount());
         draft.setRentalAmount(payloads.rentalAmount());
         draft.setStayType(payloads.stayType());
-        draft.setDeductionsJson(deductionsJson);
+        draft.setDeductions(deductionsList);
         draft.setProRate(payloads.proRate());
         draft.setCreatedAt(now);
         draft.setUpdatedAt(now);
@@ -427,16 +388,12 @@ public class CustomersServiceV2 {
             draft.setPanPic(uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(panPic), "users/profile"));
         }
 
-        // Serialize the object fields up-front so a bad payload aborts before any partial state is applied.
-        String deductionsJson;
         String idProofJson;
         String addressJson;
         String bookingJson;
         String jobDetailsJson;
         String guardiansJson;
         try {
-            deductionsJson = (payloads.deductions() != null && !payloads.deductions().isEmpty())
-                    ? objectMapper.writeValueAsString(payloads.deductions()) : null;
             idProofJson = payloads.idProof() != null ? objectMapper.writeValueAsString(payloads.idProof()) : null;
             addressJson = payloads.address() != null ? objectMapper.writeValueAsString(payloads.address()) : null;
             bookingJson = payloads.booking() != null ? objectMapper.writeValueAsString(payloads.booking()) : null;
@@ -445,6 +402,16 @@ public class CustomersServiceV2 {
         } catch (JsonProcessingException e) {
             return new ResponseEntity<>("Invalid JSON payload", HttpStatus.BAD_REQUEST);
         }
+        List<Deductions> deductionsList = null;
+
+        if (payloads.deductions() != null) {
+            deductionsList = payloads.deductions()
+                    .stream()
+                    .map(i -> new Deductions(i.type(), i.amount(), 0.0))
+                    .toList();
+        }
+
+
 
         // Basic customer fields on the draft — applied as sent so empty values clear the column.
         customers.setFirstName(payloads.firstName());
@@ -468,12 +435,12 @@ public class CustomersServiceV2 {
         draft.setRentalAmount(payloads.rentalAmount());
         draft.setStayType(payloads.stayType());
         draft.setProRate(payloads.proRate());
-        draft.setDeductionsJson(deductionsJson);
         draft.setIdProofJson(idProofJson);
         draft.setAddressJson(addressJson);
         draft.setBookingJson(bookingJson);
         draft.setJobDetailsJson(jobDetailsJson);
         draft.setGuardiansJson(guardiansJson);
+        draft.setDeductions(deductionsList);
         // Vehicle details applied as sent; an omitted vehicleDetails object clears all three columns.
         VehicleDetails vehicle = payloads.vehicleDetails();
         draft.setVehicleType(vehicle != null ? vehicle.vehicleType() : null);
@@ -582,10 +549,18 @@ public class CustomersServiceV2 {
 
         Draft draft = draftsRepository.findById(customerId).orElse(null);
 
+//        List<Deductions> deductionsList = null;
+//        if (payloads.deductions() != null) {
+//            deductionsList = payloads.deductions()
+//                    .stream()
+//                    .map(i -> new Deductions(i.type(), i.amount(), 0.0))
+//                    .toList();
+//        }
+
         String fullName = NameUtils.getFullName(customers.getFirstName(), customers.getLastName());
         String initials = NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
 
-        List<Deductions> listDeductionFromDraft = parseDraftDeductionsJson(draft != null ? draft.getDeductionsJson() : null);
+        List<Deductions> listDeductionFromDraft = draft.getDeductions();
 
         List<Deductions> otherDeductionBreakup = null;
         double maintenance = 0;
@@ -718,15 +693,362 @@ public class CustomersServiceV2 {
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
 
-    private List<Deductions> parseDraftDeductionsJson(String json) {
-        if (json == null || json.isBlank()) {
-            return null;
+//    private List<Deductions> parseDraftDeductionsJson(String json) {
+//        if (json == null || json.isBlank()) {
+//            return null;
+//        }
+//        try {
+//            return objectMapper.readValue(json, new TypeReference<List<Deductions>>() {
+//            });
+//        } catch (Exception e) {
+//            return null;
+//        }
+//    }
+
+    public ResponseEntity<?> updateDraftInformations(String hostelId, String customerId, UpdateDrafts updateDrafts) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        try {
-            return objectMapper.readValue(json, new TypeReference<List<Deductions>>() {
-            });
-        } catch (Exception e) {
-            return null;
+        Users user = userService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.WALK_IN.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!hostelV1.getHostelId().equalsIgnoreCase(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        return customerDraftService.updateDraftInfo(customerId, updateDrafts);
+
+
+    }
+
+    public ResponseEntity<?> checkinCustomer(String hostelId, String customerId, CheckInRequestNew payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!Utils.checkNullOrEmpty(customerId)) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!floorsService.checkFloorExistForHostel(payloads.floorId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.N0_FLOOR_FOUND_HOSTEL, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!roomsService.checkRoomExistForFloor(payloads.floorId(), payloads.roomId())) {
+            return new ResponseEntity<>(Utils.N0_ROOM_FOUND_FLOOR, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.UNAUTHORIZED);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(customers.getHostelId());
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_CHECKED_IN, HttpStatus.BAD_REQUEST);
+        }
+
+
+        String date = payloads.joiningDate().replace("/", "-");
+        if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+            return new ResponseEntity<>(Utils.CHECK_IN_FUTURE_DATE_ERROR, HttpStatus.BAD_REQUEST);
+        }
+
+        if (bedsService.isBedAvailable(payloads.bedId(), user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
+            Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), joiningDate);
+            BillingDates currentBillDate = getCurrentBillDateForCheckin(hostelV1.getHostelId(), joiningDate, billingDates);
+
+            Double deductionAmount = 0.0;
+            Double refundableAmount = 0.0;
+            double totalAdvanceAmount = 0.0;
+            double rentAmount = 0.0;
+            boolean shouldCollectFullRent = false;
+            List<Deductions> listDeductions = null;
+            if (payloads.deductions() != null) {
+                listDeductions = payloads.deductions()
+                        .stream()
+                        .map(i -> new Deductions(i.type(), i.amount(), 0.0))
+                        .toList();
+                deductionAmount = payloads
+                        .deductions()
+                        .stream()
+                        .mapToDouble(i -> {
+                            if (i.amount() != null) {
+                                return i.amount();
+                            }
+                            return 0.0;
+                        })
+                        .sum();
+            }
+            if (payloads.refundableAmount() != null) {
+                refundableAmount = payloads.refundableAmount();
+            }
+
+            totalAdvanceAmount = refundableAmount + deductionAmount;
+
+            Advance advance = customers.getAdvance();
+            if (advance == null) {
+                advance = new Advance();
+            }
+
+            advance.setAdvanceAmount(totalAdvanceAmount);
+            advance.setCustomers(customers);
+            advance.setStatus(AdvanceStatus.INVOICE_GENERATED.name());
+            advance.setCreatedBy(userId);
+            advance.setCreatedAt(new Date());
+            advance.setDeductions(listDeductions);
+            advance.setInvoiceDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
+            advance.setUpdatedAt(new Date());
+
+            customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
+            customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+            customers.setJoiningDate(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+            customers.setAdvance(advance);
+
+            Customers savedCustomer = customersRepository.save(customers);
+
+            bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"), savedCustomer.getCustomerId());
+
+            CheckInRequest checkInRequest = new CheckInRequest(payloads.floorId(),
+                    payloads.bedId(),
+                    payloads.roomId(),
+                    payloads.joiningDate(),
+                    totalAdvanceAmount,
+                    rentAmount,
+                    payloads.stayType(),
+                    payloads.deductions(),
+                    shouldCollectFullRent);
+            bookingsService.addCheckin(customers, checkInRequest);
+            customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
+
+            if (totalAdvanceAmount > 0) {
+                invoiceV1Service.addAdvanceInvoice(customerId, totalAdvanceAmount, InvoiceType.ADVANCE.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
+            }
+
+            if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+                if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
+                    return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, payloads.rentalAmount(), payloads.oneTimeDeduction());
+                } else {
+                    CheckInRequest invoiceRequest = getCurrentCycleInvoiceRequest(checkInRequest, joiningDate, currentBillDate);
+                    calculateRentAndCreateRentalInvoice(customers, invoiceRequest, payloads.shouldCollectFullRent(), payloads.customRent(), payloads.oneTimeDeduction());
+                    if (Utils.isCurrentMonth(joiningDate)) {
+                        whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                    }
+                    userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
+                    return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+                }
+            } else {
+                if (Utils.isCurrentMonth(joiningDate)) {
+                    whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                }
+                userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
+                return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+            }
+        }
+        else {
+            return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private BillingDates getCurrentBillDateForCheckin(String hostelId, Date joiningDate, BillingDates billingDates) {
+        if (billingDates != null && billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
+            return hostelService.getJoiningBasedCurrentMonthBillingDate(joiningDate, hostelId, new Date());
+        }
+        return hostelService.getCurrentBillStartAndEndDates(hostelId);
+    }
+
+    private CheckInRequest getCurrentCycleInvoiceRequest(CheckInRequest request, Date joiningDate, BillingDates currentBillDate) {
+        if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
+            String currentCycleStartDate = Utils.dateToString(currentBillDate.currentBillStartDate());
+            return new CheckInRequest(request.floorId(), request.bedId(), request.roomId(), currentCycleStartDate, request.advanceAmount(), request.rentalAmount(), request.stayType(), request.deductions(), Boolean.TRUE.equals(request.proRate()));
+        }
+        return request;
+    }
+
+    public void calculateRentAndCreateRentalInvoice(Customers customers, CheckInRequest payloads, Boolean shouldCollectFullRent, Double customRent, List<NonRefundable> ontimeDeductions) {
+        HostelV1 hostelV1 = hostelService.getHostelInfo(customers.getHostelId());
+        if (hostelV1 != null) {
+
+            Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+            BillingDates billingDates = hostelService.getBillingRuleOnDate(customers.getHostelId(), joiningDate);
+
+
+            Calendar c = Calendar.getInstance();
+            c.setTime(joiningDate);
+
+            boolean collectFullRent = false;
+            if (shouldCollectFullRent != null) {
+                collectFullRent = shouldCollectFullRent;
+            }
+
+            double totalRentalAmount = 0.0;
+            double rentAlone = 0.0;
+            double deductionAmount = 0.0;
+            List<Deductions> listDeductions = null;
+
+            if (collectFullRent) {
+                if (customRent != null) {
+                    rentAlone = customRent;
+                }
+                else {
+                    rentAlone = payloads.rentalAmount();
+                }
+            }
+
+            if (ontimeDeductions != null) {
+                listDeductions = ontimeDeductions
+                        .stream()
+                        .map(i -> new Deductions(i.type(), i.amount(), 0.0))
+                        .toList();
+                deductionAmount = ontimeDeductions
+                        .stream()
+                        .mapToDouble(i -> {
+                            if (i.amount() != null) {
+                                return i.amount();
+                            }
+                            return 0.0;
+                        })
+                        .sum();
+            }
+
+            totalRentalAmount = rentAlone + deductionAmount;
+
+            if (collectFullRent) {
+                invoiceV1Service.addInvoice(customers.getCustomerId(), totalRentalAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
+            }
+            else {
+                if (billingDates.hasGracePeriod()) {
+                    Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays() - 1);
+                    if (payloads.proRate() != null && payloads.proRate()) {
+                        long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                        long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
+                        double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+                        double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                        if (finalRent > payloads.rentalAmount()) {
+                            finalRent = payloads.rentalAmount();
+                        }
+
+                        invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
+                    } else {
+                        if (Utils.compareWithTwoDates(joiningDate, gracePeriodEndingDate) <= 0) {
+                            double finalRent = payloads.rentalAmount();
+                            invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
+                        } else {
+                            long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                            long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
+                            double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+                            double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                            if (finalRent > payloads.rentalAmount()) {
+                                finalRent = payloads.rentalAmount();
+                            }
+                            invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
+
+                        }
+                    }
+                } else {
+                    long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                    long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
+                    double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+                    double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                    if (finalRent > payloads.rentalAmount()) {
+                        finalRent = payloads.rentalAmount();
+                    }
+
+                    invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
+
+                }
+            }
+        }
+
+    }
+
+    private ResponseEntity<?> setupJoiningDateBasisCheckin(BillingDates currentBillDate, Date joiningDate, Customers customers, Users users, double rentalAmount, List<NonRefundable> oneTimeDeductions) {
+        if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) >= 0 && Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillEndDate()) <= 0) {
+            double deductionAmount = 0.0;
+            List<Deductions> listDeductions = null;
+            if (oneTimeDeductions != null) {
+                deductionAmount = oneTimeDeductions
+                        .stream()
+                        .mapToDouble(i -> {
+                            if (i.amount() != null) {
+                                return i.amount();
+                            }
+                            return 0.0;
+                        })
+                        .sum();
+                listDeductions = new ArrayList<>(oneTimeDeductions
+                        .stream()
+                        .map(i -> new Deductions(i.type(), i.amount(), 0.0))
+                        .toList());
+            }
+            double totalRentalAmount = rentalAmount + deductionAmount;
+            //should generate the invoice
+            //send welcome message on whatsapp
+            invoiceV1Service.createNewInvoiceCurrentMonthJoining(customers, joiningDate, totalRentalAmount, currentBillDate, listDeductions, deductionAmount);
+            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL) && Utils.isCurrentMonth(joiningDate)) {
+                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+            }
+
+        } else if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
+            invoiceV1Service.createNewInvoiceCurrentMonthJoining(customers, currentBillDate.currentBillStartDate(), rentalAmount, currentBillDate);
+            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL) && Utils.isCurrentMonth(joiningDate)) {
+                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+            }
+        }
+//        else {
+//            if (Utils.compareWithTwoDates(joiningDate, currentBillDate.currentBillStartDate()) < 0) {
+//                //for old month joining and new invoice for current month
+//                invoiceService.createNewInvoiceForCurrentMonth(customers, joiningDate, rentalAmount, currentBillDate);
+//            }
+//        }
+
+        customerBillingRulesService.addCustomerBillingRule(customers.getCustomerId(), customers.getHostelId(), joiningDate);
+        userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, users);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 }
