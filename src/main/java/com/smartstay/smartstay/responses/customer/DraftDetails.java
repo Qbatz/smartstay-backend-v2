@@ -35,6 +35,14 @@ public record DraftDetails(
     String panPic,
     String aadharPic,
     List<Deductions> deductions,
-    VehicleDetails vehicleDetails
+    VehicleDetails vehicleDetails,
+    String bankId,
+    String referenceNumber,
+    String stayType,
+    Double bookingAmount,          // Total Rent for booking
+    Boolean refuseAdvanceAmount,   // "Do you want to refuse advance amount"
+    Boolean proRate,               // "Do you want to collect Full Rent for current month"
+    Double rentalAmount,           // Custom Rent Amount
+    Double advanceAmount           // Add Onetime Payment
 ) {
 }

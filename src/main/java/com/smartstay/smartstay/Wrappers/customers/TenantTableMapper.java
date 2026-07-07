@@ -136,7 +136,9 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
             return "NA";
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.MOBILE_NUMBER)) {
-            return "+91 " + customers.getMobile();
+            // Avoid rendering "+91 null" for incomplete/draft customers with no mobile number.
+            String mobile = customers.getMobile();
+            return (mobile != null && !mobile.trim().isEmpty()) ? "+91 " + mobile : "";
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.FLOOR)) {
             if (bedDetail != null) {
