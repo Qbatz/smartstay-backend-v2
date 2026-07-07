@@ -34,6 +34,7 @@ public record ExpenseDetailResponse(
         Double totalExpensePaidAmount,
         Integer creditPeriod,
         Double discount,
+        Double discountPercentage,
         Double tax,
         String transactionId,
         String createdAt,
