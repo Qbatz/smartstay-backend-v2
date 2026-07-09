@@ -1519,6 +1519,16 @@ public class InvoiceV1Service {
             }
         }
 
+        if (canApplyToOtherInvoice) {
+            List<InvoicesV1> unpaidRentInvoices = findUnpaidInvoices(customers.getCustomerId()).stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())
+                            || i.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name()))
+                    .toList();
+            if (unpaidRentInvoices.isEmpty()) {
+                canApplyToOtherInvoice = false;
+            }
+        }
+
         if (isInvoicesAvailableForRedeem) {
             if (invoicesV1.isCancelled()) {
                 isInvoicesAvailableForRedeem = false;
