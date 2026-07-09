@@ -85,12 +85,12 @@ public class CustomersController {
 
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getAllCustomerForHostel(@PathVariable("hostelId") String hostelId,
-                                                     @RequestParam(value = "name", required=false) String name,
-                                                     @RequestParam(value = "type", required = false) String type,
+                                                     @RequestParam(value = "name", required = false) String name,
+                                                     @RequestParam(value = "type", required = false) List<String> type,
                                                      @RequestParam(value = "page", defaultValue = "1") int page,
                                                      @RequestParam(value = "size", defaultValue = "10") int size,
-                                                     @RequestParam(value = "period", required = false) String periods,
-                                                     @RequestParam(value = "sharingType", required = false) String sharingType) {
+                                                     @RequestParam(value = "period", required = false) List<String> periods,
+                                                     @RequestParam(value = "sharingType", required = false) List<String> sharingType) {
         return customersService.getAllCustomersForHostel(hostelId, name, type, page, size, periods, sharingType);
     }
 

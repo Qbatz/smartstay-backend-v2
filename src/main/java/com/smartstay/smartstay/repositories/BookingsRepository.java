@@ -294,4 +294,14 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
              AND b.currentStatus IN :statuses
             """)
     boolean existsByCustomerIdNotAndBedIdAndCurrentStatusIn(@Param("customerId") String customerId, @Param("bedId") int bedId, @Param("statuses") List<String> statuses);
+
+    @Query("""
+            SELECT DISTINCT b.customerId FROM BookingsV1 b
+            JOIN Rooms r ON r.roomId = b.roomId
+            WHERE b.hostelId = :hostelId
+            AND r.sharingType IN :sharingTypes
+            """)
+    List<String> findCustomerIdsByHostelIdAndSharingTypeIn(
+            @Param("hostelId") String hostelId,
+            @Param("sharingTypes") List<Integer> sharingTypes);
 }
