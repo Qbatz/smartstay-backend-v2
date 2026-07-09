@@ -348,21 +348,21 @@ public class CustomersService {
         return new int[]{missingOrder, missingOrder, missingOrder};
     }
 
-    public List<CustomerData> searchAndGetCustomers(String hostelId, String name, String type) {
+    public List<CustomerData> searchAndGetCustomers(String hostelId, String name, List<String> types) {
         List<String> typeArray = new ArrayList<>();
-        if (type == null || (type != null && type.trim().equalsIgnoreCase(""))) {
+        if (types == null || types.isEmpty()) {
             typeArray.add(CustomerStatus.NOTICE.name());
             typeArray.add(CustomerStatus.CHECK_IN.name());
             typeArray.add(CustomerStatus.BOOKED.name());
             typeArray.add(CustomerStatus.SETTLEMENT_GENERATED.name());
             typeArray.add(CustomerStatus.DRAFT.name());
         } else {
-            typeArray.add(type.toUpperCase());
+            types.forEach(t -> typeArray.add(t.toUpperCase()));
         }
         return customersRepository.getCustomerData(hostelId, name != null && !name.isBlank() ? name : null, typeArray);
     }
 
-    public ResponseEntity<?> getAllCustomersForHostel(String hostelId, String name, String type, Integer page, Integer size, String periods, String sharingType) {
+    public ResponseEntity<?> getAllCustomersForHostel(String hostelId, String name, List<String> type, Integer page, Integer size, List<String> periods, List<String> sharingType) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -436,17 +436,17 @@ public class CustomersService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, String type, Integer page, Integer size, String periods, String sharingType) {
+    private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, List<String> types, Integer page, Integer size, List<String> periodList, List<String> sharingTypeList) {
 
         List<String> typeArray = new ArrayList<>();
-        if (type == null || (type != null && type.trim().equalsIgnoreCase(""))) {
+        if (types == null || types.isEmpty()) {
             typeArray.add(CustomerStatus.NOTICE.name());
             typeArray.add(CustomerStatus.CHECK_IN.name());
             typeArray.add(CustomerStatus.BOOKED.name());
             typeArray.add(CustomerStatus.SETTLEMENT_GENERATED.name());
             typeArray.add(CustomerStatus.DRAFT.name());
         } else {
-            typeArray.add(type.toUpperCase());
+            types.forEach(t -> typeArray.add(t.toUpperCase()));
         }
 
         Date startDate = null;
@@ -454,37 +454,67 @@ public class CustomersService {
         List<String> customerIds = null;
 
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
-        if (periods != null) {
-            if (periods.equalsIgnoreCase(FilterKeywords.THIS_MONTH)) {
-                startDate = billingDates.currentBillStartDate();
-                endDate = billingDates.currentBillEndDate();
-            } else if (periods.equalsIgnoreCase(FilterKeywords.LAST_MONTH)) {
-                Calendar calendar = Calendar.getInstance();
-                calendar.add(Calendar.MONTH, -1);
-                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
-                startDate = billDatesBasedOnDate.currentBillStartDate();
-                endDate = billDatesBasedOnDate.currentBillEndDate();
-            } else if (periods.equalsIgnoreCase(FilterKeywords.LAST_3_MONTH)) {
-                Calendar calendar = Calendar.getInstance();
-                calendar.add(Calendar.MONTH, -3);
-                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
-                startDate = billDatesBasedOnDate.currentBillStartDate();
-                endDate = billingDates.currentBillEndDate();
-            } else if (periods.equalsIgnoreCase(FilterKeywords.LAST_6_MONTH)) {
-                Calendar calendar = Calendar.getInstance();
-                calendar.add(Calendar.MONTH, -6);
-                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
-                startDate = billDatesBasedOnDate.currentBillStartDate();
-                endDate = billingDates.currentBillEndDate();
-            } else if (periods.equalsIgnoreCase(FilterKeywords.LAST_1_YEAR)) {
-                Calendar calendar = Calendar.getInstance();
-                calendar.add(Calendar.YEAR, -1);
-                BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
-                startDate = billDatesBasedOnDate.currentBillStartDate();
-                endDate = billingDates.currentBillEndDate();
+        if (periodList != null && !periodList.isEmpty()) {
+            for (String period : periodList) {
+                Date pStart = null;
+                Date pEnd = null;
+                if (period.equalsIgnoreCase(FilterKeywords.THIS_MONTH)) {
+                    pStart = billingDates.currentBillStartDate();
+                    pEnd = billingDates.currentBillEndDate();
+                } else if (period.equalsIgnoreCase(FilterKeywords.LAST_MONTH)) {
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.add(Calendar.MONTH, -1);
+                    BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                    pStart = billDatesBasedOnDate.currentBillStartDate();
+                    pEnd = billDatesBasedOnDate.currentBillEndDate();
+                } else if (period.equalsIgnoreCase(FilterKeywords.LAST_3_MONTH)) {
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.add(Calendar.MONTH, -3);
+                    BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                    pStart = billDatesBasedOnDate.currentBillStartDate();
+                    pEnd = billingDates.currentBillEndDate();
+                } else if (period.equalsIgnoreCase(FilterKeywords.LAST_6_MONTH)) {
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.add(Calendar.MONTH, -6);
+                    BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                    pStart = billDatesBasedOnDate.currentBillStartDate();
+                    pEnd = billingDates.currentBillEndDate();
+                } else if (period.equalsIgnoreCase(FilterKeywords.LAST_1_YEAR)) {
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.add(Calendar.YEAR, -1);
+                    BillingDates billDatesBasedOnDate = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                    pStart = billDatesBasedOnDate.currentBillStartDate();
+                    pEnd = billingDates.currentBillEndDate();
+                }
+                // Union: take the earliest start and latest end across all selected periods
+                if (pStart != null) {
+                    startDate = (startDate == null || pStart.before(startDate)) ? pStart : startDate;
+                }
+                if (pEnd != null) {
+                    endDate = (endDate == null || pEnd.after(endDate)) ? pEnd : endDate;
+                }
             }
 
             customerIds = bookingsService.getCustomerIdsByStartAndEndDate(hostelId, startDate, endDate);
+        }
+        if (sharingTypeList != null && !sharingTypeList.isEmpty()) {
+            List<Integer> shareTypeInts = sharingTypeList.stream()
+                    .map(s -> {
+                        try { return Integer.parseInt(s.trim()); } catch (NumberFormatException e) { return null; }
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toList());
+            if (!shareTypeInts.isEmpty()) {
+                List<String> sharingCustomerIds = bookingsService.getCustomerIdsBySharingTypes(hostelId, shareTypeInts);
+                if (customerIds == null) {
+                    customerIds = sharingCustomerIds;
+                } else {
+                    List<String> periodIds = customerIds;
+                    customerIds = sharingCustomerIds.stream()
+                            .filter(periodIds::contains)
+                            .collect(java.util.stream.Collectors.toList());
+                }
+            }
         }
 
         Pageable pageableRequest = PageRequest.of(page - 1, size);

@@ -1409,4 +1409,9 @@ public class BookingsService {
         }
         return bookingsV1.getRentAmount();
     }
+
+    public List<String> getCustomerIdsBySharingTypes(String hostelId, List<Integer> sharingTypes) {
+        List<String> customerIds = bookingsRepository.findCustomerIdsByHostelIdAndSharingTypeIn(hostelId, sharingTypes);
+        return customerIds != null ? customerIds : new ArrayList<>();
+    }
 }

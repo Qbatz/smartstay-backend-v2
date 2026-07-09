@@ -153,6 +153,12 @@ public class BankTransactionService {
                 return false;
             }
 
+            BankingV1 bankingV1 = bankingService.getBankDetails(transactionDto.bankId());
+            double accountBalance = 0.0;
+            if (bankingV1 != null && bankingV1.getBalance() != null) {
+                accountBalance = bankingV1.getBalance();
+            }
+            transactionsV1.setAccountBalance(accountBalance);
             Date dt = null;
             if (transactionDto.transactionDate() != null) {
                 dt = Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
