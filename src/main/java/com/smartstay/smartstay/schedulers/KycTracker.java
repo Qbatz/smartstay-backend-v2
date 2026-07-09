@@ -28,12 +28,18 @@ public class KycTracker {
             if (count < listKyc.size()) {
                 kycService.verifyKycStatusAndUpdate(listKyc.get(count-1));
                 count = count + 1;
-                try {
-                    Thread.sleep(2000);
-                    makeAPICall(listKyc, count);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                if (count % 3 == 0) {
+                    try {
+                        Thread.sleep(2000);
+
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
+                else {
+                    makeAPICall(listKyc, count);
+                }
+
 
             }
         }

@@ -34,11 +34,4 @@ public class SmartstayApplication {
         SpringApplication.run(SmartstayApplication.class, args);
     }
 
-//    alter table smart_stay.kyc_address_details drop address;
-//    alter table smart_stay.kyc_address_details drop city;
-//    alter table smart_stay.kyc_address_details drop locality;
-//    alter table smart_stay.kyc_address_details drop pincode;
-//    alter table smart_stay.kyc_address_details drop state;
-//truncate smart_stay.drafts;
-
 }
