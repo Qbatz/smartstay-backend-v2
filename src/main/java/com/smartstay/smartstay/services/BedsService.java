@@ -816,6 +816,10 @@ public class BedsService {
         return bedsRepository.save(bed);
     }
 
+    public List<Beds> getBedsByHostelId(String hostelId) {
+        return bedsRepository.findByHostelIdAndIsDeletedFalse(hostelId);
+    }
+
     public BedsStatus getBedCountsForDashboard(String hostelId) {
         List<Beds> listBeds = bedsRepository.findByHostelIdAndIsDeletedFalse(hostelId);
 
