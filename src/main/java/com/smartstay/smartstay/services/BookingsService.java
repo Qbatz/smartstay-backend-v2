@@ -388,6 +388,46 @@ public class BookingsService {
         }
     }
 
+    public void addCheckin(Customers customers, CheckInRequest payloads, double rent) {
+        String date = payloads.joiningDate().replace("/", "-");
+        BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customers.getCustomerId(), customers.getHostelId());
+        if (bookingsV1 != null) {
+            bookingsV1.setUpdatedAt(new Date());
+            bookingsV1.setIsBooked(false);
+            bookingsV1.setLeavingDate(null);
+            bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
+            bookingsV1.setRoomId(payloads.roomId());
+            String rawDateStr = payloads.joiningDate().replace("-", "/");
+
+            Date joiningDate = Utils.convertStringToDate(rawDateStr);
+            bookingsV1.setJoiningDate(joiningDate);
+            bookingsV1.setAdvanceAmount(payloads.advanceAmount());
+
+            CustomersBedHistory cbh = new CustomersBedHistory();
+            cbh.setRoomId(bookingsV1.getRoomId());
+            cbh.setBedId(bookingsV1.getBedId());
+            cbh.setFloorId(bookingsV1.getFloorId());
+            cbh.setHostelId(bookingsV1.getHostelId());
+            cbh.setStartDate(bookingsV1.getJoiningDate());
+            cbh.setCustomerId(bookingsV1.getCustomerId());
+            cbh.setChangedBy(authentication.getName());
+            cbh.setType(CustomersBedType.CHECK_IN.name());
+            cbh.setRentAmount(payloads.rentalAmount());
+            // cbh.setReason("Initial check in");
+            cbh.setActive(true);
+            cbh.setCreatedAt(new Date());
+
+            customersBedHistoryService.saveCheckInHistory(cbh);
+
+            bookingsRepository.save(bookingsV1);
+
+            rentHistoryService.addInitialRent(bookingsV1);
+        } else {
+            BookingsV1 bookingsV11 = checkinCustomer(payloads, customers);
+            rentHistoryService.addInitialRent(bookingsV11);
+        }
+    }
+
     public void checkInBookedCustomer(Customers customers, CheckInRequest payloads) {
         String date = payloads.joiningDate().replace("/", "-");
         BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customers.getCustomerId(), customers.getHostelId());
@@ -1417,5 +1457,45 @@ public class BookingsService {
 
     public List<BookingsV1> getAllBookingsByHostelId(String hostelId) {
         return bookingsRepository.findByHostelId(hostelId);
+    }
+
+    public void addBookedCheckIn(Customers customers, CheckInRequest payloads) {
+        BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customers.getCustomerId(), customers.getHostelId());
+        if (bookingsV1 != null) {
+            bookingsV1.setUpdatedAt(new Date());
+            bookingsV1.setLeavingDate(null);
+            bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
+            bookingsV1.setRoomId(payloads.roomId());
+            bookingsV1.setRentAmount(payloads.rentalAmount());
+            String rawDateStr = payloads.joiningDate().replace("-", "/");
+
+            Date joiningDate = Utils.convertStringToDate(rawDateStr);
+            bookingsV1.setJoiningDate(joiningDate);
+            bookingsV1.setAdvanceAmount(payloads.advanceAmount());
+
+            CustomersBedHistory cbh = new CustomersBedHistory();
+            cbh.setRoomId(bookingsV1.getRoomId());
+            cbh.setBedId(bookingsV1.getBedId());
+            cbh.setFloorId(bookingsV1.getFloorId());
+            cbh.setHostelId(bookingsV1.getHostelId());
+            cbh.setStartDate(bookingsV1.getJoiningDate());
+            cbh.setCustomerId(bookingsV1.getCustomerId());
+            cbh.setRentAmount(payloads.rentalAmount());
+            cbh.setChangedBy(authentication.getName());
+            cbh.setReason("Initial check in");
+            cbh.setType(CustomersBedType.CHECK_IN.name());
+            cbh.setActive(true);
+            cbh.setCreatedAt(new Date());
+
+            customersBedHistoryService.saveCheckInHistory(cbh);
+            // List<RentHistory> listRentHistory = new ArrayList<>();
+            // RentHistory rentHistory = rentHistoryService.addInitialRent(bookingsV1);
+            // listRentHistory.add(rentHistory);
+            //
+            // bookingsV1.setRentHistory(listRentHistory);
+
+            bookingsRepository.save(bookingsV1);
+            rentHistoryService.addInitialRent(bookingsV1);
+        }
     }
 }

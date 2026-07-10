@@ -53,7 +53,12 @@ public interface CustomerAmenityRepository extends JpaRepository<CustomersAmenit
             """, nativeQuery = true)
     List<CustomerData> findCustomersWithAmenityStatus(@Param("amenityId") String amenityId, @Param("hostelId") String hostelId);
 
-    List<CustomersAmenity> findByCustomerId(String customerId);
+    @Query("""
+            SELECT ca FROM CustomersAmenity ca WHERE ca.customerId=:customerId AND 
+            (ca.endDate IS NULL OR DATE(ca.endDate) >= DATE(:todaysDate)) AND 
+            (DATE(ca.startDate) <=  DATE(:todaysDate))
+            """)
+    List<CustomersAmenity> findByCustomerId(String customerId, Date todaysDate);
 
     @Query("""
             SELECT ca FROM CustomersAmenity ca WHERE ca.customerId=:customerId AND DATE(ca.startDate) <= DATE(:endDate) 

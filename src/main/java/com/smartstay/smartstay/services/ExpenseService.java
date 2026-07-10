@@ -1408,7 +1408,7 @@ public class ExpenseService {
         Date startDate = null;
         Date endDate = null;
 
-        int page = pageFromParam + 1;
+        int page = pageFromParam - 1;
 
         if (customStartDate != null && customEndDate != null) {
             startDate = Utils.stringToDate(customStartDate, Utils.USER_INPUT_DATE_FORMAT);

@@ -283,14 +283,14 @@ public class SubscriptionService {
         double discountAmount = 0.0;
         double discountPercentage = 0.0;
         double totalAmount = plans.getFinalPrice();
-        if (subscription.discountAmount() != null) {
-            discountAmount = subscription.discountAmount();
-            discountPercentage = (discountAmount / totalAmount) * 100;
-        }
-        else if (subscription.discountPercentage() != null) {
-            discountPercentage = subscription.discountPercentage();
-            discountAmount = (discountPercentage/100) * totalAmount;
-        }
+//        if (subscription.discountAmount() != null) {
+//            discountAmount = subscription.discountAmount();
+//            discountPercentage = (discountAmount / totalAmount) * 100;
+//        }
+//        else if (subscription.discountPercentage() != null) {
+//            discountPercentage = subscription.discountPercentage();
+//            discountAmount = (discountPercentage/100) * totalAmount;
+//        }
         double finalAmount = totalAmount - discountAmount;
 
         Map<String, Object> requestBody = new HashMap<>();
@@ -382,14 +382,14 @@ public class SubscriptionService {
         double discountAmount = 0.0;
         double discountPercentage = 0.0;
         double totalAmount = plans.getFinalPrice();
-        if (subscription.discountAmount() != null) {
-            discountAmount = subscription.discountAmount();
-            discountPercentage = (discountAmount / totalAmount) * 100;
-        }
-        else if (subscription.discountPercentage() != null) {
-            discountPercentage = subscription.discountPercentage();
-            discountAmount = (discountPercentage/100) * totalAmount;
-        }
+//        if (subscription.discountAmount() != null) {
+//            discountAmount = subscription.discountAmount();
+//            discountPercentage = (discountAmount / totalAmount) * 100;
+//        }
+//        else if (subscription.discountPercentage() != null) {
+//            discountPercentage = subscription.discountPercentage();
+//            discountAmount = (discountPercentage/100) * totalAmount;
+//        }
         double finalAmount = totalAmount - discountAmount;
 
         Map<String, Object> requestBody = new HashMap<>();

@@ -25,7 +25,9 @@ public class KycDetails {
     private Date createdAt;
     private Date completedAt;
     private String aadhaarNumber;
+    //pdf of Aadhaar or pan
     private String kycDocument;
+    //Aadhaar or PAN, or any govt id proof
     private String kycDocumentType;
     private String documentType;
     private String gender;

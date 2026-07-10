@@ -999,7 +999,7 @@ public class TransactionService {
             }
         }
 
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page-1, size);
         List<TransactionV1> transactions = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
                 endDate, bankIds, collectedBy, invoiceIds, pageable);
         // long totalRecords =

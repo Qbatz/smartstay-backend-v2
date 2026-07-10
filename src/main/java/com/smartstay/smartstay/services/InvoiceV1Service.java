@@ -386,7 +386,7 @@ public class InvoiceV1Service {
         }
     }
 
-    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate, BillingDates billingDates, double deductionAmount, List<Deductions> listDeductions) {
+    public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate, BillingDates billingDates, double rentAmount, double deductionAmount, List<Deductions> listDeductions) {
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
             BillTemplates templates = templateService.getBillTemplate(hostelId, type);
@@ -465,6 +465,9 @@ public class InvoiceV1Service {
             invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
             invoicesV1.setCancelled(false);
             invoicesV1.setHostelId(hostelId);
+            if (listDeductions != null) {
+                invoicesV1.setDeductions(listDeductions);
+            }
 
             List<InvoiceItems> listInvoiceItems = new ArrayList<>();
 
@@ -478,7 +481,7 @@ public class InvoiceV1Service {
                 invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.ADVANCE.name());
             }
 
-            invoiceItems.setAmount(amount);
+            invoiceItems.setAmount(rentAmount);
             listInvoiceItems.add(invoiceItems);
 
             invoicesV1.setInvoiceItems(listInvoiceItems);
@@ -682,7 +685,7 @@ public class InvoiceV1Service {
         return invoicesV1Repository.findById(invoiceId).orElse(null);
     }
 
-    public ResponseEntity<?> getAllInvoices(String hostelId, String startDate, String endDate, List<String> types, List<String> createdBy, List<String> mode, String searchKey, List<String> paymentStatus) {
+    public ResponseEntity<?> getAllInvoices(String hostelId, String startDate, String endDate, List<String> types, List<String> createdBy, List<String> mode, String searchKey, List<String> paymentStatus, Integer pageFromParams, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -756,10 +759,24 @@ public class InvoiceV1Service {
             invoiceFilterOptions.setCreatedBy(listCreatedBy);
         }
 
-        List<InvoicesV1> listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
+        Pageable pageableRequest = PageRequest.of(pageFromParams - 1, size);
+        List<InvoicesV1> listAllInvoice = new ArrayList<>();
+
+        if (authentication.getSource().equalsIgnoreCase("web")) {
+            Page<InvoicesV1> pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, pageableRequest);
+
+            if (pageList != null) {
+                listAllInvoice = pageList.getContent();
+            }
+        }
+        else {
+            listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
+        }
+
+
         List<InvoiceRedemption> listInvoiceRedeemed;
         List<String> invoiceIds = new ArrayList<>();
-        if (listAllInvoice != null && !listAllInvoice.isEmpty()) {
+        if (!listAllInvoice.isEmpty()) {
             invoiceIds = listAllInvoice
                     .stream()
                     .filter(InvoicesV1::isDiscounted)
@@ -843,7 +860,8 @@ public class InvoiceV1Service {
 //                            invoice.setBalanceAmount(paidAfterDeduction);
 //                        }
                     }
-                } else {
+                }
+                else {
                     if (deductionAmount > 0) {
                         if (invoice.getDeductions() != null) {
                             double pendingAmount = invoice.getDeductions()
@@ -927,6 +945,109 @@ public class InvoiceV1Service {
                     }
 
 
+                }
+            }
+            else {
+                if (invoice.getDeductionAmount() != null) {
+                    if (invoice.getDeductionAmount() > 0) {
+                        double deductionAmount = invoice.getDeductionAmount();
+                        if ((paidAmount + amount) < deductionAmount) {
+                            List<Deductions> listDeductions = invoice.getDeductions();
+                            if (listDeductions != null) {
+                                final double[] tempAmount = {amount};
+                                List<Deductions> newDeductions = listDeductions
+                                        .stream()
+                                        .map(i -> {
+                                            if (Objects.equals(i.getPaidAmount(), i.getAmount())) {
+                                                return i;
+                                            }
+                                            if (i.getPaidAmount() < i.getAmount()) {
+                                                if (tempAmount[0] > 0) {
+                                                    double balance = i.getAmount() - i.getPaidAmount();
+                                                    if (balance > 0) {
+                                                        if (tempAmount[0] >= balance) {
+                                                            i.setPaidAmount(i.getAmount());
+                                                            tempAmount[0] = tempAmount[0] - balance;
+                                                        }
+                                                        else {
+                                                            i.setPaidAmount(i.getPaidAmount() + tempAmount[0]);
+                                                            tempAmount[0] = 0;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            return i;
+                                        })
+                                        .toList();
+
+                                invoice.setDeductions(newDeductions);
+                            }
+
+                        }
+                        else {
+                            if (deductionAmount > 0) {
+                                if (invoice.getDeductions() != null) {
+                                    double pendingAmount = invoice.getDeductions()
+                                            .stream()
+                                            .filter(i -> {
+                                                if (i.getPaidAmount() != null) {
+                                                    if (!i.getPaidAmount().equals(i.getAmount())) {
+                                                        return true;
+                                                    }
+                                                    return false;
+                                                }
+                                                return false;
+                                            })
+                                            .mapToDouble(i1 -> i1.getAmount() - i1.getPaidAmount())
+                                            .sum();
+                                    if (pendingAmount > 0) {
+                                        double pAmount = 0.0;
+                                        if (invoice.getPaidAmount() != null) {
+                                            pAmount = invoice.getPaidAmount();
+                                        }
+                                        AtomicReference<Double> newDeductionAmount = new AtomicReference<>(amount);
+
+                                        List<Deductions> listDeductions = invoice.getDeductions();
+                                        List<Deductions> newDeductions = listDeductions
+                                                .stream()
+                                                .map(i -> {
+                                                    if (Objects.equals(i.getPaidAmount(), i.getAmount())) {
+                                                        return i;
+                                                    }
+                                                    if (i.getPaidAmount() < i.getAmount()) {
+                                                        if (newDeductionAmount.get() > 0) {
+                                                            double balance = i.getAmount() - i.getPaidAmount();
+                                                            if (balance > 0) {
+                                                                if (newDeductionAmount.get() >= balance) {
+                                                                    i.setPaidAmount(i.getAmount());
+                                                                    newDeductionAmount.set(newDeductionAmount.get() - balance);
+                                                                }
+                                                                else {
+                                                                    i.setPaidAmount(i.getPaidAmount() + newDeductionAmount.get());
+                                                                    newDeductionAmount.set(0.0);
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    return i;
+                                                })
+                                                .toList();
+
+                                        invoice.setDeductions(newDeductions);
+//                                        if (newDeductionAmount.get() > 0) {
+//                                            if (invoice.getBalanceAmount() != null) {
+//                                                invoice.setBalanceAmount(newDeductionAmount.get() + invoice.getBalanceAmount());
+//                                            } else {
+//                                                invoice.setBalanceAmount(newDeductionAmount.get());
+//                                            }
+//                                        }
+                                    }
+
+                                }
+
+                            }
+                        }
+                    }
                 }
             }
             invoice.setPaymentStatus(status);
@@ -1421,7 +1542,7 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
         }
 
-
+        Double deductionAmount = 0.0;
         String paymentStatus = null;
         String cancelledOn = null;
         if (invoicesV1.getPaymentStatus() != null) {
@@ -1716,6 +1837,13 @@ public class InvoiceV1Service {
                 }
             }
 
+            Double total1 = 0.0;
+            Double total2 = 0.0;
+            if (invoicesV1.getTotalAmount() != null) {
+                total1 = invoicesV1.getTotalAmount() - totalDeductionAmount;
+                total2 = totalDeductionAmount;
+            }
+
             InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
                     Utils.roundOffWithTwoDigit(invoicesV1.getBasePrice()),
                     0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
@@ -1725,7 +1853,10 @@ public class InvoiceV1Service {
                     cancelledOn,
                     invoicesV1.isDiscounted(),
                     discountReason,
-                    Utils.roundOffWithTwoDigit(totalDeductionAmount), false, false, 0.0, false, false, 0.0, listInvoiceItems, listDeductions, null);
+                    Utils.roundOffWithTwoDigit(totalDeductionAmount), false, false,
+                    total1,
+                    total2,
+                    0.0, false, false, 0.0, listInvoiceItems, listDeductions, null);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1,
                     invoiceSummaries);
@@ -1795,6 +1926,17 @@ public class InvoiceV1Service {
 
         }
 
+        Double total1 = 0.0;
+        Double total2 = 0.0;
+        if (invoicesV1.getDeductionAmount() != null) {
+            deductionAmount = invoicesV1.getDeductionAmount();
+
+            total2 = deductionAmount;
+        }
+        if (invoicesV1.getTotalAmount() != null) {
+            total1 = invoicesV1.getTotalAmount() - deductionAmount;
+        }
+
 
         InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
                 Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
@@ -1805,9 +1947,11 @@ public class InvoiceV1Service {
                 cancelledOn,
                 invoicesV1.isDiscounted(),
                 discountReason,
-                0.0,
+                deductionAmount,
                 isInvoicesAvailableForRedeem,
                 false,
+                total1,
+                total2,
                 Utils.roundOffWithTwoDigit(availableCreditAmount),
                 isAdvanceAvailableForRedeem,
                 canApplyToOtherInvoice,
@@ -1845,6 +1989,8 @@ public class InvoiceV1Service {
                     0.0,
                     canRedeemBooking,
                     false,
+                    paidAmount,
+                    0.0,
                     Utils.roundOffWithTwoDigit(availableCreditAmount),
                     isAdvanceAvailableForRedeem,
                     false,
@@ -6049,5 +6195,92 @@ public class InvoiceV1Service {
                 .stream()
                 .map(InvoicesV1::getInvoiceId)
                 .toList();
+    }
+
+    public ResponseEntity<?> getBasicList(String hostelId, String startDate, String endDate, List<String> types, List<String> createdBy, List<String> invoiceModes, String searchKey, List<String> paymentStatus) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        Date dStartDate = null;
+        Date dEndDate = null;
+        if (startDate != null) {
+            dStartDate = Utils.stringToDate(startDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        if (endDate != null) {
+            dEndDate = Utils.stringToDate(endDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        List<String> invoiceTypes = null;
+        if (types != null) {
+            invoiceTypes = types;
+        } else {
+            invoiceTypes = new ArrayList<>();
+            invoiceTypes.add(InvoiceType.RENT.name());
+            invoiceTypes.add(InvoiceType.SETTLEMENT.name());
+            invoiceTypes.add(InvoiceType.ADVANCE.name());
+            invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
+        }
+
+        List<String> createdByUsers = null;
+        if (createdBy != null && !createdBy.isEmpty()) {
+            createdByUsers = createdBy;
+        }
+
+        List<String> modes = null;
+        if (invoiceModes != null && !invoiceModes.isEmpty()) {
+            modes = invoiceModes;
+        }
+        List<String> pStatus = null;
+        if (paymentStatus != null && !paymentStatus.isEmpty()) {
+            pStatus = paymentStatus;
+        }
+
+        List<String> userIds = null;
+        if (searchKey != null && !searchKey.trim().equalsIgnoreCase("")) {
+            List<Customers> listCustomers = customersService.searchCustomerByHostelName(hostelId, searchKey.trim());
+            userIds = listCustomers.stream().map(Customers::getCustomerId).toList();
+        }
+
+        List<UserHostel> listAdminUsers = userHostelService.findAllByHostelId(hostelId);
+        List<String> adminIds = listAdminUsers.stream().map(UserHostel::getUserId).toList();
+        List<Users> adminUsers = usersService.findAllUsersFromUserId(adminIds);
+
+        List<CreatedBy> listCreatedBy = adminUsers.stream().map(i -> {
+            StringBuilder fullName = new StringBuilder();
+            if (i.getFirstName() != null) {
+                fullName.append(i.getFirstName());
+            }
+            if (i.getLastName() != null && i.getLastName().trim().equalsIgnoreCase("")) {
+                fullName.append(" ");
+                fullName.append(i.getLastName());
+            }
+            return new CreatedBy(fullName.toString(), i.getUserId());
+        }).toList();
+
+        List<InvoicesV1> listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
+        if (listAllInvoice != null && !listAllInvoice.isEmpty()) {
+            List<String> customerIds = listAllInvoice
+                    .stream()
+                    .map(InvoicesV1::getCustomerId)
+                    .toList();
+            List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+            List<InvoiceBasicList> invoiceBasicLists = listAllInvoice.stream()
+                    .map(i -> new InvoiceBasicMapper(listCustomers).apply(i))
+                    .toList();
+
+            return new ResponseEntity<>(invoiceBasicLists, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+
     }
 }

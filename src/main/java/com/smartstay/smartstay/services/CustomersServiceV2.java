@@ -412,7 +412,6 @@ public class CustomersServiceV2 {
         }
 
 
-
         // Basic customer fields on the draft — applied as sent so empty values clear the column.
         customers.setFirstName(payloads.firstName());
         customers.setLastName(payloads.lastName());
@@ -641,7 +640,8 @@ public class CustomersServiceV2 {
                 address = draft.getAddressJson() != null ? objectMapper.readValue(draft.getAddressJson(), Address.class) : null;
                 booking = draft.getBookingJson() != null ? objectMapper.readValue(draft.getBookingJson(), Booking.class) : null;
                 jobDetails = draft.getJobDetailsJson() != null ? objectMapper.readValue(draft.getJobDetailsJson(), JobDetails.class) : null;
-                guardians = draft.getGuardiansJson() != null ? objectMapper.readValue(draft.getGuardiansJson(), new TypeReference<List<Guardian>>() {}) : null;
+                guardians = draft.getGuardiansJson() != null ? objectMapper.readValue(draft.getGuardiansJson(), new TypeReference<List<Guardian>>() {
+                }) : null;
             } catch (JsonProcessingException e) {
                 // Handle exception
             }
@@ -654,7 +654,7 @@ public class CustomersServiceV2 {
                 || draft.getVehicleNumber() != null
                 || draft.getIsParkingSpaceRequired() != null))
                 ? new VehicleDetails(draft.getVehicleType(), draft.getVehicleNumber(),
-                        draft.getIsParkingSpaceRequired())
+                draft.getIsParkingSpaceRequired())
                 : null;
 
         DraftDetails details = new DraftDetails(
@@ -852,12 +852,16 @@ public class CustomersServiceV2 {
 
             bedsService.addUserToBed(payloads.bedId(), payloads.joiningDate().replace("/", "-"), savedCustomer.getCustomerId());
 
+            if (payloads.shouldCollectFullRent() == null || !payloads.shouldCollectFullRent()) {
+                rentAmount = payloads.rentalAmount();
+            }
+
             CheckInRequest checkInRequest = new CheckInRequest(payloads.floorId(),
                     payloads.bedId(),
                     payloads.roomId(),
                     payloads.joiningDate(),
                     totalAdvanceAmount,
-                    rentAmount,
+                    payloads.rentalAmount(),
                     payloads.stayType(),
                     payloads.deductions(),
                     shouldCollectFullRent);
@@ -874,21 +878,20 @@ public class CustomersServiceV2 {
                 } else {
                     CheckInRequest invoiceRequest = getCurrentCycleInvoiceRequest(checkInRequest, joiningDate, currentBillDate);
                     calculateRentAndCreateRentalInvoice(customers, invoiceRequest, payloads.shouldCollectFullRent(), payloads.customRent(), payloads.oneTimeDeduction());
-                    if (Utils.isCurrentMonth(joiningDate)) {
+                    if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL) && Utils.isCurrentMonth(joiningDate)) {
                         whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
                     }
                     userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             } else {
-                if (Utils.isCurrentMonth(joiningDate)) {
+                if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL) && Utils.isCurrentMonth(joiningDate)) {
                     whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
                 }
                 userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
                 return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
             }
-        }
-        else {
+        } else {
             return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);
         }
     }
@@ -931,12 +934,13 @@ public class CustomersServiceV2 {
             List<Deductions> listDeductions = null;
 
             if (collectFullRent) {
-                if (customRent != null) {
+                if (customRent != null && customRent != 0.0) {
                     rentAlone = customRent;
-                }
-                else {
+                } else {
                     rentAlone = payloads.rentalAmount();
                 }
+            } else {
+                rentAlone = payloads.rentalAmount();
             }
 
             if (ontimeDeductions != null) {
@@ -957,26 +961,15 @@ public class CustomersServiceV2 {
 
             totalRentalAmount = rentAlone + deductionAmount;
 
-            if (collectFullRent) {
-                invoiceV1Service.addInvoice(customers.getCustomerId(), totalRentalAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
-            }
-            else {
+            if (Utils.compareWithTwoDates(joiningDate, billingDates.currentBillStartDate()) >= 0) {
                 if (billingDates.hasGracePeriod()) {
                     Date gracePeriodEndingDate = Utils.addDaysToDate(billingDates.currentBillStartDate(), billingDates.gracePeriodDays() - 1);
-                    if (payloads.proRate() != null && payloads.proRate()) {
-                        long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
-                        long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
-                        double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
-                        double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
-                        if (finalRent > payloads.rentalAmount()) {
-                            finalRent = payloads.rentalAmount();
-                        }
-
-                        invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
+                    if (Utils.compareWithTwoDates(joiningDate, gracePeriodEndingDate) <= 0) {
+                        double finalRent = payloads.rentalAmount();
+                        invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, rentAlone, deductionAmount, listDeductions);
                     } else {
-                        if (Utils.compareWithTwoDates(joiningDate, gracePeriodEndingDate) <= 0) {
-                            double finalRent = payloads.rentalAmount();
-                            invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
+                        if (collectFullRent) {
+                            invoiceV1Service.addInvoice(customers.getCustomerId(), totalRentalAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, rentAlone, deductionAmount, listDeductions);
                         } else {
                             long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
                             long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
@@ -985,22 +978,36 @@ public class CustomersServiceV2 {
                             if (finalRent > payloads.rentalAmount()) {
                                 finalRent = payloads.rentalAmount();
                             }
-                            invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
+                            invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, finalRent, deductionAmount, listDeductions);
 
                         }
                     }
                 } else {
-                    long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
-                    long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
-                    double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
-                    double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
-                    if (finalRent > payloads.rentalAmount()) {
-                        finalRent = payloads.rentalAmount();
+                    if (collectFullRent) {
+                        invoiceV1Service.addInvoice(customers.getCustomerId(), totalRentalAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, rentAlone, deductionAmount, listDeductions);
+                    } else {
+                        long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                        long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
+                        double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+                        double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                        if (finalRent > payloads.rentalAmount()) {
+                            finalRent = payloads.rentalAmount();
+                        }
+                        invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, finalRent, deductionAmount, listDeductions);
+
                     }
-
-                    invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
-
                 }
+            } else {
+                long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+                long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
+                double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
+                double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                if (finalRent > payloads.rentalAmount()) {
+                    finalRent = payloads.rentalAmount();
+                }
+
+                invoiceV1Service.addInvoice(customers.getCustomerId(), finalRent + deductionAmount, InvoiceType.RENT.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, finalRent, deductionAmount, listDeductions);
+
             }
         }
 
@@ -1051,4 +1058,178 @@ public class CustomersServiceV2 {
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
+
+    public ResponseEntity<?> checkinBookedCustomer(String hostelId, String customerId, CheckInBookedCustomerNew payloads) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = userService.findUserByUserId(userId);
+
+        if (!Utils.checkNullOrEmpty(customerId)) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!customers.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(customerId);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.CUSTOMER_BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        Integer bedId = 0;
+        if (payloads.bedId() != null) {
+            if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(), customers.getHostelId())) {
+                return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.UNAUTHORIZED);
+            }
+
+            bedId = payloads.bedId();
+        } else {
+            bedId = bookingsV1.getBedId();
+
+        }
+
+        HostelV1 hostelV1 = hostelService.getHostelInfo(customers.getHostelId());
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_CHECKED_IN, HttpStatus.BAD_REQUEST);
+        }
+
+
+        String date = payloads.joiningDate().replace("/", "-");
+        if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+            return new ResponseEntity<>(Utils.CHECK_IN_FUTURE_DATE_ERROR, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!bedsService.isBedAvailable(bedId, user.getParentId(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT))) {
+            return new ResponseEntity<>(Utils.BED_CURRENTLY_UNAVAILABLE, HttpStatus.BAD_REQUEST);
+        }
+
+        Integer roomId = 0;
+        Integer floorId = 0;
+
+        Beds beds = bedsService.findBedById(bedId);
+        if (beds != null) {
+            roomId = beds.getRoomId();
+            floorId = beds.getBedId();
+        }
+
+        Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), joiningDate);
+        BillingDates currentBillDate = getCurrentBillDateForCheckin(hostelV1.getHostelId(), joiningDate, billingDates);
+
+        Double deductionAmount = 0.0;
+        Double refundableAmount = 0.0;
+        double totalAdvanceAmount = 0.0;
+        double rentAmount = 0.0;
+        boolean shouldCollectFullRent = false;
+        List<Deductions> listDeductions = null;
+        if (payloads.deductions() != null) {
+            listDeductions = payloads.deductions()
+                    .stream()
+                    .map(i -> new Deductions(i.type(), i.amount(), 0.0))
+                    .toList();
+            deductionAmount = payloads
+                    .deductions()
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.amount() != null) {
+                            return i.amount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+        }
+        if (payloads.refundableAmount() != null) {
+            refundableAmount = payloads.refundableAmount();
+        }
+
+        totalAdvanceAmount = refundableAmount + deductionAmount;
+
+        Advance advance = customers.getAdvance();
+        if (advance == null) {
+            advance = new Advance();
+        }
+
+        advance.setAdvanceAmount(totalAdvanceAmount);
+        advance.setCustomers(customers);
+        advance.setStatus(AdvanceStatus.INVOICE_GENERATED.name());
+        advance.setCreatedBy(userId);
+        advance.setCreatedAt(new Date());
+        advance.setDeductions(listDeductions);
+        advance.setInvoiceDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
+        advance.setUpdatedAt(new Date());
+
+        customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
+        customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
+        customers.setJoiningDate(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
+        customers.setAdvance(advance);
+
+        Customers savedCustomer = customersRepository.save(customers);
+
+        bedsService.addUserToBed(bedId, payloads.joiningDate().replace("/", "-"), savedCustomer.getCustomerId());
+
+        if (payloads.shouldCollectFullRent() == null || !payloads.shouldCollectFullRent()) {
+            rentAmount = payloads.rentalAmount();
+        }
+
+        CheckInRequest checkInRequest = new CheckInRequest(floorId,
+                bedId,
+                roomId,
+                payloads.joiningDate(),
+                totalAdvanceAmount,
+                payloads.rentalAmount(),
+                payloads.stayType(),
+                payloads.deductions(),
+                shouldCollectFullRent);
+        bookingsService.addBookedCheckIn(customers, checkInRequest);
+        customersConfigService.addToConfiguration(customerId, hostelV1.getHostelId(), joiningDate);
+
+        if (totalAdvanceAmount > 0) {
+            invoiceV1Service.addAdvanceInvoice(customerId, totalAdvanceAmount, InvoiceType.ADVANCE.name(), customers.getHostelId(), customers.getMobile(), customers.getEmailId(), payloads.joiningDate(), billingDates, deductionAmount, listDeductions);
+        }
+
+        if (billingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+            if (billingDates.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
+                return setupJoiningDateBasisCheckin(currentBillDate, joiningDate, customers, user, payloads.rentalAmount(), payloads.oneTimeDeduction());
+            } else {
+                CheckInRequest invoiceRequest = getCurrentCycleInvoiceRequest(checkInRequest, joiningDate, currentBillDate);
+                calculateRentAndCreateRentalInvoice(customers, invoiceRequest, payloads.shouldCollectFullRent(), payloads.customRent(), payloads.oneTimeDeduction());
+                if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL) && Utils.isCurrentMonth(joiningDate)) {
+                    whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+                }
+                userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
+                return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+            }
+        } else {
+            if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL) && Utils.isCurrentMonth(joiningDate)) {
+                whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
+            }
+            userService.addUserLog(hostelV1.getHostelId(), savedCustomer.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CHECKIN, user);
+            return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
+        }
+    }
+
 }

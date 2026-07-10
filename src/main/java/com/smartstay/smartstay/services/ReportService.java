@@ -263,7 +263,7 @@ public class ReportService {
                                                      List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, String period,
                                                      Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount,
                                                      Double maxOutstandingAmount,
-                                                     String customStartDate, String customEndDate, int page, int size) {
+                                                     String customStartDate, String customEndDate, int pageParams, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -328,7 +328,7 @@ public class ReportService {
             endDate = Utils.stringToDate(customEndDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
 
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(pageParams - 1, size);
         List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
                 paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
                 minOutstandingAmount, maxOutstandingAmount, isCancelledList, pageable);
@@ -339,7 +339,7 @@ public class ReportService {
         return buildReportResponse(hostelId, startDate, endDate, search, paymentStatus, invoiceModes,
                 invoiceTypes,
                 createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount,
-                invoiceDetails, options, page, size, isCancelledList);
+                invoiceDetails, options, pageParams-1, size, isCancelledList);
     }
 
     private BillingDates calculateDateRange(String period, String hostelId) {
@@ -664,7 +664,7 @@ public class ReportService {
     public ResponseEntity<?> getExpenseDetails(String hostelId, String period, String customStartDate,
                                                String customEndDate, List<Long> categoryIds, List<Long> subCategoryIds,
                                                List<String> paymentModes,
-                                               List<String> paidTo, List<String> createdBy, int page, int size) {
+                                               List<String> paidTo, List<String> createdBy, int pageParams, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -680,7 +680,7 @@ public class ReportService {
         }
 
         return new ResponseEntity<>(expenseService.getExpenseReportDetails(hostelId, period, customStartDate,
-                customEndDate, categoryIds, subCategoryIds, paymentModes, paidTo, createdBy, page,
+                customEndDate, categoryIds, subCategoryIds, paymentModes, paidTo, createdBy, pageParams,
                 size),
                 HttpStatus.OK);
     }
@@ -741,7 +741,7 @@ public class ReportService {
         if (search != null && !search.isEmpty()) {
             customerIds = customersService.findCustomerIdsByName(hostelId, search);
             if (customerIds.isEmpty()) {
-                return buildEmptyTenantResponse(startDate, endDate, page, size, hostelId,
+                return buildEmptyTenantResponse(startDate, endDate, page-1, size, hostelId,
                         user.getParentId());
             }
         }
@@ -797,7 +797,7 @@ public class ReportService {
 
         Page<BookingsV1> bookingsPage = bookingsService
                 .findBookingsWithFilters(hostelId, startDate, endDate, customerIds, status, rooms,
-                        floors, page, size);
+                        floors, page-1, size);
         List<BookingsV1> paginatedBookings = bookingsPage.getContent();
         long totalRecords = bookingsPage.getTotalElements();
 
@@ -865,7 +865,7 @@ public class ReportService {
                         .builder().from(Utils.dateToString(startDate))
                         .to(Utils.dateToString(endDate)).build())
                 .summary(summary).tenants(details)
-                .pagination(TenantRegisterResponse.Pagination.builder().currentPage(page).pageSize(size)
+                .pagination(TenantRegisterResponse.Pagination.builder().currentPage(page-1).pageSize(size)
                         .totalRecords(totalRecords).totalPages(bookingsPage.getTotalPages())
                         .build())
                 .filters(filtersData).build();
