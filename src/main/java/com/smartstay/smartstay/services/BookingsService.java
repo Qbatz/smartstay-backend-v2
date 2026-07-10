@@ -1455,6 +1455,10 @@ public class BookingsService {
         return customerIds != null ? customerIds : new ArrayList<>();
     }
 
+    public List<BookingsV1> getAllBookingsByHostelId(String hostelId) {
+        return bookingsRepository.findByHostelId(hostelId);
+    }
+
     public void addBookedCheckIn(Customers customers, CheckInRequest payloads) {
         BookingsV1 bookingsV1 = findBookingsByCustomerIdAndHostelId(customers.getCustomerId(), customers.getHostelId());
         if (bookingsV1 != null) {
