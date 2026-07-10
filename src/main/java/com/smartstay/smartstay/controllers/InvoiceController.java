@@ -27,8 +27,17 @@ public class InvoiceController {
     @Autowired
     private InvoiceV1Service invoiceV1Service;
     @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getAllTransactions(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate, @RequestParam(value = "type", required = false) List<String> types, @RequestParam(value = "createdBy", required = false) List<String> createdBy, @RequestParam(value = "modes", required = false) List<String> modes, @RequestParam(value = "search", required = false) String searchKey, @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus) {
-        return invoiceV1Service.getAllInvoices(hostelId, startDate, endDate, types, createdBy, modes, searchKey, paymentStatus);
+    public ResponseEntity<?> getAllTransactions(@PathVariable("hostelId") String hostelId,
+                                                @RequestParam(value = "startDate", required = false) String startDate,
+                                                @RequestParam(value = "endDate", required = false) String endDate,
+                                                @RequestParam(value = "type", required = false) List<String> types,
+                                                @RequestParam(value = "createdBy", required = false) List<String> createdBy,
+                                                @RequestParam(value = "modes", required = false) List<String> modes,
+                                                @RequestParam(value = "search", required = false) String searchKey,
+                                                @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus,
+                                                @RequestParam(value = "size", defaultValue = "10") Integer size,
+                                                @RequestParam(value = "page", defaultValue = "1") Integer page) {
+        return invoiceV1Service.getAllInvoices(hostelId, startDate, endDate, types, createdBy, modes, searchKey, paymentStatus, page, size);
     }
 
     @GetMapping("/receipts/{hostelId}")
@@ -141,5 +150,10 @@ public class InvoiceController {
     @GetMapping("/advances/{hostelId}/{invoiceId}")
     public ResponseEntity<?> getAdvanceInvoicesForCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestParam(value = "type", required = false) String type) {
         return invoiceV1Service.getAvailableInvoicesToApply(hostelId, invoiceId, type);
+    }
+
+    @GetMapping("/basic-list/{hostelId}")
+    public ResponseEntity<?> getBasicInfo(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate, @RequestParam(value = "type", required = false) List<String> types, @RequestParam(value = "createdBy", required = false) List<String> createdBy, @RequestParam(value = "modes", required = false) List<String> modes, @RequestParam(value = "search", required = false) String searchKey, @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus) {
+        return invoiceV1Service.getBasicList(hostelId, startDate, endDate, types, createdBy, modes, searchKey, paymentStatus);
     }
 }

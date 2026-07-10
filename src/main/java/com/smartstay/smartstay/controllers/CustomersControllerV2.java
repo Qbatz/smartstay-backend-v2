@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.controllers;
 
+import com.smartstay.smartstay.payloads.customer.CheckInBookedCustomerNew;
 import com.smartstay.smartstay.payloads.customer.CheckInRequest;
 import com.smartstay.smartstay.payloads.customer.CheckInRequestNew;
 import com.smartstay.smartstay.payloads.customer.SaveDraftCustomerRequest;
@@ -75,6 +76,11 @@ public class CustomersControllerV2 {
     @PostMapping("/check-in/{hostelId}/{customerId}")
     public ResponseEntity<?> checkInCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @Valid @RequestBody CheckInRequestNew newCheckInRequest) {
         return customersServiceV2.checkinCustomer(hostelId, customerId, newCheckInRequest);
+    }
+
+    @PostMapping("/booked/check-in/{hostelId}/{customerId}")
+    public ResponseEntity<?> checkInBookedCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @Valid @RequestBody CheckInBookedCustomerNew payloads) {
+        return customersServiceV2.checkinBookedCustomer(hostelId, customerId, payloads);
     }
 
 }

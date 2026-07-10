@@ -1600,7 +1600,7 @@ public class CustomersService {
         List<Amenities> amenities = amenitiesService.getAmenitiesByCustomerId(customerId);
         List<TransactionDto> listTransactions = transactionService.getTranactionInfoByCustomerId(customerId);
         List<AmenityRequestDTO> listRequestedAmenities = amenityRequestService.getRequestedAmenities(customerId, customers.getHostelId());
-
+        List<AvailableAmenities> listAvailableAmenities = amenitiesService.getAvailableAmenitiesExceptAvailed(customers.getHostelId(), amenities, listRequestedAmenities);
         List<String> invoicesIds = listTransactions.stream().map(TransactionDto::invoiceId).toList();
         Set<String> bankIds = listTransactions.stream().map(TransactionDto::bankId).collect(Collectors.toSet());
         List<InvoicesV1> listOfInvoices = invoiceService.findInvoices(invoicesIds);
@@ -1651,7 +1651,16 @@ public class CustomersService {
             effectiveFromMonth = Utils.getEffectiveBillingMonths(new Date(), customers.getJoiningDate(), billingStartDay);
         }
 
-        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, customers.getProfilePic(), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic, effectiveFromMonth, customers.getIdProofType(), customers.getIdProofNo());
+        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(),
+                customers.getMobile(), "91", initials, customers.getProfilePic(),
+                bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint,
+                customers.getCurrentStatus(), address, hostelInformation,
+                kycInfo, advanceInfo, checkoutInfo, bookingInfo,
+                invoiceResponseList, listBeds, listTransactionResponse, amenities,
+                listRequestedAmenities, listAvailableAmenities, walletInfo, customerFiles, additionalContacts,
+                isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy,
+                createdByName, createdByInitials, createdByPic, effectiveFromMonth,
+                customers.getIdProofType(), customers.getIdProofNo());
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }

@@ -685,7 +685,7 @@ public class InvoiceV1Service {
         return invoicesV1Repository.findById(invoiceId).orElse(null);
     }
 
-    public ResponseEntity<?> getAllInvoices(String hostelId, String startDate, String endDate, List<String> types, List<String> createdBy, List<String> mode, String searchKey, List<String> paymentStatus) {
+    public ResponseEntity<?> getAllInvoices(String hostelId, String startDate, String endDate, List<String> types, List<String> createdBy, List<String> mode, String searchKey, List<String> paymentStatus, Integer pageFromParams, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -759,10 +759,24 @@ public class InvoiceV1Service {
             invoiceFilterOptions.setCreatedBy(listCreatedBy);
         }
 
-        List<InvoicesV1> listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
+        Pageable pageableRequest = PageRequest.of(pageFromParams - 1, size);
+        List<InvoicesV1> listAllInvoice = new ArrayList<>();
+
+        if (authentication.getSource().equalsIgnoreCase("web")) {
+            Page<InvoicesV1> pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, pageableRequest);
+
+            if (pageList != null) {
+                listAllInvoice = pageList.getContent();
+            }
+        }
+        else {
+            listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
+        }
+
+
         List<InvoiceRedemption> listInvoiceRedeemed;
         List<String> invoiceIds = new ArrayList<>();
-        if (listAllInvoice != null && !listAllInvoice.isEmpty()) {
+        if (!listAllInvoice.isEmpty()) {
             invoiceIds = listAllInvoice
                     .stream()
                     .filter(InvoicesV1::isDiscounted)
@@ -6171,5 +6185,92 @@ public class InvoiceV1Service {
                 .stream()
                 .map(InvoicesV1::getInvoiceId)
                 .toList();
+    }
+
+    public ResponseEntity<?> getBasicList(String hostelId, String startDate, String endDate, List<String> types, List<String> createdBy, List<String> invoiceModes, String searchKey, List<String> paymentStatus) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        Date dStartDate = null;
+        Date dEndDate = null;
+        if (startDate != null) {
+            dStartDate = Utils.stringToDate(startDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        if (endDate != null) {
+            dEndDate = Utils.stringToDate(endDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        List<String> invoiceTypes = null;
+        if (types != null) {
+            invoiceTypes = types;
+        } else {
+            invoiceTypes = new ArrayList<>();
+            invoiceTypes.add(InvoiceType.RENT.name());
+            invoiceTypes.add(InvoiceType.SETTLEMENT.name());
+            invoiceTypes.add(InvoiceType.ADVANCE.name());
+            invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
+        }
+
+        List<String> createdByUsers = null;
+        if (createdBy != null && !createdBy.isEmpty()) {
+            createdByUsers = createdBy;
+        }
+
+        List<String> modes = null;
+        if (invoiceModes != null && !invoiceModes.isEmpty()) {
+            modes = invoiceModes;
+        }
+        List<String> pStatus = null;
+        if (paymentStatus != null && !paymentStatus.isEmpty()) {
+            pStatus = paymentStatus;
+        }
+
+        List<String> userIds = null;
+        if (searchKey != null && !searchKey.trim().equalsIgnoreCase("")) {
+            List<Customers> listCustomers = customersService.searchCustomerByHostelName(hostelId, searchKey.trim());
+            userIds = listCustomers.stream().map(Customers::getCustomerId).toList();
+        }
+
+        List<UserHostel> listAdminUsers = userHostelService.findAllByHostelId(hostelId);
+        List<String> adminIds = listAdminUsers.stream().map(UserHostel::getUserId).toList();
+        List<Users> adminUsers = usersService.findAllUsersFromUserId(adminIds);
+
+        List<CreatedBy> listCreatedBy = adminUsers.stream().map(i -> {
+            StringBuilder fullName = new StringBuilder();
+            if (i.getFirstName() != null) {
+                fullName.append(i.getFirstName());
+            }
+            if (i.getLastName() != null && i.getLastName().trim().equalsIgnoreCase("")) {
+                fullName.append(" ");
+                fullName.append(i.getLastName());
+            }
+            return new CreatedBy(fullName.toString(), i.getUserId());
+        }).toList();
+
+        List<InvoicesV1> listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
+        if (listAllInvoice != null && !listAllInvoice.isEmpty()) {
+            List<String> customerIds = listAllInvoice
+                    .stream()
+                    .map(InvoicesV1::getCustomerId)
+                    .toList();
+            List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+            List<InvoiceBasicList> invoiceBasicLists = listAllInvoice.stream()
+                    .map(i -> new InvoiceBasicMapper(listCustomers).apply(i))
+                    .toList();
+
+            return new ResponseEntity<>(invoiceBasicLists, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+
     }
 }

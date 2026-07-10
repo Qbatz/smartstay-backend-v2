@@ -1,11 +1,12 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.amenity.AvailableAmenitiesMapper;
 import com.smartstay.smartstay.Wrappers.amenity.AmenityMapper;
 import com.smartstay.smartstay.Wrappers.amenity.CustomerAmenityMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.beds.BedDetails;
-import com.smartstay.smartstay.dto.beds.BedInformations;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
@@ -14,11 +15,10 @@ import com.smartstay.smartstay.payloads.amenity.*;
 import com.smartstay.smartstay.payloads.amenity.AmenityRequest;
 import com.smartstay.smartstay.repositories.AmentityRepository;
 import com.smartstay.smartstay.repositories.CustomerAmenityRepository;
-import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.responses.amenitity.AmenityInfoProjection;
 import com.smartstay.smartstay.responses.amenitity.AmenityList;
-import com.smartstay.smartstay.responses.amenitity.AmenityResponse;
 import com.smartstay.smartstay.responses.customer.Amenities;
+import com.smartstay.smartstay.responses.customer.AvailableAmenities;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -26,7 +26,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class AmenitiesService {
@@ -414,8 +413,14 @@ public class AmenitiesService {
                 .toList();
     }
 
+    /**
+     * this is to fetch availed amenities by todays date
+     *
+     * @param customerId
+     * @return
+     */
     public List<Amenities> getAmenitiesByCustomerId(String customerId) {
-        List<CustomersAmenity> listCustomerAmenities = customerAmenityRepository.findByCustomerId(customerId);
+        List<CustomersAmenity> listCustomerAmenities = customerAmenityRepository.findByCustomerId(customerId, new Date());
         List<String> amenityIds = listCustomerAmenities
                 .stream()
                 .map(CustomersAmenity::getAmenityId)
@@ -560,5 +565,24 @@ public class AmenitiesService {
             customersAmenities = new ArrayList<>();
         }
         return customersAmenities;
+    }
+
+    public List<AvailableAmenities> getAvailableAmenitiesExceptAvailed(String hostelId, List<Amenities> amenities, List<AmenityRequestDTO> requestedAmenities) {
+        List<String> amenityIds = null;
+        if (amenities != null) {
+            amenityIds = amenities.stream()
+                    .map(Amenities::amenityId)
+                    .toList();
+        }
+
+        List<AmenitiesV1> listAmenities = amentityRepository.findByHostelIdAndExceptList(hostelId, amenityIds);
+        if (listAmenities != null && !listAmenities.isEmpty()) {
+            return listAmenities
+                    .stream()
+                    .map(i -> new AvailableAmenitiesMapper(requestedAmenities).apply(i))
+                    .toList();
+        }
+
+        return new ArrayList<>();
     }
 }
