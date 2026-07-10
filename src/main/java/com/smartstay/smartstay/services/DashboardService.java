@@ -7,6 +7,7 @@ import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.dashboard.BedsStatus;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.BookingStatus;
+import com.smartstay.smartstay.ennum.BedStatus;
 import com.smartstay.smartstay.repositories.BedChangeRequestRepository;
 import com.smartstay.smartstay.responses.dashboard.*;
 import com.smartstay.smartstay.util.Utils;
@@ -169,11 +170,49 @@ public class DashboardService {
         return new ResponseEntity<>(dashboardNew, HttpStatus.OK);
     }
 
+    private Map<Integer, BookingsV1> getLatestBookingsMap(String hostelId) {
+        List<BookingsV1> bookings = bookingsService.getAllBookingsByHostelId(hostelId);
+        Map<Integer, BookingsV1> latestBookingMap = new HashMap<>();
+        if (bookings != null) {
+            for (BookingsV1 b : bookings) {
+                BookingsV1 existing = latestBookingMap.get(b.getBedId());
+                if (existing == null) {
+                    latestBookingMap.put(b.getBedId(), b);
+                } else {
+                    Date d1 = b.getCreatedAt() != null ? b.getCreatedAt() : (b.getBookingDate() != null ? b.getBookingDate() : b.getJoiningDate());
+                    Date d2 = existing.getCreatedAt() != null ? existing.getCreatedAt() : (existing.getBookingDate() != null ? existing.getBookingDate() : existing.getJoiningDate());
+                    if (d1 != null && (d2 == null || d1.after(d2))) {
+                        latestBookingMap.put(b.getBedId(), b);
+                    }
+                }
+            }
+        }
+        return latestBookingMap;
+    }
+
     private Occupancy buildOccupancy(String hostelId) {
-        com.smartstay.smartstay.dto.dashboard.BedsStatus bedsStatus = bedsService.getBedCountsForDashboard(hostelId);
-        Integer occupiedBeds = bedsStatus != null ? bedsStatus.occupiedBeds() : 0;
-        Integer freeBeds = bedsStatus != null ? bedsStatus.freeBeds() : 0;
-        Integer totalBeds = bedsStatus != null ? bedsStatus.totalBeds() : 1;
+        List<Beds> listBeds = bedsService.getBedsByHostelId(hostelId);
+        Map<Integer, BookingsV1> latestBookingMap = getLatestBookingsMap(hostelId);
+
+        int totalBeds = listBeds.size();
+        int occupiedBeds = 0;
+        int freeBeds = 0;
+
+        for (Beds bed : listBeds) {
+            BookingsV1 latest = latestBookingMap.get(bed.getBedId());
+            if (latest != null && latest.getSettlementGeneratedDate() != null) {
+                freeBeds++;
+            } else {
+                String status = bed.getCurrentStatus();
+                boolean isBooked = Boolean.TRUE.equals(bed.isBooked());
+                if (status != null && (status.equalsIgnoreCase(BedStatus.OCCUPIED.name()) || status.equalsIgnoreCase(BedStatus.BOOKED.name()) || isBooked)) {
+                    occupiedBeds++;
+                } else {
+                    freeBeds++;
+                }
+            }
+        }
+
         String occupancyRate = Utils.roundOffWithTwoDigit((occupiedBeds * 100.0) / Math.max(1, totalBeds)) + "%";
         return new Occupancy(occupiedBeds, freeBeds, occupancyRate, "0%");
     }
@@ -250,12 +289,24 @@ public class DashboardService {
 
         List<Rooms> rooms = roomsService.findByHostelId(hostelId);
         List<RoomBedCount> totalBedsByRoom = bedsService.countBedsByRoomForHostel(hostelId);
-        List<RoomBedCount> occupiedBedsByRoom = bedsService.countOccupiedBedsByRoomForHostel(hostelId);
+
+        List<Beds> listBeds = bedsService.getBedsByHostelId(hostelId);
+        Map<Integer, BookingsV1> latestBookingMap = getLatestBookingsMap(hostelId);
 
         Map<Integer, Long> totalBedsMap = totalBedsByRoom.stream()
                 .collect(Collectors.toMap(RoomBedCount::getRoomId, RoomBedCount::getBedCount));
-        Map<Integer, Long> occupiedBedsMap = occupiedBedsByRoom.stream()
-                .collect(Collectors.toMap(RoomBedCount::getRoomId, RoomBedCount::getBedCount));
+
+        Map<Integer, Long> occupiedBedsMap = listBeds.stream()
+                .filter(bed -> {
+                    BookingsV1 latest = latestBookingMap.get(bed.getBedId());
+                    if (latest != null && latest.getSettlementGeneratedDate() != null) {
+                        return false;
+                    }
+                    String status = bed.getCurrentStatus();
+                    boolean isBooked = Boolean.TRUE.equals(bed.isBooked());
+                    return status != null && (status.equalsIgnoreCase(BedStatus.OCCUPIED.name()) || status.equalsIgnoreCase(BedStatus.BOOKED.name()) || isBooked);
+                })
+                .collect(Collectors.groupingBy(Beds::getRoomId, Collectors.counting()));
 
         int filledRooms = 0;
         int occupiedBedsTotal = 0;

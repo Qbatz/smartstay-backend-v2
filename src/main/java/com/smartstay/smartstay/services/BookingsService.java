@@ -1414,4 +1414,8 @@ public class BookingsService {
         List<String> customerIds = bookingsRepository.findCustomerIdsByHostelIdAndSharingTypeIn(hostelId, sharingTypes);
         return customerIds != null ? customerIds : new ArrayList<>();
     }
+
+    public List<BookingsV1> getAllBookingsByHostelId(String hostelId) {
+        return bookingsRepository.findByHostelId(hostelId);
+    }
 }

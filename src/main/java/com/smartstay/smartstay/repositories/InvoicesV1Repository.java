@@ -302,7 +302,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     Double getTotalAdvanceAmount(@Param("hostelId") String hostelId);
 
     @Query("""
-            SELECT SUM(i.paidAmount)
+            SELECT SUM(i.balanceAmount)
             FROM InvoicesV1 i
             WHERE i.hostelId = :hostelId AND i.invoiceType = 'ADVANCE' AND i.isCancelled = false
             AND i.paymentStatus IN ('PAID', 'PARTIAL_PAYMENT')

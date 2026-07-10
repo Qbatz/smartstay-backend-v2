@@ -116,6 +116,8 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
     List<BookingsV1> findByHostelIdAndCurrentStatusIn(String hostelId, List<String> currentStatuses);
 
+    List<BookingsV1> findByHostelId(String hostelId);
+
     @Query("""
             SELECT booking from BookingsV1 booking WHERE booking.bedId=:bedId and booking.currentStatus in ('CHECKIN', 'NOTICE')
             """)
@@ -247,10 +249,10 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     List<BookingsV1> findTopCheckins(@Param("hostelId") String hostelId, Pageable pageable);
 
 
-    @Query("SELECT COUNT(b) FROM BookingsV1 b WHERE b.hostelId = :hostelId AND b.currentStatus = :status AND DATE(b.joiningDate) <= DATE(:date) AND (b.checkoutDate IS NULL OR DATE(b.checkoutDate) >= DATE(:date))")
+    @Query("SELECT COUNT(b) FROM BookingsV1 b WHERE b.hostelId = :hostelId AND b.currentStatus = :status AND DATE(b.joiningDate) <= DATE(:date) AND (b.checkoutDate IS NULL OR DATE(b.checkoutDate) >= DATE(:date)) AND (b.settlementGeneratedDate IS NULL OR DATE(b.settlementGeneratedDate) > DATE(:date))")
     int countByStatusAndDate(@Param("hostelId") String hostelId, @Param("status") String status, @Param("date") java.util.Date date);
 
-    @Query("SELECT COUNT(b) FROM BookingsV1 b WHERE b.hostelId = :hostelId AND b.currentStatus = 'BOOKED' AND DATE(b.expectedJoiningDate) <= DATE(:date) AND b.joiningDate IS NULL")
+    @Query("SELECT COUNT(b) FROM BookingsV1 b WHERE b.hostelId = :hostelId AND b.currentStatus = 'BOOKED' AND DATE(b.expectedJoiningDate) <= DATE(:date) AND b.joiningDate IS NULL AND (b.settlementGeneratedDate IS NULL OR DATE(b.settlementGeneratedDate) > DATE(:date))")
     int countBookedByDate(@Param("hostelId") String hostelId, @Param("date") java.util.Date date);
 
     int countByHostelIdAndCurrentStatus(String hostelId, String currentStatus);
