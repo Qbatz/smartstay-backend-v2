@@ -1464,6 +1464,7 @@ public class CustomersService {
         double maintenance = 0;
         double otherDeductions = 0;
         double advanceAmount = 0;
+        double netAdvanceAmount = 0;
         if (advance != null) {
             advanceAmount = advance.getAdvanceAmount();
             listDeduction = advance.getDeductions();
@@ -1474,12 +1475,15 @@ public class CustomersService {
 
             }
 
+            double totalDeductions = maintenance + otherDeductions;
+            netAdvanceAmount = advanceAmount - totalDeductions;
+
         }
         if (bookingDetails != null) {
             bookingId = bookingDetails.getBookingId();
             advanceInfo = toAdvanceInfoResponse(advance, advanceInvoice, bookingDetails.getBookingAmount());
 
-            hostelInformation = new HostelInformation(bookingDetails.getRoomName(), bookingDetails.getRoomId(), bookingDetails.getFloorName(), bookingDetails.getFloorId(), bookingDetails.getBedName(), bookingDetails.getBedId(), Utils.dateToString(bookingDetails.getJoiningDate()), bookingDetails.getCurrentStatus(), advanceAmount, otherDeductions, maintenance, bookingDetails.getRentAmount(), otherDeductionBreakup);
+            hostelInformation = new HostelInformation(bookingDetails.getRoomName(), bookingDetails.getRoomId(), bookingDetails.getFloorName(), bookingDetails.getFloorId(), bookingDetails.getBedName(), bookingDetails.getBedId(), Utils.dateToString(bookingDetails.getJoiningDate()), bookingDetails.getCurrentStatus(), Utils.roundOffWithTwoDigit(netAdvanceAmount), otherDeductions, maintenance, bookingDetails.getRentAmount(), otherDeductionBreakup);
 
             if (bookingDetails.getIsBooked() != null && bookingDetails.getIsBooked()) {
                 BookingsV1 bookingV1 = bookingsService.getBookingsByCustomerId(customerId);
