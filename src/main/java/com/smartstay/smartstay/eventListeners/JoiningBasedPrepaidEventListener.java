@@ -140,6 +140,7 @@ public class JoiningBasedPrepaidEventListener {
             invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
             invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
             invoicesV1.setInvoiceGeneratedDate(new Date());
+            invoicesV1.setInvoiceDate(new Date());
             invoicesV1.setInvoiceDueDate(dueDate);
             invoicesV1.setInvoiceStartDate(new Date());
             invoicesV1.setInvoiceEndDate(invoiceEndDate);

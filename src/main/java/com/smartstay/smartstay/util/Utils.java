@@ -219,6 +219,10 @@ public class Utils {
     public static final String CUSTOMER_VERIFIED_KYC = "Customer is already verified";
     public static final String KYC_VERIFICATION_ALREADY_REQUESTED = "Kyc verification is already requested";
     public static final String CANNOT_REQUEST_VACATED_TENANT = "Cannot request for vacated tenant";
+    public static final String CANNOT_REQUEST_BOOKING_TENANT = "Cannot request for booked tenants";
+    public static final String CANNOT_REQUEST_INACTIVE_TENANT = "Cannot request for inactive tenants";
+    public static final String CANNOT_REQUEST_DRAFTED_TENANT = "Cannot request for drafted tenants";
+    public static final String CANNOT_REQUEST_CANCELLED_TENANT = "Cannot request for cancelled tenants";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String INVALID_DUE_DYS = "Invalid due days";
     public static final String INVALID_NOTICE_DAYS = "Invalid notice days";

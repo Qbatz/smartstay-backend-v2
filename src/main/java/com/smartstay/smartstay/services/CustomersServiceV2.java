@@ -781,6 +781,7 @@ public class CustomersServiceV2 {
         if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(), customers.getHostelId())) {
             return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.UNAUTHORIZED);
         }
+
         HostelV1 hostelV1 = hostelService.getHostelInfo(customers.getHostelId());
         if (hostelV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
@@ -834,7 +835,7 @@ public class CustomersServiceV2 {
                 advance = new Advance();
             }
 
-            advance.setAdvanceAmount(totalAdvanceAmount);
+            advance.setAdvanceAmount(refundableAmount);
             advance.setCustomers(customers);
             advance.setStatus(AdvanceStatus.INVOICE_GENERATED.name());
             advance.setCreatedBy(userId);
@@ -1173,7 +1174,7 @@ public class CustomersServiceV2 {
             advance = new Advance();
         }
 
-        advance.setAdvanceAmount(totalAdvanceAmount);
+        advance.setAdvanceAmount(refundableAmount);
         advance.setCustomers(customers);
         advance.setStatus(AdvanceStatus.INVOICE_GENERATED.name());
         advance.setCreatedBy(userId);

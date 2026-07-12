@@ -10,6 +10,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
+import com.smartstay.smartstay.dto.booking.CustomerInfo;
 import com.smartstay.smartstay.dto.customer.CustomerData;
 import com.smartstay.smartstay.dto.customer.TransactionDto;
 import com.smartstay.smartstay.dto.customer.*;
@@ -41,6 +42,7 @@ import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.responses.customer.KycAddressDetails;
 import com.smartstay.smartstay.responses.settlement.DeductionsInfo;
 import com.smartstay.smartstay.responses.settlement.DeductionsItem;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.FilterKeywords;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
@@ -1828,9 +1830,9 @@ public class CustomersService {
             if (Utils.compareWithTwoDates(lDate, new Date()) > 0) {
                 return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
             }
-            if (Utils.compareWithTwoDates(lDate, billDate.currentBillStartDate()) < 0) {
-                return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
-            }
+//             if (Utils.compareWithTwoDates(lDate, billDate.currentBillStartDate()) < 0) {
+//                    return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+//            }
         } else {
             lDate = new Date();
         }
@@ -4100,5 +4102,18 @@ public class CustomersService {
             return new ArrayList<>();
         }
         return listCustomers;
+    }
+
+    public CustomerInfo getCustomerInformationForInitializeCheckIn(String customerId) {
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return null;
+        }
+        return new CustomerInfo(customers.getFirstName(),
+                customers.getLastName(),
+                NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
+                customerId,
+                CustomerUtils.getProfilePic(customers),
+                NameUtils.getInitials(customers.getFirstName(), customers.getLastName()));
     }
 }
