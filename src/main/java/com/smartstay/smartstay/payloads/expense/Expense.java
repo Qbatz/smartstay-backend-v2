@@ -27,8 +27,6 @@ public record Expense(
         String paymentStatus,
         Double paidAmount,
         Double balanceAmount,
-        @NotNull(message = "Payment method is required")
-        @NotEmpty(message = "Payment method is required")
         String paymentMethod,
         String note,
         String transactionId,
