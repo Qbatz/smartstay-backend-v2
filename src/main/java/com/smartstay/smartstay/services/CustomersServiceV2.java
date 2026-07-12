@@ -272,6 +272,8 @@ public class CustomersServiceV2 {
         draft.setStayType(payloads.stayType());
         draft.setDeductions(deductionsList);
         draft.setProRate(payloads.proRate());
+        draft.setShouldCollectFullRent(payloads.shouldCollectFullRent());
+        draft.setCustomRent(payloads.customRent());
         draft.setCreatedAt(now);
         draft.setUpdatedAt(now);
         draft.setAadharPic(aadharImage);
@@ -298,6 +300,9 @@ public class CustomersServiceV2 {
             }
             if (payloads.guardians() != null) {
                 draft.setGuardiansJson(objectMapper.writeValueAsString(payloads.guardians()));
+            }
+            if (payloads.oneTimeDeduction() != null) {
+                draft.setOneTimeDeductionJson(objectMapper.writeValueAsString(payloads.oneTimeDeduction()));
             }
         } catch (JsonProcessingException e) {
             return new ResponseEntity<>("Invalid JSON payload", HttpStatus.BAD_REQUEST);
@@ -393,12 +398,14 @@ public class CustomersServiceV2 {
         String bookingJson;
         String jobDetailsJson;
         String guardiansJson;
+        String oneTimeDeductionJson;
         try {
             idProofJson = payloads.idProof() != null ? objectMapper.writeValueAsString(payloads.idProof()) : null;
             addressJson = payloads.address() != null ? objectMapper.writeValueAsString(payloads.address()) : null;
             bookingJson = payloads.booking() != null ? objectMapper.writeValueAsString(payloads.booking()) : null;
             jobDetailsJson = payloads.jobDetails() != null ? objectMapper.writeValueAsString(payloads.jobDetails()) : null;
             guardiansJson = payloads.guardians() != null ? objectMapper.writeValueAsString(payloads.guardians()) : null;
+            oneTimeDeductionJson = payloads.oneTimeDeduction() != null ? objectMapper.writeValueAsString(payloads.oneTimeDeduction()) : null;
         } catch (JsonProcessingException e) {
             return new ResponseEntity<>("Invalid JSON payload", HttpStatus.BAD_REQUEST);
         }
@@ -434,11 +441,14 @@ public class CustomersServiceV2 {
         draft.setRentalAmount(payloads.rentalAmount());
         draft.setStayType(payloads.stayType());
         draft.setProRate(payloads.proRate());
+        draft.setShouldCollectFullRent(payloads.shouldCollectFullRent());
+        draft.setCustomRent(payloads.customRent());
         draft.setIdProofJson(idProofJson);
         draft.setAddressJson(addressJson);
         draft.setBookingJson(bookingJson);
         draft.setJobDetailsJson(jobDetailsJson);
         draft.setGuardiansJson(guardiansJson);
+        draft.setOneTimeDeductionJson(oneTimeDeductionJson);
         draft.setDeductions(deductionsList);
         // Vehicle details applied as sent; an omitted vehicleDetails object clears all three columns.
         VehicleDetails vehicle = payloads.vehicleDetails();
@@ -634,6 +644,7 @@ public class CustomersServiceV2 {
         Booking booking = null;
         JobDetails jobDetails = null;
         List<Guardian> guardians = null;
+        List<NonRefundable> oneTimeDeduction = null;
         if (draft != null) {
             try {
                 idProof = draft.getIdProofJson() != null ? objectMapper.readValue(draft.getIdProofJson(), IdProof.class) : null;
@@ -641,6 +652,8 @@ public class CustomersServiceV2 {
                 booking = draft.getBookingJson() != null ? objectMapper.readValue(draft.getBookingJson(), Booking.class) : null;
                 jobDetails = draft.getJobDetailsJson() != null ? objectMapper.readValue(draft.getJobDetailsJson(), JobDetails.class) : null;
                 guardians = draft.getGuardiansJson() != null ? objectMapper.readValue(draft.getGuardiansJson(), new TypeReference<List<Guardian>>() {
+                }) : null;
+                oneTimeDeduction = draft.getOneTimeDeductionJson() != null ? objectMapper.readValue(draft.getOneTimeDeductionJson(), new TypeReference<List<NonRefundable>>() {
                 }) : null;
             } catch (JsonProcessingException e) {
                 // Handle exception
@@ -688,7 +701,10 @@ public class CustomersServiceV2 {
                 booking != null ? booking.refuseAdvanceAmount() : null,
                 draft != null ? draft.getProRate() : null,
                 draft != null ? draft.getRentalAmount() : null,
-                draft != null ? draft.getAdvanceAmount() : null);
+                draft != null ? draft.getAdvanceAmount() : null,
+                draft != null ? draft.getShouldCollectFullRent() : null,
+                draft != null ? draft.getCustomRent() : null,
+                oneTimeDeduction);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }

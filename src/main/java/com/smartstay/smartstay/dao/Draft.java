@@ -116,4 +116,16 @@ public class Draft {
 
     @Column(name = "is_parking_space_required")
     private Boolean isParkingSpaceRequired;
+
+    // Whether to collect full rent for the current month; optional.
+    @Column(name = "should_collect_full_rent")
+    private Boolean shouldCollectFullRent;
+
+    // Custom rent amount; optional.
+    @Column(name = "custom_rent")
+    private Double customRent;
+
+    // One-time deductions serialized as JSON (single column), same pattern as job_details_json.
+    @Column(name = "one_time_deduction_json", columnDefinition = "LONGTEXT")
+    private String oneTimeDeductionJson;
 }

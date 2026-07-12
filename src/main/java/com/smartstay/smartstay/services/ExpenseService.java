@@ -438,10 +438,13 @@ public class ExpenseService {
             }
         }
         // Non-vendor expenses are auto-settled: paidAmount = payable amount, balanceAmount = 0 and status
-        // is FULL (set above) — the request's paidAmount/balanceAmount are ignored. Vendor expenses keep
-        // the request-driven amounts unchanged.
+        // is FULL (set above). Vendor expenses keep the request-driven paidAmount.
         Double effectivePaidAmount = isVendorExpense ? expense.paidAmount() : payableAmount;
-        Double effectiveBalanceAmount = isVendorExpense ? expense.balanceAmount() : 0.0;
+        // Balance is always derived from the payable (post-discount) total minus the amount paid, so any
+        // discount is correctly reflected — consistent with the settlement/payment flows. The request's
+        // balanceAmount (which may be computed against the pre-discount total) is intentionally ignored.
+        double paidForBalance = effectivePaidAmount != null ? effectivePaidAmount : 0.0;
+        Double effectiveBalanceAmount = isVendorExpense ? (payableAmount - paidForBalance) : 0.0;
         expensesV1.setPaidAmount(effectivePaidAmount);
         expensesV1.setBalanceAmount(effectiveBalanceAmount);
         expensesV1.setPaymentMethod(expense.paymentMethod());
