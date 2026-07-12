@@ -192,8 +192,8 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             SELECT
               COALESCE(SUM(exp.total_price), 0) as totalExpenseAmount,
               COALESCE(SUM(CASE WHEN exp.payment_status = 'Full' THEN exp.total_price ELSE 0 END), 0) as totalPaidAmount,
-              COALESCE(SUM(CASE WHEN exp.payment_status IN ('Pending', 'Overdue') THEN exp.total_price ELSE 0 END), 0) as totalUnPaidAmount,
-              COALESCE(SUM(CASE WHEN exp.payment_status = 'Partial' THEN exp.total_price ELSE 0 END), 0) as totalPartialPaidAmount
+              COALESCE(SUM(COALESCE(exp.balance_amount, 0)), 0) as totalUnPaidAmount,
+              COALESCE(SUM(CASE WHEN exp.payment_status = 'Partial' THEN COALESCE(exp.paid_amount, 0) ELSE 0 END), 0) as totalPartialPaidAmount
             FROM expensesv1 exp
             WHERE exp.hostel_id=:hostelId AND exp.is_active=true
             AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%') OR exp.expense_id LIKE CONCAT('%', :name, '%'))
