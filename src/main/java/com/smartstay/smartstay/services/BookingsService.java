@@ -965,9 +965,32 @@ public class BookingsService {
             }
             Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
-            BillingDates targetBillingDates = hostelService.getBillingRuleOnDate(hostelId, joinigDate);
-            if (targetBillingDates != null) {
-                if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), joinigDate)) {
+            BillingDates currentMonthBilling = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+            if (currentMonthBilling != null
+                    && currentMonthBilling.billingModel() != null
+                    && currentMonthBilling.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+
+                // 1. PrePaid + joining-date-based
+                if (currentMonthBilling.typeOfBilling() != null
+                        && currentMonthBilling.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
+
+                    BillingDates billingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), hostelId, new Date());
+
+                    if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), billingDates.currentBillStartDate())) {
+                        return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
+                    }
+
+                } else {
+                    // 2. PrePaid + Calendar/Standard-based (Now correctly inside 'else')
+                    if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), currentMonthBilling.currentBillStartDate())) {
+                        return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
+                    }
+                }
+
+            } else {
+                // 3. PostPaid: retain existing check
+                if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), currentMonthBilling.currentBillStartDate())) {
                     return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
                 }
             }

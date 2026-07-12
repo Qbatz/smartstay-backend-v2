@@ -300,8 +300,9 @@ public class BankTransactionService {
             bankTransactionsV1.setUpdatedBy(authentication.getName());
 
             bankingService.updateAccountBalanceByDeleteExpense(hostelId, bankTransactionsV1.getBankId(), bankTransactionsV1.getAmount());
-            return true;
         }
-        return false;
+        // No bank transaction (e.g. a PENDING expense created without a bank) means there is nothing to
+        // reverse — the expense is still safely deletable, so report success either way.
+        return true;
     }
 }
