@@ -354,7 +354,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findInvoicesByCustomerIdAndTypeInAndDate(@Param("customerId") String customerId, @Param("invoiceTypes") List<String> invoiceTypes, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
 
-    @Query("SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType IN :invoiceTypes AND DATE(i.invoiceStartDate) >= DATE(:startDate)")
+    @Query("SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType IN :invoiceTypes AND DATE(i.invoiceStartDate) < DATE(:startDate)")
     List<InvoicesV1> findInvoicesByCustomerIdAndTypeInAndDate1(@Param("customerId") String customerId, @Param("invoiceTypes") List<String> invoiceTypes, @Param("startDate") Date startDate);
 
     @Query("""
