@@ -55,5 +55,11 @@ public record SaveDraftCustomerRequest(
         List<Guardian> guardians,
 
         // Optional vehicle details; all sub-fields are non-mandatory.
-        VehicleDetails vehicleDetails
+        VehicleDetails vehicleDetails,
+
+        // Optional rent / deduction details.
+        Boolean shouldCollectFullRent,
+        Double customRent,
+        @Valid
+        List<NonRefundable> oneTimeDeduction
 ) {}
