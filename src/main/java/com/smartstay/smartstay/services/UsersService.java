@@ -24,24 +24,23 @@ import com.smartstay.smartstay.payloads.user.ResetPasswordRequest;
 import com.smartstay.smartstay.payloads.user.ResetPin;
 import com.smartstay.smartstay.payloads.user.SetupPin;
 import com.smartstay.smartstay.payloads.user.VerifyPin;
-import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.UserRepository;
 import com.smartstay.smartstay.repositories.UsersConfigRepository;
 import com.smartstay.smartstay.responses.LoginUsersDetails;
 import com.smartstay.smartstay.responses.OtpRequired;
 import com.smartstay.smartstay.responses.account.AdminUserResponse;
 import com.smartstay.smartstay.responses.user.MobileLogin;
-import com.smartstay.smartstay.responses.user.OtpResponse;
 import com.smartstay.smartstay.responses.user.VerifyUsername;
+import com.smartstay.smartstay.sockets.AdminConnect;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
-import jdk.jshell.execution.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -53,7 +52,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.ExecutionException;
 
 @Service
 public class UsersService {
@@ -67,6 +66,9 @@ public class UsersService {
 
     @Autowired
     JWTService jwtService;
+
+    @Autowired
+    private AdminConnect adminConnect;
 
     @Autowired
     UploadFileToS3 uploadToS3;
@@ -266,6 +268,7 @@ public class UsersService {
                 loginHistoryService.login(users.getUserId(), users.getParentId(), AppSource.WEB.name(), "");
                 userActivitiesService.addLoginLog(null, null, ActivitySource.PROFILE.name(),
                         ActivitySourceType.LOGGED_IN.name(), users.getUserId(), users);
+
                 return new ResponseEntity<>(jwtService.generateToken(authentication.getName(), claims), HttpStatus.OK);
             } else {
                 return new ResponseEntity<>(HttpStatus.FORBIDDEN);

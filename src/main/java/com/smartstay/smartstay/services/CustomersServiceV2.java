@@ -1206,7 +1206,7 @@ public class CustomersServiceV2 {
 
         Customers savedCustomer = customersRepository.save(customers);
 
-        bedsService.addUserToBed(bedId, payloads.joiningDate().replace("/", "-"), savedCustomer.getCustomerId());
+        bedsService.addUserToBed(bookingsV1.getBedId(), bedId, payloads.joiningDate().replace("/", "-"), savedCustomer.getCustomerId());
 
         if (payloads.shouldCollectFullRent() == null || !payloads.shouldCollectFullRent()) {
             rentAmount = payloads.rentalAmount();
