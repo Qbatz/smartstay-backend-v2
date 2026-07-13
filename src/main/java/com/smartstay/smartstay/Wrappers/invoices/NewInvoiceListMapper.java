@@ -1,10 +1,6 @@
 package com.smartstay.smartstay.Wrappers.invoices;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.smartstay.dao.*;
-import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
@@ -83,16 +79,11 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
 
         if (invoicesV1.getTotalAmount() < 0) {
             dueAmount = invoicesV1.getTotalAmount() + paidAmount;
-        }
-        else {
+        } else {
             dueAmount = invoicesV1.getTotalAmount() - paidAmount;
         }
 
-        Customers customers = listCustomers
-                .stream()
-                .filter(i -> i.getCustomerId().equalsIgnoreCase(invoicesV1.getCustomerId()))
-                .findFirst()
-                .orElse(null);
+        Customers customers = listCustomers.stream().filter(i -> i.getCustomerId().equalsIgnoreCase(invoicesV1.getCustomerId())).findFirst().orElse(null);
 
         if (customers != null) {
             firstName = customers.getFirstName();
@@ -107,8 +98,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 fullName.append(" ");
                 fullName.append(customers.getLastName());
                 initials.append(customers.getLastName().toUpperCase().charAt(0));
-            }
-            else {
+            } else {
                 if (customers.getFirstName() != null && customers.getFirstName().length() > 1) {
                     initials.append(customers.getFirstName().toUpperCase().charAt(1));
                 }
@@ -116,14 +106,9 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         }
 
         if (listAdvances != null && !invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
-            advanceInvoiceForCurrentCustomer = listAdvances
-                    .stream()
-                    .filter(i -> i.getCustomerId().equalsIgnoreCase(invoicesV1.getCustomerId()))
-                    .findFirst()
-                    .orElse(null);
+            advanceInvoiceForCurrentCustomer = listAdvances.stream().filter(i -> i.getCustomerId().equalsIgnoreCase(invoicesV1.getCustomerId())).findFirst().orElse(null);
             if (advanceInvoiceForCurrentCustomer != null) {
-                if (advanceInvoiceForCurrentCustomer.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
-                advanceInvoiceForCurrentCustomer.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                if (advanceInvoiceForCurrentCustomer.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoiceForCurrentCustomer.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
                     if (advanceInvoiceForCurrentCustomer.getPaidAmount() != null) {
                         if (advanceInvoiceForCurrentCustomer.getBalanceAmount() != null && advanceInvoiceForCurrentCustomer.getBalanceAmount() > 0) {
                             canApplyFromAdvance = true;
@@ -156,23 +141,19 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
             invoiceType = "Rent";
             canEdit = true;
-        }
-        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
             invoiceType = "Booking";
             canEdit = false;
             canRedeem = true;
-        }
-        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
             invoiceType = "Advance";
             canEdit = false;
             if (invoicesV1.getBalanceAmount() != null && invoicesV1.getBalanceAmount() > 0) {
                 canRedeem = true;
             }
-        }
-        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHERS.name())) {
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHERS.name())) {
             invoiceType = "Others";
-        }
-        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             invoiceType = "Settlement";
             canEdit = false;
             if (invoicesV1.getPaymentStatus() != null) {
@@ -182,8 +163,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                     }
                 }
             }
-        }
-        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
             invoiceType = "Reassign-Rent";
             canEdit = true;
         }
@@ -202,21 +182,15 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             if (!canEdit) {
                 canEdit = true;
             }
-        }
-        else if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
+        } else if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
             invoiceMode = "Manual";
-        }
-        else if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.AUTOMATIC.name())) {
+        } else if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.AUTOMATIC.name())) {
             invoiceMode = "Automatic";
 
         }
 
         if (listInvoiceDiscounts != null) {
-            InvoiceDiscounts ids = listInvoiceDiscounts
-                    .stream()
-                    .filter(i -> i.getInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId()))
-                    .findFirst()
-                    .orElse(null);
+            InvoiceDiscounts ids = listInvoiceDiscounts.stream().filter(i -> i.getInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId())).findFirst().orElse(null);
             if (ids != null) {
                 if (canEdit) {
                     canEdit = false;
@@ -232,21 +206,14 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
 
         if (!listAppliedInvoices.isEmpty()) {
 
-            double appliedInvoiceAmount = listAppliedInvoices
-                    .stream()
-                    .filter(i -> i.getTargetInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId()))
-                    .mapToDouble(i -> {
-                        if (i.getRedemptionAmount() != null) {
-                            return i.getRedemptionAmount();
-                        }
-                        return 0.0;
-                    })
-                    .sum();
+            double appliedInvoiceAmount = listAppliedInvoices.stream().filter(i -> i.getTargetInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId())).mapToDouble(i -> {
+                if (i.getRedemptionAmount() != null) {
+                    return i.getRedemptionAmount();
+                }
+                return 0.0;
+            }).sum();
 
-            long appliedInvoiceCount = listAppliedInvoices
-                    .stream()
-                    .filter(i -> i.getTargetInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId()))
-                    .count();
+            long appliedInvoiceCount = listAppliedInvoices.stream().filter(i -> i.getTargetInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId())).count();
 
             if (appliedInvoiceCount > 0) {
                 isInvoicesApplied = true;
@@ -279,95 +246,49 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             }
         }
 
-       if (canRedeem) {
-           if (customerStatus.equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()) || customerStatus.equalsIgnoreCase(CustomerStatus.VACATED.name())) {
-               canRedeem = false;
-           }
-       }
+        if (canRedeem) {
+            if (customerStatus.equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()) || customerStatus.equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+                canRedeem = false;
+            }
+        }
 
-       if (canRedeem){
-           if (pendingInvoices != null) {
-               List<InvoicesV1> pendingInvoice = pendingInvoices
-                       .stream()
-                       .filter(i -> i.getCustomerId().equalsIgnoreCase(invoicesV1.getCustomerId()))
-                       .toList();
-               if (pendingInvoice.isEmpty()) {
-                   canRedeem = false;
-               }
-           }
-       }
+        if (canRedeem) {
+            if (pendingInvoices != null) {
+                List<InvoicesV1> pendingInvoice = pendingInvoices.stream().filter(i -> i.getCustomerId().equalsIgnoreCase(invoicesV1.getCustomerId())).toList();
+                if (pendingInvoice.isEmpty()) {
+                    canRedeem = false;
+                }
+            }
+        }
 
-       if (canApplyFromAdvance) {
-           if (customerStatus.equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()) || customerStatus.equalsIgnoreCase(CustomerStatus.VACATED.name())) {
-               canApplyFromAdvance = false;
-           }
-       }
-       if (canApplyFromAdvance) {
-           if (isRefundable) {
-               canApplyFromAdvance = false;
-           }
-       }
+        if (canApplyFromAdvance) {
+            if (customerStatus.equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name()) || customerStatus.equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+                canApplyFromAdvance = false;
+            }
+        }
+        if (canApplyFromAdvance) {
+            if (isRefundable) {
+                canApplyFromAdvance = false;
+            }
+        }
 
-       if (canRedeem) {
-           if (isRefundable) {
-               canRedeem = false;
-           }
-       }
+        if (canRedeem) {
+            if (isRefundable) {
+                canRedeem = false;
+            }
+        }
 
-       // canUnpaid = true only when amount has actually been paid (PAID or PARTIAL_PAYMENT)
-       // AND the customer is NOT settlement-generated (settlement invoices must not be reversed)
-       if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
-           canUnpaid = true;
-       }
-       if (canUnpaid) {
-           if (listTrasactions != null) {
-               TransactionV1 transactionV1 = listTrasactions
-                       .stream()
-                       .filter(i -> i.getInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId()))
-                       .findFirst()
-                       .orElse(null);
-               if (transactionV1 != null) {
-                   canUnpaid = false;
-               }
-           }
+        if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name()) && (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))) {
+            canUnpaid = true;
+        }
 
-       }
+        if (canUnpaid && listTrasactions != null) {
+            TransactionV1 transactionV1 = listTrasactions.stream().filter(i -> i.getInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId())).findFirst().orElse(null);
+            if (transactionV1 != null) {
+                canUnpaid = false;
+            }
+        }
 
-        return new InvoicesList(firstName,
-                lastName,
-                fullName.toString(),
-                invoicesV1.getCustomerId(),
-                initials.toString(),
-                profilePic,
-                isRefundable,
-                Utils.roundOffWithTwoDigit(invoiceAmount),
-                Utils.roundOffWithTwoDigit(totalAmount),
-                invoicesV1.getInvoiceId(),
-                Utils.roundOffWithTwoDigit(paidAmount),
-                Utils.roundOffWithTwoDigit(dueAmount),
-                invoicesV1.isDiscounted(),
-                discountAmount,
-                discountPercentage,
-                invoicesV1.getCgst(),
-                invoicesV1.getSgst(),
-                gstAmount,
-                Utils.dateToString(invoicesV1.getCreatedAt()),
-                invoicesV1.getCreatedBy(),
-                invoicesV1.getHostelId(),
-                Utils.dateToString(invoicesV1.getInvoiceStartDate()),
-                Utils.dateToString(invoicesV1.getInvoiceDueDate()),
-                invoiceType,
-                invoiceMode,
-                paymentStatus,
-                Utils.dateToString(invoicesV1.getUpdatedAt()),
-                invoicesV1.getInvoiceNumber(),
-                isCancelled,
-                cancelledOn,
-                canEdit,
-                canUnpaid,
-                isInvoicesApplied,
-                canRedeem,
-                canApplyFromAdvance,
-                invoicesApplied);
+        return new InvoicesList(firstName, lastName, fullName.toString(), invoicesV1.getCustomerId(), initials.toString(), profilePic, isRefundable, Utils.roundOffWithTwoDigit(invoiceAmount), Utils.roundOffWithTwoDigit(totalAmount), invoicesV1.getInvoiceId(), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(dueAmount), invoicesV1.isDiscounted(), discountAmount, discountPercentage, invoicesV1.getCgst(), invoicesV1.getSgst(), gstAmount, Utils.dateToString(invoicesV1.getCreatedAt()), invoicesV1.getCreatedBy(), invoicesV1.getHostelId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), invoiceType, invoiceMode, paymentStatus, Utils.dateToString(invoicesV1.getUpdatedAt()), invoicesV1.getInvoiceNumber(), isCancelled, cancelledOn, canEdit, canUnpaid, isInvoicesApplied, canRedeem, canApplyFromAdvance, invoicesApplied);
     }
 }
