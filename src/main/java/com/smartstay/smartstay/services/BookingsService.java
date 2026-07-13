@@ -508,6 +508,7 @@ public class BookingsService {
                 bookingAmount = 0.0;
             }
 
+            CustomerInfo customerInfo = customersService.getCustomerInformationForInitializeCheckIn(bookingsV1.getCustomerId());
             if (bed != null) {
                 BedDetails bedDetails = bedsService.getBedDetails(bed.getBedId());
                 if (bed.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
@@ -515,7 +516,7 @@ public class BookingsService {
                 } else if (Utils.compareWithTwoDates(new Date(), bed.getFreeFrom()) > 0) {
                     canCheckIn = false;
                 }
-                CustomerInfo customerInfo = customersService.getCustomerInformationForInitializeCheckIn(bookingsV1.getCustomerId());
+
                 InitializeCheckIn initializeCheckIn = new InitializeCheckIn(bed.getBedId(),
                         bed.getBedName(),
                         bed.getRoomId(),
@@ -524,6 +525,23 @@ public class BookingsService {
                         Utils.dateToString(bookingsV1.getBookingDate()),
                         bed.getRentAmount(),
                         canCheckIn,
+                        200,
+                        bookingsV1.getBookingId(),
+                        Utils.dateToString(bookingsV1.getExpectedJoiningDate()),
+                        customerInfo);
+
+                return new ResponseEntity<>(initializeCheckIn, HttpStatus.OK);
+            }
+            else {
+                InitializeCheckIn initializeCheckIn = new InitializeCheckIn(bookingsV1.getBedId(),
+                        null,
+                        bookingsV1.getRoomId(),
+                        bookingsV1.getFloorId(),
+                        bookingAmount,
+                        Utils.dateToString(bookingsV1.getBookingDate()),
+                        0.0,
+                        false,
+                        400,
                         bookingsV1.getBookingId(),
                         Utils.dateToString(bookingsV1.getExpectedJoiningDate()),
                         customerInfo);
@@ -1503,6 +1521,7 @@ public class BookingsService {
             bookingsV1.setLeavingDate(null);
             bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
             bookingsV1.setRoomId(payloads.roomId());
+            bookingsV1.setBedId(payloads.bedId());
             bookingsV1.setRentAmount(payloads.rentalAmount());
             String rawDateStr = payloads.joiningDate().replace("-", "/");
 
@@ -1511,9 +1530,9 @@ public class BookingsService {
             bookingsV1.setAdvanceAmount(payloads.advanceAmount());
 
             CustomersBedHistory cbh = new CustomersBedHistory();
-            cbh.setRoomId(bookingsV1.getRoomId());
-            cbh.setBedId(bookingsV1.getBedId());
-            cbh.setFloorId(bookingsV1.getFloorId());
+            cbh.setRoomId(payloads.roomId());
+            cbh.setBedId(payloads.bedId());
+            cbh.setFloorId(payloads.floorId());
             cbh.setHostelId(bookingsV1.getHostelId());
             cbh.setStartDate(bookingsV1.getJoiningDate());
             cbh.setCustomerId(bookingsV1.getCustomerId());

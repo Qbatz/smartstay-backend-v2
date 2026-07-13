@@ -476,6 +476,56 @@ public class BedsService {
     }
 
     /**
+     * this is for booked to check in customers
+     *
+     *
+     * @param bedId
+     * @param joiningDate
+     * @param customerId
+     * @return
+     */
+    public ResponseEntity<?> addUserToBed(int bookedBedId, int bedId, String joiningDate, String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users users = usersService.findUserByUserId(userId);
+
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Beds existingBed = bedsRepository.findByBedIdAndParentId(bedId, users.getParentId());
+        if (existingBed != null) {
+            if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(joiningDate, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
+                existingBed.setStatus(BedStatus.BOOKED.name());
+                existingBed.setBooked(true);
+            } else {
+                boolean isOtherBooingExist = bookingService.checkOtherBookings(existingBed.getBedId(), customerId);
+                existingBed.setBooked(isOtherBooingExist);
+                existingBed.setStatus(BedStatus.OCCUPIED.name());
+                existingBed.setCurrentStatus(BedStatus.OCCUPIED.name());
+                existingBed.setFreeFrom(null);
+            }
+
+            existingBed.setUpdatedAt(new Date());
+
+            bedsRepository.save(existingBed);
+
+        }
+
+        Beds existingBookedBed = bedsRepository.findByBedIdAndParentId(bookedBedId, users.getParentId());
+        if (existingBookedBed != null) {
+            boolean isOtherBooingExist = bookingService.checkOtherBookings(existingBookedBed.getBedId(), customerId);
+            existingBookedBed.setBooked(isOtherBooingExist);
+            existingBookedBed.setUpdatedAt(new Date());
+
+            bedsRepository.save(existingBookedBed);
+        }
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+    }
+
+    /**
      * this works when booking a customer
      *
      * @return

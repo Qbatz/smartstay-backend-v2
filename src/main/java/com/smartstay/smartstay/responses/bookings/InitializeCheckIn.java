@@ -11,6 +11,7 @@ public record InitializeCheckIn(Integer bedId,
 //                                rent for a bed
                                 Double rent,
                                 boolean canCheckIn,
+                                Integer responseCode,
                                 String bookingId,
                                 String expectedJoiningDate,
                                 CustomerInfo customerInfo) {

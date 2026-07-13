@@ -448,9 +448,9 @@ public class TransactionService {
         }
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
-            rentalPeriod.append(Utils.dateToMonth(invoicesV1.getInvoiceStartDate()));
-            rentalPeriod.append("-");
-            rentalPeriod.append(Utils.dateToMonth(invoicesV1.getInvoiceEndDate()));
+            rentalPeriod.append(Utils.dateToDateMonth(invoicesV1.getInvoiceStartDate()));
+            rentalPeriod.append(" - ");
+            rentalPeriod.append(Utils.dateToDateMonth(invoicesV1.getInvoiceEndDate()));
         }
 
         if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().equalsIgnoreCase("")) {

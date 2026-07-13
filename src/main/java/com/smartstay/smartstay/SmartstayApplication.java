@@ -28,8 +28,6 @@ import java.util.stream.Collectors;
 @OpenAPIDefinition(servers = {@Server(url = "/", description = "Default")})
 public class SmartstayApplication {
 
-    private static final Logger log = LoggerFactory.getLogger(SmartstayApplication.class);
-
     public static void main(String[] args) {
         SpringApplication.run(SmartstayApplication.class, args);
     }
