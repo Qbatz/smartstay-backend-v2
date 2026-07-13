@@ -309,6 +309,7 @@ public class PostpaidRecurringEventListener {
                         invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
                         invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
                         invoicesV1.setInvoiceGeneratedDate(new Date());
+                        invoicesV1.setInvoiceDate(new Date());
                         invoicesV1.setInvoiceDueDate(invoiceDueDate.get());
                         invoicesV1.setInvoiceStartDate(invoiceStartDate.get());
                         invoicesV1.setInvoiceEndDate(invoiceMonthBillingDates.currentBillEndDate());

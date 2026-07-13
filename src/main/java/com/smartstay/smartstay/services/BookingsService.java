@@ -10,6 +10,7 @@ import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
+import com.smartstay.smartstay.dto.booking.CustomerInfo;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
@@ -501,18 +502,31 @@ public class BookingsService {
         BookingsV1 bookingsV1 = bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
         if (bookingsV1 != null) {
             Beds bed = bedsService.isBedAvailabeForCheckIn(bookingsV1.getBedId(), bookingsV1.getExpectedJoiningDate());
+
             bookingAmount = invoiceService.getBookingAmount(customerId, hostelId);
             if (bookingAmount == null) {
                 bookingAmount = 0.0;
             }
 
             if (bed != null) {
+                BedDetails bedDetails = bedsService.getBedDetails(bed.getBedId());
                 if (bed.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
                     canCheckIn = true;
                 } else if (Utils.compareWithTwoDates(new Date(), bed.getFreeFrom()) > 0) {
                     canCheckIn = false;
                 }
-                InitializeCheckIn initializeCheckIn = new InitializeCheckIn(bed.getBedId(), bed.getBedName(), bookingAmount, Utils.dateToString(bookingsV1.getBookingDate()), bed.getRentAmount(), canCheckIn, bookingsV1.getBookingId());
+                CustomerInfo customerInfo = customersService.getCustomerInformationForInitializeCheckIn(bookingsV1.getCustomerId());
+                InitializeCheckIn initializeCheckIn = new InitializeCheckIn(bed.getBedId(),
+                        bed.getBedName(),
+                        bed.getRoomId(),
+                        bedDetails.getFloorId(),
+                        bookingAmount,
+                        Utils.dateToString(bookingsV1.getBookingDate()),
+                        bed.getRentAmount(),
+                        canCheckIn,
+                        bookingsV1.getBookingId(),
+                        Utils.dateToString(bookingsV1.getExpectedJoiningDate()),
+                        customerInfo);
 
                 return new ResponseEntity<>(initializeCheckIn, HttpStatus.OK);
             }
