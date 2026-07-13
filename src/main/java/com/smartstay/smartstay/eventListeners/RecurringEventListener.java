@@ -215,6 +215,7 @@ public class RecurringEventListener {
                         invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
                         invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
                         invoicesV1.setInvoiceGeneratedDate(new Date());
+                        invoicesV1.setInvoiceDate(new Date());
                         invoicesV1.setInvoiceDueDate(billingDates.dueDate());
                         invoicesV1.setInvoiceStartDate(billingDates.currentBillStartDate());
                         invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());

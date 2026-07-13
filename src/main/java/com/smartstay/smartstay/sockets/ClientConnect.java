@@ -3,6 +3,7 @@ package com.smartstay.smartstay.sockets;
 import com.smartstay.smartstay.payloads.subscription.ZohoPaymentResponse;
 import com.smartstay.smartstay.services.OrderHistoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.*;
@@ -13,14 +14,15 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 import java.lang.reflect.Type;
 import java.util.concurrent.ExecutionException;
 
+//This client connection is used for connect with payments.
 @Component
 public class ClientConnect {
-    private final OrderHistoryService orderHistoryService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    public ClientConnect(OrderHistoryService orderHistoryService,
-                         SimpMessagingTemplate messagingTemplate) {
-        this.orderHistoryService = orderHistoryService;
+    @Value("${ENVIRONMENT}")
+    private String environment;
+
+    public ClientConnect(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -28,10 +30,14 @@ public class ClientConnect {
         WebSocketStompClient stompClient = new WebSocketStompClient(new StandardWebSocketClient());
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 
+        String baseUrl = "wss://paymentdev.qbatz.com//ws";
 //        "wss://payment.qbatz.com/ws",
+        if (environment.equalsIgnoreCase("PROD")) {
+            baseUrl = "wss://payment.qbatz.com//ws";
+        }
 
         StompSession session = stompClient.connectAsync(
-                "wss://payment.qbatz.com/ws",
+                "wss://paymentdev.qbatz.com//ws",
                 new StompSessionHandlerAdapter() {
                     @Override
                     public void afterConnected(StompSession session, StompHeaders connectedHeaders) {

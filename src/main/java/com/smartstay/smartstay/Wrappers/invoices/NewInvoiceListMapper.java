@@ -25,14 +25,16 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
     List<InvoicesV1> listAdvances = null;
 
     List<InvoicesV1> pendingInvoices = null;
+    private List<TransactionV1> listTrasactions = null;
 
-    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts, List<InvoiceRedemption> listAppliedInvoices, List<InvoicesV1> listAdvanceInvoices, List<InvoicesV1> pendingInvoices) {
+    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts, List<InvoiceRedemption> listAppliedInvoices, List<InvoicesV1> listAdvanceInvoices, List<InvoicesV1> pendingInvoices, List<TransactionV1> transactions) {
         this.listCustomers = customers;
         this.listCreatedBy = createdBy;
         this.listInvoiceDiscounts = listInvoiceDiscounts;
         this.listAppliedInvoices = listAppliedInvoices;
         this.listAdvances = listAdvanceInvoices;
         this.pendingInvoices = pendingInvoices;
+        this.listTrasactions = transactions;
     }
 
     @Override
@@ -314,12 +316,21 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
 
        // canUnpaid = true only when amount has actually been paid (PAID or PARTIAL_PAYMENT)
        // AND the customer is NOT settlement-generated (settlement invoices must not be reversed)
-       if (invoicesV1.getPaymentStatus() != null) {
-           boolean isPaidOrPartial = invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())
-                   || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name());
-           boolean isSettlementGenerated = customers != null
-                   && CustomerStatus.SETTLEMENT_GENERATED.name().equalsIgnoreCase(customers.getCurrentStatus());
-           canUnpaid = isPaidOrPartial && !isSettlementGenerated;
+       if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name())) {
+           canUnpaid = true;
+       }
+       if (canUnpaid) {
+           if (listTrasactions != null) {
+               TransactionV1 transactionV1 = listTrasactions
+                       .stream()
+                       .filter(i -> i.getInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId()))
+                       .findFirst()
+                       .orElse(null);
+               if (transactionV1 != null) {
+                   canUnpaid = false;
+               }
+           }
+
        }
 
         return new InvoicesList(firstName,

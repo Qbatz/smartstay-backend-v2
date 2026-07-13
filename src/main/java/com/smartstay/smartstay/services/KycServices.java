@@ -86,6 +86,18 @@ public class KycServices {
         if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
             return new ResponseEntity<>(Utils.CANNOT_REQUEST_VACATED_TENANT, HttpStatus.BAD_REQUEST);
         }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REQUEST_BOOKING_TENANT, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REQUEST_INACTIVE_TENANT, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.DRAFT.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REQUEST_DRAFTED_TENANT, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REQUEST_CANCELLED_TENANT, HttpStatus.BAD_REQUEST);
+        }
 
         KycDetails kycDetails = customers.getKycDetails();
         if (kycDetails != null) {
@@ -93,6 +105,9 @@ public class KycServices {
                 return new ResponseEntity<>(Utils.CUSTOMER_VERIFIED_KYC, HttpStatus.BAD_REQUEST);
             }
             if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
+                return new ResponseEntity<>(Utils.KYC_VERIFICATION_ALREADY_REQUESTED, HttpStatus.BAD_REQUEST);
+            }
+            if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.REQUESTED.name())) {
                 return new ResponseEntity<>(Utils.KYC_VERIFICATION_ALREADY_REQUESTED, HttpStatus.BAD_REQUEST);
             }
         }

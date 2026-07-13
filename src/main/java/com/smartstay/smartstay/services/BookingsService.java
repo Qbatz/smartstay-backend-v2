@@ -10,6 +10,7 @@ import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.booking.BedBookingStatus;
 import com.smartstay.smartstay.dto.booking.BookedCustomer;
 import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
+import com.smartstay.smartstay.dto.booking.CustomerInfo;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
@@ -501,18 +502,49 @@ public class BookingsService {
         BookingsV1 bookingsV1 = bookingsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
         if (bookingsV1 != null) {
             Beds bed = bedsService.isBedAvailabeForCheckIn(bookingsV1.getBedId(), bookingsV1.getExpectedJoiningDate());
+
             bookingAmount = invoiceService.getBookingAmount(customerId, hostelId);
             if (bookingAmount == null) {
                 bookingAmount = 0.0;
             }
 
+            CustomerInfo customerInfo = customersService.getCustomerInformationForInitializeCheckIn(bookingsV1.getCustomerId());
             if (bed != null) {
+                BedDetails bedDetails = bedsService.getBedDetails(bed.getBedId());
                 if (bed.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
                     canCheckIn = true;
                 } else if (Utils.compareWithTwoDates(new Date(), bed.getFreeFrom()) > 0) {
                     canCheckIn = false;
                 }
-                InitializeCheckIn initializeCheckIn = new InitializeCheckIn(bed.getBedId(), bed.getBedName(), bookingAmount, Utils.dateToString(bookingsV1.getBookingDate()), bed.getRentAmount(), canCheckIn, bookingsV1.getBookingId());
+
+                InitializeCheckIn initializeCheckIn = new InitializeCheckIn(bed.getBedId(),
+                        bed.getBedName(),
+                        bed.getRoomId(),
+                        bedDetails.getFloorId(),
+                        bookingAmount,
+                        Utils.dateToString(bookingsV1.getBookingDate()),
+                        bed.getRentAmount(),
+                        canCheckIn,
+                        200,
+                        bookingsV1.getBookingId(),
+                        Utils.dateToString(bookingsV1.getExpectedJoiningDate()),
+                        customerInfo);
+
+                return new ResponseEntity<>(initializeCheckIn, HttpStatus.OK);
+            }
+            else {
+                InitializeCheckIn initializeCheckIn = new InitializeCheckIn(bookingsV1.getBedId(),
+                        null,
+                        bookingsV1.getRoomId(),
+                        bookingsV1.getFloorId(),
+                        bookingAmount,
+                        Utils.dateToString(bookingsV1.getBookingDate()),
+                        0.0,
+                        false,
+                        400,
+                        bookingsV1.getBookingId(),
+                        Utils.dateToString(bookingsV1.getExpectedJoiningDate()),
+                        customerInfo);
 
                 return new ResponseEntity<>(initializeCheckIn, HttpStatus.OK);
             }
@@ -1489,6 +1521,7 @@ public class BookingsService {
             bookingsV1.setLeavingDate(null);
             bookingsV1.setCurrentStatus(BookingStatus.CHECKIN.name());
             bookingsV1.setRoomId(payloads.roomId());
+            bookingsV1.setBedId(payloads.bedId());
             bookingsV1.setRentAmount(payloads.rentalAmount());
             String rawDateStr = payloads.joiningDate().replace("-", "/");
 
@@ -1497,9 +1530,9 @@ public class BookingsService {
             bookingsV1.setAdvanceAmount(payloads.advanceAmount());
 
             CustomersBedHistory cbh = new CustomersBedHistory();
-            cbh.setRoomId(bookingsV1.getRoomId());
-            cbh.setBedId(bookingsV1.getBedId());
-            cbh.setFloorId(bookingsV1.getFloorId());
+            cbh.setRoomId(payloads.roomId());
+            cbh.setBedId(payloads.bedId());
+            cbh.setFloorId(payloads.floorId());
             cbh.setHostelId(bookingsV1.getHostelId());
             cbh.setStartDate(bookingsV1.getJoiningDate());
             cbh.setCustomerId(bookingsV1.getCustomerId());

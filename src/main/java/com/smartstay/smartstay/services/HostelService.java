@@ -740,12 +740,18 @@ public class HostelService {
                 newBillingRules.setHasGracePeriod(true);
                 newBillingRules.setGracePeriodDays(gracePeriodDays);
             } else {
+                newBillingRules.setHasGracePeriod(false);
+                newBillingRules.setGracePeriodDays(null);
+            }
+        } else {
+            if (currentBillingRules.isHasGracePeriod()) {
+                newBillingRules.setHasGracePeriod(false);
+                newBillingRules.setGracePeriodDays(null);
+            }
+            else {
                 newBillingRules.setHasGracePeriod(currentBillingRules.isHasGracePeriod());
                 newBillingRules.setGracePeriodDays(currentBillingRules.getGracePeriodDays());
             }
-        } else {
-            newBillingRules.setHasGracePeriod(currentBillingRules.isHasGracePeriod());
-            newBillingRules.setGracePeriodDays(currentBillingRules.getGracePeriodDays());
         }
 
 
