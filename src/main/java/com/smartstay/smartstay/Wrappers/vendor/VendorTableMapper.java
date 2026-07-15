@@ -69,9 +69,9 @@ public class VendorTableMapper implements Function<VendorV1, List<Object>> {
             if (vendor.getMobile() == null || vendor.getMobile().trim().isEmpty()) {
                 return "-";
             }
-            String countryCode = vendor.getCountryCode() != null && !vendor.getCountryCode().trim().isEmpty()
-                    ? vendor.getCountryCode().trim() : "91";
-            return "+" + countryCode + " " + vendor.getMobile();
+            // Single-country: always render the +91 prefix. The stored countryCode is inconsistent
+            // across rows ("1", "91", "+91"), which produced "+1 ..." and "++91 ...".
+            return "+91 " + vendor.getMobile().trim();
         }
         if (column.equalsIgnoreCase(VendorColumnUtils.EMAIL_ID)) {
             return vendor.getEmailId() != null && !vendor.getEmailId().trim().isEmpty() ? vendor.getEmailId() : "-";

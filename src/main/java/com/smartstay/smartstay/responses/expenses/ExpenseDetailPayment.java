@@ -8,6 +8,8 @@ public record ExpenseDetailPayment(
         String paymentMethod,
         String bankId,
         String bankName,
+        // bankingv1.account_type of the payment's bank; null when the payment has no bank.
+        String paymentMode,
         String paymentDate,
         String transactionId,
         String notes,

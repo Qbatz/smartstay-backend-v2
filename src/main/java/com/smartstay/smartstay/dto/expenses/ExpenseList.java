@@ -11,6 +11,8 @@ public interface ExpenseList {
     String getHostelId();
     String getBankId();
     Double getTotalAmount();
+    // Original total before any discount (expensesv1.actual_total_price).
+    Double getActualTotalPrice();
     Double getTransactionAmount();
     Date getTransactionDate();
     Double getUnitPrice();
