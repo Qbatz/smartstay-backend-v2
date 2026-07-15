@@ -107,7 +107,8 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
     @Query(value = """
             SELECT exp.expense_id as expenseId, exp.unit_count as noOfItems, exp.category_id as categoryId,
             exp.description, exp.hostel_id as hostelId, exp.bank_id as bankId, exp.sub_category_id as subCategoryId,
-            exp.total_price as totalAmount, exp.transaction_amount as transactionAmount, exp.transaction_date as transactionDate,
+            exp.total_price as totalAmount, exp.actual_total_price as actualTotalPrice,
+            exp.transaction_amount as transactionAmount, exp.transaction_date as transactionDate,
             exp.unit_price as unitPrice, exp.vendor_id as vendorId, exp.expense_number as referenceNumber,
             exp.title as title, exp.is_vendor_expense as isVendorExpense, exp.payment_status as paymentStatus,
             exp.paid_amount as paidAmount, exp.balance_amount as balanceAmount, exp.payment_method as paymentMethod, exp.note as note,
@@ -122,7 +123,8 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
     @Query(value = """
             SELECT exp.expense_id as expenseId, exp.unit_count as noOfItems, exp.category_id as categoryId,
             exp.description, exp.hostel_id as hostelId, exp.bank_id as bankId, exp.sub_category_id as subCategoryId,
-            exp.total_price as totalAmount, exp.transaction_amount as transactionAmount, exp.transaction_date as transactionDate,
+            exp.total_price as totalAmount, exp.actual_total_price as actualTotalPrice,
+            exp.transaction_amount as transactionAmount, exp.transaction_date as transactionDate,
             exp.unit_price as unitPrice, exp.vendor_id as vendorId, exp.expense_number as referenceNumber,
             exp.title as title, exp.is_vendor_expense as isVendorExpense, exp.payment_status as paymentStatus,
             exp.paid_amount as paidAmount, exp.balance_amount as balanceAmount, exp.payment_method as paymentMethod, exp.note as note,
@@ -155,7 +157,8 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
     @Query(value = """
             SELECT exp.expense_id as expenseId, exp.unit_count as noOfItems, exp.category_id as categoryId,
             exp.description, exp.hostel_id as hostelId, exp.bank_id as bankId, exp.sub_category_id as subCategoryId,
-            exp.total_price as totalAmount, exp.transaction_amount as transactionAmount, exp.transaction_date as transactionDate,
+            exp.total_price as totalAmount, exp.actual_total_price as actualTotalPrice,
+            exp.transaction_amount as transactionAmount, exp.transaction_date as transactionDate,
             exp.unit_price as unitPrice, exp.vendor_id as vendorId, exp.expense_number as referenceNumber,
             exp.title as title, exp.is_vendor_expense as isVendorExpense, exp.payment_status as paymentStatus,
             exp.paid_amount as paidAmount, exp.balance_amount as balanceAmount, exp.payment_method as paymentMethod, exp.note as note,

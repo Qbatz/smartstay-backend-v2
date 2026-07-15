@@ -77,6 +77,12 @@ public class ExpenseTableMapper implements Function<ExpenseList, List<Object>> {
         if (column.equalsIgnoreCase(ExpenseColumnUtils.BALANCE_AMOUNT)) {
             return expense.getBalanceAmount() != null ? String.valueOf(expense.getBalanceAmount()) : "-";
         }
+        if (column.equalsIgnoreCase(ExpenseColumnUtils.ACTUAL_TOTAL)) {
+            // Original total before discount; older rows without it fall back to the payable total.
+            Double actualTotal = expense.getActualTotalPrice() != null
+                    ? expense.getActualTotalPrice() : expense.getTotalAmount();
+            return actualTotal != null ? String.valueOf(actualTotal) : "-";
+        }
         return "NA";
     }
 
