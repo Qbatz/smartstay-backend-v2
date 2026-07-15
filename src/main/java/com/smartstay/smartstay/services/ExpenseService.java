@@ -1226,6 +1226,7 @@ public class ExpenseService {
                     return new ExpenseDetailPayment(
                             p.getId(), p.getPaidAmount(), p.getPaymentMethod(), p.getBankId(),
                             paymentBank != null ? paymentBank.getBankName() : null,
+                            paymentBank != null ? paymentBank.getAccountType() : null,
                             p.getPaymentDate() != null ? Utils.dateToString(p.getPaymentDate()) : null,
                             p.getTransactionId(), p.getNotes(), p.getImageUrl(), p.getImageUrls(),
                             p.getCreatedAt() != null ? Utils.dateToString(p.getCreatedAt()) : null,
