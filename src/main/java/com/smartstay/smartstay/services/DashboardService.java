@@ -129,7 +129,19 @@ public class DashboardService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        DashboardNew dashboardNew = new DashboardNew(buildRoomsAndBedInfo(hostelId), buildOccupancy(hostelId), buildTenantsSummary(hostelId), buildAdvanceSummary(hostelId), buildExpenseSummary(hostelId, financeFilter), buildOccupancyTrendSummary(hostelId, occupancyFilter), buildBillingSummary(hostelId, billingFilter), buildTenantComplaints(hostelId, complaintRequestFilter), buildTenantRequests(hostelId, complaintRequestFilter), buildFinanceSummary(hostelId, financeFilter), buildRevenueSummary(hostelId, financeFilter), buildRevenueTrend(hostelId), buildRecentCheckins(hostelId), buildOverdueInvoices(hostelId), buildRecentActivities(hostelId, complaintRequestFilter), buildTenantComplaintList(hostelId), DASHBOARD_FILTERS);
+        DashboardNew dashboardNew = new DashboardNew(
+                buildRoomsAndBedInfo(hostelId),
+                buildOccupancy(hostelId),
+                buildTenantsSummary(hostelId),
+                buildAdvanceSummary(hostelId),
+                buildExpenseSummary(hostelId, financeFilter),
+                buildOccupancyTrendSummary(hostelId, occupancyFilter),
+                buildBillingSummary(hostelId, billingFilter),
+                buildTenantComplaints(hostelId, complaintRequestFilter),
+                buildTenantRequests(hostelId, complaintRequestFilter),
+                buildFinanceSummary(hostelId, financeFilter),
+                buildRevenueSummary(hostelId, financeFilter),
+                buildRevenueTrend(hostelId), buildRecentCheckins(hostelId), buildOverdueInvoices(hostelId), buildRecentActivities(hostelId, complaintRequestFilter), buildTenantComplaintList(hostelId), DASHBOARD_FILTERS);
 
         return new ResponseEntity<>(dashboardNew, HttpStatus.OK);
     }

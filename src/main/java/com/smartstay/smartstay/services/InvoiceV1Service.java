@@ -4056,7 +4056,7 @@ public class InvoiceV1Service {
     }
 
     public List<InvoicesV1> findTopOverdueInvoices(String hostelId, org.springframework.data.domain.Pageable pageable) {
-        return invoicesV1Repository.findTopOverdueInvoices(hostelId, pageable);
+        return invoicesV1Repository.findTopOverdueInvoices(hostelId, new Date(), pageable);
     }
 
     public Double getTotalPaidAmount(String hostelId, Date startDate, Date endDate) {
