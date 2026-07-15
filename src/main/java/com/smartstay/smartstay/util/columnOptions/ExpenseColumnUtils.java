@@ -16,6 +16,7 @@ public class ExpenseColumnUtils {
     public static final String TOTAL_AMOUNT = "Total Amount";
     public static final String PAID_AMOUNT = "Paid Amount";
     public static final String BALANCE_AMOUNT = "Balance Amount";
+    public static final String ACTUAL_TOTAL = "Actual Total";
 
     private ExpenseColumnUtils() {
     }
@@ -36,6 +37,7 @@ public class ExpenseColumnUtils {
                 new ColumnFilters(8, PAYMENT_MODE, true),
                 new ColumnFilters(9, TOTAL_AMOUNT, true),
                 new ColumnFilters(10, PAID_AMOUNT, true),
-                new ColumnFilters(11, BALANCE_AMOUNT, true));
+                new ColumnFilters(11, BALANCE_AMOUNT, true),
+                new ColumnFilters(12, ACTUAL_TOTAL, true));
     }
 }
