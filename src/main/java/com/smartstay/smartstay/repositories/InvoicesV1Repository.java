@@ -35,8 +35,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND (:mode IS NULL OR i.invoiceMode in (:mode))
             AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus))
             AND (:userId IS NULL OR i.customerId IN (:userId)) ORDER BY i.invoiceStartDate DESC
-            """,
-            countQuery = """
+            """, countQuery = """
                 SELECT COUNT(DISTINCT i.invoiceId) FROM InvoicesV1 i WHERE hostelId=:hostelId
             AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
             AND (:endDate IS NULL OR DATE(i.invoiceEndDate) <= DATE(:endDate))
@@ -46,6 +45,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND (:userId IS NULL OR i.customerId IN (:userId)) ORDER BY i.invoiceStartDate DESC
             """)
     Page<InvoicesV1> findAllInvoicesByHostelId(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("types") List<String> types, @Param("createdBy") List<String> createdBy, @Param("mode") List<String> mode, @Param("paymentStatus") List<String> paymentStatus, @Param("userId") List<String> userId, Pageable pageable);
+
     @Query(value = """
                 SELECT * FROM invoicesv1
                 WHERE hostel_id=:hostelId AND invoice_number LIKE CONCAT(:prefix, '%')
@@ -293,9 +293,16 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """, nativeQuery = true)
     List<java.util.Map<String, Object>> findOverdueInvoices(@Param("hostelId") String hostelId, org.springframework.data.domain.Pageable pageable);
 
-    @Query("SELECT i FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND i.isCancelled = false ORDER BY i.invoiceDueDate ASC")
-    List<InvoicesV1> findTopOverdueInvoices(@Param("hostelId") String hostelId, org.springframework.data.domain.Pageable pageable);
-
+    @Query("""
+            SELECT i
+            FROM InvoicesV1 i
+            WHERE i.hostelId = :hostelId
+            AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT')
+            AND i.isCancelled = false
+            AND i.invoiceDueDate < :today
+            ORDER BY i.invoiceDueDate ASC
+            """)
+    List<InvoicesV1> findTopOverdueInvoices(@Param("hostelId") String hostelId, @Param("today") Date today, Pageable pageable);
 
     @Query("""
             SELECT SUM(i.paidAmount)
@@ -379,10 +386,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
             i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false 
             ORDER BY b.floorId ASC, r.roomId ASC
-            """,
-            countQuery = """
-                    SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes)
-                    """)
+            """, countQuery = """
+            SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes)
+            """)
     Page<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Pageable pageable);
 
     @Query(value = """
@@ -394,15 +400,14 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             (:minAmount IS NULL OR i.balanceAmount >= :minAmount) AND 
             (:maxAmount IS NULL OR i.balanceAmount <= :maxAmount)
             ORDER BY f.floorId ASC, r.roomId ASC, bed.bedId ASC
-            """,
-            countQuery = """
-                    SELECT COUNT(DISTINCT i.invoiceId) FROM InvoicesV1 i WHERE 
-                    i.hostelId=:hostelId AND 
-                    i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
-                    i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false AND 
-                    (:minAmount IS NULL OR i.balanceAmount >= :minAmount) AND 
-                    (:maxAmount IS NULL OR i.balanceAmount <= :maxAmount)
-                    """)
+            """, countQuery = """
+            SELECT COUNT(DISTINCT i.invoiceId) FROM InvoicesV1 i WHERE 
+            i.hostelId=:hostelId AND 
+            i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
+            i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false AND 
+            (:minAmount IS NULL OR i.balanceAmount >= :minAmount) AND 
+            (:maxAmount IS NULL OR i.balanceAmount <= :maxAmount)
+            """)
     Page<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Integer minAmount, Integer maxAmount, Pageable pageable);
 
     @Query("""
@@ -438,14 +443,12 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findByHostelIdAndInvoiceNumberContainingIgnoreCaseAndInvoiceTypeIn(String hostelId, String invoiceNumber, List<String> invoiceType);
 
     @Query("""
-    SELECT i
-    FROM InvoicesV1 i
-    WHERE i.customerId IN :customerIds
-      AND i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADVANCE')
-      AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT')
-      AND i.isCancelled = false
-    """)
-    List<InvoicesV1> findUnpaidInvoicesByCustomerIds(
-            @Param("customerIds") List<String> customerIds
-    );
+            SELECT i
+            FROM InvoicesV1 i
+            WHERE i.customerId IN :customerIds
+              AND i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADVANCE')
+              AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT')
+              AND i.isCancelled = false
+            """)
+    List<InvoicesV1> findUnpaidInvoicesByCustomerIds(@Param("customerIds") List<String> customerIds);
 }
