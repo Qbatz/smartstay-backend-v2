@@ -306,4 +306,10 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     List<String> findCustomerIdsByHostelIdAndSharingTypeIn(
             @Param("hostelId") String hostelId,
             @Param("sharingTypes") List<Integer> sharingTypes);
+
+    @Query("""
+    SELECT booking FROM BookingsV1 booking WHERE booking.hostelId = :hostelId AND booking.bedId = :bedId 
+    AND booking.bookingId <> :bookingId AND booking.currentStatus <> 'CANCELLED'
+    """)
+    List<BookingsV1> findActiveBookings(String hostelId, Integer bedId, String bookingId);
 }

@@ -58,6 +58,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         //should used for advance invoices.
         boolean canRedeem = false;
         boolean canApplyFromAdvance = false;
+        String invoiceDate = null;
         InvoicesApplied invoicesApplied = null;
         InvoicesV1 advanceInvoiceForCurrentCustomer = null;
 
@@ -147,6 +148,12 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             }
         }
 
+        if (invoicesV1.getInvoiceDate() != null) {
+            invoiceDate = Utils.dateToString(invoicesV1.getInvoiceDate());
+        }
+        else {
+            invoiceDate = Utils.dateToString(invoicesV1.getInvoiceStartDate());
+        }
 
         String paymentStatus = null;
         if (invoicesV1.getPaymentStatus() != null) {
@@ -354,7 +361,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 Utils.dateToString(invoicesV1.getCreatedAt()),
                 invoicesV1.getCreatedBy(),
                 invoicesV1.getHostelId(),
-                Utils.dateToString(invoicesV1.getInvoiceStartDate()),
+                invoiceDate,
                 Utils.dateToString(invoicesV1.getInvoiceDueDate()),
                 invoiceType,
                 invoiceMode,

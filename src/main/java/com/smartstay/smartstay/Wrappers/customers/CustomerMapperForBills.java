@@ -37,7 +37,9 @@ public class CustomerMapperForBills implements Function<Customers, GetCustomersF
            if (bookingsV1.getExpectedJoiningDate() != null) {
                expectedJoiningDate = Utils.dateToString(bookingsV1.getExpectedJoiningDate());
            }
-           rent = bookingsV1.getRentAmount();
+           if (bookingsV1.getRentAmount() != null) {
+               rent = bookingsV1.getRentAmount();
+           }
         }
         return new GetCustomersForBills(customers.getCustomerId(),
                 NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),

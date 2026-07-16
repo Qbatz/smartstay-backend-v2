@@ -758,14 +758,18 @@ public class BedsService {
     }
 
 
-    public void cancelBooking(int bedId, String parentId) {
+    public void cancelBooking(int bedId, String parentId, String bookingId) {
         Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
         if (beds != null) {
-            beds.setBooked(false);
-            if (!beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-                beds.setStatus(BedStatus.VACANT.name());
+            List<BookingsV1> findBookingsExceptCancel = bookingService.findAllBookingsExceptCancel(bedId, bookingId, beds.getHostelId());
+            if (findBookingsExceptCancel.isEmpty()) {
+                beds.setBooked(false);
+                if (!beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+                    beds.setStatus(BedStatus.VACANT.name());
+                }
+                bedsRepository.save(beds);
             }
-            bedsRepository.save(beds);
+
         }
     }
 

@@ -3,6 +3,7 @@ package com.smartstay.smartstay.repositories;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dto.customer.CheckoutCustomers;
 import com.smartstay.smartstay.dto.customer.CustomerData;
+import com.smartstay.smartstay.responses.retainer.CustomersList;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -172,4 +173,5 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
 
     @Query("SELECT c FROM Customers c WHERE c.hostelId = :hostelId AND c.mobile LIKE CONCAT('%', :mobile, '%')")
     List<Customers> searchByMobileAndHostelId(@Param("hostelId") String hostelId, @Param("mobile") String mobile);
+
 }

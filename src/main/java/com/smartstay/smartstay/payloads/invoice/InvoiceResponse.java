@@ -6,6 +6,7 @@ public record InvoiceResponse(
         String invoiceId,
         String invoiceNumber,
         String invoiceType,
+        String invoiceDate,
         String paymentStatus,
         Double totalAmount,
         Double dueAmount,

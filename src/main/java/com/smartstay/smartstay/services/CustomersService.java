@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.customers.CustomerMapperForBills;
 import com.smartstay.smartstay.Wrappers.customers.TenantTableMapper;
 import com.smartstay.smartstay.Wrappers.customers.TransctionsForCustomerDetails;
+import com.smartstay.smartstay.Wrappers.retainer.CustomersListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
@@ -40,6 +41,7 @@ import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.responses.customer.KycAddressDetails;
+import com.smartstay.smartstay.responses.retainer.CustomerListResponse;
 import com.smartstay.smartstay.responses.settlement.DeductionsInfo;
 import com.smartstay.smartstay.responses.settlement.DeductionsItem;
 import com.smartstay.smartstay.util.CustomerUtils;
@@ -1447,7 +1449,7 @@ public class CustomersService {
             if (inv.isCancelled()) {
                 cancelledDate = inv.cancelledOn();
             }
-            return new InvoiceResponse(inv.invoiceId(), inv.invoiceNumber(), inv.invoiceType(), inv.paymentStatus(), inv.totalAmount(), inv.dueAmount(), inv.paidAmount(), inv.dueDate(), inv.invoiceGeneratedDate(), inv.invoiceMode(), inv.isDiscounted(), inv.items(), canUnpaid, isCancelled, cancelledDate);
+            return new InvoiceResponse(inv.invoiceId(), inv.invoiceNumber(), inv.invoiceType(), inv.invoiceDate(), inv.paymentStatus(), inv.totalAmount(), inv.dueAmount(), inv.paidAmount(), inv.dueDate(), inv.invoiceGeneratedDate(), inv.invoiceMode(), inv.isDiscounted(), inv.items(), canUnpaid, isCancelled, cancelledDate);
         }).toList();
         InvoiceResponse advanceInvoice = invoiceResponseList.stream().filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType())).limit(1).findFirst().orElse(null);
         if (rentHistories != null) {
@@ -4067,7 +4069,7 @@ public class CustomersService {
             List<GetCustomersForBills> customerForBills = listCustomers.stream().map(i -> new CustomerMapperForBills(cusotmerBookings).apply(i)).toList();
 
             return new ResponseEntity<>(customerForBills, HttpStatus.OK);
-        } else {
+        } else if (purpose.equals(GetCustomersPurpose.COMPLAINTS)) {
             List<String> customerStatus = new ArrayList<>();
             customerStatus.add(CustomerStatus.ACTIVE.name());
             customerStatus.add(CustomerStatus.NOTICE.name());
@@ -4079,6 +4081,40 @@ public class CustomersService {
             return new ResponseEntity<>(listCustomersForComplaint, HttpStatus.OK);
 
         }
+        else if (purpose.equals(GetCustomersPurpose.ADVANCE_HOLDING)) {
+            List<com.smartstay.smartstay.responses.retainer.CustomersList> listCustomers = getCustomersListForRetainerInvoices(hostelId);
+
+            CustomerListResponse response = new CustomerListResponse(hostelId,
+                    listCustomers);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        }
+        else {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private List<com.smartstay.smartstay.responses.retainer.CustomersList> getCustomersListForRetainerInvoices(String hostelId) {
+        List<String> customerStatus = new ArrayList<>();
+        customerStatus.add(CustomerStatus.ACTIVE.name());
+        customerStatus.add(CustomerStatus.NOTICE.name());
+        customerStatus.add(CustomerStatus.CHECK_IN.name());
+
+        List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
+        if (listCustomers == null) {
+            return new ArrayList<>();
+        }
+
+        List<String> customerIds = listCustomers
+                .stream()
+                .map(Customers::getCustomerId)
+                .toList();
+        List<com.smartstay.smartstay.dao.CustomerAdditionalContacts> additionalContacts = additionalContactService.getAdditionalContactsByHostelIdAndCustomerIdIn(hostelId, customerIds);
+        return listCustomers
+                .stream()
+                .map(i -> new CustomersListMapper(additionalContacts).apply(i))
+                .toList();
     }
 
     public double getDeductionAmount(String customerId) {

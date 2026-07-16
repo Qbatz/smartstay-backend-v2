@@ -15,4 +15,10 @@ public interface CustomerAdditionalContactsRepositories extends JpaRepository<Cu
             AND cac.is_deleted=false
             """, nativeQuery = true)
     List<CustomerAdditionalContacts> findByCustomerIdAndHostelId(@Param("hostelId") String hostelId, @Param("customerId") String customerId);
+
+    @Query("""
+            SELECT cac FROM CustomerAdditionalContacts cac WHERE cac.hostelId=:hostelId AND 
+            cac.customerId in (:customerIds) AND cac.isDeleted=false
+            """)
+    List<CustomerAdditionalContacts> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
 }

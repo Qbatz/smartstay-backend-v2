@@ -185,4 +185,11 @@ public class CustomerDraftService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
 
     }
+
+    public void deleteDraftedCUstomer(String customerId) {
+        Draft draft = draftsRepository.findById(customerId).orElse(null);
+        if (draft != null) {
+            draftsRepository.delete(draft);
+        }
+    }
 }
