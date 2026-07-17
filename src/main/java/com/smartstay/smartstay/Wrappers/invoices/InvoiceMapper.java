@@ -19,6 +19,7 @@ public class InvoiceMapper {
         Double paidAmount = 0.0;
         boolean isCancelled = false;
         String cancelledDate = null;
+        String invoiceDate = null;
 
         if (invoice.getPaidAmount() != null) {
             paidAmount = invoice.getPaidAmount();
@@ -29,6 +30,13 @@ public class InvoiceMapper {
         }
         if (invoice.isCancelled()) {
             paymentStatus = "Cancelled";
+        }
+
+        if (invoice.getInvoiceDate() != null) {
+            invoiceDate = Utils.dateToString(invoice.getInvoiceDate());
+        }
+        else {
+            invoiceDate = Utils.dateToString(invoice.getInvoiceStartDate());
         }
 
         double dueAmount = 0.0;
@@ -85,6 +93,7 @@ public class InvoiceMapper {
                 invoice.getInvoiceId(),
                 invoice.getInvoiceNumber(),
                 Utils.capitalize(invoice.getInvoiceType()),
+                invoiceDate,
                 paymentStatus,
                 Utils.roundOffWithTwoDigit(invoice.getTotalAmount()),
                 Utils.roundOffWithTwoDigit(dueAmount),

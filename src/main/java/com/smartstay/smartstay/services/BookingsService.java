@@ -623,7 +623,7 @@ public class BookingsService {
             bankTransactionService.cancelBooking(transactionDto, invoicesV1.getInvoiceId(), transactionId);
         }
 
-        bedsService.cancelBooking(bookingsV1.getBedId(), user.getParentId());
+        bedsService.cancelBooking(bookingsV1.getBedId(), user.getParentId(), bookingsV1.getBookingId());
         userService.addUserLog(bookingsV1.getHostelId(), bookingsV1.getBookingId(), ActivitySource.BOOKING, ActivitySourceType.CANCEL, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
@@ -1553,5 +1553,14 @@ public class BookingsService {
             bookingsRepository.save(bookingsV1);
             rentHistoryService.addInitialRent(bookingsV1);
         }
+    }
+
+    public List<BookingsV1> findAllBookingsExceptCancel(Integer bedId, String bookingId, String hostelId) {
+        List<BookingsV1> listBookings = bookingsRepository.findActiveBookings(hostelId, bedId, bookingId);
+        if (listBookings == null) {
+            listBookings = new ArrayList<>();
+        }
+
+        return listBookings;
     }
 }

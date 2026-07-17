@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -53,5 +54,15 @@ public class AdditionalContactService {
                         i.getOccupation(),
                         i.getContactId()))
                 .toList();
+    }
+
+    public List<com.smartstay.smartstay.dao.CustomerAdditionalContacts> getAdditionalContactsByHostelIdAndCustomerIdIn(String hostelId, List<String> customerId) {
+        List<com.smartstay.smartstay.dao.CustomerAdditionalContacts> listAdditionalContacts = customerAdditionalContactsRepositories.findByHostelIdAndCustomerIdIn(hostelId, customerId);
+
+        if (listAdditionalContacts == null) {
+            return new ArrayList<>();
+        }
+
+        return listAdditionalContacts;
     }
 }

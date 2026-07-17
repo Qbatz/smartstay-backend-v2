@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.responses.invoices.InvoiceBasicList;
 import com.smartstay.smartstay.util.CustomerUtils;
+import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 
@@ -23,6 +24,8 @@ public class InvoiceBasicMapper implements Function<InvoicesV1, InvoiceBasicList
         String profilePic = null;
         String initials = null;
 
+        String paymentStatus = null;
+
         if (listCustomers != null) {
             Customers customers = listCustomers.stream()
                     .filter(i -> i.getCustomerId().equalsIgnoreCase(invoicesV1.getCustomerId()))
@@ -35,6 +38,14 @@ public class InvoiceBasicMapper implements Function<InvoicesV1, InvoiceBasicList
             }
         }
 
+        if (invoicesV1.getPaymentStatus() != null) {
+            paymentStatus = InvoiceUtils.getInvoicePaymentStatusByStatus(invoicesV1.getPaymentStatus());
+        }
+
+        if (invoicesV1.isCancelled()) {
+            paymentStatus = "Cancelled";
+        }
+
 
 
 
@@ -43,7 +54,7 @@ public class InvoiceBasicMapper implements Function<InvoicesV1, InvoiceBasicList
                 profilePic,
                 initials,
                 invoicesV1.getInvoiceNumber(),
-                invoicesV1.getPaymentStatus(),
+                paymentStatus,
                 invoicesV1.getTotalAmount(),
                 Utils.dateToString(invoicesV1.getInvoiceStartDate()));
     }
