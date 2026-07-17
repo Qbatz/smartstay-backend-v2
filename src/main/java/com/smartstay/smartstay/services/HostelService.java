@@ -325,7 +325,16 @@ public class HostelService {
         List<BookingsV1> bookingsV1 = bookingsService.checkAllByHostelId(hostelId);
         boolean canModifyBilling = bookingsV1 == null || bookingsV1.isEmpty();
 
-        HostelDetails details = new HostelDetails(hostel.getHostelId(), hostel.getMainImage(), hostel.getCity(), String.valueOf(hostel.getCountry()), hostel.getEmailId(), hostel.getHostelName(), hostel.getHouseNo(), hostel.getLandmark(), hostel.getMobile(), hostel.getPincode(), hostel.getState(), hostel.getStreet(), Utils.dateToString(hostel.getUpdatedAt()), isSubscriptionActive, nextBillingDate, remainingDays, floorDetails.size(), floorDetails, notificationCount, canModifyBilling);
+        BillingDates billingDates = getCurrentBillStartAndEndDates(hostelId);
+        String currentMonthBillStartDate = billingDates != null && billingDates.currentBillStartDate() != null
+                ? Utils.dateToString(billingDates.currentBillStartDate()) : "";
+        String currentMonthBillEndDate = billingDates != null && billingDates.currentBillEndDate() != null
+                ? Utils.dateToString(billingDates.currentBillEndDate()) : "";
+        int dueDays = billingDates != null && billingDates.dueDays() != null ? billingDates.dueDays() : 0;
+        String billingMode = billingDates != null ? billingDates.billingModel() : null;
+        String billingType = billingDates != null ? billingDates.typeOfBilling() : null;
+
+        HostelDetails details = new HostelDetails(hostel.getHostelId(), hostel.getMainImage(), hostel.getCity(), String.valueOf(hostel.getCountry()), hostel.getEmailId(), hostel.getHostelName(), hostel.getHouseNo(), hostel.getLandmark(), hostel.getMobile(), hostel.getPincode(), hostel.getState(), hostel.getStreet(), Utils.dateToString(hostel.getUpdatedAt()), isSubscriptionActive, nextBillingDate, remainingDays, currentMonthBillStartDate, currentMonthBillEndDate, dueDays, billingMode, billingType, floorDetails.size(), floorDetails, notificationCount, canModifyBilling);
 
         return ResponseEntity.ok(details);
     }
