@@ -90,6 +90,11 @@ public class InvoiceController {
         return invoiceV1Service.markInvoiceUnpaid(hostelId, invoiceId);
     }
 
+    @GetMapping("/discount/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> initializeDiscount(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.initializeInvoiceDiscounts(hostelId, invoiceId);
+    }
+
     @PostMapping("/discount/{hostelId}/{invoiceId}")
     public ResponseEntity<?> applyDiscountForInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody @Valid ApplyDiscount discount) {
         return invoiceV1Service.applyinvoiceDiscount(hostelId, invoiceId, discount);
@@ -153,7 +158,20 @@ public class InvoiceController {
     }
 
     @GetMapping("/basic-list/{hostelId}")
-    public ResponseEntity<?> getBasicInfo(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate, @RequestParam(value = "type", required = false) List<String> types, @RequestParam(value = "createdBy", required = false) List<String> createdBy, @RequestParam(value = "modes", required = false) List<String> modes, @RequestParam(value = "search", required = false) String searchKey, @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus) {
-        return invoiceV1Service.getBasicList(hostelId, startDate, endDate, types, createdBy, modes, searchKey, paymentStatus);
+    public ResponseEntity<?> getBasicInfo(@PathVariable("hostelId") String hostelId,
+                                          @RequestParam(value = "startDate", required = false) String startDate,
+                                          @RequestParam(value = "endDate", required = false) String endDate,
+                                          @RequestParam(value = "type", required = false) List<String> types,
+                                          @RequestParam(value = "createdBy", required = false) List<String> createdBy,
+                                          @RequestParam(value = "customerId", required = false) List<String> customerIds,
+                                          @RequestParam(value = "modes", required = false) List<String> modes,
+                                          @RequestParam(value = "search", required = false) String searchKey,
+                                          @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus) {
+        return invoiceV1Service.getBasicList(hostelId, customerIds, startDate, endDate, types, createdBy, modes, searchKey, paymentStatus);
+    }
+
+    @GetMapping("/payment/initialize/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> initializeToRecordPayment(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.initializeRecordPayment(hostelId, invoiceId);
     }
 }

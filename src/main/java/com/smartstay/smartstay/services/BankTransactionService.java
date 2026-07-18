@@ -202,7 +202,7 @@ public class BankTransactionService {
             dt = new Date();
         }
 
-
+        double bankBalance = bankingService.getBankBalance(refundInvoice.bankId());
         transactionsV1.setTransactionDate(Utils.convertToTimeStamp(dt));
         transactionsV1.setBankId(refundInvoice.bankId());
         transactionsV1.setReferenceNumber(refundInvoice.referenceNumber());
@@ -214,6 +214,7 @@ public class BankTransactionService {
         transactionsV1.setIsDeleted(false);
         transactionsV1.setHostelId(invoicesV1.getHostelId());
         transactionsV1.setCreatedAt(new Date());
+        transactionsV1.setAccountBalance(bankBalance);
         transactionsV1.setCreatedBy(authentication.getName());
 
         bankRepository.save(transactionsV1);

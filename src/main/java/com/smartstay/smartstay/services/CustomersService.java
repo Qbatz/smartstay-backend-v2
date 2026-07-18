@@ -4156,4 +4156,30 @@ public class CustomersService {
                 CustomerUtils.getProfilePic(customers),
                 NameUtils.getInitials(customers.getFirstName(), customers.getLastName()));
     }
+
+    public com.smartstay.smartstay.responses.invoices.CustomerDetails getCustomerInformationForRecordPayment(String customerId) {
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers != null) {
+            return new com.smartstay.smartstay.responses.invoices.CustomerDetails(NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
+                    customers.getFirstName(),
+                    customers.getLastName(),
+                    NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
+                    CustomerUtils.getProfilePic(customers),
+                    customers.getCustomerId());
+        }
+        return null;
+    }
+
+    public com.smartstay.smartstay.responses.discount.CustomerInfo getCustomerInfoForDiscount(String customerId) {
+        Customers customer = customersRepository.findById(customerId).orElse(null);
+        if (customer == null) {
+            return null;
+        }
+        return new com.smartstay.smartstay.responses.discount.CustomerInfo(customerId,
+                NameUtils.getFullName(customer.getFirstName(), customer.getLastName()),
+                customer.getLastName(),
+                customer.getFirstName(),
+                NameUtils.getInitials(customer.getFirstName(), customer.getLastName()),
+                CustomerUtils.getProfilePic(customer));
+    }
 }

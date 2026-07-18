@@ -20,7 +20,6 @@ public interface ElectricityReadingRepository extends JpaRepository<com.smartsta
         SELECT er.room_id AS roomId
         FROM electricity_readings er
         WHERE er.hostel_id = :hostelId
-          AND er.room_id NOT IN (:roomIds)
         GROUP BY er.room_id
         """, nativeQuery = true)
     List<Integer> getRoomIds(

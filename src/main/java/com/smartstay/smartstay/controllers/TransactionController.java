@@ -72,4 +72,5 @@ public class TransactionController {
                                                   @PathVariable("transactionId") String transactionId) {
         return transactionService.shareReceiptWhatsApp(hostelId, transactionId);
     }
+
 }

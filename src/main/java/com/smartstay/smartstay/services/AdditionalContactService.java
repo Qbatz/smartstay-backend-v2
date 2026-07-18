@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.payloads.customer.CustomerAdditionalContacts;
+import com.smartstay.smartstay.payloads.customer.Guardian;
 import com.smartstay.smartstay.repositories.CustomerAdditionalContactsRepositories;
 import com.smartstay.smartstay.responses.customer.AdditionalContacts;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,5 +65,28 @@ public class AdditionalContactService {
         }
 
         return listAdditionalContacts;
+    }
+
+    public void addAdditionalContacts(String hostelId, String customerId, List<Guardian> guardianList) {
+        List<com.smartstay.smartstay.dao.CustomerAdditionalContacts> listAdditionalContacts = guardianList
+                .stream()
+                .map(i -> {
+                    com.smartstay.smartstay.dao.CustomerAdditionalContacts cd = new com.smartstay.smartstay.dao.CustomerAdditionalContacts();
+                    cd.setName(i.guardianFullName());
+                    cd.setMobile(i.mobileNo());
+                    cd.setRelationship(i.relationshipToTenant());
+                    cd.setOccupation(i.guardianOccupation());
+                    cd.setCustomerId(customerId);
+                    cd.setHostelId(hostelId);
+                    cd.setCountryCode("91");
+                    cd.setDeleted(false);
+                    cd.setAddedByUserType(UserType.ADMIN.name());
+                    cd.setCreatedAt(new Date());
+                    cd.setCreatedBy(authentication.getName());
+                    return cd;
+                })
+                .toList();
+
+        customerAdditionalContactsRepositories.saveAll(listAdditionalContacts);
     }
 }

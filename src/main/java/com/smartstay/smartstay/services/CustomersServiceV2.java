@@ -57,7 +57,6 @@ public class CustomersServiceV2 {
     private String environment;
     @Autowired
     private Authentication authentication;
-
     @Autowired
     private UsersService userService;
     @Autowired
@@ -78,16 +77,18 @@ public class CustomersServiceV2 {
     private InvoiceV1Service invoiceV1Service;
     @Autowired
     private DraftsRepository draftsRepository;
-
     @Autowired
     private RolesService rolesService;
-
     @Autowired
     private CustomerCredentialsService ccs;
-
     @Autowired
     private SubscriptionService subscriptionService;
-
+    @Autowired
+    private AdditionalContactService additionalContactService;
+    @Autowired
+    private CustomerJobDetailsService customerJobDetailsService;
+    @Autowired
+    private CustomerDocumentsService customerDocumentsService;
     @Autowired
     private FloorsService floorsService;
 
@@ -1245,4 +1246,77 @@ public class CustomersServiceV2 {
         }
     }
 
+    public ResponseEntity<?> addAdditionalData(String hostelId, String customerId, CustomerAdditionalData additionalData, MultipartFile aadhaarPic, MultipartFile panPic) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = userService.findUserByUserId(authentication.getName());
+
+        if (!Utils.checkNullOrEmpty(customerId)) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!customers.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(customerId);
+        if (bookingsV1 == null) {
+            return new ResponseEntity<>(Utils.CUSTOMER_BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (additionalData == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (additionalData.guardians() == null && additionalData.jobDetails() == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (additionalData.guardians() != null) {
+            List<Guardian> guardianList = additionalData.guardians()
+                    .stream()
+                    .filter(i -> i.guardianFullName() == null)
+                    .toList();
+            if (guardianList != null && !guardianList.isEmpty()) {
+                return new ResponseEntity<>(Utils.FULL_NAME_REQUIRES, HttpStatus.BAD_REQUEST);
+            }
+
+            List<Guardian> guardianListNoMobile = additionalData.guardians()
+                    .stream()
+                    .filter(i -> i.mobileNo() == null)
+                    .toList();
+
+            if (guardianListNoMobile != null && !guardianListNoMobile.isEmpty()) {
+                return new ResponseEntity<>(Utils.MOBILE_NO_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            additionalContactService.addAdditionalContacts(hostelId, customerId, additionalData.guardians());
+
+        }
+        if (additionalData.jobDetails() != null) {
+            customerJobDetailsService.addJobDetails(hostelId, customerId, additionalData.jobDetails());
+        }
+
+        customerDocumentsService.uploadManualKycFiles(hostelId, customerId, aadhaarPic, panPic);
+
+        return new ResponseEntity<>(HttpStatus.CREATED);
+    }
 }

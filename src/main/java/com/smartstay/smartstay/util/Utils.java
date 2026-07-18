@@ -228,6 +228,7 @@ public class Utils {
     public static final String INVALID_NOTICE_DAYS = "Invalid notice days";
     public static final String FULL_NAME_REQUIRES = "Full name is required";
     public static final String ATLEAST_ONE_COLUMN_REQUIRED = "Atleast one column required";
+    public static final String INVOICE_ALREADY_PAID = "This invoice is already paid";
     public static final String INVALID_GRACE_PERIOD = "Invalid grace period.";
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
