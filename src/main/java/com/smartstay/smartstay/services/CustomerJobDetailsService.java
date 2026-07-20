@@ -67,4 +67,17 @@ public class CustomerJobDetailsService {
             jobDetailsRepository.save(customerJobDetails);
         }
     }
+
+    public com.smartstay.smartstay.dto.customer.JobDetails getCustomerJobDetails(String hostelId, String customerId) {
+        CustomerJobDetails customerJobDetails = jobDetailsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+        if (customerJobDetails == null) {
+            return null;
+        }
+        return new com.smartstay.smartstay.dto.customer.JobDetails(customerJobDetails.getEmploymentStatus(),
+                customerJobDetails.getOrganizationName(),
+                customerJobDetails.getRole(),
+                customerJobDetails.getWorkLocation(),
+                customerJobDetails.getShiftType(),
+                customerJobDetails.getShiftStartTime() + ":" + customerJobDetails.getShiftEndTime());
+    }
 }

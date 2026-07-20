@@ -192,4 +192,15 @@ public class CustomerDraftService {
             draftsRepository.delete(draft);
         }
     }
+
+    public Draft getCustomerDrafts(String customerId, String hostelId) {
+        return draftsRepository.findById(customerId).orElse(null);
+    }
+
+    public void findCustomerInDraftAndDelete(String hostelId, String customerId) {
+        Draft customerDrafts = draftsRepository.findById(customerId).orElse(null);
+        if (customerDrafts != null) {
+            draftsRepository.delete(customerDrafts);
+        }
+    }
 }

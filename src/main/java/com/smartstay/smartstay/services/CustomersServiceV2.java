@@ -808,7 +808,6 @@ public class CustomersServiceV2 {
             return new ResponseEntity<>(Utils.CUSTOMER_ALREADY_CHECKED_IN, HttpStatus.BAD_REQUEST);
         }
 
-
         String date = payloads.joiningDate().replace("/", "-");
         if (Utils.compareWithTwoDates(new Date(), Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT)) < 0) {
             return new ResponseEntity<>(Utils.CHECK_IN_FUTURE_DATE_ERROR, HttpStatus.BAD_REQUEST);
@@ -847,6 +846,8 @@ public class CustomersServiceV2 {
 
             totalAdvanceAmount = refundableAmount + deductionAmount;
 
+            Draft customerDrafts = customerDraftService.getCustomerDrafts(customerId, hostelId);
+
             Advance advance = customers.getAdvance();
             if (advance == null) {
                 advance = new Advance();
@@ -861,6 +862,42 @@ public class CustomersServiceV2 {
             advance.setInvoiceDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
             advance.setUpdatedAt(new Date());
 
+            if (customerDrafts != null) {
+                if (customerDrafts.getAddressJson() != null) {
+                    try {
+                        Address address = objectMapper.readValue(customerDrafts.getAddressJson(), Address.class);
+                        if (address != null) {
+                            if (address.house() != null) {
+                                customers.setHouseNo(address.house());
+                            }
+                            if (address.street() != null) {
+                                customers.setStreet(address.street());
+                            }
+                            if (address.landmark() != null) {
+                                customers.setLandmark(address.landmark());
+                            }
+                            if (address.city() != null) {
+                                customers.setCity(address.city());
+                            }
+                            if (address.state() != null) {
+                                customers.setState(address.state());
+                            }
+                            if (address.pincode() != null) {
+                                try {
+                                    customers.setPincode(Integer.parseInt(address.pincode()));
+                                }
+                                catch(Exception e) {
+
+                                }
+
+                            }
+
+                        }
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
             customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
             customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
             customers.setJoiningDate(Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
@@ -1193,6 +1230,45 @@ public class CustomersServiceV2 {
         advance.setDeductions(listDeductions);
         advance.setInvoiceDate(Utils.stringToDate(date, Utils.USER_INPUT_DATE_FORMAT));
         advance.setUpdatedAt(new Date());
+
+        Draft customerDrafts = customerDraftService.getCustomerDrafts(customerId, hostelId);
+
+        if (customerDrafts != null) {
+            if (customerDrafts.getAddressJson() != null) {
+                try {
+                    Address address = objectMapper.readValue(customerDrafts.getAddressJson(), Address.class);
+                    if (address != null) {
+                        if (address.house() != null) {
+                            customers.setHouseNo(address.house());
+                        }
+                        if (address.street() != null) {
+                            customers.setStreet(address.street());
+                        }
+                        if (address.landmark() != null) {
+                            customers.setLandmark(address.landmark());
+                        }
+                        if (address.city() != null) {
+                            customers.setCity(address.city());
+                        }
+                        if (address.state() != null) {
+                            customers.setState(address.state());
+                        }
+                        if (address.pincode() != null) {
+                            try {
+                                customers.setPincode(Integer.parseInt(address.pincode()));
+                            }
+                            catch(Exception e) {
+
+                            }
+
+                        }
+
+                    }
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
 
         customers.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
         customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());

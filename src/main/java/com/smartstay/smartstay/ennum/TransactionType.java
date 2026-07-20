@@ -4,7 +4,8 @@ public enum TransactionType {
     BOOKING("Booking"),
     ADVANCE("Advance"),
     RENT("Rent"),
-    REFUND("Refund");
+    REFUND("Refund"),
+    ADVANCE_HOLDING("Advance Holding");
 
 
     TransactionType(String booking) {

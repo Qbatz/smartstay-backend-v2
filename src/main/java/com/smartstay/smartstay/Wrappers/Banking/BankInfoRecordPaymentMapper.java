@@ -2,7 +2,6 @@ package com.smartstay.smartstay.Wrappers.Banking;
 
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.responses.invoices.BankInfoRecordPayments;
-import com.smartstay.smartstay.util.BankUtils;
 import com.smartstay.smartstay.util.BankingUtils;
 
 import java.util.function.Function;

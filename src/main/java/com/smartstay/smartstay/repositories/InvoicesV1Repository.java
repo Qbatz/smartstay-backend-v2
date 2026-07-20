@@ -453,4 +453,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
               AND i.isCancelled = false
             """)
     List<InvoicesV1> findUnpaidInvoicesByCustomerIds(@Param("customerIds") List<String> customerIds);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.invoiceType IN ('AMOUNT_HOLDING', 'EB_HOLDING') 
+            ORDER BY i.createdAt DESC
+            """)
+    InvoicesV1 findByAdvanceHoldingByHostelId(String hostelId);
 }

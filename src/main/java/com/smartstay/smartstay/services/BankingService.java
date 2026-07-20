@@ -993,7 +993,7 @@ public class BankingService {
     public List<BankInfoRecordPayments> getBankForReceivingPayments(String hostelId) {
         List<BankingV1> listBanks = bankingV1Repository.findByHostelId(hostelId);
         if (listBanks == null) {
-            return null;
+            return new ArrayList<>();
         }
 
         return listBanks
@@ -1012,5 +1012,21 @@ public class BankingService {
             return 0.0;
         }
         return bankingV1.getBalance();
+    }
+
+    public Double updateRetainerAmountToBank(Date paymentDate, double amount, String bankId) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        if (bankingV1 == null) {
+            return null;
+        }
+        double existingBalance = 0.0;
+        if (bankingV1.getBalance() != null) {
+            existingBalance = bankingV1.getBalance();
+        }
+        bankingV1.setBalance(existingBalance + amount);
+        bankingV1.setLastTransaction(paymentDate);
+        bankingV1Repository.save(bankingV1);
+
+        return existingBalance + amount;
     }
 }

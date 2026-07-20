@@ -303,6 +303,7 @@ public class Utils {
     public static final String CANNOT_MODIFY_BILLING_DATE_TENANT_EXIST_ERROR = "Cannot modify the billing rules. Tenant already exists.";
     public static final String CANNOT_MODIFY_BILLING_TYPE = "Cannot modify billing type, Check in tenant exist";
     public static final String CANNOT_DELETE_RECEIPT_SETTLMENT_GENERATED = "Cannot delete receipts for settlement generated customers";
+    public static final String CANNOT_DELETE_RECEIPT_RETAINER_INVOICE = "Cannot delete receipts for retainer invoices";
     public static final String CANNOT_DELETE_REFUNDED_BOOKING_RECEIPT = "Cannot delete receipts for refunded booking invoices";
     public static final String CANNOT_DELETE_REDEEMED_RECEIPT = "Cannot delete receipt as the amount has already been redeemed";
     public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
@@ -333,6 +334,8 @@ public class Utils {
     public static final String SHARING_TYPE_TWO = "Two sharing";
     public static final String SHARING_TYPE_THREE = "Three sharing";
     public static final String DEMO_REQUESTED_SUCCESSFULLY = "Demo requested successfully";
+    public static final String RELATION_NAME_REQUIRED = "Relation name required";
+    public static final String INVALID_RELATION_ID = "Invalid relation id";
     public static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
     private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

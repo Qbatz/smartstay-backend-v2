@@ -67,6 +67,8 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                 .stream()
                 .filter(i -> common.contains(i.getCustomerId()))
                 .map(i -> {
+                    boolean isNotice = false;
+                    boolean isBooked = false;
                     CustomersAmenity customersAmenity = listCustomersAmenity
                             .stream()
                             .filter(j -> i.getCustomerId().equalsIgnoreCase(j.getCustomerId()))
@@ -112,6 +114,12 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                             initials.append(i.getFirstName().toLowerCase().charAt(1));
                         }
                     }
+                    if (i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
+                        isBooked = true;
+                    }
+                    if (i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
+                        isNotice = true;
+                    }
 
                     return new CustomerResponse(i.getCustomerId(),
                             fullName.toString(),
@@ -124,7 +132,9 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                             roomName.get(),
                             false,
                             isEnding.get(),
-                            endDate.get());
+                            endDate.get(),
+                            isBooked,
+                            isNotice);
                 })
                 .toList();
 
@@ -133,6 +143,8 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                 .filter(i -> unique.contains(i.getCustomerId()))
                 .map(i -> {
                     boolean canAssign = true;
+                    boolean isBooked = false;
+                    boolean isNotice = false;
 
                     StringBuilder fullName = new StringBuilder();
                     StringBuilder initials = new StringBuilder();
@@ -169,6 +181,13 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                     if (i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
                         canAssign = false;
                     }
+                    if (i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
+                        isBooked = true;
+                    }
+                    if (i.getCurrentStatus().equalsIgnoreCase(CustomerStatus.NOTICE.name())) {
+                        isNotice = true;
+                    }
+
                     return new CustomerResponse(i.getCustomerId(),
                             fullName.toString(),
                             initials.toString(),
@@ -180,7 +199,9 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                             roomName.get(),
                             canAssign,
                             false,
-                            null);
+                            null,
+                            isBooked,
+                            isNotice);
                 })
                 .toList();
 

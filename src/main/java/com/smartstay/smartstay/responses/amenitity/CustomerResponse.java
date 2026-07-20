@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.responses.amenitity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,5 +21,8 @@ public class CustomerResponse {
     private boolean canAssign;
     private boolean isEnding;
     private String endDate;
+    @JsonProperty("isBooked")
+    private boolean booked;
+    private boolean onNotice;
 }
 

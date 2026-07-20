@@ -89,4 +89,15 @@ public class AdditionalContactService {
 
         customerAdditionalContactsRepositories.saveAll(listAdditionalContacts);
     }
+
+    public boolean checkRelationExistForCusotmer(String customerId, Long relationId) {
+        com.smartstay.smartstay.dao.CustomerAdditionalContacts cac = customerAdditionalContactsRepositories.getReferenceById(relationId);
+        if (cac == null) {
+            return false;
+        }
+        if (!cac.getCustomerId().equalsIgnoreCase(customerId)) {
+            return false;
+        }
+        return true;
+    }
 }
