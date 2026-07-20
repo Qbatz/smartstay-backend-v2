@@ -311,9 +311,7 @@ public class CustomersService {
         return customersRepository.findAdvancesByHostelId(hostelId);
     }
 
-    private void sortCustomersByFloorRoomBed(List<Customers> customers,
-                                             Map<String, BookingsV1> bookingByCustomerId,
-                                             Map<String, Draft> draftByCustomerId) {
+    private void sortCustomersByFloorRoomBed(List<Customers> customers, Map<String, BookingsV1> bookingByCustomerId, Map<String, Draft> draftByCustomerId) {
         customers.sort((first, second) -> {
             int[] firstLocation = resolveFloorRoomBedIds(first.getCustomerId(), bookingByCustomerId, draftByCustomerId);
             int[] secondLocation = resolveFloorRoomBedIds(second.getCustomerId(), bookingByCustomerId, draftByCustomerId);
@@ -329,25 +327,15 @@ public class CustomersService {
         });
     }
 
-    private int[] resolveFloorRoomBedIds(String customerId,
-                                         Map<String, BookingsV1> bookingByCustomerId,
-                                         Map<String, Draft> draftByCustomerId) {
+    private int[] resolveFloorRoomBedIds(String customerId, Map<String, BookingsV1> bookingByCustomerId, Map<String, Draft> draftByCustomerId) {
         int missingOrder = Integer.MAX_VALUE;
         BookingsV1 booking = bookingByCustomerId.get(customerId);
         if (booking != null && booking.getBedId() > 0) {
-            return new int[]{
-                    booking.getFloorId() > 0 ? booking.getFloorId() : missingOrder,
-                    booking.getRoomId() > 0 ? booking.getRoomId() : missingOrder,
-                    booking.getBedId()
-            };
+            return new int[]{booking.getFloorId() > 0 ? booking.getFloorId() : missingOrder, booking.getRoomId() > 0 ? booking.getRoomId() : missingOrder, booking.getBedId()};
         }
         Draft draft = draftByCustomerId.get(customerId);
         if (draft != null && draft.getBedId() != null && draft.getBedId() > 0) {
-            return new int[]{
-                    draft.getFloorId() != null && draft.getFloorId() > 0 ? draft.getFloorId() : missingOrder,
-                    draft.getRoomId() != null && draft.getRoomId() > 0 ? draft.getRoomId() : missingOrder,
-                    draft.getBedId()
-            };
+            return new int[]{draft.getFloorId() != null && draft.getFloorId() > 0 ? draft.getFloorId() : missingOrder, draft.getRoomId() != null && draft.getRoomId() > 0 ? draft.getRoomId() : missingOrder, draft.getBedId()};
         }
         return new int[]{missingOrder, missingOrder, missingOrder};
     }
@@ -431,10 +419,7 @@ public class CustomersService {
             return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(), item.getLastName(), fullName.toString(), item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), item.getProfilePic(), item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName());
         }).collect(Collectors.toList());
 
-        listCustomers.sort(Comparator
-                .comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds))
-                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds))
-                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
+        listCustomers.sort(Comparator.comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
 
         CustomersList response = new CustomersList(hostelId, listCustomers.size(), null, listCustomers);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -502,21 +487,20 @@ public class CustomersService {
             customerIds = bookingsService.getCustomerIdsByStartAndEndDate(hostelId, startDate, endDate);
         }
         if (sharingTypeList != null && !sharingTypeList.isEmpty()) {
-            List<Integer> shareTypeInts = sharingTypeList.stream()
-                    .map(s -> {
-                        try { return Integer.parseInt(s.trim()); } catch (NumberFormatException e) { return null; }
-                    })
-                    .filter(java.util.Objects::nonNull)
-                    .collect(java.util.stream.Collectors.toList());
+            List<Integer> shareTypeInts = sharingTypeList.stream().map(s -> {
+                try {
+                    return Integer.parseInt(s.trim());
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toList());
             if (!shareTypeInts.isEmpty()) {
                 List<String> sharingCustomerIds = bookingsService.getCustomerIdsBySharingTypes(hostelId, shareTypeInts);
                 if (customerIds == null) {
                     customerIds = sharingCustomerIds;
                 } else {
                     List<String> periodIds = customerIds;
-                    customerIds = sharingCustomerIds.stream()
-                            .filter(periodIds::contains)
-                            .collect(java.util.stream.Collectors.toList());
+                    customerIds = sharingCustomerIds.stream().filter(periodIds::contains).collect(java.util.stream.Collectors.toList());
                 }
             }
         }
@@ -568,8 +552,7 @@ public class CustomersService {
         List<BookingsV1> listBookings = bookingsService.findByCustomerIds(listCustomerIds);
         List<Draft> draftRows = draftsRepository.findByCustomerIdIn(listCustomerIds);
         Map<String, Draft> draftByCustomerId = draftRows.stream().collect(Collectors.toMap(Draft::getCustomerId, Function.identity(), (a, b) -> a));
-        Map<String, BookingsV1> bookingByCustomerId = listBookings.stream()
-                .collect(Collectors.toMap(BookingsV1::getCustomerId, Function.identity(), (a, b) -> a));
+        Map<String, BookingsV1> bookingByCustomerId = listBookings.stream().collect(Collectors.toMap(BookingsV1::getCustomerId, Function.identity(), (a, b) -> a));
         sortCustomersByFloorRoomBed(customersList, bookingByCustomerId, draftByCustomerId);
         List<Integer> bedIds = new ArrayList<>();
         for (BookingsV1 b : listBookings) {
@@ -589,9 +572,7 @@ public class CustomersService {
             listBedDetails = new ArrayList<>();
         }
 
-        List<List<Object>> listTenants = customersList.stream()
-        .map(i -> new TenantTableMapper(listBedDetails, listBookings, tableColumns, draftByCustomerId).apply(i))
-        .collect(Collectors.toCollection(ArrayList::new));
+        List<List<Object>> listTenants = customersList.stream().map(i -> new TenantTableMapper(listBedDetails, listBookings, tableColumns, draftByCustomerId).apply(i)).collect(Collectors.toCollection(ArrayList::new));
 
 
         FilterOptions filterOptions = getTenantFilterOptions(hostelId);
@@ -1136,9 +1117,7 @@ public class CustomersService {
             Customers savedCustomers = customersRepository.save(customers);
             userService.addUserLog(hostelId, savedCustomers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.CREATE, user);
             // Return the generated customerId only after the record is successfully persisted.
-            return new ResponseEntity<>(
-                    new CreateCustomerResponse(Utils.CUSTOMER_CREATED, savedCustomers.getCustomerId()),
-                    HttpStatus.CREATED);
+            return new ResponseEntity<>(new CreateCustomerResponse(Utils.CUSTOMER_CREATED, savedCustomers.getCustomerId()), HttpStatus.CREATED);
         } else {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -1441,13 +1420,17 @@ public class CustomersService {
         List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
         boolean isSettlementGenerated = CustomerStatus.SETTLEMENT_GENERATED.name().equalsIgnoreCase(customers.getCurrentStatus());
         invoiceResponseList = invoiceResponseList.stream().map(inv -> {
-            boolean isPaidOrPartial = "PAID".equalsIgnoreCase(inv.paymentStatus())
-                    || "PARTIAL_PAYMENT".equalsIgnoreCase(inv.paymentStatus());
-            boolean canUnpaid = isPaidOrPartial && !isSettlementGenerated;
+            boolean isPaidOrPartial = "PAID".equalsIgnoreCase(inv.paymentStatus()) || "PARTIAL_PAYMENT".equalsIgnoreCase(inv.paymentStatus());
+            boolean canUnpaid = inv.invoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name()) && isPaidOrPartial && !isSettlementGenerated && (inv.invoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || inv.invoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name()));
             boolean isCancelled = inv.isCancelled();
             String cancelledDate = null;
             if (inv.isCancelled()) {
                 cancelledDate = inv.cancelledOn();
+            }
+            //transactions iruntha, means record payment kudutha unpaid ah matha mudiyathu
+            List<TransactionV1> transactionV1s = transactionService.getTransactionsByInvoiceId(inv.invoiceId());
+            if (canUnpaid && transactionV1s != null && !transactionV1s.isEmpty()) {
+                canUnpaid = false;
             }
             return new InvoiceResponse(inv.invoiceId(), inv.invoiceNumber(), inv.invoiceType(), inv.invoiceDate(), inv.paymentStatus(), inv.totalAmount(), inv.dueAmount(), inv.paidAmount(), inv.dueDate(), inv.invoiceGeneratedDate(), inv.invoiceMode(), inv.isDiscounted(), inv.items(), canUnpaid, isCancelled, cancelledDate);
         }).toList();
@@ -1523,9 +1506,8 @@ public class CustomersService {
         KycInformations kycInfo = null;
         String kycDocumentFromDigio = null;
         if (kycDetails == null) {
-            kycInfo = new KycInformations("PENDING", null, null, null, null,  null, null, null, null, null);
-        }
-        else {
+            kycInfo = new KycInformations("PENDING", null, null, null, null, null, null, null, null, null);
+        } else {
             if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.REQUESTED.name()) || kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
                 kycDetails = kycServices.verifyStatus(customers);
             }
@@ -1563,27 +1545,16 @@ public class CustomersService {
                         }
                     }
 
-                    currentAddress =  new KycAddressDetails(houseNumber, currentStreetName, addressDetails.getCurrentLocality(), addressDetails.getCurrentState(), addressDetails.getCurrentPincode(), addressDetails.getCurrentAddress());
+                    currentAddress = new KycAddressDetails(houseNumber, currentStreetName, addressDetails.getCurrentLocality(), addressDetails.getCurrentState(), addressDetails.getCurrentPincode(), addressDetails.getCurrentAddress());
                     permanentAddress = new KycAddressDetails(permanentAddressHouseNumber, permanentStreetName, addressDetails.getPermanentLocality(), addressDetails.getPermanentState(), addressDetails.getPermanentPincode(), addressDetails.getPermanentAddress());
                 }
 
                 kycDocumentFromDigio = kycDetails.getKycDocument();
-                kycInfo = new KycInformations(KycStatus.VERIFIED.name(),
-                        kycDetails.getIdPic(),
-                        kycDetails.getAadhaarNumber(),
-                        kycDetails.getNameInDocument(),
-                        kycDetails.getDateOfBirth(),
-                        Utils.dateToString(kycDetails.getCompletedAt()),
-                        kycDetails.getKycDocument(),
-                        kycDetails.getKycDocumentType(),
-                        currentAddress,
-                        permanentAddress);
-            }
-            else if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
+                kycInfo = new KycInformations(KycStatus.VERIFIED.name(), kycDetails.getIdPic(), kycDetails.getAadhaarNumber(), kycDetails.getNameInDocument(), kycDetails.getDateOfBirth(), Utils.dateToString(kycDetails.getCompletedAt()), kycDetails.getKycDocument(), kycDetails.getKycDocumentType(), currentAddress, permanentAddress);
+            } else if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
                 kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null, null, null);
-            }
-            else {
-                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null,null, null, null, null, null, null);
+            } else {
+                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null, null, null);
             }
 
         }
@@ -1659,16 +1630,7 @@ public class CustomersService {
             effectiveFromMonth = Utils.getEffectiveBillingMonths(new Date(), customers.getJoiningDate(), billingStartDay);
         }
 
-        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(),
-                customers.getMobile(), "91", initials, customers.getProfilePic(),
-                bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint,
-                customers.getCurrentStatus(), address, hostelInformation,
-                kycInfo, advanceInfo, checkoutInfo, bookingInfo,
-                invoiceResponseList, listBeds, listTransactionResponse, amenities,
-                listRequestedAmenities, listAvailableAmenities, walletInfo, customerFiles, additionalContacts,
-                isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy,
-                createdByName, createdByInitials, createdByPic, effectiveFromMonth,
-                customers.getIdProofType(), customers.getIdProofNo());
+        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, CustomerUtils.getProfilePic(customers), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, listAvailableAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic, effectiveFromMonth, customers.getIdProofType(), customers.getIdProofNo());
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -2098,7 +2060,7 @@ public class CustomersService {
 
         AvailableAmountToRedeem availableAmountToRedeem = new AvailableAmountToRedeem(availableAdvanceAmountToReddem, availableBookingAmountToRedeem, availableTotalAmountToReddem);
 
-        CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(), customers.getFirstName(), customers.getLastName(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), customers.getProfilePic(), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), "91", customers.getMobile(), Utils.dateToString(bookingsV1.getJoiningDate()), customers.getAdvance().getAdvanceAmount(), bookingsV1.getRentAmount(), isAdvancePaid, totalAdvancePaid, bookingAmount, availableAmountToRedeem);
+        CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(), customers.getFirstName(), customers.getLastName(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), CustomerUtils.getProfilePic(customers), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), "91", customers.getMobile(), Utils.dateToString(bookingsV1.getJoiningDate()), customers.getAdvance().getAdvanceAmount(), bookingsV1.getRentAmount(), isAdvancePaid, totalAdvancePaid, bookingAmount, availableAmountToRedeem);
 
         StayInfo stayInfo = bookingsService.getStayInfo(customers, bookingsV1, leavingDate);
         EBInfo ebInfo = electricityService.getEbInfoForSettlement(customers, customers.getHostelId(), leavingDate);
@@ -2360,7 +2322,7 @@ public class CustomersService {
         AvailableAmountToRedeem redeemableAmount = new AvailableAmountToRedeem(availableAdvanceAmountToRedeem, availableBookingAmountToReddem, availableAmountToRedeem);
 
 
-        CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(), customers.getFirstName(), customers.getLastName(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), customers.getProfilePic(), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), "91", customers.getMobile(), Utils.dateToString(bookings.getJoiningDate()), customers.getAdvance().getAdvanceAmount(), bookings.getRentAmount(), isAdvancePaid, totalAdvanceAmount, bookingAmount, redeemableAmount);
+        CustomerInformations customerInformations = new CustomerInformations(customers.getCustomerId(), customers.getFirstName(), customers.getLastName(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), CustomerUtils.getProfilePic(customers), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), "91", customers.getMobile(), Utils.dateToString(bookings.getJoiningDate()), customers.getAdvance().getAdvanceAmount(), bookings.getRentAmount(), isAdvancePaid, totalAdvanceAmount, bookingAmount, redeemableAmount);
 
         return customerInformations;
     }
@@ -2411,17 +2373,12 @@ public class CustomersService {
             stayDays = (int) listRentBreakup.stream().mapToLong(RentBreakUp::noOfDays).sum();
             currentMonthPayableAmount = currentPayableRent + otherItemAMount[0];
             if (listRentBreakup.size() > 1) {
-                RentBreakUp rbu = listRentBreakup
-                        .stream()
-                        .max(Comparator.comparing(RentBreakUp::rent))
-                        .orElse(null);
+                RentBreakUp rbu = listRentBreakup.stream().max(Comparator.comparing(RentBreakUp::rent)).orElse(null);
                 if (rbu != null) {
                     fullRent = rbu.rent();
                 }
-            }
-            else if (!listRentBreakup.isEmpty()) {
-                fullRent = listRentBreakup
-                        .getFirst().rent();
+            } else if (!listRentBreakup.isEmpty()) {
+                fullRent = listRentBreakup.getFirst().rent();
 
             }
         }
@@ -2799,26 +2756,19 @@ public class CustomersService {
             }
 
             InvoicesV1 advanceInvoiceTemp = advInv;
-            if (advanceInvoiceTemp.getDeductions() != null ) {
+            if (advanceInvoiceTemp.getDeductions() != null) {
                 if (!advanceInvoiceTemp.getDeductions().isEmpty()) {
                     if (advanceInvoiceTemp.getPaidAmount() != null) {
                         if (advanceInvoiceTemp.getPaidAmount() < advanceInvoiceTemp.getDeductionAmount()) {
-                            listDeductions = advanceInvoiceTemp
-                                    .getDeductions()
-                                    .stream()
-                                    .filter(i -> {
-                                        if (i.getPaidAmount() == null) {
-                                            return true;
-                                        }
-                                        if (i.getPaidAmount() == 0) {
-                                            return true;
-                                        }
-                                        if (i.getPaidAmount() < i.getAmount()) {
-                                            return true;
-                                        }
-                                        return false;
-                                    })
-                                    .toList();
+                            listDeductions = advanceInvoiceTemp.getDeductions().stream().filter(i -> {
+                                if (i.getPaidAmount() == null) {
+                                    return true;
+                                }
+                                if (i.getPaidAmount() == 0) {
+                                    return true;
+                                }
+                                return i.getPaidAmount() < i.getAmount();
+                            }).toList();
                         }
                     }
                 }
@@ -2838,26 +2788,19 @@ public class CustomersService {
                     advancePaidAmount = paidAmount;
                 }
                 InvoicesV1 advanceInvoiceTemp = invAdvanceInvoice;
-                if (advanceInvoiceTemp.getDeductions() != null ) {
+                if (advanceInvoiceTemp.getDeductions() != null) {
                     if (!advanceInvoiceTemp.getDeductions().isEmpty()) {
                         if (advanceInvoiceTemp.getPaidAmount() != null) {
                             if (advanceInvoiceTemp.getPaidAmount() < advanceInvoiceTemp.getDeductionAmount()) {
-                                listDeductions = advanceInvoiceTemp
-                                        .getDeductions()
-                                        .stream()
-                                        .filter(i -> {
-                                            if (i.getPaidAmount() == null) {
-                                                return true;
-                                            }
-                                            if (i.getPaidAmount() == 0) {
-                                                return true;
-                                            }
-                                            if (i.getPaidAmount() < i.getAmount()) {
-                                                return true;
-                                            }
-                                            return false;
-                                        })
-                                        .toList();
+                                listDeductions = advanceInvoiceTemp.getDeductions().stream().filter(i -> {
+                                    if (i.getPaidAmount() == null) {
+                                        return true;
+                                    }
+                                    if (i.getPaidAmount() == 0) {
+                                        return true;
+                                    }
+                                    return i.getPaidAmount() < i.getAmount();
+                                }).toList();
                             }
                         }
                     }
@@ -2982,33 +2925,25 @@ public class CustomersService {
             } else if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
                 isAdvancePaid = true;
             }
-            if (advanceInvoice.getDeductions() != null ) {
+            if (advanceInvoice.getDeductions() != null) {
                 if (!advanceInvoice.getDeductions().isEmpty()) {
                     if (advanceInvoice.getPaidAmount() != null) {
                         if (advanceInvoice.getPaidAmount() < advanceInvoice.getDeductionAmount()) {
-                            checkInDeductions = advanceInvoice
-                                    .getDeductions()
-                                    .stream()
-                                    .filter(i -> {
-                                        if (i.getPaidAmount() == null) {
-                                            return true;
-                                        }
-                                        if (i.getPaidAmount() == 0) {
-                                            return true;
-                                        }
-                                        if (i.getPaidAmount() < i.getAmount()) {
-                                            return true;
-                                        }
-                                        return false;
-                                    })
-                                    .map(i -> {
-                                        if (i.getPaidAmount() != null) {
-                                            i.setAmount(i.getAmount() - i.getPaidAmount());
-                                        }
-                                        i.setPaidAmount(0.0);
-                                        return i;
-                                    })
-                                    .toList();
+                            checkInDeductions = advanceInvoice.getDeductions().stream().filter(i -> {
+                                if (i.getPaidAmount() == null) {
+                                    return true;
+                                }
+                                if (i.getPaidAmount() == 0) {
+                                    return true;
+                                }
+                                return i.getPaidAmount() < i.getAmount();
+                            }).map(i -> {
+                                if (i.getPaidAmount() != null) {
+                                    i.setAmount(i.getAmount() - i.getPaidAmount());
+                                }
+                                i.setPaidAmount(0.0);
+                                return i;
+                            }).toList();
                         }
                     }
                 }
@@ -3084,8 +3019,7 @@ public class CustomersService {
                         }
                         differenceAmount = rentInfo.rentDifference();
                     }
-                }
-                else {
+                } else {
                     RentInfo rentInfo = settlementInfo.currentMonthRentInfo();
                     if (rentInfo != null) {
                         if (!customRent.equals(rentInfo.currentMonthRent())) {
@@ -3093,15 +3027,13 @@ public class CustomersService {
 //                            if (differenceAmount < 0) {
 //                                differenceAmount = differenceAmount * -1;
 //                            }
-                        }
-                        else {
-                            differenceAmount =  rentInfo.rentDifference();
+                        } else {
+                            differenceAmount = rentInfo.rentDifference();
                         }
 
                     }
                 }
-            }
-            else {
+            } else {
                 RentInfo rentInfo = settlementInfo.currentMonthRentInfo();
                 if (rentInfo != null) {
                     differenceAmount = rentInfo.rentDifference();
@@ -3115,10 +3047,7 @@ public class CustomersService {
 //        leavingDate, users, isAdvancePaid
 
         List<InvoicesV1> unpaidInvoices = invoiceService.findUnpaidInvoices(customers.getCustomerId());
-        List<String> unpaidInvoiceIds = unpaidInvoices
-                .stream()
-                .map(InvoicesV1::getInvoiceId)
-                .toList();
+        List<String> unpaidInvoiceIds = unpaidInvoices.stream().map(InvoicesV1::getInvoiceId).toList();
 
 
         InvoicesV1 settlementInvoice = invoiceService.createSettlementInvoiceForFixedPrepaid(customers, customers.getHostelId(), totalAmountToBePaid, unpaidInvoiceIds, lisDeductions, amountToBePaidWithoutDeductions, leavingDate, users, isAdvancePaid, checkInDeductions);
@@ -3186,33 +3115,25 @@ public class CustomersService {
                 isAdvancePaid = true;
             }
 
-            if (advanceInvoice.getDeductions() != null ) {
+            if (advanceInvoice.getDeductions() != null) {
                 if (!advanceInvoice.getDeductions().isEmpty()) {
                     if (advanceInvoice.getPaidAmount() != null) {
                         if (advanceInvoice.getPaidAmount() < advanceInvoice.getDeductionAmount()) {
-                            checkInDeductions = advanceInvoice
-                                    .getDeductions()
-                                    .stream()
-                                    .filter(i -> {
-                                        if (i.getPaidAmount() == null) {
-                                            return true;
-                                        }
-                                        if (i.getPaidAmount() == 0) {
-                                            return true;
-                                        }
-                                        if (i.getPaidAmount() < i.getAmount()) {
-                                            return true;
-                                        }
-                                        return false;
-                                    })
-                                    .map(i -> {
-                                        if (i.getPaidAmount() != null) {
-                                            i.setAmount(i.getAmount() - i.getPaidAmount());
-                                        }
-                                        i.setPaidAmount(0.0);
-                                        return i;
-                                    })
-                                    .toList();
+                            checkInDeductions = advanceInvoice.getDeductions().stream().filter(i -> {
+                                if (i.getPaidAmount() == null) {
+                                    return true;
+                                }
+                                if (i.getPaidAmount() == 0) {
+                                    return true;
+                                }
+                                return i.getPaidAmount() < i.getAmount();
+                            }).map(i -> {
+                                if (i.getPaidAmount() != null) {
+                                    i.setAmount(i.getAmount() - i.getPaidAmount());
+                                }
+                                i.setPaidAmount(0.0);
+                                return i;
+                            }).toList();
                         }
                     }
                 }
@@ -3255,16 +3176,14 @@ public class CustomersService {
                         if (customRent == 0) {
                             fullRent = currentMonthRentInfo.fullRent();
                             rentDifference = currentMonthRentInfo.rentDifference();
-                        }
-                        else {
+                        } else {
                             fullRent = customRent;
                             rentDifference = customRent - currentMonthRentInfo.fullRent() + currentMonthRentInfo.rentDifference();
 //                            if (rentDifference < 0) {
 //                                rentDifference = rentDifference * -1;
 //                            }
                         }
-                    }
-                    else {
+                    } else {
                         fullRent = customRent;
                         rentDifference = customRent - currentMonthRentInfo.currentPayableRent();
                         if (rentDifference < 0) {
@@ -3348,33 +3267,25 @@ public class CustomersService {
             }
 
             if (advanceInvoice.getPaymentStatus() != null && !advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-                if (advanceInvoice.getDeductions() != null ) {
+                if (advanceInvoice.getDeductions() != null) {
                     if (!advanceInvoice.getDeductions().isEmpty()) {
                         if (advanceInvoice.getPaidAmount() != null) {
                             if (advanceInvoice.getPaidAmount() < advanceInvoice.getDeductionAmount()) {
-                                checkInDeductions = advanceInvoice
-                                        .getDeductions()
-                                        .stream()
-                                        .filter(i -> {
-                                            if (i.getPaidAmount() == null) {
-                                                return true;
-                                            }
-                                            if (i.getPaidAmount() == 0) {
-                                                return true;
-                                            }
-                                            if (i.getPaidAmount() < i.getAmount()) {
-                                                return true;
-                                            }
-                                            return false;
-                                        })
-                                        .map(i -> {
-                                            if (i.getPaidAmount() != null) {
-                                                i.setAmount(i.getAmount() - i.getPaidAmount());
-                                            }
-                                            i.setPaidAmount(0.0);
-                                            return i;
-                                        })
-                                        .toList();
+                                checkInDeductions = advanceInvoice.getDeductions().stream().filter(i -> {
+                                    if (i.getPaidAmount() == null) {
+                                        return true;
+                                    }
+                                    if (i.getPaidAmount() == 0) {
+                                        return true;
+                                    }
+                                    return i.getPaidAmount() < i.getAmount();
+                                }).map(i -> {
+                                    if (i.getPaidAmount() != null) {
+                                        i.setAmount(i.getAmount() - i.getPaidAmount());
+                                    }
+                                    i.setPaidAmount(0.0);
+                                    return i;
+                                }).toList();
                             }
                         }
                     }
@@ -3402,30 +3313,28 @@ public class CustomersService {
 
         if (isFullRentCollected) {
             double difference = 0.0;
-                if (customRent == 0) {
-                    RentInfo rentInfo = settlement.currentMonthRentInfo();
-                    if (rentInfo != null) {
-                        if (rentInfo.fullRent() != null) {
-                            customRent = rentInfo.fullRent();
-                        }
-                        difference = rentInfo.rentDifference();
+            if (customRent == 0) {
+                RentInfo rentInfo = settlement.currentMonthRentInfo();
+                if (rentInfo != null) {
+                    if (rentInfo.fullRent() != null) {
+                        customRent = rentInfo.fullRent();
                     }
+                    difference = rentInfo.rentDifference();
                 }
-                else {
-                    RentInfo rentInfo = settlement.currentMonthRentInfo();
-                    if (rentInfo != null) {
-                        if (!rentInfo.currentMonthRent().equals(fullRent)) {
-                            difference = customRent - rentInfo.fullRent() + rentInfo.rentDifference();
+            } else {
+                RentInfo rentInfo = settlement.currentMonthRentInfo();
+                if (rentInfo != null) {
+                    if (!rentInfo.currentMonthRent().equals(fullRent)) {
+                        difference = customRent - rentInfo.fullRent() + rentInfo.rentDifference();
 //                            if (difference < 0) {
 //                                difference = difference * -1;
 //                            }
-                        }
-                        else {
-                            difference =  rentInfo.rentDifference();
-                        }
-
+                    } else {
+                        difference = rentInfo.rentDifference();
                     }
+
                 }
+            }
 //            }
 //            else {
 //                RentInfo rentInfo = settlementInfo.currentMonthRentInfo();
@@ -3507,33 +3416,25 @@ public class CustomersService {
             }
 
             if (advanceInvoice.getPaymentStatus() != null && !advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-                if (advanceInvoice.getDeductions() != null ) {
+                if (advanceInvoice.getDeductions() != null) {
                     if (!advanceInvoice.getDeductions().isEmpty()) {
                         if (advanceInvoice.getPaidAmount() != null) {
                             if (advanceInvoice.getPaidAmount() < advanceInvoice.getDeductionAmount()) {
-                                checkInDeductions = advanceInvoice
-                                        .getDeductions()
-                                        .stream()
-                                        .filter(i -> {
-                                            if (i.getPaidAmount() == null) {
-                                                return true;
-                                            }
-                                            if (i.getPaidAmount() == 0) {
-                                                return true;
-                                            }
-                                            if (i.getPaidAmount() < i.getAmount()) {
-                                                return true;
-                                            }
-                                            return false;
-                                        })
-                                        .map(i -> {
-                                            if (i.getPaidAmount() != null) {
-                                                i.setAmount(i.getAmount() - i.getPaidAmount());
-                                            }
-                                            i.setPaidAmount(0.0);
-                                            return i;
-                                        })
-                                        .toList();
+                                checkInDeductions = advanceInvoice.getDeductions().stream().filter(i -> {
+                                    if (i.getPaidAmount() == null) {
+                                        return true;
+                                    }
+                                    if (i.getPaidAmount() == 0) {
+                                        return true;
+                                    }
+                                    return i.getPaidAmount() < i.getAmount();
+                                }).map(i -> {
+                                    if (i.getPaidAmount() != null) {
+                                        i.setAmount(i.getAmount() - i.getPaidAmount());
+                                    }
+                                    i.setPaidAmount(0.0);
+                                    return i;
+                                }).toList();
                             }
                         }
                     }
@@ -3582,8 +3483,7 @@ public class CustomersService {
                     customRent = rentInfo.fullRent();
                     difference = rentInfo.rentDifference();
                 }
-            }
-            else {
+            } else {
                 RentInfo rentInfo = settlement.currentMonthRentInfo();
                 if (rentInfo != null) {
                     difference = customRent - rentInfo.currentMonthTotalAmount();
@@ -3595,8 +3495,6 @@ public class CustomersService {
 
             amountToBePaid = amountToBePaid + difference;
         }
-
-
 
 
         List<Deductions> lisDeductions = new ArrayList<>();
@@ -4050,7 +3948,7 @@ public class CustomersService {
             customerStatus.add(CustomerStatus.INACTIVE.name());
             List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
             if (listCustomers != null) {
-                List<WalkInCustomers> listWalkInCustomers = listCustomers.stream().map(i -> new WalkInCustomers(i.getCustomerId(), NameUtils.getFullName(i.getFirstName(), i.getLastName()), i.getProfilePic(), NameUtils.getInitials(i.getFirstName(), i.getLastName()), "+91 " + i.getMobile(), i.getEmailId())).toList();
+                List<WalkInCustomers> listWalkInCustomers = listCustomers.stream().map(i -> new WalkInCustomers(i.getCustomerId(), NameUtils.getFullName(i.getFirstName(), i.getLastName()), CustomerUtils.getProfilePic(i), NameUtils.getInitials(i.getFirstName(), i.getLastName()), "+91 " + i.getMobile(), i.getEmailId())).toList();
 
                 return new ResponseEntity<>(listWalkInCustomers, HttpStatus.OK);
             }
@@ -4076,21 +3974,18 @@ public class CustomersService {
             customerStatus.add(CustomerStatus.CHECK_IN.name());
 
             List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
-            List<CustomersForComplaints> listCustomersForComplaint = listCustomers.stream().map(i -> new CustomersForComplaints(i.getCustomerId(), NameUtils.getFullName(i.getFirstName(), i.getLastName()), i.getFirstName(), i.getLastName(), i.getProfilePic(), NameUtils.getInitials(i.getFirstName(), i.getLastName()))).toList();
+            List<CustomersForComplaints> listCustomersForComplaint = listCustomers.stream().map(i -> new CustomersForComplaints(i.getCustomerId(), NameUtils.getFullName(i.getFirstName(), i.getLastName()), i.getFirstName(), i.getLastName(), CustomerUtils.getProfilePic(i), NameUtils.getInitials(i.getFirstName(), i.getLastName()))).toList();
 
             return new ResponseEntity<>(listCustomersForComplaint, HttpStatus.OK);
 
-        }
-        else if (purpose.equals(GetCustomersPurpose.ADVANCE_HOLDING)) {
+        } else if (purpose.equals(GetCustomersPurpose.ADVANCE_HOLDING)) {
             List<com.smartstay.smartstay.responses.retainer.CustomersList> listCustomers = getCustomersListForRetainerInvoices(hostelId);
 
-            CustomerListResponse response = new CustomerListResponse(hostelId,
-                    listCustomers);
+            CustomerListResponse response = new CustomerListResponse(hostelId, listCustomers);
 
             return new ResponseEntity<>(response, HttpStatus.OK);
 
-        }
-        else {
+        } else {
             return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
         }
     }
@@ -4106,15 +4001,9 @@ public class CustomersService {
             return new ArrayList<>();
         }
 
-        List<String> customerIds = listCustomers
-                .stream()
-                .map(Customers::getCustomerId)
-                .toList();
+        List<String> customerIds = listCustomers.stream().map(Customers::getCustomerId).toList();
         List<com.smartstay.smartstay.dao.CustomerAdditionalContacts> additionalContacts = additionalContactService.getAdditionalContactsByHostelIdAndCustomerIdIn(hostelId, customerIds);
-        return listCustomers
-                .stream()
-                .map(i -> new CustomersListMapper(additionalContacts).apply(i))
-                .toList();
+        return listCustomers.stream().map(i -> new CustomersListMapper(additionalContacts).apply(i)).toList();
     }
 
     public double getDeductionAmount(String customerId) {
@@ -4149,11 +4038,6 @@ public class CustomersService {
         if (customers == null) {
             return null;
         }
-        return new CustomerInfo(customers.getFirstName(),
-                customers.getLastName(),
-                NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
-                customerId,
-                CustomerUtils.getProfilePic(customers),
-                NameUtils.getInitials(customers.getFirstName(), customers.getLastName()));
+        return new CustomerInfo(customers.getFirstName(), customers.getLastName(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), customerId, CustomerUtils.getProfilePic(customers), customers.getMobile(), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()));
     }
 }

@@ -5,5 +5,6 @@ public record CustomerInfo(String firstName,
                            String fullName,
                            String customerId,
                            String profilePic,
+                           String mobileNumber,
                            String initials) {
 }
