@@ -149,7 +149,6 @@ public class BookingsService {
         List<String> statuses = new ArrayList<>();
         statuses.add(BookingStatus.NOTICE.name());
         statuses.add(BookingStatus.CHECKIN.name());
-        statuses.add(BookingStatus.VACATED.name());
         statuses.add(BookingStatus.BOOKED.name());
         return bookingsRepository.findByHostelIdAndCurrentStatusIn(hostelId, statuses);
     }

@@ -18,6 +18,7 @@ import com.smartstay.smartstay.dto.transaction.Receipts;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
+import com.smartstay.smartstay.payloads.retainer.LoadBalance;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
@@ -877,6 +878,10 @@ public class TransactionService {
         if (!subscriptionService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
+
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_RECEIPT_RETAINER_INVOICE, HttpStatus.BAD_REQUEST);
+        }
         if (!invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());
             if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
@@ -1564,5 +1569,35 @@ public class TransactionService {
                 filterOptions,
                 receipts);
         return new ResponseEntity<>(receiptResponse, HttpStatus.OK);
+    }
+
+    public void addRetainerTransaction(InvoicesV1 invoicesV1, LoadBalance loadBalance) {
+
+        Date paymentDate = new Date();
+        if (loadBalance.paymentDate() != null) {
+            paymentDate = Utils.stringToDate(loadBalance.paymentDate().replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            paymentDate = Utils.convertToTimeStamp(paymentDate);
+        }
+
+        TransactionV1 transactionV1 = new TransactionV1();
+        transactionV1.setType(TransactionType.ADVANCE_HOLDING.name());
+        transactionV1.setPaidAmount(loadBalance.amount());
+        transactionV1.setCreatedBy(authentication.getName());
+        transactionV1.setCreatedAt(new Date());
+        transactionV1.setStatus(PaymentStatus.PAID.name());
+        transactionV1.setInvoiceId(invoicesV1.getInvoiceId());
+        transactionV1.setHostelId(invoicesV1.getHostelId());
+        transactionV1.setPaymentDate(paymentDate);
+        transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
+        transactionV1.setSource(authentication.getSource());
+        transactionV1.setTransactionReferenceId(generateRandomNumber());
+        transactionV1.setBankId(loadBalance.bankId());
+        transactionV1.setReferenceNumber(loadBalance.referenceNumber());
+        transactionV1.setPaidAt(paymentDate);
+
+        TransactionV1 transactionV11 = transactionRespository.save(transactionV1);
+
+        bankTransactionService.addRetainerTransaction(transactionV11, invoicesV1, paymentDate, loadBalance);
+
     }
 }

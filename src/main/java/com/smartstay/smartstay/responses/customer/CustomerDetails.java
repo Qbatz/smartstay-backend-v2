@@ -3,6 +3,7 @@ package com.smartstay.smartstay.responses.customer;
 import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.dto.customer.BookingInfo;
 import com.smartstay.smartstay.dto.customer.CheckoutInfo;
+import com.smartstay.smartstay.dto.customer.JobDetails;
 import com.smartstay.smartstay.dto.customer.WalletInfo;
 import com.smartstay.smartstay.dto.documents.CustomerFiles;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
@@ -38,6 +39,7 @@ public record CustomerDetails(String customerId,
                               List<AvailableAmenities> availableAmenitiesList,
                               WalletInfo walletInfo,
                               CustomerFiles files,
+                              JobDetails jobDetails,
                               List<AdditionalContacts> additionalContacts,
                               Boolean isJoiningDateEditable,
                               String createdDate,

@@ -1,9 +1,6 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.payloads.customer.CheckInBookedCustomerNew;
-import com.smartstay.smartstay.payloads.customer.CheckInRequest;
-import com.smartstay.smartstay.payloads.customer.CheckInRequestNew;
-import com.smartstay.smartstay.payloads.customer.SaveDraftCustomerRequest;
+import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.payloads.drafts.UpdateDrafts;
 import com.smartstay.smartstay.services.CustomersServiceV2;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -81,6 +78,14 @@ public class CustomersControllerV2 {
     @PostMapping("/booked/check-in/{hostelId}/{customerId}")
     public ResponseEntity<?> checkInBookedCustomer(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @Valid @RequestBody CheckInBookedCustomerNew payloads) {
         return customersServiceV2.checkinBookedCustomer(hostelId, customerId, payloads);
+    }
+
+    @PutMapping("/additional-details/{hostelId}/{customerId}")
+    public ResponseEntity<?> updateCustomerAdditionalData(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId,
+                                                          @RequestPart(required = false) CustomerAdditionalData additionalData,
+                                                          @RequestPart(value = "aadhaarPic", required = false) MultipartFile aadhaarPic,
+                                                          @RequestPart(value = "panPic", required = false) MultipartFile panPic) {
+        return customersServiceV2.addAdditionalData(hostelId, customerId, additionalData, aadhaarPic, panPic);
     }
 
 }

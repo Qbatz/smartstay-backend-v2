@@ -26,6 +26,7 @@ import com.smartstay.smartstay.responses.beds.BedDetails;
 import com.smartstay.smartstay.responses.beds.*;
 import com.smartstay.smartstay.responses.customer.InitializeBooking;
 import com.smartstay.smartstay.responses.hostel.IBedSummary;
+import com.smartstay.smartstay.responses.invoices.StayInfo;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -990,5 +991,17 @@ public class BedsService {
         }).toList();
 
         bedsRepository.saveAll(deletableBeds);
+    }
+
+    public StayInfo getBedInformationGeneral(Integer bedId) {
+        com.smartstay.smartstay.dto.beds.BedDetails bedDetails = getBedDetails(bedId);
+        if (bedDetails == null) {
+            return null;
+        }
+
+        return new StayInfo(bedDetails.getBedName(),
+                bedDetails.getFloorName(),
+                bedDetails.getRoomName(),
+                null);
     }
 }

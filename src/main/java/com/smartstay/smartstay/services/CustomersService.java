@@ -13,6 +13,7 @@ import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.booking.CustomerInfo;
 import com.smartstay.smartstay.dto.customer.CustomerData;
+import com.smartstay.smartstay.dto.customer.JobDetails;
 import com.smartstay.smartstay.dto.customer.TransactionDto;
 import com.smartstay.smartstay.dto.customer.*;
 import com.smartstay.smartstay.dto.documents.CustomerFiles;
@@ -41,6 +42,7 @@ import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.responses.customer.KycAddressDetails;
+import com.smartstay.smartstay.responses.invoices.BankInfoRecordPayments;
 import com.smartstay.smartstay.responses.retainer.CustomerListResponse;
 import com.smartstay.smartstay.responses.settlement.DeductionsInfo;
 import com.smartstay.smartstay.responses.settlement.DeductionsItem;
@@ -123,6 +125,10 @@ public class CustomersService {
     private CustomerBillingRulesService customerBillingRulesService;
     @Autowired
     private TableColumnService columnService;
+    @Autowired
+    private CustomerJobDetailsService customerJobDetailsService;
+    @Autowired
+    private CustomerDraftService draftService;
     private KycServices kycServices;
     private ElectricityService electricityService;
 
@@ -1586,6 +1592,7 @@ public class CustomersService {
         List<BankingV1> listOFBankings = bankingService.findAllBanksById(bankIds);
         List<String> userIds = listOFBankings.stream().map(BankingV1::getUserId).toList();
         List<Users> listUsers = userService.findAllUsersFromUserId(userIds);
+        JobDetails jobDetails = customerJobDetailsService.getCustomerJobDetails(customers.getHostelId(), customers.getCustomerId());
 
 
         List<com.smartstay.smartstay.responses.customer.TransactionDto> listTransactionResponse = listTransactions.stream().map(i -> new TransctionsForCustomerDetails(listOfInvoices, listOFBankings, listUsers).apply(i)).toList();
@@ -1630,7 +1637,17 @@ public class CustomersService {
             effectiveFromMonth = Utils.getEffectiveBillingMonths(new Date(), customers.getJoiningDate(), billingStartDay);
         }
 
-        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(), customers.getMobile(), "91", initials, CustomerUtils.getProfilePic(customers), bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint, customers.getCurrentStatus(), address, hostelInformation, kycInfo, advanceInfo, checkoutInfo, bookingInfo, invoiceResponseList, listBeds, listTransactionResponse, amenities, listRequestedAmenities, listAvailableAmenities, walletInfo, customerFiles, additionalContacts, isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy, createdByName, createdByInitials, createdByPic, effectiveFromMonth, customers.getIdProofType(), customers.getIdProofNo());
+        CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(),
+                customers.getMobile(), "91", initials, customers.getProfilePic(),
+                bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint,
+                customers.getCurrentStatus(), address, hostelInformation,
+                kycInfo, advanceInfo, checkoutInfo, bookingInfo,
+                invoiceResponseList, listBeds, listTransactionResponse, amenities,
+                listRequestedAmenities, listAvailableAmenities, walletInfo, customerFiles, jobDetails,
+                additionalContacts,
+                isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy,
+                createdByName, createdByInitials, createdByPic, effectiveFromMonth,
+                customers.getIdProofType(), customers.getIdProofNo());
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -2611,14 +2628,14 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                //done updating cbh
+                //done amenity release
                 return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             } else {
                 if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-                    //done updating cbh
+                    //done amenity release
                     return generateFinalSettlementForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users, isFullRentCollected, customRent);
                 }
-                //done updating cbh
+                //done ameity release
                 return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             }
         } else {
@@ -3067,6 +3084,7 @@ public class CustomersService {
         bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
+        amenitiesService.stopCustomerAmenities(customers.getCustomerId(), leavingDate);
 
         SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), settlementInvoice.getInvoiceId(), settlementInfo, isFullRentCollected, customRent);
 
@@ -3230,6 +3248,7 @@ public class CustomersService {
         bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
+        amenitiesService.stopCustomerAmenities(customers.getCustomerId(), leavingDate);
 
         userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.SETTLEMENT, users);
 
@@ -3372,6 +3391,7 @@ public class CustomersService {
         bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
+        amenitiesService.stopCustomerAmenities(customers.getCustomerId(), leavingDate);
 
         userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.SETTLEMENT, users);
 
@@ -3520,6 +3540,7 @@ public class CustomersService {
         if (settlementDetails != null && settlementDetails.getLeavingDate() != null) {
             bookingsV1.setCheckoutDate(settlementDetails.getLeavingDate());
             bookingsV1.setSettlementGeneratedDate(settlementDetails.getLeavingDate());
+            amenitiesService.stopCustomerAmenities(customers.getCustomerId(), settlementDetails.getLeavingDate());
             bedHistory.generateSettlement(customers.getHostelId(), customers.getCustomerId(), settlementDetails.getLeavingDate());
         }
         bookingsService.saveBooking(bookingsV1);
@@ -3796,6 +3817,8 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.CANNOT_DELETE_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);
         }
 
+        draftService.findCustomerInDraftAndDelete(customers.getHostelId(), customerId);
+
         List<Customers> listCustomersBasedOnXuid = customersRepository.findByXuid(customers.getXuid());
         if (listCustomersBasedOnXuid.size() == 1) {
             ccs.deleteCustomer(customers.getXuid());
@@ -3980,8 +4003,10 @@ public class CustomersService {
 
         } else if (purpose.equals(GetCustomersPurpose.ADVANCE_HOLDING)) {
             List<com.smartstay.smartstay.responses.retainer.CustomersList> listCustomers = getCustomersListForRetainerInvoices(hostelId);
-
-            CustomerListResponse response = new CustomerListResponse(hostelId, listCustomers);
+            List<BankInfoRecordPayments> listBanks = bankingService.getBankForReceivingPayments(hostelId);
+            CustomerListResponse response = new CustomerListResponse(hostelId,
+                    listCustomers,
+                    listBanks);
 
             return new ResponseEntity<>(response, HttpStatus.OK);
 
@@ -4039,5 +4064,41 @@ public class CustomersService {
             return null;
         }
         return new CustomerInfo(customers.getFirstName(), customers.getLastName(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), customerId, CustomerUtils.getProfilePic(customers), customers.getMobile(), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()));
+    }
+
+    public com.smartstay.smartstay.responses.invoices.CustomerDetails getCustomerInformationForRecordPayment(String customerId) {
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers != null) {
+            return new com.smartstay.smartstay.responses.invoices.CustomerDetails(NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
+                    customers.getFirstName(),
+                    customers.getLastName(),
+                    NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
+                    CustomerUtils.getProfilePic(customers),
+                    customers.getCustomerId());
+        }
+        return null;
+    }
+
+    public com.smartstay.smartstay.responses.discount.CustomerInfo getCustomerInfoForDiscount(String customerId) {
+        Customers customer = customersRepository.findById(customerId).orElse(null);
+        if (customer == null) {
+            return null;
+        }
+        return new com.smartstay.smartstay.responses.discount.CustomerInfo(customerId,
+                NameUtils.getFullName(customer.getFirstName(), customer.getLastName()),
+                customer.getLastName(),
+                customer.getFirstName(),
+                NameUtils.getInitials(customer.getFirstName(), customer.getLastName()),
+                CustomerUtils.getProfilePic(customer));
+    }
+
+    public List<Customers> getOccupiedCustomersForAmenity(List<String> customerIds) {
+        List<String> status = new ArrayList<>();
+        status.add(CustomerStatus.ACTIVE.name());
+        status.add(CustomerStatus.BOOKED.name());
+        status.add(CustomerStatus.CHECK_IN.name());
+        status.add(CustomerStatus.NOTICE.name());
+
+        return customersRepository.findCheckedInCustomersByStatus(customerIds, status);
     }
 }

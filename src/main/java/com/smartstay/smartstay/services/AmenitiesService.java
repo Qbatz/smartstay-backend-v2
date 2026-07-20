@@ -102,13 +102,16 @@ public class AmenitiesService {
         List<String> customerIds = stayingCustomersList
                 .stream()
                 .map(BookingsV1::getCustomerId)
+                .distinct()
                 .toList();
         List<Integer> bedIds = stayingCustomersList
                 .stream()
                 .map(BookingsV1::getBedId)
+                .distinct()
                 .toList();
         List<BedDetails> bedDetails = bedsService.getBedDetails(bedIds);
-        List<Customers> listCustomer = customersService.getCustomerDetails(customerIds);
+        List<Customers> listCustomer = customersService.getOccupiedCustomersForAmenity(customerIds);
+
         HashMap<String, Integer> bedCustomerMapper = new HashMap<>();
         stayingCustomersList.forEach(i -> {
             bedCustomerMapper.put(i.getCustomerId(), i.getBedId());
@@ -584,5 +587,20 @@ public class AmenitiesService {
         }
 
         return new ArrayList<>();
+    }
+
+    public void stopCustomerAmenities(String customerId, Date checkoutDate) {
+        List<CustomersAmenity> listCustomerAmenities = customerAmenityRepository.findByCustomerId(customerId, checkoutDate);
+        if (listCustomerAmenities != null) {
+            List<CustomersAmenity> customersAmenitiesToUpdate = listCustomerAmenities
+                    .stream()
+                    .map(i -> {
+                        i.setEndDate(checkoutDate);
+                        i.setReasonForStop("SETTLEMENT");
+                        return i;
+                    })
+                    .toList();
+            customerAmenityRepository.saveAll(customersAmenitiesToUpdate);
+        }
     }
 }

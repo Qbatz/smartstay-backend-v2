@@ -252,4 +252,65 @@ public class CustomerDocumentsService {
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    public void uploadManualKycFiles(String hostelId, String customerId, MultipartFile aadhaarPic, MultipartFile panPic) {
+        if (aadhaarPic != null) {
+            UploadFiles aadhaarFiles = uploadFileToS3.uploadCustomerFiles(FilesConfig.convertMultipartToFile(aadhaarPic), "customer/additional");
+
+            CustomerDocuments cd = new CustomerDocuments();
+            cd.setCustomerId(customerId);
+            cd.setHostelId(hostelId);
+            cd.setDocumentUrl(aadhaarFiles.fileName());
+            cd.setIsDeleted(false);
+            cd.setIsActive(true);
+            cd.setCreatedBy(authentication.getName());
+            cd.setCreatedAt(new Date());
+            cd.setCreatedByUserType(UserType.ADMIN.name());
+            if (aadhaarFiles.fileFormat().equalsIgnoreCase("image/png")
+                    || aadhaarFiles.fileFormat().equalsIgnoreCase("image/jpeg")
+                    || aadhaarFiles.fileFormat().equalsIgnoreCase("image/jpg")) {
+                cd.setDocumentFileType(FileFormat.IMAGE.name());
+            }
+            else if (aadhaarFiles.fileFormat().equalsIgnoreCase("application/pdf")) {
+                cd.setDocumentFileType(FileFormat.PDF.name());
+            }
+            else if (aadhaarFiles.fileFormat().equalsIgnoreCase("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) {
+                cd.setDocumentFileType(FileFormat.DOC.name());
+            }
+            cd.setDocumentType(DocumentType.KYC.name());
+
+
+            customerDocumentsRepositories.save(cd);
+        }
+
+        if (panPic != null) {
+            UploadFiles panPicFile = uploadFileToS3.uploadCustomerFiles(FilesConfig.convertMultipartToFile(panPic), "customer/additional");
+
+            CustomerDocuments cd = new CustomerDocuments();
+            cd.setCustomerId(customerId);
+            cd.setHostelId(hostelId);
+            cd.setDocumentUrl(panPicFile.fileName());
+            cd.setIsDeleted(false);
+            cd.setIsActive(true);
+            cd.setCreatedBy(authentication.getName());
+            cd.setCreatedAt(new Date());
+            cd.setCreatedByUserType(UserType.ADMIN.name());
+            if (panPicFile.fileFormat().equalsIgnoreCase("image/png")
+                    || panPicFile.fileFormat().equalsIgnoreCase("image/jpeg")
+                    || panPicFile.fileFormat().equalsIgnoreCase("image/jpg")) {
+                cd.setDocumentFileType(FileFormat.IMAGE.name());
+            }
+            else if (panPicFile.fileFormat().equalsIgnoreCase("application/pdf")) {
+                cd.setDocumentFileType(FileFormat.PDF.name());
+            }
+            else if (panPicFile.fileFormat().equalsIgnoreCase("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) {
+                cd.setDocumentFileType(FileFormat.DOC.name());
+            }
+            cd.setDocumentType(DocumentType.KYC.name());
+
+
+            customerDocumentsRepositories.save(cd);
+        }
+
+    }
 }

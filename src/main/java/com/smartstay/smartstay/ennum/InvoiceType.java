@@ -7,5 +7,6 @@ public enum InvoiceType {
     OTHERS,
     SETTLEMENT,
     REASSIGN_RENT,
-    AMOUNT_HOLDING
+    AMOUNT_HOLDING,
+    EB_HOLDING
 }

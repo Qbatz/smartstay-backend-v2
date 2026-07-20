@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.Banking.BankInfoRecordPaymentMapper;
 import com.smartstay.smartstay.Wrappers.Banking.BookingBankMapper;
 import com.smartstay.smartstay.Wrappers.Banking.CashReturnMapper;
 import com.smartstay.smartstay.Wrappers.BankingListMapper;
@@ -22,6 +23,7 @@ import com.smartstay.smartstay.responses.banking.BankList;
 import com.smartstay.smartstay.responses.beds.Bank;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.banking.SelfTransferInitialize;
+import com.smartstay.smartstay.responses.invoices.BankInfoRecordPayments;
 import com.smartstay.smartstay.responses.invoices.RefundableBanks;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -986,5 +988,45 @@ public class BankingService {
                 bankingV1Repository.saveAll(modifiedBankAccount);
             }
         }
+    }
+
+    public List<BankInfoRecordPayments> getBankForReceivingPayments(String hostelId) {
+        List<BankingV1> listBanks = bankingV1Repository.findByHostelId(hostelId);
+        if (listBanks == null) {
+            return new ArrayList<>();
+        }
+
+        return listBanks
+                .stream()
+                .map(i -> new BankInfoRecordPaymentMapper().apply(i))
+                .toList();
+
+    }
+
+    public double getBankBalance(String s) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(s);
+        if (bankingV1 == null) {
+            return 0.0;
+        }
+        if (bankingV1.getBalance() == null) {
+            return 0.0;
+        }
+        return bankingV1.getBalance();
+    }
+
+    public Double updateRetainerAmountToBank(Date paymentDate, double amount, String bankId) {
+        BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
+        if (bankingV1 == null) {
+            return null;
+        }
+        double existingBalance = 0.0;
+        if (bankingV1.getBalance() != null) {
+            existingBalance = bankingV1.getBalance();
+        }
+        bankingV1.setBalance(existingBalance + amount);
+        bankingV1.setLastTransaction(paymentDate);
+        bankingV1Repository.save(bankingV1);
+
+        return existingBalance + amount;
     }
 }

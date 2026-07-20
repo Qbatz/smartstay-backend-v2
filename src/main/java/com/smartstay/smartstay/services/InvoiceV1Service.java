@@ -41,6 +41,8 @@ import com.smartstay.smartstay.responses.bookings.AdvanceInfo;
 import com.smartstay.smartstay.responses.bookings.*;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
 import com.smartstay.smartstay.responses.customer.*;
+import com.smartstay.smartstay.responses.discount.InvoiceDiscount;
+import com.smartstay.smartstay.responses.invoices.CustomerDetails;
 import com.smartstay.smartstay.responses.invoices.CustomerInfo;
 import com.smartstay.smartstay.responses.invoices.InvoiceInfo;
 import com.smartstay.smartstay.responses.invoices.StayInfo;
@@ -658,6 +660,12 @@ public class InvoiceV1Service {
             userIds = listCustomers.stream().map(Customers::getCustomerId).toList();
         }
 
+        if (userIds != null) {
+            if (userIds.isEmpty()) {
+                userIds = null;
+            }
+        }
+
         List<UserHostel> listAdminUsers = userHostelService.findAllByHostelId(hostelId);
         List<String> adminIds = listAdminUsers.stream().map(UserHostel::getUserId).toList();
         List<Users> adminUsers = usersService.findAllUsersFromUserId(adminIds);
@@ -684,7 +692,7 @@ public class InvoiceV1Service {
         Page<InvoicesV1> pageList = null;
 
         if (authentication.getSource().equalsIgnoreCase("web")) {
-            pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, pageableRequest);
+            pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey, pageableRequest);
 
             if (pageList != null) {
                 listAllInvoice = pageList.getContent();
@@ -3527,9 +3535,12 @@ public class InvoiceV1Service {
             i.setAmount(newAdvance);
             return i;
         }).ifPresent(i -> invoiceItemService.updateInvoiceItems(i));
-
-        advanceInvoice.setTotalAmount(newAdvance);
-        advanceInvoice.setSubTotal(newAdvance);
+        double deductionAmount = 0.0;
+        if (advanceInvoice.getDeductionAmount() != null) {
+            deductionAmount = advanceInvoice.getDeductionAmount();
+        }
+        advanceInvoice.setTotalAmount(newAdvance + deductionAmount);
+        advanceInvoice.setSubTotal(newAdvance + deductionAmount);
 
         invoicesV1Repository.save(advanceInvoice);
 
@@ -5703,7 +5714,7 @@ public class InvoiceV1Service {
         return listInvoices.stream().map(InvoicesV1::getInvoiceId).toList();
     }
 
-    public ResponseEntity<?> getBasicList(String hostelId, String startDate, String endDate, List<String> types, List<String> createdBy, List<String> invoiceModes, String searchKey, List<String> paymentStatus) {
+    public ResponseEntity<?> getBasicList(String hostelId, List<String> cusIds, String startDate, String endDate, List<String> types, List<String> createdBy, List<String> invoiceModes, String searchKey, List<String> paymentStatus) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -5754,6 +5765,12 @@ public class InvoiceV1Service {
         if (searchKey != null && !searchKey.trim().equalsIgnoreCase("")) {
             List<Customers> listCustomers = customersService.searchCustomerByHostelName(hostelId, searchKey.trim());
             userIds = listCustomers.stream().map(Customers::getCustomerId).toList();
+        }
+
+        if (userIds == null) {
+            if (cusIds != null) {
+                userIds = cusIds;
+            }
         }
 
         List<UserHostel> listAdminUsers = userHostelService.findAllByHostelId(hostelId);
@@ -5882,5 +5899,140 @@ public class InvoiceV1Service {
             PaymentSummary summary = new PaymentSummary(hostelId, customerId, invoiceNumber.toString(), rentAmount, customerMailId, customerMobile, "Active");
             paymentSummaryService.addInvoice(summary);
         }
+    }
+
+    public ResponseEntity<?> initializeRecordPayment(String hostelId, String invoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!hostelId.equalsIgnoreCase(invoicesV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+            return new ResponseEntity<>(Utils.INVOICE_ALREADY_PAID, HttpStatus.BAD_REQUEST);
+        }
+        Integer bedId = 0;
+        Double paidAmount = 0.0;
+        Double pendingAmount = 0.0;
+        Double totalAmount = 0.0;
+        if (invoicesV1.getTotalAmount() != null) {
+            totalAmount = invoicesV1.getTotalAmount();
+        }
+        if (invoicesV1.getPaidAmount() != null) {
+            paidAmount = invoicesV1.getPaidAmount();
+        }
+        pendingAmount = totalAmount - paidAmount;
+        BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(invoicesV1.getCustomerId());
+        if (bookingsV1 != null) {
+            bedId = bookingsV1.getBedId();
+        }
+        CustomerDetails customerInfo = customersService.getCustomerInformationForRecordPayment(invoicesV1.getCustomerId());
+        StayInfo stayInfo = bedService.getBedInformationGeneral(bedId);
+        List<BankInfoRecordPayments> bankInfo = bankingService.getBankForReceivingPayments(invoicesV1.getHostelId());
+        RecordPayment recordPayment = new RecordPayment(invoicesV1.getInvoiceId(),
+                invoicesV1.getHostelId(),
+                invoicesV1.getInvoiceNumber(),
+                Utils.roundOffWithTwoDigit(pendingAmount),
+                Utils.roundOffWithTwoDigit(paidAmount),
+                Utils.roundOffWithTwoDigit(totalAmount),
+                customerInfo,
+                stayInfo,
+                bankInfo);
+
+        return new ResponseEntity<>(recordPayment, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> initializeInvoiceDiscounts(String hostelId, String invoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!hostelId.equalsIgnoreCase(invoicesV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
+            return new ResponseEntity<>(Utils.INVOICE_ALREADY_PAID, HttpStatus.BAD_REQUEST);
+        }
+        Double invoiceAMount = 0.0;
+        Double paidAmount = 0.0;
+
+        String invoiceDate = Utils.dateToString(invoicesV1.getInvoiceStartDate());
+        if (invoicesV1.getInvoiceDate() != null) {
+            invoiceDate = Utils.dateToString(invoicesV1.getInvoiceDate());
+        }
+
+        if (invoicesV1.getPaidAmount() != null) {
+            paidAmount = invoicesV1.getPaidAmount();
+        }
+        if (invoicesV1.getBasePrice() != null) {
+            invoiceAMount = invoicesV1.getBasePrice();
+        }
+        long overdueDays = Utils.findNumberOfDays(invoicesV1.getInvoiceDueDate(), new Date()) - 1;
+        if (overdueDays < 0) {
+            overdueDays = overdueDays * -1;
+        }
+
+        Double discountedAmount = 0.0;
+        com.smartstay.smartstay.dto.invoices.InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelId, invoiceId);
+        if (invoiceDiscounts != null) {
+            discountedAmount = invoiceDiscounts.discountAmount();
+        }
+
+        InvoiceDiscount invoiceDiscount = null;
+        com.smartstay.smartstay.responses.discount.InvoiceInfo invoiceInfo = new com.smartstay.smartstay.responses.discount.InvoiceInfo(invoicesV1.getInvoiceId(),
+                invoicesV1.getInvoiceNumber(),
+                invoiceDate,
+                invoiceAMount,
+                paidAmount,
+                discountedAmount,
+                Utils.dateToString(invoicesV1.getInvoiceDueDate()),
+                String.valueOf(overdueDays));
+        com.smartstay.smartstay.responses.discount.CustomerInfo customerInfo = customersService.getCustomerInfoForDiscount(invoicesV1.getCustomerId());
+        BedDetails bedDetails = null;
+        BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(invoicesV1.getCustomerId());
+        if (bookingsV1 != null) {
+            bedDetails = bedService.getBedDetails(bookingsV1.getBedId());
+        }
+        com.smartstay.smartstay.responses.discount.StayInfo stayInfo = null;
+        if (bedDetails != null) {
+            stayInfo = new com.smartstay.smartstay.responses.discount.StayInfo(bedDetails.getBedName(),
+                    bedDetails.getFloorName(), bedDetails.getRoomName());
+        }
+
+        invoiceDiscount = new InvoiceDiscount(invoicesV1.getHostelId(), invoiceInfo, customerInfo,stayInfo);
+        return new ResponseEntity<>(invoiceDiscount, HttpStatus.OK);
     }
 }

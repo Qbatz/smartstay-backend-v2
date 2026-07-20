@@ -174,4 +174,8 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     @Query("SELECT c FROM Customers c WHERE c.hostelId = :hostelId AND c.mobile LIKE CONCAT('%', :mobile, '%')")
     List<Customers> searchByMobileAndHostelId(@Param("hostelId") String hostelId, @Param("mobile") String mobile);
 
+    @Query("""
+            SELECT cus FROM Customers cus WHERE cus.customerId IN (:customerIds) AND cus.currentStatus in (:status)
+            """)
+    List<Customers> findCheckedInCustomersByStatus(List<String> customerIds, List<String> status);
 }

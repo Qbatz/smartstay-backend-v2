@@ -11,22 +11,16 @@ import lombok.NoArgsConstructor;
 import java.util.Date;
 
 @Entity
-@Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CustomersAmenity {
-
+@Data
+public class TenantBanking {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-    private String amenityId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long bankId;
     private String customerId;
-    private Double amenityPrice;
-    private Date createdAt;
-    private Date updatedAt;
-    private String updatedBy;
-    private String createdBy;
-    private Date startDate;
-    private Date endDate;
-    private String reasonForStop;
+    private String hostelId;
+    //available balance.
+    private Double amount;
+    private Date lastUpdate;
 }

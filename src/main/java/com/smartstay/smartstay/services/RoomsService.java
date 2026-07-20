@@ -257,15 +257,12 @@ public class RoomsService {
         return roomRepository.getCountOfRoomsBasedOnHostel(hostelId);
     }
 
-    public List<RoomInfoForEB> getBedsNotRegisteredOnEB(List<Integer> listRoomsInMeterReadings, String hostelId, String startDate, String endDate) {
-        if (listRoomsInMeterReadings.isEmpty()) {
-            return roomRepository.getAllRoomsForEb(hostelId);
+    public List<Rooms> findAllRooms(String hostelId) {
+        List<Rooms> rooms = roomRepository.findByHostelId(hostelId);
+        if (rooms == null) {
+            rooms = new ArrayList<>();
         }
-        return roomRepository.getAllRoomsNotInEb(listRoomsInMeterReadings, hostelId, startDate, endDate);
-    }
-
-    public List<RoomInfoForEB> findAllRoomsByHostelId(String hostelId) {
-        return roomRepository.getAllRoomsByHostelForEB(hostelId);
+        return rooms;
     }
 
     public List<Rooms> getAllRoomsByHostelId(String hostelId) {

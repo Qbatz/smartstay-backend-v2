@@ -22,12 +22,14 @@ public class TransactionV1 {
     private Double paidAmount;
     private String createdBy;
     private Date createdAt;
+    //From payment status ENUM
     private String status;
     private String invoiceId;
     private String hostelId;
     private String isInvoice;
     private String customerId;
     private Date paymentDate;
+    //From receipt mode Enum
     private String transactionMode;
     private String source;
     //auto generated

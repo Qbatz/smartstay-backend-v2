@@ -11,4 +11,5 @@ import java.util.List;
 public interface DraftsRepository extends JpaRepository<Draft, String> {
 
     List<Draft> findByCustomerIdIn(Collection<String> customerIds);
+
 }
