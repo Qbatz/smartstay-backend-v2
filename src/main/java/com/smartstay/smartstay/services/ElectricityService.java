@@ -832,9 +832,9 @@ public class ElectricityService {
             return new ResponseEntity<>(Utils.ELECTRICITY_CONFIG_NOT_SET_UP, HttpStatus.BAD_REQUEST);
         }
 
-        List<Rooms> listRooms = roomsService.findByHostelIdDeletedRooms(hostelId);
+        List<Rooms> listRooms = roomsService.findAllRooms(hostelId);
 
-        List<Integer> deletedRooms = listRooms == null ? Collections.emptyList() : listRooms.stream().map(Rooms::getRoomId).toList();
+        List<Integer> deletedRooms = listRooms.stream().map(Rooms::getRoomId).toList();
 
 
         List<CustomersList> listCustomers = new ArrayList<>();

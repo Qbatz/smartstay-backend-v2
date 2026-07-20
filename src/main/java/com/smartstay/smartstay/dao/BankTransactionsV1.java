@@ -21,13 +21,14 @@ public class BankTransactionsV1 {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int transactionId;
     private String bankId;
+    //user entered
     private String referenceNumber;
     private Double amount;
     private Double accountBalance;
     private String description;
-    //credit or debit
+    //credit or debit from BankTransaction Type enum
     private String type;
-    //assets or rent or advance or expense
+    //assets or rent or advance or expense from BankSource Enum
     private String source;
     private String sourceId;
     private String hostelId;
@@ -39,4 +40,5 @@ public class BankTransactionsV1 {
     private String createdBy;
     private Date updatedAt;
     private String updatedBy;
+    private String platform;
 }

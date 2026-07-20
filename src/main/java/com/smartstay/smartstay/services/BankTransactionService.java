@@ -5,10 +5,12 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.InvoicesV1;
+import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.ennum.BankSource;
 import com.smartstay.smartstay.ennum.BankTransactionType;
 import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
+import com.smartstay.smartstay.payloads.retainer.LoadBalance;
 import com.smartstay.smartstay.repositories.BankTransactionRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -202,7 +204,7 @@ public class BankTransactionService {
             dt = new Date();
         }
 
-
+        double bankBalance = bankingService.getBankBalance(refundInvoice.bankId());
         transactionsV1.setTransactionDate(Utils.convertToTimeStamp(dt));
         transactionsV1.setBankId(refundInvoice.bankId());
         transactionsV1.setReferenceNumber(refundInvoice.referenceNumber());
@@ -214,6 +216,7 @@ public class BankTransactionService {
         transactionsV1.setIsDeleted(false);
         transactionsV1.setHostelId(invoicesV1.getHostelId());
         transactionsV1.setCreatedAt(new Date());
+        transactionsV1.setAccountBalance(bankBalance);
         transactionsV1.setCreatedBy(authentication.getName());
 
         bankRepository.save(transactionsV1);
@@ -304,5 +307,29 @@ public class BankTransactionService {
         // No bank transaction (e.g. a PENDING expense created without a bank) means there is nothing to
         // reverse — the expense is still safely deletable, so report success either way.
         return true;
+    }
+
+    public void addRetainerTransaction(TransactionV1 transactionV11, InvoicesV1 invoicesV1, Date paymentDate, LoadBalance loadBalance) {
+        double newBalance = bankingService.updateRetainerAmountToBank(paymentDate, loadBalance.amount(), loadBalance.bankId());
+        BankTransactionsV1 bankTransactionsV1 = new BankTransactionsV1();
+        if (bankTransactionsV1 == null) {
+            return;
+        }
+
+        bankTransactionsV1.setBankId(loadBalance.bankId());
+        bankTransactionsV1.setReferenceNumber(loadBalance.referenceNumber());
+        bankTransactionsV1.setAmount(loadBalance.amount());
+        bankTransactionsV1.setAccountBalance(newBalance);
+        bankTransactionsV1.setType(BankTransactionType.CREDIT.name());
+        bankTransactionsV1.setSource(BankSource.INVOICE.name());
+        bankTransactionsV1.setSourceId(invoicesV1.getInvoiceId());
+        bankTransactionsV1.setHostelId(invoicesV1.getHostelId());
+        bankTransactionsV1.setTransactionNumber(transactionV11.getTransactionId());
+        bankTransactionsV1.setTransactionDate(paymentDate);
+        bankTransactionsV1.setCreatedAt(new Date());
+        bankTransactionsV1.setPlatform(authentication.getSource());
+        bankTransactionsV1.setCreatedBy(authentication.getName());
+
+        bankRepository.save(bankTransactionsV1);
     }
 }

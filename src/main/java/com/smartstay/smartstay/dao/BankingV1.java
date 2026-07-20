@@ -42,4 +42,5 @@ public class BankingV1 {
     String updatedBy;
     Date createdAt;
     Date updatedAt;
+    Date lastTransaction;
 }
