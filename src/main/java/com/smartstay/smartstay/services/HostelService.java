@@ -334,7 +334,10 @@ public class HostelService {
         String billingMode = billingDates != null ? billingDates.billingModel() : null;
         String billingType = billingDates != null ? billingDates.typeOfBilling() : null;
 
-        HostelDetails details = new HostelDetails(hostel.getHostelId(), hostel.getMainImage(), hostel.getCity(), String.valueOf(hostel.getCountry()), hostel.getEmailId(), hostel.getHostelName(), hostel.getHouseNo(), hostel.getLandmark(), hostel.getMobile(), hostel.getPincode(), hostel.getState(), hostel.getStreet(), Utils.dateToString(hostel.getUpdatedAt()), isSubscriptionActive, nextBillingDate, remainingDays, currentMonthBillStartDate, currentMonthBillEndDate, dueDays, billingMode, billingType, floorDetails.size(), floorDetails, notificationCount, canModifyBilling);
+        int gracePeriod = billingDates != null ? billingDates.gracePeriodDays() : 0;
+        boolean hasGracePeriod = billingDates != null && billingDates.hasGracePeriod();
+
+        HostelDetails details = new HostelDetails(hostel.getHostelId(), hostel.getMainImage(), hostel.getCity(), String.valueOf(hostel.getCountry()), hostel.getEmailId(), hostel.getHostelName(), hostel.getHouseNo(), hostel.getLandmark(), hostel.getMobile(), hostel.getPincode(), hostel.getState(), hostel.getStreet(), Utils.dateToString(hostel.getUpdatedAt()), isSubscriptionActive, nextBillingDate, remainingDays, currentMonthBillStartDate, currentMonthBillEndDate, dueDays, billingMode, billingType, floorDetails.size(), floorDetails, notificationCount, canModifyBilling, gracePeriod, hasGracePeriod);
 
         return ResponseEntity.ok(details);
     }
