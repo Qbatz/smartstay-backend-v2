@@ -4,7 +4,11 @@ import com.smartstay.smartstay.Wrappers.banking.BankingV2Mapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BankAccountTypeV2;
+import com.smartstay.smartstay.ennum.BankPurpose;
+import com.smartstay.smartstay.ennum.CashAccountType;
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.responses.banking.BankV2ListResponse;
@@ -71,6 +75,10 @@ public class BankingServiceV2 {
 
         String accountNo = trimToNull(payload.accountNo());
 
+        // CASH-only fields, validated only when the account type is CASH.
+        String cashAccountTypeValue = null;
+        String responsiblePerson = null;
+
         if (accountType == BankAccountTypeV2.BANK) {
             // All bank details are mandatory for a BANK account.
             if (!allPresent(payload.holderName(), payload.bankName(), payload.displayName(),
@@ -80,6 +88,16 @@ public class BankingServiceV2 {
             if (!isValidBankAccountType(payload.bankAccountType())) {
                 return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
             }
+        } else if (accountType == BankAccountTypeV2.CASH) {
+            if (!allPresent(payload.cashAccountType(), payload.responsiblePerson())) {
+                return new ResponseEntity<>(Utils.V2_CASH_DETAILS_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            CashAccountType cashType = CashAccountType.fromValue(payload.cashAccountType());
+            if (cashType == null) {
+                return new ResponseEntity<>(Utils.V2_CASH_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
+            }
+            cashAccountTypeValue = cashType.getValue();
+            responsiblePerson = trimToNull(payload.responsiblePerson());
         }
 
         // Duplicate account-number guard (within the hostel) when an account number is supplied.
@@ -99,9 +117,12 @@ public class BankingServiceV2 {
         bank.setAccountHolderName(trimToNull(payload.holderName()));
         bank.setAccountType(accountType.name());
         bank.setBankAccountType(trimToNull(payload.bankAccountType()));
+        bank.setCashAccountType(cashAccountTypeValue);
+        bank.setResponsiblePerson(responsiblePerson);
         bank.setDescription(payload.description());
         bank.setUserId(users.getUserId());
         bank.setHostelId(hostelId);
+        bank.setTransactionType(BankPurpose.BOTH.name());
         bank.setBalance(payload.openingBalance() != null ? payload.openingBalance() : 0.0);
         bank.setActive(true);
         bank.setDeleted(false);
@@ -112,8 +133,11 @@ public class BankingServiceV2 {
         bank.setUpdatedAt(now);
         bank.setPlatform(authentication.getSource());
 
-        BankingV2 saved = bankingV2Repository.save(bank);
-        return new ResponseEntity<>(new BankingV2Mapper().apply(saved), HttpStatus.CREATED);
+        BankingV2 bankingV2 = bankingV2Repository.save(bank);
+
+        usersService.addUserLog(hostelId, bankingV2.getBankId(), ActivitySource.BANKING, ActivitySourceType.CREATE, users);
+
+        return new ResponseEntity<>(new BankingV2Mapper().apply(bankingV2), HttpStatus.CREATED);
     }
 
     public ResponseEntity<?> getBanks(String hostelId, Integer page, Integer size) {
