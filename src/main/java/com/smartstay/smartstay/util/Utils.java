@@ -132,6 +132,9 @@ public class Utils {
     public static final String FUTURE_DATES_NOT_ALLOWED = "Future Dates are not allowed";
     public static final String PAST_DATE_TIME_NOT_ALLOWED = "Past date and time are not allowed";
     public static final String ACCOUNT_NO_ALREAY_EXISTS = "Account number already exists";
+    public static final String V2_ACCOUNT_TYPE_INVALID = "Account type should be BANK or CASH";
+    public static final String V2_BANK_ACCOUNT_TYPE_INVALID = "Bank account type should be Savings or Current";
+    public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name, display name, branch name, account number, IFSC code and bank account type are required for a BANK account";
     public static final String CASH_ACCOUNT_ALREAY_EXISTS = "Cash Account already exists";
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
