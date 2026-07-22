@@ -994,20 +994,20 @@ public class BookingsService {
 
                     BillingDates billingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), hostelId, new Date());
 
-                    if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), billingDates.currentBillEndDate())) {
+                    if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), billingDates.currentBillStartDate())) {
                         return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
                     }
 
                 } else {
                     // 2. PrePaid + Calendar/Standard-based (Now correctly inside 'else')
-                    if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), currentMonthBilling.currentBillEndDate())) {
+                    if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), currentMonthBilling.currentBillStartDate())) {
                         return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
                     }
                 }
 
             } else {
                 // 3. PostPaid: retain existing check
-                if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), currentMonthBilling.currentBillEndDate())) {
+                if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), currentMonthBilling.currentBillStartDate())) {
                     return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
                 }
             }
