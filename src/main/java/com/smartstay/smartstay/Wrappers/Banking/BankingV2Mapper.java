@@ -20,6 +20,8 @@ public class BankingV2Mapper implements Function<BankingV2, BankV2Response> {
                 bank.getAccountHolderName(),
                 bank.getAccountType(),
                 bank.getBankAccountType(),
+                bank.getCashAccountType(),
+                bank.getResponsiblePerson(),
                 bank.getDescription(),
                 bank.getBalance(),
                 bank.isActive(),
@@ -27,6 +29,6 @@ public class BankingV2Mapper implements Function<BankingV2, BankV2Response> {
                 bank.getHostelId(),
                 bank.getPlatform(),
                 bank.getCreatedBy(),
-                bank.getCreatedAt() != null ? Utils.dateToString(bank.getCreatedAt()) : null);
+                Utils.dateToTableFormat(bank.getCreatedAt()));
     }
 }

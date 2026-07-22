@@ -58,6 +58,10 @@ public class UserHostelService {
         return userHostelRepo.findAllByHostelId(hostelId);
     }
 
+    public List<UserHostel> findAllByHostelIdAndParentId(String hostelId, String parentId) {
+        return userHostelRepo.findAllByHostelIdAndParentId(hostelId, parentId);
+    }
+
     public void deleteAllHostels(String hostelId) {
         List<UserHostel> listUsers = findAllByHostelId(hostelId);
         userHostelRepo.deleteAll(listUsers);

@@ -53,6 +53,10 @@ public class RolesService {
         this.usersService = usersService;
     }
 
+    public List<RolesV1> findRolesByIdsAndHostelId(List<Integer> roleIds, String hostelId) {
+        return rolesRepository.findAllByRoleIdInAndHostelId(roleIds, hostelId);
+    }
+
     public ResponseEntity<?> getAllRoles(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);

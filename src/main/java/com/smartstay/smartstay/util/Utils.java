@@ -135,6 +135,8 @@ public class Utils {
     public static final String V2_ACCOUNT_TYPE_INVALID = "Account type should be BANK or CASH";
     public static final String V2_BANK_ACCOUNT_TYPE_INVALID = "Bank account type should be Savings or Current";
     public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name, display name, branch name, account number, IFSC code and bank account type are required for a BANK account";
+    public static final String V2_CASH_DETAILS_REQUIRED = "Cash account type and responsible person are required for a CASH account";
+    public static final String V2_CASH_ACCOUNT_TYPE_INVALID = "Cash account type should be Petty Cash or Office Cash";
     public static final String CASH_ACCOUNT_ALREAY_EXISTS = "Cash Account already exists";
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
@@ -428,6 +430,13 @@ public class Utils {
             return "";
         }
         return new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(date);
+    }
+
+    public static String dateToTableFormat(Date date) {
+        if (date == null) {
+            return null;
+        }
+        return new SimpleDateFormat(INPUT_DATE_TIME_FORMAT).format(date);
     }
 
     public static Date stringToDateTime(String date) {

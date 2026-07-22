@@ -689,6 +689,10 @@ public class UsersService {
         return userRepository.findUserByUserId(userId);
     }
 
+    public List<Users> findUsersByUserIds(List<String> userIds) {
+        return userRepository.findAllById(userIds);
+    }
+
     public List<Users> findAllByParentId(String parentId) {
         return userRepository.findAllByParentId(parentId);
     }

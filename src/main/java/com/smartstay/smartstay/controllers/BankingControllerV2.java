@@ -34,4 +34,10 @@ public class BankingControllerV2 {
             @RequestParam(value = "size", defaultValue = "10") int size) {
         return bankingServiceV2.getBanks(hostelId, page, size);
     }
+
+    // Users (with roles) mapped to the hostel, for the CASH account "responsible person" picker.
+    @GetMapping("/responsiblePerson/{hostelId}")
+    public ResponseEntity<?> getResponsiblePersons(@PathVariable("hostelId") String hostelId) {
+        return bankingServiceV2.getResponsiblePersons(hostelId);
+    }
 }
