@@ -10,6 +10,8 @@ public record BankV2Response(
         String accountHolderName,
         String accountType,
         String bankAccountType,
+        String cashAccountType,
+        String responsiblePerson,
         String description,
         Double balance,
         boolean isActive,

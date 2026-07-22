@@ -3,12 +3,19 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.banking.BankingV2Mapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankingV2;
+import com.smartstay.smartstay.dao.RolesV1;
+import com.smartstay.smartstay.dao.UserHostel;
 import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BankAccountTypeV2;
+import com.smartstay.smartstay.ennum.BankPurpose;
+import com.smartstay.smartstay.ennum.CashAccountType;
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.responses.banking.BankV2ListResponse;
 import com.smartstay.smartstay.responses.banking.BankV2Response;
+import com.smartstay.smartstay.responses.banking.ResponsiblePersonResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -19,8 +26,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -71,6 +82,10 @@ public class BankingServiceV2 {
 
         String accountNo = trimToNull(payload.accountNo());
 
+        // CASH-only fields, validated only when the account type is CASH.
+        String cashAccountTypeValue = null;
+        String responsiblePerson = null;
+
         if (accountType == BankAccountTypeV2.BANK) {
             // All bank details are mandatory for a BANK account.
             if (!allPresent(payload.holderName(), payload.bankName(), payload.displayName(),
@@ -80,6 +95,16 @@ public class BankingServiceV2 {
             if (!isValidBankAccountType(payload.bankAccountType())) {
                 return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
             }
+        } else if (accountType == BankAccountTypeV2.CASH) {
+            if (!allPresent(payload.cashAccountType(), payload.responsiblePerson())) {
+                return new ResponseEntity<>(Utils.V2_CASH_DETAILS_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            CashAccountType cashType = CashAccountType.fromValue(payload.cashAccountType());
+            if (cashType == null) {
+                return new ResponseEntity<>(Utils.V2_CASH_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
+            }
+            cashAccountTypeValue = cashType.getValue();
+            responsiblePerson = trimToNull(payload.responsiblePerson());
         }
 
         // Duplicate account-number guard (within the hostel) when an account number is supplied.
@@ -99,9 +124,12 @@ public class BankingServiceV2 {
         bank.setAccountHolderName(trimToNull(payload.holderName()));
         bank.setAccountType(accountType.name());
         bank.setBankAccountType(trimToNull(payload.bankAccountType()));
+        bank.setCashAccountType(cashAccountTypeValue);
+        bank.setResponsiblePerson(responsiblePerson);
         bank.setDescription(payload.description());
         bank.setUserId(users.getUserId());
         bank.setHostelId(hostelId);
+        bank.setTransactionType(BankPurpose.BOTH.name());
         bank.setBalance(payload.openingBalance() != null ? payload.openingBalance() : 0.0);
         bank.setActive(true);
         bank.setDeleted(false);
@@ -112,8 +140,11 @@ public class BankingServiceV2 {
         bank.setUpdatedAt(now);
         bank.setPlatform(authentication.getSource());
 
-        BankingV2 saved = bankingV2Repository.save(bank);
-        return new ResponseEntity<>(new BankingV2Mapper().apply(saved), HttpStatus.CREATED);
+        BankingV2 bankingV2 = bankingV2Repository.save(bank);
+
+        usersService.addUserLog(hostelId, bankingV2.getBankId(), ActivitySource.BANKING, ActivitySourceType.CREATE, users);
+
+        return new ResponseEntity<>(new BankingV2Mapper().apply(bankingV2), HttpStatus.CREATED);
     }
 
     public ResponseEntity<?> getBanks(String hostelId, Integer page, Integer size) {
@@ -145,6 +176,60 @@ public class BankingServiceV2 {
                 bankPage.getTotalPages(),
                 pageSize,
                 banks);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getResponsiblePersons(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+//        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_READ)) {
+//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//        }
+
+        String parentId = users.getParentId();
+
+        List<UserHostel> userHostels = userHostelService.findAllByHostelIdAndParentId(hostelId, parentId);
+        if (userHostels.isEmpty()) {
+            return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+        }
+
+        List<String> userIds = userHostels.stream()
+                .map(UserHostel::getUserId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, Users> usersById = usersService.findUsersByUserIds(userIds).stream()
+                .collect(Collectors.toMap(Users::getUserId, Function.identity(), (a, b) -> a));
+
+        List<Integer> roleIds = usersById.values().stream()
+                .map(Users::getRoleId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Integer, String> roleNameById = roleIds.isEmpty()
+                ? Collections.emptyMap()
+                : rolesService.findRolesByIdsAndHostelId(roleIds, hostelId).stream()
+                        .collect(Collectors.toMap(RolesV1::getRoleId, RolesV1::getRoleName, (a, b) -> a));
+
+        List<ResponsiblePersonResponse> response = userIds.stream()
+                .map(usersById::get)
+                .filter(Objects::nonNull)
+                .map(user -> new ResponsiblePersonResponse(
+                        user.getUserId(),
+                        user.getFirstName(),
+                        user.getLastName(),
+                        user.getRoleId(),
+                        roleNameById.get(user.getRoleId()),
+                        hostelId,
+                        parentId))
+                .collect(Collectors.toList());
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

@@ -42,4 +42,6 @@ public class BankingV2 {
     private Date updatedAt;
     private Date lastTransaction;
     private String platform;
+    private String cashAccountType;
+    private String responsiblePerson;
 }

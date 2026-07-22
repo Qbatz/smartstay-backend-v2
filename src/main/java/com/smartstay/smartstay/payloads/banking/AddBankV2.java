@@ -16,6 +16,8 @@ public record AddBankV2(
         @NotBlank(message = "Account type is required")
         String accountType,
         String bankAccountType,
-        Double openingBalance
+        Double openingBalance,
+        String cashAccountType,
+        String responsiblePerson
 ) {
 }
