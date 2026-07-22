@@ -281,6 +281,8 @@ public class Utils {
     public static final String CANNOT_CHANGE_JOINING_DATE_SETTLEMENT_CUSTOMERS = "Cannot change joining date for the settlement generated customers";
     public static final String CANNOT_CHANGE_JOINING_DATE_CANCELLED_CUSTOMERS = "Cannot change joining date for the cancelled customers";
     public static final String CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES = "Cannot change the joining date. Already invoices are available for this customers";
+    public static final String CANNOT_UPDATE_JOB_DETAILS_VACATED_TENANT = "Cannot update job details for vacated tenants";
+    public static final String CANNOT_UPDATE_JOB_DETAILS_CANCELLED_TENANT = "Cannot update job details for cancelled tenants";
     public static final String CANNOT_CHANGE_JOINING_DATE_CUSTOMER_NOT_CHECKEDIN = "Cannot change the joining date, seems customer is not checked-In";
     public static final String BED_OCCUPIED_ON_DATE = "Cannot change joining date. The bed was occupied by another tenant during the selected period.";
     public static final String RENT_AMOUNT_REQUIRED_TO_UPDATE_RENT = "Rent amount required";

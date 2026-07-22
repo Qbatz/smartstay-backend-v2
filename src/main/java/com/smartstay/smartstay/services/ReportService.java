@@ -328,10 +328,9 @@ public class ReportService {
             endDate = Utils.stringToDate(customEndDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
 
-        Pageable pageable = PageRequest.of(pageParams - 1, size);
         List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
                 paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
-                minOutstandingAmount, maxOutstandingAmount, isCancelledList, pageable);
+                minOutstandingAmount, maxOutstandingAmount, isCancelledList);
         List<ReportDetailsResponse.InvoiceDetail> invoiceDetails = mapToInvoiceDetails(invoices, isCancelled.get());
 
         ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);
@@ -507,7 +506,7 @@ public class ReportService {
         Pageable pageable = Pageable.unpaged();
         List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
                 paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
-                minOutstandingAmount, maxOutstandingAmount, isCancelled, pageable);
+                minOutstandingAmount, maxOutstandingAmount, isCancelled);
 
 
         int totalInvoices = 0;
