@@ -17,7 +17,6 @@ public record AddBankV2(
         String accountType,
         String bankAccountType,
         Double openingBalance,
-        // Mandatory for CASH accounts: sub-type ("Petty Cash" / "Office Cash") and the responsible user id.
         String cashAccountType,
         String responsiblePerson
 ) {

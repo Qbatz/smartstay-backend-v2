@@ -432,10 +432,6 @@ public class Utils {
         return new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(date);
     }
 
-    /**
-     * Formats a date exactly as it is stored in the database (MySQL DATETIME format,
-     * e.g. "2026-07-22 10:30:45").
-     */
     public static String dateToTableFormat(Date date) {
         if (date == null) {
             return null;
