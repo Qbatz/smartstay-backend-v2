@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
+import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
 import com.smartstay.smartstay.services.BankingServiceV2;
 import com.smartstay.smartstay.services.QrBankTypeService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -77,5 +78,33 @@ public class BankingControllerV2 {
     @DeleteMapping("/qrCardType/{id}")
     public ResponseEntity<?> deleteQrCardType(@PathVariable("id") Integer id) {
         return qrBankTypeService.delete(id);
+    }
+
+    @PostMapping(value = "/bankMethod/{hostelId}/{bankId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> addBankingMethod(
+            @PathVariable("hostelId") String hostelId,
+            @PathVariable("bankId") String bankId,
+            @RequestParam(value = "paymentMethod", required = false) String paymentMethod,
+            @RequestParam(value = "upiId", required = false) String upiId,
+            @RequestParam(value = "upiApp", required = false) Integer upiApp,
+            @RequestParam(value = "displayName", required = false) String displayName,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "cardNumber", required = false) String cardNumber,
+            @RequestParam(value = "cardNetwork", required = false) Integer cardNetwork,
+            @RequestParam(value = "cardHolderName", required = false) String cardHolderName,
+            @RequestParam(value = "creditLimit", required = false) Double creditLimit,
+            @RequestParam(value = "billingCycle", required = false) String billingCycle,
+            @RequestParam(value = "linkedUpiId", required = false) String linkedUpiId,
+            @RequestParam(value = "qrImage", required = false) MultipartFile qrImage) {
+        AddBankingMethod payload = new AddBankingMethod(paymentMethod, upiId, upiApp, displayName,
+                description, cardNumber, cardNetwork, cardHolderName, creditLimit, billingCycle, linkedUpiId);
+        return bankingServiceV2.addBankingMethod(hostelId, bankId, payload, qrImage);
+    }
+
+    @GetMapping("/bankMethod/{hostelId}/{bankId}")
+    public ResponseEntity<?> getBankingMethods(
+            @PathVariable("hostelId") String hostelId,
+            @PathVariable("bankId") String bankId) {
+        return bankingServiceV2.getBankingMethods(hostelId, bankId);
     }
 }
