@@ -137,6 +137,12 @@ public class Utils {
     public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name, display name, branch name, account number, IFSC code and bank account type are required for a BANK account";
     public static final String V2_CASH_DETAILS_REQUIRED = "Cash account type and responsible person are required for a CASH account";
     public static final String V2_CASH_ACCOUNT_TYPE_INVALID = "Cash account type should be Petty Cash or Office Cash";
+    public static final String QR_TYPE_INVALID = "Type should be UPI or CARD";
+    public static final String QR_NAME_REQUIRED = "Name is required";
+    public static final String QR_IMAGE_INVALID = "Image must be a valid image file";
+    public static final String QR_TYPE_ALREADY_EXISTS = "This type and name already exists";
+    public static final String QR_TYPE_NOT_FOUND = "QR bank type not found";
+    public static final String QR_TYPE_DELETED = "Deleted successfully";
     public static final String CASH_ACCOUNT_ALREAY_EXISTS = "Cash Account already exists";
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
