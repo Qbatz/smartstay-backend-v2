@@ -1,7 +1,11 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.banking.BankingMethodsMapper;
 import com.smartstay.smartstay.Wrappers.banking.BankingV2Mapper;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.config.FilesConfig;
+import com.smartstay.smartstay.config.UploadFileToS3;
+import com.smartstay.smartstay.dao.BankingMethods;
 import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.UserHostel;
@@ -11,10 +15,14 @@ import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BankAccountTypeV2;
 import com.smartstay.smartstay.ennum.BankPurpose;
 import com.smartstay.smartstay.ennum.CashAccountType;
+import com.smartstay.smartstay.ennum.PaymentMethod;
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
+import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
+import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.responses.banking.BankV2ListResponse;
 import com.smartstay.smartstay.responses.banking.BankV2Response;
+import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
 import com.smartstay.smartstay.responses.banking.ResponsiblePersonResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,17 +33,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class BankingServiceV2 {
+
+    private static final String QR_S3_FOLDER = "BankingMethods/QR";
 
     @Autowired
     private Authentication authentication;
@@ -54,6 +66,12 @@ public class BankingServiceV2 {
 
     @Autowired
     private BankingV2Repository bankingV2Repository;
+
+    @Autowired
+    private BankingMethodsRepository bankingMethodsRepository;
+
+    @Autowired
+    private UploadFileToS3 uploadToS3;
 
     @Transactional
     public ResponseEntity<?> addBank(String hostelId, AddBankV2 payload) {
@@ -233,6 +251,170 @@ public class BankingServiceV2 {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @Transactional
+    public ResponseEntity<?> addBankingMethod(String hostelId, String bankId, AddBankingMethod payload,
+            MultipartFile qrImage) {
+        Users user = currentUser();
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        BankingV2 bank = validBankOrNull(hostelId, bankId);
+        if (bank == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!isBankAccount(bank)) {
+            return new ResponseEntity<>(Utils.BANKING_METHOD_ONLY_FOR_BANK, HttpStatus.BAD_REQUEST);
+        }
+
+        PaymentMethod method = PaymentMethod.fromValue(payload.paymentMethod());
+        if (method == null) {
+            return new ResponseEntity<>(Utils.BANKING_METHOD_PAYMENT_METHOD_INVALID, HttpStatus.BAD_REQUEST);
+        }
+
+        String displayName = trimToNull(payload.displayName());
+        if (displayName == null) {
+            return new ResponseEntity<>(Utils.BANKING_METHOD_DISPLAY_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        String upiId = trimToNull(payload.upiId());
+        Integer upiApp = payload.upiApp();
+        String cardNumber = trimToNull(payload.cardNumber());
+        Integer cardNetwork = payload.cardNetwork();
+        String cardHolderName = trimToNull(payload.cardHolderName());
+        String linkedUpiId = trimToNull(payload.linkedUpiId());
+
+        Date billingCycle = null;
+        switch (method) {
+            case UPI -> {
+                if (upiId == null) {
+                    return badRequest(Utils.BANKING_METHOD_UPI_ID_REQUIRED);
+                }
+                if (upiApp == null) {
+                    return badRequest(Utils.BANKING_METHOD_UPI_APP_REQUIRED);
+                }
+            }
+            case CREDIT_CARD -> {
+                String cardError = validateCard(cardNumber, cardNetwork, cardHolderName);
+                if (cardError != null) {
+                    return badRequest(cardError);
+                }
+                if (isPresent(payload.billingCycle())) {
+                    billingCycle = Utils.convertStringToDate(payload.billingCycle().trim());
+                    if (billingCycle == null) {
+                        return badRequest(Utils.BANKING_METHOD_BILLING_CYCLE_INVALID);
+                    }
+                }
+            }
+            case DEBIT_CARD -> {
+                String cardError = validateCard(cardNumber, cardNetwork, cardHolderName);
+                if (cardError != null) {
+                    return badRequest(cardError);
+                }
+            }
+            case QR_CODE -> {
+                if (upiApp == null) {
+                    return badRequest(Utils.BANKING_METHOD_UPI_APP_REQUIRED);
+                }
+                if (cardNumber == null) {
+                    return badRequest(Utils.BANKING_METHOD_CARD_NUMBER_REQUIRED);
+                }
+                if (!isValidCardNumber(cardNumber)) {
+                    return badRequest(Utils.BANKING_METHOD_CARD_NUMBER_INVALID);
+                }
+                if (linkedUpiId == null) {
+                    return badRequest(Utils.BANKING_METHOD_LINKED_UPI_REQUIRED);
+                }
+                if (qrImage == null || qrImage.isEmpty()) {
+                    return badRequest(Utils.BANKING_METHOD_QR_IMAGE_REQUIRED);
+                }
+                if (!isImage(qrImage)) {
+                    return badRequest(Utils.BANKING_METHOD_IMAGE_INVALID);
+                }
+            }
+        }
+
+        if (method == PaymentMethod.UPI
+                && bankingMethodsRepository.existsByBank_BankIdAndHostelIdAndUpiIdIgnoreCase(bankId, hostelId, upiId)) {
+            return badRequest(Utils.BANKING_METHOD_UPI_ID_EXISTS);
+        }
+        if ((method == PaymentMethod.CREDIT_CARD || method == PaymentMethod.DEBIT_CARD || method == PaymentMethod.QR_CODE)
+                && bankingMethodsRepository.existsByBank_BankIdAndHostelIdAndCardNumber(bankId, hostelId, cardNumber)) {
+            return badRequest(Utils.BANKING_METHOD_CARD_NUMBER_EXISTS);
+        }
+
+        Date now = new Date();
+        BankingMethods entity = new BankingMethods();
+        entity.setBank(bank);
+        entity.setPaymentMethod(method);
+        entity.setDisplayName(displayName);
+        entity.setDescription(trimToNull(payload.description()));
+        entity.setHostelId(hostelId);
+        entity.setUserId(user.getUserId());
+        entity.setBalance(0.0);
+        entity.setCreatedBy(user.getUserId());
+        entity.setUpdatedBy(user.getUserId());
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
+
+        switch (method) {
+            case UPI -> {
+                entity.setUpiId(upiId);
+                entity.setUpiApp(upiApp);
+            }
+            case CREDIT_CARD -> {
+                entity.setCardNumber(cardNumber);
+                entity.setCardNetwork(cardNetwork);
+                entity.setCardHolderName(cardHolderName);
+                entity.setCreditLimit(payload.creditLimit());
+                entity.setBillingCycle(billingCycle);
+            }
+            case DEBIT_CARD -> {
+                entity.setCardNumber(cardNumber);
+                entity.setCardNetwork(cardNetwork);
+                entity.setCardHolderName(cardHolderName);
+            }
+            case QR_CODE -> {
+                entity.setUpiApp(upiApp);
+                entity.setCardNumber(cardNumber);
+                entity.setLinkedUpiId(linkedUpiId);
+                entity.setQrImage(uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(qrImage), QR_S3_FOLDER));
+            }
+        }
+
+        BankingMethods saved = bankingMethodsRepository.save(entity);
+        return new ResponseEntity<>(new BankingMethodsMapper().apply(saved), HttpStatus.CREATED);
+    }
+
+    public ResponseEntity<?> getBankingMethods(String hostelId, String bankId) {
+        Users user = currentUser();
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        BankingV2 bank = validBankOrNull(hostelId, bankId);
+        if (bank == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!isBankAccount(bank)) {
+            return new ResponseEntity<>(Utils.BANKING_METHOD_ONLY_FOR_BANK, HttpStatus.BAD_REQUEST);
+        }
+
+        BankingMethodsMapper mapper = new BankingMethodsMapper();
+        List<BankingMethodResponse> response = bankingMethodsRepository
+                .findByBank_BankIdOrderByCreatedAtAsc(bankId)
+                .stream()
+                .map(mapper)
+                .collect(Collectors.toList());
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     private String trimToNull(String value) {
         return (value != null && !value.trim().isEmpty()) ? value.trim() : null;
     }
@@ -249,5 +431,64 @@ public class BankingServiceV2 {
     private boolean isValidBankAccountType(String value) {
         String trimmed = value == null ? "" : value.trim();
         return "Savings".equalsIgnoreCase(trimmed) || "Current".equalsIgnoreCase(trimmed);
+    }
+
+    private BankingV2 validBankOrNull(String hostelId, String bankId) {
+        if (bankId == null) {
+            return null;
+        }
+        Optional<BankingV2> bankOpt = bankingV2Repository.findById(bankId);
+        if (bankOpt.isEmpty()) {
+            return null;
+        }
+        BankingV2 bank = bankOpt.get();
+        if (bank.isDeleted() || !hostelId.equals(bank.getHostelId())) {
+            return null;
+        }
+        return bank;
+    }
+
+    private boolean isBankAccount(BankingV2 bank) {
+        return BankAccountTypeV2.BANK.name().equalsIgnoreCase(bank.getAccountType());
+    }
+
+    private String validateCard(String cardNumber, Integer cardNetwork, String cardHolderName) {
+        if (cardNumber == null) {
+            return Utils.BANKING_METHOD_CARD_NUMBER_REQUIRED;
+        }
+        if (!isValidCardNumber(cardNumber)) {
+            return Utils.BANKING_METHOD_CARD_NUMBER_INVALID;
+        }
+        if (cardNetwork == null) {
+            return Utils.BANKING_METHOD_CARD_NETWORK_REQUIRED;
+        }
+        if (cardHolderName == null) {
+            return Utils.BANKING_METHOD_CARD_HOLDER_REQUIRED;
+        }
+        return null;
+    }
+
+    private Users currentUser() {
+        if (!authentication.isAuthenticated()) {
+            return null;
+        }
+        return usersService.findUserByUserId(authentication.getName());
+    }
+
+    private ResponseEntity<?> badRequest(String message) {
+        return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+    }
+
+    private boolean isPresent(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private boolean isValidCardNumber(String cardNumber) {
+        return cardNumber.replaceAll("\\s", "").matches("\\d{4,}");
+    }
+
+    private boolean isImage(MultipartFile image) {
+        String contentType = image.getContentType();
+        return contentType != null && contentType.toLowerCase().startsWith("image/");
     }
 }
