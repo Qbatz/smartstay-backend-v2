@@ -176,6 +176,22 @@ public class BankingServiceV2 {
 
         BankingV2 bankingV2 = bankingV2Repository.save(bank);
 
+        if (payload.openingBalance() != null && payload.openingBalance() > 0) {
+            double openingBalance = payload.openingBalance();
+            BankTransactionsV1 transaction = new BankTransactionsV1();
+            transaction.setBankId(bankingV2.getBankId());
+            transaction.setHostelId(hostelId);
+            transaction.setType("CREDIT");
+            transaction.setSource(BankSource.DEPOSIT.name());
+            transaction.setAccountBalance(openingBalance);
+            transaction.setAmount(openingBalance);
+            transaction.setTransactionDate(now);
+            transaction.setCreatedAt(now);
+            transaction.setIsDeleted(false);
+            transaction.setCreatedBy(users.getUserId());
+            transactionService.saveTransaction(transaction);
+        }
+
         usersService.addUserLog(hostelId, bankingV2.getBankId(), ActivitySource.BANKING, ActivitySourceType.CREATE, users);
 
         return new ResponseEntity<>(new BankingV2Mapper().apply(bankingV2), HttpStatus.CREATED);
