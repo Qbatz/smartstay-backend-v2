@@ -6,6 +6,7 @@ import com.smartstay.smartstay.Wrappers.banking.BankingV2Mapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
+import com.smartstay.smartstay.dao.BankTransactionsV1;
 import com.smartstay.smartstay.dao.BankingMethods;
 import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.dao.QrBankType;
@@ -16,10 +17,12 @@ import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BankAccountTypeV2;
 import com.smartstay.smartstay.ennum.BankPurpose;
+import com.smartstay.smartstay.ennum.BankSource;
 import com.smartstay.smartstay.ennum.CashAccountType;
 import com.smartstay.smartstay.ennum.PaymentMethod;
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
+import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
 import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.repositories.QrBankTypeRepository;
@@ -79,6 +82,9 @@ public class BankingServiceV2 {
 
     @Autowired
     private QrBankTypeRepository qrBankTypeRepository;
+
+    @Autowired
+    private BankTransactionService transactionService;
 
     @Autowired
     private UploadFileToS3 uploadToS3;
@@ -423,6 +429,90 @@ public class BankingServiceV2 {
                 .map(mapper)
                 .collect(Collectors.toList());
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @Transactional
+    public ResponseEntity<?> addMoney(String hostelId, AddMoneyV2 payload) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (payload == null || payload.bankId() == null || payload.bankId().trim().isEmpty()) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (payload.amount() == null || payload.amount() <= 0) {
+            return new ResponseEntity<>(Utils.ADD_MONEY_AMOUNT_INVALID, HttpStatus.BAD_REQUEST);
+        }
+
+        String bankId = payload.bankId().trim();
+        double amount = payload.amount();
+
+        BankingV2 bank = validBankOrNull(hostelId, bankId);
+        if (bank == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!bank.isActive()) {
+            return new ResponseEntity<>(Utils.ADD_MONEY_ACCOUNT_INACTIVE, HttpStatus.BAD_REQUEST);
+        }
+
+        Date now = new Date();
+        String userId = user.getUserId();
+        String paymentMethodId = null;
+
+        if (isBankAccount(bank)) {
+            String methodId = payload.paymentMethodId() != null ? payload.paymentMethodId().trim() : null;
+            if (methodId == null || methodId.isEmpty()) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_PAYMENT_METHOD_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            BankingMethods method = bankingMethodsRepository.findById(methodId).orElse(null);
+            if (method == null) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_INVALID_PAYMENT_METHOD, HttpStatus.BAD_REQUEST);
+            }
+            if (method.getBank() == null || !bankId.equals(method.getBank().getBankId())) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_PAYMENT_METHOD_MISMATCH, HttpStatus.BAD_REQUEST);
+            }
+            paymentMethodId = methodId;
+
+            bankingMethodsRepository.addBalance(methodId, amount, now, userId);
+            bankingV2Repository.addBalance(bankId, amount, now, userId);
+        } else {
+            bankingV2Repository.addBalance(bankId, amount, now, userId);
+        }
+
+        BankTransactionsV1 latest = transactionService.getLatestTransaction(bankId, hostelId);
+        BankTransactionsV1 transaction = new BankTransactionsV1();
+        transaction.setBankId(bankId);
+        transaction.setHostelId(hostelId);
+        transaction.setType("CREDIT");
+        transaction.setSource(BankSource.DEPOSIT.name());
+        transaction.setAccountBalance(latest != null && latest.getAccountBalance() != null
+                ? latest.getAccountBalance() + amount : amount);
+        transaction.setAmount(amount);
+        transaction.setTransactionDate(now);
+        transaction.setCreatedAt(now);
+        transaction.setIsDeleted(false);
+        transaction.setCreatedBy(userId);
+        if (paymentMethodId != null) {
+            transaction.setSourceId(paymentMethodId);
+        }
+        transactionService.saveTransaction(transaction);
+
+        usersService.addUserLog(hostelId, bankId, ActivitySource.BANKING, ActivitySourceType.ADD_MONEY, user);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
     @Transactional(readOnly = true)

@@ -2,6 +2,7 @@ package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
+import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
 import com.smartstay.smartstay.services.BankingServiceV2;
 import com.smartstay.smartstay.services.QrBankTypeService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -111,5 +112,11 @@ public class BankingControllerV2 {
     @GetMapping("/allPaymentMethods/{hostelId}")
     public ResponseEntity<?> getAllPaymentMethods(@PathVariable("hostelId") String hostelId) {
         return bankingServiceV2.getAllPaymentMethods(hostelId);
+    }
+
+    @PutMapping("/addMoney/{hostelId}")
+    public ResponseEntity<?> addMoney(@PathVariable("hostelId") String hostelId,
+            @RequestBody(required = false) AddMoneyV2 payload) {
+        return bankingServiceV2.addMoney(hostelId, payload);
     }
 }

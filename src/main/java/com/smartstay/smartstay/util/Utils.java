@@ -158,6 +158,11 @@ public class Utils {
     public static final String BANKING_METHOD_BILLING_CYCLE_INVALID = "Billing cycle must be in DD/MM/YYYY format";
     public static final String BANKING_METHOD_UPI_ID_EXISTS = "This UPI id already exists for this bank";
     public static final String BANKING_METHOD_CARD_NUMBER_EXISTS = "This card number already exists for this bank";
+    public static final String ADD_MONEY_AMOUNT_INVALID = "Amount must be greater than 0";
+    public static final String ADD_MONEY_ACCOUNT_INACTIVE = "This account is inactive or deleted";
+    public static final String ADD_MONEY_PAYMENT_METHOD_REQUIRED = "Payment method id is required for a BANK account";
+    public static final String ADD_MONEY_INVALID_PAYMENT_METHOD = "Invalid payment method id";
+    public static final String ADD_MONEY_PAYMENT_METHOD_MISMATCH = "Payment method does not belong to the specified bank";
     public static final String CASH_ACCOUNT_ALREAY_EXISTS = "Cash Account already exists";
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
