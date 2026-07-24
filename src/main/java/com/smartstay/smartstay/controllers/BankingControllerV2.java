@@ -107,4 +107,9 @@ public class BankingControllerV2 {
             @PathVariable("bankId") String bankId) {
         return bankingServiceV2.getBankingMethods(hostelId, bankId);
     }
+
+    @GetMapping("/allPaymentMethods/{hostelId}")
+    public ResponseEntity<?> getAllPaymentMethods(@PathVariable("hostelId") String hostelId) {
+        return bankingServiceV2.getAllPaymentMethods(hostelId);
+    }
 }

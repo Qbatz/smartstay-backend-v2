@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.banking.AllPaymentMethodsMapper;
 import com.smartstay.smartstay.Wrappers.banking.BankingMethodsMapper;
 import com.smartstay.smartstay.Wrappers.banking.BankingV2Mapper;
 import com.smartstay.smartstay.config.Authentication;
@@ -7,6 +8,7 @@ import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.BankingMethods;
 import com.smartstay.smartstay.dao.BankingV2;
+import com.smartstay.smartstay.dao.QrBankType;
 import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.UserHostel;
 import com.smartstay.smartstay.dao.Users;
@@ -20,9 +22,11 @@ import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
 import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
+import com.smartstay.smartstay.repositories.QrBankTypeRepository;
 import com.smartstay.smartstay.responses.banking.BankV2ListResponse;
 import com.smartstay.smartstay.responses.banking.BankV2Response;
 import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
+import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
 import com.smartstay.smartstay.responses.banking.ResponsiblePersonResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,12 +39,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -69,6 +76,9 @@ public class BankingServiceV2 {
 
     @Autowired
     private BankingMethodsRepository bankingMethodsRepository;
+
+    @Autowired
+    private QrBankTypeRepository qrBankTypeRepository;
 
     @Autowired
     private UploadFileToS3 uploadToS3;
@@ -413,6 +423,117 @@ public class BankingServiceV2 {
                 .map(mapper)
                 .collect(Collectors.toList());
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getAllPaymentMethods(String hostelId) {
+        Users user = currentUser();
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        if (accounts.isEmpty()) {
+            return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+        }
+
+        List<BankingV2> cashAccounts = new ArrayList<>();
+        List<BankingV2> bankAccounts = new ArrayList<>();
+        for (BankingV2 account : accounts) {
+            if (BankAccountTypeV2.CASH.name().equalsIgnoreCase(account.getAccountType())) {
+                cashAccounts.add(account);
+            } else if (BankAccountTypeV2.BANK.name().equalsIgnoreCase(account.getAccountType())) {
+                bankAccounts.add(account);
+            }
+        }
+
+        List<String> bankIds = bankAccounts.stream().map(BankingV2::getBankId).collect(Collectors.toList());
+        Map<String, List<BankingMethods>> methodsByBankId = bankIds.isEmpty()
+                ? Collections.emptyMap()
+                : bankingMethodsRepository.findByBank_BankIdIn(bankIds).stream()
+                        .collect(Collectors.groupingBy(method -> method.getBank().getBankId()));
+
+        Set<Integer> qrTypeIds = new HashSet<>();
+        methodsByBankId.values().forEach(methods -> methods.forEach(method -> {
+            if (method.getCardNetwork() != null) {
+                qrTypeIds.add(method.getCardNetwork());
+            }
+            if (method.getUpiApp() != null) {
+                qrTypeIds.add(method.getUpiApp());
+            }
+        }));
+        Map<Integer, QrBankType> qrTypeById = qrTypeIds.isEmpty()
+                ? Collections.emptyMap()
+                : qrBankTypeRepository.findAllById(qrTypeIds).stream()
+                        .collect(Collectors.toMap(QrBankType::getId, Function.identity()));
+
+        List<String> personIds = accounts.stream()
+                .map(BankingV2::getResponsiblePerson)
+                .filter(id -> id != null && !id.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, Users> personById = personIds.isEmpty()
+                ? Collections.emptyMap()
+                : usersService.findUsersByUserIds(personIds).stream()
+                        .collect(Collectors.toMap(Users::getUserId, Function.identity(), (a, b) -> a));
+        List<Integer> roleIds = personById.values().stream()
+                .map(Users::getRoleId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Integer, String> roleNameById = roleIds.isEmpty()
+                ? Collections.emptyMap()
+                : rolesService.findRolesByIdsAndHostelId(roleIds, hostelId).stream()
+                        .collect(Collectors.toMap(RolesV1::getRoleId, RolesV1::getRoleName, (a, b) -> a));
+
+        AllPaymentMethodsMapper mapper = new AllPaymentMethodsMapper();
+        List<PaymentMethodOptionResponse> response = new ArrayList<>();
+
+        for (BankingV2 cash : cashAccounts) {
+            response.add(mapper.cash(cash, responsiblePersonName(cash, personById, roleNameById)));
+        }
+
+        for (BankingV2 bank : bankAccounts) {
+            List<BankingMethods> methods = methodsByBankId.get(bank.getBankId());
+            if (methods == null || methods.isEmpty()) {
+                continue;
+            }
+            String personName = responsiblePersonName(bank, personById, roleNameById);
+            for (BankingMethods method : methods) {
+                QrBankType cardNetworkType = method.getCardNetwork() != null
+                        ? qrTypeById.get(method.getCardNetwork()) : null;
+                QrBankType upiAppType = method.getUpiApp() != null
+                        ? qrTypeById.get(method.getUpiApp()) : null;
+                String cardNetwork = cardNetworkType != null ? cardNetworkType.getName() : null;
+                String upiApp = upiAppType != null ? upiAppType.getName() : null;
+                String qrCardImage = cardNetworkType != null ? cardNetworkType.getImage()
+                        : (upiAppType != null ? upiAppType.getImage() : null);
+                response.add(mapper.bankMethod(bank, method, cardNetwork, upiApp, qrCardImage, personName));
+            }
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private String responsiblePersonName(BankingV2 bank, Map<String, Users> personById,
+            Map<Integer, String> roleNameById) {
+        String personId = bank.getResponsiblePerson();
+        if (personId == null || personId.isEmpty()) {
+            return null;
+        }
+        Users person = personById.get(personId);
+        if (person == null) {
+            return null;
+        }
+        String name = ((person.getFirstName() != null ? person.getFirstName() : "") + " "
+                + (person.getLastName() != null ? person.getLastName() : "")).trim();
+        String roleName = roleNameById.get(person.getRoleId());
+        if (roleName != null && !roleName.isEmpty()) {
+            return name.isEmpty() ? roleName : name + " - " + roleName;
+        }
+        return name.isEmpty() ? null : name;
     }
 
     private String trimToNull(String value) {

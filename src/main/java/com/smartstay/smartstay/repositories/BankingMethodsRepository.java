@@ -11,6 +11,8 @@ public interface BankingMethodsRepository extends JpaRepository<BankingMethods, 
 
     List<BankingMethods> findByBank_BankIdOrderByCreatedAtAsc(String bankId);
 
+    List<BankingMethods> findByBank_BankIdIn(List<String> bankIds);
+
     boolean existsByBank_BankIdAndHostelIdAndUpiIdIgnoreCase(String bankId, String hostelId, String upiId);
 
     boolean existsByBank_BankIdAndHostelIdAndCardNumber(String bankId, String hostelId, String cardNumber);
