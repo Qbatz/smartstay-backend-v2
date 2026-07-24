@@ -18,11 +18,13 @@ import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BankAccountTypeV2;
 import com.smartstay.smartstay.ennum.BankPurpose;
 import com.smartstay.smartstay.ennum.BankSource;
+import com.smartstay.smartstay.ennum.BankTransactionType;
 import com.smartstay.smartstay.ennum.CashAccountType;
 import com.smartstay.smartstay.ennum.PaymentMethod;
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
 import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
+import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
 import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.repositories.QrBankTypeRepository;
@@ -40,6 +42,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -529,6 +532,179 @@ public class BankingServiceV2 {
         usersService.addUserLog(hostelId, bankId, ActivitySource.BANKING, ActivitySourceType.ADD_MONEY, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+
+    @Transactional
+    public ResponseEntity<?> moneyTransfer(String hostelId, MoneyTransferV2 payload) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (payload == null
+                || payload.fromBankId() == null || payload.fromBankId().trim().isEmpty()
+                || payload.toBankId() == null || payload.toBankId().trim().isEmpty()) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (payload.amount() == null || payload.amount() <= 0) {
+            return new ResponseEntity<>(Utils.ADD_MONEY_AMOUNT_INVALID, HttpStatus.BAD_REQUEST);
+        }
+
+        String fromId = payload.fromBankId().trim();
+        String toId = payload.toBankId().trim();
+        double amount = payload.amount();
+
+        if (fromId.equals(toId)) {
+            return new ResponseEntity<>(Utils.TRANSFER_SAME_ACCOUNT, HttpStatus.BAD_REQUEST);
+        }
+
+        EndpointResult from = resolveEndpoint(hostelId, fromId, true);
+        if (from.error() != null) {
+            return new ResponseEntity<>(from.error(), HttpStatus.BAD_REQUEST);
+        }
+        EndpointResult to = resolveEndpoint(hostelId, toId, false);
+        if (to.error() != null) {
+            return new ResponseEntity<>(to.error(), HttpStatus.BAD_REQUEST);
+        }
+        TransferEndpoint source = from.endpoint();
+        TransferEndpoint destination = to.endpoint();
+
+        if (source.balance() < amount) {
+            return new ResponseEntity<>(Utils.TRANSFER_INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);
+        }
+
+        Date now = new Date();
+        String userId = user.getUserId();
+
+        boolean debited;
+        if (source.cash()) {
+            debited = bankingV2Repository.deductBalance(source.identifier(), amount, now, userId) > 0;
+        } else {
+            debited = bankingMethodsRepository.deductBalance(source.identifier(), amount, now, userId) > 0
+                    && bankingV2Repository.deductBalance(source.parentBankId(), amount, now, userId) > 0;
+        }
+        if (!debited) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return new ResponseEntity<>(Utils.TRANSFER_INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (destination.cash()) {
+            bankingV2Repository.addBalance(destination.identifier(), amount, now, userId);
+        } else {
+            bankingMethodsRepository.addBalance(destination.identifier(), amount, now, userId);
+            bankingV2Repository.addBalance(destination.parentBankId(), amount, now, userId);
+        }
+
+        BankTransactionsV1 sourceLatest = transactionService.getLatestTransaction(source.txnBankId(), hostelId);
+        BankTransactionsV1 debit = new BankTransactionsV1();
+        debit.setBankId(source.txnBankId());
+        debit.setHostelId(hostelId);
+        debit.setType(BankTransactionType.DEBIT.name());
+        debit.setSource(BankSource.SELF_TRANSFER.name());
+        debit.setAccountBalance(sourceLatest != null && sourceLatest.getAccountBalance() != null
+                ? sourceLatest.getAccountBalance() - amount : source.balance() - amount);
+        debit.setAmount(amount);
+        debit.setTransactionDate(now);
+        debit.setCreatedAt(now);
+        debit.setIsDeleted(false);
+        debit.setCreatedBy(userId);
+        if (source.txnSourceId() != null) {
+            debit.setSourceId(source.txnSourceId());
+        }
+        transactionService.saveTransaction(debit);
+
+        BankTransactionsV1 destLatest = transactionService.getLatestTransaction(destination.txnBankId(), hostelId);
+        BankTransactionsV1 credit = new BankTransactionsV1();
+        credit.setBankId(destination.txnBankId());
+        credit.setHostelId(hostelId);
+        credit.setType(BankTransactionType.CREDIT.name());
+        credit.setSource(BankSource.SELF_TRANSFER.name());
+        credit.setAccountBalance(destLatest != null && destLatest.getAccountBalance() != null
+                ? destLatest.getAccountBalance() + amount : amount);
+        credit.setAmount(amount);
+        credit.setTransactionDate(now);
+        credit.setCreatedAt(now);
+        credit.setIsDeleted(false);
+        credit.setCreatedBy(userId);
+        if (destination.txnSourceId() != null) {
+            credit.setSourceId(destination.txnSourceId());
+        }
+        transactionService.saveTransaction(credit);
+
+        usersService.addUserLog(hostelId, source.txnBankId(), ActivitySource.BANKING, ActivitySourceType.TRANSFER, user);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    private EndpointResult resolveEndpoint(String hostelId, String identifier, boolean isSource) {
+        String invalid = isSource ? Utils.TRANSFER_INVALID_SOURCE : Utils.TRANSFER_INVALID_DESTINATION;
+
+        Optional<BankingV2> bankOpt = bankingV2Repository.findById(identifier);
+        if (bankOpt.isPresent()) {
+            BankingV2 bank = bankOpt.get();
+            if (bank.isDeleted() || !hostelId.equals(bank.getHostelId())) {
+                return EndpointResult.fail(invalid);
+            }
+            if (BankAccountTypeV2.BANK.name().equalsIgnoreCase(bank.getAccountType())) {
+                return EndpointResult.fail(Utils.TRANSFER_BANK_ACCOUNT_NOT_ALLOWED);
+            }
+            if (!bank.isActive()) {
+                return EndpointResult.fail(Utils.TRANSFER_ACCOUNT_INACTIVE);
+            }
+            double balance = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            return EndpointResult.ok(new TransferEndpoint(true, identifier, null, balance));
+        }
+
+        Optional<BankingMethods> methodOpt = bankingMethodsRepository.findById(identifier);
+        if (methodOpt.isPresent()) {
+            BankingMethods method = methodOpt.get();
+            BankingV2 parent = method.getBank();
+            if (parent == null || parent.isDeleted()
+                    || !hostelId.equals(parent.getHostelId())
+                    || !hostelId.equals(method.getHostelId())) {
+                return EndpointResult.fail(invalid);
+            }
+            if (!parent.isActive()) {
+                return EndpointResult.fail(Utils.TRANSFER_ACCOUNT_INACTIVE);
+            }
+            double balance = method.getBalance() != null ? method.getBalance() : 0.0;
+            return EndpointResult.ok(new TransferEndpoint(false, identifier, parent.getBankId(), balance));
+        }
+
+        return EndpointResult.fail(invalid);
+    }
+
+    private record TransferEndpoint(boolean cash, String identifier, String parentBankId, double balance) {
+        String txnBankId() {
+            return cash ? identifier : parentBankId;
+        }
+
+        String txnSourceId() {
+            return cash ? null : identifier;
+        }
+    }
+
+    private record EndpointResult(TransferEndpoint endpoint, String error) {
+        static EndpointResult ok(TransferEndpoint endpoint) {
+            return new EndpointResult(endpoint, null);
+        }
+
+        static EndpointResult fail(String error) {
+            return new EndpointResult(null, error);
+        }
     }
 
     @Transactional(readOnly = true)

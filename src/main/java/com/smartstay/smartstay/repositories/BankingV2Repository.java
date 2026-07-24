@@ -29,4 +29,10 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
             "b.updatedAt = :now, b.updatedBy = :userId WHERE b.bankId = :bankId")
     int addBalance(@Param("bankId") String bankId, @Param("amount") double amount,
             @Param("now") Date now, @Param("userId") String userId);
+
+    @Modifying
+    @Query("UPDATE BankingV2 b SET b.balance = b.balance - :amount, " +
+            "b.updatedAt = :now, b.updatedBy = :userId WHERE b.bankId = :bankId AND b.balance >= :amount")
+    int deductBalance(@Param("bankId") String bankId, @Param("amount") double amount,
+            @Param("now") Date now, @Param("userId") String userId);
 }

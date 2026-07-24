@@ -26,4 +26,11 @@ public interface BankingMethodsRepository extends JpaRepository<BankingMethods, 
             "m.updatedAt = :now, m.updatedBy = :userId WHERE m.paymentMethodId = :paymentMethodId")
     int addBalance(@Param("paymentMethodId") String paymentMethodId, @Param("amount") double amount,
             @Param("now") Date now, @Param("userId") String userId);
+
+    @Modifying
+    @Query("UPDATE BankingMethods m SET m.balance = m.balance - :amount, " +
+            "m.updatedAt = :now, m.updatedBy = :userId " +
+            "WHERE m.paymentMethodId = :paymentMethodId AND m.balance >= :amount")
+    int deductBalance(@Param("paymentMethodId") String paymentMethodId, @Param("amount") double amount,
+            @Param("now") Date now, @Param("userId") String userId);
 }

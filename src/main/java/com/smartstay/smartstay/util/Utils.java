@@ -163,6 +163,12 @@ public class Utils {
     public static final String ADD_MONEY_PAYMENT_METHOD_REQUIRED = "Payment method id is required for a BANK account";
     public static final String ADD_MONEY_INVALID_PAYMENT_METHOD = "Invalid payment method id";
     public static final String ADD_MONEY_PAYMENT_METHOD_MISMATCH = "Payment method does not belong to the specified bank";
+    public static final String TRANSFER_INVALID_SOURCE = "Invalid source account";
+    public static final String TRANSFER_INVALID_DESTINATION = "Invalid destination account";
+    public static final String TRANSFER_BANK_ACCOUNT_NOT_ALLOWED = "A BANK account cannot be used directly; use its payment method instead";
+    public static final String TRANSFER_ACCOUNT_INACTIVE = "This account or payment method is inactive";
+    public static final String TRANSFER_SAME_ACCOUNT = "Source and destination cannot be the same";
+    public static final String TRANSFER_INSUFFICIENT_BALANCE = "Insufficient balance to complete the transfer";
     public static final String CASH_ACCOUNT_ALREAY_EXISTS = "Cash Account already exists";
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
