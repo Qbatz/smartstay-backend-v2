@@ -42,7 +42,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -505,10 +504,10 @@ public class BankingServiceV2 {
             }
             paymentMethodId = methodId;
 
-            bankingMethodsRepository.addBalance(methodId, amount, now, userId);
-            bankingV2Repository.addBalance(bankId, amount, now, userId);
+            applyMethodDelta(method, amount, now, userId);
+            applyBankDelta(bank, amount, now, userId);
         } else {
-            bankingV2Repository.addBalance(bankId, amount, now, userId);
+            applyBankDelta(bank, amount, now, userId);
         }
 
         BankTransactionsV1 latest = transactionService.getLatestTransaction(bankId, hostelId);
@@ -589,23 +588,19 @@ public class BankingServiceV2 {
         Date now = new Date();
         String userId = user.getUserId();
 
-        boolean debited;
+
         if (source.cash()) {
-            debited = bankingV2Repository.deductBalance(source.identifier(), amount, now, userId) > 0;
+            applyBankDelta(source.cashAccount(), -amount, now, userId);
         } else {
-            debited = bankingMethodsRepository.deductBalance(source.identifier(), amount, now, userId) > 0
-                    && bankingV2Repository.deductBalance(source.parentBankId(), amount, now, userId) > 0;
-        }
-        if (!debited) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return new ResponseEntity<>(Utils.TRANSFER_INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);
+            applyMethodDelta(source.method(), -amount, now, userId);
+            applyBankDelta(source.parentBank(), -amount, now, userId);
         }
 
         if (destination.cash()) {
-            bankingV2Repository.addBalance(destination.identifier(), amount, now, userId);
+            applyBankDelta(destination.cashAccount(), amount, now, userId);
         } else {
-            bankingMethodsRepository.addBalance(destination.identifier(), amount, now, userId);
-            bankingV2Repository.addBalance(destination.parentBankId(), amount, now, userId);
+            applyMethodDelta(destination.method(), amount, now, userId);
+            applyBankDelta(destination.parentBank(), amount, now, userId);
         }
 
         BankTransactionsV1 sourceLatest = transactionService.getLatestTransaction(source.txnBankId(), hostelId);
@@ -649,6 +644,22 @@ public class BankingServiceV2 {
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
+    private void applyBankDelta(BankingV2 bank, double delta, Date now, String userId) {
+        double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+        bank.setBalance(current + delta);
+        bank.setUpdatedAt(now);
+        bank.setUpdatedBy(userId);
+        bankingV2Repository.save(bank);
+    }
+
+    private void applyMethodDelta(BankingMethods method, double delta, Date now, String userId) {
+        double current = method.getBalance() != null ? method.getBalance() : 0.0;
+        method.setBalance(current + delta);
+        method.setUpdatedAt(now);
+        method.setUpdatedBy(userId);
+        bankingMethodsRepository.save(method);
+    }
+
     private EndpointResult resolveEndpoint(String hostelId, String identifier, boolean isSource) {
         String invalid = isSource ? Utils.TRANSFER_INVALID_SOURCE : Utils.TRANSFER_INVALID_DESTINATION;
 
@@ -664,8 +675,7 @@ public class BankingServiceV2 {
             if (!bank.isActive()) {
                 return EndpointResult.fail(Utils.TRANSFER_ACCOUNT_INACTIVE);
             }
-            double balance = bank.getBalance() != null ? bank.getBalance() : 0.0;
-            return EndpointResult.ok(new TransferEndpoint(true, identifier, null, balance));
+            return EndpointResult.ok(new TransferEndpoint(bank, null, null));
         }
 
         Optional<BankingMethods> methodOpt = bankingMethodsRepository.findById(identifier);
@@ -680,20 +690,28 @@ public class BankingServiceV2 {
             if (!parent.isActive()) {
                 return EndpointResult.fail(Utils.TRANSFER_ACCOUNT_INACTIVE);
             }
-            double balance = method.getBalance() != null ? method.getBalance() : 0.0;
-            return EndpointResult.ok(new TransferEndpoint(false, identifier, parent.getBankId(), balance));
+            return EndpointResult.ok(new TransferEndpoint(null, method, parent));
         }
 
         return EndpointResult.fail(invalid);
     }
 
-    private record TransferEndpoint(boolean cash, String identifier, String parentBankId, double balance) {
+    private record TransferEndpoint(BankingV2 cashAccount, BankingMethods method, BankingV2 parentBank) {
+        boolean cash() {
+            return cashAccount != null;
+        }
+
+        double balance() {
+            Double balance = cash() ? cashAccount.getBalance() : method.getBalance();
+            return balance != null ? balance : 0.0;
+        }
+
         String txnBankId() {
-            return cash ? identifier : parentBankId;
+            return cash() ? cashAccount.getBankId() : parentBank.getBankId();
         }
 
         String txnSourceId() {
-            return cash ? null : identifier;
+            return cash() ? null : method.getPaymentMethodId();
         }
     }
 
