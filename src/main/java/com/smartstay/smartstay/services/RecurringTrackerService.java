@@ -56,10 +56,7 @@ public class RecurringTrackerService {
         if (listRecurringForHostel == null) {
             return true;
         }
-        else if (listRecurringForHostel.isEmpty()) {
-            return true;
-        }
-        return false;
+        else return listRecurringForHostel.isEmpty();
     }
 
     public boolean canGeneratePostpaidInvoice(String hostelId, Date date) {
@@ -67,9 +64,6 @@ public class RecurringTrackerService {
         if (listRecurringForHostel == null) {
             return true;
         }
-        else if (listRecurringForHostel.isEmpty()) {
-            return true;
-        }
-        return false;
+        else return listRecurringForHostel.isEmpty();
     }
 }

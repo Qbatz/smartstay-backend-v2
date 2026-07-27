@@ -12,6 +12,10 @@ import java.util.List;
 @Builder
 public class ExpenseReportResponse {
     private String hostelId;
+    private int totalRecords;
+    private int totalPages;
+    private int currentPage;
+    private int itemsPerPage;
     private FiltersData filtersData;
     private Summary summary;
     private Pagination pagination;
@@ -43,6 +47,7 @@ public class ExpenseReportResponse {
     @NoArgsConstructor
     @Builder
     public static class SubCategoryFilter {
+        private Long categoryId;
         private Long subCategoryId;
         private String subCategoryName;
     }

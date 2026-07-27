@@ -8,7 +8,7 @@ import java.util.Date;
 import java.util.function.Function;
 
 public class AddAdminUsersMapper implements Function<AddAdminPayload, Users> {
-    private Users users;
+    private final Users users;
 
     public AddAdminUsersMapper(Users users) {
         this.users = users;

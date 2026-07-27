@@ -93,7 +93,7 @@ public class UsersService {
     @Autowired
     private UserActivitiesService userActivitiesService;
 
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
     private final RestTemplate restTemplate;
 
@@ -186,11 +186,7 @@ public class UsersService {
             if (config == null) {
                 isPinSetup = false;
             } else {
-                if (config.getPin() == null) {
-                    isPinSetup = false;
-                } else {
-                    isPinSetup = true;
-                }
+                isPinSetup = config.getPin() != null;
             }
             MobileLogin mobileLogin = new MobileLogin(users.getUserId(), isPinSetup);
             userActivitiesService.addMobileLoginLog(null, null, ActivitySource.PROFILE.name(),
@@ -271,10 +267,10 @@ public class UsersService {
 
                 return new ResponseEntity<>(jwtService.generateToken(authentication.getName(), claims), HttpStatus.OK);
             } else {
-                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+                return new ResponseEntity<>(Utils.INVALID_USER_NAME_PASSWORD, HttpStatus.FORBIDDEN);
             }
         } else {
-            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(Utils.INVALID_USER_NAME_PASSWORD, HttpStatus.FORBIDDEN);
         }
 
     }
@@ -551,10 +547,7 @@ public class UsersService {
     }
 
     public boolean checkUUID(String uuid) {
-        if (userRepository.findUserByParentId(uuid) == null) {
-            return false;
-        }
-        return true;
+        return userRepository.findUserByParentId(uuid) != null;
     }
 
     public String configUUID() {

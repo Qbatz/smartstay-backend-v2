@@ -227,7 +227,7 @@ public class CustomerDocumentsService {
             return new ResponseEntity<>(Utils.INVALID_DOCUMENT_ID, HttpStatus.BAD_REQUEST);
         }
 
-        Long docId = 0l;
+        Long docId = 0L;
         try {
             docId = Long.valueOf(documentId);
         }

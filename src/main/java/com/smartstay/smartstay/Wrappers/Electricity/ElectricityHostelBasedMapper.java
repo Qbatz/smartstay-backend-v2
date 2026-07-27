@@ -9,8 +9,8 @@ import java.util.function.Function;
 
 public class ElectricityHostelBasedMapper implements Function<RoomInfoForEB, ElectricityUsage> {
     private int size = 1;
-    private String hostelId;
-    private ElectricityReadings electricityReadings;
+    private final String hostelId;
+    private final ElectricityReadings electricityReadings;
 
     public ElectricityHostelBasedMapper(int size, String hostelId, ElectricityReadings readings) {
         this.size = size;

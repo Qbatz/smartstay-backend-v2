@@ -6,8 +6,8 @@ import org.springframework.context.ApplicationEvent;
 import java.util.Date;
 
 public class AddEbEvents extends ApplicationEvent {
-    private String hostelId;
-    private Integer roomId;
+    private final String hostelId;
+    private final Integer roomId;
     private ElectricityReadings electricityReadings;
 
     public AddEbEvents(Object source, String hostelId, Integer roomId, ElectricityReadings electricityReadings) {

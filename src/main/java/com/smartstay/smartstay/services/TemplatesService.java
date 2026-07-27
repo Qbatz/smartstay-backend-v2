@@ -67,10 +67,8 @@ public class TemplatesService {
     public int initialTemplateSetup(com.smartstay.smartstay.payloads.templates.BillTemplates tmpl) {
 
         String hostelName = tmpl.hostelName();
-        StringBuilder findPrefix = new StringBuilder();
-        StringBuilder findPrefixRent = new StringBuilder();
-        findPrefix.append("ADV");
-        findPrefixRent.append("INV");
+        String findPrefix = "ADV";
+        String findPrefixRent = "INV";
 //        if (hostelName.length() > 3) {
 //            String hostelNameShort = hostelName.replaceAll(" ", "").substring(0, 4).toUpperCase();
 //            findPrefixRent.append(hostelNameShort);
@@ -99,7 +97,7 @@ public class TemplatesService {
 
         BillTemplateType templateType = new BillTemplateType();
         templateType.setInvoiceType(BillConfigTypes.ADVANCE.name());
-        templateType.setInvoicePrefix(findPrefix.toString());
+        templateType.setInvoicePrefix(findPrefix);
         templateType.setInvoiceSuffix("001");
         templateType.setGstPercentage(0.0);
         templateType.setCgst(0.0);
@@ -114,7 +112,7 @@ public class TemplatesService {
 
         BillTemplateType templateType1 = new BillTemplateType();
         templateType1.setInvoiceType(BillConfigTypes.RENTAL.name());
-        templateType1.setInvoicePrefix(findPrefixRent.toString());
+        templateType1.setInvoicePrefix(findPrefixRent);
         templateType1.setInvoiceSuffix("001");
         templateType1.setGstPercentage(0.0);
         templateType1.setCgst(0.0);

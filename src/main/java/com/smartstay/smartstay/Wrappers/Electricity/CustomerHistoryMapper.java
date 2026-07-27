@@ -9,8 +9,8 @@ import java.util.function.Function;
 public class CustomerHistoryMapper implements Function<ElectricityHistoryBySingleCustomer, CustomersElectricityHistory> {
     @Override
     public CustomersElectricityHistory apply(ElectricityHistoryBySingleCustomer electricityHistoryBySingleCustomer) {
-        Double amount = Math.round(electricityHistoryBySingleCustomer.getAmount() * 100.0)/100.0;;
-        Double consumption = Math.round(electricityHistoryBySingleCustomer.getConsumption() * 100.0)/100.0;;
+        Double amount = Math.round(electricityHistoryBySingleCustomer.getAmount() * 100.0)/100.0;
+        Double consumption = Math.round(electricityHistoryBySingleCustomer.getConsumption() * 100.0)/100.0;
 
 
         return new CustomersElectricityHistory(electricityHistoryBySingleCustomer.getId(),

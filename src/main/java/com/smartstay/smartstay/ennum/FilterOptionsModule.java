@@ -5,5 +5,5 @@ public enum FilterOptionsModule {
     MODULE_BOOKINGS,
     MODULE_INVOICE,
     MODULE_VENDOR,
-    MODULE_EXPENSE;
+    MODULE_EXPENSE
 }

@@ -8,5 +8,5 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RoomCount {
-    Long count = 0l;
+    Long count = 0L;
 }

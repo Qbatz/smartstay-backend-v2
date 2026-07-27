@@ -44,10 +44,7 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                     if (i.getEndDate() == null){
                         return true;
                     }
-                    if (Utils.compareWithTwoDates(i.getEndDate(), new Date()) < 0) {
-                        return false;
-                    }
-                    return true;
+                    return Utils.compareWithTwoDates(i.getEndDate(), new Date()) >= 0;
                 })
                 .map(CustomersAmenity::getCustomerId)
                 .toList();

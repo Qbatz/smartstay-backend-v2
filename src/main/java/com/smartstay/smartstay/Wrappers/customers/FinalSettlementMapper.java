@@ -40,10 +40,7 @@ public class FinalSettlementMapper implements Function<InvoicesV1, RentBreakUp> 
                    if (i.getEndDate() == null) {
                        return true;
                    }
-                   if (Utils.compareWithTwoDates(i.getStartDate(), invoicesV1.getInvoiceStartDate()) <= 0 && Utils.compareWithTwoDates(i.getEndDate(), invoicesV1.getInvoiceEndDate()) == 0) {
-                       return true;
-                   }
-                   return false;
+                    return Utils.compareWithTwoDates(i.getStartDate(), invoicesV1.getInvoiceStartDate()) <= 0 && Utils.compareWithTwoDates(i.getEndDate(), invoicesV1.getInvoiceEndDate()) == 0;
                 })
                 .limit(1)
                 .toList();

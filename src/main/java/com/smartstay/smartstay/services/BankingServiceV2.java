@@ -1,6 +1,6 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.banking.BankingV2Mapper;
+import com.smartstay.smartstay.Wrappers.Banking.BankingV2Mapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.dao.RolesV1;

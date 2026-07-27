@@ -615,14 +615,10 @@ public class BankingService {
             return false;
         }
 
-        if (fromBank.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())
-                && toBank.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())
-                && fromBank.getUpiId() != null
-                && fromBank.getUpiId().equalsIgnoreCase(toBank.getUpiId())) {
-            return false;
-        }
-
-        return true;
+        return !fromBank.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())
+                || !toBank.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())
+                || fromBank.getUpiId() == null
+                || !fromBank.getUpiId().equalsIgnoreCase(toBank.getUpiId());
     }
 
     private Bank mapBankWithLatestBalance(BankingV1 bankingV1, String hostelId) {

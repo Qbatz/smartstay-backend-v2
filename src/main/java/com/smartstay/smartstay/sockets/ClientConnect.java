@@ -30,14 +30,14 @@ public class ClientConnect {
         WebSocketStompClient stompClient = new WebSocketStompClient(new StandardWebSocketClient());
         stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 
-        String baseUrl = "wss://paymentdev.qbatz.com//ws";
+        String baseUrl = "wss://paymentdev.qbatz.com/ws";
 //        "wss://payment.qbatz.com/ws",
         if (environment.equalsIgnoreCase("PROD")) {
-            baseUrl = "wss://payment.qbatz.com//ws";
+            baseUrl = "wss://payment.qbatz.com/ws";
         }
 
         StompSession session = stompClient.connectAsync(
-                "wss://paymentdev.qbatz.com//ws",
+                "wss://paymentdev.qbatz.com/ws",
                 new StompSessionHandlerAdapter() {
                     @Override
                     public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
@@ -67,8 +67,7 @@ public class ClientConnect {
             @Override
             public void handleFrame(StompHeaders headers, Object payload) {
                 if (payload instanceof ZohoPaymentResponse paymentDetails) {
-                    ZohoPaymentResponse paymentResponse = (ZohoPaymentResponse) payload;
-                    if (paymentResponse.linkId() == null) {
+                    if (paymentDetails.linkId() == null) {
 //                        orderHistoryService.successfullMobilePayment(payload);
                         messagingTemplate.convertAndSend("/payments/" + paymentDetails.paymentSessionId(), "success");
                     }
