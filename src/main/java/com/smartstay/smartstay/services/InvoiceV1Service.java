@@ -771,92 +771,69 @@ public class InvoiceV1Service {
     }
 
     public InvoiceSummaryInfo getSummary(String hostelId, Integer totalInvoices, List<InvoicesV1> invoiceList) {
+        if (invoiceList == null) {
+            return new InvoiceSummaryInfo(totalInvoices, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        }
+
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+        List<InvoicesV1> validInvoices = invoiceList.stream()
+                .filter(i -> !i.isCancelled())
+                .toList();
+
+        Double totalAmount = validInvoices.stream()
+                .mapToDouble(i -> i.getTotalAmount() != null ? i.getTotalAmount() : 0.0)
+                .sum();
+
+        Double totalPaidAmount = validInvoices.stream()
+                .mapToDouble(i -> i.getPaidAmount() != null ? i.getPaidAmount() : 0.0)
+                .sum();
+
+        Double outstandingAmount = totalAmount - totalPaidAmount;
+
+        Double collectedThisMonth = 0.0;
+        Double dueToday = 0.0;
+        Double overDueToday = 0.0;
+
         if (billingDates != null) {
-            Double collectedThisMonth = 0.0;
-            Double dueToday = 0.0;
-            Double overDueToday = 0.0;
-            Double totalAmount = 0.0;
-            Double outstandingAmount = 0.0;
-            List<InvoicesV1> thisMonthInvoices = invoiceList
-                    .stream()
-                    .filter(i -> Utils.compareWithTwoDates(i.getInvoiceStartDate(),billingDates.currentBillStartDate()) >= 0)
-                    .toList();
-            totalAmount = invoiceList
-                    .stream()
-                    .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
-                        }
-                        return 0.0;
-                    })
+            collectedThisMonth = validInvoices.stream()
+                    .filter(i -> Utils.compareWithTwoDates(i.getInvoiceStartDate(), billingDates.currentBillStartDate()) >= 0)
+                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                    .mapToDouble(i -> i.getPaidAmount() != null ? i.getPaidAmount() : 0.0)
                     .sum();
 
-            if (thisMonthInvoices == null) {
-                thisMonthInvoices = new ArrayList<>();
-            }
-            List<InvoicesV1> thisMonthPaid = thisMonthInvoices
-                    .stream()
-                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
-                    .toList();
-            if (thisMonthPaid == null) {
-                thisMonthPaid = new ArrayList<>();
-            }
-            collectedThisMonth = thisMonthPaid
-                    .stream()
-                    .mapToDouble(i -> {
-                        if (i.getPaidAmount() != null) {
-                            return i.getPaidAmount();
-                        }
-                        return 0.0;
-                    })
-                    .sum();
-            List<InvoicesV1> invoicesDueToday = invoiceList
-                    .stream()
+            dueToday = validInvoices.stream()
                     .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
                     .filter(i -> i.getInvoiceDueDate() != null)
                     .filter(i -> Utils.compareWithTwoDates(i.getInvoiceStartDate(), billingDates.currentBillStartDate()) >= 0)
                     .filter(i -> Utils.compareWithTwoDates(i.getInvoiceDueDate(), new Date()) <= 0)
-                    .toList();
-            if (invoicesDueToday != null) {
-                dueToday = invoicesDueToday
-                        .stream()
-                        .mapToDouble(i -> {
-                            if (i.getPaidAmount() != null) {
-                                return i.getTotalAmount() - i.getPaidAmount();
-                            }
-                            return i.getTotalAmount();
-                        })
-                        .sum();
-                outstandingAmount = totalAmount - dueToday;
-                List<InvoicesV1> overDueInvoices = invoiceList
-                        .stream()
-                        .filter(i -> Utils.compareWithTwoDates(i.getInvoiceEndDate(), billingDates.currentBillStartDate()) <= 0)
-                        .toList();
-                if (overDueInvoices != null) {
-                    overDueToday = overDueInvoices
-                            .stream()
-                            .mapToDouble(i -> {
-                                if (i.getPaidAmount() != null) {
-                                    return i.getTotalAmount() - i.getPaidAmount();
-                                }
-                                return i.getTotalAmount();
-                            })
-                            .sum();
-                    outstandingAmount = outstandingAmount - overDueToday;
-                }
-            }
-            return new InvoiceSummaryInfo(totalInvoices,
-                    collectedThisMonth,
-                    dueToday,
-                    overDueToday,
-                    outstandingAmount,
-                    totalAmount,
-                    0.0);
+                    .mapToDouble(i -> {
+                        double total = i.getTotalAmount() != null ? i.getTotalAmount() : 0.0;
+                        double paid = i.getPaidAmount() != null ? i.getPaidAmount() : 0.0;
+                        return total - paid;
+                    })
+                    .sum();
 
+            overDueToday = validInvoices.stream()
+                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                    .filter(i -> i.getInvoiceDueDate() != null && Utils.compareWithTwoDates(i.getInvoiceDueDate(), new Date()) < 0)
+                    .mapToDouble(i -> {
+                        double total = i.getTotalAmount() != null ? i.getTotalAmount() : 0.0;
+                        double paid = i.getPaidAmount() != null ? i.getPaidAmount() : 0.0;
+                        return total - paid;
+                    })
+                    .sum();
         }
-        return null;
+
+        return new InvoiceSummaryInfo(totalInvoices,
+                collectedThisMonth,
+                dueToday,
+                overDueToday,
+                outstandingAmount,
+                totalAmount,
+                0.0);
     }
+
 
     public int recordPayment(String invoiceId, String status, double amount) {
         InvoicesV1 invoice = invoicesV1Repository.findById(invoiceId).orElse(null);
