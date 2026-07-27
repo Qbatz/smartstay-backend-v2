@@ -7,10 +7,7 @@ import com.smartstay.smartstay.dto.Bookings;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
-import com.smartstay.smartstay.dto.booking.BedBookingStatus;
-import com.smartstay.smartstay.dto.booking.BookedCustomer;
-import com.smartstay.smartstay.dto.booking.BookedCustomerInfoElectricity;
-import com.smartstay.smartstay.dto.booking.CustomerInfo;
+import com.smartstay.smartstay.dto.booking.*;
 import com.smartstay.smartstay.dto.customer.CancelBookingDto;
 import com.smartstay.smartstay.dto.customer.CustomersBookingDetails;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
@@ -61,6 +58,8 @@ public class BookingsService {
     private BedsService bedsService;
     @Autowired
     private InvoiceV1Service invoiceService;
+    @Autowired
+    private com.smartstay.smartstay.repositories.InvoicesV1Repository invoicesV1Repository;
     private CustomersService customersService;
     @Autowired
     private CreditDebitNoteService creditDebitNoteService;
@@ -961,55 +960,17 @@ public class BookingsService {
         if (customers == null) {
             return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
         }
-        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
-            return new ResponseEntity<>(Utils.CANNOT_CHANGE_JOINING_DATE_VACATED_CUSTOMERS, HttpStatus.BAD_REQUEST);
-        }
-        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
-            return new ResponseEntity<>(Utils.CANNOT_CHANGE_JOINING_DATE_SETTLEMENT_CUSTOMERS, HttpStatus.BAD_REQUEST);
-        }
-        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
-            return new ResponseEntity<>(Utils.CANNOT_CHANGE_JOINING_DATE_CANCELLED_CUSTOMERS, HttpStatus.BAD_REQUEST);
-        }
-
         if (updateInfo == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
-
         if (updateInfo.joiningDate() != null && !updateInfo.joiningDate().equalsIgnoreCase("")) {
 
-            if (customersBedHistoryService.hasReassignedHistory(customers.getCustomerId())) {
-                return new ResponseEntity<>(Utils.CUSTOMER_DID_THE_BED_CHANGE, HttpStatus.BAD_REQUEST);
-            }
             Date joinigDate = Utils.stringToDate(updateInfo.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-
             BillingDates currentMonthBilling = hostelService.getCurrentBillStartAndEndDates(hostelId);
 
-            if (currentMonthBilling != null
-                    && currentMonthBilling.billingModel() != null
-                    && currentMonthBilling.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
-
-                // 1. PrePaid + joining-date-based
-                if (currentMonthBilling.typeOfBilling() != null
-                        && currentMonthBilling.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
-
-                    BillingDates billingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), hostelId, new Date());
-
-                    if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), billingDates.currentBillStartDate())) {
-                        return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
-                    }
-
-                } else {
-                    // 2. PrePaid + Calendar/Standard-based (Now correctly inside 'else')
-                    if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), currentMonthBilling.currentBillStartDate())) {
-                        return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
-                    }
-                }
-
-            } else {
-                // 3. PostPaid: retain existing check
-                if (invoiceService.hasInvoicesInRange(bookingsV1.getCustomerId(), currentMonthBilling.currentBillStartDate())) {
-                    return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES, HttpStatus.BAD_REQUEST);
-                }
+            JoiningDateValidationResult validationResult = validateJoiningDateChange(customers, customers.getJoiningDate(), joinigDate, currentMonthBilling, hostelId);
+            if (!validationResult.isValid()) {
+                return new ResponseEntity<>(validationResult.getErrorMessage(), HttpStatus.BAD_REQUEST);
             }
 
             if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CHECK_IN.name())) {
@@ -1561,5 +1522,52 @@ public class BookingsService {
         }
 
         return listBookings;
+    }
+
+    JoiningDateValidationResult validateJoiningDateChange(Customers customers, Date oldJoiningDate, Date newJoiningDate, BillingDates currentMonthBilling, String hostelId) {
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            return new JoiningDateValidationResult(false, "CANNOT_CHANGE_JOINING_DATE_VACATED_CUSTOMERS", Utils.CANNOT_CHANGE_JOINING_DATE_VACATED_CUSTOMERS);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {
+            return new JoiningDateValidationResult(false, "CANNOT_CHANGE_JOINING_DATE_SETTLEMENT_CUSTOMERS", Utils.CANNOT_CHANGE_JOINING_DATE_SETTLEMENT_CUSTOMERS);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
+            return new JoiningDateValidationResult(false, "CANNOT_CHANGE_JOINING_DATE_CANCELLED_CUSTOMERS", Utils.CANNOT_CHANGE_JOINING_DATE_CANCELLED_CUSTOMERS);
+        }
+
+        if (customersBedHistoryService.hasReassignedHistory(customers.getCustomerId())) {
+            return new JoiningDateValidationResult(false, "CUSTOMER_HAS_BED_REASSIGNMENT_HISTORY", Utils.CUSTOMER_DID_THE_BED_CHANGE);
+        }
+
+        List<String> rentInvoiceTypes = java.util.Arrays.asList(InvoiceType.RENT.name(), InvoiceType.REASSIGN_RENT.name());
+        List<InvoicesV1> currentMonthInvoices = invoicesV1Repository.findAllCurrentMonthInvoices(customers.getCustomerId(), hostelId, currentMonthBilling.currentBillStartDate());
+
+        if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBilling.currentBillStartDate()) == 0) {
+            if (currentMonthInvoices.size() != 1) {
+                return new JoiningDateValidationResult(false, "INVALID_INVOICE_COUNT_FOR_CURRENT_MONTH", "Current month should have exactly 1 invoice.");
+            }
+            InvoicesV1 invoice = currentMonthInvoices.getFirst();
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                return new JoiningDateValidationResult(false, "CANNOT_UPDATE_PAID_OR_PARTIAL_PAID_INVOICE", "Invoice is paid or partially paid.");
+            }
+        } else if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBilling.currentBillStartDate()) < 0) {
+            if (currentMonthInvoices.size() != 1) {
+                return new JoiningDateValidationResult(false, "INVALID_INVOICE_COUNT_FOR_CURRENT_MONTH", "Current month should have exactly 1 invoice.");
+            }
+            InvoicesV1 invoice = currentMonthInvoices.getFirst();
+            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                return new JoiningDateValidationResult(false, "CANNOT_UPDATE_PAID_OR_PARTIAL_PAID_INVOICE", "Invoice is paid or partially paid.");
+            }
+
+            if (Utils.compareWithTwoDates(newJoiningDate, oldJoiningDate) > 0 && Utils.compareWithTwoDates(newJoiningDate, currentMonthBilling.currentBillStartDate()) < 0) {
+                Date endDateForQuery = Utils.addDaysToDate(newJoiningDate, -1);
+                List<InvoicesV1> skippedInvoices = invoicesV1Repository.findInvoicesByCustomerIdAndTypeInAndDate(customers.getCustomerId(), rentInvoiceTypes, oldJoiningDate, endDateForQuery);
+                if (skippedInvoices != null && !skippedInvoices.isEmpty()) {
+                    return new JoiningDateValidationResult(false, "INVOICES_EXIST_IN_SKIPPED_DATE_RANGE", "Invoices exist in the skipped date range.");
+                }
+            }
+        }
+
+        return new JoiningDateValidationResult(true, null, null);
     }
 }

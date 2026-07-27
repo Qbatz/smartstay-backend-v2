@@ -131,7 +131,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findAllCurrentMonthInvoices(@Param("customerId") String customerId, @Param("hostelId") String hostelId, @Param("startDate") Date startDate);
 
     @Query(value = """
-            SELECT * FROM invoicesv1 WHERE customer_id=:customerId AND hostel_id=:hostelId AND DATE(invoice_start_date) >= DATE(:startDate)
+            SELECT * FROM invoicesv1 WHERE customer_id=:customerId AND hostel_id=:hostelId AND DATE(invoice_start_date) <= DATE(:startDate)
              AND  (invoice_type='RENT' OR invoice_type='REASSIGN_RENT')
             """, nativeQuery = true)
     List<InvoicesV1> findAllInvoicesFromDate(@Param("customerId") String customerId, @Param("hostelId") String hostelId, @Param("startDate") Date startDate);
