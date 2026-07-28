@@ -43,7 +43,7 @@ public class ReportController {
                                                      @RequestParam(value = "maxOutstandingAmount", required = false) Double maxOutstandingAmount,
                                                      @RequestParam(value = "startDate", required = false) String startDate,
                                                      @RequestParam(value = "endDate", required = false) String endDate,
-                                                     @RequestParam(value = "page", defaultValue = "0") int page,
+                                                     @RequestParam(value = "page", defaultValue = "1") int page,
                                                      @RequestParam(value = "size", defaultValue = "10") int size) {
         return reportService.getInvoiceReportDetails(hostelId, search, paymentStatus, invoiceModes,
                 invoiceTypes,
@@ -60,7 +60,7 @@ public class ReportController {
                                                          @RequestParam(value = "period", required = false) String period,
                                                          @RequestParam(value = "startDate", required = false) String customStartDate,
                                                          @RequestParam(value = "endDate", required = false) String customEndDate,
-                                                         @RequestParam(value = "page", defaultValue = "0") int page,
+                                                         @RequestParam(value = "page", defaultValue = "1") int page,
                                                          @RequestParam(value = "size", defaultValue = "10") int size) {
         return reportService.getReceiptDetails(hostelId, period, customStartDate, customEndDate, invoiceType,
                 paymentMode, collectedBy, page, size);
@@ -76,7 +76,7 @@ public class ReportController {
                                                      @RequestParam(value = "paymentMode", required = false) List<String> paymentMode,
                                                      @RequestParam(value = "paidTo", required = false) List<String> paidTo,
                                                      @RequestParam(value = "createdBy", required = false) List<String> createdBy,
-                                                     @RequestParam(value = "page", defaultValue = "0") int page,
+                                                     @RequestParam(value = "page", defaultValue = "1") int page,
                                                      @RequestParam(value = "size", defaultValue = "10") int size) {
         return reportService.getExpenseDetails(hostelId, period, customStartDate, customEndDate, categoryId,
                 subCategoryId, paymentMode, paidTo, createdBy, page, size);
@@ -92,7 +92,7 @@ public class ReportController {
                                                       @RequestParam(value = "startDate", required = false) String startDate,
                                                       @RequestParam(value = "endDate", required = false) String endDate,
                                                       @RequestParam(value = "sharingType", required = false) List<String> sharingType,
-                                                      @RequestParam(value = "page", defaultValue = "0") int page,
+                                                      @RequestParam(value = "page", defaultValue = "1") int page,
                                                       @RequestParam(value = "size", defaultValue = "10") int size) {
         return reportService.getTenantRegister(hostelId, search, status, room, floor, period, startDate,
                 endDate, page,
@@ -106,22 +106,30 @@ public class ReportController {
     }
 
     @GetMapping("/download/{hostelId}")
-    public ResponseEntity<?> downloadCustomerReports(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate) {
+    public ResponseEntity<?> downloadCustomerReports(@PathVariable("hostelId") String hostelId,
+                                                     @RequestParam(value = "startDate", required = false) String startDate,
+                                                     @RequestParam(value = "endDate", required = false) String endDate) {
         return reportService.downloadCustomersReport(hostelId, startDate, endDate);
     }
 
     @GetMapping("/download/receipts/{hostelId}")
-    public ResponseEntity<?> downloadReceiptReport(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate) {
+    public ResponseEntity<?> downloadReceiptReport(@PathVariable("hostelId") String hostelId,
+                                                   @RequestParam(value = "startDate", required = false) String startDate,
+                                                   @RequestParam(value = "endDate", required = false) String endDate) {
         return reportService.downloadReceiptsReport(hostelId, startDate, endDate);
     }
 
     @GetMapping("/download/expense/{hostelId}")
-    public ResponseEntity<?> downloadExpenseReport(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate) {
+    public ResponseEntity<?> downloadExpenseReport(@PathVariable("hostelId") String hostelId,
+                                                   @RequestParam(value = "startDate", required = false) String startDate,
+                                                   @RequestParam(value = "endDate", required = false) String endDate) {
         return reportService.downloadExpenseReport(hostelId, startDate, endDate);
     }
 
     @GetMapping("/download/invoice/{hostelId}")
-    public ResponseEntity<?> downloadInvoiceReport(@PathVariable("hostelId") String hostelId, @RequestParam(value = "startDate", required = false) String startDate, @RequestParam(value = "endDate", required = false) String endDate) {
+    public ResponseEntity<?> downloadInvoiceReport(@PathVariable("hostelId") String hostelId,
+                                                   @RequestParam(value = "startDate", required = false) String startDate,
+                                                   @RequestParam(value = "endDate", required = false) String endDate) {
         return reportService.downloadInvoiceReport(hostelId, startDate, endDate);
     }
 }

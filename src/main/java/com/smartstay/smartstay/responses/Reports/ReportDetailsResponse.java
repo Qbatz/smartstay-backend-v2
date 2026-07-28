@@ -15,6 +15,7 @@ public class ReportDetailsResponse {
     private int totalInvoices;
     private int currentPage;
     private int totalPages;
+    private int itemsPerPage;
     private Double totalAmount;
     private Double refundAmount;
     private Double profit;

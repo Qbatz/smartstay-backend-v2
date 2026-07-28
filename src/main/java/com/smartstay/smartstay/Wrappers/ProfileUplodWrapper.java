@@ -10,7 +10,7 @@ import java.util.function.Function;
 
 public class ProfileUplodWrapper implements Function<UpdateUserProfilePayloads, Users> {
 
-    private Users users;
+    private final Users users;
     public ProfileUplodWrapper(Users user) {
         this.users = user;
     }

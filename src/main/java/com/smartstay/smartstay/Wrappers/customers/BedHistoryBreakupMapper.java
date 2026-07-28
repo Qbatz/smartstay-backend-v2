@@ -14,7 +14,7 @@ import java.util.function.Function;
 public class BedHistoryBreakupMapper implements Function<CustomersBedHistory, RentBreakUp> {
     private List<BedDetails> listDetails = new ArrayList<>();
     private Date leavingDate = null;
-    private BillingDates billingDates;
+    private final BillingDates billingDates;
     public BedHistoryBreakupMapper(List<BedDetails> listDetails, Date leavingDate, BillingDates billingDates) {
         this.listDetails = listDetails;
         this.leavingDate = leavingDate;

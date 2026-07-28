@@ -10,10 +10,7 @@ import java.util.function.Function;
 public class TransactionsMapper implements Function<BankTransactionsV1, TransactionDto> {
     @Override
     public TransactionDto apply(BankTransactionsV1 transactionV1) {
-        boolean isCredit = false;
-        if (transactionV1.getType().equalsIgnoreCase(BankTransactionType.CREDIT.name())) {
-            isCredit = true;
-        }
+        boolean isCredit = transactionV1.getType().equalsIgnoreCase(BankTransactionType.CREDIT.name());
         return new TransactionDto(transactionV1.getTransactionId(),
                 transactionV1.getReferenceNumber(),
                 transactionV1.getAmount(),

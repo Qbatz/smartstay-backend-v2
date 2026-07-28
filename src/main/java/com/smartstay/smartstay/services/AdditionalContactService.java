@@ -95,9 +95,6 @@ public class AdditionalContactService {
         if (cac == null) {
             return false;
         }
-        if (!cac.getCustomerId().equalsIgnoreCase(customerId)) {
-            return false;
-        }
-        return true;
+        return cac.getCustomerId().equalsIgnoreCase(customerId);
     }
 }

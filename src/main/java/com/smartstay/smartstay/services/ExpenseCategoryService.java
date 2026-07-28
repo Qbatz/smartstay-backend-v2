@@ -192,7 +192,7 @@ public class ExpenseCategoryService {
                     List<ExpensesSubCategory> listSubCategories= item.getListSubCategories()
                             .stream()
                             .map(i -> {
-                                return new ExpensesSubCategory(i.getSubCategoryId(), i.getSubCategoryName());
+                                return new ExpensesSubCategory(i.getSubCategoryId(), i.getSubCategoryName(), i.getExpenseCategory().getCategoryId());
                             })
                             .toList();
                     return new ExpensesCategory(item.getCategoryId(),
@@ -235,7 +235,7 @@ public class ExpenseCategoryService {
         if (expenseCategory == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
-        Long catId = 0l;
+        Long catId = 0L;
         try {
             catId = Long.valueOf(categoryId);
         }
@@ -318,18 +318,12 @@ public class ExpenseCategoryService {
                 .filter(i -> i.getSubCategoryId().equals(subCategoryId))
                 .findFirst()
                 .orElse(null);
-        if (expenseSubCategory1 == null) {
-            return false;
-        }
-        return true;
+        return expenseSubCategory1 != null;
     }
 
     public boolean checkCategoryIdValid(String hostelId, Long categoryId) {
         com.smartstay.smartstay.dao.ExpenseCategory expenseCategory = expensesCategoryRepository.findByHostelIdAndCategoryId(hostelId, categoryId);
-        if (expenseCategory == null) {
-            return false;
-        }
-        return true;
+        return expenseCategory != null;
     }
 
     public List<com.smartstay.smartstay.dao.ExpenseCategory> findAllByHostelIdAndIsActiveTrue(String hostelId) {

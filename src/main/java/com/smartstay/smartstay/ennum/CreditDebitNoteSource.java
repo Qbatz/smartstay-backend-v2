@@ -5,5 +5,5 @@ public enum CreditDebitNoteSource {
     FINAL_SETTLEMT,
     ASSETS_RETURN,
     CANCEL_BOOKING,
-    ADVANCE;
+    ADVANCE
 }

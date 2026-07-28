@@ -692,14 +692,12 @@ public class InvoiceV1Service {
         List<InvoicesV1> listAllInvoice = new ArrayList<>();
         Page<InvoicesV1> pageList = null;
 
+        listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey);
         if (authentication.getSource().equalsIgnoreCase("web")) {
             pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey, pageableRequest);
-
             if (pageList != null) {
                 listAllInvoice = pageList.getContent();
             }
-        } else {
-            listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
         }
 
 
@@ -3840,7 +3838,7 @@ public class InvoiceV1Service {
         return users.stream().map(u -> new Object[]{u.getUserId(), u.getFirstName(), u.getLastName()}).collect(Collectors.toList());
     }
 
-    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, List<Boolean> isCancelled, Pageable pageable) {
+    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, List<Boolean> isCancelled) {
         List<String> customerIds = null;
         if (search != null && !search.trim().isEmpty()) {
             List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
@@ -3851,11 +3849,13 @@ public class InvoiceV1Service {
         }
 
         if (customerIds != null && !customerIds.isEmpty()) {
-            return invoicesV1Repository.findInvoicesByFiltersWithCustomers(hostelId, startDate, endDate, customerIds, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, isCancelled, pageable);
+            return invoicesV1Repository.findInvoicesByFiltersWithCustomers(hostelId, startDate, endDate, customerIds, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, isCancelled);
         } else {
-            return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, isCancelled, pageable);
+            return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, isCancelled);
         }
     }
+
+
 
     public List<String> findInvoiceIdsByHostelIdAndTypeIn(String hostelId, List<String> invoiceTypes) {
         List<String> listInvoiceIds = invoicesV1Repository.findInvoiceIdsByHostelIdAndTypeIn(hostelId, invoiceTypes);
@@ -5273,6 +5273,9 @@ public class InvoiceV1Service {
 
         List<String> invoiceTypes = new ArrayList<>();
         invoiceTypes.add(InvoiceType.BOOKING.name());
+        invoiceTypes.add(InvoiceType.ADVANCE.name());
+        invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
+        invoiceTypes.add(InvoiceType.EB_HOLDING.name());
 
         int totalAdvanceInvoice = 0;
         int currentPage = 1;
@@ -5626,6 +5629,9 @@ public class InvoiceV1Service {
 
             List<String> invoiceTypes = new ArrayList<>();
             invoiceTypes.add(InvoiceType.BOOKING.name());
+            invoiceTypes.add(InvoiceType.ADVANCE.name());
+            invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
+            invoiceTypes.add(InvoiceType.EB_HOLDING.name());
 
             Integer minimumAmount = null;
             Integer maximumAmount = null;
@@ -6012,5 +6018,21 @@ public class InvoiceV1Service {
 
         invoiceDiscount = new InvoiceDiscount(invoicesV1.getHostelId(), invoiceInfo, customerInfo,stayInfo);
         return new ResponseEntity<>(invoiceDiscount, HttpStatus.OK);
+    }
+
+    public Page<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, List<Boolean> isCancelledList, Pageable pageableRequest) {
+
+        List<String> types = null;
+        if (invoiceTypes != null) {
+            types = invoiceTypes;
+        } else {
+            types = new ArrayList<>();
+            types.add(InvoiceType.RENT.name());
+            types.add(InvoiceType.SETTLEMENT.name());
+            types.add(InvoiceType.ADVANCE.name());
+            types.add(InvoiceType.REASSIGN_RENT.name());
+        }
+        return invoicesV1Repository.findAllInvoicesByHostelIdForHostelId(hostelId, startDate, endDate, types, createdBy, invoiceModes, paymentStatus, pageableRequest);
+
     }
 }

@@ -106,7 +106,7 @@ public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, Compla
         }
 
         if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.OPENED.name())) {
-            update = fullName.toString() + " is raised - " + complaintType ;
+            update = fullName + " is raised - " + complaintType ;
         }
         else if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.PENDING.name())) {
             update = complaintUpdates.getComments();

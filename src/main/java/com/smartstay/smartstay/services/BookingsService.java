@@ -1353,6 +1353,10 @@ public class BookingsService {
         return bookingsRepository.findBookingsWithFilters(hostelId, startDate, endDate, (customerIds != null && !customerIds.isEmpty()) ? customerIds : null, (statuses != null && !statuses.isEmpty()) ? statuses : null, (roomIds != null && !roomIds.isEmpty()) ? roomIds : null, (floorIds != null && !floorIds.isEmpty()) ? floorIds : null, org.springframework.data.domain.PageRequest.of(page, size));
     }
 
+    public List<BookingsV1> findBookingsWithFilters(String hostelId, Date startDate, Date endDate, List<String> customerIds, List<String> statuses, List<Integer> roomIds, List<Integer> floorIds) {
+        return bookingsRepository.findBookingForReport(hostelId, startDate, endDate, (customerIds != null && !customerIds.isEmpty()) ? customerIds : null, (statuses != null && !statuses.isEmpty()) ? statuses : null, (roomIds != null && !roomIds.isEmpty()) ? roomIds : null, (floorIds != null && !floorIds.isEmpty()) ? floorIds : null);
+    }
+
     public List<BookingsV1> findAllBookingsWithFilters(String hostelId, Date startDate, Date endDate, List<String> customerIds, List<String> statuses, List<Integer> roomIds, List<Integer> floorIds) {
         return bookingsRepository.findAllBookingsWithFilters(hostelId, startDate, endDate, (customerIds != null && !customerIds.isEmpty()) ? customerIds : null, (statuses != null && !statuses.isEmpty()) ? statuses : null, (roomIds != null && !roomIds.isEmpty()) ? roomIds : null, (floorIds != null && !floorIds.isEmpty()) ? floorIds : null);
     }

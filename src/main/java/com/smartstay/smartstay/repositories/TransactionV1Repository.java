@@ -73,8 +73,14 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     @Query(value = "SELECT t FROM TransactionV1 t WHERE t.hostelId = :hostelId " +
             "AND (:startDate IS NULL OR DATE(t.paymentDate) >= DATE(:startDate)) AND (:endDate IS NULL OR DATE(t.paymentDate) <= DATE(:endDate)) " +
             "AND (:bankIds IS NULL OR t.bankId IN :bankIds) AND (:userIds IS NULL OR t.createdBy IN :userIds) " +
-            "AND (:invoiceIds IS NULL OR t.invoiceId IN :invoiceIds)")
-    List<TransactionV1> findTransactionsByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds, org.springframework.data.domain.Pageable pageable);
+            "AND (:invoiceIds IS NULL OR t.invoiceId IN :invoiceIds) ORDER BY t.paymentDate DESC")
+    Page<TransactionV1> findTransactionsByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds, org.springframework.data.domain.Pageable pageable);
+
+    @Query(value = "SELECT t FROM TransactionV1 t WHERE t.hostelId = :hostelId " +
+            "AND (:startDate IS NULL OR DATE(t.paymentDate) >= DATE(:startDate)) AND (:endDate IS NULL OR DATE(t.paymentDate) <= DATE(:endDate)) " +
+            "AND (:bankIds IS NULL OR t.bankId IN :bankIds) AND (:userIds IS NULL OR t.createdBy IN :userIds) " +
+            "AND (:invoiceIds IS NULL OR t.invoiceId IN :invoiceIds) ORDER BY t.paymentDate DESC")
+    List<TransactionV1> findTransactionsByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds);
 
     @Query(value = "SELECT COUNT(t) FROM TransactionV1 t WHERE t.hostelId = :hostelId " + "AND (:startDate IS NULL OR t.paidAt >= :startDate) " + "AND (:endDate IS NULL OR t.paidAt <= :endDate) " + "AND (:bankIds IS NULL OR t.bankId IN :bankIds) " + "AND (:userIds IS NULL OR t.createdBy IN :userIds) " + "AND (:invoiceIds IS NULL OR t.invoiceId IN :invoiceIds)")
     long countTransactionsByFiltersNew(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("bankIds") List<String> bankIds, @Param("userIds") List<String> userIds, @Param("invoiceIds") List<String> invoiceIds);
@@ -96,7 +102,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND 
             (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND 
             (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
-            (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount)
+            (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount) ORDER BY trns.paymentDate DESC
             """,
     countQuery = """
             SELECT COUNT(trns) FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND 
@@ -104,7 +110,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND 
             (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND 
             (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
-            (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount)
+            (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount) ORDER BY trns.paymentDate DESC
             """)
     Page<TransactionV1> findPagebleTransactions(String hostelId, List<String> customerIds, List<String> invoiceIds, List<String> bankIds, List<String> collectedBy, Date startDate, Date endDate, Integer minAmount, Integer maxAmount, Pageable pageable);
 
@@ -114,7 +120,7 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND 
             (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND 
             (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
-            (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount)
+            (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount) ORDER BY trns.paymentDate DESC
             """)
     List<TransactionV1> findTransactionsByHostelId(String hostelId, List<String> customerIds, List<String> invoiceIds, List<String> bankIds, List<String> collectedBy, Date startDate, Date endDate, Integer minAmount, Integer maxAmount);
 }

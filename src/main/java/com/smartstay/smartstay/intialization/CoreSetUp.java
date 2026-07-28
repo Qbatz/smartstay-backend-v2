@@ -365,7 +365,7 @@ public class CoreSetUp {
 
 				Plans planTrial = new Plans();
 				planTrial.setPlanName("Trial");
-				planTrial.setDuration(30l);
+				planTrial.setDuration(30L);
 				planTrial.setPrice(0.0);
 				planTrial.setDiscounts(0.0);
 				planTrial.setCgstAmount(0.0);
@@ -437,7 +437,7 @@ public class CoreSetUp {
 				String planCode3 = Utils.generatePlanCode();
 				planBasic = new Plans();
 				planBasic.setPlanName("Basic");
-				planBasic.setDuration(30l);
+				planBasic.setDuration(30L);
 				planBasic.setPrice(599.0);
 				planBasic.setDiscounts(0.0);
 				planBasic.setCgstAmount(Utils.roundOffWithTwoDigit(cgstAmount));
@@ -508,7 +508,7 @@ public class CoreSetUp {
 				String planCode2 = Utils.generatePlanCode();
 				planAdvance = new Plans();
 				planAdvance.setPlanName("Advance");
-				planAdvance.setDuration(30l);
+				planAdvance.setDuration(30L);
 				planAdvance.setPrice(999.0);
 				planAdvance.setDiscounts(0.0);
 				planAdvance.setCgstAmount(Utils.roundOffWithTwoDigit(cgstAmount));

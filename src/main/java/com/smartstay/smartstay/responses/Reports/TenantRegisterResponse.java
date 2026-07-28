@@ -12,13 +12,16 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class TenantRegisterResponse {
+    private int pageSize;
+    private int currentPage;
+    private int totalItems;
+    private int totalPages;
     private boolean status;
     private String message;
     private DateRange dateRange;
     private Summary summary;
     private Filters filters;
     private List<TenantDetail> tenants;
-    private Pagination pagination;
 
     @Data
     @AllArgsConstructor
@@ -67,17 +70,6 @@ public class TenantRegisterResponse {
         private String stayDuration;
         private String initials;
         private String profilePic;
-    }
-
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder
-    public static class Pagination {
-        private int currentPage;
-        private int pageSize;
-        private long totalRecords;
-        private int totalPages;
     }
 
     @Data

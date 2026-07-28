@@ -30,7 +30,7 @@ public class ExpenseSubCategoryService {
     }
 
     public ResponseEntity<?> updateSubCategry(String hostelId, String subCategoryId, UpdateSubCategory subCategory) {
-        Long subCatId = 0l;
+        Long subCatId = 0L;
         try {
             subCatId = Long.valueOf(subCategoryId);
         }
