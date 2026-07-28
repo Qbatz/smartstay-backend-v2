@@ -30,12 +30,13 @@ public class CustomersListMapper implements Function<ElectricityCustomersList, C
                 initials.append(customersList.getFirstName().toUpperCase().charAt(1));
             }
         }
+        String profilePic = customersList.getProfilePic();
         return new CustomersList(customersList.getCustomerId(),
                 customersList.getFirstName(),
                 customersList.getLastName(),
                 fullName.toString(),
                 initials.toString(),
-                customersList.getProfilePic(),
+                profilePic,
                 customersList.getFloorId(),
                 customersList.getFloorName(),
                 customersList.getRoomId(),

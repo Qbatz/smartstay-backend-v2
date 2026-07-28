@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.booking.BookingTableHeader;
 import com.smartstay.smartstay.ennum.CustomerStatus;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import com.smartstay.smartstay.util.columnOptions.BookingColumnUtils;
@@ -98,10 +99,8 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
             return NameUtils.getFullName(customers.getFirstName(), customers.getLastName());
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.PROFILE_PIC)) {
-            if (customers.getProfilePic() != null) {
-                return customers.getProfilePic();
-            }
-            return NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
+            String profilePic = CustomerUtils.getProfilePic(customers);
+            return profilePic;
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.MOBILE_NO)) {
             return "+91 " + customers.getMobile();

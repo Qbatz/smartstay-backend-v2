@@ -970,7 +970,7 @@ public class ElectricityService {
 
         List<CustomersElectricityHistory> listHistory = listEbHistory.stream().map(item -> new CustomerHistoryMapper().apply(item)).toList();
 
-        ElectricitySingleCustomer singleCustomers = new ElectricitySingleCustomer(customers.getFirstName(), customers.getLastName(), initials.toString(), customers.getProfilePic(), customers.getCustomerId(), bedName, floorName, roomName, kycStatus, isKycCompleted, listHistory);
+        ElectricitySingleCustomer singleCustomers = new ElectricitySingleCustomer(customers.getFirstName(), customers.getLastName(), initials.toString(), com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers), customers.getCustomerId(), bedName, floorName, roomName, kycStatus, isKycCompleted, listHistory);
 
         return new ResponseEntity<>(singleCustomers, HttpStatus.OK);
 

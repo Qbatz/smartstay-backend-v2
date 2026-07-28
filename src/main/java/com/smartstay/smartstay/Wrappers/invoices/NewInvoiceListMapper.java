@@ -89,7 +89,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         if (customers != null) {
             firstName = customers.getFirstName();
             lastName = customers.getLastName();
-            profilePic = customers.getProfilePic();
+            profilePic = com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers);
             customerStatus = customers.getCurrentStatus();
             if (customers.getFirstName() != null) {
                 fullName.append(customers.getFirstName());
