@@ -35,6 +35,7 @@ import com.smartstay.smartstay.responses.customer.DraftDetails;
 import com.smartstay.smartstay.responses.customer.HostelInformation;
 import com.smartstay.smartstay.responses.customer.KycInformations;
 import com.smartstay.smartstay.dto.customer.WalletInfo;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -133,7 +134,7 @@ public class CustomersServiceV2 {
                         NameUtils.getFullName(c.getFirstName(), c.getLastName()),
                         c.getFirstName(),
                         c.getLastName(),
-                        c.getProfilePic(),
+                        CustomerUtils.getProfilePic(c),
                         NameUtils.getInitials(c.getFirstName(), c.getLastName()),
                         "+91 " + c.getMobile(),
                         c.getEmailId()))
@@ -681,7 +682,7 @@ public class CustomersServiceV2 {
                 customers.getMobile(),
                 "91",
                 initials,
-                customers.getProfilePic(),
+                CustomerUtils.getProfilePic(customers),
                 customers.getCurrentStatus(),
                 hostelInformation,
                 bookingInfo,

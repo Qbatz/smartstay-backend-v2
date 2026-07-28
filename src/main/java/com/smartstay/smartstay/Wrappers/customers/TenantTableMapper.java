@@ -73,10 +73,7 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
 
     private String getColumnItem(Customers customers, BedDetails bedDetail, BookingsV1 bookingsV1, Draft draft, String columnItem) {
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.PROFILE_PIC)) {
-            if (customers.getProfilePic() != null && !customers.getProfilePic().trim().equalsIgnoreCase("")) {
-                return customers.getProfilePic();
-            }
-            return NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
+            return com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers);
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.FULL_NAME)) {
             return NameUtils.getFullName(customers.getFirstName(), customers.getLastName());
