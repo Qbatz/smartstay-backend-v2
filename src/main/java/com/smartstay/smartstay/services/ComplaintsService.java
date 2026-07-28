@@ -13,6 +13,7 @@ import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
 import com.smartstay.smartstay.responses.complaint.ComplaintUpdatesList;
 import com.smartstay.smartstay.responses.complaint.ComplaintsUpdates;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.Utils;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -444,7 +445,7 @@ public class ComplaintsService {
                     if (!tenants.isEmpty()) {
                         Customers cus = tenants.stream().filter(tnt -> tnt.getCustomerId().equalsIgnoreCase(i.getCreatedBy())).findFirst().orElse(null);
                         if (cus != null) {
-                            profilePic = cus.getProfilePic();
+                            profilePic = CustomerUtils.getProfilePic(cus);
                             if (cus.getFirstName() != null) {
                                 initials.append(cus.getFirstName().trim().toUpperCase().charAt(0));
                             }

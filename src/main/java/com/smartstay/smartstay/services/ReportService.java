@@ -14,6 +14,7 @@ import com.smartstay.smartstay.responses.Reports.ReportDetailsResponse;
 import com.smartstay.smartstay.responses.Reports.ReportResponse;
 import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.transaction.TransactionReportResponse;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -437,7 +438,7 @@ public class ReportService {
                             + (c.getLastName() != null ? c.getLastName() : "");
                     detail.setFullName(Utils.capitalize(full.trim()));
                     detail.setInitials(getInitials(c.getFirstName(), c.getLastName()));
-                    detail.setProfilePic(c.getProfilePic());
+                    detail.setProfilePic(CustomerUtils.getProfilePic(c));
                 }
             });
         }
@@ -853,7 +854,7 @@ public class ReportService {
                     .checkOutAmount(b.getRentAmount() != null ? b.getRentAmount() : 0)
                     .stayDuration(stayDuration)
                     .initials(getInitials(c != null ? c.getFirstName() : null, c != null ? c.getLastName() : null))
-                    .profilePic(c != null ? c.getProfilePic() : null)
+                    .profilePic(c != null ? CustomerUtils.getProfilePic(c) : null)
                     .build());
         }
 

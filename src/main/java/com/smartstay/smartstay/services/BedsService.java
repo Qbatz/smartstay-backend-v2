@@ -192,7 +192,7 @@ public class BedsService {
                         tenantId = customers.getCustomerId();
                         firstName = customers.getFirstName();
                         lastName = customers.getLastName();
-                        profilePic = customers.getProfilePic();
+                        profilePic = com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers);
                         mobile = customers.getMobile();
                         if (customers.getAdvance() != null) {
                             advance = customers.getAdvance().getAdvanceAmount();
@@ -266,7 +266,7 @@ public class BedsService {
                         tenantId = customers.getCustomerId();
                         firstName = customers.getFirstName();
                         lastName = customers.getLastName();
-                        profilePic = customers.getProfilePic();
+                        profilePic = com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers);
                         mobile = customers.getMobile();
                         if (customers.getAdvance() != null) {
                             advance = customers.getAdvance().getAdvanceAmount();

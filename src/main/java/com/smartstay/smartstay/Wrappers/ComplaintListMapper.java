@@ -8,6 +8,7 @@ import com.smartstay.smartstay.dto.room.RoomInfo;
 import com.smartstay.smartstay.repositories.ComplaintCommentsRepository;
 import com.smartstay.smartstay.repositories.ComplaintRepository;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.Date;
@@ -94,7 +95,7 @@ public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResp
 
         if (customers != null) {
             customerId = customers.getCustomerId();
-            profilePic = customers.getProfilePic();
+            profilePic = CustomerUtils.getProfilePic(customers);
 
             if (customers.getFirstName() != null) {
                 initials.append(customers.getFirstName().toUpperCase().charAt(0));

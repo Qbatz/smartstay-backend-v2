@@ -7,6 +7,7 @@ import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.responses.amenitity.AmenityInfoProjection;
 import com.smartstay.smartstay.responses.amenitity.AmenityResponse;
 import com.smartstay.smartstay.responses.amenitity.CustomerResponse;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.*;
@@ -124,7 +125,7 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                     return new CustomerResponse(i.getCustomerId(),
                             fullName.toString(),
                             initials.toString(),
-                            i.getProfilePic(),
+                            CustomerUtils.getProfilePic(i),
                             i.getMobile(),
                             "91",
                             bedName.get(),
@@ -191,7 +192,7 @@ public class AmenityMapper implements Function<AmenityInfoProjection, AmenityRes
                     return new CustomerResponse(i.getCustomerId(),
                             fullName.toString(),
                             initials.toString(),
-                            i.getProfilePic(),
+                            CustomerUtils.getProfilePic(i),
                             i.getMobile(),
                             "91",
                             bedName.get(),

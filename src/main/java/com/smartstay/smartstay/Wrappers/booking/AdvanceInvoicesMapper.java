@@ -54,7 +54,7 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
                 lastName = customers.getLastName();
                 fullName = NameUtils.getFullName(customers.getFirstName(), customers.getLastName());
                 initials = NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
-                profilePic = customers.getProfilePic();
+                profilePic = com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers);
                 customerMobile = customers.getMobile();
 
                 if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.SETTLEMENT_GENERATED.name())) {

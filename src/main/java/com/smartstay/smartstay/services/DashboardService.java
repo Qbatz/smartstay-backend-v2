@@ -11,6 +11,7 @@ import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.repositories.BedChangeRequestRepository;
 import com.smartstay.smartstay.responses.dashboard.*;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -565,7 +566,7 @@ public class DashboardService {
             String customerName = c != null ? (c.getFirstName() + (c.getLastName() != null ? " " + c.getLastName() : "")) : null;
             if (customerName != null) customerName = Utils.capitalize(customerName);
 
-            String profilePic = c != null ? c.getProfilePic() : null;
+            String profilePic = c != null ? CustomerUtils.getProfilePic(c) : null;
             String tenantId = c != null ? c.getCustomerId() : null;
             String initials = c != null ? Utils.getInitials(c.getFirstName(), c.getLastName()) : null;
 
@@ -597,7 +598,7 @@ public class DashboardService {
             String customerName = c != null ? (c.getFirstName() + (c.getLastName() != null ? " " + c.getLastName() : "")) : null;
             if (customerName != null) customerName = Utils.capitalize(customerName);
 
-            String profilePic = c != null ? c.getProfilePic() : null;
+            String profilePic = c != null ? CustomerUtils.getProfilePic(c) : null;
             String initials = c != null ? Utils.getInitials(c.getFirstName(), c.getLastName()) : null;
 
             Double paidAmount = inv.getPaidAmount() != null ? inv.getPaidAmount() : 0.0;
@@ -623,7 +624,7 @@ public class DashboardService {
             Rooms rm = (booking != null && booking.getRoomId() > 0) ? roomsService.findRoomByRoomId(booking.getRoomId()) : null;
             String roomName = (rm != null) ? rm.getRoomName() : null;
 
-            activities.add(new DashboardRequest(r.getAmenityRequestId(), cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown", cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null, cus != null ? cus.getProfilePic() : null, "Amenity Request", r.getCurrentStatus(), r.getCreatedAt() != null ? sdf.format(r.getCreatedAt()) : null, r.getDescription(), roomName));
+            activities.add(new DashboardRequest(r.getAmenityRequestId(), cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown", cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null, cus != null ? CustomerUtils.getProfilePic(cus) : null, "Amenity Request", r.getCurrentStatus(), r.getCreatedAt() != null ? sdf.format(r.getCreatedAt()) : null, r.getDescription(), roomName));
         }
 
         // Fetch Bed Change Requests
@@ -633,7 +634,7 @@ public class DashboardService {
             Rooms rm = (b.getRoomId() != null && b.getRoomId() > 0) ? roomsService.findRoomByRoomId(b.getRoomId()) : null;
             String roomName = (rm != null) ? rm.getRoomName() : null;
 
-            activities.add(new DashboardRequest(b.getId(), cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown", cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null, cus != null ? cus.getProfilePic() : null, "Bed Change", b.getCurrentStatus(), b.getCreatedAt() != null ? sdf.format(b.getCreatedAt()) : null, b.getReason(), roomName));
+            activities.add(new DashboardRequest(b.getId(), cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown", cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null, cus != null ? CustomerUtils.getProfilePic(cus) : null, "Bed Change", b.getCurrentStatus(), b.getCreatedAt() != null ? sdf.format(b.getCreatedAt()) : null, b.getReason(), roomName));
         }
 
         return activities.stream().sorted((a, b1) -> {
@@ -717,7 +718,7 @@ public class DashboardService {
 
             String fullName = cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown";
             String initials = cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null;
-            String profilePic = cus != null ? cus.getProfilePic() : null;
+            String profilePic = cus != null ? CustomerUtils.getProfilePic(cus) : null;
             String roomName = (rm != null) ? rm.getRoomName() : null;
             String complaintTypeName = (ct != null) ? ct.getComplaintTypeName() : null;
             String formattedDate = (c.getCreatedAt() != null) ? sdf.format(c.getCreatedAt()) : null;

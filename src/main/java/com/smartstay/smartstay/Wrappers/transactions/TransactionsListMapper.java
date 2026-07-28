@@ -82,10 +82,9 @@ public class TransactionsListMapper implements Function<TransactionV1, ReceiptsL
                 .findFirst()
                 .orElse(null);
         if (cus != null) {
-            profilePic = cus.getProfilePic();
+            profilePic = com.smartstay.smartstay.util.CustomerUtils.getProfilePic(cus);
             firstName = cus.getFirstName();
             lastName = cus.getLastName();
-            profilePic = cus.getProfilePic();
             if (cus.getFirstName() != null && !cus.getFirstName().trim().equalsIgnoreCase("")) {
                 fullName.append(cus.getFirstName());
                 initials.append(cus.getFirstName().toUpperCase().charAt(0));

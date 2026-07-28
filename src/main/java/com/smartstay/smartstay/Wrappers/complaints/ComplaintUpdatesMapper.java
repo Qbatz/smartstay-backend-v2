@@ -7,6 +7,7 @@ import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.ennum.ComplaintStatus;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.responses.complaint.ComplaintUpdatesList;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.List;
@@ -65,7 +66,7 @@ public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, Compla
                         .orElse(null);
 
                 if (customer != null) {
-                    profilePic = customer.getProfilePic();
+                    profilePic = CustomerUtils.getProfilePic(customer);
                     initials.append(customer.getFirstName().toUpperCase().charAt(0));
                     fullName.append(customer.getFirstName());
                     if (customer.getLastName() != null && !customer.getLastName().trim().equalsIgnoreCase("")) {
@@ -141,7 +142,7 @@ public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, Compla
                                             .orElse(null);
 
                                     if (customer != null) {
-                                        pp = customer.getProfilePic();
+                                        pp = CustomerUtils.getProfilePic(customer);
                                         intl.append(customer.getFirstName().toUpperCase().charAt(0));
                                         fName.append(customer.getFirstName());
                                         if (customer.getLastName() != null && !customer.getLastName().trim().equalsIgnoreCase("")) {

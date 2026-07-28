@@ -614,7 +614,7 @@ public class TransactionService {
             }
 
             customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(),
-                    customers.getProfilePic(),
+                    com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers),
                     NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
                     customers.getCustomerId(), customers.getMobile(), "91", fullAddress.toString(),
                     Utils.dateToString(customers.getJoiningDate()));

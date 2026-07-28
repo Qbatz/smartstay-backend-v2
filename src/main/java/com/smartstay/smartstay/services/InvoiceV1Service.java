@@ -38,6 +38,7 @@ import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.InvoiceRedemption.AvailableInvoices;
 import com.smartstay.smartstay.responses.InvoiceRedemption.SelectedInvoiceInfo;
 import com.smartstay.smartstay.responses.bookings.AdvanceInfo;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.responses.bookings.*;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
 import com.smartstay.smartstay.responses.customer.*;
@@ -1688,7 +1689,7 @@ public class InvoiceV1Service {
                 fullAddress.append(customers.getPincode());
             }
 
-            customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(), customers.getProfilePic(), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), customers.getCustomerId(), customers.getMobile(), "91", fullAddress.toString(), Utils.dateToString(customers.getJoiningDate()));
+            customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(), com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), customers.getCustomerId(), customers.getMobile(), "91", fullAddress.toString(), Utils.dateToString(customers.getJoiningDate()));
         }
 
         StayInfo stayInfo = null;
@@ -5405,7 +5406,7 @@ public class InvoiceV1Service {
         Customers customers = customersService.getCustomerInformation(advanceInvoices.getCustomerId());
         com.smartstay.smartstay.responses.bookings.CustomerInfo customerInfo = null;
         if (customers != null) {
-            customerInfo = new com.smartstay.smartstay.responses.bookings.CustomerInfo(customers.getCustomerId(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), customers.getProfilePic(), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), customers.getFirstName(), customers.getLastName(), floorName, bedName, roomName);
+            customerInfo = new com.smartstay.smartstay.responses.bookings.CustomerInfo(customers.getCustomerId(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), CustomerUtils.getProfilePic(customers), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), customers.getFirstName(), customers.getLastName(), floorName, bedName, roomName);
         }
 
         List<InitializeInvoiceItems> listInvoiceItems = invoiceItemsToShow.stream().map(i -> new InitializeRedemptionMapper(listTransactions, listBanks).apply(i)).toList();
@@ -5459,7 +5460,7 @@ public class InvoiceV1Service {
             if (bookingsV1 != null) {
                 BedDetails bedDetails = bedService.getBedDetails(bookingsV1.getBedId());
                 if (bedDetails != null) {
-                    customerInfo = new com.smartstay.smartstay.responses.InvoiceRedemption.CustomerInfo(customers.getFirstName(), customers.getLastName(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), customers.getProfilePic(), bedDetails.getBedName(), bedDetails.getRoomName(), bedDetails.getFloorName());
+                    customerInfo = new com.smartstay.smartstay.responses.InvoiceRedemption.CustomerInfo(customers.getFirstName(), customers.getLastName(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), CustomerUtils.getProfilePic(customers), bedDetails.getBedName(), bedDetails.getRoomName(), bedDetails.getFloorName());
                 }
             }
         }
