@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.InvoiceMode;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.retainer.LoadBalance;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
@@ -106,6 +107,16 @@ public class RetainerService {
             paymentDate = Utils.convertToTimeStamp(paymentDate);
         }
 
+        String invoiceType = null;
+        if (loadBalance.invoiceType() != null) {
+            if (loadBalance.invoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name())) {
+                invoiceType = InvoiceType.AMOUNT_HOLDING.name();
+            }
+            else if (loadBalance.invoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name())) {
+                invoiceType = InvoiceType.EB_HOLDING.name();
+            }
+        }
+
         String invoiceNumber = getInvoiceNumber(hostelId);
         InvoicesV1 invoicesV1 = new InvoicesV1();
         invoicesV1.setCustomerId(customerId);
@@ -113,7 +124,7 @@ public class RetainerService {
         invoicesV1.setInvoiceNumber(invoiceNumber);
         invoicesV1.setCustomerMobile(customers.getMobile());
         invoicesV1.setCustomerMailId(customers.getEmailId());
-        invoicesV1.setInvoiceType(loadBalance.invoiceType());
+        invoicesV1.setInvoiceType(invoiceType);
         invoicesV1.setBasePrice(loadBalance.amount());
         invoicesV1.setTotalAmount(loadBalance.amount());
         invoicesV1.setPaidAmount(loadBalance.amount());

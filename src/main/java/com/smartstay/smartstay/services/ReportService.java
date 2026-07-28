@@ -277,45 +277,63 @@ public class ReportService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        List<Boolean> isCancelledList = null;
         AtomicBoolean requestedAll = new AtomicBoolean(false);
-        AtomicBoolean isCancelled = new AtomicBoolean(false);
+        List<String> pStatus = null;
         if (paymentStatus != null) {
-
+            AtomicBoolean hasContainsCancelled = new AtomicBoolean(false);
             paymentStatus.forEach(i -> {
-                if (i.equalsIgnoreCase(PaymentStatus.CANCELLED.name())) {
-                    isCancelled.set(true);
-                } else if (i.equalsIgnoreCase("ALL")) {
+                if (i.equalsIgnoreCase("ALL")) {
                     requestedAll.set(true);
+                }
+                if (i.equalsIgnoreCase("CANCELLED")) {
+                    hasContainsCancelled.set(true);
                 }
             });
 
-            if (isCancelled.get()) {
-                paymentStatus = paymentStatus.stream()
-                        .filter(i -> !i.equalsIgnoreCase(PaymentStatus.CANCELLED.name()))
+            if (hasContainsCancelled.get()) {
+                if (paymentStatus.size() == 1) {
+                    requestedAll.set(false);
+                    isCancelledList = new ArrayList<>();
+                    isCancelledList.add(true);
+                }
+                else {
+                    pStatus = new ArrayList<>();
+                    pStatus.add(PaymentStatus.PAID.name());
+                    pStatus.add(PaymentStatus.REFUNDED.name());
+                    pStatus.add(PaymentStatus.PENDING.name());
+                    pStatus.add(PaymentStatus.PARTIAL_PAYMENT.name());
+                    pStatus.add(PaymentStatus.PENDING_REFUND.name());
+                    pStatus.add(PaymentStatus.PARTIAL_REFUND.name());
+                }
+            }
+
+
+            if (requestedAll.get()) {
+                pStatus = new ArrayList<>();
+                pStatus.add(PaymentStatus.PAID.name());
+                pStatus.add(PaymentStatus.REFUNDED.name());
+                pStatus.add(PaymentStatus.PENDING.name());
+                pStatus.add(PaymentStatus.PARTIAL_PAYMENT.name());
+                pStatus.add(PaymentStatus.PENDING_REFUND.name());
+                pStatus.add(PaymentStatus.PARTIAL_REFUND.name());
+            }
+            else {
+                pStatus = paymentStatus
+                        .stream()
+                        .filter(i -> !i.equalsIgnoreCase("ALL"))
                         .toList();
-                if (paymentStatus.isEmpty()) {
-                    paymentStatus = null;
+                if (pStatus.isEmpty()) {
+                    pStatus = null;
+                }
+                if (!hasContainsCancelled.get()) {
+                    isCancelledList = new ArrayList<>();
+                    isCancelledList.add(false);
                 }
             }
         }
 
-        List<Boolean> isCancelledList = new ArrayList<>();
-        if (isCancelled.get()) {
-            isCancelledList.add(true);
-        }
-        if (paymentStatus == null && !isCancelled.get()) {
-            isCancelledList.add(true);
-            isCancelledList.add(false);
-        } else {
-            if (paymentStatus != null && requestedAll.get()) {
-                paymentStatus = null;
-                isCancelledList.add(true);
-                isCancelledList.add(false);
-            } else if (paymentStatus != null && !requestedAll.get()) {
-                isCancelledList.add(true);
-                isCancelledList.add(false);
-            }
-        }
+
 
         BillingDates dates = calculateDateRange(period, hostelId);
         Date startDate = dates.currentBillStartDate();
@@ -330,18 +348,18 @@ public class ReportService {
         ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);
         if (authentication.getSource().equalsIgnoreCase("web")) {
             return getInvoiceWebReport(hostelId, startDate, endDate, search,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
+                    pStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
                     minOutstandingAmount, maxOutstandingAmount, isCancelledList, options, pageParams, size);
         }
         else {
             List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
+                    pStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
                     minOutstandingAmount, maxOutstandingAmount, isCancelledList);
             List<ReportDetailsResponse.InvoiceDetail> invoiceDetails = mapToInvoiceDetails(invoices);
 
 
 
-            return buildReportResponse(hostelId, startDate, endDate, search, paymentStatus, invoiceModes,
+            return buildReportResponse(hostelId, startDate, endDate, search, pStatus, invoiceModes,
                     invoiceTypes,
                     createdBy, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount,
                     invoiceDetails, options, pageParams-1, size, isCancelledList);
@@ -362,7 +380,7 @@ public class ReportService {
                                                   Double maxPaidAmount,
                                                   Double minOutstandingAmount,
                                                   Double maxOutstandingAmount,
-                                                  List<Boolean> isCancelledList,
+                                                  List<Boolean> isCancelled,
                                                   ReportDetailsResponse.FilterOptions filterOptions,
                                                   int page,
                                                   int size) {
@@ -371,10 +389,10 @@ public class ReportService {
 
         List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
                 paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
-                minOutstandingAmount, maxOutstandingAmount, isCancelledList);
+                minOutstandingAmount, maxOutstandingAmount, isCancelled);
         Page<InvoicesV1> pagedInvoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
                 paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
-                minOutstandingAmount, maxOutstandingAmount, isCancelledList, pageableRequest);
+                minOutstandingAmount, maxOutstandingAmount, isCancelled, pageableRequest);
 
 
         if (pagedInvoices != null) {

@@ -6054,7 +6054,7 @@ public class InvoiceV1Service {
             types.add(InvoiceType.ADVANCE.name());
             types.add(InvoiceType.REASSIGN_RENT.name());
         }
-        return invoicesV1Repository.findAllInvoicesByHostelIdForHostelId(hostelId, startDate, endDate, types, createdBy, invoiceModes, paymentStatus, pageableRequest);
+        return invoicesV1Repository.findAllInvoicesByHostelIdForHostelId(hostelId, startDate, endDate, types, createdBy, invoiceModes, paymentStatus, isCancelledList, pageableRequest);
 
     }
 }
