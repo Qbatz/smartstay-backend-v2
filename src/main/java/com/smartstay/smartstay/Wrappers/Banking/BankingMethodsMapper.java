@@ -1,4 +1,4 @@
-package com.smartstay.smartstay.Wrappers.banking;
+package com.smartstay.smartstay.Wrappers.Banking;
 
 import com.smartstay.smartstay.dao.BankingMethods;
 import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
