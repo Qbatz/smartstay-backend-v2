@@ -614,7 +614,7 @@ public class TransactionService {
             }
 
             customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(),
-                    customers.getProfilePic(),
+                    com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers),
                     NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
                     customers.getCustomerId(), customers.getMobile(), "91", fullAddress.toString(),
                     Utils.dateToString(customers.getJoiningDate()));
@@ -1004,13 +1004,30 @@ public class TransactionService {
             }
         }
 
-        Pageable pageable = PageRequest.of(page-1, size);
-        List<TransactionV1> transactions = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
-                endDate, bankIds, collectedBy, invoiceIds, pageable);
-        // long totalRecords =
-        // transactionRespository.countTransactionsByFiltersNew(hostelId, startDate,
-        // endDate, bankIds,
-        // collectedBy, invoiceIds);
+        int currentPage = 0;
+        int pageSize = 0;
+        int numberOfPages = 0;
+        int itemsPerPage = 0;
+        int totalItems = 0;
+
+        List<TransactionV1> transactionsMain = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
+                endDate, bankIds, collectedBy, invoiceIds);
+        List<TransactionV1> secondaryTransactions = transactionsMain;
+
+        totalItems = transactionsMain.size();
+
+        if (authentication.getSource().equalsIgnoreCase("web")) {
+            Pageable pageable = PageRequest.of(page-1, size);
+            Page<TransactionV1> webTransactions = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
+                    endDate, bankIds, collectedBy, invoiceIds, pageable);
+            currentPage = webTransactions.getPageable().getPageNumber() + 1;
+            pageSize = webTransactions.getTotalPages();
+            numberOfPages = webTransactions.getNumberOfElements();
+            totalItems = (int) webTransactions.getTotalElements();
+            itemsPerPage = webTransactions.getPageable().getPageSize();
+            secondaryTransactions = webTransactions.getContent();
+        }
+
 
         Double receivedAmount = 0.0;
         Double returnedAmount = 0.0;
@@ -1019,7 +1036,7 @@ public class TransactionService {
                 endDate, bankIds,
                 collectedBy, invoiceIds);
 
-        long totalRecords = listTransactions.size();
+        int totalRecords = listTransactions.size();
 
         receivedAmount = listTransactions
                 .stream()
@@ -1042,13 +1059,13 @@ public class TransactionService {
         Double totalInvoiceAmount = invoiceService.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId,
                 "SETTLEMENT", startDate, endDate);
 
-        List<String> customerIds = transactions.stream().map(TransactionV1::getCustomerId).filter(Objects::nonNull)
+        List<String> customerIds = transactionsMain.stream().map(TransactionV1::getCustomerId).filter(Objects::nonNull)
                 .distinct().collect(Collectors.toList());
-        List<String> tBankIds = transactions.stream().map(TransactionV1::getBankId).filter(Objects::nonNull).distinct()
+        List<String> tBankIds = transactionsMain.stream().map(TransactionV1::getBankId).filter(Objects::nonNull).distinct()
                 .toList();
-        List<String> tUserIds = transactions.stream().map(TransactionV1::getCreatedBy).filter(Objects::nonNull)
+        List<String> tUserIds = transactionsMain.stream().map(TransactionV1::getCreatedBy).filter(Objects::nonNull)
                 .distinct().collect(Collectors.toList());
-        List<String> tInvoiceIds = transactions.stream().map(TransactionV1::getInvoiceId).filter(Objects::nonNull)
+        List<String> tInvoiceIds = transactionsMain.stream().map(TransactionV1::getInvoiceId).filter(Objects::nonNull)
                 .distinct().collect(Collectors.toList());
 
         Map<String, Customers> customerMap = new HashMap<>();
@@ -1067,7 +1084,7 @@ public class TransactionService {
         if (!tInvoiceIds.isEmpty())
             invoiceService.findByInvoiceIdIn(tInvoiceIds).forEach(i -> invoiceMap.put(i.getInvoiceId(), i));
 
-        List<TransactionReportResponse.TransactionData> dataList = transactions.stream().map(t -> {
+        List<TransactionReportResponse.TransactionData> dataList = secondaryTransactions.stream().map(t -> {
             Customers c = customerMap.get(t.getCustomerId());
             BankingV1 b = bankMap.get(t.getBankId());
             Users u = userMap.get(t.getCreatedBy());
@@ -1106,9 +1123,12 @@ public class TransactionService {
                     .date(Utils.dateToString(t.getPaymentDate())).build();
         }).collect(Collectors.toList());
 
-        int totalPages = (int) Math.ceil((double) totalRecords / size);
 
         return TransactionReportResponse.builder().status(true).message("Receipts report fetched successfully")
+                .currentPage(currentPage)
+                .totalPages(pageSize)
+                .itemsPerPage(itemsPerPage)
+                .totalItems(totalRecords)
                 .summary(TransactionReportResponse.Summary.builder().hostelId(hostelId)
                         .startDate(Utils.dateToString(startDate)).endDate(Utils.dateToString(endDate))
                         .totalInvoiceAmount(totalInvoiceAmount != null ? totalInvoiceAmount : 0.0)
@@ -1118,9 +1138,6 @@ public class TransactionService {
                 .filters(TransactionReportResponse.Filters.builder().invoiceType(buildInvoiceTypeFilters())
                         .period(buildPeriodFilters()).paymentMode(buildPaymentModeFilters())
                         .collectedBy(buildCollectedByFilters(hostelId)).build())
-                .pagination(TransactionReportResponse.Pagination.builder().currentPage(page).pageSize(size)
-                        .totalRecords(totalRecords).totalPages(totalPages).hasNextPage(page < totalPages - 1)
-                        .hasPreviousPage(page > 0).build())
                 .data(dataList).build();
     }
 
@@ -1160,9 +1177,10 @@ public class TransactionService {
                 .summary(TransactionReportResponse.Summary.builder().hostelId(hostelId)
                         .startDate(Utils.dateToString(startDate)).endDate(Utils.dateToString(endDate))
                         .totalInvoiceAmount(0.0).receivedAmount(0.0).build())
-                .filters(TransactionReportResponse.Filters.builder().build()) // Populate basic options if needed, or
-                .pagination(TransactionReportResponse.Pagination.builder().currentPage(page).pageSize(size)
-                        .totalRecords(0).totalPages(0).hasNextPage(false).hasPreviousPage(false).build())
+                .filters(TransactionReportResponse.Filters.builder().invoiceType(buildInvoiceTypeFilters())
+                        .period(buildPeriodFilters()).paymentMode(buildPaymentModeFilters())
+                        .collectedBy(buildCollectedByFilters(hostelId)).build()) // Populate basic options if needed, or
+
                 .data(new ArrayList<>()).build();
     }
 

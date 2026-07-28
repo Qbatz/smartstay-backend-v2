@@ -35,6 +35,7 @@ import com.smartstay.smartstay.responses.customer.DraftDetails;
 import com.smartstay.smartstay.responses.customer.HostelInformation;
 import com.smartstay.smartstay.responses.customer.KycInformations;
 import com.smartstay.smartstay.dto.customer.WalletInfo;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -133,7 +134,7 @@ public class CustomersServiceV2 {
                         NameUtils.getFullName(c.getFirstName(), c.getLastName()),
                         c.getFirstName(),
                         c.getLastName(),
-                        c.getProfilePic(),
+                        CustomerUtils.getProfilePic(c),
                         NameUtils.getInitials(c.getFirstName(), c.getLastName()),
                         "+91 " + c.getMobile(),
                         c.getEmailId()))
@@ -681,7 +682,7 @@ public class CustomersServiceV2 {
                 customers.getMobile(),
                 "91",
                 initials,
-                customers.getProfilePic(),
+                CustomerUtils.getProfilePic(customers),
                 customers.getCurrentStatus(),
                 hostelInformation,
                 bookingInfo,
@@ -1394,5 +1395,52 @@ public class CustomersServiceV2 {
         customerDocumentsService.uploadManualKycFiles(hostelId, customerId, aadhaarPic, panPic);
 
         return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+
+    public ResponseEntity<?> updateCustomerJobInformation(String hostelId, String customerId, UpdateCustomerJob updateCustomerJob) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = userService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(customerId)) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!customers.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.CUSTOMERS.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(user.getUserId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOB_DETAILS_VACATED_TENANT, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_UPDATE_JOB_DETAILS_CANCELLED_TENANT, HttpStatus.BAD_REQUEST);
+        }
+        if (updateCustomerJob == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+
+        return customerJobDetailsService.updateJobInformation(hostelId, customerId, updateCustomerJob);
     }
 }

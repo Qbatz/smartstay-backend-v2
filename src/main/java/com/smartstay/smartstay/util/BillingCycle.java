@@ -4,8 +4,8 @@ import java.time.LocalDate;
 
 public class BillingCycle {
 
-    private LocalDate startDate;
-    private LocalDate endDate;
+    private final LocalDate startDate;
+    private final LocalDate endDate;
 
     public BillingCycle(LocalDate startDate, LocalDate endDate) {
         this.startDate = startDate;

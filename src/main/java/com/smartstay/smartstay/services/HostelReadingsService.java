@@ -205,12 +205,7 @@ public class HostelReadingsService {
         EBInfo ebInfo = null;
         if (hr != null) {
             boolean canAdd = false;
-            if (Utils.compareWithTwoDates(leavingDate, hr.getEntryDate()) <= 0) {
-                canAdd = false;
-            }
-            else {
-                canAdd = true;
-            }
+            canAdd = Utils.compareWithTwoDates(leavingDate, hr.getEntryDate()) > 0;
             ebInfo = new EBInfo(hr.getCurrentReading(),
                     unitPrice,
                     Utils.dateToString(hr.getEntryDate()),

@@ -10,10 +10,7 @@ public class BookingBankMapper implements Function<BankingV1, BookingBankInfo> {
     @Override
     public BookingBankInfo apply(BankingV1 bankingV1) {
 
-        boolean isUpi = false;
-        if (bankingV1.getUpiId() != null && bankingV1.getAccountNumber() == null) {
-            isUpi = true;
-        }
+        boolean isUpi = bankingV1.getUpiId() != null && bankingV1.getAccountNumber() == null;
         String bankName = bankingV1.getBankName();
         if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
             bankName = BankAccountType.CASH.name();

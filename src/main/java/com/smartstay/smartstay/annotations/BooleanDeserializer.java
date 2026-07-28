@@ -10,7 +10,7 @@ import java.io.IOException;
 
 public class BooleanDeserializer extends JsonDeserializer<Boolean> {
     @Override
-    public Boolean deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
+    public Boolean deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         String text = p.getText();
 
         if ("true".equalsIgnoreCase(text)) return true;

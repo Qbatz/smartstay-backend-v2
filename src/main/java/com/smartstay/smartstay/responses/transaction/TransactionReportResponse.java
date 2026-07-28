@@ -12,6 +12,10 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class TransactionReportResponse {
+    private int currentPage;
+    private int totalPages;
+    private int itemsPerPage;
+    private int totalItems;
     private boolean status;
     private String message;
     private Summary summary;
@@ -71,8 +75,6 @@ public class TransactionReportResponse {
         private int pageSize;
         private long totalRecords;
         private int totalPages;
-        private boolean hasNextPage;
-        private boolean hasPreviousPage;
     }
 
     @Data

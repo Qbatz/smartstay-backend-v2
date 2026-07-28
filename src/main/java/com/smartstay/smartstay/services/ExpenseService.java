@@ -954,10 +954,7 @@ public class ExpenseService {
     }
 
     private boolean checkRandomNumberExistsOrNot(String randomNumber, String hostelId) {
-        if (expensesRepository.findByExpenseNumberAndHostelId(randomNumber, hostelId) == null) {
-            return true;
-        }
-        return false;
+        return expensesRepository.findByExpenseNumberAndHostelId(randomNumber, hostelId) == null;
     }
 
     @Transactional
@@ -1480,20 +1477,36 @@ public class ExpenseService {
             finalBankIds = bankIdsFromPaidTo;
         }
 
+        int totalRecords = 0;
+        int currentPage = 0;
+        int noOfItemsPerPage = 0;
+        int totalPages = 0;
+
         ExpenseSummaryProjection summaryProj = expensesRepository.getExpenseSummary(hostelId, categoryIds,
                 subCategoryIds, finalBankIds, null, createdBy, startDate, endDate);
-        long totalRecords = (summaryProj != null) ? summaryProj.getTotalRecords() : 0;
         Double totalAmount = (summaryProj != null) ? summaryProj.getTotalAmount() : 0.0;
 
-        Pageable pageable = PageRequest.of(page, size);
-        List<ExpensesV1> expenses = expensesRepository.findExpensesWithFiltersV2(hostelId, categoryIds,
-                subCategoryIds, finalBankIds, null, createdBy, startDate, endDate, pageable);
 
-        Set<Long> catIds = expenses.stream().map(ExpensesV1::getCategoryId).filter(Objects::nonNull)
+        List<ExpensesV1> primaryExpenses = expensesRepository.findExpensesWithFiltersV2(hostelId, categoryIds,
+                subCategoryIds, finalBankIds, null, createdBy, startDate, endDate);
+        List<ExpensesV1> secondaryExpenses = primaryExpenses;
+        totalRecords = primaryExpenses.size();
+
+        if (authentication.getSource().equalsIgnoreCase("web")) {
+            Pageable pageable = PageRequest.of(page, size);
+            Page<ExpensesV1> pagedExpenses = expensesRepository.findExpensesWithFiltersV2(hostelId, categoryIds,
+                    subCategoryIds, finalBankIds, null, createdBy, startDate, endDate, pageable);
+            secondaryExpenses = pagedExpenses.getContent();
+            currentPage = pagedExpenses.getPageable().getPageNumber()+1;
+            noOfItemsPerPage = pagedExpenses.getNumberOfElements();
+            totalPages = pagedExpenses.getTotalPages();
+        }
+
+        Set<Long> catIds = primaryExpenses.stream().map(ExpensesV1::getCategoryId).filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        Set<String> bIds = expenses.stream().map(ExpensesV1::getBankId).filter(Objects::nonNull)
+        Set<String> bIds = primaryExpenses.stream().map(ExpensesV1::getBankId).filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        Set<String> uIds = expenses.stream().map(ExpensesV1::getCreatedBy).filter(Objects::nonNull)
+        Set<String> uIds = primaryExpenses.stream().map(ExpensesV1::getCreatedBy).filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         Map<Long, ExpenseCategory> categoryMap = new HashMap<>();
@@ -1515,7 +1528,7 @@ public class ExpenseService {
             usersService.findAllUsersFromUserId(uIds.stream().toList()).forEach(u -> userMap.put(u.getUserId(), u));
         }
 
-        List<ExpenseReportResponse.ExpenseDetail> details = expenses.stream().map(e -> {
+        List<ExpenseReportResponse.ExpenseDetail> details = secondaryExpenses.stream().map(e -> {
             ExpenseCategory cat = categoryMap.get(e.getCategoryId());
             String catName = (cat != null) ? cat.getCategoryName() : null;
             String subCatName = null;
@@ -1553,24 +1566,19 @@ public class ExpenseService {
 
         ExpenseReportResponse.FiltersData filtersData = buildFiltersData(hostelId);
 
-        int totalPages = (int) Math.ceil((double) totalRecords / size);
 
         return ExpenseReportResponse.builder()
                 .hostelId(hostelId)
+                .totalRecords(totalRecords)
+                .totalPages(totalPages)
+                .currentPage(currentPage)
+                .itemsPerPage(noOfItemsPerPage)
                 .filtersData(filtersData)
                 .summary(ExpenseReportResponse.Summary.builder()
                         .totalExpenses(totalRecords)
                         .totalAmount(totalAmount)
                         .startDate(Utils.dateToString(startDate))
                         .endDate(Utils.dateToString(endDate))
-                        .build())
-                .pagination(ExpenseReportResponse.Pagination.builder()
-                        .currentPage(page)
-                        .pageSize(size)
-                        .totalPages(totalPages)
-                        .totalRecords(totalRecords)
-                        .hasNext(page < totalPages - 1)
-                        .hasPrevious(page > 0)
                         .build())
                 .expenseLists(details)
                 .build();
@@ -1594,7 +1602,7 @@ public class ExpenseService {
 
         List<ExpenseReportResponse.SubCategoryFilter> subCatFilters = allCategories.stream()
                 .flatMap(c -> c.subCategories().stream())
-                .map(s -> new ExpenseReportResponse.SubCategoryFilter(s.subCategoryId(), s.subCategoryName()))
+                .map(s -> new ExpenseReportResponse.SubCategoryFilter( s.categoryId(), s.subCategoryId(), s.subCategoryName()))
                 .distinct()
                 .collect(Collectors.toList());
 

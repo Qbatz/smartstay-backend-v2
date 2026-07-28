@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.CustomersConfig;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.responses.recurring.CustomersList;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.Date;
@@ -74,7 +75,7 @@ public class CustomerListMapper implements Function<Customers, CustomersList> {
                 customers.getLastName(),
                 fullName.toString(),
                 initials.toString(),
-                customers.getProfilePic(),
+                CustomerUtils.getProfilePic(customers),
                 isEnabled,
                 lastInvoiceNumber,
                 lastInvoiceDate,

@@ -28,19 +28,19 @@ public class CustomerNotificationService {
         String titleMessage = "Complaint updates";
         String description = complaintType + " has some update";
 
-        if (newStatus.toLowerCase().equalsIgnoreCase(ComplaintStatus.RESOLVED.name().toLowerCase())) {
+        if (newStatus.equalsIgnoreCase(ComplaintStatus.RESOLVED.name())) {
             description = "Your complaint for " + complaintType + " has been ressolved";
             titleMessage = "Updates on complaint " + complaintType;
         }
-        else if (newStatus.toLowerCase().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name().toLowerCase())) {
+        else if (newStatus.equalsIgnoreCase(ComplaintStatus.ASSIGNED.name())) {
             titleMessage = "Updates on complaint " + complaintType;
             description = "Your complaint for " + complaintType + " has been assigned to " + name;
         }
-        else if (newStatus.toLowerCase().equalsIgnoreCase(ComplaintStatus.IN_PROGRESS.name().toLowerCase())) {
+        else if (newStatus.equalsIgnoreCase(ComplaintStatus.IN_PROGRESS.name())) {
             titleMessage = "Updates on complaint " + complaintType;
             description = "Your complaint for " + complaintType + " is moved for inprogress " + name;
         }
-        else if (newStatus.toLowerCase().equalsIgnoreCase(ComplaintStatus.PENDING.name().toLowerCase())) {
+        else if (newStatus.equalsIgnoreCase(ComplaintStatus.PENDING.name())) {
             titleMessage = "Updates on complaint " + complaintType;
             description = "Your complaint has been put on pending by " + name;
         }

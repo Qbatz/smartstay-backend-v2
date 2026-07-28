@@ -12,7 +12,7 @@ import java.io.InputStream;
 public class BufferingClientHttpResponseWrapper implements ClientHttpResponse  {
 
     private final ClientHttpResponse response;
-    private byte[] body;
+    private final byte[] body;
 
     public BufferingClientHttpResponseWrapper(ClientHttpResponse response) throws IOException {
         this.response = response;

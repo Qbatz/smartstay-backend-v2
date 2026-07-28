@@ -4,6 +4,7 @@ import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.responses.beds.TenantInfo;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.List;
@@ -57,7 +58,7 @@ public class CustomersTenantMapper implements Function<Customers, TenantInfo> {
             tenantId = customers.getCustomerId();
             firstName = customers.getFirstName();
             lastName = customers.getLastName();
-            profilePic = customers.getProfilePic();
+            profilePic = CustomerUtils.getProfilePic(customers);
             mobile = customers.getMobile();
 
             if (customers.getFirstName() != null) {

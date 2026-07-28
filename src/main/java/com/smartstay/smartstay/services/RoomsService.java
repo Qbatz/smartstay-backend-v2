@@ -289,7 +289,7 @@ public class RoomsService {
         return listRoomInfo
                 .stream()
                 .map(i -> {
-                    return new RoomInfoForEB(i.getFloorId(), i.getRoomId(), i.getRoomName(), i.getFloorName(), hostelId, 0l);
+                    return new RoomInfoForEB(i.getFloorId(), i.getRoomId(), i.getRoomName(), i.getFloorName(), hostelId, 0L);
                 })
                 .toList();
     }

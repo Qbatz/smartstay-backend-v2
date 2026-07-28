@@ -3,7 +3,7 @@ package com.smartstay.smartstay.dto.customer;
 import java.util.Date;
 
 public interface BedHistory {
-    public Long getHistoryId();
+    Long getHistoryId();
     Integer getBedId();
     String getBedName();
     String getRoomName();

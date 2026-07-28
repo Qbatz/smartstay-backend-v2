@@ -9,14 +9,13 @@ import java.util.function.Function;
 public class RefundableBanksMapper implements Function<BankingV1, RefundableBanks> {
     @Override
     public RefundableBanks apply(BankingV1 bankingV1) {
-        StringBuilder bankName = new StringBuilder();
 
-        bankName.append(bankingV1.getAccountHolderName());
-        bankName.append("-");
-        bankName.append(bankingV1.getAccountType());
+        String bankName = bankingV1.getAccountHolderName() +
+                "-" +
+                bankingV1.getAccountType();
 
         return new RefundableBanks(bankingV1.getBankId(),
-                bankName.toString(),
+                bankName,
                 bankingV1.getAccountHolderName());
     }
 }

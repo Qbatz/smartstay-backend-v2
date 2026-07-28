@@ -88,4 +88,9 @@ public class CustomersControllerV2 {
         return customersServiceV2.addAdditionalData(hostelId, customerId, additionalData, aadhaarPic, panPic);
     }
 
+    @PutMapping("/job/{hostelId}/{customerId}")
+    public ResponseEntity<?> updateCustomerAdditionalContacts(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @RequestBody(required = false) UpdateCustomerJob updateCustomerJob) {
+        return customersServiceV2.updateCustomerJobInformation(hostelId, customerId, updateCustomerJob);
+    }
+
 }

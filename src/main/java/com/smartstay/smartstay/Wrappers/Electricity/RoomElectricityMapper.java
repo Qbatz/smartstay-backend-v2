@@ -33,11 +33,12 @@ public class RoomElectricityMapper implements Function<com.smartstay.smartstay.d
         double amount = Utils.roundOffWithTwoDigit(roomElectricityCustomersList.getAmount());
 
 
+        String profilePic = roomElectricityCustomersList.getProfilePic();
         return new RoomElectricityCustomersList(roomElectricityCustomersList.getCustomerId(),
                 roomElectricityCustomersList.getFirstName(),
                 roomElectricityCustomersList.getLastName(),
                 fullName.toString(),
-                roomElectricityCustomersList.getProfilePic(),
+                profilePic,
                 initials.toString(),
                 Utils.dateToString(roomElectricityCustomersList.getStartDate()),
                 Utils.dateToString(roomElectricityCustomersList.getStartDate()),

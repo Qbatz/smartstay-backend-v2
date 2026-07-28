@@ -288,6 +288,7 @@ public class Utils {
     public static final String REFUND_PROCESSED_SUCCESSFULLY = "Refund processed successfully";
     public static final String CANNOT_REDEEM_RENTAL_INVOICE = "Cannot redeem rental invoices";
     public static final String NO_INVOICE_AVAILABLE_TO_REDEEM = "No invoice available to redeem";
+    public static final String INVOICE_NOT_FOUND = "No invoices are available";
     public static final String CANNOT_REDEEM_SETTLEMENT_INVOICE = "Cannot redeem settlement invoices";
     public static final String TARGET_INVOICE_ID_REQUIRED = "Target invoice id is required";
     public static final String CANNOT_CREATE_INVOICE_CHECKOUT_CUSTOMERS = "Cannot create manual invoice for checkout customers";
@@ -315,6 +316,8 @@ public class Utils {
     public static final String CANNOT_CHANGE_JOINING_DATE_SETTLEMENT_CUSTOMERS = "Cannot change joining date for the settlement generated customers";
     public static final String CANNOT_CHANGE_JOINING_DATE_CANCELLED_CUSTOMERS = "Cannot change joining date for the cancelled customers";
     public static final String CANNOT_UPDATE_JOINING_DATE_DUE_TO_INVOICES = "Cannot change the joining date. Already invoices are available for this customers";
+    public static final String CANNOT_UPDATE_JOB_DETAILS_VACATED_TENANT = "Cannot update job details for vacated tenants";
+    public static final String CANNOT_UPDATE_JOB_DETAILS_CANCELLED_TENANT = "Cannot update job details for cancelled tenants";
     public static final String CANNOT_CHANGE_JOINING_DATE_CUSTOMER_NOT_CHECKEDIN = "Cannot change the joining date, seems customer is not checked-In";
     public static final String BED_OCCUPIED_ON_DATE = "Cannot change joining date. The bed was occupied by another tenant during the selected period.";
     public static final String RENT_AMOUNT_REQUIRED_TO_UPDATE_RENT = "Rent amount required";

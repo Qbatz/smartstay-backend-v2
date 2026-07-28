@@ -422,7 +422,12 @@ public class CustomersService {
                 filterOption.put(currentStatus, currentStatus);
             }
 
-            return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(), item.getLastName(), fullName.toString(), item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), item.getProfilePic(), item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName());
+            String profilePicStr = item.getProfilePic();
+            if (profilePicStr == null || profilePicStr.trim().isEmpty()) {
+                profilePicStr = initials.toString();
+            }
+
+            return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(), item.getLastName(), fullName.toString(), item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), profilePicStr, item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName());
         }).collect(Collectors.toList());
 
         listCustomers.sort(Comparator.comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
@@ -1638,7 +1643,7 @@ public class CustomersService {
         }
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(),
-                customers.getMobile(), "91", initials, customers.getProfilePic(),
+                customers.getMobile(), "91", initials, CustomerUtils.getProfilePic(customers),
                 bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint,
                 customers.getCurrentStatus(), address, hostelInformation,
                 kycInfo, advanceInfo, checkoutInfo, bookingInfo,
@@ -3756,7 +3761,11 @@ public class CustomersService {
             if (item.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
                 currentStatus = "Vacated";
             }
-            return new CheckoutCustomers(item.getFirstName(), item.getLastName(), fullName, item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), item.getProfilePic(), item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials, Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName(), Utils.dateToString(item.getCheckoutDate()));
+            String profilePicStr = item.getProfilePic();
+            if (profilePicStr == null || profilePicStr.trim().isEmpty()) {
+                profilePicStr = initials.toString();
+            }
+            return new CheckoutCustomers(item.getFirstName(), item.getLastName(), fullName, item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), profilePicStr, item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials, Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName(), Utils.dateToString(item.getCheckoutDate()));
         }).toList();
 
         CheckoutList checkoutList = new CheckoutList(hostelId, listCustomers.size(), null, listCustomers);

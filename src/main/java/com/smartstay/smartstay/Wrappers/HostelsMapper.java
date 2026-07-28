@@ -19,7 +19,7 @@ public class HostelsMapper implements Function<HostelV1, Hostels> {
     private int noOfBeds = 0;
     private int noOfOccupiedBeds = 0;
     private int noOfAvailableBeds = 0;
-    private SubscriptionDto subscriptionDto;
+    private final SubscriptionDto subscriptionDto;
 
     public HostelsMapper(int noOfFloors, int noOfRooms, int noOfBeds, int noOfOccupiedBeds, int noOfAvailableBeds, SubscriptionDto subscriptionDto) {
         this.noOfFloors = noOfFloors;

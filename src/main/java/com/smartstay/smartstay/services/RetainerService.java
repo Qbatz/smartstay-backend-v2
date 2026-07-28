@@ -80,12 +80,12 @@ public class RetainerService {
             }
         }
         else {
-            Long relationalId = 0l;
+            Long relationalId = 0L;
             try {
                 relationalId  = Long.parseLong(loadBalance.relationId());
             }
             catch (Exception e) {
-                relationalId = 0l;
+                relationalId = 0L;
             }
             if (relationalId == 0) {
                 return new ResponseEntity<>(Utils.INVALID_RELATION_ID, HttpStatus.BAD_REQUEST);
