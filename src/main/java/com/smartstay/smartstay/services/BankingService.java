@@ -1,8 +1,6 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.Banking.BankInfoRecordPaymentMapper;
 import com.smartstay.smartstay.Wrappers.Banking.BookingBankMapper;
-import com.smartstay.smartstay.Wrappers.Banking.CashReturnMapper;
 import com.smartstay.smartstay.Wrappers.BankingListMapper;
 import com.smartstay.smartstay.Wrappers.invoices.RefundableBanksMapper;
 import com.smartstay.smartstay.config.Authentication;
@@ -25,6 +23,7 @@ import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.banking.SelfTransferInitialize;
 import com.smartstay.smartstay.responses.invoices.BankInfoRecordPayments;
 import com.smartstay.smartstay.responses.invoices.RefundableBanks;
+import com.smartstay.smartstay.util.BankingUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -465,7 +464,13 @@ public class BankingService {
 
         return listBankAccounts
                 .stream()
-                .map(item -> new CashReturnMapper().apply(item))
+                .map(item -> {
+                    String bankName = item.getBankName();
+                    if (bankName == null || bankName.isBlank()) {
+                        bankName = item.getAccountType();
+                    }
+                    return new DebitsBank(item.getBankId(), bankName, item.getAccountHolderName());
+                })
                 .toList();
 
     }
@@ -994,7 +999,11 @@ public class BankingService {
 
         return listBanks
                 .stream()
-                .map(i -> new BankInfoRecordPaymentMapper().apply(i))
+                .map(i -> new BankInfoRecordPayments(
+                        i.getBankId(),
+                        BankingUtils.getPaymentModeWithHolder(i),
+                        i.getAccountHolderName()
+                ))
                 .toList();
 
     }
