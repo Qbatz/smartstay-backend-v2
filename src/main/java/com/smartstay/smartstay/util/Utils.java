@@ -169,6 +169,11 @@ public class Utils {
     public static final String TRANSFER_ACCOUNT_INACTIVE = "This account or payment method is inactive";
     public static final String TRANSFER_SAME_ACCOUNT = "Source and destination cannot be the same";
     public static final String TRANSFER_INSUFFICIENT_BALANCE = "Insufficient balance to complete the transfer";
+    public static final String TRANSACTION_DATE_FILTER_INVALID = "Date filter should be ALL, THIS_MONTH, LAST_3_MONTHS, LAST_6_MONTHS or CUSTOM";
+    public static final String TRANSACTION_SOURCE_INVALID = "Invalid source filter";
+    public static final String TRANSACTION_CUSTOM_DATES_REQUIRED = "fromDate and toDate are required for a CUSTOM date filter";
+    public static final String TRANSACTION_DATE_FORMAT_INVALID = "fromDate and toDate must be in DD/MM/YYYY format";
+    public static final String TRANSACTION_DATE_RANGE_INVALID = "fromDate cannot be after toDate";
     public static final String CASH_ACCOUNT_ALREAY_EXISTS = "Cash Account already exists";
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";

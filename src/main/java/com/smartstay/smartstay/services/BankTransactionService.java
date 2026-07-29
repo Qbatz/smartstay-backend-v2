@@ -15,6 +15,8 @@ import com.smartstay.smartstay.repositories.BankTransactionRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
@@ -108,6 +110,11 @@ public class BankTransactionService {
 
     public BankTransactionsV1 saveTransaction(BankTransactionsV1 transaction) {
         return bankRepository.save(transaction);
+    }
+
+    public Page<BankTransactionsV1> getTransactions(String hostelId, Date startDate, Date endDate,
+            String source, Pageable pageable) {
+        return bankRepository.findTransactions(hostelId, startDate, endDate, source, pageable);
     }
 
     /**
