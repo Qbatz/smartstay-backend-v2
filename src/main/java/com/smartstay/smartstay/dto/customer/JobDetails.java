@@ -5,5 +5,6 @@ public record JobDetails(String employmentStatus,
                          String role,
                          String workLocation,
                          String shiftType,
-                         String shiftTiming) {
+                         String shiftStartTime,
+                         String shiftEndTime) {
 }

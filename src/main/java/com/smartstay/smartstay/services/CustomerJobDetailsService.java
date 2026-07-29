@@ -82,7 +82,8 @@ public class CustomerJobDetailsService {
                 customerJobDetails.getRole(),
                 customerJobDetails.getWorkLocation(),
                 customerJobDetails.getShiftType(),
-                customerJobDetails.getShiftStartTime() + ":" + customerJobDetails.getShiftEndTime());
+                customerJobDetails.getShiftStartTime(),
+                customerJobDetails.getShiftEndTime());
     }
 
     public ResponseEntity<?> updateJobInformation(String hostelId, String customerId, UpdateCustomerJob updateCustomerJob) {
