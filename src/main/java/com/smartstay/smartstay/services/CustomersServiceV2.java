@@ -227,6 +227,11 @@ public class CustomersServiceV2 {
             customers.setExpJoiningDate(joiningDate);
         }
 
+        if (payloads.idProof() != null) {
+            customers.setIdProofType(payloads.idProof().type());
+            customers.setIdProofNo(payloads.idProof().number());
+        }
+
         CustomerCredentials customerCredentials = ccs.addCustomerCredentials(payloads.mobile());
         if (customerCredentials != null) {
             customers.setXuid(customerCredentials.getXuid());
@@ -429,6 +434,11 @@ public class CustomersServiceV2 {
         customers.setExpJoiningDate(parseDraftDate(payloads.joiningDate()));
         customers.setLastUpdatedAt(new Date());
         customers.setUpdatedBy(loginId);
+
+        if (payloads.idProof() != null) {
+            customers.setIdProofType(payloads.idProof().type());
+            customers.setIdProofNo(payloads.idProof().number());
+        }
 
         // Draft detail fields — every value applied as sent (null/empty clears).
         draft.setJoiningDate(parseDraftDate(payloads.joiningDate()));
