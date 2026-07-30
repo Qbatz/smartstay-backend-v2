@@ -22,6 +22,7 @@ public class RentHistory {
     private Date endingAt;
     private Date createdAt;
     private String createdBy;
+    private Boolean isActive = true;
 
     @ManyToOne
     @JoinColumn(name = "booking_id")
