@@ -197,12 +197,14 @@ public class BankingServiceV2 {
             transaction.setCreatedAt(now);
             transaction.setIsDeleted(false);
             transaction.setCreatedBy(users.getUserId());
+            transaction.setPlatform(authentication.getSource());
             transactionService.saveTransaction(transaction);
         }
 
         usersService.addUserLog(hostelId, bankingV2.getBankId(), ActivitySource.BANKING, ActivitySourceType.CREATE, users);
 
-        return new ResponseEntity<>(new BankingV2Mapper().apply(bankingV2), HttpStatus.CREATED);
+        String responsiblePersonName = getUserName(bankingV2.getResponsiblePerson());
+        return new ResponseEntity<>(new BankingV2Mapper().apply(bankingV2, responsiblePersonName), HttpStatus.CREATED);
     }
 
     public ResponseEntity<?> getBanks(String hostelId, Integer page, Integer size) {
@@ -225,8 +227,23 @@ public class BankingServiceV2 {
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
         Page<BankingV2> bankPage = bankingV2Repository.findBanksByHostelId(hostelId, pageable);
+        List<BankingV2> content = bankPage.getContent();
+
+        List<String> personIds = content.stream()
+                .map(BankingV2::getResponsiblePerson)
+                .filter(id -> id != null && !id.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, String> personNameById = personIds.isEmpty()
+                ? Collections.emptyMap()
+                : usersService.findUsersByUserIds(personIds).stream()
+                        .collect(Collectors.toMap(Users::getUserId, this::fullName, (a, b) -> a));
+
         BankingV2Mapper mapper = new BankingV2Mapper();
-        List<BankV2Response> banks = bankPage.getContent().stream().map(mapper).collect(Collectors.toList());
+        List<BankV2Response> banks = content.stream()
+                .map(bank -> mapper.apply(bank, bank.getResponsiblePerson() != null
+                        ? personNameById.get(bank.getResponsiblePerson()) : null))
+                .collect(Collectors.toList());
 
         BankV2ListResponse response = new BankV2ListResponse(
                 bankPage.getTotalElements(),
@@ -248,9 +265,9 @@ public class BankingServiceV2 {
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
-//        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_READ)) {
-//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-//        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
 
         String parentId = users.getParentId();
 
@@ -923,6 +940,14 @@ public class BankingServiceV2 {
         String name = ((user.getFirstName() != null ? user.getFirstName() : "") + " "
                 + (user.getLastName() != null ? user.getLastName() : "")).trim();
         return name.isEmpty() ? null : name;
+    }
+
+    private String getUserName(String userId) {
+        if (userId == null || userId.isEmpty()) {
+            return null;
+        }
+        Users person = usersService.findUserByUserId(userId);
+        return person != null ? fullName(person) : null;
     }
 
     @Transactional(readOnly = true)
