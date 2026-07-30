@@ -10,12 +10,16 @@ public class BankingMethodsMapper implements Function<BankingMethods, BankingMet
 
     @Override
     public BankingMethodResponse apply(BankingMethods entity) {
+        return apply(entity, null);
+    }
+    public BankingMethodResponse apply(BankingMethods entity, String upiAppImage) {
         return new BankingMethodResponse(
                 entity.getPaymentMethodId(),
                 entity.getBank() != null ? entity.getBank().getBankId() : null,
                 entity.getPaymentMethod() != null ? entity.getPaymentMethod().getValue() : null,
                 entity.getUpiId(),
                 entity.getUpiApp(),
+                upiAppImage,
                 entity.getDisplayName(),
                 entity.getDescription(),
                 entity.getCardNumber(),

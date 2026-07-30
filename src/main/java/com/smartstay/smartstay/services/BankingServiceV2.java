@@ -464,11 +464,23 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.BANKING_METHOD_ONLY_FOR_BANK, HttpStatus.BAD_REQUEST);
         }
 
+        List<BankingMethods> methods = bankingMethodsRepository.findByBank_BankIdOrderByCreatedAtAsc(bankId);
+
+        List<Integer> upiAppIds = methods.stream()
+                .map(BankingMethods::getUpiApp)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Integer, String> upiAppImageById = upiAppIds.isEmpty()
+                ? Collections.emptyMap()
+                : qrBankTypeRepository.findAllById(upiAppIds).stream()
+                        .filter(qr -> qr.getImage() != null)
+                        .collect(Collectors.toMap(QrBankType::getId, QrBankType::getImage, (a, b) -> a));
+
         BankingMethodsMapper mapper = new BankingMethodsMapper();
-        List<BankingMethodResponse> response = bankingMethodsRepository
-                .findByBank_BankIdOrderByCreatedAtAsc(bankId)
-                .stream()
-                .map(mapper)
+        List<BankingMethodResponse> response = methods.stream()
+                .map(method -> mapper.apply(method, method.getUpiApp() != null
+                        ? upiAppImageById.get(method.getUpiApp()) : null))
                 .collect(Collectors.toList());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
