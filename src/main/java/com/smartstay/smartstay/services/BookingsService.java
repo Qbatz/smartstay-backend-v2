@@ -1116,6 +1116,42 @@ public class BookingsService {
 
     }
 
+    public ResponseEntity<?> cancelUpcomingRentRevision(String hostelId, String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = userService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customers = customersService.getCustomerInformation(customerId);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        RentHistory upcomingRentHistory = rentHistoryService.findNextUpcomingRentRevision(customers.getCustomerId(), new Date());
+        if (upcomingRentHistory == null) {
+            return new ResponseEntity<>(Utils.NO_UPCOMING_RENT_REVISION_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        upcomingRentHistory.setBooking(null);
+        rentHistoryService.softDeleteRentHistory(upcomingRentHistory);
+
+        userService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.CANCEL, users);
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+
+    }
+
     /**
      * Validates whether the bed is available for the new joining date.
      * This checks if the previous customer on the same bed has vacated before the new joining date.

@@ -29,6 +29,10 @@ public class ExpenseSubCategoryService {
         return expenseSubCategoryRepository.existsBySubCategoryNameIgnoreCaseAndHostelId(subcategoryName, hostelId);
     }
 
+    public boolean checkSubCategoryExist(String hostelId, Long categoryId, String subcategoryName) {
+        return expenseSubCategoryRepository.existsBySubCategoryNameIgnoreCaseAndHostelIdAndExpenseCategoryCategoryId(subcategoryName, hostelId, categoryId);
+    }
+
     public ResponseEntity<?> updateSubCategry(String hostelId, String subCategoryId, UpdateSubCategory subCategory) {
         Long subCatId = 0L;
         try {

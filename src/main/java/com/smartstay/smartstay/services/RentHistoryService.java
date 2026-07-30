@@ -82,6 +82,17 @@ public class RentHistoryService {
         return rentHistoryRepository.findRentByCustomerIdAndDate(customerId, leavingDate);
     }
 
+    public RentHistory findNextUpcomingRentRevision(String customerId, Date afterDate) {
+        return rentHistoryRepository.findNextUpcomingRentHistoryByCustomerIdAndAfterDate(customerId, afterDate);
+    }
+
+    public void softDeleteRentHistory(RentHistory rentHistory) {
+        if (rentHistory != null) {
+            rentHistory.setIsActive(false);
+            rentHistoryRepository.save(rentHistory);
+        }
+    }
+
     public void updateRentHistory(RentHistory rentHistory) {
         rentHistoryRepository.save(rentHistory);
     }

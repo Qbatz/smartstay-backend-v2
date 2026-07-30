@@ -109,7 +109,7 @@ public class ExpenseCategoryService {
             if (!Utils.checkNullOrEmpty(category.subCategory())) {
                 return new ResponseEntity<>(Utils.SUB_CATEGORY_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
             }
-            if (expenseSubCategory.checkSubCategoryExist(hostelId, category.subCategory())) {
+            if (expenseSubCategory.checkSubCategoryExist(hostelId, category.categoryId(), category.subCategory())) {
                 return new ResponseEntity<>(Utils.SUB_CATEGORY_NAME_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
             }
             else {

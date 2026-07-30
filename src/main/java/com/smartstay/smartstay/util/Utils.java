@@ -117,6 +117,7 @@ public class Utils {
     public static final String CHECK_IN_FUTURE_DATE_ERROR = "Check in cannot be accept for future dates";
     public static final String OTP_SENT_SUCCESSFULLY = "OTP has been sent successfully.";
     public static final String INVALID_BOOKING_ID = "Invalid booking id";
+    public static final String NO_UPCOMING_RENT_REVISION_FOUND = "No upcoming rent revision found";
     public static final String PAYLOADS_REQUIRED = "Payloads required";
     public static final String PARAMS_REQUIRED = "Params required";
     public static final String TRY_AGAIN = "Try Again";
