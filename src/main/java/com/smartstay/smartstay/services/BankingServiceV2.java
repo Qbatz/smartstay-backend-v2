@@ -37,6 +37,7 @@ import com.smartstay.smartstay.responses.banking.BankV2Response;
 import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
 import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
 import com.smartstay.smartstay.responses.banking.ResponsiblePersonResponse;
+import com.smartstay.smartstay.responses.banking.TransferInitializeResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -951,7 +952,7 @@ public class BankingServiceV2 {
     }
 
     @Transactional(readOnly = true)
-    public ResponseEntity<?> getAllPaymentMethods(String hostelId) {
+    public ResponseEntity<?> initializeTransfer(String hostelId, String bankId, String paymentMethodId) {
         Users user = currentUser();
         if (user == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -960,9 +961,67 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
+        BankingV2 bank = validBankOrNull(hostelId, bankId);
+        if (bank == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!bank.isActive()) {
+            return new ResponseEntity<>(Utils.ADD_MONEY_ACCOUNT_INACTIVE, HttpStatus.BAD_REQUEST);
+        }
+
+        String sourcePaymentMethodId = null;
+        if (isBankAccount(bank)) {
+            String methodId = paymentMethodId != null ? paymentMethodId.trim() : null;
+            if (methodId == null || methodId.isEmpty()) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_PAYMENT_METHOD_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            BankingMethods method = bankingMethodsRepository.findById(methodId).orElse(null);
+            if (method == null) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_INVALID_PAYMENT_METHOD, HttpStatus.BAD_REQUEST);
+            }
+            if (method.getBank() == null || !bankId.equals(method.getBank().getBankId())) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_PAYMENT_METHOD_MISMATCH, HttpStatus.BAD_REQUEST);
+            }
+            sourcePaymentMethodId = methodId;
+        }
+
+        List<PaymentMethodOptionResponse> options = buildAllPaymentMethods(hostelId);
+        PaymentMethodOptionResponse fromBank = null;
+        List<PaymentMethodOptionResponse> toBanks = new ArrayList<>();
+        for (PaymentMethodOptionResponse option : options) {
+            boolean isSource = sourcePaymentMethodId != null
+                    ? sourcePaymentMethodId.equals(option.paymentMethodId())
+                    : (bankId.equals(option.bankId()) && option.paymentMethodId() == null);
+            if (isSource) {
+                fromBank = option;
+            } else {
+                toBanks.add(option);
+            }
+        }
+
+        if (fromBank == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(new TransferInitializeResponse(fromBank, toBanks), HttpStatus.OK);
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getAllPaymentMethods(String hostelId) {
+        Users user = currentUser();
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        return new ResponseEntity<>(buildAllPaymentMethods(hostelId), HttpStatus.OK);
+    }
+
+    private List<PaymentMethodOptionResponse> buildAllPaymentMethods(String hostelId) {
         List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
         if (accounts.isEmpty()) {
-            return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+            return new ArrayList<>();
         }
 
         List<BankingV2> cashAccounts = new ArrayList<>();
@@ -1039,7 +1098,7 @@ public class BankingServiceV2 {
             }
         }
 
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return response;
     }
 
     private String responsiblePersonName(BankingV2 bank, Map<String, Users> personById,
