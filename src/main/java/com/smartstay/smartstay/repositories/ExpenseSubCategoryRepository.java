@@ -11,6 +11,8 @@ import java.util.List;
 public interface ExpenseSubCategoryRepository extends JpaRepository<ExpenseSubCategory, Long> {
     boolean existsBySubCategoryNameIgnoreCaseAndHostelId(String subCategoryName, String hostelId);
 
+    boolean existsBySubCategoryNameIgnoreCaseAndHostelIdAndExpenseCategoryCategoryId(String subCategoryName, String hostelId, Long categoryId);
+
     @Query("""
             SELECT esc FROM ExpenseSubCategory esc WHERE LOWER(esc.subCategoryName)=LOWER(:subCateName) AND 
             esc.hostelId=:hostelId AND esc.subCategoryId !=:id
