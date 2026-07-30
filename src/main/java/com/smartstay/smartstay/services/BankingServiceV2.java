@@ -496,6 +496,17 @@ public class BankingServiceV2 {
         String userId = user.getUserId();
         String paymentMethodId = null;
 
+        Date transactionDate;
+        if (isPresent(payload.transactionDate())) {
+            Date parsedDate = Utils.convertYmdStringToDate(payload.transactionDate());
+            if (parsedDate == null) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_TRANSACTION_DATE_INVALID, HttpStatus.BAD_REQUEST);
+            }
+            transactionDate = isSameDay(parsedDate, now) ? now : parsedDate;
+        } else {
+            transactionDate = now;
+        }
+
         if (isBankAccount(bank)) {
             String methodId = payload.paymentMethodId() != null ? payload.paymentMethodId().trim() : null;
             if (methodId == null || methodId.isEmpty()) {
@@ -525,10 +536,12 @@ public class BankingServiceV2 {
         transaction.setAccountBalance(latest != null && latest.getAccountBalance() != null
                 ? latest.getAccountBalance() + amount : amount);
         transaction.setAmount(amount);
-        transaction.setTransactionDate(now);
+        transaction.setDescription(trimToNull(payload.description()));
+        transaction.setTransactionDate(transactionDate);
         transaction.setCreatedAt(now);
         transaction.setIsDeleted(false);
         transaction.setCreatedBy(userId);
+        transaction.setPlatform(authentication.getSource());
         if (paymentMethodId != null) {
             transaction.setSourceId(paymentMethodId);
         }
@@ -886,6 +899,15 @@ public class BankingServiceV2 {
         calendar.set(Calendar.SECOND, 59);
         calendar.set(Calendar.MILLISECOND, 999);
         return calendar.getTime();
+    }
+
+    private boolean isSameDay(Date a, Date b) {
+        Calendar first = Calendar.getInstance();
+        first.setTime(a);
+        Calendar second = Calendar.getInstance();
+        second.setTime(b);
+        return first.get(Calendar.YEAR) == second.get(Calendar.YEAR)
+                && first.get(Calendar.DAY_OF_YEAR) == second.get(Calendar.DAY_OF_YEAR);
     }
 
     private BankSource parseSource(String value) {
