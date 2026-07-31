@@ -126,4 +126,23 @@ public class BankingControllerV2 {
             @RequestBody(required = false) MoneyTransferV2 payload) {
         return bankingServiceV2.moneyTransfer(hostelId, payload);
     }
+
+    @GetMapping("/transfer/initialize/{hostelId}/{bankId}")
+    public ResponseEntity<?> initializeTransfer(
+            @PathVariable("hostelId") String hostelId,
+            @PathVariable("bankId") String bankId,
+            @RequestParam(value = "paymentMethodId", required = false) String paymentMethodId) {
+        return bankingServiceV2.initializeTransfer(hostelId, bankId, paymentMethodId);
+    }
+
+    @GetMapping("/allTransactions/{hostelId}")
+    public ResponseEntity<?> getAllTransactions(@PathVariable("hostelId") String hostelId,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "dateFilter", required = false) String dateFilter,
+            @RequestParam(value = "source", required = false) String source,
+            @RequestParam(value = "fromDate", required = false) String fromDate,
+            @RequestParam(value = "toDate", required = false) String toDate) {
+        return bankingServiceV2.getAllTransactions(hostelId, page, size, dateFilter, source, fromDate, toDate);
+    }
 }

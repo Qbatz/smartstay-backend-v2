@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.Banking.AllPaymentMethodsMapper;
+import com.smartstay.smartstay.Wrappers.Banking.BankTransactionListMapper;
 import com.smartstay.smartstay.Wrappers.Banking.BankingMethodsMapper;
 import com.smartstay.smartstay.Wrappers.Banking.BankingV2Mapper;
 import com.smartstay.smartstay.config.Authentication;
@@ -20,6 +21,7 @@ import com.smartstay.smartstay.ennum.BankPurpose;
 import com.smartstay.smartstay.ennum.BankSource;
 import com.smartstay.smartstay.ennum.BankTransactionType;
 import com.smartstay.smartstay.ennum.CashAccountType;
+import com.smartstay.smartstay.ennum.DateFilter;
 import com.smartstay.smartstay.ennum.PaymentMethod;
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
@@ -28,16 +30,20 @@ import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
 import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.repositories.QrBankTypeRepository;
+import com.smartstay.smartstay.responses.banking.BankTransactionListResponse;
+import com.smartstay.smartstay.responses.banking.BankTransactionResponse;
 import com.smartstay.smartstay.responses.banking.BankV2ListResponse;
 import com.smartstay.smartstay.responses.banking.BankV2Response;
 import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
 import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
 import com.smartstay.smartstay.responses.banking.ResponsiblePersonResponse;
+import com.smartstay.smartstay.responses.banking.TransferInitializeResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -45,6 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -191,12 +198,14 @@ public class BankingServiceV2 {
             transaction.setCreatedAt(now);
             transaction.setIsDeleted(false);
             transaction.setCreatedBy(users.getUserId());
+            transaction.setPlatform(authentication.getSource());
             transactionService.saveTransaction(transaction);
         }
 
         usersService.addUserLog(hostelId, bankingV2.getBankId(), ActivitySource.BANKING, ActivitySourceType.CREATE, users);
 
-        return new ResponseEntity<>(new BankingV2Mapper().apply(bankingV2), HttpStatus.CREATED);
+        String responsiblePersonName = getUserName(bankingV2.getResponsiblePerson());
+        return new ResponseEntity<>(new BankingV2Mapper().apply(bankingV2, responsiblePersonName), HttpStatus.CREATED);
     }
 
     public ResponseEntity<?> getBanks(String hostelId, Integer page, Integer size) {
@@ -219,8 +228,23 @@ public class BankingServiceV2 {
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
         Page<BankingV2> bankPage = bankingV2Repository.findBanksByHostelId(hostelId, pageable);
+        List<BankingV2> content = bankPage.getContent();
+
+        List<String> personIds = content.stream()
+                .map(BankingV2::getResponsiblePerson)
+                .filter(id -> id != null && !id.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, String> personNameById = personIds.isEmpty()
+                ? Collections.emptyMap()
+                : usersService.findUsersByUserIds(personIds).stream()
+                        .collect(Collectors.toMap(Users::getUserId, this::fullName, (a, b) -> a));
+
         BankingV2Mapper mapper = new BankingV2Mapper();
-        List<BankV2Response> banks = bankPage.getContent().stream().map(mapper).collect(Collectors.toList());
+        List<BankV2Response> banks = content.stream()
+                .map(bank -> mapper.apply(bank, bank.getResponsiblePerson() != null
+                        ? personNameById.get(bank.getResponsiblePerson()) : null))
+                .collect(Collectors.toList());
 
         BankV2ListResponse response = new BankV2ListResponse(
                 bankPage.getTotalElements(),
@@ -242,9 +266,9 @@ public class BankingServiceV2 {
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
-//        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_READ)) {
-//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-//        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
 
         String parentId = users.getParentId();
 
@@ -440,11 +464,23 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.BANKING_METHOD_ONLY_FOR_BANK, HttpStatus.BAD_REQUEST);
         }
 
+        List<BankingMethods> methods = bankingMethodsRepository.findByBank_BankIdOrderByCreatedAtAsc(bankId);
+
+        List<Integer> upiAppIds = methods.stream()
+                .map(BankingMethods::getUpiApp)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Integer, String> upiAppImageById = upiAppIds.isEmpty()
+                ? Collections.emptyMap()
+                : qrBankTypeRepository.findAllById(upiAppIds).stream()
+                        .filter(qr -> qr.getImage() != null)
+                        .collect(Collectors.toMap(QrBankType::getId, QrBankType::getImage, (a, b) -> a));
+
         BankingMethodsMapper mapper = new BankingMethodsMapper();
-        List<BankingMethodResponse> response = bankingMethodsRepository
-                .findByBank_BankIdOrderByCreatedAtAsc(bankId)
-                .stream()
-                .map(mapper)
+        List<BankingMethodResponse> response = methods.stream()
+                .map(method -> mapper.apply(method, method.getUpiApp() != null
+                        ? upiAppImageById.get(method.getUpiApp()) : null))
                 .collect(Collectors.toList());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -490,6 +526,17 @@ public class BankingServiceV2 {
         String userId = user.getUserId();
         String paymentMethodId = null;
 
+        Date transactionDate;
+        if (isPresent(payload.transactionDate())) {
+            Date parsedDate = Utils.convertYmdStringToDate(payload.transactionDate());
+            if (parsedDate == null) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_TRANSACTION_DATE_INVALID, HttpStatus.BAD_REQUEST);
+            }
+            transactionDate = isSameDay(parsedDate, now) ? now : parsedDate;
+        } else {
+            transactionDate = now;
+        }
+
         if (isBankAccount(bank)) {
             String methodId = payload.paymentMethodId() != null ? payload.paymentMethodId().trim() : null;
             if (methodId == null || methodId.isEmpty()) {
@@ -519,10 +566,12 @@ public class BankingServiceV2 {
         transaction.setAccountBalance(latest != null && latest.getAccountBalance() != null
                 ? latest.getAccountBalance() + amount : amount);
         transaction.setAmount(amount);
-        transaction.setTransactionDate(now);
+        transaction.setDescription(trimToNull(payload.description()));
+        transaction.setTransactionDate(transactionDate);
         transaction.setCreatedAt(now);
         transaction.setIsDeleted(false);
         transaction.setCreatedBy(userId);
+        transaction.setPlatform(authentication.getSource());
         if (paymentMethodId != null) {
             transaction.setSourceId(paymentMethodId);
         }
@@ -726,7 +775,8 @@ public class BankingServiceV2 {
     }
 
     @Transactional(readOnly = true)
-    public ResponseEntity<?> getAllPaymentMethods(String hostelId) {
+    public ResponseEntity<?> getAllTransactions(String hostelId, Integer page, Integer size,
+            String dateFilterParam, String sourceParam, String fromDateParam, String toDateParam) {
         Users user = currentUser();
         if (user == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -735,9 +785,255 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
 
+        DateFilter dateFilter = DateFilter.ALL;
+        if (isPresent(dateFilterParam)) {
+            dateFilter = DateFilter.fromValue(dateFilterParam);
+            if (dateFilter == null) {
+                return new ResponseEntity<>(Utils.TRANSACTION_DATE_FILTER_INVALID, HttpStatus.BAD_REQUEST);
+            }
+        }
+        String source = null;
+        if (isPresent(sourceParam)) {
+            BankSource bankSource = parseSource(sourceParam);
+            if (bankSource == null) {
+                return new ResponseEntity<>(Utils.TRANSACTION_SOURCE_INVALID, HttpStatus.BAD_REQUEST);
+            }
+            source = bankSource.name();
+        }
+
+        Date startDate;
+        Date endDate = null;
+        if (dateFilter == DateFilter.CUSTOM) {
+            if (!isPresent(fromDateParam) || !isPresent(toDateParam)) {
+                return new ResponseEntity<>(Utils.TRANSACTION_CUSTOM_DATES_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            startDate = Utils.convertStringToDate(fromDateParam.trim());
+            Date toDate = Utils.convertStringToDate(toDateParam.trim());
+            if (startDate == null || toDate == null) {
+                return new ResponseEntity<>(Utils.TRANSACTION_DATE_FORMAT_INVALID, HttpStatus.BAD_REQUEST);
+            }
+            endDate = endOfDay(toDate);
+            if (startDate.after(endDate)) {
+                return new ResponseEntity<>(Utils.TRANSACTION_DATE_RANGE_INVALID, HttpStatus.BAD_REQUEST);
+            }
+        } else {
+            startDate = startDateFor(dateFilter);
+        }
+
+        int pageNumber = (page == null || page < 1) ? 1 : page;
+        int pageSize = (size == null || size < 1) ? 20 : size;
+        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<BankTransactionsV1> txnPage = transactionService.getTransactions(hostelId, startDate, endDate, source, pageable);
+        List<BankTransactionsV1> transactions = txnPage.getContent();
+
+        List<String> bankIds = transactions.stream()
+                .map(BankTransactionsV1::getBankId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, BankingV2> bankById = bankIds.isEmpty()
+                ? Collections.emptyMap()
+                : bankingV2Repository.findAllById(bankIds).stream()
+                        .collect(Collectors.toMap(BankingV2::getBankId, Function.identity(), (a, b) -> a));
+
+        List<String> sourceIds = transactions.stream()
+                .map(BankTransactionsV1::getSourceId)
+                .filter(id -> id != null && !id.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, BankingMethods> methodById = sourceIds.isEmpty()
+                ? Collections.emptyMap()
+                : bankingMethodsRepository.findAllById(sourceIds).stream()
+                        .collect(Collectors.toMap(BankingMethods::getPaymentMethodId, Function.identity(), (a, b) -> a));
+
+        Set<Integer> qrTypeIds = new HashSet<>();
+        methodById.values().forEach(method -> {
+            if (method.getCardNetwork() != null) {
+                qrTypeIds.add(method.getCardNetwork());
+            }
+            if (method.getUpiApp() != null) {
+                qrTypeIds.add(method.getUpiApp());
+            }
+        });
+        Map<Integer, String> qrNameById = qrTypeIds.isEmpty()
+                ? Collections.emptyMap()
+                : qrBankTypeRepository.findAllById(qrTypeIds).stream()
+                        .collect(Collectors.toMap(QrBankType::getId, QrBankType::getName, (a, b) -> a));
+
+        Set<String> userIds = new HashSet<>();
+        transactions.forEach(txn -> {
+            if (isPresent(txn.getCreatedBy())) {
+                userIds.add(txn.getCreatedBy());
+            }
+        });
+        bankById.values().forEach(bank -> {
+            if (isPresent(bank.getResponsiblePerson())) {
+                userIds.add(bank.getResponsiblePerson());
+            }
+        });
+        Map<String, String> userNameById = userIds.isEmpty()
+                ? Collections.emptyMap()
+                : usersService.findUsersByUserIds(new ArrayList<>(userIds)).stream()
+                        .collect(Collectors.toMap(Users::getUserId, this::fullName, (a, b) -> a));
+
+        BankTransactionListMapper mapper = new BankTransactionListMapper();
+        List<BankTransactionResponse> items = transactions.stream().map(txn -> {
+            BankingV2 bank = txn.getBankId() != null ? bankById.get(txn.getBankId()) : null;
+            BankingMethods method = txn.getSourceId() != null ? methodById.get(txn.getSourceId()) : null;
+            String createdByName = txn.getCreatedBy() != null ? userNameById.get(txn.getCreatedBy()) : null;
+            String responsiblePersonName = (bank != null && bank.getResponsiblePerson() != null)
+                    ? userNameById.get(bank.getResponsiblePerson()) : null;
+            String cardNetwork = (method != null && method.getCardNetwork() != null)
+                    ? qrNameById.get(method.getCardNetwork()) : null;
+            String upiApp = (method != null && method.getUpiApp() != null)
+                    ? qrNameById.get(method.getUpiApp()) : null;
+            return mapper.map(txn, bank, method, createdByName, responsiblePersonName, cardNetwork, upiApp);
+        }).collect(Collectors.toList());
+
+        BankTransactionListResponse response = new BankTransactionListResponse(
+                txnPage.getTotalElements(), pageNumber, txnPage.getTotalPages(), pageSize, items);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private Date startDateFor(DateFilter filter) {
+        Calendar calendar = Calendar.getInstance();
+        switch (filter) {
+            case THIS_MONTH -> {
+                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                return calendar.getTime();
+            }
+            case LAST_3_MONTHS -> {
+                calendar.add(Calendar.MONTH, -3);
+                return calendar.getTime();
+            }
+            case LAST_6_MONTHS -> {
+                calendar.add(Calendar.MONTH, -6);
+                return calendar.getTime();
+            }
+            default -> {
+                return null;
+            }
+        }
+    }
+
+    private Date endOfDay(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
+        return calendar.getTime();
+    }
+
+    private boolean isSameDay(Date a, Date b) {
+        Calendar first = Calendar.getInstance();
+        first.setTime(a);
+        Calendar second = Calendar.getInstance();
+        second.setTime(b);
+        return first.get(Calendar.YEAR) == second.get(Calendar.YEAR)
+                && first.get(Calendar.DAY_OF_YEAR) == second.get(Calendar.DAY_OF_YEAR);
+    }
+
+    private BankSource parseSource(String value) {
+        for (BankSource bankSource : BankSource.values()) {
+            if (bankSource.name().equalsIgnoreCase(value.trim())) {
+                return bankSource;
+            }
+        }
+        return null;
+    }
+
+    private String fullName(Users user) {
+        String name = ((user.getFirstName() != null ? user.getFirstName() : "") + " "
+                + (user.getLastName() != null ? user.getLastName() : "")).trim();
+        return name.isEmpty() ? null : name;
+    }
+
+    private String getUserName(String userId) {
+        if (userId == null || userId.isEmpty()) {
+            return null;
+        }
+        Users person = usersService.findUserByUserId(userId);
+        return person != null ? fullName(person) : null;
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> initializeTransfer(String hostelId, String bankId, String paymentMethodId) {
+        Users user = currentUser();
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        BankingV2 bank = validBankOrNull(hostelId, bankId);
+        if (bank == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!bank.isActive()) {
+            return new ResponseEntity<>(Utils.ADD_MONEY_ACCOUNT_INACTIVE, HttpStatus.BAD_REQUEST);
+        }
+
+        String sourcePaymentMethodId = null;
+        if (isBankAccount(bank)) {
+            String methodId = paymentMethodId != null ? paymentMethodId.trim() : null;
+            if (methodId == null || methodId.isEmpty()) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_PAYMENT_METHOD_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            BankingMethods method = bankingMethodsRepository.findById(methodId).orElse(null);
+            if (method == null) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_INVALID_PAYMENT_METHOD, HttpStatus.BAD_REQUEST);
+            }
+            if (method.getBank() == null || !bankId.equals(method.getBank().getBankId())) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_PAYMENT_METHOD_MISMATCH, HttpStatus.BAD_REQUEST);
+            }
+            sourcePaymentMethodId = methodId;
+        }
+
+        List<PaymentMethodOptionResponse> options = buildAllPaymentMethods(hostelId);
+        PaymentMethodOptionResponse fromBank = null;
+        List<PaymentMethodOptionResponse> toBanks = new ArrayList<>();
+        for (PaymentMethodOptionResponse option : options) {
+            boolean isSource = sourcePaymentMethodId != null
+                    ? sourcePaymentMethodId.equals(option.paymentMethodId())
+                    : (bankId.equals(option.bankId()) && option.paymentMethodId() == null);
+            if (isSource) {
+                fromBank = option;
+            } else {
+                toBanks.add(option);
+            }
+        }
+
+        if (fromBank == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(new TransferInitializeResponse(fromBank, toBanks), HttpStatus.OK);
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getAllPaymentMethods(String hostelId) {
+        Users user = currentUser();
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        return new ResponseEntity<>(buildAllPaymentMethods(hostelId), HttpStatus.OK);
+    }
+
+    private List<PaymentMethodOptionResponse> buildAllPaymentMethods(String hostelId) {
         List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
         if (accounts.isEmpty()) {
-            return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+            return new ArrayList<>();
         }
 
         List<BankingV2> cashAccounts = new ArrayList<>();
@@ -814,7 +1110,7 @@ public class BankingServiceV2 {
             }
         }
 
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return response;
     }
 
     private String responsiblePersonName(BankingV2 bank, Map<String, Users> personById,
