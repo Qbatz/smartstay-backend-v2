@@ -10,6 +10,10 @@ public class BankingV2Mapper implements Function<BankingV2, BankV2Response> {
 
     @Override
     public BankV2Response apply(BankingV2 bank) {
+        return apply(bank, null);
+    }
+
+    public BankV2Response apply(BankingV2 bank, String responsiblePersonName) {
         return new BankV2Response(
                 bank.getBankId(),
                 bank.getDisplayName(),
@@ -22,6 +26,7 @@ public class BankingV2Mapper implements Function<BankingV2, BankV2Response> {
                 bank.getBankAccountType(),
                 bank.getCashAccountType(),
                 bank.getResponsiblePerson(),
+                responsiblePersonName,
                 bank.getDescription(),
                 bank.getBalance(),
                 bank.isActive(),

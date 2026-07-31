@@ -6,6 +6,7 @@ public record BankingMethodResponse(
         String paymentMethod,
         String upiId,
         Integer upiApp,
+        String upiAppImage,
         String displayName,
         String description,
         String cardNumber,
