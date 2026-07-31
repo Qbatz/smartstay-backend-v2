@@ -631,6 +631,7 @@ public class InvoiceV1Service {
             dEndDate = Utils.stringToDate(endDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
         List<String> invoiceTypes = null;
+        Boolean isCancelled = null;
         if (types != null) {
             invoiceTypes = types;
         } else {
@@ -652,7 +653,18 @@ public class InvoiceV1Service {
         }
         List<String> pStatus = null;
         if (paymentStatus != null && !paymentStatus.isEmpty()) {
-            pStatus = paymentStatus;
+            List<String> allPaymentStatus = paymentStatus
+                    .stream()
+                    .filter(i -> i.equalsIgnoreCase("ALL"))
+                    .toList();
+            if (allPaymentStatus != null && !allPaymentStatus.isEmpty()) {
+                isCancelled = null;
+                pStatus = null;
+            }
+            else {
+                isCancelled = false;
+                pStatus = paymentStatus;
+            }
         }
 
         List<String> userIds = null;
@@ -692,9 +704,9 @@ public class InvoiceV1Service {
         List<InvoicesV1> listAllInvoice = new ArrayList<>();
         Page<InvoicesV1> pageList = null;
 
-        listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey);
+        listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey, isCancelled);
         if (authentication.getSource().equalsIgnoreCase("web")) {
-            pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey, pageableRequest);
+            pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey, isCancelled, pageableRequest);
             if (pageList != null) {
                 listAllInvoice = pageList.getContent();
             }
@@ -735,8 +747,8 @@ public class InvoiceV1Service {
                 listInvoiceDiscounts, listInvoiceRedeemed, listAdvanceInvoice, listAllInvoiceForCustomer, listTransactions).apply(i)).toList();
 
         if (authentication.getSource().equalsIgnoreCase("web")) {
-            List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
-            return getAllInvoicesWebResponse(hostelId, invoiceFilterOptions, pageList, newInvoicesList, listInvoices);
+//            List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
+            return getAllInvoicesWebResponse(hostelId, invoiceFilterOptions, pageList, newInvoicesList, listAllInvoice);
         }
         else {
             NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, invoiceFilterOptions, newInvoicesList);
@@ -5773,7 +5785,7 @@ public class InvoiceV1Service {
             return new CreatedBy(fullName.toString(), i.getUserId());
         }).toList();
 
-        List<InvoicesV1> listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
+        List<InvoicesV1> listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelIdForBasicList(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
         if (listAllInvoice != null && !listAllInvoice.isEmpty()) {
             List<String> customerIds = listAllInvoice.stream().map(InvoicesV1::getCustomerId).toList();
             List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
