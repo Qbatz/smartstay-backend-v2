@@ -30,8 +30,13 @@ import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
 import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.repositories.QrBankTypeRepository;
+import com.smartstay.smartstay.responses.banking.BankOverviewResponse;
 import com.smartstay.smartstay.responses.banking.BankTransactionListResponse;
 import com.smartstay.smartstay.responses.banking.BankTransactionResponse;
+import com.smartstay.smartstay.responses.banking.MonthOverview;
+import com.smartstay.smartstay.responses.banking.OverviewFilterOptions;
+import com.smartstay.smartstay.responses.banking.FilterOption;
+import com.smartstay.smartstay.responses.banking.TransactionFilterOptions;
 import com.smartstay.smartstay.responses.banking.BankV2ListResponse;
 import com.smartstay.smartstay.responses.banking.BankV2Response;
 import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
@@ -50,12 +55,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -567,6 +578,7 @@ public class BankingServiceV2 {
                 ? latest.getAccountBalance() + amount : amount);
         transaction.setAmount(amount);
         transaction.setDescription(trimToNull(payload.description()));
+        transaction.setTransactionNumber(trimToNull(payload.transactionId()));
         transaction.setTransactionDate(transactionDate);
         transaction.setCreatedAt(now);
         transaction.setIsDeleted(false);
@@ -775,7 +787,145 @@ public class BankingServiceV2 {
     }
 
     @Transactional(readOnly = true)
+    public ResponseEntity<?> getBankOverview(String hostelId, String bankId, String dateFilterParam) {
+        Users user = currentUser();
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        BankingV2 bank = validBankOrNull(hostelId, bankId);
+        if (bank == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        DateFilter filter = DateFilter.LAST_6_MONTHS;
+        if (isPresent(dateFilterParam)) {
+            filter = DateFilter.fromValue(dateFilterParam);
+            if (filter == null || filter == DateFilter.ALL || filter == DateFilter.CUSTOM) {
+                return new ResponseEntity<>(Utils.OVERVIEW_DATE_FILTER_INVALID, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        YearMonth currentMonth = YearMonth.now();
+        YearMonth monthTo = currentMonth;
+        YearMonth monthFrom = switch (filter) {
+            case THIS_MONTH -> currentMonth;
+            case LAST_3_MONTHS -> currentMonth.minusMonths(2);
+            default -> currentMonth.minusMonths(5); // LAST_6_MONTHS
+        };
+        Date startDate = startOfMonth(monthFrom);
+
+        List<BankTransactionsV1> transactions =
+                transactionService.getOverviewTransactions(hostelId, bankId, startDate);
+
+        Map<YearMonth, Map<String, Double>> sourceByMonth = new HashMap<>();
+        Map<YearMonth, Double> netChangeByMonth = new HashMap<>();
+        Map<String, Double> summaryTotals = new HashMap<>();
+        BankTransactionsV1 earliest = null;
+        for (BankTransactionsV1 txn : transactions) {
+            if (txn.getCreatedAt() == null) {
+                continue;
+            }
+            YearMonth ym = toYearMonth(txn.getCreatedAt());
+            double amount = txn.getAmount() != null ? txn.getAmount() : 0.0;
+            if (txn.getSource() != null) {
+                sourceByMonth.computeIfAbsent(ym, key -> new HashMap<>()).merge(txn.getSource(), amount, Double::sum);
+                summaryTotals.merge(txn.getSource(), amount, Double::sum);
+            }
+            netChangeByMonth.merge(ym, signedAmount(txn), Double::sum);
+            if (earliest == null || txn.getCreatedAt().before(earliest.getCreatedAt())) {
+                earliest = txn;
+            }
+        }
+
+        double currentBalance = bank.getBalance() != null ? bank.getBalance() : 0.0;
+        double openingBalance = openingBalanceFor(earliest, currentBalance);
+
+        List<MonthOverview> monthData = new ArrayList<>();
+        double runningOpening = openingBalance;
+        for (YearMonth ym = monthFrom; !ym.isAfter(monthTo); ym = ym.plusMonths(1)) {
+            Map<String, Double> monthSources = sourceByMonth.getOrDefault(ym, Collections.emptyMap());
+            double opening = runningOpening;
+            double closing = opening + netChangeByMonth.getOrDefault(ym, 0.0);
+            monthData.add(new MonthOverview(
+                    ym.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH),
+                    closing,
+                    opening,
+                    monthSources.getOrDefault(BankSource.INVOICE.name(), 0.0),
+                    monthSources.getOrDefault(BankSource.ASSETS.name(), 0.0),
+                    monthSources.getOrDefault(BankSource.BOOKING_REFUND.name(), 0.0),
+                    monthSources.getOrDefault(BankSource.DEPOSIT.name(), 0.0),
+                    monthSources.getOrDefault(BankSource.SELF_TRANSFER.name(), 0.0),
+                    monthSources.getOrDefault(BankSource.RENT_REFUND.name(), 0.0),
+                    monthSources.getOrDefault(BankSource.EXPENSE.name(), 0.0)));
+            runningOpening = closing;
+        }
+
+        BankOverviewResponse response = new BankOverviewResponse(
+                new OverviewFilterOptions(buildOverviewDateFilterOptions()),
+                currentBalance,
+                openingBalance,
+                summaryTotals.getOrDefault(BankSource.INVOICE.name(), 0.0),
+                summaryTotals.getOrDefault(BankSource.ASSETS.name(), 0.0),
+                summaryTotals.getOrDefault(BankSource.BOOKING_REFUND.name(), 0.0),
+                summaryTotals.getOrDefault(BankSource.DEPOSIT.name(), 0.0),
+                summaryTotals.getOrDefault(BankSource.SELF_TRANSFER.name(), 0.0),
+                summaryTotals.getOrDefault(BankSource.RENT_REFUND.name(), 0.0),
+                summaryTotals.getOrDefault(BankSource.EXPENSE.name(), 0.0),
+                monthData);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private Date startOfMonth(YearMonth yearMonth) {
+        return Date.from(yearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    private YearMonth toYearMonth(Date date) {
+        return YearMonth.from(date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+    }
+
+    private List<FilterOption> buildDateFilterOptions() {
+        return Arrays.stream(DateFilter.values())
+                .map(filter -> new FilterOption(toDisplayName(filter.name()), filter.name()))
+                .collect(Collectors.toList());
+    }
+
+    private List<FilterOption> buildOverviewDateFilterOptions() {
+        return Arrays.stream(DateFilter.values())
+                .filter(filter -> filter != DateFilter.ALL && filter != DateFilter.CUSTOM)
+                .map(filter -> new FilterOption(toDisplayName(filter.name()), filter.name()))
+                .collect(Collectors.toList());
+    }
+
+    private double signedAmount(BankTransactionsV1 txn) {
+        double amount = txn.getAmount() != null ? txn.getAmount() : 0.0;
+        return BankTransactionType.CREDIT.name().equalsIgnoreCase(txn.getType()) ? amount : -amount;
+    }
+
+    private double openingBalanceFor(BankTransactionsV1 earliest, double currentBalance) {
+        if (earliest == null) {
+            return currentBalance;
+        }
+        double earliestBalance = earliest.getAccountBalance() != null ? earliest.getAccountBalance() : 0.0;
+        return earliestBalance - signedAmount(earliest);
+    }
+
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getAllTransactions(String hostelId, Integer page, Integer size,
+            String dateFilterParam, String sourceParam, String fromDateParam, String toDateParam) {
+        return listTransactions(hostelId, null, page, size, dateFilterParam, sourceParam, fromDateParam, toDateParam);
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getAllBankTransactions(String hostelId, String bankId, Integer page, Integer size,
+            String dateFilterParam, String sourceParam, String fromDateParam, String toDateParam) {
+        return listTransactions(hostelId, bankId, page, size, dateFilterParam, sourceParam, fromDateParam, toDateParam);
+    }
+
+    private ResponseEntity<?> listTransactions(String hostelId, String bankId, Integer page, Integer size,
             String dateFilterParam, String sourceParam, String fromDateParam, String toDateParam) {
         Users user = currentUser();
         if (user == null) {
@@ -783,6 +933,10 @@ public class BankingServiceV2 {
         }
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (bankId != null && validBankOrNull(hostelId, bankId) == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
 
         DateFilter dateFilter = DateFilter.ALL;
@@ -824,7 +978,8 @@ public class BankingServiceV2 {
         int pageSize = (size == null || size < 1) ? 20 : size;
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        Page<BankTransactionsV1> txnPage = transactionService.getTransactions(hostelId, startDate, endDate, source, pageable);
+        Page<BankTransactionsV1> txnPage =
+                transactionService.getTransactions(hostelId, bankId, startDate, endDate, source, pageable);
         List<BankTransactionsV1> transactions = txnPage.getContent();
 
         List<String> bankIds = transactions.stream()
@@ -892,7 +1047,8 @@ public class BankingServiceV2 {
         }).collect(Collectors.toList());
 
         BankTransactionListResponse response = new BankTransactionListResponse(
-                txnPage.getTotalElements(), pageNumber, txnPage.getTotalPages(), pageSize, items);
+                txnPage.getTotalElements(), pageNumber, txnPage.getTotalPages(), pageSize,
+                buildTransactionFilterOptions(), items);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -953,6 +1109,27 @@ public class BankingServiceV2 {
         String name = ((user.getFirstName() != null ? user.getFirstName() : "") + " "
                 + (user.getLastName() != null ? user.getLastName() : "")).trim();
         return name.isEmpty() ? null : name;
+    }
+
+    private TransactionFilterOptions buildTransactionFilterOptions() {
+        List<FilterOption> sources = Arrays.stream(BankSource.values())
+                .map(source -> new FilterOption(toDisplayName(source.name()), source.name()))
+                .collect(Collectors.toList());
+        return new TransactionFilterOptions(buildDateFilterOptions(), sources);
+    }
+
+    private String toDisplayName(String enumName) {
+        StringBuilder label = new StringBuilder();
+        for (String word : enumName.toLowerCase().split("_")) {
+            if (word.isEmpty()) {
+                continue;
+            }
+            if (label.length() > 0) {
+                label.append(" ");
+            }
+            label.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        }
+        return label.toString();
     }
 
     private String getUserName(String userId) {
