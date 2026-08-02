@@ -117,6 +117,10 @@ public class BankTransactionService {
         return bankRepository.findTransactions(hostelId, startDate, endDate, source, pageable);
     }
 
+    public List<BankTransactionsV1> getOverviewTransactions(String hostelId, String bankId, Date startDate) {
+        return bankRepository.findOverviewTransactions(hostelId, bankId, startDate);
+    }
+
     /**
      *
      * this is to refund the booking amount

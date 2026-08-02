@@ -135,6 +135,14 @@ public class BankingControllerV2 {
         return bankingServiceV2.initializeTransfer(hostelId, bankId, paymentMethodId);
     }
 
+    @GetMapping("/overview/{hostelId}/{bankId}")
+    public ResponseEntity<?> getBankOverview(
+            @PathVariable("hostelId") String hostelId,
+            @PathVariable("bankId") String bankId,
+            @RequestParam(value = "dateFilter", required = false) String dateFilter) {
+        return bankingServiceV2.getBankOverview(hostelId, bankId, dateFilter);
+    }
+
     @GetMapping("/allTransactions/{hostelId}")
     public ResponseEntity<?> getAllTransactions(@PathVariable("hostelId") String hostelId,
             @RequestParam(value = "page", defaultValue = "1") int page,

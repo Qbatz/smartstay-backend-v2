@@ -5,6 +5,7 @@ public record AddMoneyV2(
         String paymentMethodId,
         Double amount,
         String description,
-        String transactionDate
+        String transactionDate,
+        String transactionId
 ) {
 }

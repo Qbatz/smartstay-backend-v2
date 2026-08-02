@@ -53,4 +53,11 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             @Param("startDate") Date startDate, @Param("endDate") Date endDate,
             @Param("source") String source, Pageable pageable);
 
+    @Query("SELECT t FROM BankTransactionsV1 t " +
+            "WHERE t.hostelId = :hostelId AND t.bankId = :bankId " +
+            "AND (t.isDeleted = false OR t.isDeleted IS NULL) " +
+            "AND t.createdAt >= :startDate")
+    List<BankTransactionsV1> findOverviewTransactions(@Param("hostelId") String hostelId,
+            @Param("bankId") String bankId, @Param("startDate") Date startDate);
+
 }
