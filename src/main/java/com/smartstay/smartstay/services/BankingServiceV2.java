@@ -916,12 +916,27 @@ public class BankingServiceV2 {
     @Transactional(readOnly = true)
     public ResponseEntity<?> getAllTransactions(String hostelId, Integer page, Integer size,
             String dateFilterParam, String sourceParam, String fromDateParam, String toDateParam) {
+        return listTransactions(hostelId, null, page, size, dateFilterParam, sourceParam, fromDateParam, toDateParam);
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getAllBankTransactions(String hostelId, String bankId, Integer page, Integer size,
+            String dateFilterParam, String sourceParam, String fromDateParam, String toDateParam) {
+        return listTransactions(hostelId, bankId, page, size, dateFilterParam, sourceParam, fromDateParam, toDateParam);
+    }
+
+    private ResponseEntity<?> listTransactions(String hostelId, String bankId, Integer page, Integer size,
+            String dateFilterParam, String sourceParam, String fromDateParam, String toDateParam) {
         Users user = currentUser();
         if (user == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (bankId != null && validBankOrNull(hostelId, bankId) == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
 
         DateFilter dateFilter = DateFilter.ALL;
@@ -963,7 +978,8 @@ public class BankingServiceV2 {
         int pageSize = (size == null || size < 1) ? 20 : size;
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        Page<BankTransactionsV1> txnPage = transactionService.getTransactions(hostelId, startDate, endDate, source, pageable);
+        Page<BankTransactionsV1> txnPage =
+                transactionService.getTransactions(hostelId, bankId, startDate, endDate, source, pageable);
         List<BankTransactionsV1> transactions = txnPage.getContent();
 
         List<String> bankIds = transactions.stream()

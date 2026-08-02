@@ -143,6 +143,18 @@ public class BankingControllerV2 {
         return bankingServiceV2.getBankOverview(hostelId, bankId, dateFilter);
     }
 
+    @GetMapping("/allBankTransactions/{hostelId}/{bankId}")
+    public ResponseEntity<?> getAllBankTransactions(@PathVariable("hostelId") String hostelId,
+            @PathVariable("bankId") String bankId,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "dateFilter", required = false) String dateFilter,
+            @RequestParam(value = "source", required = false) String source,
+            @RequestParam(value = "fromDate", required = false) String fromDate,
+            @RequestParam(value = "toDate", required = false) String toDate) {
+        return bankingServiceV2.getAllBankTransactions(hostelId, bankId, page, size, dateFilter, source, fromDate, toDate);
+    }
+
     @GetMapping("/allTransactions/{hostelId}")
     public ResponseEntity<?> getAllTransactions(@PathVariable("hostelId") String hostelId,
             @RequestParam(value = "page", defaultValue = "1") int page,

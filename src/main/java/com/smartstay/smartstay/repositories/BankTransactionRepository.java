@@ -40,16 +40,18 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     BankTransactionsV1 findByHostelIdAndSourceId(String hostelId, String sourceId);
 
     @Query(value = "SELECT t FROM BankTransactionsV1 t WHERE t.hostelId = :hostelId " +
+            "AND (:bankId IS NULL OR t.bankId = :bankId) " +
             "AND (t.isDeleted = false OR t.isDeleted IS NULL) " +
             "AND (:startDate IS NULL OR t.createdAt >= :startDate) " +
             "AND (:endDate IS NULL OR t.createdAt <= :endDate) " +
             "AND (:source IS NULL OR t.source = :source)",
             countQuery = "SELECT COUNT(t) FROM BankTransactionsV1 t WHERE t.hostelId = :hostelId " +
+                    "AND (:bankId IS NULL OR t.bankId = :bankId) " +
                     "AND (t.isDeleted = false OR t.isDeleted IS NULL) " +
                     "AND (:startDate IS NULL OR t.createdAt >= :startDate) " +
                     "AND (:endDate IS NULL OR t.createdAt <= :endDate) " +
                     "AND (:source IS NULL OR t.source = :source)")
-    Page<BankTransactionsV1> findTransactions(@Param("hostelId") String hostelId,
+    Page<BankTransactionsV1> findTransactions(@Param("hostelId") String hostelId, @Param("bankId") String bankId,
             @Param("startDate") Date startDate, @Param("endDate") Date endDate,
             @Param("source") String source, Pageable pageable);
 
