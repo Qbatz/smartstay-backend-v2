@@ -32,6 +32,8 @@ import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.repositories.QrBankTypeRepository;
 import com.smartstay.smartstay.responses.banking.BankTransactionListResponse;
 import com.smartstay.smartstay.responses.banking.BankTransactionResponse;
+import com.smartstay.smartstay.responses.banking.FilterOption;
+import com.smartstay.smartstay.responses.banking.TransactionFilterOptions;
 import com.smartstay.smartstay.responses.banking.BankV2ListResponse;
 import com.smartstay.smartstay.responses.banking.BankV2Response;
 import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
@@ -51,6 +53,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -892,7 +895,8 @@ public class BankingServiceV2 {
         }).collect(Collectors.toList());
 
         BankTransactionListResponse response = new BankTransactionListResponse(
-                txnPage.getTotalElements(), pageNumber, txnPage.getTotalPages(), pageSize, items);
+                txnPage.getTotalElements(), pageNumber, txnPage.getTotalPages(), pageSize,
+                buildTransactionFilterOptions(), items);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -953,6 +957,30 @@ public class BankingServiceV2 {
         String name = ((user.getFirstName() != null ? user.getFirstName() : "") + " "
                 + (user.getLastName() != null ? user.getLastName() : "")).trim();
         return name.isEmpty() ? null : name;
+    }
+
+    private TransactionFilterOptions buildTransactionFilterOptions() {
+        List<FilterOption> dateFilters = Arrays.stream(DateFilter.values())
+                .map(filter -> new FilterOption(toDisplayName(filter.name()), filter.name()))
+                .collect(Collectors.toList());
+        List<FilterOption> sources = Arrays.stream(BankSource.values())
+                .map(source -> new FilterOption(toDisplayName(source.name()), source.name()))
+                .collect(Collectors.toList());
+        return new TransactionFilterOptions(dateFilters, sources);
+    }
+
+    private String toDisplayName(String enumName) {
+        StringBuilder label = new StringBuilder();
+        for (String word : enumName.toLowerCase().split("_")) {
+            if (word.isEmpty()) {
+                continue;
+            }
+            if (label.length() > 0) {
+                label.append(" ");
+            }
+            label.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        }
+        return label.toString();
     }
 
     private String getUserName(String userId) {
