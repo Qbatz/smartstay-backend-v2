@@ -123,4 +123,11 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount) ORDER BY trns.paymentDate DESC
             """)
     List<TransactionV1> findTransactionsByHostelId(String hostelId, List<String> customerIds, List<String> invoiceIds, List<String> bankIds, List<String> collectedBy, Date startDate, Date endDate, Integer minAmount, Integer maxAmount);
+
+    @Query("""
+            SELECT trns FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND trns.invoiceId in (:invoiceIds) AND 
+            trns.transactionId=(SELECT t.transactionId FROM TransactionV1 t WHERE t.invoiceId=trns.invoiceId ORDER BY 
+            t.paymentDate DESC LIMIT 1)
+            """)
+    List<TransactionV1> findLatestTransactionsByHostelIdAndInvoiceIds(String hostelId, List<String> invoiceIds);
 }

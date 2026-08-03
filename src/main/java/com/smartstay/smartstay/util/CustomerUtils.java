@@ -19,7 +19,7 @@ public class CustomerUtils {
             }
             
             // Fallback to initials
-            return NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
+            return null;
         }
         return null;
     }

@@ -333,8 +333,14 @@ public class HostelService {
         int dueDays = billingDates != null && billingDates.dueDays() != null ? billingDates.dueDays() : 0;
         String billingMode = billingDates != null ? billingDates.billingModel() : null;
         String billingType = billingDates != null ? billingDates.typeOfBilling() : null;
+        int gracePeriod = 0;
+        if (billingDates != null) {
+            if (billingDates.gracePeriodDays() != null) {
+                gracePeriod = billingDates.gracePeriodDays();
+            }
+        }
 
-        int gracePeriod = billingDates != null ? billingDates.gracePeriodDays() : 0;
+//        int gracePeriod = billingDates != null ? billingDates.gracePeriodDays() != null ? billingDates.gracePeriodDays() : 0;
         boolean hasGracePeriod = billingDates != null && billingDates.hasGracePeriod();
 
         HostelDetails details = new HostelDetails(hostel.getHostelId(), hostel.getMainImage(), hostel.getCity(), String.valueOf(hostel.getCountry()), hostel.getEmailId(), hostel.getHostelName(), hostel.getHouseNo(), hostel.getLandmark(), hostel.getMobile(), hostel.getPincode(), hostel.getState(), hostel.getStreet(), Utils.dateToString(hostel.getUpdatedAt()), isSubscriptionActive, nextBillingDate, remainingDays, currentMonthBillStartDate, currentMonthBillEndDate, dueDays, billingMode, billingType, floorDetails.size(), floorDetails, notificationCount, canModifyBilling, gracePeriod, hasGracePeriod);

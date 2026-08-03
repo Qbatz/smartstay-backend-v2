@@ -14,7 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "bankingv2")
 public class BankingV2 {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

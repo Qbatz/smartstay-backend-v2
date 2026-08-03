@@ -100,6 +100,9 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.PROFILE_PIC)) {
             String profilePic = CustomerUtils.getProfilePic(customers);
+            if (profilePic == null) {
+                profilePic = NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
+            }
             return profilePic;
         }
         else if (columnName.equalsIgnoreCase(BookingColumnUtils.MOBILE_NO)) {

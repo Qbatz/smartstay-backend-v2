@@ -13,9 +13,9 @@ import java.util.List;
 @Repository
 public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
 
-    @Query(value = "SELECT b FROM BankingV2 b WHERE b.hostelId = :hostelId AND b.isDeleted = false " +
+    @Query(value = "SELECT b FROM bankingv2 b WHERE b.hostelId = :hostelId AND b.isDeleted = false " +
             "ORDER BY b.createdAt DESC",
-            countQuery = "SELECT COUNT(b) FROM BankingV2 b WHERE b.hostelId = :hostelId AND b.isDeleted = false")
+            countQuery = "SELECT COUNT(b) FROM bankingv2 b WHERE b.hostelId = :hostelId AND b.isDeleted = false")
     Page<BankingV2> findBanksByHostelId(@Param("hostelId") String hostelId, Pageable pageable);
 
     boolean existsByHostelIdAndAccountNumberAndIsDeletedFalse(String hostelId, String accountNumber);

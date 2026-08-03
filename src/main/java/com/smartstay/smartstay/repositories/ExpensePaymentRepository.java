@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.ExpensePayment;
+import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dto.vendor.VendorLastPayment;
 import com.smartstay.smartstay.dto.vendor.VendorLastPaymentAmount;
 import org.springframework.data.domain.Page;

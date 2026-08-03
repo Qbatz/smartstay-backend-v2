@@ -1618,4 +1618,12 @@ public class TransactionService {
         bankTransactionService.addRetainerTransaction(transactionV11, invoicesV1, paymentDate, loadBalance);
 
     }
+
+    public List<TransactionV1> getLatestTransactions(String hostelId, List<String> invoiceIds) {
+        List<TransactionV1> listLatestTransactions = transactionRespository.findLatestTransactionsByHostelIdAndInvoiceIds(hostelId, invoiceIds);
+        if (listLatestTransactions == null) {
+            listLatestTransactions = new ArrayList<>();
+        }
+        return listLatestTransactions;
+    }
 }
