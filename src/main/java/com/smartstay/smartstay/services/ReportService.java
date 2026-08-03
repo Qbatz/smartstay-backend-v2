@@ -278,36 +278,16 @@ public class ReportService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<Boolean> isCancelledList = null;
+        Boolean isCancelledList = null;
         AtomicBoolean requestedAll = new AtomicBoolean(false);
         List<String> pStatus = null;
         if (paymentStatus != null) {
-            AtomicBoolean hasContainsCancelled = new AtomicBoolean(false);
+            isCancelledList = false;
             paymentStatus.forEach(i -> {
                 if (i.equalsIgnoreCase("ALL")) {
                     requestedAll.set(true);
                 }
-                if (i.equalsIgnoreCase("CANCELLED")) {
-                    hasContainsCancelled.set(true);
-                }
             });
-
-            if (hasContainsCancelled.get()) {
-                if (paymentStatus.size() == 1) {
-                    requestedAll.set(false);
-                    isCancelledList = new ArrayList<>();
-                    isCancelledList.add(true);
-                }
-                else {
-                    pStatus = new ArrayList<>();
-                    pStatus.add(PaymentStatus.PAID.name());
-                    pStatus.add(PaymentStatus.REFUNDED.name());
-                    pStatus.add(PaymentStatus.PENDING.name());
-                    pStatus.add(PaymentStatus.PARTIAL_PAYMENT.name());
-                    pStatus.add(PaymentStatus.PENDING_REFUND.name());
-                    pStatus.add(PaymentStatus.PARTIAL_REFUND.name());
-                }
-            }
 
 
             if (requestedAll.get()) {
@@ -322,19 +302,27 @@ public class ReportService {
             else {
                 pStatus = paymentStatus
                         .stream()
-                        .filter(i -> !i.equalsIgnoreCase("ALL"))
+                        .filter(i -> i.equalsIgnoreCase("CANCELLED"))
                         .toList();
-                if (pStatus.isEmpty()) {
+
+                if (!pStatus.isEmpty()) {
                     pStatus = null;
+                    isCancelledList = true;
                 }
-                if (!hasContainsCancelled.get()) {
-                    isCancelledList = new ArrayList<>();
-                    isCancelledList.add(false);
+
+                List<String> paymentStatusWithoutFilter = paymentStatus
+                        .stream()
+                        .filter(i -> !i.equalsIgnoreCase("CANCELLED"))
+                        .toList();
+
+                if (!paymentStatusWithoutFilter.isEmpty() && paymentStatusWithoutFilter.size() > 0) {
+                    pStatus = paymentStatusWithoutFilter
+                            .stream()
+                            .toList();
                 }
+
             }
         }
-
-
 
         BillingDates dates = calculateDateRange(period, hostelId);
         Date startDate = dates.currentBillStartDate();
@@ -381,18 +369,29 @@ public class ReportService {
                                                   Double maxPaidAmount,
                                                   Double minOutstandingAmount,
                                                   Double maxOutstandingAmount,
-                                                  List<Boolean> isCancelled,
+                                                  Boolean isCancelled,
                                                   ReportDetailsResponse.FilterOptions filterOptions,
                                                   int page,
                                                   int size) {
 
+        Double minPaid = null;
+        Double maxPaid = null;
+        if (minPaidAmount != null && minPaidAmount != 0) {
+            minPaid = minPaidAmount;
+        }
+
+        if (maxPaidAmount != null && maxPaidAmount != 0) {
+            maxPaid = maxPaidAmount;
+        }
+
+
         Pageable pageableRequest = PageRequest.of(page - 1, size);
 
         List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
-                paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
+                paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaid, maxPaid,
                 minOutstandingAmount, maxOutstandingAmount, isCancelled);
         Page<InvoicesV1> pagedInvoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
-                paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
+                paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaid, maxPaid,
                 minOutstandingAmount, maxOutstandingAmount, isCancelled, pageableRequest);
 
 
@@ -497,15 +496,15 @@ public class ReportService {
                     .currentPage(currentPage)
                     .totalPages(totalPages)
                     .itemsPerPage(itemsPerPage)
-                    .totalAmount(totalAmount)
-                    .refundAmount(returnInvoiceAmount)
-                    .outStandingAmount(outstandingAmount)
-                    .paidAmount(paidAmount)
-                    .cancelledAmount(cancelledAmount)
-                    .refundedAmount(returnInvoiceAmount)
+                    .totalAmount(Utils.roundOffWithTwoDigit(totalAmount))
+                    .refundAmount(Utils.roundOffWithTwoDigit(returnInvoiceAmount))
+                    .outStandingAmount(Utils.roundOffWithTwoDigit(outstandingAmount))
+                    .paidAmount(Utils.roundOffWithTwoDigit(paidAmount))
+                    .cancelledAmount(Utils.roundOffWithTwoDigit(cancelledAmount))
+                    .refundedAmount(Utils.roundOffWithTwoDigit(returnInvoiceAmount))
                     .paidInvoiceCount(paidInvoiceCount)
                     .cancelledInvoiceCount(cancelledInvoiceCount)
-                    .outStandingAmount(outstandingAmount)
+                    .outStandingAmount(Utils.roundOffWithTwoDigit(outstandingAmount))
                     .returnedInvoiceCount(returnedInvoiceCount)
                     .filterOptions(filterOptions)
                     .invoiceList(invoiceDetails)
@@ -677,7 +676,7 @@ public class ReportService {
                                                   List<String> createdBy,
                                                   Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount,
                                                   Double maxOutstandingAmount, List<ReportDetailsResponse.InvoiceDetail> invoiceDetails,
-                                                  ReportDetailsResponse.FilterOptions options, int page, int size, List<Boolean> isCancelled) {
+                                                  ReportDetailsResponse.FilterOptions options, int page, int size, Boolean isCancelled) {
 
         List<InvoicesV1> invoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
                 paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
@@ -792,12 +791,12 @@ public class ReportService {
                 .itemsPerPage(0)
                 .currentPage(page)
                 .totalPages(totalPages)
-                .totalAmount(totalAmount)
-                .refundAmount(returnInvoiceAmount)
+                .totalAmount(Utils.roundOffWithTwoDigit(totalAmount))
+                .refundAmount(Utils.roundOffWithTwoDigit(returnInvoiceAmount))
                 .profit(profit)
-                .outStandingAmount(outstandingAmount)
-                .cancelledAmount(cancelledAmount)
-                .paidAmount(paidAmount)
+                .outStandingAmount(Utils.roundOffWithTwoDigit(outstandingAmount))
+                .cancelledAmount(Utils.roundOffWithTwoDigit(cancelledAmount))
+                .paidAmount(Utils.roundOffWithTwoDigit(paidAmount))
                 .paidInvoiceCount(paidInvoiceCount)
                 .cancelledInvoiceCount(cancelledInvoiceCount)
                 .outstandingInvoiceCount(outstandingInvoiceCount)

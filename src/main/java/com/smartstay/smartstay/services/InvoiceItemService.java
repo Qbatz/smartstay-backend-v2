@@ -191,4 +191,30 @@ public class InvoiceItemService {
 
     }
 
+    public Double updateInvoiceRentAmount(String invoiceId, Double rent) {
+        List<InvoiceItems> listInvoiceItems = invoiceItemsRepository
+                .findByInvoice_InvoiceId(invoiceId);
+        if (listInvoiceItems != null) {
+            InvoiceItems invoiceItems = listInvoiceItems
+                    .stream()
+                    .filter(i -> i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name()))
+                    .findFirst()
+                    .orElse(null);
+            if (invoiceItems != null) {
+                invoiceItems.setAmount(rent);
+                invoiceItemsRepository.save(invoiceItems);
+            }
+
+            return listInvoiceItems
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
+                            return rent;
+                        }
+                        return i.getAmount();
+                    })
+                    .sum();
+        }
+        return rent;
+    }
 }
