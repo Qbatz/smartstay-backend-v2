@@ -38,6 +38,7 @@ import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
 import com.smartstay.smartstay.repositories.CustomersRepository;
 import com.smartstay.smartstay.repositories.DraftsRepository;
+import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
@@ -105,6 +106,10 @@ public class CustomersService {
     private InvoiceV1Service invoiceService;
     @Autowired
     private HostelService hostelService;
+    @Autowired
+    private InvoicesV1Repository invoicesV1Repository;
+    @Autowired
+    private InvoiceDiscountService invoiceDiscountService;
     @Autowired
     private BankingService bankingService;
     @Autowired
@@ -1429,6 +1434,16 @@ public class CustomersService {
         List<RentHistory> rentHistories = bookingsService.getNewRentAmount(customerId, new Date());
         CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
         List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
+
+        List<InvoicesV1> originalInvoices = invoicesV1Repository.findByCustomerIdOrderByInvoiceStartDateDesc(customers.getCustomerId());
+        Map<String, InvoicesV1> invoiceMap = originalInvoices.stream().collect(Collectors.toMap(InvoicesV1::getInvoiceId, Function.identity()));
+
+        List<String> invoiceIds = originalInvoices.stream().map(InvoicesV1::getInvoiceId).toList();
+        List<InvoiceDiscounts> listInvoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(customers.getHostelId(), invoiceIds);
+        Map<String, Double> discountMap = listInvoiceDiscounts.stream()
+                .filter(InvoiceDiscounts::isActive)
+                .collect(Collectors.toMap(InvoiceDiscounts::getInvoiceId, InvoiceDiscounts::getDiscountAmount));
+        
         boolean isSettlementGenerated = CustomerStatus.SETTLEMENT_GENERATED.name().equalsIgnoreCase(customers.getCurrentStatus());
         invoiceResponseList = invoiceResponseList.stream().map(inv -> {
             boolean isPaidOrPartial = "PAID".equalsIgnoreCase(inv.paymentStatus()) || "PARTIAL_PAYMENT".equalsIgnoreCase(inv.paymentStatus());
@@ -1443,7 +1458,23 @@ public class CustomersService {
             if (canUnpaid && transactionV1s != null && !transactionV1s.isEmpty()) {
                 canUnpaid = false;
             }
-            return new InvoiceResponse(inv.invoiceId(), inv.invoiceNumber(), inv.invoiceType(), inv.invoiceDate(), inv.paymentStatus(), inv.totalAmount(), inv.dueAmount(), inv.paidAmount(), inv.dueDate(), inv.invoiceGeneratedDate(), inv.invoiceMode(), inv.isDiscounted(), inv.items(), canUnpaid, isCancelled, cancelledDate);
+            // Calculate canEdit and discountAmount
+            Double discountAmount = 0.0;
+            boolean canEdit = true;
+            InvoicesV1 originalInvoice = invoiceMap.get(inv.invoiceId());
+            if (originalInvoice != null) {
+                boolean isPaid = PaymentStatus.PAID.name().equalsIgnoreCase(originalInvoice.getPaymentStatus());
+                boolean isPartiallyPaid = PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(originalInvoice.getPaymentStatus());
+                boolean isRedeemed = originalInvoice.getCancelledInvoices() != null && !originalInvoice.getCancelledInvoices().isEmpty();
+                boolean hasDiscount = originalInvoice.isDiscounted();
+                canEdit = !(isPaid || isPartiallyPaid || isRedeemed || hasDiscount);
+
+                // Get discount amount from invoice_discounts table
+                if (discountMap.containsKey(inv.invoiceId())) {
+                    discountAmount = discountMap.get(inv.invoiceId());
+                }
+            }
+            return new InvoiceResponse(inv.invoiceId(), inv.invoiceNumber(), inv.invoiceType(), inv.invoiceDate(), inv.paymentStatus(), inv.totalAmount(), inv.dueAmount(), inv.paidAmount(), inv.dueDate(), inv.invoiceGeneratedDate(), inv.invoiceMode(), inv.isDiscounted(), inv.items(), canUnpaid, isCancelled, cancelledDate, discountAmount, canEdit);
         }).toList();
         InvoiceResponse advanceInvoice = invoiceResponseList.stream().filter(inv -> "ADVANCE".equalsIgnoreCase(inv.invoiceType())).limit(1).findFirst().orElse(null);
         if (rentHistories != null) {
