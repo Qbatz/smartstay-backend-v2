@@ -112,9 +112,13 @@ public class BankTransactionService {
         return bankRepository.save(transaction);
     }
 
-    public Page<BankTransactionsV1> getTransactions(String hostelId, Date startDate, Date endDate,
+    public Page<BankTransactionsV1> getTransactions(String hostelId, String bankId, Date startDate, Date endDate,
             String source, Pageable pageable) {
-        return bankRepository.findTransactions(hostelId, startDate, endDate, source, pageable);
+        return bankRepository.findTransactions(hostelId, bankId, startDate, endDate, source, pageable);
+    }
+
+    public List<BankTransactionsV1> getOverviewTransactions(String hostelId, String bankId, Date startDate) {
+        return bankRepository.findOverviewTransactions(hostelId, bankId, startDate);
     }
 
     /**
