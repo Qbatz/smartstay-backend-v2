@@ -486,7 +486,11 @@ public class BankingService {
     }
 
     public List<BankingV1> findAllBanksById(Set<String> bankLists) {
-        return bankingV1Repository.findByBankIdIn(bankLists.stream().toList());
+        List<BankingV1> listBanks = bankingV1Repository.findByBankIdIn(bankLists.stream().toList());
+        if (listBanks == null) {
+            listBanks = new ArrayList<>();
+        }
+        return listBanks;
     }
 
     public ResponseEntity<?> addMoney(String hostelId, UpdateBankBalance balance) {

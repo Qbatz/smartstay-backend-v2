@@ -187,16 +187,16 @@ public class RetainerService {
             }
             int newNum = oldNum + 1;
             if (newNum < 10) {
-                return "000" + newNum;
+                return "RET-000" + newNum;
             }
             else if (newNum < 100) {
-                return "00" + newNum;
+                return "RET-00" + newNum;
             }
             else if (newNum < 1000) {
-                return "0" + newNum;
+                return "RET-0" + newNum;
             }
 
-            return String.valueOf(newNum);
+            return "RET-" + String.valueOf(newNum);
         }
         else {
             return "RET-001";

@@ -17,5 +17,8 @@ public record AdvanceListItems(
         String floorName,
         String bedName,
         String roomName,
-        boolean canRedeem) {
+        boolean canRedeem,
+        Double latestPayment,
+        String latestPaymentDate,
+        String latestPaymentMode) {
 }

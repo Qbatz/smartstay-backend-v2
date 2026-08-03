@@ -1,8 +1,6 @@
 package com.smartstay.smartstay.Wrappers.booking;
 
-import com.smartstay.smartstay.dao.BookingsV1;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.InvoicesV1;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
@@ -19,12 +17,15 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
     private List<Customers> listCustomers = null;
 
     private List<InvoicesV1> listInvoices = null;
-
-    public AdvanceInvoicesMapper(List<BookingsV1> listBookings, List<BedDetails> listBedDetails, List<Customers> listCustomers, List<InvoicesV1> listInvoices) {
+    private List<TransactionV1> listLatestPayments = null;
+    private List<BankingV1> listBanks = null;
+    public AdvanceInvoicesMapper(List<BookingsV1> listBookings, List<BedDetails> listBedDetails, List<Customers> listCustomers, List<InvoicesV1> listInvoices, List<TransactionV1> listTransactions, List<BankingV1> listBanks) {
         this.listBookings = listBookings;
         this.listBedDetails = listBedDetails;
         this.listCustomers = listCustomers;
         this.listInvoices = listInvoices;
+        this.listLatestPayments = listTransactions;
+        this.listBanks = listBanks;
     }
 
     @Override
@@ -42,6 +43,9 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
         String bedName = null;
         String roomName = null;
         boolean canRedeem = true;
+        Double latestTransactionAmount = 0.0;
+        String latestTransactionDate = null;
+        String latestTransactionMode = null;
 
         if (listCustomers != null) {
             Customers customers = listCustomers
@@ -132,6 +136,29 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
             availableAmount = invoicesV1.getBalanceAmount();
         }
 
+        if (listLatestPayments != null) {
+            TransactionV1 transactionV1 = listLatestPayments
+                    .stream()
+                    .filter(i -> i.getInvoiceId().equalsIgnoreCase(invoicesV1.getInvoiceId()))
+                    .findFirst()
+                    .orElse(null);
+            if (transactionV1 != null) {
+                latestTransactionAmount = Utils.roundOffWithTwoDigit(transactionV1.getPaidAmount());
+                latestTransactionDate = Utils.dateToString(transactionV1.getPaymentDate());
+                if (listBanks != null) {
+                    BankingV1 bankingV1 = listBanks
+                            .stream()
+                            .filter(i -> i.getBankId().equalsIgnoreCase(transactionV1.getBankId()))
+                            .findFirst()
+                            .orElse(null);
+                    if (bankingV1 != null) {
+                        latestTransactionMode = bankingV1.getAccountType();
+                    }
+                }
+
+            }
+        }
+
 
         return new AdvanceListItems(invoicesV1.getInvoiceId(),
                 invoicesV1.getInvoiceNumber(),
@@ -149,6 +176,9 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
                 floorName,
                 bedName,
                 roomName,
-                canRedeem);
+                canRedeem,
+                latestTransactionAmount,
+                latestTransactionDate,
+                latestTransactionMode);
     }
 }

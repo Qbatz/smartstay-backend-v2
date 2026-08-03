@@ -423,9 +423,9 @@ public class CustomersService {
             }
 
             String profilePicStr = item.getProfilePic();
-            if (profilePicStr == null || profilePicStr.trim().isEmpty()) {
-                profilePicStr = initials.toString();
-            }
+//            if (profilePicStr == null || profilePicStr.trim().isEmpty()) {
+//                profilePicStr = initials.toString();
+//            }
 
             return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(), item.getLastName(), fullName.toString(), item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), profilePicStr, item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName());
         }).collect(Collectors.toList());

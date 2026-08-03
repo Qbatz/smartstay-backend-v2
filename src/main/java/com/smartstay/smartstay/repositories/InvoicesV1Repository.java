@@ -429,9 +429,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     InvoicesV1 findAdvanceInvoiceByCustomerId(String customerId);
 
     @Query("""
-            SELECT i FROM InvoicesV1 i WHERE i.invoiceType IN :invoiceTypes
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId=:customerId AND i.invoiceType IN (:invoiceTypes) 
+            AND i.isCancelled=false AND i.balanceAmount > 0
             """)
-    List<InvoicesV1> findAllAdvances(List<String> invoiceTypes);
+    List<InvoicesV1> findRetainerInvoicesByCustomerId(String hostelId, String customerId, List<String> invoiceTypes);
 
     @Query(value = """
             SELECT i FROM InvoicesV1 i, BookingsV1 b, Rooms r  WHERE i.customerId = b.customerId AND r.roomId = b.roomId AND 
@@ -439,10 +440,8 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
             i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false 
             ORDER BY b.floorId ASC, r.roomId ASC
-            """, countQuery = """
-            SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes)
             """)
-    Page<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Pageable pageable);
+    List<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes);
 
     @Query(value = """
             SELECT i FROM InvoicesV1 i, BookingsV1 b, Rooms r, Beds bed, Floors f  WHERE b.customerId = i.customerId AND 
@@ -507,7 +506,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     @Query("""
             SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.invoiceType IN ('AMOUNT_HOLDING', 'EB_HOLDING') 
-            ORDER BY i.createdAt DESC
+            ORDER BY i.createdAt DESC LIMIT 1
             """)
     InvoicesV1 findByAdvanceHoldingByHostelId(String hostelId);
 
