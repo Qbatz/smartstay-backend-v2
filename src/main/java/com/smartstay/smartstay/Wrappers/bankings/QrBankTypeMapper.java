@@ -1,4 +1,4 @@
-package com.smartstay.smartstay.Wrappers.Banking;
+package com.smartstay.smartstay.Wrappers.bankings;
 
 import com.smartstay.smartstay.dao.QrBankType;
 import com.smartstay.smartstay.responses.banking.QrBankTypeResponse;

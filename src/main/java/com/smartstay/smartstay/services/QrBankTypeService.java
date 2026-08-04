@@ -1,6 +1,6 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.Banking.QrBankTypeMapper;
+import com.smartstay.smartstay.Wrappers.bankings.QrBankTypeMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;

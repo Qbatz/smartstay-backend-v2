@@ -1,9 +1,9 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.Banking.AllPaymentMethodsMapper;
-import com.smartstay.smartstay.Wrappers.Banking.BankTransactionListMapper;
-import com.smartstay.smartstay.Wrappers.Banking.BankingMethodsMapper;
-import com.smartstay.smartstay.Wrappers.Banking.BankingV2Mapper;
+import com.smartstay.smartstay.Wrappers.bankings.AllPaymentMethodsMapper;
+import com.smartstay.smartstay.Wrappers.bankings.BankTransactionListMapper;
+import com.smartstay.smartstay.Wrappers.bankings.BankingMethodsMapper;
+import com.smartstay.smartstay.Wrappers.bankings.BankingV2Mapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
