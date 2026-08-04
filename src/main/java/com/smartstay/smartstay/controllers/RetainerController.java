@@ -28,4 +28,10 @@ public class RetainerController {
     public ResponseEntity<?> addInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @Valid  @RequestBody LoadBalance loadBalance) {
         return retainerService.addMoney(hostelId, customerId, loadBalance);
     }
+
+    //this to receive available retainer invoices
+    @GetMapping("/get/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> getAvailableInvoices(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return retainerService.getAllAvailableRetainers(hostelId, invoiceId);
+    }
 }
