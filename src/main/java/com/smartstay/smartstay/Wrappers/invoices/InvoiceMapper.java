@@ -123,7 +123,9 @@ public class InvoiceMapper {
                         : List.of(),
                 false,
                 isCancelled,
-                cancelledDate
+                cancelledDate,
+                0.0,
+                true
         );
     }
 }

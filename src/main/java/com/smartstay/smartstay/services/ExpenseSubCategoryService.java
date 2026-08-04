@@ -56,7 +56,7 @@ public class ExpenseSubCategoryService {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
-        List<ExpenseSubCategory> listExpSubCate = expenseSubCategoryRepository.findBySUbCatNameAndId(hostelId, subCategory.newSubCategoryName(), subCatId);
+        List<ExpenseSubCategory> listExpSubCate = expenseSubCategoryRepository.findBySUbCatNameAndId(hostelId, subCategory.newSubCategoryName(), subCatId, expSub.getExpenseCategory().getCategoryId());
         if (listExpSubCate != null && !listExpSubCate.isEmpty()) {
             return new ResponseEntity<>(Utils.SUB_CATEGORY_NAME_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
         }
