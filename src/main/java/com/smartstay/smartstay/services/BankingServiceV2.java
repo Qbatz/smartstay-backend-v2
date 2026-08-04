@@ -585,7 +585,7 @@ public class BankingServiceV2 {
         transaction.setCreatedBy(userId);
         transaction.setPlatform(authentication.getSource());
         if (paymentMethodId != null) {
-            transaction.setSourceId(paymentMethodId);
+            transaction.setPaymentMethodId(paymentMethodId);
         }
         transactionService.saveTransaction(transaction);
 
@@ -677,8 +677,8 @@ public class BankingServiceV2 {
         debit.setCreatedAt(now);
         debit.setIsDeleted(false);
         debit.setCreatedBy(userId);
-        if (source.txnSourceId() != null) {
-            debit.setSourceId(source.txnSourceId());
+        if (source.txnPaymentMethodId() != null) {
+            debit.setPaymentMethodId(source.txnPaymentMethodId());
         }
         transactionService.saveTransaction(debit);
 
@@ -695,8 +695,8 @@ public class BankingServiceV2 {
         credit.setCreatedAt(now);
         credit.setIsDeleted(false);
         credit.setCreatedBy(userId);
-        if (destination.txnSourceId() != null) {
-            credit.setSourceId(destination.txnSourceId());
+        if (destination.txnPaymentMethodId() != null) {
+            credit.setPaymentMethodId(destination.txnPaymentMethodId());
         }
         transactionService.saveTransaction(credit);
 
@@ -719,6 +719,71 @@ public class BankingServiceV2 {
         method.setUpdatedAt(now);
         method.setUpdatedBy(userId);
         bankingMethodsRepository.save(method);
+    }
+
+    @Transactional
+    public void debitExpenseBalances(String bankId, String paymentMethodId, double amount, String userId) {
+        String resolvedBankId = trimToNull(bankId);
+        if (resolvedBankId == null || amount <= 0) {
+            return;
+        }
+        Date now = new Date();
+        BankingV2 bank = bankingV2Repository.findById(resolvedBankId).orElse(null);
+        if (bank != null && !bank.isDeleted()) {
+            applyBankDelta(bank, -amount, now, userId);
+        }
+        String methodId = trimToNull(paymentMethodId);
+        if (methodId != null) {
+            BankingMethods method = bankingMethodsRepository.findById(methodId).orElse(null);
+            if (method != null && method.getBank() != null
+                    && resolvedBankId.equals(method.getBank().getBankId())) {
+                applyMethodDelta(method, -amount, now, userId);
+            }
+        }
+    }
+
+    @Transactional
+    public void recordVendorExpenseDebit(String bankId, String paymentMethodId, double amount,
+            String fallbackHostelId, String userId) {
+        String resolvedBankId = trimToNull(bankId);
+        if (resolvedBankId == null || amount <= 0) {
+            return;
+        }
+        Date now = new Date();
+
+        BankingV2 bank = bankingV2Repository.findById(resolvedBankId).orElse(null);
+        if (bank != null && !bank.isDeleted()) {
+            applyBankDelta(bank, -amount, now, userId);
+        }
+
+        String methodId = trimToNull(paymentMethodId);
+        if (methodId != null) {
+            BankingMethods method = bankingMethodsRepository.findById(methodId).orElse(null);
+            if (method != null && method.getBank() != null
+                    && resolvedBankId.equals(method.getBank().getBankId())) {
+                applyMethodDelta(method, -amount, now, userId);
+            }
+        }
+
+        String hostelId = bank != null ? bank.getHostelId() : fallbackHostelId;
+        BankTransactionsV1 latest = transactionService.getLatestTransaction(resolvedBankId, hostelId);
+        BankTransactionsV1 transaction = new BankTransactionsV1();
+        transaction.setBankId(resolvedBankId);
+        transaction.setHostelId(hostelId);
+        transaction.setType("DEBIT");
+        transaction.setSource(BankSource.EXPENSE.name());
+        transaction.setAccountBalance(latest != null && latest.getAccountBalance() != null
+                ? latest.getAccountBalance() - amount : -amount);
+        transaction.setAmount(amount);
+        transaction.setTransactionDate(now);
+        transaction.setCreatedAt(now);
+        transaction.setIsDeleted(false);
+        transaction.setCreatedBy(userId);
+        transaction.setPlatform(authentication.getSource());
+        if (methodId != null) {
+            transaction.setPaymentMethodId(methodId);
+        }
+        transactionService.saveTransaction(transaction);
     }
 
     private EndpointResult resolveEndpoint(String hostelId, String identifier, boolean isSource) {
@@ -771,7 +836,7 @@ public class BankingServiceV2 {
             return cash() ? cashAccount.getBankId() : parentBank.getBankId();
         }
 
-        String txnSourceId() {
+        String txnPaymentMethodId() {
             return cash() ? null : method.getPaymentMethodId();
         }
     }
@@ -992,14 +1057,14 @@ public class BankingServiceV2 {
                 : bankingV2Repository.findAllById(bankIds).stream()
                         .collect(Collectors.toMap(BankingV2::getBankId, Function.identity(), (a, b) -> a));
 
-        List<String> sourceIds = transactions.stream()
-                .map(BankTransactionsV1::getSourceId)
+        List<String> methodIds = transactions.stream()
+                .map(BankTransactionsV1::getPaymentMethodId)
                 .filter(id -> id != null && !id.isEmpty())
                 .distinct()
                 .collect(Collectors.toList());
-        Map<String, BankingMethods> methodById = sourceIds.isEmpty()
+        Map<String, BankingMethods> methodById = methodIds.isEmpty()
                 ? Collections.emptyMap()
-                : bankingMethodsRepository.findAllById(sourceIds).stream()
+                : bankingMethodsRepository.findAllById(methodIds).stream()
                         .collect(Collectors.toMap(BankingMethods::getPaymentMethodId, Function.identity(), (a, b) -> a));
 
         Set<Integer> qrTypeIds = new HashSet<>();
@@ -1035,7 +1100,7 @@ public class BankingServiceV2 {
         BankTransactionListMapper mapper = new BankTransactionListMapper();
         List<BankTransactionResponse> items = transactions.stream().map(txn -> {
             BankingV2 bank = txn.getBankId() != null ? bankById.get(txn.getBankId()) : null;
-            BankingMethods method = txn.getSourceId() != null ? methodById.get(txn.getSourceId()) : null;
+            BankingMethods method = txn.getPaymentMethodId() != null ? methodById.get(txn.getPaymentMethodId()) : null;
             String createdByName = txn.getCreatedBy() != null ? userNameById.get(txn.getCreatedBy()) : null;
             String responsiblePersonName = (bank != null && bank.getResponsiblePerson() != null)
                     ? userNameById.get(bank.getResponsiblePerson()) : null;
@@ -1207,7 +1272,7 @@ public class BankingServiceV2 {
         return new ResponseEntity<>(buildAllPaymentMethods(hostelId), HttpStatus.OK);
     }
 
-    private List<PaymentMethodOptionResponse> buildAllPaymentMethods(String hostelId) {
+    public List<PaymentMethodOptionResponse> buildAllPaymentMethods(String hostelId) {
         List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
         if (accounts.isEmpty()) {
             return new ArrayList<>();

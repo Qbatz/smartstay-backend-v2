@@ -11,5 +11,6 @@ public record AddPayment(
         String paymentDate,
         String referenceId,
         @NotNull(message = "Amount required")
-        Double amount) {
+        Double amount,
+        String paymentMethodId) {
 }

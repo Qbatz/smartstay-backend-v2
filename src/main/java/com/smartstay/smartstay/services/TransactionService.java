@@ -224,7 +224,7 @@ public class TransactionService {
                     BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(),
                     trns.getTransactionId());
 
-            bankTransactionService.addTransaction(transaction, trns.getTransactionId());
+            bankTransactionService.addTransaction(transaction, trns.getTransactionId(), payment.paymentMethodId());
 
             return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
         }
@@ -349,7 +349,7 @@ public class TransactionService {
                     BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(),
                     trnsV1.getTransactionId());
 
-            bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId());
+            bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId(), payment.paymentMethodId());
 
             usersService.addUserLog(hostelId, trnsV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.CREATE, user);
 

@@ -19,6 +19,7 @@ public record Expense(
         Double totalAmount,
         // Mandatory for every payment status except PENDING; enforced conditionally in the service layer.
         String bankId,
+        String paymentMethodId,
         String description,
 
         String title,

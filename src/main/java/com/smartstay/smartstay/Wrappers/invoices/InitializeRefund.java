@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.Wrappers.invoices;
 
+import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
 import com.smartstay.smartstay.responses.invoices.RefundableBanks;
 
 import java.util.List;
@@ -12,5 +13,6 @@ public record InitializeRefund(
         Double refundedAmount,
         Double pendingRefund,
         String invoiceDate,
-        List<RefundableBanks> listBanks) {
+        List<RefundableBanks> listBanks,
+        List<PaymentMethodOptionResponse> allPaymentMethods) {
 }

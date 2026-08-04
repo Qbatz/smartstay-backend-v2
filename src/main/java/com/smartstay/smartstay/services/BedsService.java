@@ -67,6 +67,9 @@ public class BedsService {
     @Autowired
     private BankingService bankingService;
     @Autowired
+    @Lazy
+    private BankingServiceV2 bankingServiceV2;
+    @Autowired
     private InvoiceV1Service invoiceService;
     @Autowired
     private SubscriptionService subscriptionService;
@@ -729,7 +732,8 @@ public class BedsService {
 
         List<BedInitializations> initializations = freeBeds.stream().map(i -> new BedInitializationMapper(bookedBeds).apply(i)).toList();
 
-        InitializeBooking initializeBooking = new InitializeBooking(initializations, listBanks);
+        InitializeBooking initializeBooking = new InitializeBooking(initializations, listBanks,
+                bankingServiceV2.buildAllPaymentMethods(hostelId));
         return new ResponseEntity<>(initializeBooking, HttpStatus.OK);
     }
 

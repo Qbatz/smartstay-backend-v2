@@ -43,7 +43,7 @@ public class BankTransactionService {
     }
 
 
-    public int addTransaction(TransactionDto transactionDto, String sourceId) {
+    public int addTransaction(TransactionDto transactionDto, String sourceId, String paymentMethodId) {
         if (authentication.isAuthenticated()) {
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
             BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
@@ -75,6 +75,7 @@ public class BankTransactionService {
             transactionsV1.setType(transactionDto.type());
             transactionsV1.setSource(transactionDto.source());
             transactionsV1.setSourceId(sourceId);
+            transactionsV1.setPaymentMethodId((paymentMethodId != null && !paymentMethodId.isBlank()) ? paymentMethodId.trim() : null);
             transactionsV1.setIsDeleted(false);
             transactionsV1.setHostelId(transactionDto.hostelId());
             transactionsV1.setCreatedAt(new Date());
@@ -157,7 +158,7 @@ public class BankTransactionService {
         }
     }
 
-    public boolean addExpenseTransaction(TransactionDto transactionDto, String sourceId) {
+    public boolean addExpenseTransaction(TransactionDto transactionDto, String sourceId, String paymentMethodId) {
         if (authentication.isAuthenticated()) {
 
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
@@ -187,6 +188,7 @@ public class BankTransactionService {
             transactionsV1.setType(transactionDto.type());
             transactionsV1.setSource(transactionDto.source());
             transactionsV1.setSourceId(sourceId);
+            transactionsV1.setPaymentMethodId((paymentMethodId != null && !paymentMethodId.isBlank()) ? paymentMethodId.trim() : null);
             transactionsV1.setHostelId(transactionDto.hostelId());
             transactionsV1.setCreatedAt(new Date());
             transactionsV1.setIsDeleted(false);
@@ -224,6 +226,8 @@ public class BankTransactionService {
         transactionsV1.setSource(BankSource.INVOICE.name());
         transactionsV1.setTransactionNumber(transactionId);
         transactionsV1.setSourceId(sourceId);
+        transactionsV1.setPaymentMethodId((refundInvoice.paymentMethodId() != null && !refundInvoice.paymentMethodId().isBlank())
+                ? refundInvoice.paymentMethodId().trim() : null);
         transactionsV1.setIsDeleted(false);
         transactionsV1.setHostelId(invoicesV1.getHostelId());
         transactionsV1.setCreatedAt(new Date());
