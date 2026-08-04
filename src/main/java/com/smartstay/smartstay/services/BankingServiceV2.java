@@ -1272,7 +1272,7 @@ public class BankingServiceV2 {
         return new ResponseEntity<>(buildAllPaymentMethods(hostelId), HttpStatus.OK);
     }
 
-    private List<PaymentMethodOptionResponse> buildAllPaymentMethods(String hostelId) {
+    public List<PaymentMethodOptionResponse> buildAllPaymentMethods(String hostelId) {
         List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
         if (accounts.isEmpty()) {
             return new ArrayList<>();

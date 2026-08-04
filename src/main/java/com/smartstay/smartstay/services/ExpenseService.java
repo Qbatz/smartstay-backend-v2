@@ -264,7 +264,8 @@ public class ExpenseService {
                         nullSafe(v.getBalance())))
                 .toList();
 
-        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks, listVendors);
+        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks, listVendors,
+                bankingServiceV2.buildAllPaymentMethods(hostelId));
 
         return new ResponseEntity<>(initializeExpenses, HttpStatus.OK);
 
@@ -310,7 +311,8 @@ public class ExpenseService {
                 .map(expenseSummaryMapper)
                 .toList();
 
-        VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses);
+        VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses,
+                bankingServiceV2.buildAllPaymentMethods(hostelId));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

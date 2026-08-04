@@ -97,6 +97,9 @@ public class InvoiceV1Service {
     @Autowired
     private BankingService bankingService;
     @Autowired
+    @Lazy
+    private BankingServiceV2 bankingServiceV2;
+    @Autowired
     private BankTransactionService bankTransactionService;
     @Autowired
     private InvoiceItemService invoiceItemService;
@@ -2804,7 +2807,8 @@ public class InvoiceV1Service {
             }
         }
         List<RefundableBanks> listBanks = bankingService.initializeRefund(invoicesV1.getHostelId());
-        InitializeRefund refundInitializations = new InitializeRefund(roomName, floorName, bedName, refundableAmount, refundedAmount, pendingRefund, invoiceDate, listBanks);
+        InitializeRefund refundInitializations = new InitializeRefund(roomName, floorName, bedName, refundableAmount, refundedAmount, pendingRefund, invoiceDate, listBanks,
+                bankingServiceV2.buildAllPaymentMethods(hostelId));
         return new ResponseEntity<>(refundInitializations, HttpStatus.OK);
     }
 
@@ -5938,7 +5942,8 @@ public class InvoiceV1Service {
                 Utils.roundOffWithTwoDigit(totalAmount),
                 customerInfo,
                 stayInfo,
-                bankInfo);
+                bankInfo,
+                bankingServiceV2.buildAllPaymentMethods(hostelId));
 
         return new ResponseEntity<>(recordPayment, HttpStatus.OK);
     }
