@@ -31,6 +31,8 @@ public class BankTransactionsV1 {
     //assets or rent or advance or expense from BankSource Enum
     private String source;
     private String sourceId;
+    //banking_methods id
+    private String paymentMethodId;
     private String hostelId;
     //transactionId from transaction v1 table
     private String transactionNumber;

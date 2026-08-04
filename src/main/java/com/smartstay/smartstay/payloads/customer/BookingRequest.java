@@ -25,6 +25,7 @@ public record BookingRequest(
         @NotNull(message = "Bank id required")
         @NotEmpty(message = "Bank id required")
         String bankId,
-        String referenceNumber
+        String referenceNumber,
+        String paymentMethodId
 ) {}
 

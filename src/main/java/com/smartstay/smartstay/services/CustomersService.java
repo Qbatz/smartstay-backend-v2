@@ -698,7 +698,7 @@ public class CustomersService {
 
                 bookingsService.addBooking(hostelId, payloads);
 
-                AddPayment addPayment = new AddPayment(payloads.bankId(), payloads.bookingDate(), payloads.referenceNumber(), payloads.bookingAmount());
+                AddPayment addPayment = new AddPayment(payloads.bankId(), payloads.bookingDate(), payloads.referenceNumber(), payloads.bookingAmount(), payloads.paymentMethodId());
                 transactionService.recordPaymentForBooking(hostelId, invoiceId, addPayment);
                 userService.addUserLog(hostelId, customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.BOOKING, user);
                 return bedsService.assignCustomer(payloads.bedId(), payloads.joiningDate().replace("/", "-"));
