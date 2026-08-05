@@ -550,20 +550,21 @@ public class BankingServiceV2 {
 
         if (isBankAccount(bank)) {
             String methodId = payload.paymentMethodId() != null ? payload.paymentMethodId().trim() : null;
-            if (methodId == null || methodId.isEmpty()) {
-                return new ResponseEntity<>(Utils.ADD_MONEY_PAYMENT_METHOD_REQUIRED, HttpStatus.BAD_REQUEST);
-            }
-            BankingMethods method = bankingMethodsRepository.findById(methodId).orElse(null);
-            if (method == null) {
-                return new ResponseEntity<>(Utils.ADD_MONEY_INVALID_PAYMENT_METHOD, HttpStatus.BAD_REQUEST);
-            }
-            if (method.getBank() == null || !bankId.equals(method.getBank().getBankId())) {
-                return new ResponseEntity<>(Utils.ADD_MONEY_PAYMENT_METHOD_MISMATCH, HttpStatus.BAD_REQUEST);
-            }
-            paymentMethodId = methodId;
+            if (methodId != null && !methodId.isEmpty()) {
+                BankingMethods method = bankingMethodsRepository.findById(methodId).orElse(null);
+                if (method == null) {
+                    return new ResponseEntity<>(Utils.ADD_MONEY_INVALID_PAYMENT_METHOD, HttpStatus.BAD_REQUEST);
+                }
+                if (method.getBank() == null || !bankId.equals(method.getBank().getBankId())) {
+                    return new ResponseEntity<>(Utils.ADD_MONEY_PAYMENT_METHOD_MISMATCH, HttpStatus.BAD_REQUEST);
+                }
+                paymentMethodId = methodId;
 
-            applyMethodDelta(method, amount, now, userId);
-            applyBankDelta(bank, amount, now, userId);
+                applyMethodDelta(method, amount, now, userId);
+                applyBankDelta(bank, amount, now, userId);
+            } else {
+                applyBankDelta(bank, amount, now, userId);
+            }
         } else {
             applyBankDelta(bank, amount, now, userId);
         }
@@ -584,6 +585,7 @@ public class BankingServiceV2 {
         transaction.setIsDeleted(false);
         transaction.setCreatedBy(userId);
         transaction.setPlatform(authentication.getSource());
+        transaction.setInvestorName(trimToNull(payload.investorName()));
         if (paymentMethodId != null) {
             transaction.setPaymentMethodId(paymentMethodId);
         }

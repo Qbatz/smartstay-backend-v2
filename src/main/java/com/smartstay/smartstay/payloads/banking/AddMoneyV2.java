@@ -6,6 +6,7 @@ public record AddMoneyV2(
         Double amount,
         String description,
         String transactionDate,
-        String transactionId
+        String transactionId,
+        String investorName
 ) {
 }

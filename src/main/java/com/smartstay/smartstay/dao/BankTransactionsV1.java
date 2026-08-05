@@ -33,6 +33,7 @@ public class BankTransactionsV1 {
     private String sourceId;
     //banking_methods id
     private String paymentMethodId;
+    private String investorName;
     private String hostelId;
     //transactionId from transaction v1 table
     private String transactionNumber;

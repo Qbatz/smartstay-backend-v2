@@ -15,6 +15,7 @@ public record BankTransactionResponse(
         String transactionNumber,
         String type,
         String sourceId,
+        String investorName,
         // ---- bankingv2 ----
         String bankAccountType,
         String accountNumber,
