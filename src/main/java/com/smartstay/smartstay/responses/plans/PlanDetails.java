@@ -3,6 +3,7 @@ package com.smartstay.smartstay.responses.plans;
 import java.util.List;
 
 public record PlanDetails(String planId,
+                          Long subscriptionId,
                           String planCode,
                           String planName,
                           String subscriptionNumber,
@@ -18,5 +19,6 @@ public record PlanDetails(String planId,
                           String paymentMethod,
                           String status,
                           boolean isTrial,
+                          String referenceNumber,
                           List<BillingHistoryItem> billingHistory) {
 }

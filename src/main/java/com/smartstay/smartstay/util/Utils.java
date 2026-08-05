@@ -246,6 +246,7 @@ public class Utils {
     public static final String ADVANCE_AMOUNT_REQUIRED = "Advance amount required";
     public static final String NO_BOOKING_INFORMATION_FOUND = "No booking information found";
     public static final String NO_BOOKINGS_FOUND = "No bookings found";
+    public static final String TRANSFER_AMOUNT_REQUIRED = "Transfer amount is required";
     public static final String YOU_CANNOT_TRANSFER = "You cannot transfer funds to the same UPI account.";
     public static final String FINAL_SETTLEMENT_GENERATED = "Final settlement is already generated";
     public static final String FINAL_SETTLEMENT_NOT_GENERATED = "Final settlement is pending";

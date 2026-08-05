@@ -514,4 +514,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT i FROM InvoicesV1 i WHERE i.invoiceType='BOOKING' AND i.paymentStatus='CANCELLED' AND i.isCancelled=FALSE
             """)
     List<InvoicesV1> findCancelledInvoices();
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId=:customerId AND i.invoiceType IN (:invoiceTypes) 
+            AND i.balanceAmount > 0 AND i.isCancelled=false
+            """)
+    List<InvoicesV1> findRetainersByCustomerIdAndInvoiceTypes(String customerId, List<String> invoiceTypes);
 }

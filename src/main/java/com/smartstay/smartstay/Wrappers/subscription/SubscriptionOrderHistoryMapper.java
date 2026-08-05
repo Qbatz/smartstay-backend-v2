@@ -82,7 +82,10 @@ public class SubscriptionOrderHistoryMapper implements Function<Subscription, Bi
                 paymentMethod,
                 paidById,
                 paidByName,
-                Utils.dateToString(subscription.getCreatedAt())
+                Utils.dateToString(subscription.getCreatedAt()),
+                Utils.dateToString(subscription.getPlanStartsAt()),
+                Utils.dateToString(subscription.getPlanEndsAt()),
+                subscription.getSubscriptionNumber()
         );
     }
 }

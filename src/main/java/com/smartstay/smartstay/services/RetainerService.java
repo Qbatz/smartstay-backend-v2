@@ -1,12 +1,20 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.retainer.InvoicesInvoiceInfoMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.retainer.LoadBalance;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
+import com.smartstay.smartstay.responses.InvoiceRedemption.CustomerInfo;
+import com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo;
+import com.smartstay.smartstay.responses.InvoiceRedemption.SelectedInvoiceInfo;
+import com.smartstay.smartstay.responses.retainer.AvailableRetainerInvoices;
+import com.smartstay.smartstay.util.CustomerUtils;
+import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -42,6 +50,10 @@ public class RetainerService {
     private AdditionalContactService additionalContactService;
     @Autowired
     private RetainerRelationService retainerRelationService;
+    @Autowired
+    private BookingsService bookingsService;
+    @Autowired
+    private BedsService bedsService;
 
     public ResponseEntity<?> addMoney(String hostelId, String customerId, LoadBalance loadBalance) {
         if (!authentication.isAuthenticated()) {
@@ -235,9 +247,60 @@ public class RetainerService {
 
         List<String> invoiceTypes = new ArrayList<>();
         invoiceTypes.add(InvoiceType.EB_HOLDING.name());
-        invoiceTypes.add(InvoiceType.EB_HOLDING.name());
+        invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
         invoiceTypes.add(InvoiceType.ADVANCE.name());
 
-        return null;
+        Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());
+        CustomerInfo customerInfo = null;
+        //for bed details
+        if (customers != null) {
+            BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(customers.getCustomerId());
+            if (bookingsV1 != null) {
+                BedDetails bedDetails = bedsService.getBedDetails(bookingsV1.getBedId());
+                if (bedDetails != null) {
+                    customerInfo = new com.smartstay.smartstay.responses.InvoiceRedemption.CustomerInfo(customers.getFirstName(), customers.getLastName(), NameUtils.getFullName(customers.getFirstName(), customers.getLastName()), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), CustomerUtils.getProfilePic(customers), bedDetails.getBedName(), bedDetails.getRoomName(), bedDetails.getFloorName());
+                }
+            }
+        }
+
+        List<InvoiceInfo> listAvailableInvoices = null;
+        SelectedInvoiceInfo selectedInvoiceInfo = null;
+        AvailableRetainerInvoices availableRetainerInvoices = null;
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findRetainersByCustomerIdAndInvoiceTypes(invoicesV1.getCustomerId(), invoiceTypes);
+        if (listInvoices != null) {
+            Double totalAmount = 0.0;
+            Double pendingAmount = 0.0;
+            Double paidAmount = 0.0;
+            if (invoicesV1.getTotalAmount() != null) {
+                totalAmount = invoicesV1.getTotalAmount();
+            }
+            if (invoicesV1.getPaidAmount() != null) {
+                paidAmount = invoicesV1.getPaidAmount();
+            }
+
+            pendingAmount = totalAmount - paidAmount;
+
+
+            selectedInvoiceInfo = new SelectedInvoiceInfo(invoicesV1.getInvoiceId(),
+                    invoicesV1.getInvoiceNumber(),
+                    Utils.roundOffWithTwoDigit(paidAmount),
+                    Utils.roundOffWithTwoDigit(pendingAmount),
+                    Utils.roundOffWithTwoDigit(totalAmount),
+                    invoicesV1.getPaymentStatus(),
+                    invoicesV1.getInvoiceType(),
+                    Utils.dateToString(invoicesV1.getInvoiceDate()),
+                    Utils.dateToString(invoicesV1.getInvoiceDueDate()));
+
+            listAvailableInvoices = listInvoices
+                    .stream()
+                    .map(i -> new InvoicesInvoiceInfoMapper().apply(i))
+                    .toList();
+
+
+        }
+        availableRetainerInvoices = new AvailableRetainerInvoices(customerInfo,
+                listAvailableInvoices,
+                selectedInvoiceInfo);
+        return new ResponseEntity<>(availableRetainerInvoices, HttpStatus.OK);
     }
 }
