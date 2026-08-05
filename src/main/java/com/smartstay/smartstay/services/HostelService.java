@@ -101,6 +101,11 @@ public class HostelService {
         String emailId = payloads.emailId();
         Users users = usersService.findUserByUserId(userId);
 
+        int roleId = users.getRoleId();
+        if (roleId != 1 && roleId != 2) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
