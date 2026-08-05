@@ -9,6 +9,7 @@ import java.util.List;
 public record SettleVendorPayment(
         String paymentDate,
         String bankId,
+        String paymentMethodId,
         String paymentMethod,
         String transactionId,
         String notes,

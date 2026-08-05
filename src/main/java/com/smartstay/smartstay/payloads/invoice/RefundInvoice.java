@@ -11,5 +11,6 @@ public record RefundInvoice(
         String refundDate,
         @Positive(message = "Invalid refund amount")
         Double refundAmount,
-        String referenceNumber) {
+        String referenceNumber,
+        String paymentMethodId) {
 }

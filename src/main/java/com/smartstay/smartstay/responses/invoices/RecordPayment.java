@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.responses.invoices;
 
+import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
+
 import java.util.List;
 
 public record RecordPayment(String invoiceId,
@@ -10,5 +12,6 @@ public record RecordPayment(String invoiceId,
                             Double totalAmount,
                             CustomerDetails customerInfo,
                             StayInfo stayInfo,
-                            List<BankInfoRecordPayments> accountInfo) {
+                            List<BankInfoRecordPayments> accountInfo,
+                            List<PaymentMethodOptionResponse> allPaymentMethods) {
 }

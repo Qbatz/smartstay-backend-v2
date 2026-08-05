@@ -88,6 +88,8 @@ public class ExpenseService {
     @Autowired
     private BankingService bankingService;
     @Autowired
+    private BankingServiceV2 bankingServiceV2;
+    @Autowired
     private BankTransactionService bankTransactionService;
     @Autowired
     private HostelService hostelService;
@@ -262,7 +264,8 @@ public class ExpenseService {
                         nullSafe(v.getBalance())))
                 .toList();
 
-        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks, listVendors);
+        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks, listVendors,
+                bankingServiceV2.buildAllPaymentMethods(hostelId));
 
         return new ResponseEntity<>(initializeExpenses, HttpStatus.OK);
 
@@ -308,7 +311,8 @@ public class ExpenseService {
                 .map(expenseSummaryMapper)
                 .toList();
 
-        VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses);
+        VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses,
+                bankingServiceV2.buildAllPaymentMethods(hostelId));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -514,8 +518,9 @@ public class ExpenseService {
         if (!bankProvided) {
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
-        if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId())) {
-
+        if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId(), expense.paymentMethodId())) {
+            bankingServiceV2.debitExpenseBalances(transactionDto.bankId(), expense.paymentMethodId(),
+                    transactionDto.amount(), authentication.getName());
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
         else {
@@ -662,6 +667,15 @@ public class ExpenseService {
                 paymentDate, payload.transactionId(), payload.notes(), imageUrls, auditUser, auditNow);
         expensePaymentRepository.save(payment);
 
+        if (Utils.checkNullOrEmpty(payload.bankId()) && requestPaid > 0) {
+            String settleBankId = payload.bankId().trim();
+            if (bankingService.getBankDetails(settleBankId) != null) {
+                bankingService.updateBalanceForExpense(requestPaid, BankTransactionType.DEBIT.name(), settleBankId);
+            }
+            bankingServiceV2.recordVendorExpenseDebit(settleBankId, payload.paymentMethodId(), requestPaid,
+                    expense.getHostelId(), auditUser);
+        }
+
         // Keep the vendor's denormalized financial summary in sync.
         if (expense.getVendorId() != null) {
             vendorFinancialService.recalculate(expense.getVendorId());
@@ -771,6 +785,20 @@ public class ExpenseService {
                     payload.notes(), imageUrls, auditUser, auditNow));
         }
         expensePaymentRepository.saveAll(payments);
+
+        if (Utils.checkNullOrEmpty(payload.bankId())) {
+            double totalSettled = requestedExpenses.stream()
+                    .mapToDouble(requested -> requested.paidAmount() != null ? requested.paidAmount() : 0.0)
+                    .sum();
+            if (totalSettled > 0) {
+                String settleBankId = payload.bankId().trim();
+                if (bankingService.getBankDetails(settleBankId) != null) {
+                    bankingService.updateBalanceForExpense(totalSettled, BankTransactionType.DEBIT.name(), settleBankId);
+                }
+                bankingServiceV2.recordVendorExpenseDebit(settleBankId, payload.paymentMethodId(), totalSettled,
+                        expensesToUpdate.get(0).getHostelId(), auditUser);
+            }
+        }
 
         for (ExpensesV1 expense : expensesToUpdate) {
             usersService.addUserLog(expense.getHostelId(), expense.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
