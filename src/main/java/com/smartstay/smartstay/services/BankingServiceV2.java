@@ -652,15 +652,15 @@ public class BankingServiceV2 {
         String userId = user.getUserId();
 
 
-        if (source.cash()) {
-            applyBankDelta(source.cashAccount(), -amount, now, userId);
+        if (source.direct()) {
+            applyBankDelta(source.directAccount(), -amount, now, userId);
         } else {
             applyMethodDelta(source.method(), -amount, now, userId);
             applyBankDelta(source.parentBank(), -amount, now, userId);
         }
 
-        if (destination.cash()) {
-            applyBankDelta(destination.cashAccount(), amount, now, userId);
+        if (destination.direct()) {
+            applyBankDelta(destination.directAccount(), amount, now, userId);
         } else {
             applyMethodDelta(destination.method(), amount, now, userId);
             applyBankDelta(destination.parentBank(), amount, now, userId);
@@ -797,9 +797,6 @@ public class BankingServiceV2 {
             if (bank.isDeleted() || !hostelId.equals(bank.getHostelId())) {
                 return EndpointResult.fail(invalid);
             }
-            if (BankAccountTypeV2.BANK.name().equalsIgnoreCase(bank.getAccountType())) {
-                return EndpointResult.fail(Utils.TRANSFER_BANK_ACCOUNT_NOT_ALLOWED);
-            }
             if (!bank.isActive()) {
                 return EndpointResult.fail(Utils.TRANSFER_ACCOUNT_INACTIVE);
             }
@@ -824,22 +821,22 @@ public class BankingServiceV2 {
         return EndpointResult.fail(invalid);
     }
 
-    private record TransferEndpoint(BankingV2 cashAccount, BankingMethods method, BankingV2 parentBank) {
-        boolean cash() {
-            return cashAccount != null;
+    private record TransferEndpoint(BankingV2 directAccount, BankingMethods method, BankingV2 parentBank) {
+        boolean direct() {
+            return directAccount != null;
         }
 
         double balance() {
-            Double balance = cash() ? cashAccount.getBalance() : method.getBalance();
+            Double balance = direct() ? directAccount.getBalance() : method.getBalance();
             return balance != null ? balance : 0.0;
         }
 
         String txnBankId() {
-            return cash() ? cashAccount.getBankId() : parentBank.getBankId();
+            return direct() ? directAccount.getBankId() : parentBank.getBankId();
         }
 
         String txnPaymentMethodId() {
-            return cash() ? null : method.getPaymentMethodId();
+            return direct() ? null : method.getPaymentMethodId();
         }
     }
 
