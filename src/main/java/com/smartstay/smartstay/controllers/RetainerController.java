@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.retainer.LoadBalance;
+import com.smartstay.smartstay.payloads.retainer.RedeemAmount;
+import com.smartstay.smartstay.payloads.retainer.RedeemInvoice;
 import com.smartstay.smartstay.services.RetainerService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -33,5 +35,10 @@ public class RetainerController {
     @GetMapping("/get/{hostelId}/{invoiceId}")
     public ResponseEntity<?> getAvailableInvoices(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return retainerService.getAllAvailableRetainers(hostelId, invoiceId);
+    }
+
+    @PostMapping("/redeem/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> redeemAmountFromRetainerInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId, @RequestBody RedeemAmount redeemAmount) {
+        return retainerService.redeemAmountToInvoice(hostelId, invoiceId, redeemAmount);
     }
 }

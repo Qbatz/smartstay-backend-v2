@@ -8,6 +8,8 @@ import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.retainer.LoadBalance;
+import com.smartstay.smartstay.payloads.retainer.RedeemAmount;
+import com.smartstay.smartstay.payloads.retainer.RedeemInvoice;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.InvoiceRedemption.CustomerInfo;
 import com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo;
@@ -23,7 +25,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class RetainerService {
@@ -54,6 +59,10 @@ public class RetainerService {
     private BookingsService bookingsService;
     @Autowired
     private BedsService bedsService;
+    @Autowired
+    private InvoiceRedemptionService invoiceRedemptionService;
+    @Autowired
+    private InvoiceDiscountService invoiceDiscountService;
 
     public ResponseEntity<?> addMoney(String hostelId, String customerId, LoadBalance loadBalance) {
         if (!authentication.isAuthenticated()) {
@@ -92,7 +101,10 @@ public class RetainerService {
                 return new ResponseEntity<>(Utils.RELATION_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
             }
         }
-        else {
+        else if (loadBalance.relationId() != null && loadBalance.relationId().trim().isEmpty() && loadBalance.relationName() == null) {
+            return new ResponseEntity<>(Utils.RELATION_NAME_OR_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        else if (!loadBalance.relationId().trim().isEmpty()) {
             Long relationalId = 0L;
             try {
                 relationalId  = Long.parseLong(loadBalance.relationId());
@@ -111,6 +123,9 @@ public class RetainerService {
             else {
                 isRegisteredRelation = true;
             }
+        }
+        else {
+            isRegisteredRelation = false;
         }
 
         Date paymentDate = new Date();
@@ -303,4 +318,233 @@ public class RetainerService {
                 selectedInvoiceInfo);
         return new ResponseEntity<>(availableRetainerInvoices, HttpStatus.OK);
     }
+
+    public ResponseEntity<?> redeemAmountToInvoice(String hostelId, String invoiceId, RedeemAmount redeemAmount) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!hostelId.equalsIgnoreCase(invoicesV1.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_TO_EB_HOLDING, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_TO_ADVANCE_HOLDING, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_TO_ADVANCE_INVOICE, HttpStatus.BAD_REQUEST);
+        }
+        if (invoicesV1.isCancelled()) {
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_TO_CANCELLED_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
+        double discountedAmount = 0.0;
+        if (invoicesV1.isDiscounted()) {
+            discountedAmount = invoiceDiscountService.getDiscountAmount(hostelId, invoiceId);
+        }
+
+        if (redeemAmount == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        Date redeemedAt = new Date();
+        if (redeemAmount.redeemedOn() != null) {
+            redeemedAt = Utils.stringToDate(redeemAmount.redeemedOn(), Utils.USER_INPUT_DATE_FORMAT);
+        }
+
+        Double appliedAmount = 0.0;
+        if (redeemAmount.appliedAmount() != null) {
+            appliedAmount = redeemAmount.appliedAmount();
+            if (appliedAmount > 0) {
+                return applyAmountSystematically(hostelId, invoicesV1, appliedAmount, redeemedAt);
+            }
+
+        }
+
+        if (redeemAmount.retainersBreakup() == null) {
+            return new ResponseEntity<>(Utils.SOURCE_INVOICES_REQUIRED_REDEMPTION, HttpStatus.BAD_REQUEST);
+        }
+
+        if (redeemAmount.retainersBreakup().isEmpty()) {
+            return new ResponseEntity<>(Utils.SOURCE_INVOICES_REQUIRED_REDEMPTION, HttpStatus.BAD_REQUEST);
+        }
+
+        RedeemInvoice ri = redeemAmount.retainersBreakup()
+                .stream()
+                .filter(i -> i.amount() == null || i.amount() == 0)
+                .findFirst()
+                .orElse(null);
+        if (ri != null) {
+            return new ResponseEntity<>(Utils.APPLIED_AMOUNT_REQUIRED_FOR_REDEEM_LIST, HttpStatus.BAD_REQUEST);
+        }
+
+        List<String> sourceInvoiceIds = redeemAmount
+                .retainersBreakup()
+                .stream()
+                .map(RedeemInvoice::invoiceId)
+                .toList();
+
+        if (sourceInvoiceIds == null) {
+            return new ResponseEntity<>(Utils.SOURCE_INVOICES_REQUIRED_REDEMPTION, HttpStatus.BAD_REQUEST);
+        }
+        if (sourceInvoiceIds.isEmpty()) {
+            return new ResponseEntity<>(Utils.SOURCE_INVOICES_REQUIRED_REDEMPTION, HttpStatus.BAD_REQUEST);
+        }
+
+        List<InvoicesV1> listSourceInvoices = invoicesV1Repository.findByInvoiceIdIn(sourceInvoiceIds);
+
+        AtomicBoolean shouldThrowInvalidInvoiceError = new AtomicBoolean(false);
+        AtomicBoolean shouldThrowInvalidAmountError = new AtomicBoolean(false);
+        HashMap<String, Double> appliedInvoicesList = new HashMap<>();
+        listSourceInvoices.forEach(item -> {
+            RedeemInvoice ri2 = redeemAmount
+                    .retainersBreakup()
+                    .stream()
+                    .filter(i -> i.invoiceId().equalsIgnoreCase(item.getInvoiceId()))
+                    .findFirst()
+                    .orElse(null);
+            if (ri2 == null) {
+                shouldThrowInvalidInvoiceError.set(true);
+            }
+            if (item.getBalanceAmount() < ri2.amount()) {
+                shouldThrowInvalidAmountError.set(true);
+            }
+            if (ri2 != null) {
+                appliedInvoicesList.put(item.getInvoiceId(), ri2.amount());
+            }
+
+        });
+
+        if (shouldThrowInvalidInvoiceError.get()) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID_ON_SOURCE_LIST, HttpStatus.BAD_REQUEST);
+        }
+        if (shouldThrowInvalidAmountError.get()) {
+            return new ResponseEntity<>(Utils.APPLIED_AMOUNT_REQUIRED_FOR_REDEEM_LIST, HttpStatus.BAD_REQUEST);
+        }
+
+        double appliedAmountFromList = redeemAmount.retainersBreakup()
+                .stream()
+                .mapToDouble(RedeemInvoice::amount)
+                .sum();
+        if (appliedAmountFromList == 0) {
+            return new ResponseEntity<>(Utils.APPLIED_AMOUNT_REQUIRED_FOR_REDEEM_LIST, HttpStatus.BAD_REQUEST);
+        }
+
+        double paidAmount = 0.0;
+        if (invoicesV1.getPaidAmount() != null) {
+            paidAmount = invoicesV1.getPaidAmount();
+        }
+        double newPaidAmount = paidAmount + appliedAmountFromList;
+
+        invoicesV1.setPaidAmount(newPaidAmount);
+        if (newPaidAmount == invoicesV1.getTotalAmount()) {
+            invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+        }
+        else {
+            invoicesV1.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+        }
+
+        invoiceRedemptionService.applyInvoiceFromRetainer(hostelId, invoicesV1.getInvoiceId(), appliedInvoicesList, redeemedAt);
+
+        invoicesV1Repository.save(invoicesV1);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private ResponseEntity<?> applyAmountSystematically(String hostelId, InvoicesV1 invoicesV1, Double appliedAmount, Date redeemedAt) {
+        List<String> retainerInvoices = new ArrayList<>();
+        retainerInvoices.add(InvoiceType.ADVANCE.name());
+        retainerInvoices.add(InvoiceType.AMOUNT_HOLDING.name());
+        retainerInvoices.add(InvoiceType.EB_HOLDING.name());
+
+        List<InvoicesV1> listAvailableInvoices = invoicesV1Repository.findRetainersByCustomerIdAndInvoiceTypes(invoicesV1.getCustomerId(), retainerInvoices);
+        if (listAvailableInvoices == null) {
+            return new ResponseEntity<>(Utils.NO_RETAINER_INVOICE_AVAILABLE, HttpStatus.BAD_REQUEST);
+        }
+        if (listAvailableInvoices.isEmpty()) {
+            return new ResponseEntity<>(Utils.NO_RETAINER_INVOICE_AVAILABLE, HttpStatus.BAD_REQUEST);
+        }
+
+        double availableAmount = listAvailableInvoices
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getBalanceAmount() == null) {
+                        return 0.0;
+                    }
+                    return i.getBalanceAmount();
+                })
+                .sum();
+        if (availableAmount < appliedAmount) {
+            return new ResponseEntity<>(Utils.INSUFFICIENT_AMOUNT_TO_REDEEM, HttpStatus.BAD_REQUEST);
+        }
+        AtomicReference<Double> newBalance = new AtomicReference<>(appliedAmount);
+        HashMap<String, Double> appliedAmountInvoiceIdMapper = new HashMap<>();
+
+        List<InvoicesV1> listNewInvoiceAfterRedeeming = listAvailableInvoices
+                .stream()
+                .map(i -> {
+                    if (newBalance.get() > 0) {
+                        if (i.getBalanceAmount() > appliedAmount) {
+                            appliedAmountInvoiceIdMapper.put(i.getInvoiceId(), appliedAmount);
+                            i.setBalanceAmount(i.getBalanceAmount() - appliedAmount);
+                            newBalance.set(0.0);
+                        }
+                        else {
+                            double redeemingAmountAfterCurrentInvoice = newBalance.get() - i.getBalanceAmount();
+                            if (redeemingAmountAfterCurrentInvoice >= 0) {
+                                appliedAmountInvoiceIdMapper.put(i.getInvoiceId(), i.getBalanceAmount());
+                                i.setBalanceAmount(0.0);
+                                newBalance.set(newBalance.get() - redeemingAmountAfterCurrentInvoice);
+                            }
+                            else {
+                                double newBalanceAmount = i.getBalanceAmount() - newBalance.get();
+                                i.setBalanceAmount(newBalanceAmount);
+                                appliedAmountInvoiceIdMapper.put(i.getInvoiceId(), newBalance.get());
+                                newBalance.set(newBalance.get());
+                            }
+                        }
+                    }
+                    return i;
+                })
+                .toList();
+
+        invoiceRedemptionService.applyInvoiceFromRetainer(hostelId, invoicesV1.getInvoiceId(), appliedAmountInvoiceIdMapper, redeemedAt);
+
+        double invoicePaid = 0.0;
+        if (invoicesV1.getPaidAmount() != null) {
+            invoicePaid = invoicesV1.getPaidAmount();
+        }
+
+        double newPaidAmount = invoicePaid + appliedAmount;
+
+
+        invoicesV1.setPaidAmount(newPaidAmount);
+        if (invoicesV1.getTotalAmount() == newPaidAmount) {
+            invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+        }
+        else {
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        }
+        invoicesV1Repository.save(invoicesV1);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+
+    }
+
 }

@@ -293,11 +293,11 @@ public class ReportService {
             if (requestedAll.get()) {
                 pStatus = new ArrayList<>();
                 pStatus.add(PaymentStatus.PAID.name());
-                pStatus.add(PaymentStatus.REFUNDED.name());
+//                pStatus.add(PaymentStatus.REFUNDED.name());
                 pStatus.add(PaymentStatus.PENDING.name());
                 pStatus.add(PaymentStatus.PARTIAL_PAYMENT.name());
-                pStatus.add(PaymentStatus.PENDING_REFUND.name());
-                pStatus.add(PaymentStatus.PARTIAL_REFUND.name());
+//                pStatus.add(PaymentStatus.PENDING_REFUND.name());
+//                pStatus.add(PaymentStatus.PARTIAL_REFUND.name());
             }
             else {
                 pStatus = paymentStatus
@@ -319,9 +319,14 @@ public class ReportService {
                     pStatus = paymentStatusWithoutFilter
                             .stream()
                             .toList();
+
                 }
 
             }
+        }
+
+        if (isCancelledList != null && !isCancelledList) {
+            isCancelledList = null;
         }
 
         BillingDates dates = calculateDateRange(period, hostelId);
@@ -333,6 +338,12 @@ public class ReportService {
         }
         if (customEndDate != null && !customEndDate.isEmpty()) {
             endDate = Utils.stringToDate(customEndDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+        if (minOutstandingAmount != null && minOutstandingAmount == 0) {
+            minOutstandingAmount = null;
+        }
+        if (maxOutstandingAmount != null && maxOutstandingAmount == 0) {
+            maxOutstandingAmount = null;
         }
         ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);
         if (authentication.getSource().equalsIgnoreCase("web")) {

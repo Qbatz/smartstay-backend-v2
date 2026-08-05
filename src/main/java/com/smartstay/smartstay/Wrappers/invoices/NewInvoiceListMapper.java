@@ -8,6 +8,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.responses.invoices.InvoicesApplied;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
 import com.smartstay.smartstay.util.InvoiceUtils;
+import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.List;
@@ -296,6 +297,34 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             }
         }
 
-        return new InvoicesList(firstName, lastName, fullName.toString(), invoicesV1.getCustomerId(), initials.toString(), profilePic, isRefundable, Utils.roundOffWithTwoDigit(invoiceAmount), Utils.roundOffWithTwoDigit(totalAmount), invoicesV1.getInvoiceId(), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(dueAmount), invoicesV1.isDiscounted(), discountAmount, discountPercentage, invoicesV1.getCgst(), invoicesV1.getSgst(), gstAmount, Utils.dateToString(invoicesV1.getCreatedAt()), invoicesV1.getCreatedBy(), invoicesV1.getHostelId(), invoiceDate, Utils.dateToString(invoicesV1.getInvoiceDueDate()), invoiceType, invoiceMode, paymentStatus, Utils.dateToString(invoicesV1.getUpdatedAt()), invoicesV1.getInvoiceNumber(), isCancelled, cancelledOn, canEdit, canUnpaid, isInvoicesApplied, canRedeem, canApplyFromAdvance, invoicesApplied);
+        return new InvoicesList(firstName,
+                lastName,
+                fullName.toString(),
+                invoicesV1.getCustomerId(),
+                initials.toString(),
+                profilePic,
+                isRefundable,
+                Utils.roundOfDouble(invoiceAmount),
+                Utils.roundOfDouble(totalAmount),
+                invoicesV1.getInvoiceId(),
+                Utils.roundOfDouble(paidAmount),
+                Utils.roundOfDouble(dueAmount),
+                invoicesV1.isDiscounted(),
+                discountAmount,
+                discountPercentage,
+                invoicesV1.getCgst(),
+                invoicesV1.getSgst(),
+                gstAmount,
+                Utils.dateToString(invoicesV1.getCreatedAt()),
+                invoicesV1.getCreatedBy(),
+                invoicesV1.getHostelId(),
+                invoiceDate,
+                Utils.dateToString(invoicesV1.getInvoiceDueDate()),
+                invoiceType, invoiceMode, paymentStatus,
+                Utils.dateToString(invoicesV1.getUpdatedAt()),
+                invoicesV1.getInvoiceNumber(),
+                isCancelled, cancelledOn, canEdit, canUnpaid,
+                isInvoicesApplied, canRedeem, canApplyFromAdvance,
+                invoicesApplied);
     }
 }

@@ -447,9 +447,9 @@ public class InvoiceV1Service {
             Date dueDate = Utils.addDaysToDate(joiningDate1, billingDates.dueDays() - 1);
             Date endDate = billingDates.currentBillEndDate();
 
-            invoicesV1.setTotalAmount(amount);
-            invoicesV1.setBasePrice(baseAmount);
-            invoicesV1.setSubTotal(amount);
+            invoicesV1.setTotalAmount(Utils.roundOfDouble(amount));
+            invoicesV1.setBasePrice(Utils.roundOfDouble(baseAmount));
+            invoicesV1.setSubTotal(Utils.roundOfDouble(amount));
             invoicesV1.setDeductionAmount(deductionAmount);
             invoicesV1.setDeductions(null);
             invoicesV1.setBalanceAmount(0.0);
@@ -490,7 +490,7 @@ public class InvoiceV1Service {
                 invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.ADVANCE.name());
             }
 
-            invoiceItems.setAmount(rentAmount);
+            invoiceItems.setAmount(Utils.roundOfDouble(rentAmount));
             listInvoiceItems.add(invoiceItems);
 
             invoicesV1.setInvoiceItems(listInvoiceItems);
@@ -744,10 +744,16 @@ public class InvoiceV1Service {
         List<String> customerIds = listAllInvoice.stream().map(InvoicesV1::getCustomerId).toList();
         List<InvoicesV1> listAllInvoiceForCustomer = invoicesV1Repository.findUnpaidInvoicesByCustomerIds(customerIds);
         List<Customers> lisAllCustomersForInvoices = customersService.getCustomerDetails(customerIds);
-        List<InvoicesV1> listAdvanceInvoice = listAllInvoice.stream().filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())).toList();
+//        List<InvoicesV1> listAdvanceInvoice = listAllInvoice.stream().filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())).toList();
 
+        List<String> listInvoiceTypes = new ArrayList<>();
+        listInvoiceTypes.add(InvoiceType.ADVANCE.name());
+        listInvoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
+        listInvoiceTypes.add(InvoiceType.EB_HOLDING.name());
+
+        List<InvoicesV1> listRetainerInvoices = invoicesV1Repository.findRetainerInvoicesByHostelId(hostelId, listInvoiceTypes);
         List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers,
-                listInvoiceDiscounts, listInvoiceRedeemed, listAdvanceInvoice, listAllInvoiceForCustomer, listTransactions).apply(i)).toList();
+                listInvoiceDiscounts, listInvoiceRedeemed, listRetainerInvoices, listAllInvoiceForCustomer, listTransactions).apply(i)).toList();
 
         if (authentication.getSource().equalsIgnoreCase("web")) {
 //            List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
@@ -840,11 +846,11 @@ public class InvoiceV1Service {
         }
 
         return new InvoiceSummaryInfo(totalInvoices,
-                collectedThisMonth,
-                dueToday,
-                overDueToday,
-                outstandingAmount,
-                totalAmount,
+                Utils.roundOffWithTwoDigit(collectedThisMonth),
+                Utils.roundOffWithTwoDigit(dueToday),
+                Utils.roundOffWithTwoDigit(overDueToday),
+                Utils.roundOffWithTwoDigit(outstandingAmount),
+                Utils.roundOffWithTwoDigit(totalAmount),
                 0.0);
     }
 
@@ -3229,9 +3235,9 @@ public class InvoiceV1Service {
             }
 
             Double invoiceTotalAmount = invoiceItemService.updateInvoiceRentAmount(currentMonthInvoice.getInvoiceId(), newRent);
-            currentMonthInvoice.setTotalAmount(invoiceTotalAmount);
-            currentMonthInvoice.setBasePrice(invoiceTotalAmount);
-            currentMonthInvoice.setSubTotal(invoiceTotalAmount);
+            currentMonthInvoice.setTotalAmount(Utils.roundOfDouble(invoiceTotalAmount));
+            currentMonthInvoice.setBasePrice(Utils.roundOfDouble(invoiceTotalAmount));
+            currentMonthInvoice.setSubTotal(Utils.roundOfDouble(invoiceTotalAmount));
 
             invoicesV1Repository.save(currentMonthInvoice);
         }
@@ -6121,7 +6127,6 @@ public class InvoiceV1Service {
         } else {
             types = new ArrayList<>();
             types.add(InvoiceType.RENT.name());
-            types.add(InvoiceType.SETTLEMENT.name());
             types.add(InvoiceType.ADVANCE.name());
             types.add(InvoiceType.REASSIGN_RENT.name());
         }

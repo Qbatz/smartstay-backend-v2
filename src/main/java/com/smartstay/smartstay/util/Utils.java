@@ -98,6 +98,9 @@ public class Utils {
     public static final String INVALID_READING_ID = "Invalid Reading Id";
     public static final String INVALID_TRANSACTION_ID = "Invalid transaction id";
     public static final String INVALID_INVOICE_ID = "Invalid invoice id";
+    public static final String INVALID_INVOICE_ID_ON_SOURCE_LIST = "Invalid invoice id on source invoice list";
+    public static final String APPLIED_AMOUNT_REQUIRED_FOR_REDEEM_LIST = "Applied amount is required for all the invoices";
+    public static final String CANNOT_APPLY_TO_CANCELLED_INVOICES = "Cannot apply to cancelled invoices";
     public static final String INVALID_INVOICE_DATE = "Invalid invoice date";
     public static final String INVALID_SUBSCRIPTION = "Invalid subscription";
     public static final String INVALID_SUBSCRIPTION_ID = "Invalid subscription id";
@@ -304,14 +307,18 @@ public class Utils {
     public static final String CANNOT_CREATE_INVOICE_CHECKOUT_CUSTOMERS = "Cannot create manual invoice for checkout customers";
     public static final String INVALID_TARGET_INVOICE_ID = "Invalid target invoice id";
     public static final String CANNOT_REDEEM_FROM_CANCELLED_INVOICES = "Cannot redeem from cancelled invoices";
+    public static final String NO_RETAINER_INVOICE_AVAILABLE = "No retainer invoice available to redeem";
+    public static final String INSUFFICIENT_AMOUNT_TO_REDEEM = "Insufficient retainer balance to apply";
     public static final String REDEMPTION_AMOUNT_CANNOT_EXCEED_AVAILABLE_AMOUNT = "Redemption amount cannot exceed balance amount";
     public static final String CANNOT_REDEEM_FROM_UNPAID_INVOICES = "Cannot redeem from unpaid invoices";
     public static final String CANNOT_APPLY_FOR_PAID_INVOICES = "Cannot apply for paid invoices";
     public static final String CANNOT_APPLY_TO_EB_HOLDING = "Cannot apply for EB advance";
     public static final String CANNOT_APPLY_TO_ADVANCE_HOLDING = "Cannot apply for advance holding";
+    public static final String CANNOT_APPLY_TO_ADVANCE_INVOICE = "Cannot apply for advance invoice";
     public static final String TARGET_INVOICE_CANNOT_BE_CANCELLED = "Target invoice cannot be cancelled";
     public static final String REDEMPTION_AMOUNT_REQUIRED = "Invoice Redemption amount required";
     public static final String INVALID_REDEMPTION_AMOUNT = "Invalid redemption amount";
+    public static final String SOURCE_INVOICES_REQUIRED_REDEMPTION = "Source invoice id is required";
     public static final String REDEMPTION_AMOUNT_CANNOT_EXCEED_PAYABLE_AMOUNT = "Cannot exceed payable amount";
     public static final String CANNOT_CREATE_INVOICE_SETTLEMET_CREATED_CUSTOMERS = "Settlement is created";
     public static final String OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED = "Settlement cannot be generated for old months";
@@ -387,6 +394,7 @@ public class Utils {
     public static final String SHARING_TYPE_THREE = "Three sharing";
     public static final String DEMO_REQUESTED_SUCCESSFULLY = "Demo requested successfully";
     public static final String RELATION_NAME_REQUIRED = "Relation name required";
+    public static final String RELATION_NAME_OR_ID_REQUIRED = "Relation name or id is required";
     public static final String INVALID_RELATION_ID = "Invalid relation id";
     public static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
     private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
