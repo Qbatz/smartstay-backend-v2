@@ -7,6 +7,14 @@ import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
 public class AllPaymentMethodsMapper {
 
     public PaymentMethodOptionResponse cash(BankingV2 bank, String responsiblePerson) {
+        return account(bank, responsiblePerson);
+    }
+
+    public PaymentMethodOptionResponse bankAccount(BankingV2 bank, String responsiblePerson) {
+        return account(bank, responsiblePerson);
+    }
+
+    private PaymentMethodOptionResponse account(BankingV2 bank, String responsiblePerson) {
         return new PaymentMethodOptionResponse(
                 bank.getHostelId(),
                 bank.getBankId(),
