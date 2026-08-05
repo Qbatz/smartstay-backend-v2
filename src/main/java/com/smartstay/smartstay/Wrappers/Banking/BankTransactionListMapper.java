@@ -25,6 +25,7 @@ public class BankTransactionListMapper {
                 txn.getTransactionNumber(),
                 txn.getType(),
                 txn.getSourceId(),
+                txn.getInvestorName(),
                 bank != null ? bank.getBankAccountType() : null,
                 bank != null ? bank.getAccountNumber() : null,
                 bank != null ? bank.getAccountHolderName() : null,
