@@ -1111,9 +1111,11 @@ public class BankingServiceV2 {
             return mapper.map(txn, bank, method, createdByName, responsiblePersonName, cardNetwork, upiApp);
         }).collect(Collectors.toList());
 
+        List<PaymentMethodOptionResponse> bankList = bankId == null
+                ? buildBankList(hostelId) : Collections.emptyList();
         BankTransactionListResponse response = new BankTransactionListResponse(
                 txnPage.getTotalElements(), pageNumber, txnPage.getTotalPages(), pageSize,
-                buildTransactionFilterOptions(), items);
+                buildTransactionFilterOptions(), bankList, items);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -1273,10 +1275,59 @@ public class BankingServiceV2 {
     }
 
     public List<PaymentMethodOptionResponse> buildAllPaymentMethods(String hostelId) {
-        List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
-        if (accounts.isEmpty()) {
-            return new ArrayList<>();
+        PaymentMethodContext ctx = loadPaymentMethodContext(hostelId);
+        AllPaymentMethodsMapper mapper = new AllPaymentMethodsMapper();
+        List<PaymentMethodOptionResponse> response = new ArrayList<>();
+
+        for (BankingV2 cash : ctx.cashAccounts()) {
+            response.add(mapper.cash(cash, responsiblePersonName(cash, ctx.personById(), ctx.roleNameById())));
         }
+
+        for (BankingV2 bank : ctx.bankAccounts()) {
+            List<BankingMethods> methods = ctx.methodsByBankId().get(bank.getBankId());
+            if (methods == null || methods.isEmpty()) {
+                continue;
+            }
+            String personName = responsiblePersonName(bank, ctx.personById(), ctx.roleNameById());
+            for (BankingMethods method : methods) {
+                response.add(mapper.bankMethod(bank, method,
+                        cardNetworkName(method, ctx), upiAppName(method, ctx), qrCardImage(method, ctx), personName));
+            }
+        }
+
+        return response;
+    }
+
+    public List<PaymentMethodOptionResponse> buildBankList(String hostelId) {
+        PaymentMethodContext ctx = loadPaymentMethodContext(hostelId);
+        AllPaymentMethodsMapper mapper = new AllPaymentMethodsMapper();
+        List<PaymentMethodOptionResponse> response = new ArrayList<>();
+
+        for (BankingV2 cash : ctx.cashAccounts()) {
+            response.add(mapper.cash(cash, responsiblePersonName(cash, ctx.personById(), ctx.roleNameById())));
+        }
+
+        for (BankingV2 bank : ctx.bankAccounts()) {
+            String personName = responsiblePersonName(bank, ctx.personById(), ctx.roleNameById());
+            response.add(mapper.bankAccount(bank, personName));
+            List<BankingMethods> methods = ctx.methodsByBankId().get(bank.getBankId());
+            if (methods == null) {
+                continue;
+            }
+            for (BankingMethods method : methods) {
+                if (method.getPaymentMethod() != PaymentMethod.CREDIT_CARD) {
+                    continue;
+                }
+                response.add(mapper.bankMethod(bank, method,
+                        cardNetworkName(method, ctx), upiAppName(method, ctx), qrCardImage(method, ctx), personName));
+            }
+        }
+
+        return response;
+    }
+    
+    private PaymentMethodContext loadPaymentMethodContext(String hostelId) {
+        List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
 
         List<BankingV2> cashAccounts = new ArrayList<>();
         List<BankingV2> bankAccounts = new ArrayList<>();
@@ -1326,33 +1377,35 @@ public class BankingServiceV2 {
                 : rolesService.findRolesByIdsAndHostelId(roleIds, hostelId).stream()
                         .collect(Collectors.toMap(RolesV1::getRoleId, RolesV1::getRoleName, (a, b) -> a));
 
-        AllPaymentMethodsMapper mapper = new AllPaymentMethodsMapper();
-        List<PaymentMethodOptionResponse> response = new ArrayList<>();
+        return new PaymentMethodContext(cashAccounts, bankAccounts, methodsByBankId, qrTypeById, personById, roleNameById);
+    }
 
-        for (BankingV2 cash : cashAccounts) {
-            response.add(mapper.cash(cash, responsiblePersonName(cash, personById, roleNameById)));
+    private String cardNetworkName(BankingMethods method, PaymentMethodContext ctx) {
+        QrBankType type = method.getCardNetwork() != null ? ctx.qrTypeById().get(method.getCardNetwork()) : null;
+        return type != null ? type.getName() : null;
+    }
+
+    private String upiAppName(BankingMethods method, PaymentMethodContext ctx) {
+        QrBankType type = method.getUpiApp() != null ? ctx.qrTypeById().get(method.getUpiApp()) : null;
+        return type != null ? type.getName() : null;
+    }
+
+    private String qrCardImage(BankingMethods method, PaymentMethodContext ctx) {
+        QrBankType cardNetworkType = method.getCardNetwork() != null ? ctx.qrTypeById().get(method.getCardNetwork()) : null;
+        if (cardNetworkType != null) {
+            return cardNetworkType.getImage();
         }
+        QrBankType upiAppType = method.getUpiApp() != null ? ctx.qrTypeById().get(method.getUpiApp()) : null;
+        return upiAppType != null ? upiAppType.getImage() : null;
+    }
 
-        for (BankingV2 bank : bankAccounts) {
-            List<BankingMethods> methods = methodsByBankId.get(bank.getBankId());
-            if (methods == null || methods.isEmpty()) {
-                continue;
-            }
-            String personName = responsiblePersonName(bank, personById, roleNameById);
-            for (BankingMethods method : methods) {
-                QrBankType cardNetworkType = method.getCardNetwork() != null
-                        ? qrTypeById.get(method.getCardNetwork()) : null;
-                QrBankType upiAppType = method.getUpiApp() != null
-                        ? qrTypeById.get(method.getUpiApp()) : null;
-                String cardNetwork = cardNetworkType != null ? cardNetworkType.getName() : null;
-                String upiApp = upiAppType != null ? upiAppType.getName() : null;
-                String qrCardImage = cardNetworkType != null ? cardNetworkType.getImage()
-                        : (upiAppType != null ? upiAppType.getImage() : null);
-                response.add(mapper.bankMethod(bank, method, cardNetwork, upiApp, qrCardImage, personName));
-            }
-        }
-
-        return response;
+    private record PaymentMethodContext(
+            List<BankingV2> cashAccounts,
+            List<BankingV2> bankAccounts,
+            Map<String, List<BankingMethods>> methodsByBankId,
+            Map<Integer, QrBankType> qrTypeById,
+            Map<String, Users> personById,
+            Map<Integer, String> roleNameById) {
     }
 
     private String responsiblePersonName(BankingV2 bank, Map<String, Users> personById,

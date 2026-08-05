@@ -8,6 +8,7 @@ public record BankTransactionListResponse(
         int totalPages,
         int pageSize,
         TransactionFilterOptions filterOptions,
+        List<PaymentMethodOptionResponse> bankList,
         List<BankTransactionResponse> transactions
 ) {
 }
