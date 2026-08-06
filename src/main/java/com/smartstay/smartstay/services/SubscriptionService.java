@@ -513,4 +513,8 @@ public class SubscriptionService {
         }
         return listSubscriptions;
     }
+
+    public Subscription findCurrentSubscription(String hostelId) {
+        return subscriptionRepository.checkSubscriptionForToday(hostelId, new Date());
+    }
 }

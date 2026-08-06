@@ -347,4 +347,61 @@ public class BankTransactionService {
 
         bankRepository.save(bankTransactionsV1);
     }
+
+    public String updateTransactionsForSelfTransfer(String hostelId, String fromBankId, String toBankId, Double transferAmount, Double fromBankAccountBalance, Double toBankAccountBalance, Date paymentDate) {
+//        BankTransactionsV1 latestFromTransaction = bankRepository.findTopByBankIdOrderByTransactionDateDesc(fromBankId);
+//        BankTransactionsV1 latestToTransaction = bankRepository.findTopByBankIdOrderByTransactionDateDesc(toBankId);
+
+        String generateReferenceId = generateRandomIdForBankTransfer();
+
+        BankTransactionsV1 newTransactionForFromAccount = new BankTransactionsV1();
+        newTransactionForFromAccount.setBankId(fromBankId);
+        newTransactionForFromAccount.setReferenceNumber(generateReferenceId);
+        newTransactionForFromAccount.setAmount(transferAmount);
+        newTransactionForFromAccount.setAccountBalance(fromBankAccountBalance);
+        newTransactionForFromAccount.setType(BankTransactionType.DEBIT.name());
+        newTransactionForFromAccount.setSource(BankSource.SELF_TRANSFER.name());
+        newTransactionForFromAccount.setSourceId(null);
+        newTransactionForFromAccount.setHostelId(hostelId);
+        newTransactionForFromAccount.setTransactionNumber(null);
+        newTransactionForFromAccount.setTransactionDate(paymentDate);
+        newTransactionForFromAccount.setIsDeleted(false);
+        newTransactionForFromAccount.setCreatedAt(new Date());
+        newTransactionForFromAccount.setPlatform(authentication.getSource());
+        newTransactionForFromAccount.setCreatedBy(authentication.getName());
+
+        bankRepository.save(newTransactionForFromAccount);
+
+        BankTransactionsV1 newTransactionForToAccount = new BankTransactionsV1();
+        newTransactionForToAccount.setBankId(toBankId);
+        newTransactionForToAccount.setReferenceNumber(generateReferenceId);
+        newTransactionForToAccount.setAmount(transferAmount);
+        newTransactionForToAccount.setAccountBalance(toBankAccountBalance);
+        newTransactionForToAccount.setType(BankTransactionType.CREDIT.name());
+        newTransactionForToAccount.setSource(BankSource.SELF_TRANSFER.name());
+        newTransactionForToAccount.setSourceId(null);
+        newTransactionForToAccount.setHostelId(hostelId);
+        newTransactionForToAccount.setTransactionNumber(null);
+        newTransactionForToAccount.setTransactionDate(paymentDate);
+        newTransactionForToAccount.setIsDeleted(false);
+        newTransactionForToAccount.setCreatedAt(new Date());
+        newTransactionForToAccount.setPlatform(authentication.getSource());
+        newTransactionForToAccount.setCreatedBy(authentication.getName());
+
+        BankTransactionsV1 transactionsV1 = bankRepository.save(newTransactionForToAccount);
+        return String.valueOf(transactionsV1.getTransactionId());
+    }
+
+    private String generateRandomIdForBankTransfer() {
+        String randomId = "SSTY-TTRNS" + Utils.generateReference();
+
+        List<BankTransactionsV1> listBankTransactionsWithSameReference = bankRepository.findByReferenceNumber(randomId);
+        if (listBankTransactionsWithSameReference == null) {
+            return randomId;
+        }
+        if (listBankTransactionsWithSameReference.isEmpty()) {
+            return randomId;
+        }
+        return generateRandomIdForBankTransfer();
+    }
 }

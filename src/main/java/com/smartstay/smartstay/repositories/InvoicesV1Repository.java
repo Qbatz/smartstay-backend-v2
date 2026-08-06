@@ -44,7 +44,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND (:endDate IS NULL OR DATE(i.invoiceEndDate) <= DATE(:endDate))
             AND (:types IS NULL OR i.invoiceType in (:types)) AND (:createdBy IS NULL OR i.createdBy in (:createdBy))
             AND (:mode IS NULL OR i.invoiceMode in (:mode))
-            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NULL OR i.isCancelled=:isCancelled)) 
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NOT NULL AND i.isCancelled=:isCancelled)) 
             AND ((:userId IS NOT NULL AND i.customerId IN (:userId)) OR :userId IS NULL AND (:searchKey IS NULL OR :searchKey IS NOT NULL AND LOWER(i.invoiceNumber) LIKE LOWER(CONCAT('%', :searchKey, '%')))) 
             ORDER BY i.invoiceStartDate DESC
             """, countQuery = """
@@ -53,7 +53,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND (:endDate IS NULL OR DATE(i.invoiceEndDate) <= DATE(:endDate))
             AND (:types IS NULL OR i.invoiceType in (:types)) AND (:createdBy IS NULL OR i.createdBy in (:createdBy))
             AND (:mode IS NULL OR i.invoiceMode in (:mode))
-            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NULL OR i.isCancelled=:isCancelled)) 
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NOT NULL AND i.isCancelled=:isCancelled)) 
             AND ((:userId IS NOT NULL AND i.customerId IN (:userId)) OR :userId IS NULL AND (:searchKey IS NULL OR :searchKey IS NOT NULL AND LOWER(i.invoiceNumber) LIKE LOWER(CONCAT('%', :searchKey, '%')))) 
             AND (:userId IS NULL OR i.customerId IN (:userId)) ORDER BY i.invoiceStartDate DESC
             """)
@@ -76,10 +76,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND (:startDate IS NULL OR DATE(i.invoiceEndDate) >= DATE(:startDate)) 
             AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy)) 
             AND (:mode IS NULL OR i.invoiceMode in (:mode)) 
-            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) OR (:isCancelled IS NULL OR i.isCancelled=:isCancelled)) 
-            AND (:minPaidAmount IS NULL OR i.paidAmount >= :minPaidAmount) 
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NOT NULL AND i.isCancelled=:isCancelled)) 
+            AND (:minPaidAmount IS NULL OR i.paidAmount >= :minPaidAmount)  
             AND (:maxPaidAmount IS NULL OR i.paidAmount <= :maxPaidAmount) 
-            AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)
+            AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)  
             AND (:maxOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) <= :maxOutstandingAmount) 
             ORDER BY i.invoiceStartDate DESC
             """, countQuery = """
@@ -87,11 +87,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
             AND (:startDate IS NULL OR DATE(i.invoiceEndDate) >= DATE(:startDate))
             AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy))
-            AND (:mode IS NULL OR i.invoiceMode in (:mode))
-            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) OR (:isCancelled IS NULL OR i.isCancelled=:isCancelled)) 
+            AND (:mode IS NULL OR i.invoiceMode in (:mode)) 
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NOT NULL AND i.isCancelled=:isCancelled)) 
             AND (:minPaidAmount IS NULL OR i.paidAmount >= :minPaidAmount) 
             AND (:maxPaidAmount IS NULL OR i.paidAmount <= :maxPaidAmount) 
-            AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)
+            AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)  
             AND (:maxOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) <= :maxOutstandingAmount) 
             ORDER BY i.invoiceStartDate DESC
             """)
@@ -251,7 +251,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND i.invoiceType != 'SETTLEMENT' 
             AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
-            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) OR (:isCancelled IS NULL OR i.isCancelled=:isCancelled)) 
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NULL OR i.isCancelled=:isCancelled)) 
             AND (:invoiceModes IS NULL OR i.invoiceMode IN :invoiceModes)
             AND (:invoiceTypes IS NULL OR i.invoiceType IN :invoiceTypes)
             AND (:createdBy IS NULL OR i.createdBy IN :createdBy)
@@ -434,6 +434,12 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """)
     List<InvoicesV1> findRetainerInvoicesByCustomerId(String hostelId, String customerId, List<String> invoiceTypes);
 
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.invoiceType IN (:invoiceTypes) 
+            AND i.isCancelled=false AND i.balanceAmount > 0
+            """)
+    List<InvoicesV1> findRetainerInvoicesByHostelId(String hostelId, List<String> invoiceTypes);
+
     @Query(value = """
             SELECT i FROM InvoicesV1 i, BookingsV1 b, Rooms r  WHERE i.customerId = b.customerId AND r.roomId = b.roomId AND 
             i.hostelId=:hostelId AND 
@@ -514,4 +520,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT i FROM InvoicesV1 i WHERE i.invoiceType='BOOKING' AND i.paymentStatus='CANCELLED' AND i.isCancelled=FALSE
             """)
     List<InvoicesV1> findCancelledInvoices();
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId=:customerId AND i.invoiceType IN (:invoiceTypes) 
+            AND i.balanceAmount > 0 AND i.isCancelled=false
+            """)
+    List<InvoicesV1> findRetainersByCustomerIdAndInvoiceTypes(String customerId, List<String> invoiceTypes);
 }
