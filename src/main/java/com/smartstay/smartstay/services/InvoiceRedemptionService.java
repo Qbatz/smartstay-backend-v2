@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 @Service
@@ -188,5 +189,28 @@ public class InvoiceRedemptionService {
         }
         return redeemedAmount;
 
+    }
+
+    public void applyInvoiceFromRetainer(String hostelId, String invoiceId, HashMap<String, Double> appliedAmountInvoiceIdMapper, Date redeemedAt) {
+        List<InvoiceRedemption> listInvoiceRedeemed = new ArrayList<>();
+        appliedAmountInvoiceIdMapper.keySet().forEach(i -> {
+            InvoiceRedemption ir = new InvoiceRedemption();
+            ir.setCreatedAt(new Date());
+            ir.setRedeemedAt(redeemedAt);
+            ir.setSourceInvoiceId(invoiceId);
+            ir.setTargetInvoiceId(i);
+            ir.setRedemptionAmount(appliedAmountInvoiceIdMapper.get(i));
+            ir.setUserType(UserType.OWNER.name());
+            ir.setIsActive(true);
+            ir.setHostelId(hostelId);
+            ir.setTransactionId(getNextReferenceNumber(hostelId));
+            ir.setReferenceNumber(null);
+            ir.setReason(null);
+            ir.setCreatedBy(authentication.getName());
+
+            listInvoiceRedeemed.add(ir);
+       });
+
+        invoiceRedemptionRepository.saveAll(listInvoiceRedeemed);
     }
 }

@@ -159,6 +159,14 @@ public class PlansService {
 
 
         List<Subscription> listSubscriptions = subscriptionService.getSubscriptionList(hostelId);
+        Subscription subscription = subscriptionService.findCurrentSubscription(hostelId);
+        Long subscriptionId = null;
+        String referenceNumber = null;
+
+        if (subscription != null) {
+            subscriptionId = subscription.getSubscriptionId();
+            referenceNumber = subscription.getSubscriptionNumber();
+        }
         List<Subscription> subscriptionsWithOrderIds = listSubscriptions
                 .stream()
                 .filter(i -> i.getOrderId() != null)
@@ -169,6 +177,7 @@ public class PlansService {
                     .stream()
                     .map(Subscription::getOrderId)
                     .toList();
+
         }
 
         List<OrderHistory> listOrderHistory;
@@ -213,6 +222,7 @@ public class PlansService {
 
         PlanDetails planDetails = new PlanDetails(
                 String.valueOf(hostelPlan.getHostelPlanId()),
+                subscriptionId,
                 hostelPlan.getCurrentPlanCode(),
                 hostelPlan.getCurrentPlanName(),
                 hostelPlan.getSubscriptionNumber(),
@@ -227,6 +237,7 @@ public class PlansService {
                 currentPaymentMethod,
                 status,
                 isTrial,
+                referenceNumber,
                 billingHistory
         );
 
