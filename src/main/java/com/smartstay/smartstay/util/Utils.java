@@ -315,6 +315,7 @@ public class Utils {
     public static final String CANNOT_APPLY_TO_EB_HOLDING = "Cannot apply for EB advance";
     public static final String CANNOT_APPLY_TO_ADVANCE_HOLDING = "Cannot apply for advance holding";
     public static final String CANNOT_APPLY_TO_ADVANCE_INVOICE = "Cannot apply for advance invoice";
+    public static final String CANNOT_APPLY_TO_BOOKING_INVOICE = "Cannot apply to booking invoice";
     public static final String TARGET_INVOICE_CANNOT_BE_CANCELLED = "Target invoice cannot be cancelled";
     public static final String REDEMPTION_AMOUNT_REQUIRED = "Invoice Redemption amount required";
     public static final String INVALID_REDEMPTION_AMOUNT = "Invalid redemption amount";

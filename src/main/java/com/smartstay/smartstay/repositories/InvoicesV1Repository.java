@@ -74,9 +74,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT i FROM InvoicesV1 i WHERE hostelId=:hostelId 
             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
             AND (:startDate IS NULL OR DATE(i.invoiceEndDate) >= DATE(:startDate)) 
+            AND (:customerIds IS NULL OR i.customerId IN (:customerIds)) 
             AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy)) 
             AND (:mode IS NULL OR i.invoiceMode in (:mode)) 
-            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NOT NULL AND i.isCancelled=:isCancelled)) 
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) OR (:isCancelled IS NOT NULL AND i.isCancelled=:isCancelled)) 
             AND (:minPaidAmount IS NULL OR i.paidAmount >= :minPaidAmount)  
             AND (:maxPaidAmount IS NULL OR i.paidAmount <= :maxPaidAmount) 
             AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)  
@@ -85,17 +86,18 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """, countQuery = """
                 SELECT COUNT(DISTINCT i.invoiceId) FROM InvoicesV1 i WHERE hostelId=:hostelId 
             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
-            AND (:startDate IS NULL OR DATE(i.invoiceEndDate) >= DATE(:startDate))
+            AND (:startDate IS NULL OR DATE(i.invoiceEndDate) >= DATE(:startDate)) 
+            AND (:customerIds IS NULL OR i.customerId IN (:customerIds)) 
             AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy))
             AND (:mode IS NULL OR i.invoiceMode in (:mode)) 
-            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NOT NULL AND i.isCancelled=:isCancelled)) 
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) OR (:isCancelled IS NOT NULL AND i.isCancelled=:isCancelled)) 
             AND (:minPaidAmount IS NULL OR i.paidAmount >= :minPaidAmount) 
             AND (:maxPaidAmount IS NULL OR i.paidAmount <= :maxPaidAmount) 
             AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)  
             AND (:maxOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) <= :maxOutstandingAmount) 
             ORDER BY i.invoiceStartDate DESC
             """)
-    Page<InvoicesV1> findAllInvoicesByHostelIdForHostelId(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("types") List<String> types, @Param("createdBy") List<String> createdBy, @Param("mode") List<String> mode, @Param("paymentStatus") List<String> paymentStatus, Boolean isCancelled, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, Pageable pageable);
+    Page<InvoicesV1> findAllInvoicesByHostelIdForHostelId(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("customerIds") List<String> customerIds, @Param("types") List<String> types, @Param("createdBy") List<String> createdBy, @Param("mode") List<String> mode, @Param("paymentStatus") List<String> paymentStatus, Boolean isCancelled, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, Pageable pageable);
     @Query(value = """
                 SELECT * FROM invoicesv1
                 WHERE hostel_id=:hostelId AND invoice_number LIKE CONCAT(:prefix, '%')
@@ -249,9 +251,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT i FROM InvoicesV1 i
             WHERE i.hostelId = :hostelId 
             AND i.invoiceType != 'SETTLEMENT' 
-            AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
+            AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate)) 
+            AND i.customerId IN :customerIds 
             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
-            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NULL OR i.isCancelled=:isCancelled)) 
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) OR (:isCancelled IS NOT NULL AND i.isCancelled=:isCancelled)) 
             AND (:invoiceModes IS NULL OR i.invoiceMode IN :invoiceModes)
             AND (:invoiceTypes IS NULL OR i.invoiceType IN :invoiceTypes)
             AND (:createdBy IS NULL OR i.createdBy IN :createdBy)
@@ -261,7 +264,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND (:maxOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) <= :maxOutstandingAmount)
             ORDER BY i.invoiceStartDate DESC
             """)
-    List<InvoicesV1> findInvoicesByFilters(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("paymentStatus") List<String> paymentStatus, @Param("invoiceModes") List<String> invoiceModes, @Param("invoiceTypes") List<String> invoiceTypes, @Param("createdBy") List<String> createdBy, @Param("minPaidAmount") Double minPaidAmount, @Param("maxPaidAmount") Double maxPaidAmount, @Param("minOutstandingAmount") Double minOutstandingAmount, @Param("maxOutstandingAmount") Double maxOutstandingAmount, Boolean isCancelled);
+    List<InvoicesV1> findInvoicesByFilters(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("customerIds") List<String> customerId, @Param("paymentStatus") List<String> paymentStatus, @Param("invoiceModes") List<String> invoiceModes, @Param("invoiceTypes") List<String> invoiceTypes, @Param("createdBy") List<String> createdBy, @Param("minPaidAmount") Double minPaidAmount, @Param("maxPaidAmount") Double maxPaidAmount, @Param("minOutstandingAmount") Double minOutstandingAmount, @Param("maxOutstandingAmount") Double maxOutstandingAmount, Boolean isCancelled);
 
     @Query("""
             SELECT i FROM InvoicesV1 i
