@@ -34,6 +34,7 @@ import com.smartstay.smartstay.responses.banking.BankOverviewResponse;
 import com.smartstay.smartstay.responses.banking.BankTransactionListResponse;
 import com.smartstay.smartstay.responses.banking.BankTransactionResponse;
 import com.smartstay.smartstay.responses.banking.MonthOverview;
+import com.smartstay.smartstay.responses.banking.MonthMetric;
 import com.smartstay.smartstay.responses.banking.OverviewFilterOptions;
 import com.smartstay.smartstay.responses.banking.FilterOption;
 import com.smartstay.smartstay.responses.banking.TransactionFilterOptions;
@@ -910,12 +911,20 @@ public class BankingServiceV2 {
 
         List<MonthOverview> monthData = new ArrayList<>();
         double runningOpening = openingBalance;
+        int monthCount = 0;
+        double netChangeSum = 0.0;
+        String highestMonthName = null;
+        double highestMonthValue = 0.0;
+        String lowestMonthName = null;
+        double lowestMonthValue = 0.0;
         for (YearMonth ym = monthFrom; !ym.isAfter(monthTo); ym = ym.plusMonths(1)) {
             Map<String, Double> monthSources = sourceByMonth.getOrDefault(ym, Collections.emptyMap());
             double opening = runningOpening;
-            double closing = opening + netChangeByMonth.getOrDefault(ym, 0.0);
+            double netChange = netChangeByMonth.getOrDefault(ym, 0.0);
+            double closing = opening + netChange;
+            String monthName = ym.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
             monthData.add(new MonthOverview(
-                    ym.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH),
+                    monthName,
                     closing,
                     opening,
                     monthSources.getOrDefault(BankSource.INVOICE.name(), 0.0),
@@ -925,8 +934,22 @@ public class BankingServiceV2 {
                     monthSources.getOrDefault(BankSource.SELF_TRANSFER.name(), 0.0),
                     monthSources.getOrDefault(BankSource.RENT_REFUND.name(), 0.0),
                     monthSources.getOrDefault(BankSource.EXPENSE.name(), 0.0)));
+
+            netChangeSum += netChange;
+            if (highestMonthName == null || netChange > highestMonthValue) {
+                highestMonthValue = netChange;
+                highestMonthName = monthName;
+            }
+            if (lowestMonthName == null || netChange < lowestMonthValue) {
+                lowestMonthValue = netChange;
+                lowestMonthName = monthName;
+            }
+            monthCount++;
             runningOpening = closing;
         }
+        Double averageMonthly = monthCount > 0 ? Utils.roundOffWithTwoDigit(netChangeSum / monthCount) : 0.0;
+        MonthMetric highestMonth = new MonthMetric(highestMonthName, Utils.roundOffWithTwoDigit(highestMonthValue));
+        MonthMetric lowestMonth = new MonthMetric(lowestMonthName, Utils.roundOffWithTwoDigit(lowestMonthValue));
 
         BankOverviewResponse response = new BankOverviewResponse(
                 new OverviewFilterOptions(buildOverviewDateFilterOptions()),
@@ -939,7 +962,18 @@ public class BankingServiceV2 {
                 summaryTotals.getOrDefault(BankSource.SELF_TRANSFER.name(), 0.0),
                 summaryTotals.getOrDefault(BankSource.RENT_REFUND.name(), 0.0),
                 summaryTotals.getOrDefault(BankSource.EXPENSE.name(), 0.0),
-                monthData);
+                monthData,
+                averageMonthly,
+                highestMonth,
+                lowestMonth,
+                bank.getAccountType(),
+                bank.getCashAccountType(),
+                bank.getDisplayName(),
+                bank.getBankName(),
+                bank.getAccountHolderName(),
+                bank.getAccountNumber(),
+                bank.getIfscCode(),
+                bank.getBranchName());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
