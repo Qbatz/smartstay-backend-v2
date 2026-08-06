@@ -654,6 +654,17 @@ public class BankingServiceV2 {
         Date now = new Date();
         String userId = user.getUserId();
 
+        Date transactionDate;
+        if (isPresent(payload.date())) {
+            Date parsedDate = Utils.convertYmdStringToDate(payload.date());
+            if (parsedDate == null) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_TRANSACTION_DATE_INVALID, HttpStatus.BAD_REQUEST);
+            }
+            transactionDate = isSameDay(parsedDate, now) ? now : parsedDate;
+        } else {
+            transactionDate = now;
+        }
+        String description = trimToNull(payload.notes());
 
         if (source.direct()) {
             applyBankDelta(source.directAccount(), -amount, now, userId);
@@ -678,7 +689,8 @@ public class BankingServiceV2 {
         debit.setAccountBalance(sourceLatest != null && sourceLatest.getAccountBalance() != null
                 ? sourceLatest.getAccountBalance() - amount : source.balance() - amount);
         debit.setAmount(amount);
-        debit.setTransactionDate(now);
+        debit.setTransactionDate(transactionDate);
+        debit.setDescription(description);
         debit.setCreatedAt(now);
         debit.setIsDeleted(false);
         debit.setCreatedBy(userId);
@@ -696,7 +708,8 @@ public class BankingServiceV2 {
         credit.setAccountBalance(destLatest != null && destLatest.getAccountBalance() != null
                 ? destLatest.getAccountBalance() + amount : amount);
         credit.setAmount(amount);
-        credit.setTransactionDate(now);
+        credit.setTransactionDate(transactionDate);
+        credit.setDescription(description);
         credit.setCreatedAt(now);
         credit.setIsDeleted(false);
         credit.setCreatedBy(userId);
