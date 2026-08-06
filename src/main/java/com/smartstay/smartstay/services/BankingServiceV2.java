@@ -56,8 +56,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1336,13 +1338,20 @@ public class BankingServiceV2 {
         AllPaymentMethodsMapper mapper = new AllPaymentMethodsMapper();
         List<PaymentMethodOptionResponse> response = new ArrayList<>();
 
+        List<String> accountBankIds = new ArrayList<>();
+        ctx.cashAccounts().forEach(account -> accountBankIds.add(account.getBankId()));
+        ctx.bankAccounts().forEach(account -> accountBankIds.add(account.getBankId()));
+        Map<String, Date> lastTxnByBankId = transactionService.getLatestTransactionDates(accountBankIds);
+
         for (BankingV2 cash : ctx.cashAccounts()) {
-            response.add(mapper.cash(cash, responsiblePersonName(cash, ctx.personById(), ctx.roleNameById())));
+            response.add(mapper.cash(cash, responsiblePersonName(cash, ctx.personById(), ctx.roleNameById()),
+                    Utils.dateToTableFormat(lastTxnByBankId.get(cash.getBankId()))));
         }
 
         for (BankingV2 bank : ctx.bankAccounts()) {
             String personName = responsiblePersonName(bank, ctx.personById(), ctx.roleNameById());
-            response.add(mapper.bankAccount(bank, personName));
+            response.add(mapper.bankAccount(bank, personName,
+                    Utils.dateToTableFormat(lastTxnByBankId.get(bank.getBankId()))));
             List<BankingMethods> methods = ctx.methodsByBankId().get(bank.getBankId());
             if (methods == null) {
                 continue;
@@ -1352,11 +1361,28 @@ public class BankingServiceV2 {
                     continue;
                 }
                 response.add(mapper.bankMethod(bank, method,
-                        cardNetworkName(method, ctx), upiAppName(method, ctx), qrCardImage(method, ctx), personName));
+                        cardNetworkName(method, ctx), upiAppName(method, ctx), qrCardImage(method, ctx),
+                        personName, creditCardDueDate(method)));
             }
         }
 
         return response;
+    }
+
+    private static final DateTimeFormatter DUE_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    private String creditCardDueDate(BankingMethods method) {
+        if (method.getBillingCycle() == null) {
+            return null;
+        }
+        int billingDay = method.getBillingCycle().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfMonth();
+        LocalDate today = LocalDate.now();
+        LocalDate due = today.withDayOfMonth(Math.min(billingDay, today.lengthOfMonth()));
+        if (due.isBefore(today)) {
+            LocalDate next = today.plusMonths(1);
+            due = next.withDayOfMonth(Math.min(billingDay, next.lengthOfMonth()));
+        }
+        return due.format(DUE_DATE_FORMAT);
     }
     
     private PaymentMethodContext loadPaymentMethodContext(String hostelId) {

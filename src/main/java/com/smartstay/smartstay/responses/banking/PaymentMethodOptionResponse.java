@@ -26,6 +26,8 @@ public record PaymentMethodOptionResponse(
         String cardNetwork,
         String upiApp,
         String qrCardImage,
-        String qrImage
+        String qrImage,
+        String lastTransactionDate,
+        String dueDate
 ) {
 }
