@@ -109,6 +109,19 @@ public class BankTransactionService {
         return bankRepository.findTopByBankIdAndHostelIdOrderByCreatedAtDesc(bankId,hostelId);
     }
 
+    public java.util.Map<String, Date> getLatestTransactionDates(List<String> bankIds) {
+        java.util.Map<String, Date> result = new java.util.HashMap<>();
+        if (bankIds == null || bankIds.isEmpty()) {
+            return result;
+        }
+        for (Object[] row : bankRepository.findLatestTransactionDates(bankIds)) {
+            if (row[0] != null && row[1] != null) {
+                result.put((String) row[0], (Date) row[1]);
+            }
+        }
+        return result;
+    }
+
     public BankTransactionsV1 saveTransaction(BankTransactionsV1 transaction) {
         return bankRepository.save(transaction);
     }

@@ -13,6 +13,17 @@ public record BankOverviewResponse(
         Double selfTransferAmount,
         Double rentRefundAmount,
         Double expenseAmount,
-        List<MonthOverview> monthData
+        List<MonthOverview> monthData,
+        Double averageMonthly,
+        MonthMetric highestMonth,
+        MonthMetric lowestMonth,
+        String accountType,
+        String cashAccountType,
+        String displayName,
+        String bankName,
+        String beneficiaryName,
+        String accountNumber,
+        String ifscCode,
+        String branch
 ) {
 }
