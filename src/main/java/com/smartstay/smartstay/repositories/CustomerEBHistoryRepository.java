@@ -17,9 +17,16 @@ public interface CustomerEBHistoryRepository extends JpaRepository<CustomersEbHi
 
     @Query(value = """
            SELECT ebHis.id, ebHis.amount, ebHis.bed_id as bedId, ebHis.units as consumption, ebHis.start_date as startDate, 
-           ebHis.end_date as endDate, ebHis.customer_id as customerId, cus.profile_pic as profilePic, cus.first_name as firstName, 
+           ebHis.end_date as endDate, ebHis.customer_id as customerId, 
+           COALESCE(
+               NULLIF(TRIM(cus.profile_pic), ''),
+               CASE WHEN kyc.current_status = 'VERIFIED' AND NULLIF(TRIM(kyc.id_pic), '') IS NOT NULL THEN kyc.id_pic ELSE NULL END
+           ) as profilePic, 
+           cus.first_name as firstName, 
            cus.last_name as lastName, 
-           bed.bed_name as bedName FROM customers_eb_history ebHis INNER JOIN customers cus on cus.customer_id=ebHis.customer_id 
+           bed.bed_name as bedName FROM customers_eb_history ebHis 
+           INNER JOIN customers cus on cus.customer_id=ebHis.customer_id 
+           LEFT JOIN kyc_details kyc on kyc.customer_id=cus.customer_id
            inner JOIN beds bed on bed.bed_id=ebHis.bed_id WHERE ebHis.room_id=:roomId ORDER BY ebHis.end_date DESC
             """, nativeQuery = true)
     List<RoomElectricityCustomersList> getAllCustomersByRoomId(@Param("roomId") Integer roomId);

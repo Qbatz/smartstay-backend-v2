@@ -6127,6 +6127,7 @@ public class InvoiceV1Service {
             types.add(InvoiceType.RENT.name());
             types.add(InvoiceType.ADVANCE.name());
             types.add(InvoiceType.REASSIGN_RENT.name());
+            types.add(InvoiceType.BOOKING.name());
         }
 
         List<String> customerIds = null;
