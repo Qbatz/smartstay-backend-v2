@@ -4036,9 +4036,6 @@ public class CustomersService {
         if (additionalContacts.fullName() == null || additionalContacts.fullName().equalsIgnoreCase("")) {
             return new ResponseEntity<>(Utils.FULL_NAME_REQUIRES, HttpStatus.BAD_REQUEST);
         }
-        if (additionalContacts.mobile() == null || additionalContacts.mobile().equalsIgnoreCase("")) {
-            return new ResponseEntity<>(Utils.MOBILE_NO_REQUIRED, HttpStatus.BAD_REQUEST);
-        }
 
         return additionalContactService.addAdditionalContacts(hostelId, customerId, additionalContacts);
 

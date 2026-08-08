@@ -21,12 +21,15 @@ public class AdditionalContactService {
     private Authentication authentication;
     @Autowired
     private CustomerAdditionalContactsRepositories customerAdditionalContactsRepositories;
+
     public ResponseEntity<?> addAdditionalContacts(String hostelId, String customerId, CustomerAdditionalContacts additionalContacts) {
         com.smartstay.smartstay.dao.CustomerAdditionalContacts ac = new com.smartstay.smartstay.dao.CustomerAdditionalContacts();
         ac.setName(additionalContacts.fullName());
         ac.setRelationship(additionalContacts.relationship());
         ac.setOccupation(additionalContacts.occupation());
-        ac.setMobile(additionalContacts.mobile());
+        if (additionalContacts.mobile() != null && !additionalContacts.mobile().isEmpty()) {
+            ac.setMobile(additionalContacts.mobile());
+        }
         ac.setCustomerId(customerId);
         ac.setHostelId(hostelId);
         ac.setCountryCode("91");
@@ -46,15 +49,7 @@ public class AdditionalContactService {
             return null;
         }
 
-        return cac
-                .stream()
-                .map(i -> new AdditionalContacts(i.getName(),
-                        i.getMobile(),
-                        i.getCountryCode(),
-                        i.getRelationship(),
-                        i.getOccupation(),
-                        i.getContactId()))
-                .toList();
+        return cac.stream().map(i -> new AdditionalContacts(i.getName(), i.getMobile(), i.getCountryCode(), i.getRelationship(), i.getOccupation(), i.getContactId())).toList();
     }
 
     public List<com.smartstay.smartstay.dao.CustomerAdditionalContacts> getAdditionalContactsByHostelIdAndCustomerIdIn(String hostelId, List<String> customerId) {
@@ -68,24 +63,21 @@ public class AdditionalContactService {
     }
 
     public void addAdditionalContacts(String hostelId, String customerId, List<Guardian> guardianList) {
-        List<com.smartstay.smartstay.dao.CustomerAdditionalContacts> listAdditionalContacts = guardianList
-                .stream()
-                .map(i -> {
-                    com.smartstay.smartstay.dao.CustomerAdditionalContacts cd = new com.smartstay.smartstay.dao.CustomerAdditionalContacts();
-                    cd.setName(i.guardianFullName());
-                    cd.setMobile(i.mobileNo());
-                    cd.setRelationship(i.relationshipToTenant());
-                    cd.setOccupation(i.guardianOccupation());
-                    cd.setCustomerId(customerId);
-                    cd.setHostelId(hostelId);
-                    cd.setCountryCode("91");
-                    cd.setDeleted(false);
-                    cd.setAddedByUserType(UserType.ADMIN.name());
-                    cd.setCreatedAt(new Date());
-                    cd.setCreatedBy(authentication.getName());
-                    return cd;
-                })
-                .toList();
+        List<com.smartstay.smartstay.dao.CustomerAdditionalContacts> listAdditionalContacts = guardianList.stream().map(i -> {
+            com.smartstay.smartstay.dao.CustomerAdditionalContacts cd = new com.smartstay.smartstay.dao.CustomerAdditionalContacts();
+            cd.setName(i.guardianFullName());
+            cd.setMobile(i.mobileNo());
+            cd.setRelationship(i.relationshipToTenant());
+            cd.setOccupation(i.guardianOccupation());
+            cd.setCustomerId(customerId);
+            cd.setHostelId(hostelId);
+            cd.setCountryCode("91");
+            cd.setDeleted(false);
+            cd.setAddedByUserType(UserType.ADMIN.name());
+            cd.setCreatedAt(new Date());
+            cd.setCreatedBy(authentication.getName());
+            return cd;
+        }).toList();
 
         customerAdditionalContactsRepositories.saveAll(listAdditionalContacts);
     }

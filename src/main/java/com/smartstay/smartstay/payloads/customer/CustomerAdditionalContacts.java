@@ -9,7 +9,5 @@ public record CustomerAdditionalContacts(
         String fullName,
         String relationship,
         String occupation,
-        @NotNull(message = "Mobile number is required")
-        @NotEmpty(message = "Mobile number is required")
         String mobile) {
 }
