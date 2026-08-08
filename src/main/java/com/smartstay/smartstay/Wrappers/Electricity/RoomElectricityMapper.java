@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.Wrappers.Electricity;
 
 import com.smartstay.smartstay.responses.electricity.RoomElectricityCustomersList;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.function.Function;
@@ -10,6 +11,8 @@ public class RoomElectricityMapper implements Function<com.smartstay.smartstay.d
     public RoomElectricityCustomersList apply(com.smartstay.smartstay.dto.electricity.RoomElectricityCustomersList roomElectricityCustomersList) {
         StringBuilder initials = new StringBuilder();
         StringBuilder fullName = new StringBuilder();
+
+        String profilePic = roomElectricityCustomersList.getProfilePic();
 
         if (roomElectricityCustomersList.getFirstName() != null) {
             fullName.append(roomElectricityCustomersList.getFirstName());
@@ -32,8 +35,6 @@ public class RoomElectricityMapper implements Function<com.smartstay.smartstay.d
         double consumption =  Utils.roundOffWithTwoDigit(roomElectricityCustomersList.getConsumption());
         double amount = Utils.roundOffWithTwoDigit(roomElectricityCustomersList.getAmount());
 
-
-        String profilePic = roomElectricityCustomersList.getProfilePic();
         return new RoomElectricityCustomersList(roomElectricityCustomersList.getCustomerId(),
                 roomElectricityCustomersList.getFirstName(),
                 roomElectricityCustomersList.getLastName(),

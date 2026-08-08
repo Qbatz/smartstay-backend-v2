@@ -33,6 +33,7 @@ import com.smartstay.smartstay.payloads.account.AddCustomer;
 import com.smartstay.smartstay.payloads.beds.AssignBed;
 import com.smartstay.smartstay.payloads.beds.CancelCheckout;
 import com.smartstay.smartstay.payloads.beds.ChangeBed;
+import com.smartstay.smartstay.payloads.customer.Address;
 import com.smartstay.smartstay.payloads.customer.CustomerAdditionalContacts;
 import com.smartstay.smartstay.payloads.customer.*;
 import com.smartstay.smartstay.payloads.invoice.InvoiceResponse;
@@ -52,6 +53,7 @@ import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.FilterKeywords;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -136,6 +138,8 @@ public class CustomersService {
     private RetainerService retainerService;
     @Autowired
     private CustomerDraftService draftService;
+    @Autowired
+    private ObjectMapper objectMapper;
     private KycServices kycServices;
     private ElectricityService electricityService;
 
@@ -1550,7 +1554,16 @@ public class CustomersService {
 
         }
 
-        CustomerAddress address = new CustomerAddress(customers.getStreet(), customers.getHouseNo(), customers.getLandmark(), customers.getPincode(), customers.getCity(), customers.getState());
+        CustomerAddress address;
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.DRAFT.name())) {
+            address = getDraftCustomerAddress(customerId, customers.getHostelId());
+            if (address == null) {
+                address = new CustomerAddress(customers.getStreet(), customers.getHouseNo(), customers.getLandmark(), customers.getPincode(), customers.getCity(), customers.getState());
+            }
+        } else {
+            address = new CustomerAddress(customers.getStreet(), customers.getHouseNo(), customers.getLandmark(), customers.getPincode(), customers.getCity(), customers.getState());
+        }
+        
         KycDetails kycDetails = customers.getKycDetails();
         KycInformations kycInfo = null;
         String kycDocumentFromDigio = null;
@@ -1693,6 +1706,45 @@ public class CustomersService {
                 customers.getIdProofType(), customers.getIdProofNo());
 
         return new ResponseEntity<>(details, HttpStatus.OK);
+    }
+
+    /**
+     * Fetches and converts the customer's address from the draft if available.
+     * Returns null if draft doesn't exist or addressJson is not available.
+     */
+    private CustomerAddress getDraftCustomerAddress(String customerId, String hostelId) {
+        try {
+            Draft draft = draftService.getCustomerDrafts(customerId, hostelId);
+            if (draft == null || draft.getAddressJson() == null) {
+                return null;
+            }
+
+           Address draftAddr =
+                objectMapper.readValue(draft.getAddressJson(), Address.class);
+            
+            if (draftAddr == null) {
+                return null;
+            }
+
+            Integer pincode = null;
+            if (draftAddr.pincode() != null) {
+                try {
+                    pincode = Integer.parseInt(draftAddr.pincode());
+                } catch (NumberFormatException e) {
+                }
+            }
+            
+            return new CustomerAddress(
+                draftAddr.street(),
+                draftAddr.house(),
+                draftAddr.landmark(),
+                pincode,
+                draftAddr.city(),
+                draftAddr.state()
+            );
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public void calculateRentAndCreateRentalInvoice(Customers customers, CheckInRequest payloads) {
@@ -4096,9 +4148,6 @@ public class CustomersService {
         }
         if (additionalContacts.fullName() == null || additionalContacts.fullName().equalsIgnoreCase("")) {
             return new ResponseEntity<>(Utils.FULL_NAME_REQUIRES, HttpStatus.BAD_REQUEST);
-        }
-        if (additionalContacts.mobile() == null || additionalContacts.mobile().equalsIgnoreCase("")) {
-            return new ResponseEntity<>(Utils.MOBILE_NO_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
         return additionalContactService.addAdditionalContacts(hostelId, customerId, additionalContacts);
