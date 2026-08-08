@@ -16,6 +16,10 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     List<BankTransactionsV1> findByBankIdIn(List<String> listBankIds);
 
+    @Query("SELECT t.bankId, MAX(t.createdAt) FROM BankTransactionsV1 t " +
+            "WHERE t.bankId IN :bankIds AND (t.isDeleted = false OR t.isDeleted IS NULL) GROUP BY t.bankId")
+    List<Object[]> findLatestTransactionDates(@Param("bankIds") List<String> bankIds);
+
     List<BankTransactionsV1> findByHostelIdAndIsDeletedFalseOrderByTransactionDateDesc(String hostelId);
 
     List<BankTransactionsV1> findByHostelIdAndBankIdInAndIsDeletedFalseOrderByTransactionDateDesc(String hostelId, List<String> bankIds);

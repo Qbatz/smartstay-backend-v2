@@ -2,6 +2,7 @@ package com.smartstay.smartstay.responses.customer;
 
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
+import com.smartstay.smartstay.dto.retainer.RetainerInfo;
 import com.smartstay.smartstay.dto.wallet.WalletInfo;
 import com.smartstay.smartstay.responses.settlement.DeductionsInfo;
 
@@ -16,6 +17,7 @@ public record FinalSettlement(CustomerInformations customerInfo,
                               WalletInfo walletInfo,
                               AdvanceItems advanceItems,
                               AdvanceItems bookingItems,
+                              RetainerInfo retainerItems,
                               DeductionsInfo deductionsInfo,
                               SettlementInfo settlementInfo) {
 }

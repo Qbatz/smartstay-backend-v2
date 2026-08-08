@@ -603,11 +603,13 @@ public class BankingService {
         List<Bank> toBanks = bankingV1Repository.findActiveCreditAccountsByHostelId(hostelId)
                 .stream()
                 .filter(bank -> isEligibleSelfTransferDestination(fromBank, bank))
-                .map(bank -> mapBankWithLatestBalance(bank, hostelId))
+                .map(bank -> new BankingListMapper().apply(bank))
                 .toList();
 
+        Bank bank = new BankingListMapper().apply(fromBank);
+
         SelfTransferInitialize response = new SelfTransferInitialize(
-                mapBankWithLatestBalance(fromBank, hostelId),
+                bank,
                 toBanks
         );
 
@@ -628,35 +630,6 @@ public class BankingService {
                 || !toBank.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())
                 || fromBank.getUpiId() == null
                 || !fromBank.getUpiId().equalsIgnoreCase(toBank.getUpiId());
-    }
-
-    private Bank mapBankWithLatestBalance(BankingV1 bankingV1, String hostelId) {
-        Bank bank = new BankingListMapper().apply(bankingV1);
-        BankTransactionsV1 latestTransaction = transactionService.getLatestTransaction(bankingV1.getBankId(), hostelId);
-        if (latestTransaction != null && latestTransaction.getAccountBalance() != null) {
-            BigDecimal balance = BigDecimal.valueOf(latestTransaction.getAccountBalance())
-                    .setScale(2, RoundingMode.HALF_UP);
-            return new Bank(
-                    bank.bankingId(),
-                    bank.bankName(),
-                    bank.accountNumber(),
-                    bank.ifscCode(),
-                    bank.branchName(),
-                    bank.branchCode(),
-                    bank.accountHolderName(),
-                    bank.transactionType(),
-                    bank.upiId(),
-                    bank.creditCardNumber(),
-                    bank.debitCardNumber(),
-                    bank.accountType(),
-                    bank.isDefault(),
-                    bank.description(),
-                    bank.cardType(),
-                    bank.isDeleted(),
-                    balance
-            );
-        }
-        return bank;
     }
 
     public ResponseEntity<?>  selfTransfer(String hostelId, SelfTransfer selfTransfer)  {
@@ -726,7 +699,7 @@ public class BankingService {
         if (fromAccount.getBalance() == null) {
             return new ResponseEntity<>(Utils.INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);
         }
-        if (fromAccount.getBalance() <= selfTransfer.balance()) {
+        if (fromAccount.getBalance() < selfTransfer.balance()) {
             return new ResponseEntity<>(Utils.INSUFFICIENT_BALANCE, HttpStatus.BAD_REQUEST);
         }
 

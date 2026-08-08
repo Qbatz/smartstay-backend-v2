@@ -3927,16 +3927,14 @@ public class InvoiceV1Service {
         if (search != null && !search.trim().isEmpty()) {
             List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
             if (customers == null || customers.isEmpty()) {
-                return new ArrayList<>();
+                customerIds = null;
             }
-            customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
-        }
+            else {
+                customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+            }
 
-        if (customerIds != null && !customerIds.isEmpty()) {
-            return invoicesV1Repository.findInvoicesByFiltersWithCustomers(hostelId, startDate, endDate, customerIds, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaid, maxPaid, minOutstandingAmount, maxOutstandingAmount, isCancelled);
-        } else {
-            return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaid, maxPaid, minOutstandingAmount, maxOutstandingAmount, isCancelled);
         }
+        return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate, customerIds, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaid, maxPaid, minOutstandingAmount, maxOutstandingAmount, isCancelled);
     }
 
 
@@ -6131,7 +6129,20 @@ public class InvoiceV1Service {
             types.add(InvoiceType.REASSIGN_RENT.name());
             types.add(InvoiceType.BOOKING.name());
         }
-        return invoicesV1Repository.findAllInvoicesByHostelIdForHostelId(hostelId, startDate, endDate, types, createdBy, invoiceModes, paymentStatus, isCancelledList, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageableRequest);
+
+        List<String> customerIds = null;
+        if (search != null && !search.trim().isEmpty()) {
+            List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
+            if (customers == null || customers.isEmpty()) {
+                customerIds = null;
+            }
+            else {
+                customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+            }
+
+        }
+
+        return invoicesV1Repository.findAllInvoicesByHostelIdForHostelId(hostelId, startDate, endDate, customerIds, types, createdBy, invoiceModes, paymentStatus, isCancelledList, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageableRequest);
 
     }
 }

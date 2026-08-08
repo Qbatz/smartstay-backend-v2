@@ -34,6 +34,7 @@ import com.smartstay.smartstay.responses.banking.BankOverviewResponse;
 import com.smartstay.smartstay.responses.banking.BankTransactionListResponse;
 import com.smartstay.smartstay.responses.banking.BankTransactionResponse;
 import com.smartstay.smartstay.responses.banking.MonthOverview;
+import com.smartstay.smartstay.responses.banking.MonthMetric;
 import com.smartstay.smartstay.responses.banking.OverviewFilterOptions;
 import com.smartstay.smartstay.responses.banking.FilterOption;
 import com.smartstay.smartstay.responses.banking.TransactionFilterOptions;
@@ -55,8 +56,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -651,6 +654,17 @@ public class BankingServiceV2 {
         Date now = new Date();
         String userId = user.getUserId();
 
+        Date transactionDate;
+        if (isPresent(payload.date())) {
+            Date parsedDate = Utils.convertYmdStringToDate(payload.date());
+            if (parsedDate == null) {
+                return new ResponseEntity<>(Utils.ADD_MONEY_TRANSACTION_DATE_INVALID, HttpStatus.BAD_REQUEST);
+            }
+            transactionDate = isSameDay(parsedDate, now) ? now : parsedDate;
+        } else {
+            transactionDate = now;
+        }
+        String description = trimToNull(payload.notes());
 
         if (source.direct()) {
             applyBankDelta(source.directAccount(), -amount, now, userId);
@@ -675,7 +689,8 @@ public class BankingServiceV2 {
         debit.setAccountBalance(sourceLatest != null && sourceLatest.getAccountBalance() != null
                 ? sourceLatest.getAccountBalance() - amount : source.balance() - amount);
         debit.setAmount(amount);
-        debit.setTransactionDate(now);
+        debit.setTransactionDate(transactionDate);
+        debit.setDescription(description);
         debit.setCreatedAt(now);
         debit.setIsDeleted(false);
         debit.setCreatedBy(userId);
@@ -693,7 +708,8 @@ public class BankingServiceV2 {
         credit.setAccountBalance(destLatest != null && destLatest.getAccountBalance() != null
                 ? destLatest.getAccountBalance() + amount : amount);
         credit.setAmount(amount);
-        credit.setTransactionDate(now);
+        credit.setTransactionDate(transactionDate);
+        credit.setDescription(description);
         credit.setCreatedAt(now);
         credit.setIsDeleted(false);
         credit.setCreatedBy(userId);
@@ -910,12 +926,20 @@ public class BankingServiceV2 {
 
         List<MonthOverview> monthData = new ArrayList<>();
         double runningOpening = openingBalance;
+        int monthCount = 0;
+        double netChangeSum = 0.0;
+        String highestMonthName = null;
+        double highestMonthValue = 0.0;
+        String lowestMonthName = null;
+        double lowestMonthValue = 0.0;
         for (YearMonth ym = monthFrom; !ym.isAfter(monthTo); ym = ym.plusMonths(1)) {
             Map<String, Double> monthSources = sourceByMonth.getOrDefault(ym, Collections.emptyMap());
             double opening = runningOpening;
-            double closing = opening + netChangeByMonth.getOrDefault(ym, 0.0);
+            double netChange = netChangeByMonth.getOrDefault(ym, 0.0);
+            double closing = opening + netChange;
+            String monthName = ym.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
             monthData.add(new MonthOverview(
-                    ym.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH),
+                    monthName,
                     closing,
                     opening,
                     monthSources.getOrDefault(BankSource.INVOICE.name(), 0.0),
@@ -925,8 +949,22 @@ public class BankingServiceV2 {
                     monthSources.getOrDefault(BankSource.SELF_TRANSFER.name(), 0.0),
                     monthSources.getOrDefault(BankSource.RENT_REFUND.name(), 0.0),
                     monthSources.getOrDefault(BankSource.EXPENSE.name(), 0.0)));
+
+            netChangeSum += netChange;
+            if (highestMonthName == null || netChange > highestMonthValue) {
+                highestMonthValue = netChange;
+                highestMonthName = monthName;
+            }
+            if (lowestMonthName == null || netChange < lowestMonthValue) {
+                lowestMonthValue = netChange;
+                lowestMonthName = monthName;
+            }
+            monthCount++;
             runningOpening = closing;
         }
+        Double averageMonthly = monthCount > 0 ? Utils.roundOffWithTwoDigit(netChangeSum / monthCount) : 0.0;
+        MonthMetric highestMonth = new MonthMetric(highestMonthName, Utils.roundOffWithTwoDigit(highestMonthValue));
+        MonthMetric lowestMonth = new MonthMetric(lowestMonthName, Utils.roundOffWithTwoDigit(lowestMonthValue));
 
         BankOverviewResponse response = new BankOverviewResponse(
                 new OverviewFilterOptions(buildOverviewDateFilterOptions()),
@@ -939,7 +977,18 @@ public class BankingServiceV2 {
                 summaryTotals.getOrDefault(BankSource.SELF_TRANSFER.name(), 0.0),
                 summaryTotals.getOrDefault(BankSource.RENT_REFUND.name(), 0.0),
                 summaryTotals.getOrDefault(BankSource.EXPENSE.name(), 0.0),
-                monthData);
+                monthData,
+                averageMonthly,
+                highestMonth,
+                lowestMonth,
+                bank.getAccountType(),
+                bank.getCashAccountType(),
+                bank.getDisplayName(),
+                bank.getBankName(),
+                bank.getAccountHolderName(),
+                bank.getAccountNumber(),
+                bank.getIfscCode(),
+                bank.getBranchName());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -1302,13 +1351,20 @@ public class BankingServiceV2 {
         AllPaymentMethodsMapper mapper = new AllPaymentMethodsMapper();
         List<PaymentMethodOptionResponse> response = new ArrayList<>();
 
+        List<String> accountBankIds = new ArrayList<>();
+        ctx.cashAccounts().forEach(account -> accountBankIds.add(account.getBankId()));
+        ctx.bankAccounts().forEach(account -> accountBankIds.add(account.getBankId()));
+        Map<String, Date> lastTxnByBankId = transactionService.getLatestTransactionDates(accountBankIds);
+
         for (BankingV2 cash : ctx.cashAccounts()) {
-            response.add(mapper.cash(cash, responsiblePersonName(cash, ctx.personById(), ctx.roleNameById())));
+            response.add(mapper.cash(cash, responsiblePersonName(cash, ctx.personById(), ctx.roleNameById()),
+                    Utils.dateToTableFormat(lastTxnByBankId.get(cash.getBankId()))));
         }
 
         for (BankingV2 bank : ctx.bankAccounts()) {
             String personName = responsiblePersonName(bank, ctx.personById(), ctx.roleNameById());
-            response.add(mapper.bankAccount(bank, personName));
+            response.add(mapper.bankAccount(bank, personName,
+                    Utils.dateToTableFormat(lastTxnByBankId.get(bank.getBankId()))));
             List<BankingMethods> methods = ctx.methodsByBankId().get(bank.getBankId());
             if (methods == null) {
                 continue;
@@ -1318,11 +1374,28 @@ public class BankingServiceV2 {
                     continue;
                 }
                 response.add(mapper.bankMethod(bank, method,
-                        cardNetworkName(method, ctx), upiAppName(method, ctx), qrCardImage(method, ctx), personName));
+                        cardNetworkName(method, ctx), upiAppName(method, ctx), qrCardImage(method, ctx),
+                        personName, creditCardDueDate(method)));
             }
         }
 
         return response;
+    }
+
+    private static final DateTimeFormatter DUE_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    private String creditCardDueDate(BankingMethods method) {
+        if (method.getBillingCycle() == null) {
+            return null;
+        }
+        int billingDay = method.getBillingCycle().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().getDayOfMonth();
+        LocalDate today = LocalDate.now();
+        LocalDate due = today.withDayOfMonth(Math.min(billingDay, today.lengthOfMonth()));
+        if (due.isBefore(today)) {
+            LocalDate next = today.plusMonths(1);
+            due = next.withDayOfMonth(Math.min(billingDay, next.lengthOfMonth()));
+        }
+        return due.format(DUE_DATE_FORMAT);
     }
     
     private PaymentMethodContext loadPaymentMethodContext(String hostelId) {

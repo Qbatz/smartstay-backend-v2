@@ -1,9 +1,12 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.retainer.InvoiceRetainerItemMapper;
 import com.smartstay.smartstay.Wrappers.retainer.InvoicesInvoiceInfoMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
+import com.smartstay.smartstay.dto.retainer.RetainerInfo;
+import com.smartstay.smartstay.dto.retainer.RetainerItems;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
@@ -264,6 +267,7 @@ public class RetainerService {
         invoiceTypes.add(InvoiceType.EB_HOLDING.name());
         invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
         invoiceTypes.add(InvoiceType.ADVANCE.name());
+        invoiceTypes.add(InvoiceType.BOOKING.name());
 
         Customers customers = customersService.getCustomerInformation(invoicesV1.getCustomerId());
         CustomerInfo customerInfo = null;
@@ -350,6 +354,9 @@ public class RetainerService {
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
             return new ResponseEntity<>(Utils.CANNOT_APPLY_TO_ADVANCE_INVOICE, HttpStatus.BAD_REQUEST);
         }
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_APPLY_TO_BOOKING_INVOICE, HttpStatus.BAD_REQUEST);
+        }
         if (invoicesV1.isCancelled()) {
             return new ResponseEntity<>(Utils.CANNOT_APPLY_TO_CANCELLED_INVOICES, HttpStatus.BAD_REQUEST);
         }
@@ -364,7 +371,7 @@ public class RetainerService {
         }
 
         Date redeemedAt = new Date();
-        if (redeemAmount.redeemedOn() != null) {
+        if (redeemAmount.redeemedOn() != null && !redeemAmount.redeemedOn().isEmpty()) {
             redeemedAt = Utils.stringToDate(redeemAmount.redeemedOn(), Utils.USER_INPUT_DATE_FORMAT);
         }
 
@@ -464,6 +471,31 @@ public class RetainerService {
 
         invoicesV1Repository.save(invoicesV1);
 
+        List<InvoicesV1> newInvoices = new ArrayList<>();
+        if (!appliedInvoicesList.isEmpty()) {
+            appliedInvoicesList.keySet().forEach(item -> {
+                InvoicesV1 updateInvoice = listSourceInvoices
+                        .stream()
+                        .filter(i -> i.getInvoiceId().equalsIgnoreCase(item))
+                        .findFirst()
+                        .orElse(null);
+                if (updateInvoice != null) {
+                    double balance = 0.0;
+                    if (updateInvoice.getBalanceAmount() != null) {
+                        balance = updateInvoice.getBalanceAmount() - appliedInvoicesList.get(item);
+                    }
+
+                    updateInvoice.setBalanceAmount(balance);
+
+                    newInvoices.add(updateInvoice);
+                }
+            });
+        }
+
+        if (!newInvoices.isEmpty()) {
+            invoicesV1Repository.saveAll(newInvoices);
+        }
+
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
@@ -547,4 +579,42 @@ public class RetainerService {
 
     }
 
+    public RetainerInfo getAvailableRetainersByCustomerForSettlement(String customerId) {
+        List<String> invoiceTypes = new ArrayList<>();
+        invoiceTypes.add(InvoiceType.EB_HOLDING.name());
+        invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
+
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findRetainersByCustomerIdAndInvoiceTypes(customerId, invoiceTypes);
+        if (listInvoices == null) {
+            listInvoices = new ArrayList<>();
+        }
+        double totalRetinerValue = listInvoices
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getTotalAmount() == null) {
+                        return 0.0;
+                    }
+                    return i.getTotalAmount();
+                })
+                .sum();
+        double availableRetainerValue = listInvoices
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getBalanceAmount() == null) {
+                        return 0.0;
+                    }
+                    return i.getBalanceAmount();
+                })
+                .sum();
+        List<RetainerItems> listRetainerItems = listInvoices
+                .stream()
+                .map(i -> new InvoiceRetainerItemMapper().apply(i))
+                .toList();
+
+        return new RetainerInfo(listInvoices.size(),
+                availableRetainerValue,
+                totalRetinerValue,
+                listRetainerItems);
+
+    }
 }

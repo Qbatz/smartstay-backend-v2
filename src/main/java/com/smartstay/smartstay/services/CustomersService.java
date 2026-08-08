@@ -20,6 +20,7 @@ import com.smartstay.smartstay.dto.documents.CustomerFiles;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.retainer.RetainerInfo;
 import com.smartstay.smartstay.dto.settlement.AvailableAmountToRedeem;
 import com.smartstay.smartstay.dto.settlement.CurrentMonthOtherItems;
 import com.smartstay.smartstay.dto.transaction.PartialPaidInvoiceInfo;
@@ -134,6 +135,7 @@ public class CustomersService {
     private TableColumnService columnService;
     @Autowired
     private CustomerJobDetailsService customerJobDetailsService;
+    private RetainerService retainerService;
     @Autowired
     private CustomerDraftService draftService;
     @Autowired
@@ -150,6 +152,11 @@ public class CustomersService {
     @Autowired
     public void setKycServices(@Lazy KycServices kycServices) {
         this.kycServices = kycServices;
+    }
+
+    @Autowired
+    public void setRetainerService(@Lazy RetainerService retainerService) {
+        this.retainerService = retainerService;
     }
 
     public static AdvanceInfo toAdvanceInfoResponse(Advance advance, InvoiceResponse invoicesV1, double bookingAmount) {
@@ -1922,20 +1929,19 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                //done
+                //done retainer calculations
                 return getInformationForPostpaidSettlements(customers, lDate, bookingDetails, billDate);
             }
         } else {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
-                //done
+                //done retainer calculations
                 return getFinalSettlementInfoFotJoiningBasedPrepaid(customers, lDate, bookingDetails);
             }
         }
 
-
         if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
             settlementDetailsService.addSettlementForCustomer(customerId, lDate);
-            //done
+            //done retainer calculations
             FinalSettlement finalSettlement = getFinalSettlementInfoForBedChange(customers, bookingDetails, billDate, lDate);
 
             return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
@@ -2032,6 +2038,7 @@ public class CustomersService {
         RentInfo currentMonthRentInfo = getRentInfo(customers.getHostelId(), customers, lDate, bookingDetails.getRentAmount());
         AdvanceItems advanceItems = invoiceService.getRedeemedListFromAdvance(customers.getHostelId(), customers.getCustomerId());
         AdvanceItems bookingItems = invoiceService.getRedeemedListFromBookings(customers.getHostelId(), customers.getCustomerId());
+        RetainerInfo retainerInfo = retainerService.getAvailableRetainersByCustomerForSettlement(customers.getCustomerId());
         List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService.getInvoicePendingByCustomerId(customers.getCustomerId());
 
         double walletAmount = 0.0;
@@ -2061,6 +2068,7 @@ public class CustomersService {
         unpaidInvoiceAmount = unpaidInvoices.unpaidAmount();
         amountToBePaid = unpaidInvoices.invoiceTotalAmount() + ebAmount + walletAmount;
         double paidAmount = unpaidInvoices.paidAmount();
+        double retainerBalance = 0.0;
         payableRent = unpaidInvoices.unpaidAmount();
         if (currentMonthRentInfo != null) {
             amountToBePaid = amountToBePaid + currentMonthRentInfo.currentMonthTotalAmount();
@@ -2070,6 +2078,10 @@ public class CustomersService {
 
         amountToBePaid = amountToBePaid - paidAmount;
         amountToBePaid = amountToBePaid + deductionAmount;
+        if (retainerInfo != null) {
+            retainerBalance = retainerInfo.totalAvailableAmount();
+            amountToBePaid = amountToBePaid - retainerInfo.totalAvailableAmount();
+        }
         if (isAdvancePaid) {
             amountToBePaid = amountToBePaid - totalAmountToRedeem;
         }
@@ -2080,9 +2092,28 @@ public class CustomersService {
         if (isAdvancePaid) {
             totalRefundableAdvance = totalAmountToRedeem;
         }
-        SettlementInfo settlementInfo = new SettlementInfo(Utils.roundOffWithTwoDigit(amountToBePaid), deductionAmount, Utils.roundOffWithTwoDigit(payableRent), Utils.roundOffWithTwoDigit(payableRent), Utils.roundOffWithTwoDigit(totalRefundableAdvance), Utils.roundOffWithTwoDigit(ebAmount), Utils.roundOffWithTwoDigit(unpaidInvoiceAmount), isRefundable, label, Utils.roundOffWithTwoDigit(payableAmount));
+        SettlementInfo settlementInfo = new SettlementInfo(Utils.roundOffWithTwoDigit(amountToBePaid),
+                deductionAmount,
+                Utils.roundOffWithTwoDigit(payableRent),
+                Utils.roundOffWithTwoDigit(payableRent),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
+                Utils.roundOffWithTwoDigit(ebAmount),
+                Utils.roundOffWithTwoDigit(unpaidInvoiceAmount),
+                Utils.roundOffWithTwoDigit(retainerBalance),
+                isRefundable, label, Utils.roundOffWithTwoDigit(payableAmount));
 
-        return new FinalSettlement(customerInformations, stayInfo, ebInfo, null, unpaidInvoices, currentMonthRentInfo, walletInfo, advanceItems, bookingItems, deductionsInfo, settlementInfo);
+        return new FinalSettlement(customerInformations,
+                stayInfo,
+                ebInfo,
+                null,
+                unpaidInvoices,
+                currentMonthRentInfo,
+                walletInfo,
+                advanceItems,
+                bookingItems,
+                retainerInfo,
+                deductionsInfo,
+                settlementInfo);
 
     }
 
@@ -2192,6 +2223,7 @@ public class CustomersService {
             }
         }
 
+        double retainerBalance = 0.0;
         double ebAmount = 0.0;
         if (ebInfo != null) {
             ebAmount = ebInfo.pendingEbAmount();
@@ -2200,6 +2232,7 @@ public class CustomersService {
 
         com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
+        RetainerInfo retainerInfo = retainerService.getAvailableRetainersByCustomerForSettlement(customers.getCustomerId());
         double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentMonthPayableAmount();
         double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
 
@@ -2213,6 +2246,10 @@ public class CustomersService {
 
         totalAmountToBePaid = totalAmountToBePaid - availableTotalAmountToReddem - paidAmount;
         totalAmountToBePaid = totalAmountToBePaid + deductionAmount;
+        if (retainerInfo != null) {
+            retainerBalance = retainerInfo.totalAvailableAmount();
+            totalAmountToBePaid = totalAmountToBePaid - retainerInfo.totalAvailableAmount();
+        }
         if (isAdvancePaid) {
             totalAmountToBePaid = totalAmountToBePaid - totalAdvanceAmount;
         }
@@ -2223,10 +2260,30 @@ public class CustomersService {
             totalRefundableAdvance = availableTotalAmountToReddem;
         }
 
+        SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountToBePaid),
+                deductionAmount,
+                payableRent,
+                Utils.roundOffWithTwoDigit(deductionAmount),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
+                Utils.roundOffWithTwoDigit(ebAmount),
+                Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
+                retainerBalance,
+                isRefundable,
+                label,
+                Utils.roundOffWithTwoDigit(payableAmount));
 
-        SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountToBePaid), deductionAmount, payableRent, Utils.roundOffWithTwoDigit(deductionAmount), Utils.roundOffWithTwoDigit(totalRefundableAdvance), Utils.roundOffWithTwoDigit(ebAmount), Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()), isRefundable, label, Utils.roundOffWithTwoDigit(payableAmount));
-
-        return new FinalSettlement(customerInformations, stayInfo, ebInfo, listUnpaidInvoices, unpaidInvoicesInfo, currentMonthRentInfo, walletInfo, advanceItems, bookingItems, deductionsInfo, settlementInfo);
+        return new FinalSettlement(customerInformations,
+                stayInfo,
+                ebInfo,
+                listUnpaidInvoices,
+                unpaidInvoicesInfo,
+                currentMonthRentInfo,
+                walletInfo,
+                advanceItems,
+                bookingItems,
+                retainerInfo,
+                deductionsInfo,
+                settlementInfo);
     }
 
     private ResponseEntity<?> getFinalSettlementInfoFotJoiningBasedPrepaid(Customers customers, Date lDate, BookingsV1 bookingDetails) {
@@ -2320,6 +2377,7 @@ public class CustomersService {
 //        RentInfo currentMonthRentInfo = getRentInfoForJoiningBased(customers, bookingsV1, leavingDate, currentMonthBillingDates);
         AdvanceItems advanceItems = invoiceService.getRedeemedListFromAdvance(customers.getHostelId(), customers.getCustomerId());
         AdvanceItems bookingItems = invoiceService.getRedeemedListFromBookings(customers.getHostelId(), customers.getCustomerId());
+        RetainerInfo retainerInfo = retainerService.getAvailableRetainersByCustomerForSettlement(customers.getCustomerId());
         String label = null;
         double payableAmount = 0.0;
         if (currentMonthRentInfo.currentRentPaid() > currentMonthRentInfo.currentPayableRent()) {
@@ -2337,6 +2395,7 @@ public class CustomersService {
             }
         }
 
+        double retainerBalance = 0.0;
         double ebAmount = 0.0;
         if (ebInfo != null) {
             ebAmount = ebInfo.pendingEbAmount();
@@ -2352,6 +2411,10 @@ public class CustomersService {
 
         totalAmountToBePaid = totalAmountToBePaid - paidAmount;
         totalAmountToBePaid = totalAmountToBePaid + deductionAmount;
+        if (retainerInfo != null) {
+            retainerBalance = retainerInfo.totalAvailableAmount();
+            totalAmountToBePaid = totalAmountToBePaid - retainerInfo.totalAvailableAmount();
+        }
         if (isAdvancePaid) {
             totalAmountToBePaid = totalAmountToBePaid - totalAmountToRedeem;
         }
@@ -2363,8 +2426,29 @@ public class CustomersService {
         }
 
 
-        SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountToBePaid), deductionAmount, payableRent, Utils.roundOffWithTwoDigit(0.0), Utils.roundOffWithTwoDigit(totalRefundableAdvance), Utils.roundOffWithTwoDigit(ebAmount), Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()), isRefundable, label, Utils.roundOffWithTwoDigit(payableAmount));
-        return new FinalSettlement(customerInformations, stayInfo, ebInfo, listUnpaidInvoices, unpaidInvoicesInfo, currentMonthRentInfo, walletInfo, advanceItems, bookingItems, deductionsInfo, settlementInfo);
+        SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountToBePaid),
+                deductionAmount,
+                payableRent,
+                Utils.roundOffWithTwoDigit(0.0),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
+                Utils.roundOffWithTwoDigit(ebAmount),
+                Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
+                retainerBalance,
+                isRefundable,
+                label,
+                Utils.roundOffWithTwoDigit(payableAmount));
+        return new FinalSettlement(customerInformations,
+                stayInfo,
+                ebInfo,
+                listUnpaidInvoices,
+                unpaidInvoicesInfo,
+                currentMonthRentInfo,
+                walletInfo,
+                advanceItems,
+                bookingItems,
+                retainerInfo,
+                deductionsInfo,
+                settlementInfo);
     }
 
     private CustomerInformations getCustomerInformations(Customers customers, BookingsV1 bookings) {
@@ -2538,7 +2622,7 @@ public class CustomersService {
         List<com.smartstay.smartstay.dto.wallet.WalletTransactions> listWallets = customerWalletHistoryService.getInvoicePendingByCustomerId(customers.getCustomerId());
         AdvanceItems advanceItems = invoiceService.getRedeemedListFromAdvance(customers.getHostelId(), customers.getCustomerId());
         AdvanceItems bookingItems = invoiceService.getRedeemedListFromBookings(customers.getHostelId(), customers.getCustomerId());
-
+        RetainerInfo retainerInfo = retainerService.getAvailableRetainersByCustomerForSettlement(customers.getCustomerId());
         InvoicesV1 advanceInvoice = invoiceService.getAdvanceInvoiceDetails(customers.getCustomerId(), customers.getHostelId());
         InvoicesV1 bookingInvoice = invoiceService.getBookingInvoice(customers.getCustomerId(), customers.getHostelId());
 
@@ -2623,6 +2707,7 @@ public class CustomersService {
             }
         }
 
+        double retainerBalance = 0.0;
         double ebAmount = 0.0;
         if (ebInfo != null) {
             ebAmount = ebInfo.pendingEbAmount();
@@ -2638,6 +2723,10 @@ public class CustomersService {
         totalAmountToBePaid = totalAmountToBePaid - paidAmount;
 //        totalAmountToBePaid = totalAmountToBePaid  - paidAmount;
         totalAmountToBePaid = totalAmountToBePaid + deductionAmount;
+        if (retainerInfo != null) {
+            retainerBalance = retainerInfo.totalAvailableAmount();
+            totalAmountToBePaid = totalAmountToBePaid - retainerInfo.totalAvailableAmount();
+        }
         if (isAdvancePaid) {
             totalAmountToBePaid = totalAmountToBePaid - availableTotalAmountToReddem;
         }
@@ -2649,9 +2738,30 @@ public class CustomersService {
         }
 
 
-        SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountToBePaid), deductionAmount, payableRent, Utils.roundOffWithTwoDigit(totalDeductions), Utils.roundOffWithTwoDigit(totalRefundableAdvance), Utils.roundOffWithTwoDigit(ebAmount), Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()), isRefundable, label, Utils.roundOffWithTwoDigit(payableAmount));
+        SettlementInfo settlementInfo = new SettlementInfo((double) Math.round(totalAmountToBePaid),
+                deductionAmount,
+                payableRent,
+                Utils.roundOffWithTwoDigit(totalDeductions),
+                Utils.roundOffWithTwoDigit(totalRefundableAdvance),
+                Utils.roundOffWithTwoDigit(ebAmount),
+                Utils.roundOfDouble(unpaidInvoicesInfo.unpaidAmount()),
+                retainerBalance,
+                isRefundable,
+                label,
+                Utils.roundOffWithTwoDigit(payableAmount));
 
-        return new FinalSettlement(customerInformations, stayInfo, ebInfo, null, unpaidInvoicesInfo, currentMonthRentInfo, walletInfo, advanceItems, bookingItems, deductionsInfo, settlementInfo);
+        return new FinalSettlement(customerInformations,
+                stayInfo,
+                ebInfo,
+                null,
+                unpaidInvoicesInfo,
+                currentMonthRentInfo,
+                walletInfo,
+                advanceItems,
+                bookingItems,
+                retainerInfo,
+                deductionsInfo,
+                settlementInfo);
     }
 
     public ResponseEntity<?> generateFinalSettlement(String customerId, com.smartstay.smartstay.payloads.settlement.Settlement settlement) {
