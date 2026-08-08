@@ -1605,6 +1605,7 @@ public class TransactionService {
         transactionV1.setStatus(PaymentStatus.PAID.name());
         transactionV1.setInvoiceId(invoicesV1.getInvoiceId());
         transactionV1.setHostelId(invoicesV1.getHostelId());
+        transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setPaymentDate(paymentDate);
         transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
         transactionV1.setSource(authentication.getSource());

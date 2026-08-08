@@ -20,4 +20,14 @@ public class InvoiceNotesService {
 
         invoiceNotesRepository.save(in);
     }
+
+    public com.smartstay.smartstay.dto.invoiceNotes.InvoiceNotes getInvoiceNotes(String invoiceId) {
+        InvoiceNotes invoiceNotes = invoiceNotesRepository.findByInvoiceId(invoiceId);
+        if (invoiceNotes != null) {
+            return new com.smartstay.smartstay.dto.invoiceNotes.InvoiceNotes(invoiceNotes.getNotesId(),
+                    invoiceNotes.getDescription(),
+                    invoiceNotes.getNotes());
+        }
+        return null;
+    }
 }

@@ -134,6 +134,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     InvoicesV1 findByInvoiceNumberAndHostelId(String invoiceNumber, String hostelId);
 
     List<InvoicesV1> findByCustomerIdOrderByInvoiceStartDateDesc(String customerId);
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId=:customerId AND i.invoiceType IN (:invoiceTypes) 
+            ORDER BY i.invoiceStartDate DESC
+            """)
+    List<InvoicesV1> findNonRetainerInvoiceByCustomerId(String customerId, List<String> invoiceTypes);
 
     @Query(value = """
             SELECT

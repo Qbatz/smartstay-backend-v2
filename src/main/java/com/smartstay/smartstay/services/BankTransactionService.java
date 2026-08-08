@@ -354,6 +354,7 @@ public class BankTransactionService {
         bankTransactionsV1.setHostelId(invoicesV1.getHostelId());
         bankTransactionsV1.setTransactionNumber(transactionV11.getTransactionId());
         bankTransactionsV1.setTransactionDate(paymentDate);
+        bankTransactionsV1.setIsDeleted(false);
         bankTransactionsV1.setCreatedAt(new Date());
         bankTransactionsV1.setPlatform(authentication.getSource());
         bankTransactionsV1.setCreatedBy(authentication.getName());

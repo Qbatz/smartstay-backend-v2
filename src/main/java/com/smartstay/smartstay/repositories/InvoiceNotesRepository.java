@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface InvoiceNotesRepository extends JpaRepository<InvoiceNotes, Long> {
+    InvoiceNotes findByInvoiceId(String invoiceId);
 }

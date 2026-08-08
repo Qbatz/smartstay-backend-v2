@@ -14,6 +14,8 @@ public class RetainerRelationService {
     private Authentication authentication;
     @Autowired
     private RetainerRelationsRepository retainerRelationsRepository;
+    @Autowired
+    private AdditionalContactService additionalContactService;
 
     public void addRelationForDeposit(String customerId, String hostelId, LoadBalance loadBalance, boolean isRegisteredRelation, InvoicesV1 invoice) {
         RetainerRelations retainerRelations = new RetainerRelations();
@@ -29,5 +31,23 @@ public class RetainerRelationService {
         retainerRelations.setInvoiceId(invoice.getInvoiceId());
         retainerRelationsRepository.save(retainerRelations);
 
+    }
+
+    public String getRelationDetails(String invoiceId) {
+        RetainerRelations retainerRelations = retainerRelationsRepository.findByInvoiceId(invoiceId);
+        if (retainerRelations != null) {
+            if (retainerRelations.getRelationId() == null) {
+                return retainerRelations.getRelationName();
+            }
+            Long relationId = 0l;
+            try {
+                relationId = Long.parseLong(retainerRelations.getRelationId());
+            }
+            catch (Exception e) {
+
+            }
+            return additionalContactService.getRelationName(relationId);
+        }
+        return null;
     }
 }

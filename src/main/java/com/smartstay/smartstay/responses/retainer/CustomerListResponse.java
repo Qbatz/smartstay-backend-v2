@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.responses.retainer;
 
+import com.smartstay.smartstay.dto.customer.StayInfo;
 import com.smartstay.smartstay.responses.invoices.BankInfoRecordPayments;
 
 import java.util.List;

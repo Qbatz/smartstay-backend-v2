@@ -45,6 +45,7 @@ import com.smartstay.smartstay.responses.customer.BedHistory;
 import com.smartstay.smartstay.responses.customer.CheckoutCustomers;
 import com.smartstay.smartstay.responses.customer.*;
 import com.smartstay.smartstay.responses.customer.KycAddressDetails;
+import com.smartstay.smartstay.responses.customer.StayInfo;
 import com.smartstay.smartstay.responses.invoices.BankInfoRecordPayments;
 import com.smartstay.smartstay.responses.retainer.CustomerListResponse;
 import com.smartstay.smartstay.responses.settlement.DeductionsInfo;
@@ -1439,12 +1440,18 @@ public class CustomersService {
         String fullName = NameUtils.getFullName(customers.getFirstName(), customers.getLastName());
         String initials = NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
 
+        List<String> invoiceTypes = new ArrayList<>();
+        invoiceTypes.add(InvoiceType.RENT.name());
+        invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
+        invoiceTypes.add(InvoiceType.ADVANCE.name());
+        invoiceTypes.add(InvoiceType.SETTLEMENT.name());
+
         boolean isNewRentAvailable = false;
         double newRentAmount = 0.0;
         String newRentLabelHint = null;
         List<RentHistory> rentHistories = bookingsService.getNewRentAmount(customerId, new Date());
         CustomersBookingDetails bookingDetails = bookingsService.getCustomerBookingDetails(customers.getCustomerId());
-        List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId());
+        List<InvoiceResponse> invoiceResponseList = invoiceService.getInvoiceResponseList(customers.getCustomerId(), invoiceTypes);
 
         List<InvoicesV1> originalInvoices = invoicesV1Repository.findByCustomerIdOrderByInvoiceStartDateDesc(customers.getCustomerId());
         Map<String, InvoicesV1> invoiceMap = originalInvoices.stream().collect(Collectors.toMap(InvoicesV1::getInvoiceId, Function.identity()));
@@ -1662,6 +1669,7 @@ public class CustomersService {
         }
 
         WalletInfo walletInfo = new WalletInfo(walletAmount, walletTransactions);
+        com.smartstay.smartstay.dto.customer.RetainerInfo retainerInfo = retainerService.getRetaineListByCUstomerId(customerId);
         CustomerFiles customerFiles = customerDocumentsService.getCustomerFiles(customerId, kycDocumentFromDigio);
         List<AdditionalContacts> additionalContacts = additionalContactService.getAdditionalContact(customers.getHostelId(), customerId);
 
@@ -1699,7 +1707,9 @@ public class CustomersService {
                 customers.getCurrentStatus(), address, hostelInformation,
                 kycInfo, advanceInfo, checkoutInfo, bookingInfo,
                 invoiceResponseList, listBeds, listTransactionResponse, amenities,
-                listRequestedAmenities, listAvailableAmenities, walletInfo, customerFiles, jobDetails,
+                listRequestedAmenities, listAvailableAmenities, walletInfo,
+                retainerInfo,
+                customerFiles, jobDetails,
                 additionalContacts,
                 isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy,
                 createdByName, createdByInitials, createdByPic, effectiveFromMonth,
@@ -4229,8 +4239,19 @@ public class CustomersService {
         }
 
         List<String> customerIds = listCustomers.stream().map(Customers::getCustomerId).toList();
+        List<BookingsV1> listBookings = bookingsService.getBookings(hostelId, customerIds);
+        List<BedDetails> listBedDetails;
+        if (listBookings != null) {
+            List<Integer> bedIds = listBookings
+                    .stream()
+                    .map(BookingsV1::getBedId)
+                    .toList();
+            listBedDetails = bedsService.getBedDetails(bedIds);
+        } else {
+            listBedDetails = new ArrayList<>();
+        }
         List<com.smartstay.smartstay.dao.CustomerAdditionalContacts> additionalContacts = additionalContactService.getAdditionalContactsByHostelIdAndCustomerIdIn(hostelId, customerIds);
-        return listCustomers.stream().map(i -> new CustomersListMapper(additionalContacts).apply(i)).toList();
+        return listCustomers.stream().map(i -> new CustomersListMapper(additionalContacts, listBookings, listBedDetails).apply(i)).toList();
     }
 
     public double getDeductionAmount(String customerId) {
