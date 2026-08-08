@@ -2774,20 +2774,19 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                //done amenity release
+                //cancelled retainer
                 return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             } else {
                 if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-                    //done amenity release
+                    //cancelled retainers
                     return generateFinalSettlementForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users, isFullRentCollected, customRent);
                 }
-                //done ameity release
+                //cancelled retainers
                 return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             }
         } else {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
                 BillingDates customerBillingDates = hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), settlementDetails.getLeavingDate());
-                //done updating cbh
                 return generateFinalSettlementForJoininBasedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, customerBillingDates, settlement, users, isFullRentCollected, customRent);
             }
         }
@@ -3044,6 +3043,7 @@ public class CustomersService {
         }
         bookingsService.saveBooking(bookingDetails);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
+        retainerService.updateBalanceOfRetainerInvoices(customers.getCustomerId());
 
         customersRepository.save(customers);
 
@@ -3231,6 +3231,7 @@ public class CustomersService {
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
         amenitiesService.stopCustomerAmenities(customers.getCustomerId(), leavingDate);
+        retainerService.updateBalanceOfRetainerInvoices(customers.getCustomerId());
 
         SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), settlementInvoice.getInvoiceId(), settlementInfo, isFullRentCollected, customRent);
 
@@ -3538,6 +3539,7 @@ public class CustomersService {
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
         amenitiesService.stopCustomerAmenities(customers.getCustomerId(), leavingDate);
+        retainerService.updateBalanceOfRetainerInvoices(customers.getCustomerId());
 
         userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.SETTLEMENT, users);
 
@@ -3692,6 +3694,7 @@ public class CustomersService {
         bookingsService.saveBooking(bookingsV1);
         customers.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
         customersRepository.save(customers);
+        retainerService.updateBalanceOfRetainerInvoices(customers.getCustomerId());
 
         userService.addUserLog(customers.getHostelId(), customers.getCustomerId(), ActivitySource.CUSTOMERS, ActivitySourceType.SETTLEMENT, users);
 

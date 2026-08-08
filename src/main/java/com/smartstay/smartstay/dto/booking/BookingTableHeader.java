@@ -4,5 +4,6 @@ public record BookingTableHeader(String invoiceId,
                                  boolean canApply,
                                  double availableAmount,
                                  String customerId,
-                                 String status) {
+                                 String status,
+                                 String invoiceType) {
 }

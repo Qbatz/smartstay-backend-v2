@@ -12,7 +12,10 @@ import com.smartstay.smartstay.repositories.TenantBankingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
 @Service
 public class TenantBankTransactionService {
@@ -49,5 +52,55 @@ public class TenantBankTransactionService {
 
         return tenantBankTransactionRepositories.save(tenantBankTransactions);
 
+    }
+
+    public void addRetainerTransactionForRedemption(String hostelId, String invoiceId, String customerId, HashMap<String, Double> appliedAmountInvoiceIdMapper, Double appliedAmount, Date appliedDate) {
+
+
+        List<TenantBankTransactions> listTenantTransactions = new ArrayList<>();
+        appliedAmountInvoiceIdMapper.keySet().forEach(item -> {
+            Double currentBalance = tenantBankService.adjustRetainerBalance(customerId, appliedAmountInvoiceIdMapper.get(item));
+
+            TenantBankTransactions tenantBankTransactions = new TenantBankTransactions();
+            tenantBankTransactions.setTransactionAmount(appliedAmount);
+            tenantBankTransactions.setTransactionDate(appliedDate);
+            tenantBankTransactions.setCustomerId(customerId);
+            tenantBankTransactions.setHostelId(hostelId);
+            tenantBankTransactions.setSourceId(item);
+            tenantBankTransactions.setPlatform(authentication.getSource());
+            tenantBankTransactions.setTransactionType(BankTransactionType.DEBIT.name());
+            tenantBankTransactions.setBalanceAmount(currentBalance);
+            tenantBankTransactions.setCreatedBy(authentication.getName());
+            tenantBankTransactions.setCreatedAt(new Date());
+
+            listTenantTransactions.add(tenantBankTransactions);
+        });
+
+        tenantBankTransactionRepositories.saveAll(listTenantTransactions);
+    }
+
+    public void addRetainerTransactionForRedemption(String hostelId, String customerId, HashMap<String, Double> appliedAmountInvoiceIdMapper, Date appliedDate) {
+
+
+        List<TenantBankTransactions> listTenantTransactions = new ArrayList<>();
+        appliedAmountInvoiceIdMapper.keySet().forEach(item -> {
+            Double currentBalance = tenantBankService.adjustRetainerBalance(customerId, appliedAmountInvoiceIdMapper.get(item));
+
+            TenantBankTransactions tenantBankTransactions = new TenantBankTransactions();
+            tenantBankTransactions.setTransactionAmount(appliedAmountInvoiceIdMapper.get(item));
+            tenantBankTransactions.setTransactionDate(appliedDate);
+            tenantBankTransactions.setCustomerId(customerId);
+            tenantBankTransactions.setHostelId(hostelId);
+            tenantBankTransactions.setSourceId(item);
+            tenantBankTransactions.setPlatform(authentication.getSource());
+            tenantBankTransactions.setTransactionType(BankTransactionType.DEBIT.name());
+            tenantBankTransactions.setBalanceAmount(currentBalance);
+            tenantBankTransactions.setCreatedBy(authentication.getName());
+            tenantBankTransactions.setCreatedAt(new Date());
+
+            listTenantTransactions.add(tenantBankTransactions);
+        });
+
+        tenantBankTransactionRepositories.saveAll(listTenantTransactions);
     }
 }

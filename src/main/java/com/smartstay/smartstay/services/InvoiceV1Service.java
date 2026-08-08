@@ -121,6 +121,8 @@ public class InvoiceV1Service {
     private TableColumnService tableColumnService;
     @Autowired
     private SettlementItemService settlementItemService;
+    @Autowired
+    private TenantBankTransactionService tenantBankTransactionService;
     private TransactionService transactionService;
 
     private BookingsService bookingsService;
@@ -5214,11 +5216,16 @@ public class InvoiceV1Service {
         double redemptionAmount = listRedemptions.stream().mapToDouble(RedemptionItems::amount).sum();
         AtomicBoolean isAmountExceeded = new AtomicBoolean(false);
 
+        HashMap<String, Double> appliedInvoices = new HashMap<>();
+
         listInvoices.forEach(item -> {
             RedemptionItems redemptionItems = listRedemptions.stream().filter(i -> i.invoiceId().equalsIgnoreCase(item.getInvoiceId())).findFirst().orElse(null);
             if (redemptionItems != null) {
                 if (redemptionItems.amount() > (item.getTotalAmount() - item.getPaidAmount())) {
                     isAmountExceeded.set(true);
+                }
+                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name())) {
+                    appliedInvoices.put(redemptionItems.invoiceId(), redemptionItems.amount());
                 }
             }
         });
@@ -5228,8 +5235,8 @@ public class InvoiceV1Service {
         }
 
 
-        List<com.smartstay.smartstay.dao.InvoiceRedemption> ir = invoiceRedemptionService.redeemInvoice(hostelId, invoicesV1.getInvoiceId(), listRedemptions, redeemedAt, invoiceRedemption.reason());
 
+        List<com.smartstay.smartstay.dao.InvoiceRedemption> ir = invoiceRedemptionService.redeemInvoice(hostelId, invoicesV1.getInvoiceId(), listRedemptions, redeemedAt, invoiceRedemption.reason());
         if (ir != null) {
             invoicesV1.setBalanceAmount(invoicesV1.getBalanceAmount() - redemptionAmount);
             invoicesV1Repository.save(invoicesV1);
@@ -5325,6 +5332,10 @@ public class InvoiceV1Service {
                 }
                 return i;
             }).toList();
+
+            if (!appliedInvoices.isEmpty()) {
+                tenantBankTransactionService.addRetainerTransactionForRedemption(hostelId, invoicesV1.getCustomerId(), appliedInvoices, redeemedAt);
+            }
 
 
             invoicesV1Repository.saveAll(listNewInvoices);
@@ -6144,4 +6155,5 @@ public class InvoiceV1Service {
         return invoicesV1Repository.findAllInvoicesByHostelIdForHostelId(hostelId, startDate, endDate, customerIds, types, createdBy, invoiceModes, paymentStatus, isCancelledList, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageableRequest);
 
     }
+
 }

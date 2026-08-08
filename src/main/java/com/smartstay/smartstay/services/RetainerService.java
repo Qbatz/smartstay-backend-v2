@@ -66,6 +66,8 @@ public class RetainerService {
     private InvoiceRedemptionService invoiceRedemptionService;
     @Autowired
     private InvoiceDiscountService invoiceDiscountService;
+    @Autowired
+    private InvoiceNotesService invoiceNotesService;
 
     public ResponseEntity<?> addMoney(String hostelId, String customerId, LoadBalance loadBalance) {
         if (!authentication.isAuthenticated()) {
@@ -191,7 +193,7 @@ public class RetainerService {
         invoicesV1.setInvoiceItems(listInvoiceItems);
 
         InvoicesV1 createdInvoice = invoicesV1Repository.save(invoicesV1);
-
+        invoiceNotesService.addNotes(customerId, hostelId, createdInvoice.getInvoiceId(), loadBalance.description(), loadBalance.detailedDescription());
         retainerRelationService.addRelationForDeposit(customerId, hostelId, loadBalance, isRegisteredRelation, createdInvoice);
         transactionService.addRetainerTransaction(createdInvoice, loadBalance);
         tenantBankTransactionService.addRetainerTransaction(createdInvoice, loadBalance, paymentDate, isRegisteredRelation);
@@ -217,13 +219,13 @@ public class RetainerService {
             }
             int newNum = oldNum + 1;
             if (newNum < 10) {
-                return "RET-000" + newNum;
-            }
-            else if (newNum < 100) {
                 return "RET-00" + newNum;
             }
-            else if (newNum < 1000) {
+            else if (newNum < 100) {
                 return "RET-0" + newNum;
+            }
+            else if (newNum < 1000) {
+                return "RET-" + newNum;
             }
 
             return "RET-" + String.valueOf(newNum);
@@ -468,7 +470,7 @@ public class RetainerService {
         }
 
         invoiceRedemptionService.applyInvoiceFromRetainer(hostelId, invoicesV1.getInvoiceId(), appliedInvoicesList, redeemedAt);
-
+        tenantBankTransactionService.addRetainerTransactionForRedemption(hostelId, invoicesV1.getInvoiceId(), invoicesV1.getCustomerId(), appliedInvoicesList, appliedAmount, redeemedAt);
         invoicesV1Repository.save(invoicesV1);
 
         List<InvoicesV1> newInvoices = new ArrayList<>();
@@ -557,7 +559,7 @@ public class RetainerService {
                 .toList();
 
         invoiceRedemptionService.applyInvoiceFromRetainer(hostelId, invoicesV1.getInvoiceId(), appliedAmountInvoiceIdMapper, redeemedAt);
-
+        tenantBankTransactionService.addRetainerTransactionForRedemption(hostelId, invoicesV1.getInvoiceId(), invoicesV1.getCustomerId(), appliedAmountInvoiceIdMapper, appliedAmount, redeemedAt);
         double invoicePaid = 0.0;
         if (invoicesV1.getPaidAmount() != null) {
             invoicePaid = invoicesV1.getPaidAmount();
@@ -574,6 +576,10 @@ public class RetainerService {
             invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
         }
         invoicesV1Repository.save(invoicesV1);
+
+        if (!listNewInvoiceAfterRedeeming.isEmpty()) {
+            invoicesV1Repository.saveAll(listNewInvoiceAfterRedeeming);
+        }
 
         return new ResponseEntity<>(HttpStatus.OK);
 
@@ -616,5 +622,20 @@ public class RetainerService {
                 totalRetinerValue,
                 listRetainerItems);
 
+    }
+
+    public void updateBalanceOfRetainerInvoices(String customerId) {
+        List<String> retainerInvoices = new ArrayList<>();
+        retainerInvoices.add(InvoiceType.AMOUNT_HOLDING.name());
+        retainerInvoices.add(InvoiceType.EB_HOLDING.name());
+
+        List<InvoicesV1> listAvailableInvoices = invoicesV1Repository.findRetainersByCustomerIdAndInvoiceTypes(customerId, retainerInvoices);
+        if (listAvailableInvoices != null && !listAvailableInvoices.isEmpty()) {
+            List<InvoicesV1> listInvoicesUpdates = listAvailableInvoices
+                    .stream()
+                    .peek(i -> i.setBalanceAmount(0.0))
+                    .toList();
+            invoicesV1Repository.saveAll(listInvoicesUpdates);
+        }
     }
 }
