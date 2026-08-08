@@ -128,8 +128,20 @@ public class ReportController {
 
     @GetMapping("/download/invoice/{hostelId}")
     public ResponseEntity<?> downloadInvoiceReport(@PathVariable("hostelId") String hostelId,
+                                                   @RequestParam(value = "search", required = false) String search,
+                                                   @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus,
+                                                   @RequestParam(value = "invoiceModes", required = false) List<String> invoiceModes,
+                                                   @RequestParam(value = "invoiceTypes", required = false) List<String> invoiceTypes,
+                                                   @RequestParam(value = "createdBy", required = false) List<String> createdBy,
+                                                   @RequestParam(value = "period", required = false) String period,
+                                                   @RequestParam(value = "minPaidAmount", required = false) Double minPaidAmount,
+                                                   @RequestParam(value = "maxPaidAmount", required = false) Double maxPaidAmount,
+                                                   @RequestParam(value = "minOutstandingAmount", required = false) Double minOutstandingAmount,
+                                                   @RequestParam(value = "maxOutstandingAmount", required = false) Double maxOutstandingAmount,
                                                    @RequestParam(value = "startDate", required = false) String startDate,
                                                    @RequestParam(value = "endDate", required = false) String endDate) {
-        return reportService.downloadInvoiceReport(hostelId, startDate, endDate);
+        return reportService.downloadInvoiceReport(hostelId, search, paymentStatus, invoiceModes,
+                invoiceTypes, createdBy, period, minPaidAmount, maxPaidAmount,
+                minOutstandingAmount, maxOutstandingAmount, startDate, endDate);
     }
 }
