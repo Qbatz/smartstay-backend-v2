@@ -27,6 +27,8 @@ public class ReportDetailsResponse {
     private int cancelledInvoiceCount;
     private int outstandingInvoiceCount;
     private int returnedInvoiceCount;
+    private int totalBookingInvoices;
+    private Double totalBookingAmount;
     private String startDate;
     private String endDate;
     private FilterOptions filterOptions;

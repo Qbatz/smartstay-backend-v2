@@ -345,6 +345,15 @@ public class ReportService {
         if (maxOutstandingAmount != null && maxOutstandingAmount == 0) {
             maxOutstandingAmount = null;
         }
+
+        if (invoiceTypes == null) {
+            invoiceTypes = new ArrayList<>();
+            invoiceTypes.add(InvoiceType.RENT.name());
+            invoiceTypes.add(InvoiceType.ADVANCE.name());
+            invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
+            invoiceTypes.add(InvoiceType.BOOKING.name());
+        }
+
         ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);
         if (authentication.getSource().equalsIgnoreCase("web")) {
             return getInvoiceWebReport(hostelId, startDate, endDate, search,
@@ -356,8 +365,6 @@ public class ReportService {
                     pStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
                     minOutstandingAmount, maxOutstandingAmount, isCancelledList);
             List<ReportDetailsResponse.InvoiceDetail> invoiceDetails = mapToInvoiceDetails(invoices);
-
-
 
             return buildReportResponse(hostelId, startDate, endDate, search, pStatus, invoiceModes,
                     invoiceTypes,
@@ -499,6 +506,19 @@ public class ReportService {
             int itemsPerPage = pagedInvoices.getSize();
             double outstandingInvoiceCount = totalInvoice - paidInvoiceCount;
 
+            long totalBookingInvoices = invoices.stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
+                    .count();
+
+            double totalBookingAmount = invoices.stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getTotalAmount() == null) return 0.0;
+                        if (i.getTotalAmount() < 0) return i.getTotalAmount() * -1;
+                        return i.getTotalAmount();
+                    })
+                    .sum();
+
             ReportDetailsResponse response = new ReportDetailsResponse()
                     .builder()
                     .totalInvoices(totalInvoice)
@@ -517,6 +537,8 @@ public class ReportService {
                     .cancelledInvoiceCount(cancelledInvoiceCount)
                     .outStandingAmount(Utils.roundOffWithTwoDigit(outstandingAmount))
                     .returnedInvoiceCount(returnedInvoiceCount)
+                    .totalBookingInvoices((int) totalBookingInvoices)
+                    .totalBookingAmount(Utils.roundOffWithTwoDigit(totalBookingAmount))
                     .filterOptions(filterOptions)
                     .invoiceList(invoiceDetails)
                     .build();
@@ -796,6 +818,19 @@ public class ReportService {
 //                outstandingAmount = totalAmount - paidAmount;
         outstandingInvoiceCount = totalInvoices - paidInvoiceCount;
 
+        long totalBookingInvoicesLong = invoices.stream()
+                .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
+                .count();
+
+        double totalBookingAmount = invoices.stream()
+                .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
+                .mapToDouble(i -> {
+                    if (i.getTotalAmount() == null) return 0.0;
+                    if (i.getTotalAmount() < 0) return i.getTotalAmount() * -1;
+                    return i.getTotalAmount();
+                })
+                .sum();
+
         int totalPages = (int) Math.ceil((double) totalInvoices / size);
 
         ReportDetailsResponse response = ReportDetailsResponse.builder().totalInvoices(totalInvoices)
@@ -812,6 +847,8 @@ public class ReportService {
                 .cancelledInvoiceCount(cancelledInvoiceCount)
                 .outstandingInvoiceCount(outstandingInvoiceCount)
                 .returnedInvoiceCount(returnedInvoiceCount)
+                .totalBookingInvoices((int) totalBookingInvoicesLong)
+                .totalBookingAmount(Utils.roundOffWithTwoDigit(totalBookingAmount))
                 .startDate(Utils.dateToString(startDate))
                 .endDate(Utils.dateToString(endDate))
                 .filterOptions(options).invoiceList(invoiceDetails).build();
