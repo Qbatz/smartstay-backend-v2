@@ -42,6 +42,10 @@ public class BankTransactionService {
         this.bankingService = bankingService;
     }
 
+    @Autowired
+    @Lazy
+    private BankingServiceV2 bankingServiceV2;
+
 
     public int addTransaction(TransactionDto transactionDto, String sourceId, String paymentMethodId) {
         if (authentication.isAuthenticated()) {
@@ -144,6 +148,8 @@ public class BankTransactionService {
             if (!bankingService.updateBalanceForExpense(transactionDto.amount(), BankTransactionType.DEBIT.name(), transactionDto.bankId())) {
                 return;
             }
+            bankingServiceV2.syncAccountBalance(transactionDto.bankId(), -transactionDto.amount(), authentication.getName());
+
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
             BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
 
@@ -221,6 +227,7 @@ public class BankTransactionService {
         if (!bankingService.updateBalanceForExpense(refundInvoice.refundAmount(), BankTransactionType.DEBIT.name(), refundInvoice.bankId())) {
             return false;
         }
+        bankingServiceV2.syncAccountBalance(refundInvoice.bankId(), -refundInvoice.refundAmount(), authentication.getName());
 
         Date dt = null;
         if (refundInvoice.refundDate() != null) {
