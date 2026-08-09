@@ -1597,7 +1597,7 @@ public class ReportService {
             invoiceTypes.add(InvoiceType.BOOKING.name());
         }
 
-        String url =  "http://localhost:8001" + "/v2/reports/invoices/pdf/"+hostelId;
+        String url =  reportsUrl + "/v2/reports/invoices/pdf/"+hostelId;
         System.out.println("Invoice Report URL: " + url);
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
                 .queryParam("startDate", sDate)
