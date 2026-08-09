@@ -17,25 +17,25 @@ import java.util.Map;
 @Repository
 public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> {
     @Query("""
-            SELECT i FROM InvoicesV1 i WHERE hostelId=:hostelId
-            AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
-            AND (:endDate IS NULL OR DATE(i.invoiceEndDate) <= DATE(:endDate))
-            AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy))
-            AND (:mode IS NULL OR i.invoiceMode in (:mode))
-            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NULL OR i.isCancelled=:isCancelled))
-            AND (:userId IS NULL OR i.customerId IN (:userId)) ORDER BY i.invoiceStartDate DESC
-            """)
+    SELECT i FROM InvoicesV1 i WHERE hostelId=:hostelId
+    AND (:startDate IS NULL OR i.invoiceStartDate >= :startDate)
+    AND (:endDate IS NULL OR i.invoiceEndDate <= :endDate)
+    AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy))
+    AND (:mode IS NULL OR i.invoiceMode in (:mode))
+    AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus) AND (:isCancelled IS NULL OR i.isCancelled=:isCancelled))
+    AND (:userId IS NULL OR i.customerId IN (:userId)) ORDER BY i.invoiceStartDate DESC
+    """)
     List<InvoicesV1> findAllInvoicesByHostelId(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("types") List<String> types, @Param("createdBy") List<String> createdBy, @Param("mode") List<String> mode, @Param("paymentStatus") List<String> paymentStatus, @Param("userId") List<String> userId, @Param("isCancelled") Boolean isCancelled);
 
     @Query("""
-            SELECT i FROM InvoicesV1 i WHERE hostelId=:hostelId
-            AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
-            AND (:endDate IS NULL OR DATE(i.invoiceEndDate) <= DATE(:endDate))
-            AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy))
-            AND (:mode IS NULL OR i.invoiceMode in (:mode))
-            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus))
-            AND (:userId IS NULL OR i.customerId IN (:userId)) ORDER BY i.invoiceStartDate DESC
-            """)
+    SELECT i FROM InvoicesV1 i WHERE hostelId=:hostelId
+    AND (:startDate IS NULL OR i.invoiceStartDate >= :startDate)
+    AND (:endDate IS NULL OR i.invoiceEndDate <= :endDate)
+    AND i.invoiceType in (:types) AND (:createdBy IS NULL OR i.createdBy in (:createdBy))
+    AND (:mode IS NULL OR i.invoiceMode in (:mode))
+    AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus))
+    AND (:userId IS NULL OR i.customerId IN (:userId)) ORDER BY i.invoiceStartDate DESC
+    """)
     List<InvoicesV1> findAllInvoicesByHostelIdForBasicList(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("types") List<String> types, @Param("createdBy") List<String> createdBy, @Param("mode") List<String> mode, @Param("paymentStatus") List<String> paymentStatus, @Param("userId") List<String> userId);
 
     @Query(value = """
@@ -331,13 +331,13 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     InvoicesV1 findBookingInvoice(String hostelId, String customerId);
 
     @Query("""
-             SELECT COUNT(i) as totalInvoiceGenerated, SUM(i.totalAmount) as totalInvoiced, SUM(i.paidAmount) as totalPaid
-             FROM InvoicesV1 i
-             WHERE i.hostelId = :hostelId AND i.isCancelled = false
-             AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
-             AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
+            SELECT COUNT(i) as totalInvoiceGenerated, SUM(i.totalAmount) as totalInvoiced, SUM(i.paidAmount) as totalPaid
+            FROM InvoicesV1 i
+            WHERE i.hostelId = :hostelId AND i.isCancelled = false
+            AND (:startDate IS NULL OR i.invoiceStartDate >= :startDate)
+            AND (:endDate IS NULL OR i.invoiceStartDate <= :endDate)
             AND i.invoiceType in ('RENT', 'REASSIGN_RENT')
-             """)
+            """)
     Map<String, Object> getBillingSummary(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
     @Query(value = """
