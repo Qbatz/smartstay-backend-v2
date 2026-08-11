@@ -752,8 +752,17 @@ public class InvoiceV1Service {
         listInvoiceTypes.add(InvoiceType.EB_HOLDING.name());
 
         List<InvoicesV1> listRetainerInvoices = invoicesV1Repository.findRetainerInvoicesByHostelId(hostelId, listInvoiceTypes);
+
+        Set<String> sourceInvoiceIds;
+        if (!listAllInvoice.isEmpty()) {
+            List<String> allInvoiceIds = listAllInvoice.stream().map(InvoicesV1::getInvoiceId).toList();
+            sourceInvoiceIds = invoiceRedemptionService.getSourceInvoiceIds(allInvoiceIds);
+        } else {
+            sourceInvoiceIds = Collections.emptySet();
+        }
+
         List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers,
-                listInvoiceDiscounts, listInvoiceRedeemed, listRetainerInvoices, listAllInvoiceForCustomer, listTransactions).apply(i)).toList();
+                listInvoiceDiscounts, listInvoiceRedeemed, listRetainerInvoices, listAllInvoiceForCustomer, listTransactions, sourceInvoiceIds).apply(i)).toList();
 
         if (authentication.getSource().equalsIgnoreCase("web")) {
 //            List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
@@ -1885,7 +1894,6 @@ public class InvoiceV1Service {
         List<Deductions> listDeductions = invoicesV1.getDeductions();
 
         for (InvoiceItems item : invoicesV1.getInvoiceItems()) {
-            System.out.println("item----->>" + item.getInvoiceItem());
             String description;
             switch (item.getInvoiceItem()) {
                 case "RENT" -> description = "Rent";
