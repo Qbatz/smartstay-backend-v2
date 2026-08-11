@@ -1885,17 +1885,30 @@ public class InvoiceV1Service {
         List<Deductions> listDeductions = invoicesV1.getDeductions();
 
         for (InvoiceItems item : invoicesV1.getInvoiceItems()) {
+            System.out.println("item----->>" + item.getInvoiceItem());
             String description;
             switch (item.getInvoiceItem()) {
                 case "RENT" -> description = "Rent";
                 case "ADVANCE" -> description = "Advance";
                 case "EB" -> description = "Electricity Bill";
                 case "AMENITY" -> description = "Amenity";
-                case "OTHERS" -> description = item.getOtherItem() != null ? item.getOtherItem() : "Others";
+                case "OTHERS" -> {
+                    String otherItem = item.getOtherItem();
+                    description = switch (otherItem) {
+                        case "EB_holding" -> "Advance EB";
+                        case "amount_holding" -> "Advance Rent";
+                        case "other_holding" -> "Other Retainer amount";
+                        default -> otherItem != null ? otherItem : "Others";
+                    };
+                }
                 default -> description = Utils.capitalize(item.getInvoiceItem());
             }
-            com.smartstay.smartstay.responses.invoices.InvoiceItems responseItem = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), description, Utils.roundOffWithTwoDigit(item.getAmount()));
-
+            com.smartstay.smartstay.responses.invoices.InvoiceItems responseItem =
+                    new com.smartstay.smartstay.responses.invoices.InvoiceItems(
+                            invoicesV1.getInvoiceNumber(),
+                            description,
+                            Utils.roundOffWithTwoDigit(item.getAmount())
+                    );
             listInvoiceItems.add(responseItem);
         }
         List<InvoiceRefundHistory> paymentHistoryList = transactionService.findByInvoiceId(invoiceId);
