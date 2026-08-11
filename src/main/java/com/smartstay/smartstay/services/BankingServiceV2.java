@@ -731,6 +731,19 @@ public class BankingServiceV2 {
         bankingV2Repository.save(bank);
     }
 
+    @Transactional
+    public void syncAccountBalance(String bankId, double signedDelta, String userId) {
+        String resolvedBankId = trimToNull(bankId);
+        if (resolvedBankId == null || signedDelta == 0) {
+            return;
+        }
+        BankingV2 bank = bankingV2Repository.findById(resolvedBankId).orElse(null);
+        if (bank == null || bank.isDeleted()) {
+            return;
+        }
+        applyBankDelta(bank, signedDelta, new Date(), userId);
+    }
+
     private void applyMethodDelta(BankingMethods method, double delta, Date now, String userId) {
         double current = method.getBalance() != null ? method.getBalance() : 0.0;
         method.setBalance(current + delta);
