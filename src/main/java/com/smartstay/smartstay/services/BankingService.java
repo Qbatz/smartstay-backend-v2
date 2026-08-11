@@ -25,6 +25,7 @@ import com.smartstay.smartstay.responses.invoices.RefundableBanks;
 import com.smartstay.smartstay.util.BankingUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,10 @@ public class BankingService {
 
     @Autowired
     private BankingRepository bankingV1Repository;
+
+    @Autowired
+    @Lazy
+    private BankingServiceV2 bankingServiceV2;
 
     @Autowired
     private BankTransactionService transactionService;
@@ -559,6 +564,8 @@ public class BankingService {
         bankingV1.setUpdatedBy(authentication.getName());
         bankingV1Repository.save(bankingV1);
 
+        bankingServiceV2.syncAccountBalance(bankingV1.getBankId(), balance.balance(), authentication.getName());
+
         usersService.addUserLog(hostelId, bankingV1.getBankId(), ActivitySource.BANKING, ActivitySourceType.ADD_MONEY, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
@@ -720,12 +727,16 @@ public class BankingService {
         bankingV1.setUpdatedBy(authentication.getName());
         bankingV1Repository.save(bankingV1);
 
+        bankingServiceV2.syncAccountBalance(bankingV1.getBankId(), -selfTransfer.balance(), authentication.getName());
+
         // Update the balance field on the TO account (BankingV1 entity)
 
         toAccount.setBalance(toOldBalance + selfTransfer.balance());
         toAccount.setUpdatedAt(new Date());
         toAccount.setUpdatedBy(authentication.getName());
         bankingV1Repository.save(toAccount);
+
+        bankingServiceV2.syncAccountBalance(toAccount.getBankId(), selfTransfer.balance(), authentication.getName());
 
         usersService.addUserLog(hostelId, transactionId, ActivitySource.BANKING, ActivitySourceType.TRANSFER, user);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
@@ -766,6 +777,10 @@ public class BankingService {
         bankingV1.setUpdatedAt(cal.getTime());
 
         bankingV1Repository.save(bankingV1);
+
+        if (transactionType.equalsIgnoreCase(BankTransactionType.CREDIT.name())) {
+            bankingServiceV2.syncAccountBalance(bankId, paidAmount, authentication.getName());
+        }
     }
 
     public void deleteReceipt(double amount, String transactionType, String bankId) {
@@ -783,6 +798,10 @@ public class BankingService {
         bankingV1.setUpdatedAt(new Date());
 
         bankingV1Repository.save(bankingV1);
+
+        if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+            bankingServiceV2.syncAccountBalance(bankId, -amount, authentication.getName());
+        }
     }
 
 
@@ -822,6 +841,10 @@ public class BankingService {
         bankingV1.setUpdatedAt(new Date());
 
         bankingV1Repository.save(bankingV1);
+
+        if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+            bankingServiceV2.syncAccountBalance(bankId, -amount, authentication.getName());
+        }
 
         return true;
     }
@@ -872,6 +895,8 @@ public class BankingService {
             }
 
             bankingV1Repository.save(bankingV1);
+
+            bankingServiceV2.syncAccountBalance(bankId, priceDifference, authentication.getName());
         }
     }
 
@@ -889,6 +914,8 @@ public class BankingService {
             bankingV1.setBalance(balanceAmount + expAmount);
 
             bankingV1Repository.save(bankingV1);
+
+            bankingServiceV2.syncAccountBalance(bankId, expAmount, authentication.getName());
         }
     }
 
@@ -993,6 +1020,8 @@ public class BankingService {
         bankingV1.setBalance(existingBalance + amount);
         bankingV1.setLastTransaction(paymentDate);
         bankingV1Repository.save(bankingV1);
+
+        bankingServiceV2.syncAccountBalance(bankId, amount, authentication.getName());
 
         return existingBalance + amount;
     }
