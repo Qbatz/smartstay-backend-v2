@@ -1550,7 +1550,11 @@ public class ReportService {
         return new ResponseEntity<>(pdfUrl, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> downloadInvoiceReport(String hostelId, String startDate, String endDate) {
+    public ResponseEntity<?> downloadInvoiceReport(String hostelId, String search, List<String> paymentStatus,
+                                                   List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy,
+                                                   String period, Double minPaidAmount, Double maxPaidAmount,
+                                                   Double minOutstandingAmount, Double maxOutstandingAmount,
+                                                   String startDate, String endDate) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -1565,40 +1569,72 @@ public class ReportService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        String sDate = null;
-        String eDate = null;
-        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        BillingDates dates = calculateDateRange(period, hostelId);
+        Date sDateObj = dates.currentBillStartDate();
+        Date eDateObj = dates.currentBillEndDate();
 
-        if (startDate == null) {
-            sDate = Utils.dateToString(billingDates.currentBillStartDate()).replace("/", "-");
-        }
-        else {
+        if (startDate != null && !startDate.isEmpty()) {
             Date d = Utils.stringToDate(startDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-            if (d == null) {
-                sDate = Utils.dateToString(billingDates.currentBillStartDate()).replace("/", "-");
-            }
-            else {
-                sDate = Utils.dateToString(d).replace("/", "-");
+            if (d != null) {
+                sDateObj = d;
             }
         }
-        if (endDate == null) {
-            eDate = Utils.dateToString(billingDates.currentBillEndDate()).replace("/", "-");
-        }
-        else {
+        if (endDate != null && !endDate.isEmpty()) {
             Date d = Utils.stringToDate(endDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-            if (d == null) {
-                eDate = Utils.dateToString(billingDates.currentBillEndDate()).replace("/", "-");
+            if (d != null) {
+                eDateObj = d;
             }
-            else {
-                eDate = Utils.dateToString(d).replace("/", "-");
-            }
+        }
+
+        String sDate = Utils.dateToString(sDateObj).replace("/", "-");
+        String eDate = Utils.dateToString(eDateObj).replace("/", "-");
+
+        if (invoiceTypes == null) {
+            invoiceTypes = new ArrayList<>();
+            invoiceTypes.add(InvoiceType.RENT.name());
+            invoiceTypes.add(InvoiceType.ADVANCE.name());
+            invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
+            invoiceTypes.add(InvoiceType.BOOKING.name());
         }
 
         String url =  reportsUrl + "/v2/reports/invoices/pdf/"+hostelId;
+        System.out.println("Invoice Report URL: " + url);
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
                 .queryParam("startDate", sDate)
                 .queryParam("endDate", eDate);
 
+        if (search != null && !search.isEmpty()) {
+            builder.queryParam("search", search);
+        }
+        if (paymentStatus != null && !paymentStatus.isEmpty()) {
+            builder.queryParam("paymentStatus", paymentStatus);
+        }
+        if (invoiceModes != null && !invoiceModes.isEmpty()) {
+            builder.queryParam("invoiceModes", invoiceModes);
+        }
+        if (invoiceTypes != null && !invoiceTypes.isEmpty()) {
+            builder.queryParam("invoiceTypes", invoiceTypes);
+        }
+        if (createdBy != null && !createdBy.isEmpty()) {
+            builder.queryParam("createdBy", createdBy);
+        }
+        if (period != null && !period.isEmpty()) {
+            builder.queryParam("period", period);
+        }
+        if (minPaidAmount != null) {
+            builder.queryParam("minPaidAmount", minPaidAmount);
+        }
+        if (maxPaidAmount != null) {
+            builder.queryParam("maxPaidAmount", maxPaidAmount);
+        }
+        if (minOutstandingAmount != null) {
+            builder.queryParam("minOutstandingAmount", minOutstandingAmount);
+        }
+        if (maxOutstandingAmount != null) {
+            builder.queryParam("maxOutstandingAmount", maxOutstandingAmount);
+        }
+
+        System.out.println("Invoice Report Download URL: " + builder.toUriString());
         String pdfUrl = downloadService.downloadFromUrl(builder.toUriString());
 
         if (pdfUrl == null) {

@@ -374,8 +374,12 @@ public class DashboardService {
     }
 
     private BillingSummary buildBillingSummary(String hostelId, String filter) {
+        System.out.println("filter---->>"+filter);
         DashboardDateRange dates = getDateRange(filter, hostelId);
+        System.out.println("date range--"+dates.startDate());
+        System.out.println("start and enddatee--"+dates.endDate());
         Map<String, Object> summary = invoiceV1Service.getBillingSummary(hostelId, dates.startDate(), dates.endDate());
+        System.out.println("summaryBilling"+summary.toString());
         Integer totalInvoiceGenerated = summary.get("totalInvoiceGenerated") != null ? ((Number) summary.get("totalInvoiceGenerated")).intValue() : 0;
         Double totalInvoiced = summary.get("totalInvoiced") != null ? ((Number) summary.get("totalInvoiced")).doubleValue() : 0.0;
         Double totalPaid = summary.get("totalPaid") != null ? ((Number) summary.get("totalPaid")).doubleValue() : 0.0;
@@ -666,8 +670,18 @@ public class DashboardService {
                 break;
             case "This Month": {
                 BillingDates bd = hostelService.getCurrentBillStartAndEndDates(hostelId);
-                startDate = bd.currentBillStartDate();
-                endDate = bd.currentBillEndDate();
+                if (bd.billingModel() != null && bd.billingModel().equalsIgnoreCase("POSTPAID")) {
+                    // For postpaid model, treat "This Month" as the previous billing cycle (last month)
+                    Calendar prevCycleCal = Calendar.getInstance();
+                    prevCycleCal.setTime(bd.currentBillStartDate());
+                    prevCycleCal.add(Calendar.DAY_OF_MONTH, -1);
+                    BillingDates prevBd = hostelService.getBillStartAndEndDateBasedOnDate(hostelId, prevCycleCal.getTime());
+                    startDate = prevBd.currentBillStartDate();
+                    endDate = prevBd.currentBillEndDate();
+                } else {
+                    startDate = bd.currentBillStartDate();
+                    endDate = bd.currentBillEndDate();
+                }
                 break;
             }
             case "Last Month": {
