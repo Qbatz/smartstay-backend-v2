@@ -293,11 +293,8 @@ public class ReportService {
             if (requestedAll.get()) {
                 pStatus = new ArrayList<>();
                 pStatus.add(PaymentStatus.PAID.name());
-//                pStatus.add(PaymentStatus.REFUNDED.name());
                 pStatus.add(PaymentStatus.PENDING.name());
                 pStatus.add(PaymentStatus.PARTIAL_PAYMENT.name());
-//                pStatus.add(PaymentStatus.PENDING_REFUND.name());
-//                pStatus.add(PaymentStatus.PARTIAL_REFUND.name());
             }
             else {
                 pStatus = paymentStatus
@@ -308,6 +305,15 @@ public class ReportService {
                 if (!pStatus.isEmpty()) {
                     pStatus = null;
                     isCancelledList = true;
+                }
+                else {
+                    pStatus = paymentStatus
+                            .stream()
+                            .filter(i -> !i.equalsIgnoreCase("CANCELLED"))
+                            .toList();
+                    if (!pStatus.isEmpty()) {
+                        isCancelledList = false;
+                    }
                 }
 
                 List<String> paymentStatusWithoutCancelled = paymentStatus
@@ -323,10 +329,6 @@ public class ReportService {
                 }
 
             }
-        }
-
-        if (isCancelledList != null && !isCancelledList) {
-            isCancelledList = null;
         }
 
         BillingDates dates = calculateDateRange(period, hostelId);

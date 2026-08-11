@@ -59,10 +59,4 @@ public class UsersController {
         return userService.requestPasswordReset(emailId);
     }
 
-    @GetMapping("/time/zone")
-    public ResponseEntity<?> getTimezone() {
-        ZonedDateTime now = ZonedDateTime.now();
-        return new ResponseEntity<>(now, HttpStatus.OK);
-    }
-
 }

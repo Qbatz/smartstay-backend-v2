@@ -14,5 +14,7 @@ public class RetainerItems {
     String invoiceNo;
     String invoiceDate;
     Double totalAmount;
+    //available amount
+    //applied amount = totalAmount - amount
     Double amount;
 }

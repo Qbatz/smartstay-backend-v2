@@ -7,6 +7,7 @@ import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.dashboard.BedsStatus;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.ennum.BedStatus;
+import com.smartstay.smartstay.ennum.BillingModel;
 import com.smartstay.smartstay.ennum.BookingStatus;
 import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.repositories.BedChangeRequestRepository;
@@ -374,7 +375,13 @@ public class DashboardService {
     }
 
     private BillingSummary buildBillingSummary(String hostelId, String filter) {
+
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
         DashboardDateRange dates = getDateRange(filter, hostelId);
+        if (billingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+            dates = getPostPaidDateRange(filter, hostelId);
+        }
+
         Map<String, Object> summary = invoiceV1Service.getBillingSummary(hostelId, dates.startDate(), dates.endDate());
         Integer totalInvoiceGenerated = summary.get("totalInvoiceGenerated") != null ? ((Number) summary.get("totalInvoiceGenerated")).intValue() : 0;
         Double totalInvoiced = summary.get("totalInvoiced") != null ? ((Number) summary.get("totalInvoiced")).doubleValue() : 0.0;
@@ -697,6 +704,87 @@ public class DashboardService {
                 BillingDates cycle3 = hostelService.getBillStartAndEndDateBasedOnDate(hostelId, walkBackCal.getTime());
                 startDate = cycle3.currentBillStartDate();
                 endDate = currentBd.currentBillEndDate();
+                break;
+            }
+            default: // Default 7 days
+                cal.add(Calendar.DAY_OF_MONTH, -7);
+                startDate = cal.getTime();
+                break;
+        }
+        return new DashboardDateRange(startDate, endDate);
+    }
+
+    private DashboardDateRange getPostPaidDateRange(String filter, String hostelId) {
+        Calendar cal = Calendar.getInstance();
+        Date endDate = cal.getTime();
+        Date startDate;
+        Date currentBillStartDate = new Date();
+        BillingDates currentBillingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        if (currentBillingDates != null) {
+            currentBillStartDate = currentBillingDates.currentBillStartDate();
+        }
+
+        switch (filter) {
+            case "Today":
+                cal.set(Calendar.HOUR_OF_DAY, 0);
+                cal.set(Calendar.MINUTE, 0);
+                cal.set(Calendar.SECOND, 0);
+                startDate = cal.getTime();
+                break;
+            case "This Week":
+                cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek());
+                startDate = cal.getTime();
+                break;
+            case "This Month": {
+                Calendar cal2 = Calendar.getInstance();
+                cal2.setTime(currentBillStartDate);
+                cal2.add(Calendar.MONTH, -1);
+
+                BillingDates bd = hostelService.getBillingRuleOnDate(hostelId, cal2.getTime());
+                startDate = bd.currentBillStartDate();
+                endDate = bd.currentBillEndDate();
+                break;
+            }
+            case "Last Month": {
+
+                Calendar cal2 = Calendar.getInstance();
+                cal2.setTime(currentBillStartDate);
+                cal2.add(Calendar.MONTH, -1);
+
+                BillingDates bd = hostelService.getBillingRuleOnDate(hostelId, cal2.getTime());
+
+//                BillingDates currentBd = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+                Calendar prevCycleCal = Calendar.getInstance();
+                prevCycleCal.setTime(bd.currentBillStartDate());
+                prevCycleCal.add(Calendar.DAY_OF_MONTH, -1);
+                BillingDates prevBd = hostelService.getBillStartAndEndDateBasedOnDate(hostelId, prevCycleCal.getTime());
+                startDate = prevBd.currentBillStartDate();
+                endDate = prevBd.currentBillEndDate();
+                break;
+            }
+            case "Last 3 Months": {
+//                BillingDates currentBd = hostelService.getCurrentBillStartAndEndDates(hostelId);
+
+                Calendar cal2 = Calendar.getInstance();
+                cal2.setTime(currentBillStartDate);
+                cal2.add(Calendar.MONTH, -1);
+
+                BillingDates bd = hostelService.getBillingRuleOnDate(hostelId, cal2.getTime());
+
+
+                Calendar walkBackCal = Calendar.getInstance();
+                walkBackCal.setTime(bd.currentBillStartDate());
+                walkBackCal.add(Calendar.DAY_OF_MONTH, -1);
+                BillingDates cycle1 = hostelService.getBillStartAndEndDateBasedOnDate(hostelId, walkBackCal.getTime());
+                walkBackCal.setTime(cycle1.currentBillStartDate());
+                walkBackCal.add(Calendar.DAY_OF_MONTH, -1);
+                BillingDates cycle2 = hostelService.getBillStartAndEndDateBasedOnDate(hostelId, walkBackCal.getTime());
+                walkBackCal.setTime(cycle2.currentBillStartDate());
+                walkBackCal.add(Calendar.DAY_OF_MONTH, -1);
+                BillingDates cycle3 = hostelService.getBillStartAndEndDateBasedOnDate(hostelId, walkBackCal.getTime());
+                startDate = cycle3.currentBillStartDate();
+                endDate = bd.currentBillEndDate();
                 break;
             }
             default: // Default 7 days

@@ -1623,7 +1623,7 @@ public class CustomersService {
             } else if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.WAITING_FOR_APPROVAL.name())) {
                 kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null, null, null);
             } else {
-                kycInfo = new KycInformations(KycStatus.REQUESTED.name(), null, null, null, null, null, null, null, null, null);
+                kycInfo = new KycInformations("PENDING", null, null, null, null, null, null, null, null, null);
             }
 
         }
@@ -3153,7 +3153,11 @@ public class CustomersService {
             if (advanceInvoice.getDeductions() != null) {
                 if (!advanceInvoice.getDeductions().isEmpty()) {
                     if (advanceInvoice.getPaidAmount() != null) {
-                        if (advanceInvoice.getPaidAmount() < advanceInvoice.getDeductionAmount()) {
+                        double deductionAmt = 0.0;
+                        if (advanceInvoice.getDeductionAmount() != null) {
+                            deductionAmt = advanceInvoice.getDeductionAmount();
+                        }
+                        if (advanceInvoice.getPaidAmount() < deductionAmt) {
                             checkInDeductions = advanceInvoice.getDeductions().stream().filter(i -> {
                                 if (i.getPaidAmount() == null) {
                                     return true;

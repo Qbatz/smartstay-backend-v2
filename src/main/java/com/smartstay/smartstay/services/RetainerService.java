@@ -650,6 +650,12 @@ public class RetainerService {
         invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
 
         List<InvoicesV1> listInvoices = invoicesV1Repository.findByCustomerIdAndInvoiceTypeIn(customerId, invoiceTypes);
+        if (listInvoices != null) {
+            listInvoices = listInvoices
+                    .stream()
+                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                    .toList();
+        }
 
         RetainerSummary summary = new RetainerSummary(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
         com.smartstay.smartstay.dto.customer.RetainerInfo retainerInfo = new com.smartstay.smartstay.dto.customer.RetainerInfo(summary, null);
@@ -665,8 +671,8 @@ public class RetainerService {
             totalRetainerAmount = listInvoices
                     .stream()
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -676,8 +682,8 @@ public class RetainerService {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -686,8 +692,8 @@ public class RetainerService {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -697,8 +703,8 @@ public class RetainerService {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -707,8 +713,8 @@ public class RetainerService {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })

@@ -2,6 +2,7 @@ package com.smartstay.smartstay.Wrappers.retainer;
 
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dto.customer.RetainerListItems;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.function.Function;
@@ -11,10 +12,22 @@ public class InvoiceRetainerItemsMapper implements Function<InvoicesV1, Retainer
     public RetainerListItems apply(InvoicesV1 invoicesV1) {
         String status = null;
 
+        Double invoiceTotalAmount = 0.0;
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            if (invoicesV1.getDeductionAmount() != null) {
+                if (invoicesV1.getDeductionAmount() > 0) {
+                    invoiceTotalAmount = invoicesV1.getTotalAmount() - invoicesV1.getDeductionAmount();
+                }
+            }
+        }
+        else {
+            invoiceTotalAmount = invoicesV1.getTotalAmount();
+        }
+
         if (invoicesV1.getBalanceAmount() != null) {
             if (invoicesV1.getBalanceAmount() > 0) {
                 if (invoicesV1.getBalanceAmount() < invoicesV1.getPaidAmount()) {
-                    status = "Partially Redeemed";
+                    status = "Partially Adjusted";
                 }
                 else {
                     status = "Available";
@@ -22,7 +35,10 @@ public class InvoiceRetainerItemsMapper implements Function<InvoicesV1, Retainer
             }
             else {
                 if (invoicesV1.getPaidAmount() > 0) {
-                    status = "Fully redeemed";
+                    status = "Fully Adjusted";
+                }
+                else {
+                    status = "Not available";
                 }
             }
         }
@@ -31,7 +47,7 @@ public class InvoiceRetainerItemsMapper implements Function<InvoicesV1, Retainer
                 status,
                 Utils.dateToString(invoicesV1.getInvoiceStartDate()),
                 invoicesV1.getInvoiceType(),
-                invoicesV1.getTotalAmount(),
+                invoiceTotalAmount,
                 invoicesV1.getBalanceAmount(),
                 "Cash");
     }

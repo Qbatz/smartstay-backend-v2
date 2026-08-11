@@ -302,6 +302,9 @@ public class KycServices {
 
                     kycRepository.save(kycDetails);
                 }
+                else {
+                    return null;
+                }
             }
 
         }

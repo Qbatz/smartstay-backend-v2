@@ -1538,9 +1538,23 @@ public class TransactionService {
                         return 0.0;
                     })
                     .sum();
+            double retainerAmount = listAllTransactions
+                    .stream()
+                    .filter(i -> i.getType() != null && (i.getType().equalsIgnoreCase(TransactionType.ADVANCE_HOLDING.name())))
+                    .mapToDouble(i -> {
+                        if (i.getPaidAmount() != null) {
+                            if (i.getPaidAmount() <0) {
+                                return i.getPaidAmount() * -1;
+                            }
+                            return i.getPaidAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            paidAmount = paidAmount + retainerAmount;
             refundAmount = listAllTransactions
                     .stream()
-                    .filter(i -> i.getType() != null)
+                    .filter(i -> i.getType() != null && (!i.getType().equalsIgnoreCase(TransactionType.ADVANCE_HOLDING.name())))
                     .mapToDouble(i -> {
                         if (i.getPaidAmount() != null) {
                             if (i.getPaidAmount() <0) {

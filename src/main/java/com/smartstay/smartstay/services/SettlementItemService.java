@@ -77,7 +77,7 @@ public class SettlementItemService {
                     List<RetainerItems> listRetainers = retainerInfo
                             .listRetainerItems()
                             .stream()
-                            .map(i -> new RetainerItems(i.invoiceId(), i.invoiceNumber(), i.invoiceDate(), i.availableAmount(), i.invoiceAmount()))
+                            .map(i -> new RetainerItems(i.invoiceId(), i.invoiceNumber(), i.invoiceDate(), i.invoiceAmount(), i.availableAmount()))
                             .toList();
                     settlementItems.setRetainerItems(listRetainers);
                 }

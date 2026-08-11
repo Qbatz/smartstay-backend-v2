@@ -20,6 +20,7 @@ import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.customer.InvoiceRefundHistory;
 import com.smartstay.smartstay.dto.customer.ReassignRent;
+import com.smartstay.smartstay.dto.customer.Summary;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoiceNotes.InvoiceNotes;
 import com.smartstay.smartstay.dto.invoices.*;
@@ -5506,8 +5507,8 @@ public class InvoiceV1Service {
             totalRetainerAmount = listInvoices
                     .stream()
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -5517,8 +5518,8 @@ public class InvoiceV1Service {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -5527,8 +5528,8 @@ public class InvoiceV1Service {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -5538,8 +5539,8 @@ public class InvoiceV1Service {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -5548,8 +5549,8 @@ public class InvoiceV1Service {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -5602,6 +5603,71 @@ public class InvoiceV1Service {
 
         String customerId = advanceInvoices.getCustomerId();
 
+        List<String> invoiceTypes = new ArrayList<>();
+        invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
+        invoiceTypes.add(InvoiceType.EB_HOLDING.name());
+        invoiceTypes.add(InvoiceType.BOOKING.name());
+        invoiceTypes.add(InvoiceType.ADVANCE.name());
+        List<InvoicesV1> listRetainerInvoices = invoicesV1Repository.findRetainerInvoicesByCustomerId(hostelId, customerId, invoiceTypes);
+        RetainerSummary retainerSummary = null;
+        if (listRetainerInvoices != null) {
+            double totalRetainerAmount = listRetainerInvoices
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getTotalAmount() != null) {
+                            return i.getTotalAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            double totalEbAmount = listRetainerInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            double totalAdvanceAmount = listRetainerInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            double totalBookingAmount = listRetainerInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            double totalRentAmount = listRetainerInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            retainerSummary = new RetainerSummary(totalRetainerAmount,
+                    totalBookingAmount,
+                    totalAdvanceAmount,
+                    totalEbAmount,
+                    totalRentAmount,
+                    0.0);
+        }
         List<InvoicesV1> listPendingInvoices = invoicesV1Repository.findPendingByHostelIdAndCustomerId(hostelId, customerId);
         List<InvoicesV1> invoiceItemsToShow = listPendingInvoices;
         List<TransactionV1> listTransactions;
@@ -5665,7 +5731,7 @@ public class InvoiceV1Service {
 
         List<InitializeInvoiceItems> listInvoiceItems = invoiceItemsToShow.stream().map(i -> new InitializeRedemptionMapper(listTransactions, listBanks).apply(i)).toList();
 
-        InitializeRedemption initializeRedemption = new InitializeRedemption(advanceInfo, customerInfo, listInvoiceItems);
+        InitializeRedemption initializeRedemption = new InitializeRedemption(advanceInfo, retainerSummary, customerInfo, listInvoiceItems);
 
         return new ResponseEntity<>(initializeRedemption, HttpStatus.OK);
     }
@@ -5912,8 +5978,8 @@ public class InvoiceV1Service {
             totalRetainerAmount = listInvoices
                     .stream()
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -5923,8 +5989,8 @@ public class InvoiceV1Service {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -5933,8 +5999,8 @@ public class InvoiceV1Service {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -5944,8 +6010,8 @@ public class InvoiceV1Service {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })
@@ -5954,8 +6020,8 @@ public class InvoiceV1Service {
                     .stream()
                     .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()))
                     .mapToDouble(i -> {
-                        if (i.getTotalAmount() != null) {
-                            return i.getTotalAmount();
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
                         }
                         return 0.0;
                     })

@@ -20,5 +20,6 @@ public record AdvanceListItems(
         boolean canRedeem,
         Double latestPayment,
         String latestPaymentDate,
-        String latestPaymentMode) {
+        String latestPaymentMode,
+        String status) {
 }
