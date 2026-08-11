@@ -89,4 +89,12 @@ public class AdditionalContactService {
         }
         return cac.getCustomerId().equalsIgnoreCase(customerId);
     }
+
+    public String getRelationName(Long relationId) {
+        com.smartstay.smartstay.dao.CustomerAdditionalContacts cac = customerAdditionalContactsRepositories.findById(relationId).orElse(null);
+        if (cac != null) {
+            return cac.getName();
+        }
+        return null;
+    }
 }

@@ -1538,9 +1538,23 @@ public class TransactionService {
                         return 0.0;
                     })
                     .sum();
+            double retainerAmount = listAllTransactions
+                    .stream()
+                    .filter(i -> i.getType() != null && (i.getType().equalsIgnoreCase(TransactionType.ADVANCE_HOLDING.name())))
+                    .mapToDouble(i -> {
+                        if (i.getPaidAmount() != null) {
+                            if (i.getPaidAmount() <0) {
+                                return i.getPaidAmount() * -1;
+                            }
+                            return i.getPaidAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            paidAmount = paidAmount + retainerAmount;
             refundAmount = listAllTransactions
                     .stream()
-                    .filter(i -> i.getType() != null)
+                    .filter(i -> i.getType() != null && (!i.getType().equalsIgnoreCase(TransactionType.ADVANCE_HOLDING.name())))
                     .mapToDouble(i -> {
                         if (i.getPaidAmount() != null) {
                             if (i.getPaidAmount() <0) {
@@ -1605,6 +1619,7 @@ public class TransactionService {
         transactionV1.setStatus(PaymentStatus.PAID.name());
         transactionV1.setInvoiceId(invoicesV1.getInvoiceId());
         transactionV1.setHostelId(invoicesV1.getHostelId());
+        transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setPaymentDate(paymentDate);
         transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
         transactionV1.setSource(authentication.getSource());

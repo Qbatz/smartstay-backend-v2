@@ -73,6 +73,12 @@ public class TransctionsForCustomerDetails implements Function<TransactionDto, c
             else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
                 billName = "Booking";
             }
+            else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name())) {
+                billName = "Advance Holding";
+            }
+            else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name())) {
+                billName = "EB Holding";
+            }
 
             if (invoicesV1.isCancelled()) {
                 isInvoiceCancelled = true;

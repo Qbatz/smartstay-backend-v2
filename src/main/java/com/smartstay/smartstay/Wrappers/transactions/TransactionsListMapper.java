@@ -61,6 +61,8 @@ public class TransactionsListMapper implements Function<TransactionV1, ReceiptsL
                 case "REASSIGN_RENT" -> "Reassigned Rent";
                 case "SETTLEMENT" ->  "Settlement";
                 case "REFUND" -> "Refund";
+                case "AMOUNT_HOLDING" -> "Advance Holding";
+                case "EB_HOLDING" -> "EB Holding";
                 default -> "Others";
             };
             invoiceType = type;

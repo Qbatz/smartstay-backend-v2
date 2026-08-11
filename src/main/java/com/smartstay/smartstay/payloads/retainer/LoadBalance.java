@@ -9,6 +9,8 @@ public record LoadBalance(String relationId,
                           String paymentDate,
                           String mobile,
                           String relationName,
+                          String description,
+                          String detailedDescription,
                           @NotNull(message = "Invoice type required")
                           @NotEmpty(message = "Invoice type required")
                           @NotBlank(message = "Invoice type is required")

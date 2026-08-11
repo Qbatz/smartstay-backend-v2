@@ -23,6 +23,7 @@ public record FinalSettlementInvoice(HeaderInfo headerInfo,
                                      CurrentMonthEbInfo currentMonthEbInfo,
                                      WalletInfo walletInfo,
                                      InvoiceInfo invoiceInfo,
+                                     RetainerInfo retainerInfo,
                                      List<InvoiceRefundHistory> refundHistory,
                                      List<InvoiceRefundHistory> paymentHistory) {
 }

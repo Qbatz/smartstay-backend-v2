@@ -20,11 +20,15 @@ import com.smartstay.smartstay.dto.bills.PaymentSummary;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.customer.InvoiceRefundHistory;
 import com.smartstay.smartstay.dto.customer.ReassignRent;
+import com.smartstay.smartstay.dto.customer.Summary;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.invoiceNotes.InvoiceNotes;
 import com.smartstay.smartstay.dto.invoices.*;
 import com.smartstay.smartstay.dto.pagination.PaginationSummary;
+import com.smartstay.smartstay.dto.retainer.RetainerSummary;
 import com.smartstay.smartstay.dto.settlement.CurrentMonthOtherItems;
 import com.smartstay.smartstay.dto.settlement.EBItems;
+import com.smartstay.smartstay.dto.settlement.RetainerItems;
 import com.smartstay.smartstay.dto.settlement.WalltetItems;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
@@ -104,6 +108,8 @@ public class InvoiceV1Service {
     @Autowired
     private InvoiceItemService invoiceItemService;
     @Autowired
+    private InvoiceNotesService invoiceNotesService;
+    @Autowired
     private CreditDebitNoteService creditDebitNoteService;
     @Autowired
     private RentHistoryService rentHistoryService;
@@ -121,6 +127,10 @@ public class InvoiceV1Service {
     private TableColumnService tableColumnService;
     @Autowired
     private SettlementItemService settlementItemService;
+    @Autowired
+    private RetainerRelationService retainerRelationService;
+    @Autowired
+    private TenantBankTransactionService tenantBankTransactionService;
     private TransactionService transactionService;
 
     private BookingsService bookingsService;
@@ -1856,6 +1866,10 @@ public class InvoiceV1Service {
                     Utils.roundOffWithTwoDigit(discountedAmount), discountedPercentage,
                     invoiceRentalPeriod.toString(),
                     invoiceMonth.toString(), paymentStatus, invoicesV1.getInvoiceMode(),
+                    invoicesV1.getInvoiceType(),
+                    null,
+                    null,
+                    null,
                     invoicesV1.isCancelled(),
                     cancelledOn,
                     invoicesV1.isDiscounted(),
@@ -1920,8 +1934,6 @@ public class InvoiceV1Service {
             appliedInvoicesInfo = listInvoicesApplied.stream().map(i -> new AppliedInvoicesMapper(sourceInvoices).apply(i)).toList();
             double appliedAmount = listInvoicesApplied.stream().mapToDouble(InvoiceRedemption::getRedemptionAmount).sum();
             amountSettled = new AmountSettled(Utils.roundOffWithTwoDigit(appliedAmount), listInvoicesApplied.size(), appliedInvoicesInfo);
-
-
         }
 
         Double total1 = 0.0;
@@ -1940,29 +1952,7 @@ public class InvoiceV1Service {
         }
 
 
-        InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
-                invoiceDate,
-                Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
-                Utils.roundOffWithTwoDigit(discountedAmount),
-                discountedPercentage,
-                invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus,
-                invoicesV1.getInvoiceMode(),
-                invoicesV1.isCancelled(),
-                cancelledOn,
-                invoicesV1.isDiscounted(),
-                discountReason,
-                deductionAmount,
-                isInvoicesAvailableForRedeem,
-                false,
-                total1,
-                total2,
-                Utils.roundOffWithTwoDigit(availableCreditAmount),
-                isAdvanceAvailableForRedeem,
-                canApplyToOtherInvoice,
-                Utils.roundOffWithTwoDigit(availableAdvanceAmount),
-                listInvoiceItems,
-                listDeductions,
-                amountSettled);
+        InvoiceInfo invoiceInfo = null;
 
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
             boolean canRedeemBooking = false;
@@ -1987,6 +1977,10 @@ public class InvoiceV1Service {
                     invoiceRentalPeriod.toString(), invoiceMonth.toString(),
                     paymentStatus,
                     invoicesV1.getInvoiceMode(),
+                    invoicesV1.getInvoiceType(),
+                    null,
+                    null,
+                    null,
                     invoicesV1.isCancelled(),
                     cancelledOn,
                     invoicesV1.isDiscounted(),
@@ -2001,6 +1995,49 @@ public class InvoiceV1Service {
                     false,
                     Utils.roundOffWithTwoDigit(availableAdvanceAmount),
                     listInvoiceItems, null,
+                    amountSettled);
+        }
+        else {
+            String paidBy = null;
+            String description = null;
+            String detailedDescription = null;
+
+            if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()) ||
+                    invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name())) {
+                paidBy = retainerRelationService.getRelationDetails(invoicesV1.getInvoiceId());
+                InvoiceNotes invoiceNotes = invoiceNotesService.getInvoiceNotes(invoicesV1.getInvoiceId());
+                if (invoiceNotes != null) {
+                    description = invoiceNotes.description();
+                    detailedDescription = invoiceNotes.detailedDescription();
+                }
+            }
+
+            invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
+                    invoiceDate,
+                    Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
+                    Utils.roundOffWithTwoDigit(discountedAmount),
+                    discountedPercentage,
+                    invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus,
+                    invoicesV1.getInvoiceMode(),
+                    invoicesV1.getInvoiceType(),
+                    paidBy,
+                    description,
+                    detailedDescription,
+                    invoicesV1.isCancelled(),
+                    cancelledOn,
+                    invoicesV1.isDiscounted(),
+                    discountReason,
+                    deductionAmount,
+                    isInvoicesAvailableForRedeem,
+                    false,
+                    total1,
+                    total2,
+                    Utils.roundOffWithTwoDigit(availableCreditAmount),
+                    isAdvanceAvailableForRedeem,
+                    canApplyToOtherInvoice,
+                    Utils.roundOffWithTwoDigit(availableAdvanceAmount),
+                    listInvoiceItems,
+                    listDeductions,
                     amountSettled);
         }
 
@@ -2215,6 +2252,30 @@ public class InvoiceV1Service {
         }
 
         currentRentInfo = new CurrentRentInfo(currentMonthLabelText, Utils.roundOffWithTwoDigit(currentPaidAmount), Utils.roundOffWithTwoDigit(currentPayablemount), Utils.roundOffWithTwoDigit(stayDays), Utils.roundOffWithTwoDigit(currentMonthPayableRent), Utils.roundOffWithTwoDigit(currentMonthOtherAmounts), listRentBreakUp, listCurrentMonthOtherItems);
+        RetainerInfo retainerInfo = null;
+        if (settlementItems.getRetainerItems() != null) {
+            List<RetainerItems> listRetainerItems = settlementItems.getRetainerItems();
+            int noOfRetaineApplied = listRetainerItems.size();
+            double totalRetainerApplied = listRetainerItems
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getAmount() != null) {
+                            return i.getAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            List<com.smartstay.smartstay.responses.settlement.RetainerItems> items = listRetainerItems
+                    .stream()
+                    .map(i -> new com.smartstay.smartstay.responses.settlement.RetainerItems(i.getInvoiceId(),
+                            i.getInvoiceNo(),
+                            i.getAmount()))
+                    .toList();
+
+            retainerInfo = new RetainerInfo(noOfRetaineApplied,
+                    totalRetainerApplied,
+                    items);
+        }
 
         HeaderInfo headerInfo = null;
         if (hostelV1 != null) {
@@ -2247,15 +2308,30 @@ public class InvoiceV1Service {
         List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(invoicesV1.getHostelId(), invoicesList);
         Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1, invoiceSummaries);
 
-        FinalSettlementInvoice finalSettlementResponse = new FinalSettlementInvoice(headerInfo, stayInfo, accountDetails, signatureInfo, customerInfo, unpaidInvoiceInfo, deductionsInfo, advanceItems, bookingItems, currentRentInfo, currentMonthEbInfo, walletInfo, invoiceInfo, historyMap.get("refundHistory"), historyMap.get("paymentHistory"));
+        FinalSettlementInvoice finalSettlementResponse = new FinalSettlementInvoice(headerInfo,
+                stayInfo,
+                accountDetails,
+                signatureInfo,
+                customerInfo,
+                unpaidInvoiceInfo,
+                deductionsInfo,
+                advanceItems,
+                bookingItems,
+                currentRentInfo,
+                currentMonthEbInfo,
+                walletInfo,
+                invoiceInfo,
+                retainerInfo,
+                historyMap.get("refundHistory"),
+                historyMap.get("paymentHistory"));
 
 
         return new ResponseEntity<>(finalSettlementResponse, HttpStatus.OK);
     }
 
 
-    public List<InvoiceResponse> getInvoiceResponseList(String customerId) {
-        List<InvoicesV1> invoices = invoicesV1Repository.findByCustomerIdOrderByInvoiceStartDateDesc(customerId);
+    public List<InvoiceResponse> getInvoiceResponseList(String customerId, List<String> invoiceTypes) {
+        List<InvoicesV1> invoices = invoicesV1Repository.findNonRetainerInvoiceByCustomerId(customerId, invoiceTypes);
 
         return invoices.stream().map(InvoiceMapper::toResponse).toList();
 
@@ -5214,11 +5290,16 @@ public class InvoiceV1Service {
         double redemptionAmount = listRedemptions.stream().mapToDouble(RedemptionItems::amount).sum();
         AtomicBoolean isAmountExceeded = new AtomicBoolean(false);
 
+        HashMap<String, Double> appliedInvoices = new HashMap<>();
+
         listInvoices.forEach(item -> {
             RedemptionItems redemptionItems = listRedemptions.stream().filter(i -> i.invoiceId().equalsIgnoreCase(item.getInvoiceId())).findFirst().orElse(null);
             if (redemptionItems != null) {
                 if (redemptionItems.amount() > (item.getTotalAmount() - item.getPaidAmount())) {
                     isAmountExceeded.set(true);
+                }
+                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name())) {
+                    appliedInvoices.put(redemptionItems.invoiceId(), redemptionItems.amount());
                 }
             }
         });
@@ -5228,8 +5309,8 @@ public class InvoiceV1Service {
         }
 
 
-        List<com.smartstay.smartstay.dao.InvoiceRedemption> ir = invoiceRedemptionService.redeemInvoice(hostelId, invoicesV1.getInvoiceId(), listRedemptions, redeemedAt, invoiceRedemption.reason());
 
+        List<com.smartstay.smartstay.dao.InvoiceRedemption> ir = invoiceRedemptionService.redeemInvoice(hostelId, invoicesV1.getInvoiceId(), listRedemptions, redeemedAt, invoiceRedemption.reason());
         if (ir != null) {
             invoicesV1.setBalanceAmount(invoicesV1.getBalanceAmount() - redemptionAmount);
             invoicesV1Repository.save(invoicesV1);
@@ -5326,6 +5407,10 @@ public class InvoiceV1Service {
                 return i;
             }).toList();
 
+            if (!appliedInvoices.isEmpty()) {
+                tenantBankTransactionService.addRetainerTransactionForRedemption(hostelId, invoicesV1.getCustomerId(), appliedInvoices, redeemedAt);
+            }
+
 
             invoicesV1Repository.saveAll(listNewInvoices);
 
@@ -5412,8 +5497,79 @@ public class InvoiceV1Service {
                 advanceListItems = new ArrayList<>();
             }
 
+            Double totalRetainerAmount = 0.0;
+            Double totalAdvanceAmount = 0.0;
+            Double totalBookingAmount = 0.0;
+            Double totalRentAmount = 0.0;
+            Double totalEbAmount = 0.0;
+            Double totalOtherAmount = 0.0;
 
-            AdvanceList advanceList = new AdvanceList(totalAdvanceInvoice, currentPage, totalPages, noOfItemsPerPage, advanceListItems);
+            totalRetainerAmount = listInvoices
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            totalAdvanceAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            totalBookingAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            totalRentAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            totalEbAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            RetainerSummary retainerSummary = new RetainerSummary(Utils.roundOffWithTwoDigit(totalRetainerAmount),
+                    Utils.roundOffWithTwoDigit(totalBookingAmount),
+                    Utils.roundOffWithTwoDigit(totalAdvanceAmount),
+                    Utils.roundOffWithTwoDigit(totalEbAmount),
+                    Utils.roundOffWithTwoDigit(totalRentAmount),
+                    0.0);
+
+
+            AdvanceList advanceList = new AdvanceList(totalAdvanceInvoice,
+                    currentPage,
+                    totalPages,
+                    noOfItemsPerPage,
+                    retainerSummary,
+                    advanceListItems);
 
             return new ResponseEntity<>(advanceList, HttpStatus.OK);
         }
@@ -5447,6 +5603,71 @@ public class InvoiceV1Service {
 
         String customerId = advanceInvoices.getCustomerId();
 
+        List<String> invoiceTypes = new ArrayList<>();
+        invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
+        invoiceTypes.add(InvoiceType.EB_HOLDING.name());
+        invoiceTypes.add(InvoiceType.BOOKING.name());
+        invoiceTypes.add(InvoiceType.ADVANCE.name());
+        List<InvoicesV1> listRetainerInvoices = invoicesV1Repository.findRetainerInvoicesByCustomerId(hostelId, customerId, invoiceTypes);
+        RetainerSummary retainerSummary = null;
+        if (listRetainerInvoices != null) {
+            double totalRetainerAmount = listRetainerInvoices
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getTotalAmount() != null) {
+                            return i.getTotalAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            double totalEbAmount = listRetainerInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            double totalAdvanceAmount = listRetainerInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            double totalBookingAmount = listRetainerInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            double totalRentAmount = listRetainerInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            retainerSummary = new RetainerSummary(totalRetainerAmount,
+                    totalBookingAmount,
+                    totalAdvanceAmount,
+                    totalEbAmount,
+                    totalRentAmount,
+                    0.0);
+        }
         List<InvoicesV1> listPendingInvoices = invoicesV1Repository.findPendingByHostelIdAndCustomerId(hostelId, customerId);
         List<InvoicesV1> invoiceItemsToShow = listPendingInvoices;
         List<TransactionV1> listTransactions;
@@ -5510,7 +5731,7 @@ public class InvoiceV1Service {
 
         List<InitializeInvoiceItems> listInvoiceItems = invoiceItemsToShow.stream().map(i -> new InitializeRedemptionMapper(listTransactions, listBanks).apply(i)).toList();
 
-        InitializeRedemption initializeRedemption = new InitializeRedemption(advanceInfo, customerInfo, listInvoiceItems);
+        InitializeRedemption initializeRedemption = new InitializeRedemption(advanceInfo, retainerSummary, customerInfo, listInvoiceItems);
 
         return new ResponseEntity<>(initializeRedemption, HttpStatus.OK);
     }
@@ -5745,6 +5966,73 @@ public class InvoiceV1Service {
 
 
             Pageable pageableRequest = PageRequest.of(page - 1, size);
+            List<InvoicesV1> listInvoices = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, listCustomerIds, invoiceTypes);
+
+            Double totalRetainerAmount = 0.0;
+            Double totalAdvanceAmount = 0.0;
+            Double totalBookingAmount = 0.0;
+            Double totalRentAmount = 0.0;
+            Double totalEbAmount = 0.0;
+            Double totalOtherAmount = 0.0;
+
+            totalRetainerAmount = listInvoices
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            totalAdvanceAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            totalBookingAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            totalRentAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            totalEbAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            RetainerSummary retainerSummary = new RetainerSummary(Utils.roundOffWithTwoDigit(totalRetainerAmount),
+                    Utils.roundOffWithTwoDigit(totalBookingAmount),
+                    Utils.roundOffWithTwoDigit(totalAdvanceAmount),
+                    Utils.roundOffWithTwoDigit(totalEbAmount),
+                    Utils.roundOffWithTwoDigit(totalRentAmount),
+                    0.0);
 
             Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, minimumAmount, maximumAmount, pageableRequest);
 
@@ -5764,7 +6052,7 @@ public class InvoiceV1Service {
             List<BedDetails> finalListBedDetails = listBedDetails;
             List<List<Object>> listBookingInvoices = listAdvanceInvoices.stream().map(i -> new BookingsTableMapper(tableColumns, listCustomers, finalListAllCheckedInCustomers, finalListBedDetails).apply(i)).toList();
 
-            BookingsWebResponse bookingsWebResponse = new BookingsWebResponse(totalAdvanceInvoice, currentPage, totalPages, noOfItemsPerPage, bookingsFilterOptions, tableColumns, listColumns, listBookingInvoices);
+            BookingsWebResponse bookingsWebResponse = new BookingsWebResponse(totalAdvanceInvoice, currentPage, totalPages, noOfItemsPerPage, retainerSummary, bookingsFilterOptions, tableColumns, listColumns, listBookingInvoices);
 
             return new ResponseEntity<>(bookingsWebResponse, HttpStatus.OK);
         }
@@ -6145,4 +6433,5 @@ public class InvoiceV1Service {
         return invoicesV1Repository.findAllInvoicesByHostelIdForHostelId(hostelId, startDate, endDate, customerIds, types, createdBy, invoiceModes, paymentStatus, isCancelledList, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageableRequest);
 
     }
+
 }

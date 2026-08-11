@@ -33,6 +33,9 @@ public class SettlementItems {
     @Column(columnDefinition = "TEXT")
     @Convert(converter = SettlementEBItemsConverter.class)
     private List<EBItems> ebItems;
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = SettlementRetainerItemsConverter.class)
+    private List<RetainerItems> retainerItems;
 
     private Double currentMonthPayableAmount;
     private Double currentMonthPaidAmount;
@@ -43,6 +46,7 @@ public class SettlementItems {
     private String invoiceId;
     private Double bookingBalance;
     private Double advanceBalance;
+    private Double retainerBalance;
     private Date createAt;
     private String createdBy;
 }

@@ -2,10 +2,8 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.SettlementItems;
-import com.smartstay.smartstay.dto.settlement.CurrentOtherItems;
-import com.smartstay.smartstay.dto.settlement.CurrentRentBreakUp;
-import com.smartstay.smartstay.dto.settlement.SettlementUnpaidInvoices;
-import com.smartstay.smartstay.dto.settlement.WalltetItems;
+import com.smartstay.smartstay.dto.retainer.RetainerInfo;
+import com.smartstay.smartstay.dto.settlement.*;
 import com.smartstay.smartstay.repositories.SettlementItemsRepository;
 import com.smartstay.smartstay.responses.customer.FinalSettlement;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
@@ -72,6 +70,26 @@ public class SettlementItemService {
                 }
 
             }
+            if (settlementInfo.retainerItems() != null) {
+                RetainerInfo retainerInfo = settlementInfo.retainerItems();
+                if (retainerInfo.totalRetainerInvoices() > 0) {
+                    settlementItems.setRetainerBalance(retainerInfo.totalAvailableAmount());
+                    List<RetainerItems> listRetainers = retainerInfo
+                            .listRetainerItems()
+                            .stream()
+                            .map(i -> new RetainerItems(i.invoiceId(), i.invoiceNumber(), i.invoiceDate(), i.invoiceAmount(), i.availableAmount()))
+                            .toList();
+                    settlementItems.setRetainerItems(listRetainers);
+                }
+                else {
+                    settlementItems.setRetainerBalance(0.0);
+                }
+            }
+            else {
+                settlementItems.setRetainerBalance(0.0);
+            }
+
+
             settlementItems.setHostelId(hostelId);
             settlementItems.setCustomerId(customerId);
             settlementItems.setInvoiceId(invoiceId);

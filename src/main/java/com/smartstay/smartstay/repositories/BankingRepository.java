@@ -126,4 +126,5 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
             SELECT b FROM BankingV1 b WHERE b.bankId NOT IN (:bankId) AND b.isDeleted=false AND b.hostelId=:hostelId
             """)
     List<BankingV1> findByBankIdNotInAndIsDeletedFalse(List<String> bankId, String hostelId);
+
 }

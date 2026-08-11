@@ -46,6 +46,7 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
         Double latestTransactionAmount = 0.0;
         String latestTransactionDate = null;
         String latestTransactionMode = null;
+        String status = "Redeemed";
 
         if (listCustomers != null) {
             Customers customers = listCustomers
@@ -159,6 +160,21 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
             }
         }
 
+        if (invoicesV1.getBalanceAmount() != null) {
+            if (invoicesV1.getBalanceAmount().equals(invoicesV1.getTotalAmount())) {
+                status = "Available";
+            }
+            else if (invoicesV1.getBalanceAmount() < invoicesV1.getTotalAmount()) {
+                if (invoicesV1.getBalanceAmount() == 0) {
+                    status = "Redeemed";
+                }
+                status = "Partially Redeemed";
+            }
+            else {
+                status = "Redeemed";
+            }
+        }
+
 
         return new AdvanceListItems(invoicesV1.getInvoiceId(),
                 invoicesV1.getInvoiceNumber(),
@@ -179,6 +195,7 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
                 canRedeem,
                 latestTransactionAmount,
                 latestTransactionDate,
-                latestTransactionMode);
+                latestTransactionMode,
+                status);
     }
 }

@@ -30,6 +30,7 @@ public class BankingV1 {
     String upiId;
     String creditCardNumber;
     String debitCardNumber;
+    //BankAccountType enum
     String accountType;
     String description;
     String userId;

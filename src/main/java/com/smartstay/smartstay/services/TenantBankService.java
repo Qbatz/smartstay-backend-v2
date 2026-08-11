@@ -33,4 +33,30 @@ public class TenantBankService {
 
         return existingBalance + amount;
     }
+
+    /**
+     *
+     * this is to debit the amount from retainer
+     *
+     * @param hostelId
+     * @param invoiceId
+     * @param customerId
+     * @param appliedAmount
+     */
+    public double adjustRetainerBalance(String customerId, Double appliedAmount) {
+        TenantBanking tenantBanking = tenantBankingRepository.findByCustomerId(customerId);
+        if (tenantBanking != null) {
+            double existingBalance = 0.0;
+            if (tenantBanking.getAmount() != null) {
+                existingBalance = tenantBanking.getAmount();
+            }
+            tenantBanking.setAmount(existingBalance - appliedAmount);
+            tenantBanking.setLastUpdate(new Date());
+
+            TenantBanking newBanking = tenantBankingRepository.save(tenantBanking);
+            return newBanking.getAmount();
+
+        }
+        return 0.0;
+    }
 }

@@ -1,12 +1,15 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.retainer.InvoiceRetainerItemMapper;
+import com.smartstay.smartstay.Wrappers.retainer.InvoiceRetainerItemsMapper;
 import com.smartstay.smartstay.Wrappers.retainer.InvoicesInvoiceInfoMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
+import com.smartstay.smartstay.dto.customer.RetainerListItems;
 import com.smartstay.smartstay.dto.retainer.RetainerInfo;
 import com.smartstay.smartstay.dto.retainer.RetainerItems;
+import com.smartstay.smartstay.dto.retainer.RetainerSummary;
 import com.smartstay.smartstay.ennum.InvoiceMode;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
@@ -66,6 +69,8 @@ public class RetainerService {
     private InvoiceRedemptionService invoiceRedemptionService;
     @Autowired
     private InvoiceDiscountService invoiceDiscountService;
+    @Autowired
+    private InvoiceNotesService invoiceNotesService;
 
     public ResponseEntity<?> addMoney(String hostelId, String customerId, LoadBalance loadBalance) {
         if (!authentication.isAuthenticated()) {
@@ -191,7 +196,7 @@ public class RetainerService {
         invoicesV1.setInvoiceItems(listInvoiceItems);
 
         InvoicesV1 createdInvoice = invoicesV1Repository.save(invoicesV1);
-
+        invoiceNotesService.addNotes(customerId, hostelId, createdInvoice.getInvoiceId(), loadBalance.description(), loadBalance.detailedDescription());
         retainerRelationService.addRelationForDeposit(customerId, hostelId, loadBalance, isRegisteredRelation, createdInvoice);
         transactionService.addRetainerTransaction(createdInvoice, loadBalance);
         tenantBankTransactionService.addRetainerTransaction(createdInvoice, loadBalance, paymentDate, isRegisteredRelation);
@@ -217,13 +222,13 @@ public class RetainerService {
             }
             int newNum = oldNum + 1;
             if (newNum < 10) {
-                return "RET-000" + newNum;
-            }
-            else if (newNum < 100) {
                 return "RET-00" + newNum;
             }
-            else if (newNum < 1000) {
+            else if (newNum < 100) {
                 return "RET-0" + newNum;
+            }
+            else if (newNum < 1000) {
+                return "RET-" + newNum;
             }
 
             return "RET-" + String.valueOf(newNum);
@@ -468,7 +473,7 @@ public class RetainerService {
         }
 
         invoiceRedemptionService.applyInvoiceFromRetainer(hostelId, invoicesV1.getInvoiceId(), appliedInvoicesList, redeemedAt);
-
+        tenantBankTransactionService.addRetainerTransactionForRedemption(hostelId, invoicesV1.getInvoiceId(), invoicesV1.getCustomerId(), appliedInvoicesList, appliedAmount, redeemedAt);
         invoicesV1Repository.save(invoicesV1);
 
         List<InvoicesV1> newInvoices = new ArrayList<>();
@@ -557,7 +562,7 @@ public class RetainerService {
                 .toList();
 
         invoiceRedemptionService.applyInvoiceFromRetainer(hostelId, invoicesV1.getInvoiceId(), appliedAmountInvoiceIdMapper, redeemedAt);
-
+        tenantBankTransactionService.addRetainerTransactionForRedemption(hostelId, invoicesV1.getInvoiceId(), invoicesV1.getCustomerId(), appliedAmountInvoiceIdMapper, appliedAmount, redeemedAt);
         double invoicePaid = 0.0;
         if (invoicesV1.getPaidAmount() != null) {
             invoicePaid = invoicesV1.getPaidAmount();
@@ -574,6 +579,10 @@ public class RetainerService {
             invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
         }
         invoicesV1Repository.save(invoicesV1);
+
+        if (!listNewInvoiceAfterRedeeming.isEmpty()) {
+            invoicesV1Repository.saveAll(listNewInvoiceAfterRedeeming);
+        }
 
         return new ResponseEntity<>(HttpStatus.OK);
 
@@ -616,5 +625,116 @@ public class RetainerService {
                 totalRetinerValue,
                 listRetainerItems);
 
+    }
+
+    public void updateBalanceOfRetainerInvoices(String customerId) {
+        List<String> retainerInvoices = new ArrayList<>();
+        retainerInvoices.add(InvoiceType.AMOUNT_HOLDING.name());
+        retainerInvoices.add(InvoiceType.EB_HOLDING.name());
+
+        List<InvoicesV1> listAvailableInvoices = invoicesV1Repository.findRetainersByCustomerIdAndInvoiceTypes(customerId, retainerInvoices);
+        if (listAvailableInvoices != null && !listAvailableInvoices.isEmpty()) {
+            List<InvoicesV1> listInvoicesUpdates = listAvailableInvoices
+                    .stream()
+                    .peek(i -> i.setBalanceAmount(0.0))
+                    .toList();
+            invoicesV1Repository.saveAll(listInvoicesUpdates);
+        }
+    }
+
+    public com.smartstay.smartstay.dto.customer.RetainerInfo getRetaineListByCUstomerId(String customerId) {
+        List<String> invoiceTypes = new ArrayList<>();
+        invoiceTypes.add(InvoiceType.ADVANCE.name());
+        invoiceTypes.add(InvoiceType.BOOKING.name());
+        invoiceTypes.add(InvoiceType.EB_HOLDING.name());
+        invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
+
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findByCustomerIdAndInvoiceTypeIn(customerId, invoiceTypes);
+        if (listInvoices != null) {
+            listInvoices = listInvoices
+                    .stream()
+                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+                    .toList();
+        }
+
+        RetainerSummary summary = new RetainerSummary(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        com.smartstay.smartstay.dto.customer.RetainerInfo retainerInfo = new com.smartstay.smartstay.dto.customer.RetainerInfo(summary, null);
+
+        if (listInvoices != null) {
+            Double totalRetainerAmount = 0.0;
+            Double totalAdvanceAmount = 0.0;
+            Double totalBookingAmount = 0.0;
+            Double totalRentAmount = 0.0;
+            Double totalEbAmount = 0.0;
+            Double totalOtherAmount = 0.0;
+
+            totalRetainerAmount = listInvoices
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            totalAdvanceAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            totalBookingAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            totalRentAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            totalEbAmount = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()))
+                    .mapToDouble(i -> {
+                        if (i.getBalanceAmount() != null) {
+                            return i.getBalanceAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+
+            RetainerSummary retainerSummary = new RetainerSummary(Utils.roundOffWithTwoDigit(totalRetainerAmount),
+                    Utils.roundOffWithTwoDigit(totalBookingAmount),
+                    Utils.roundOffWithTwoDigit(totalAdvanceAmount),
+                    Utils.roundOffWithTwoDigit(totalEbAmount),
+                    Utils.roundOffWithTwoDigit(totalRentAmount),
+                    0.0);
+            List<RetainerListItems> retainerItems = listInvoices
+                    .stream()
+                    .map(i -> new InvoiceRetainerItemsMapper().apply(i))
+                    .toList();
+
+            return new com.smartstay.smartstay.dto.customer.RetainerInfo(retainerSummary, retainerItems);
+
+        }
+
+        return retainerInfo;
     }
 }
