@@ -134,15 +134,15 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
                 }
                 else if (invoicesV1.getBalanceAmount() < invoicesV1.getTotalAmount()) {
                     if (invoicesV1.getBalanceAmount() == 0) {
-                        return "Redeemed";
+                        return "Fully Adjusted";
                     }
-                    return "Partially Redeemed";
+                    return "Partially Adjusted";
                 }
                 else {
-                    return "Redeemed";
+                    return "Fully Adjusted";
                 }
             }
-            return "Redeemed";
+            return "Fully Adjusted";
         }
         return "NA";
     }
@@ -153,10 +153,10 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
                 return "Available";
             }
             else if (invoicesV1.getBalanceAmount() < invoicesV1.getTotalAmount()) {
-                return "Partially Redeemed";
+                return "Partially Adjusted";
             }
             else {
-                return "Redeemed";
+                return "Fully Adjusted";
             }
         }
         return "Not Available";
