@@ -12,6 +12,7 @@ import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> {
@@ -23,8 +24,10 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
 
     List<InvoicesV1> pendingInvoices = null;
     private List<TransactionV1> listTrasactions = null;
+    /** Pre-computed set of invoice IDs that are active redemption sources. */
+    private Set<String> sourceInvoiceIds = null;
 
-    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts, List<InvoiceRedemption> listAppliedInvoices, List<InvoicesV1> listAdvanceInvoices, List<InvoicesV1> pendingInvoices, List<TransactionV1> transactions) {
+    public NewInvoiceListMapper(List<Customers> customers, List<Users> createdBy, List<InvoiceDiscounts> listInvoiceDiscounts, List<InvoiceRedemption> listAppliedInvoices, List<InvoicesV1> listAdvanceInvoices, List<InvoicesV1> pendingInvoices, List<TransactionV1> transactions, Set<String> sourceInvoiceIds) {
         this.listCustomers = customers;
         this.listCreatedBy = createdBy;
         this.listInvoiceDiscounts = listInvoiceDiscounts;
@@ -32,6 +35,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
         this.listAdvances = listAdvanceInvoices;
         this.pendingInvoices = pendingInvoices;
         this.listTrasactions = transactions;
+        this.sourceInvoiceIds = sourceInvoiceIds;
     }
 
     @Override
@@ -288,6 +292,10 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
 
         if (invoicesV1.getInvoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name()) && (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) && (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))) {
             canUnpaid = true;
+        }
+
+        if (canUnpaid && sourceInvoiceIds != null && sourceInvoiceIds.contains(invoicesV1.getInvoiceId())) {
+            canUnpaid = false;
         }
 
         if (canUnpaid && listTrasactions != null) {

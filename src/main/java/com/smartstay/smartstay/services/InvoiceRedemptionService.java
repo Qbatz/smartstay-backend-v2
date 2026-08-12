@@ -22,9 +22,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class InvoiceRedemptionService {
@@ -212,5 +214,17 @@ public class InvoiceRedemptionService {
        });
 
         invoiceRedemptionRepository.saveAll(listInvoiceRedeemed);
+    }
+
+    /**
+     * Returns the subset of the supplied invoice IDs that appear as an active
+     * {@code source_invoice_id} in the {@code invoice_redemption} table.
+     * Use this to perform a single bulk check instead of N per-invoice queries.
+     */
+    public Set<String> getSourceInvoiceIds(List<String> invoiceIds) {
+        if (invoiceIds == null || invoiceIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return invoiceRedemptionRepository.findSourceInvoiceIdsBySourceInvoiceIds(invoiceIds);
     }
 }

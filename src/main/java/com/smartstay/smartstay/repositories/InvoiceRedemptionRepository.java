@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface InvoiceRedemptionRepository extends JpaRepository<InvoiceRedemption, Long> {
@@ -39,5 +40,12 @@ public interface InvoiceRedemptionRepository extends JpaRepository<InvoiceRedemp
             ir.isActive=true
             """)
     List<InvoiceRedemption> findByHostelIdAndTargetId(String hostelId, String invoiceId);
+
+    @Query("""
+            SELECT DISTINCT ir.sourceInvoiceId FROM InvoiceRedemption ir
+            WHERE ir.sourceInvoiceId IN (:sourceInvoiceIds)
+            AND ir.isActive = true
+            """)
+    Set<String> findSourceInvoiceIdsBySourceInvoiceIds(@Param("sourceInvoiceIds") List<String> sourceInvoiceIds);
 
 }

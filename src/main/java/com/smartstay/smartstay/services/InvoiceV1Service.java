@@ -762,8 +762,17 @@ public class InvoiceV1Service {
         listInvoiceTypes.add(InvoiceType.EB_HOLDING.name());
 
         List<InvoicesV1> listRetainerInvoices = invoicesV1Repository.findRetainerInvoicesByHostelId(hostelId, listInvoiceTypes);
+
+        Set<String> sourceInvoiceIds;
+        if (!listAllInvoice.isEmpty()) {
+            List<String> allInvoiceIds = listAllInvoice.stream().map(InvoicesV1::getInvoiceId).toList();
+            sourceInvoiceIds = invoiceRedemptionService.getSourceInvoiceIds(allInvoiceIds);
+        } else {
+            sourceInvoiceIds = Collections.emptySet();
+        }
+
         List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers,
-                listInvoiceDiscounts, listInvoiceRedeemed, listRetainerInvoices, listAllInvoiceForCustomer, listTransactions).apply(i)).toList();
+                listInvoiceDiscounts, listInvoiceRedeemed, listRetainerInvoices, listAllInvoiceForCustomer, listTransactions, sourceInvoiceIds).apply(i)).toList();
 
         if (authentication.getSource().equalsIgnoreCase("web")) {
 //            List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
@@ -1905,11 +1914,23 @@ public class InvoiceV1Service {
                 case "ADVANCE" -> description = "Advance";
                 case "EB" -> description = "Electricity Bill";
                 case "AMENITY" -> description = "Amenity";
-                case "OTHERS" -> description = item.getOtherItem() != null ? item.getOtherItem() : "Others";
+                case "OTHERS" -> {
+                    String otherItem = item.getOtherItem();
+                    description = switch (otherItem) {
+                        case "EB_holding" -> "Advance EB";
+                        case "amount_holding" -> "Advance Rent";
+                        case "other_holding" -> "Other Retainer amount";
+                        default -> otherItem != null ? otherItem : "Others";
+                    };
+                }
                 default -> description = Utils.capitalize(item.getInvoiceItem());
             }
-            com.smartstay.smartstay.responses.invoices.InvoiceItems responseItem = new com.smartstay.smartstay.responses.invoices.InvoiceItems(invoicesV1.getInvoiceNumber(), description, Utils.roundOffWithTwoDigit(item.getAmount()));
-
+            com.smartstay.smartstay.responses.invoices.InvoiceItems responseItem =
+                    new com.smartstay.smartstay.responses.invoices.InvoiceItems(
+                            invoicesV1.getInvoiceNumber(),
+                            description,
+                            Utils.roundOffWithTwoDigit(item.getAmount())
+                    );
             listInvoiceItems.add(responseItem);
         }
         List<InvoiceRefundHistory> paymentHistoryList = transactionService.findByInvoiceId(invoiceId);
