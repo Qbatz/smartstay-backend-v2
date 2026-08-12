@@ -149,6 +149,12 @@ public class CustomersService {
     private CustomerDocumentsService customerDocumentsService;
     @Autowired
     private SubscriptionService subscriptionService;
+    private InvoiceRedemptionService invoiceRedemptionService;
+
+    @Autowired
+    public void setInvoiceRedemptionService(@Lazy InvoiceRedemptionService invoiceRedemptionService) {
+        this.invoiceRedemptionService = invoiceRedemptionService;
+    }
 
     @Autowired
     public void setKycServices(@Lazy KycServices kycServices) {
@@ -1463,6 +1469,10 @@ public class CustomersService {
                 .collect(Collectors.toMap(InvoiceDiscounts::getInvoiceId, InvoiceDiscounts::getDiscountAmount));
         
         boolean isSettlementGenerated = CustomerStatus.SETTLEMENT_GENERATED.name().equalsIgnoreCase(customers.getCurrentStatus());
+
+        // Bulk-load the set of invoice IDs that are active redemption sources — one DB call for the whole list.
+        Set<String> sourceInvoiceIds = invoiceRedemptionService.getSourceInvoiceIds(invoiceIds);
+
         invoiceResponseList = invoiceResponseList.stream().map(inv -> {
             boolean isPaidOrPartial = "PAID".equalsIgnoreCase(inv.paymentStatus()) || "PARTIAL_PAYMENT".equalsIgnoreCase(inv.paymentStatus());
             boolean canUnpaid = inv.invoiceMode().equalsIgnoreCase(InvoiceMode.MANUAL.name()) && isPaidOrPartial && !isSettlementGenerated && (inv.invoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || inv.invoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name()));
@@ -1474,6 +1484,10 @@ public class CustomersService {
             //transactions iruntha, means record payment kudutha unpaid ah matha mudiyathu
             List<TransactionV1> transactionV1s = transactionService.getTransactionsByInvoiceId(inv.invoiceId());
             if (canUnpaid && transactionV1s != null && !transactionV1s.isEmpty()) {
+                canUnpaid = false;
+            }
+            // Invoice redemption source check — if this invoice's funds were redeemed to another invoice, block unpaid.
+            if (canUnpaid && sourceInvoiceIds.contains(inv.invoiceId())) {
                 canUnpaid = false;
             }
             // Calculate canEdit and discountAmount
