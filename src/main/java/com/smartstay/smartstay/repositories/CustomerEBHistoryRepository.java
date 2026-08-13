@@ -33,7 +33,11 @@ public interface CustomerEBHistoryRepository extends JpaRepository<CustomersEbHi
 
     @Query(value = """
             SELECT ebHis.customer_id as customerId, flrs.floor_name as floorName, rms.room_name as roomName, 
-            bed.bed_name as bedName, cus.first_name as firstName, cus.last_name as lastName, cus.profile_pic as profilePic, 
+            bed.bed_name as bedName, cus.first_name as firstName, cus.last_name as lastName, 
+            COALESCE(
+               NULLIF(TRIM(cus.profile_pic), ''),
+               CASE WHEN kyc.current_status = 'VERIFIED' AND NULLIF(TRIM(kyc.id_pic), '') IS NOT NULL THEN kyc.id_pic ELSE NULL END
+            ) as profilePic, 
             (SELECT amount from customers_eb_history h where h.customer_id=ebHis.customer_id ORDER BY h.end_date DESC LIMIT 1) as amount, 
             (SELECT bed_id from customers_eb_history h where h.customer_id=ebHis.customer_id ORDER BY h.end_date DESC LIMIT 1) as bedId, 
             (SELECT floor_id from customers_eb_history h where h.customer_id=ebHis.customer_id ORDER BY h.end_date DESC LIMIT 1) as floorId, 
@@ -45,7 +49,9 @@ public interface CustomerEBHistoryRepository extends JpaRepository<CustomersEbHi
             FROM customers_eb_history ebHis LEFT OUTER JOIN beds bed on bed.bed_id=ebHis.bed_id 
             LEFT OUTER JOIN rooms rms on rms.room_id=ebHis.room_id 
             LEFT OUTER join floors flrs on flrs.floor_id=rms.floor_id 
-            INNER JOIN customers cus on cus.customer_id=ebHis.customer_id where ebHis.room_id in (:roomIds) 
+            INNER JOIN customers cus on cus.customer_id=ebHis.customer_id 
+            LEFT JOIN kyc_details kyc on kyc.customer_id=cus.customer_id 
+            where ebHis.room_id in (:roomIds) 
             GROUP BY ebHis.customer_id ORDER BY ebHis.end_date;
             """, nativeQuery = true)
     List<ElectricityCustomersList> fetchAllCustomersList(List<Integer> roomIds);
