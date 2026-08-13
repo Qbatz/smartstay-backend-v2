@@ -2087,6 +2087,8 @@ public class InvoiceV1Service {
         double discountAmount = 0.0;
         String discountReason = null;
         boolean isDiscounted = false;
+        double totalRefundable = 0.0;
+        double totalPayable = 0.0;
 
         double currentPayablemount = 0.0;
         double currentPaidAmount = 0.0;
@@ -2286,6 +2288,7 @@ public class InvoiceV1Service {
                         return 0.0;
                     })
                     .sum();
+            totalRefundable = totalRefundable + totalRetainerApplied;
             List<com.smartstay.smartstay.responses.settlement.RetainerItems> items = listRetainerItems
                     .stream()
                     .map(i -> new com.smartstay.smartstay.responses.settlement.RetainerItems(i.getInvoiceId(),
@@ -2307,9 +2310,8 @@ public class InvoiceV1Service {
         finalAmount = Utils.roundOfDouble(invoicesV1.getTotalAmount()) + deductionAmount;
         finalAmount = finalAmount + unpaidInvoiceAmount + electricityAmount;
 
-        double totalRefundable = 0.0;
-        double totalPayable = 0.0;
-        totalRefundable = availableAdvanceBalance + availableBookingBalance;
+        totalRefundable = totalRefundable + availableAdvanceBalance + availableBookingBalance;
+
         if (walletAmount <= 0) {
             totalRefundable = totalRefundable + (walletAmount * -1);
         } else {
@@ -5470,7 +5472,7 @@ public class InvoiceV1Service {
         int noOfItemsPerPage = 10;
         int totalPages = 1;
 
-        List<BookingsV1> customerBookings = bookingsService.getAllBookedAndCheckedInCustomers(hostelId);
+        List<BookingsV1> customerBookings = bookingsService.getAllCheckedInCustomer(hostelId);
         List<String> listCustomerIds = new ArrayList<>();
         if (customerBookings != null) {
             listCustomerIds = customerBookings.stream().map(BookingsV1::getCustomerId).toList();

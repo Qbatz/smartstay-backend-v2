@@ -431,7 +431,6 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND i.isCancelled=false AND i.balanceAmount > 0
             """)
     List<InvoicesV1> findRetainerInvoicesByHostelId(String hostelId, List<String> invoiceTypes);
-
     @Query(value = """
             SELECT i FROM InvoicesV1 i, BookingsV1 b, Rooms r  WHERE i.customerId = b.customerId AND r.roomId = b.roomId AND 
             i.hostelId=:hostelId AND 
