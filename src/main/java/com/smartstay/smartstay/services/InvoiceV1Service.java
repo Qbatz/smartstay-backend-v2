@@ -1916,11 +1916,13 @@ public class InvoiceV1Service {
                 case "AMENITY" -> description = "Amenity";
                 case "OTHERS" -> {
                     String otherItem = item.getOtherItem();
-                    description = switch (otherItem) {
-                        case "EB_holding" -> "Advance EB";
+                    description = otherItem == null
+                            ? "Others"
+                            : switch (otherItem.toLowerCase()) {
+                        case "eb_holding" -> "Advance EB";
                         case "amount_holding" -> "Advance Rent";
                         case "other_holding" -> "Other Retainer amount";
-                        default -> otherItem != null ? otherItem : "Others";
+                        default -> otherItem;
                     };
                 }
                 default -> description = Utils.capitalize(item.getInvoiceItem());
