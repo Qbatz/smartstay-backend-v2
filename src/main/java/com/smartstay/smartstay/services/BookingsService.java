@@ -1579,6 +1579,29 @@ public class BookingsService {
             return new JoiningDateValidationResult(false, "CUSTOMER_HAS_BED_REASSIGNMENT_HISTORY", Utils.CUSTOMER_DID_THE_BED_CHANGE);
         }
 
+        // Retainer invoice date validation: new joining date must not be later than any retainer invoice date
+        List<String> retainerInvoiceTypes = java.util.Arrays.asList(
+                InvoiceType.ADVANCE.name(),
+                InvoiceType.AMOUNT_HOLDING.name(),
+                InvoiceType.EB_HOLDING.name()
+        );
+        List<InvoicesV1> retainerInvoices = invoicesV1Repository.findRetainersByCustomerIdAndInvoiceTypes(
+                customers.getCustomerId(), retainerInvoiceTypes);
+        if (retainerInvoices != null && !retainerInvoices.isEmpty()) {
+            for (InvoicesV1 retainerInvoice : retainerInvoices) {
+                Date retainerDate = retainerInvoice.getInvoiceDate() != null
+                        ? retainerInvoice.getInvoiceDate()
+                        : retainerInvoice.getInvoiceStartDate();
+                if (retainerDate != null && Utils.compareWithTwoDates(newJoiningDate, retainerDate) > 0) {
+                    return new JoiningDateValidationResult(
+                            false,
+                            "CANNOT_CHANGE_JOINING_DATE_AFTER_RETAINER_INVOICE_DATE",
+                            Utils.CANNOT_CHANGE_JOINING_DATE_AFTER_RETAINER_DATE
+                    );
+                }
+            }
+        }
+
         List<String> rentInvoiceTypes = java.util.Arrays.asList(InvoiceType.RENT.name(), InvoiceType.REASSIGN_RENT.name());
         List<InvoicesV1> currentMonthInvoices = invoicesV1Repository.findAllCurrentMonthInvoices(customers.getCustomerId(), hostelId, currentMonthBilling.currentBillStartDate());
 
