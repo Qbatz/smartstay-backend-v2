@@ -9,6 +9,8 @@ import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.util.Utils;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +19,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -43,6 +48,11 @@ public class SmartstayApplication {
     private static final String DEFAULT_BANK_ACCOUNT_TYPE = "Savings";
     private static final String MIGRATION_PLATFORM = "web";
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    private static final int REFERENCE_PAGE_SIZE = 500;
+
     @Bean
     CommandLineRunner migrateBankingV1ToBankingV2(BankingRepository bankingV1Repository,
                                                   BankingV2Repository bankingV2Repository,
@@ -58,6 +68,118 @@ public class SmartstayApplication {
                 System.out.print("Failed => "+ e.getMessage());
             }
         };
+    }
+
+    @Bean
+    CommandLineRunner migrateTransactionReferencesToBankingV2(
+            TransactionV1Repository transactionV1Repository,
+            BankTransactionRepository bankTransactionRepository,
+            BankingIdsRepository bankingIdsRepository,
+            PlatformTransactionManager transactionManager) {
+        return args -> {
+            try {
+                new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                        updateTransactionReferences(transactionV1Repository, bankTransactionRepository,
+                                bankingIdsRepository));
+            } catch (Exception e) {
+                System.out.print("Failed => "+ e.getMessage());
+            }
+        };
+    }
+
+    private void updateTransactionReferences(TransactionV1Repository transactionV1Repository,
+                                             BankTransactionRepository bankTransactionRepository,
+                                             BankingIdsRepository bankingIdsRepository) {
+        BankingIdMappings mappings = readIdMappings(bankingIdsRepository);
+
+        updateTransactionBankIds(transactionV1Repository, mappings);
+        updateBankTransactionReferences(bankTransactionRepository, mappings);
+    }
+
+    private BankingIdMappings readIdMappings(BankingIdsRepository bankingIdsRepository) {
+        List<BankingIds> mappings = bankingIdsRepository.findAll();
+
+        Map<String, String> bankIdV2ByV1Id = mappings.stream()
+                .filter(mapping -> mapping.getPaymentMethod() == null)
+                .filter(mapping -> mapping.getBankIdV1() != null && mapping.getBankIdV2() != null)
+                .collect(Collectors.toMap(BankingIds::getBankIdV1, BankingIds::getBankIdV2,
+                        (first, duplicate) -> first));
+
+        Map<String, String> methodIdV2ByV1Id = mappings.stream()
+                .filter(mapping -> mapping.getPaymentMethodIdV1() != null
+                        && mapping.getPaymentMethodIdV2() != null)
+                .collect(Collectors.toMap(BankingIds::getPaymentMethodIdV1, BankingIds::getPaymentMethodIdV2,
+                        (first, duplicate) -> first));
+
+        return new BankingIdMappings(bankIdV2ByV1Id, methodIdV2ByV1Id);
+    }
+
+    private void updateTransactionBankIds(TransactionV1Repository transactionV1Repository,
+                                          BankingIdMappings mappings) {
+        for (int pageNumber = 0; ; pageNumber++) {
+            Page<TransactionV1> page = transactionV1Repository.findAll(nextPage(pageNumber));
+            if (page.isEmpty()) {
+                return;
+            }
+
+            List<TransactionV1> changed = page.getContent().stream()
+                    .filter(transaction -> mappings.bankIdV2ByV1Id().containsKey(transaction.getBankId()))
+                    .toList();
+            changed.forEach(transaction ->
+                    transaction.setBankId(mappings.bankIdV2ByV1Id().get(transaction.getBankId())));
+            transactionV1Repository.saveAll(changed);
+
+            releasePage();
+            if (!page.hasNext()) {
+                return;
+            }
+        }
+    }
+
+    private void updateBankTransactionReferences(BankTransactionRepository bankTransactionRepository,
+                                                 BankingIdMappings mappings) {
+        for (int pageNumber = 0; ; pageNumber++) {
+            Page<BankTransactionsV1> page = bankTransactionRepository.findAll(nextPage(pageNumber));
+            if (page.isEmpty()) {
+                return;
+            }
+
+            List<BankTransactionsV1> changed = page.getContent().stream()
+                    .filter(row -> mappings.bankIdV2ByV1Id().containsKey(row.getBankId())
+                            || mappings.methodIdV2ByV1Id().containsKey(row.getPaymentMethodId()))
+                    .toList();
+            changed.forEach(row -> applyMappedIds(row, mappings));
+            bankTransactionRepository.saveAll(changed);
+
+            releasePage();
+            if (!page.hasNext()) {
+                return;
+            }
+        }
+    }
+
+    private void applyMappedIds(BankTransactionsV1 row, BankingIdMappings mappings) {
+        String bankIdV2 = mappings.bankIdV2ByV1Id().get(row.getBankId());
+        if (bankIdV2 != null) {
+            row.setBankId(bankIdV2);
+        }
+        String methodIdV2 = mappings.methodIdV2ByV1Id().get(row.getPaymentMethodId());
+        if (methodIdV2 != null) {
+            row.setPaymentMethodId(methodIdV2);
+        }
+    }
+
+    private PageRequest nextPage(int pageNumber) {
+        return PageRequest.of(pageNumber, REFERENCE_PAGE_SIZE, Sort.by("transactionId"));
+    }
+
+    private void releasePage() {
+        entityManager.flush();
+        entityManager.clear();
+    }
+
+    private record BankingIdMappings(Map<String, String> bankIdV2ByV1Id,
+                                     Map<String, String> methodIdV2ByV1Id) {
     }
 
     private void migrateBankingAccounts(BankingRepository bankingV1Repository,
