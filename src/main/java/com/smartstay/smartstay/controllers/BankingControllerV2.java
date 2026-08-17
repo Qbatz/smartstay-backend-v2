@@ -36,12 +36,10 @@ public class BankingControllerV2 {
         return bankingServiceV2.addBank(hostelId, payload);
     }
 
-    // Paginated list of a hostel's bank accounts.
+    // All of a hostel's bank accounts & newest first.
     @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getBanks(@PathVariable("hostelId") String hostelId,
-            @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
-        return bankingServiceV2.getBanks(hostelId, page, size);
+    public ResponseEntity<?> getBanks(@PathVariable("hostelId") String hostelId) {
+        return bankingServiceV2.getBanks(hostelId);
     }
 
     // Users (with roles) mapped to the hostel, for the CASH account "responsible person" picker.

@@ -38,7 +38,6 @@ import com.smartstay.smartstay.responses.banking.MonthMetric;
 import com.smartstay.smartstay.responses.banking.OverviewFilterOptions;
 import com.smartstay.smartstay.responses.banking.FilterOption;
 import com.smartstay.smartstay.responses.banking.TransactionFilterOptions;
-import com.smartstay.smartstay.responses.banking.BankV2ListResponse;
 import com.smartstay.smartstay.responses.banking.BankV2Response;
 import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
 import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
@@ -222,7 +221,7 @@ public class BankingServiceV2 {
         return new ResponseEntity<>(new BankingV2Mapper().apply(bankingV2, responsiblePersonName), HttpStatus.CREATED);
     }
 
-    public ResponseEntity<?> getBanks(String hostelId, Integer page, Integer size) {
+    public ResponseEntity<?> getBanks(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -237,12 +236,7 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        int pageNumber = (page == null || page < 1) ? 1 : page;
-        int pageSize = (size == null || size < 1) ? 10 : size;
-        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
-
-        Page<BankingV2> bankPage = bankingV2Repository.findBanksByHostelId(hostelId, pageable);
-        List<BankingV2> content = bankPage.getContent();
+        List<BankingV2> content = bankingV2Repository.findBanksByHostelId(hostelId);
 
         List<String> personIds = content.stream()
                 .map(BankingV2::getResponsiblePerson)
@@ -260,13 +254,7 @@ public class BankingServiceV2 {
                         ? personNameById.get(bank.getResponsiblePerson()) : null))
                 .collect(Collectors.toList());
 
-        BankV2ListResponse response = new BankV2ListResponse(
-                bankPage.getTotalElements(),
-                bankPage.getPageable().getPageNumber() + 1,
-                bankPage.getTotalPages(),
-                pageSize,
-                banks);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(banks, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getResponsiblePersons(String hostelId) {
