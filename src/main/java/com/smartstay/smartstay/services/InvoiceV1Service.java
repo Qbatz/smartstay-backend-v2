@@ -644,7 +644,6 @@ public class InvoiceV1Service {
             dEndDate = Utils.stringToDate(endDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
         List<String> invoiceTypes = null;
-        Boolean isCancelled = null;
         if (types != null) {
             invoiceTypes = types;
         } else {
@@ -671,11 +670,9 @@ public class InvoiceV1Service {
                     .filter(i -> i.equalsIgnoreCase("ALL"))
                     .toList();
             if (allPaymentStatus != null && !allPaymentStatus.isEmpty()) {
-                isCancelled = null;
                 pStatus = null;
             }
             else {
-                isCancelled = false;
                 pStatus = paymentStatus;
             }
         }
@@ -717,9 +714,9 @@ public class InvoiceV1Service {
         List<InvoicesV1> listAllInvoice = new ArrayList<>();
         Page<InvoicesV1> pageList = null;
 
-        listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey, isCancelled);
+        listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelIdForInvoice(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey);
         if (authentication.getSource().equalsIgnoreCase("web")) {
-            pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey, isCancelled, pageableRequest);
+            pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey, pageableRequest);
             if (pageList != null) {
                 listAllInvoice = pageList.getContent();
             }
@@ -2362,15 +2359,24 @@ public class InvoiceV1Service {
 
     }
 
-    public void cancelActiveInvoice(List<InvoicesV1> unpaidUpdated) {
+    public List<CancelledInvoice> cancelActiveInvoice(List<InvoicesV1> unpaidUpdated) {
+        List<CancelledInvoice> listCancelledInvoices = new ArrayList<>(unpaidUpdated.stream().map(i -> {
+           CancelledInvoice ci = new CancelledInvoice();
+           ci.setInvoiceId(i.getInvoiceId());
+           ci.setPaymentStatus(i.getPaymentStatus());
+           return ci;
+        }).toList());
         List<InvoicesV1> listNewInvoices = unpaidUpdated.stream().map(i -> {
             i.setCancelled(true);
+            i.setPaymentStatus(PaymentStatus.CANCELLED.name());
             return i;
         }).toList();
         invoicesV1Repository.saveAll(listNewInvoices);
+
+        return listCancelledInvoices;
     }
 
-    public InvoicesV1 createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate, Users users, List<Deductions> checkInDeductions) {
+    public InvoicesV1 createSettlementInvoice(Customers customers, String hostelId, double totalAmountToBePaid, List<InvoicesV1> unpaidInvoices, List<Deductions> listDeductions, Double totalAmountWithoutDeduction, Date leavingDate, Users users, List<Deductions> checkInDeductions, List<CancelledInvoice> cancelledInvoices) {
         List<InvoicesV1> invoicesV1 = invoicesV1Repository.findByCustomerIdAndInvoiceType(customers.getCustomerId(), InvoiceType.SETTLEMENT.name());
         List<Deductions> settlementDeductions = listDeductions;
         if (checkInDeductions != null) {
@@ -2383,13 +2389,24 @@ public class InvoiceV1Service {
             InvoicesV1 settlementInvoice = invoicesV1.get(0);
 
             List<String> listUnpaidInvoicesId = new ArrayList<>(unpaidInvoices.stream().map(InvoicesV1::getInvoiceId).toList());
+//            List<CancelledInvoice> listNewCancelledInvoices = new ArrayList<>(unpaidInvoices
+//                    .stream()
+//                    .map(i -> {
+//                        CancelledInvoice ci = new CancelledInvoice();
+//                        ci.setInvoiceId(i.getInvoiceId());
+//                        ci.setPaymentStatus(i.getPaymentStatus());
+//                        return ci;
+//                    }).toList());
+
 
             settlementInvoice.setSubTotal(Utils.roundOfDouble(totalAmountToBePaid));
             settlementInvoice.setDeductions(settlementDeductions);
             settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
+            settlementInvoice.setNewCancelledInvoices(cancelledInvoices);
             settlementInvoice.setBasePrice(Utils.roundOfDouble(totalAmountWithoutDeduction));
             settlementInvoice.setSubTotal(Utils.roundOfDouble(totalAmountToBePaid));
             settlementInvoice.setTotalAmount(Utils.roundOfDouble(totalAmountToBePaid));
+//            settlementInvoice.setNewCancelledInvoices(listNewCancelledInvoices);
             if (Utils.roundOfDouble(totalAmountToBePaid) == 0) {
                 settlementInvoice.setPaymentStatus(PaymentStatus.PAID.name());
             } else if (Utils.roundOfDouble(totalAmountToBePaid) > 0) {
@@ -2440,6 +2457,14 @@ public class InvoiceV1Service {
             cancelActiveInvoice(unpaidInvoices);
 
             List<String> listUnpaidInvoicesId = unpaidInvoices.stream().map(InvoicesV1::getInvoiceId).toList();
+//            List<CancelledInvoice> listCancelledNewInvoice = unpaidInvoices.stream().
+//                    map(i -> {
+//                        CancelledInvoice ci = new CancelledInvoice();
+//                        ci.setInvoiceId(i.getInvoiceId());
+//                        ci.setPaymentStatus(i.getPaymentStatus());
+//
+//                        return ci;
+//                    }).toList();
             InvoicesV1 settlementInvoice = new InvoicesV1();
             settlementInvoice.setCancelledInvoices(listUnpaidInvoicesId);
             settlementInvoice.setCustomerId(customers.getCustomerId());
@@ -2475,6 +2500,7 @@ public class InvoiceV1Service {
             settlementInvoice.setInvoiceEndDate(leavingDate);
             settlementInvoice.setCreatedAt(new Date());
             settlementInvoice.setUpdatedAt(new Date());
+            settlementInvoice.setNewCancelledInvoices(cancelledInvoices);
 
             List<InvoiceItems> listInvoiceItems = settlementDeductions.stream().map(i -> {
                 InvoiceItems invoiceItems = new InvoiceItems();
@@ -4014,7 +4040,7 @@ public class InvoiceV1Service {
         return users.stream().map(u -> new Object[]{u.getUserId(), u.getFirstName(), u.getLastName()}).collect(Collectors.toList());
     }
 
-    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, Boolean isCancelled) {
+    public List<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount) {
         Double minPaid = null;
         Double maxPaid = null;
         if (minPaidAmount != null && minPaidAmount != 0) {
@@ -4035,7 +4061,7 @@ public class InvoiceV1Service {
             }
 
         }
-        return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate, customerIds, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaid, maxPaid, minOutstandingAmount, maxOutstandingAmount, isCancelled);
+        return invoicesV1Repository.findInvoicesByFilters(hostelId, startDate, endDate, customerIds, paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaid, maxPaid, minOutstandingAmount, maxOutstandingAmount);
     }
 
 
@@ -5153,9 +5179,9 @@ public class InvoiceV1Service {
             return i;
         }).toList();
 
-        cancelActiveInvoice(invoicesHasToBeCancelled);
+        List<CancelledInvoice> cancelledInvoices = cancelActiveInvoice(invoicesHasToBeCancelled);
 
-        return createSettlementInvoice(customers, hostelId, round, listInvoices, deductions, amoutToBePaidWithoutDeductions, leavingDate, users, checkInDeductions);
+        return createSettlementInvoice(customers, hostelId, round, listInvoices, deductions, amoutToBePaidWithoutDeductions, leavingDate, users, checkInDeductions, cancelledInvoices);
     }
 
     public InvoicesV1 createSettlementInvoiceForFixedPrepaid(Customers customers, String hostelId, double totalAmountToBePaid, List<String> listUnpaidInvoices, List<Deductions> lisDeductions, double amountToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid, List<Deductions> checkInDeductions) {
@@ -5179,8 +5205,8 @@ public class InvoiceV1Service {
             return i;
         }).toList();
 
-        cancelActiveInvoice(invoicesHasToBeCancelled);
-        return createSettlementInvoice(customers, hostelId, totalAmountToBePaid, listInvoices, lisDeductions, amountToBePaidWithoutDeductions, leavingDate, users, checkInDeductions);
+        List<CancelledInvoice> oldStatus = cancelActiveInvoice(invoicesHasToBeCancelled);
+        return createSettlementInvoice(customers, hostelId, totalAmountToBePaid, listInvoices, lisDeductions, amountToBePaidWithoutDeductions, leavingDate, users, checkInDeductions, oldStatus);
     }
 
     public void modifyCurrentMonthDiscount(String customerId, String hostelId, double discountAmount, BillingDates billDate) {
@@ -6430,7 +6456,7 @@ public class InvoiceV1Service {
         return new ResponseEntity<>(invoiceDiscount, HttpStatus.OK);
     }
 
-    public Page<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, Boolean isCancelledList, Pageable pageableRequest) {
+    public Page<InvoicesV1> getInvoicesForReport(String hostelId, Date startDate, Date endDate, String search, List<String> paymentStatus, List<String> invoiceModes, List<String> invoiceTypes, List<String> createdBy, Double minPaidAmount, Double maxPaidAmount, Double minOutstandingAmount, Double maxOutstandingAmount, Pageable pageableRequest) {
 
         List<String> types = null;
         if (invoiceTypes != null) {
@@ -6455,8 +6481,61 @@ public class InvoiceV1Service {
 
         }
 
-        return invoicesV1Repository.findAllInvoicesByHostelIdForHostelId(hostelId, startDate, endDate, customerIds, types, createdBy, invoiceModes, paymentStatus, isCancelledList, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageableRequest);
+        return invoicesV1Repository.findAllInvoicesByHostelIdForHostelId(hostelId, startDate, endDate, customerIds, types, createdBy, invoiceModes, paymentStatus, minPaidAmount, maxPaidAmount, minOutstandingAmount, maxOutstandingAmount, pageableRequest);
 
     }
 
+    public ResponseEntity<?> getRetainerInvoicesBasicList(String hostelId, int page, int size, String searchKey, String period, String floor, String room, String minimumAmount, String maxAmount, String startDate, String endDate) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        List<String> invoiceTypes = new ArrayList<>();
+        invoiceTypes.add(InvoiceType.EB_HOLDING.name());
+        invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
+
+        List<String> customerIds = null;
+        Date dStartDate = null;
+        Date dEndDate = null;
+
+        if (searchKey != null) {
+            List<Customers> listCustomers = customersService.searchCustomerByHostelName(hostelId, searchKey);
+            if (listCustomers != null) {
+                customerIds = listCustomers
+                        .stream()
+                        .map(Customers::getCustomerId)
+                        .toList();
+            }
+        }
+
+        if (customerIds != null && customerIds.isEmpty()) {
+            customerIds = null;
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+
+
+        Page<InvoicesV1> retainerLists = invoicesV1Repository.findRetainerBasicList(hostelId, customerIds, searchKey, invoiceTypes, dStartDate, dEndDate, null, pageable);
+        if (retainerLists != null) {
+            List<InvoicesV1> listAllInvoice = retainerLists.getContent();
+            List<String> cIds = listAllInvoice.stream().map(InvoicesV1::getCustomerId).toList();
+            List<Customers> listCustomers = customersService.getCustomerDetails(cIds);
+            List<InvoiceBasicList> invoiceBasicLists = listAllInvoice.stream().map(i -> new InvoiceBasicMapper(listCustomers).apply(i)).toList();
+
+            return new ResponseEntity<>(invoiceBasicLists, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+    }
 }

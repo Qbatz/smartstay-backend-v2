@@ -1027,6 +1027,9 @@ public class TransactionService {
             itemsPerPage = webTransactions.getPageable().getPageSize();
             secondaryTransactions = webTransactions.getContent();
         }
+        else {
+
+        }
 
 
         Double receivedAmount = 0.0;

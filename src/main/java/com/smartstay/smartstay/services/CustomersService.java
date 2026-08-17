@@ -20,6 +20,7 @@ import com.smartstay.smartstay.dto.documents.CustomerFiles;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.invoices.CancelledInvoice;
 import com.smartstay.smartstay.dto.retainer.RetainerInfo;
 import com.smartstay.smartstay.dto.settlement.AvailableAmountToRedeem;
 import com.smartstay.smartstay.dto.settlement.CurrentMonthOtherItems;
@@ -2850,14 +2851,14 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                //cancelled retainer
+                //cancelled new update completed
                 return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             } else {
                 if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-                    //cancelled retainers
+                    //cancelled new update completed
                     return generateFinalSettlementForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users, isFullRentCollected, customRent);
                 }
-                //cancelled retainers
+                //cancelled payment
                 return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             }
         } else {
@@ -3102,7 +3103,7 @@ public class CustomersService {
         totalAmountToBePaid = totalAmountToBePaid + ebAmount;
         invoiceService.cancelActiveInvoice(unpaidUpdated);
 //        if (invAdvanceInvoice != null) {
-        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users, listDeductions);
+        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users, listDeductions, null);
 
         SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), invoicesV1.getInvoiceId(), null, isFullRentCollected, customRent);
         if (cw != null) {
@@ -3702,6 +3703,8 @@ public class CustomersService {
                     item.setCancelledDate(settlementDetails.getLeavingDate());
                 }).toList();
 
+
+
                 if (cancellInvoices != null && !cancellInvoices.isEmpty()) {
                     invoiceService.cancelActiveInvoice(cancellInvoices);
                 }
@@ -3751,8 +3754,16 @@ public class CustomersService {
         }
 
         List<InvoicesV1> unpaidInvoiceIds = invoiceService.findUnpaidInvoices(customers.getCustomerId());
-
-        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), unpaidInvoiceIds, lisDeductions, amoutToBePaidWithoutDeductions, settlementDetails.getLeavingDate(), users, checkInDeductions);
+        List<CancelledInvoice> cancelledInvoicesList = unpaidInvoiceIds
+                .stream()
+                .map(i -> {
+                    CancelledInvoice ci = new CancelledInvoice();
+                    ci.setInvoiceId(i.getInvoiceId());
+                    ci.setPaymentStatus(i.getPaymentStatus());
+                    return ci;
+                })
+                .toList();
+        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), unpaidInvoiceIds, lisDeductions, amoutToBePaidWithoutDeductions, settlementDetails.getLeavingDate(), users, checkInDeductions, cancelledInvoicesList);
 //        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
         SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), invoicesV1.getInvoiceId(), settlement, isFullRentCollected, customRent);
         CustomerWallet cw = customers.getWallet();
@@ -4178,7 +4189,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.FULL_NAME_REQUIRES, HttpStatus.BAD_REQUEST);
         }
 
-        return additionalContactService.addAdditionalContacts(hostelId, customerId, additionalContacts);
+        return additionalContactService.addAdditionalContacts(hostelId, customerId, additionalContacts, users);
 
     }
 

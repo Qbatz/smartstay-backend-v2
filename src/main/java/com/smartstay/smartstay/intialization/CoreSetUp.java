@@ -739,6 +739,11 @@ public class CoreSetUp {
 				filters12.setFieldName("Available Amount");
 				filters12.setOrder(12);
 
+				ColumnFilters filters13 = new ColumnFilters();
+				filters13.setSelected(true);
+				filters13.setFieldName("Available Amount");
+				filters13.setOrder(13);
+
 				defaultColumnFilters.add(filters1);
 				defaultColumnFilters.add(filters2);
 				defaultColumnFilters.add(filters3);
@@ -751,6 +756,7 @@ public class CoreSetUp {
 				defaultColumnFilters.add(filters10);
 				defaultColumnFilters.add(filters11);
 				defaultColumnFilters.add(filters12);
+				defaultColumnFilters.add(filters13);
 
 				bookingsFilterOptions.setFilterOptions(defaultColumnFilters);
 

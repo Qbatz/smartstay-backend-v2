@@ -60,6 +60,9 @@ public class InvoiceMapper {
                 if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
                     dueAmount = invoice.getTotalAmount() - invoice.getPaidAmount();
                 }
+                if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.CANCELLED.name())) {
+                    dueAmount = invoice.getTotalAmount() - invoice.getPaidAmount();
+                }
             }
 
         }

@@ -13,6 +13,7 @@ public enum ActivitySourceType {
     CANCEL,
     CHECKOUT,
     CHECKIN,
+    ADD_JOB,
     JOINING_DATE,
     ADVANCE_AMOUNT,
     BOOKING,
@@ -30,6 +31,8 @@ public enum ActivitySourceType {
     MANUAL_BILL,
     ADD_ADMIN,
     ADD_USER,
+    ADDITIONAL_COTACT,
+    ADD_ADDITIONAL_CONTACT,
     CHANGE_SELF_PASSWORD,
     CHANGE_ADMIN_PASSWORD,
     UPDATE_ADMIN_PROFILE,
@@ -44,6 +47,8 @@ public enum ActivitySourceType {
     EDIT_DISCOUNT,
     DELETE_DISCOUNT,
     REDEEMED,
-    CREATE_SESSION
+    CREATE_SESSION,
+    REQUEST,
+    RESET;
 
 }

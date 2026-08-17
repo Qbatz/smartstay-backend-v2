@@ -14,4 +14,6 @@ public interface TableColumnsRepositories extends JpaRepository<TableColumns, Lo
             tc.moduleName=:moduleName AND tc.isActive=true
             """)
     TableColumns findByHostelIdAndUserId(String hostelId, String userId, String moduleName);
+
+    List<TableColumns> findByModuleName(String moduleName);
 }

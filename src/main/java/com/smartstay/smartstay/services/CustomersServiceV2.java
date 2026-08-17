@@ -315,7 +315,9 @@ public class CustomersServiceV2 {
             return new ResponseEntity<>("Invalid JSON payload", HttpStatus.BAD_REQUEST);
         }
 
-        draftsRepository.save(draft);
+        Draft customerDrafts = draftsRepository.save(draft);
+
+        userService.addUserLog(hostelId, customerDrafts.getCustomerId(), ActivitySource.DRAFTS, ActivitySourceType.CREATE, user);
 
         return new ResponseEntity<>(Map.of(
                 "message", Utils.CREATED,
@@ -471,7 +473,7 @@ public class CustomersServiceV2 {
 
         customersRepository.save(customers);
         draftsRepository.save(draft);
-
+        userService.addUserLog(hostelId, draft.getCustomerId(), ActivitySource.DRAFTS, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Map.of(
                 "message", Utils.UPDATED,
                 "customerId", customers.getCustomerId(),
@@ -765,6 +767,7 @@ public class CustomersServiceV2 {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
+        userService.addUserLog(hostelId, customerId, ActivitySource.DRAFTS, ActivitySourceType.UPDATE, user);
         return customerDraftService.updateDraftInfo(customerId, updateDrafts);
 
 
@@ -1403,7 +1406,7 @@ public class CustomersServiceV2 {
         }
 
         customerDocumentsService.uploadManualKycFiles(hostelId, customerId, aadhaarPic, panPic);
-
+        userService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.ADDITIONAL_COTACT, user);
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
@@ -1451,6 +1454,6 @@ public class CustomersServiceV2 {
         }
 
 
-        return customerJobDetailsService.updateJobInformation(hostelId, customerId, updateCustomerJob);
+        return customerJobDetailsService.updateJobInformation(hostelId, customerId, updateCustomerJob, user);
     }
 }

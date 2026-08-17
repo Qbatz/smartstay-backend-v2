@@ -408,8 +408,23 @@ public class TemplatesService {
                                    String mobile, String email,
                                    Boolean isMobileCustomized, Boolean isEmailCustomized,
                                    Boolean isLogoCustomized, Boolean isSignatureCustomized) {
-        if (isNotBlank(mobile)) templates.setMobile(mobile);
-        if (isNotBlank(email)) templates.setEmailId(email);
+        if (isNotBlank(mobile)) {
+            templates.setMobile(mobile);
+        } else if (templates.getMobile() != null) {
+            if (mobile == null || mobile.isEmpty()) {
+                templates.setMobile(null);
+            }
+        }
+        if (isNotBlank(email)) {
+            templates.setEmailId(email);
+        }
+        else if (templates.getEmailId() != null) {
+            if (email == null || email.isEmpty()) {
+                templates.setEmailId(null);
+            }
+        }
+
+
         if (isMobileCustomized != null) templates.setMobileCustomized(isMobileCustomized);
         if (isEmailCustomized != null) templates.setEmailCustomized(isEmailCustomized);
         if (isLogoCustomized != null) templates.setLogoCustomized(isLogoCustomized);

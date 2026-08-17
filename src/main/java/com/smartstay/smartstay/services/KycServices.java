@@ -8,10 +8,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.KycAddressDetails;
 import com.smartstay.smartstay.dto.documents.UploadFiles;
 import com.smartstay.smartstay.dto.kyc.*;
-import com.smartstay.smartstay.ennum.CustomerStatus;
-import com.smartstay.smartstay.ennum.FileFormat;
-import com.smartstay.smartstay.ennum.KycDocumentType;
-import com.smartstay.smartstay.ennum.KycStatus;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.repositories.KycRepository;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -155,7 +152,7 @@ public class KycServices {
             kycRepository.save(kycDetails);
 
             customerNotificationService.sendKycNotification(customers, kycDetails, users, customers.getHostelId());
-
+            usersService.addUserLog(customers.getHostelId(), customerId, ActivitySource.KYC, ActivitySourceType.REQUEST, users);
             return new ResponseEntity<>(HttpStatus.OK);
         }
 
