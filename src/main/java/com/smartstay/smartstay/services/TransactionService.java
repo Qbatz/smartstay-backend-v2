@@ -1143,8 +1143,13 @@ public class TransactionService {
 
     private List<TransactionReportResponse.FilterOption> buildInvoiceTypeFilters() {
         return Arrays.stream(InvoiceType.values()).filter(type -> type != InvoiceType.SETTLEMENT)
-                .map(type -> TransactionReportResponse.FilterOption.builder().id(type.name())
-                        .label(Utils.capitalize(type.name())).build())
+                .map(type -> {
+                    String label;
+                    if (type == InvoiceType.AMOUNT_HOLDING) label = "Advance Holding";
+                    else if (type == InvoiceType.EB_HOLDING) label = "EB Holding";
+                    else label = Utils.capitalize(type.name());
+                    return TransactionReportResponse.FilterOption.builder().id(type.name()).label(label).build();
+                })
                 .collect(Collectors.toList());
     }
 
@@ -1397,6 +1402,12 @@ public class TransactionService {
             }
             else if (invoiceType.equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
                 invoiceTypeArr.add(InvoiceType.SETTLEMENT.name());
+            }
+            else if (invoiceType.equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name())) {
+                invoiceTypeArr.add(InvoiceType.AMOUNT_HOLDING.name());
+            }
+            else if (invoiceType.equalsIgnoreCase(InvoiceType.EB_HOLDING.name())) {
+                invoiceTypeArr.add(InvoiceType.EB_HOLDING.name());
             }
             if (invoiceTypeArr.isEmpty()) {
                 invoiceTypeArr = null;
