@@ -1491,16 +1491,56 @@ public class CustomersService {
             if (canUnpaid && sourceInvoiceIds.contains(inv.invoiceId())) {
                 canUnpaid = false;
             }
-            // Calculate canEdit and discountAmount
+            // Calculate canEdit and discountAmount — mirrors NewInvoiceListMapper logic
             Double discountAmount = 0.0;
-            boolean canEdit = true;
             InvoicesV1 originalInvoice = invoiceMap.get(inv.invoiceId());
+
+            // Step 1: type-based initial value
+            boolean canEdit = false;
             if (originalInvoice != null) {
-                boolean isPaid = PaymentStatus.PAID.name().equalsIgnoreCase(originalInvoice.getPaymentStatus());
-                boolean isPartiallyPaid = PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(originalInvoice.getPaymentStatus());
-                boolean isRedeemed = originalInvoice.getCancelledInvoices() != null && !originalInvoice.getCancelledInvoices().isEmpty();
-                boolean hasDiscount = originalInvoice.isDiscounted();
-                canEdit = !(isPaid || isPartiallyPaid || isRedeemed || hasDiscount);
+                String invType = originalInvoice.getInvoiceType();
+                if (InvoiceType.RENT.name().equalsIgnoreCase(invType) || InvoiceType.REASSIGN_RENT.name().equalsIgnoreCase(invType)) {
+                    canEdit = true;
+                }
+
+                // Step 2: cancelled → false
+                if (originalInvoice.isCancelled()) {
+                    canEdit = false;
+                }
+
+                // Step 3: RECURRING mode overrides back to true
+                if (InvoiceMode.RECURRING.name().equalsIgnoreCase(originalInvoice.getInvoiceMode())) {
+                    canEdit = true;
+                }
+
+                // Step 4: has a discount record → false
+                InvoiceDiscounts ids = listInvoiceDiscounts.stream()
+                        .filter(d -> d.getInvoiceId().equalsIgnoreCase(originalInvoice.getInvoiceId()))
+                        .findFirst().orElse(null);
+                if (ids != null && canEdit) {
+                    canEdit = false;
+                }
+
+                // Step 5: PAID or PARTIAL_PAYMENT → false
+                if (PaymentStatus.PAID.name().equalsIgnoreCase(originalInvoice.getPaymentStatus())
+                        || PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(originalInvoice.getPaymentStatus())) {
+                    canEdit = false;
+                }
+
+                // Step 6: BOOKING or ADVANCE type → false
+                if (InvoiceType.BOOKING.name().equalsIgnoreCase(invType) || InvoiceType.ADVANCE.name().equalsIgnoreCase(invType)) {
+                    canEdit = false;
+                }
+
+                // Step 7: cancelled (second guard, mirrors mapper) → false
+                if (originalInvoice.isCancelled()) {
+                    canEdit = false;
+                }
+
+                // Step 8: isDiscounted flag → false
+                if (originalInvoice.isDiscounted()) {
+                    canEdit = false;
+                }
 
                 // Get discount amount from invoice_discounts table
                 if (discountMap.containsKey(inv.invoiceId())) {

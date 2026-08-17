@@ -340,6 +340,7 @@ public class Utils {
     public static final String CANNOT_UPDATE_JOB_DETAILS_VACATED_TENANT = "Cannot update job details for vacated tenants";
     public static final String CANNOT_UPDATE_JOB_DETAILS_CANCELLED_TENANT = "Cannot update job details for cancelled tenants";
     public static final String CANNOT_CHANGE_JOINING_DATE_CUSTOMER_NOT_CHECKEDIN = "Cannot change the joining date, seems customer is not checked-In";
+    public static final String CANNOT_CHANGE_JOINING_DATE_AFTER_RETAINER_DATE = "Joining Date cannot be later than the Retainer invoice date.";
     public static final String BED_OCCUPIED_ON_DATE = "Cannot change joining date. The bed was occupied by another tenant during the selected period.";
     public static final String RENT_AMOUNT_REQUIRED_TO_UPDATE_RENT = "Rent amount required";
     public static final String CANNOT_CHANGE_RENT_FOR_OLD_DATES = "Cannot change rent for old dates";
