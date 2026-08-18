@@ -41,7 +41,10 @@ import com.smartstay.smartstay.responses.banking.FilterOption;
 import com.smartstay.smartstay.responses.banking.TransactionFilterOptions;
 import com.smartstay.smartstay.responses.banking.BankV2Response;
 import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
+import com.smartstay.smartstay.responses.banking.CheckedInTenantResponse;
 import com.smartstay.smartstay.responses.banking.CreditCardInitializeResponse;
+import com.smartstay.smartstay.responses.customer.CustomerData;
+import com.smartstay.smartstay.responses.invoices.InvoicesList;
 import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
 import com.smartstay.smartstay.responses.banking.ResponsiblePersonResponse;
 import com.smartstay.smartstay.responses.banking.TransferInitializeResponse;
@@ -114,10 +117,13 @@ public class BankingServiceV2 {
     @Autowired
     private UploadFileToS3 uploadToS3;
 
-    // Tenant data is owned by the customers module; reused rather than re-queried here.
     @Autowired
     @Lazy
     private CustomersService customersService;
+
+    @Autowired
+    @Lazy
+    private InvoiceV1Service invoiceV1Service;
 
     @Transactional
     public ResponseEntity<?> addBank(String hostelId, AddBankV2 payload) {
@@ -1429,7 +1435,52 @@ public class BankingServiceV2 {
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
-        return new ResponseEntity<>(customersService.getCheckedInCustomers(hostelId), HttpStatus.OK);
+        List<CustomerData> tenants = customersService.getCheckedInCustomers(hostelId);
+
+        List<String> customerIds = tenants.stream()
+                .map(CustomerData::customerId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<String, List<InvoicesList>> invoicesByCustomerId =
+                invoiceV1Service.getOutstandingInvoicesByCustomerIds(hostelId, customerIds);
+
+        List<CheckedInTenantResponse> response = tenants.stream()
+                .map(tenant -> toCheckedInTenantResponse(tenant, invoicesByCustomerId))
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private CheckedInTenantResponse toCheckedInTenantResponse(CustomerData tenant,
+                                                              Map<String, List<InvoicesList>> invoicesByCustomerId) {
+        List<InvoicesList> listInvoices = invoicesByCustomerId.getOrDefault(
+                tenant.customerId(), Collections.emptyList());
+
+        return new CheckedInTenantResponse(
+                tenant.firstName(),
+                tenant.lastName(),
+                tenant.fullName(),
+                tenant.city(),
+                tenant.state(),
+                tenant.country(),
+                tenant.mobile(),
+                tenant.currentStatus(),
+                tenant.emailId(),
+                tenant.profilePic(),
+                tenant.bedId(),
+                tenant.floorId(),
+                tenant.roomId(),
+                tenant.customerId(),
+                tenant.initials(),
+                tenant.expectedJoiningDate(),
+                tenant.actualJoining(),
+                tenant.countryCode(),
+                tenant.bookedAt(),
+                tenant.bedName(),
+                tenant.roomName(),
+                tenant.floorName(),
+                listInvoices);
     }
 
     @Transactional(readOnly = true)

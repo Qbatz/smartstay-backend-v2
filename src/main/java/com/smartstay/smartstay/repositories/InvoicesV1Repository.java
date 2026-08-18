@@ -502,6 +502,20 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             """)
     List<InvoicesV1> findUnpaidInvoicesByCustomerIds(@Param("customerIds") List<String> customerIds);
 
+
+    @Query("""
+            SELECT i
+            FROM InvoicesV1 i
+            WHERE i.hostelId = :hostelId
+              AND i.customerId IN :customerIds
+              AND (i.paymentStatus IS NULL OR i.paymentStatus <> :paidStatus)
+              AND i.isCancelled = false
+            ORDER BY i.invoiceDate DESC
+            """)
+    List<InvoicesV1> findOutstandingInvoicesByCustomerIds(@Param("hostelId") String hostelId,
+                                                          @Param("customerIds") List<String> customerIds,
+                                                          @Param("paidStatus") String paidStatus);
+
     @Query("""
             SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.invoiceType IN ('AMOUNT_HOLDING', 'EB_HOLDING') 
             ORDER BY i.createdAt DESC LIMIT 1
