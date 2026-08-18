@@ -113,6 +113,11 @@ public class BankingControllerV2 {
         return bankingServiceV2.getAllPaymentMethods(hostelId);
     }
 
+    @GetMapping("/creditCard/initialize/{hostelId}")
+    public ResponseEntity<?> getCreditCardInitialize(@PathVariable("hostelId") String hostelId) {
+        return bankingServiceV2.getCreditCardInitialize(hostelId);
+    }
+
     @PutMapping("/addMoney/{hostelId}")
     public ResponseEntity<?> addMoney(@PathVariable("hostelId") String hostelId,
             @RequestBody(required = false) AddMoneyV2 payload) {

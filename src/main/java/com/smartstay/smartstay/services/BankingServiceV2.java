@@ -40,6 +40,7 @@ import com.smartstay.smartstay.responses.banking.FilterOption;
 import com.smartstay.smartstay.responses.banking.TransactionFilterOptions;
 import com.smartstay.smartstay.responses.banking.BankV2Response;
 import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
+import com.smartstay.smartstay.responses.banking.CreditCardInitializeResponse;
 import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
 import com.smartstay.smartstay.responses.banking.ResponsiblePersonResponse;
 import com.smartstay.smartstay.responses.banking.TransferInitializeResponse;
@@ -1329,6 +1330,28 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
         return new ResponseEntity<>(buildAllPaymentMethods(hostelId), HttpStatus.OK);
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getCreditCardInitialize(String hostelId) {
+        Users user = currentUser();
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        Map<Boolean, List<PaymentMethodOptionResponse>> byCreditCard = buildAllPaymentMethods(hostelId)
+                .stream()
+                .collect(Collectors.partitioningBy(this::isCreditCard));
+
+        return new ResponseEntity<>(new CreditCardInitializeResponse(
+                byCreditCard.get(true), byCreditCard.get(false)), HttpStatus.OK);
+    }
+
+    private boolean isCreditCard(PaymentMethodOptionResponse option) {
+        return PaymentMethod.CREDIT_CARD.getValue().equalsIgnoreCase(option.paymentMethod());
     }
 
     public List<PaymentMethodOptionResponse> buildAllPaymentMethods(String hostelId) {
