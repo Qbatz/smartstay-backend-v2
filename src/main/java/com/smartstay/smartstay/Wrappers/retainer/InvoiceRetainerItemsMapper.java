@@ -18,6 +18,12 @@ public class InvoiceRetainerItemsMapper implements Function<InvoicesV1, Retainer
                 if (invoicesV1.getDeductionAmount() > 0) {
                     invoiceTotalAmount = invoicesV1.getTotalAmount() - invoicesV1.getDeductionAmount();
                 }
+                else {
+                    invoiceTotalAmount = invoicesV1.getTotalAmount();
+                }
+            }
+            else {
+                invoiceTotalAmount = invoicesV1.getTotalAmount();
             }
         }
         else {

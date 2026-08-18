@@ -5,13 +5,13 @@ import com.smartstay.smartstay.Wrappers.retainer.InvoiceRetainerItemsMapper;
 import com.smartstay.smartstay.Wrappers.retainer.InvoicesInvoiceInfoMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.customer.RetainerListItems;
 import com.smartstay.smartstay.dto.retainer.RetainerInfo;
 import com.smartstay.smartstay.dto.retainer.RetainerItems;
 import com.smartstay.smartstay.dto.retainer.RetainerSummary;
-import com.smartstay.smartstay.ennum.InvoiceMode;
-import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.retainer.LoadBalance;
 import com.smartstay.smartstay.payloads.retainer.RedeemAmount;
@@ -200,6 +200,7 @@ public class RetainerService {
         retainerRelationService.addRelationForDeposit(customerId, hostelId, loadBalance, isRegisteredRelation, createdInvoice);
         transactionService.addRetainerTransaction(createdInvoice, loadBalance);
         tenantBankTransactionService.addRetainerTransaction(createdInvoice, loadBalance, paymentDate, isRegisteredRelation);
+        usersService.addUserLog(hostelId, createdInvoice.getInvoiceId(), ActivitySource.RETAINER, ActivitySourceType.CREATE, users);
 
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -499,6 +500,7 @@ public class RetainerService {
 
         if (!newInvoices.isEmpty()) {
             invoicesV1Repository.saveAll(newInvoices);
+            usersService.addUserLog(hostelId, invoicesV1.getCustomerId(), ActivitySource.RETAINER, ActivitySourceType.REDEEMED, users);
         }
 
         return new ResponseEntity<>(HttpStatus.OK);

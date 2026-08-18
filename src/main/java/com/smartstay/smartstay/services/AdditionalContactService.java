@@ -1,6 +1,9 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.payloads.customer.CustomerAdditionalContacts;
 import com.smartstay.smartstay.payloads.customer.Guardian;
@@ -21,8 +24,10 @@ public class AdditionalContactService {
     private Authentication authentication;
     @Autowired
     private CustomerAdditionalContactsRepositories customerAdditionalContactsRepositories;
+    @Autowired
+    private UsersService usersService;
 
-    public ResponseEntity<?> addAdditionalContacts(String hostelId, String customerId, CustomerAdditionalContacts additionalContacts) {
+    public ResponseEntity<?> addAdditionalContacts(String hostelId, String customerId, CustomerAdditionalContacts additionalContacts, Users users) {
         com.smartstay.smartstay.dao.CustomerAdditionalContacts ac = new com.smartstay.smartstay.dao.CustomerAdditionalContacts();
         ac.setName(additionalContacts.fullName());
         ac.setRelationship(additionalContacts.relationship());
@@ -38,8 +43,8 @@ public class AdditionalContactService {
         ac.setCreatedAt(new Date());
         ac.setCreatedBy(authentication.getName());
 
-        customerAdditionalContactsRepositories.save(ac);
-
+        com.smartstay.smartstay.dao.CustomerAdditionalContacts ac1 = customerAdditionalContactsRepositories.save(ac);
+        usersService.addUserLog(hostelId, String.valueOf(ac1.getContactId()), ActivitySource.CUSTOMERS, ActivitySourceType.ADDITIONAL_COTACT, users);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 

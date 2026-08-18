@@ -33,6 +33,7 @@ public class InvoiceFilterOptions {
         PaymentStatus status4 = new PaymentStatus("Refunded", com.smartstay.smartstay.ennum.PaymentStatus.REFUNDED.name());
         PaymentStatus status5 = new PaymentStatus("Pending Refund", com.smartstay.smartstay.ennum.PaymentStatus.PENDING_REFUND.name());
         PaymentStatus status6 = new PaymentStatus("Partial Refund", com.smartstay.smartstay.ennum.PaymentStatus.PARTIAL_REFUND.name());
+        PaymentStatus status7 = new PaymentStatus("Cancelled", com.smartstay.smartstay.ennum.PaymentStatus.CANCELLED.name());
 
         paymentStatus.add(status1);
         paymentStatus.add(status2);
@@ -40,6 +41,7 @@ public class InvoiceFilterOptions {
         paymentStatus.add(status4);
         paymentStatus.add(status5);
         paymentStatus.add(status6);
+        paymentStatus.add(status7);
 
         invoiceTypes = new ArrayList<>();
         InvoiceType type1 = new InvoiceType("Rent", com.smartstay.smartstay.ennum.InvoiceType.RENT.name());

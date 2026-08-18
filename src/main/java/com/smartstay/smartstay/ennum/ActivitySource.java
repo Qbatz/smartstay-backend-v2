@@ -27,5 +27,7 @@ public enum ActivitySource {
     SUBSCRIPTION,
     TEMPLATES,
     TRANSACTIONS,
-    PAYMENTS
+    PAYMENTS,
+    KYC,
+    RETAINER
 }

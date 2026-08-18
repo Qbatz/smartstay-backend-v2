@@ -58,6 +58,9 @@ public class InvoiceUtils {
             else if (status.equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name())) {
                 paymentStatus = "Partially Refunded";
             }
+            else if (status.equalsIgnoreCase(PaymentStatus.CANCELLED.name())) {
+                paymentStatus = "Cancelled";
+            }
 
             return paymentStatus;
         }
