@@ -32,6 +32,8 @@ public class ReceiptFilterOptions {
         invoiceType.add(new CommonType("Advance", "ADVANCE"));
         invoiceType.add(new CommonType("Settlement", "SETTLEMENT"));
         invoiceType.add(new CommonType("Booking", "BOOKING"));
+        invoiceType.add(new CommonType("Advance Holding", "AMOUNT_HOLDING"));
+        invoiceType.add(new CommonType("EB Holding", "EB_HOLDING"));
     }
 
     public void setCollectedBy(List<Users> listCollectedByUsers) {
