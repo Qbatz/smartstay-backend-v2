@@ -459,6 +459,61 @@ public class CustomersService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    public List<com.smartstay.smartstay.responses.customer.CustomerData> getCheckedInCustomers(String hostelId) {
+        List<CustomerData> checkedInRows = customersRepository.getCustomerData(
+                hostelId, null, List.of(CustomerStatus.CHECK_IN.name()));
+
+        List<com.smartstay.smartstay.responses.customer.CustomerData> tenants = checkedInRows.stream()
+                .map(this::toCheckedInTenant)
+                .collect(Collectors.toList());
+
+        tenants.sort(Comparator.comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds))
+                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds))
+                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
+
+        return tenants;
+    }
+
+    private com.smartstay.smartstay.responses.customer.CustomerData toCheckedInTenant(CustomerData item) {
+        StringBuilder initials = new StringBuilder();
+        StringBuilder fullName = new StringBuilder();
+        if (item.getFirstName() != null) {
+            initials.append(item.getFirstName().toUpperCase().charAt(0));
+            fullName.append(item.getFirstName());
+        }
+        if (item.getLastName() != null && !item.getLastName().isEmpty()) {
+            fullName.append(" ");
+            fullName.append(item.getLastName());
+            initials.append(item.getLastName().toUpperCase().charAt(0));
+        } else if (item.getFirstName() != null && item.getFirstName().length() > 1) {
+            initials.append(item.getFirstName().toUpperCase().charAt(1));
+        }
+
+        return new com.smartstay.smartstay.responses.customer.CustomerData(
+                item.getFirstName(),
+                item.getLastName(),
+                fullName.toString(),
+                item.getCity(),
+                item.getState(),
+                item.getCountry(),
+                item.getMobile(),
+                "Checked In",
+                item.getEmailId(),
+                item.getProfilePic(),
+                item.getBedId(),
+                item.getFloorId(),
+                item.getRoomId(),
+                item.getCustomerId(),
+                initials.toString(),
+                Utils.dateToString(item.getExpectedJoiningDate()),
+                Utils.dateToString(item.getActualJoiningDate()),
+                item.getCountryCode(),
+                Utils.dateToString(item.getCreatedAt()),
+                item.getBedName(),
+                item.getRoomName(),
+                item.getFloorName());
+    }
+
     private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, List<String> types, Integer page, Integer size, List<String> periodList, List<String> sharingTypeList) {
 
         List<String> typeArray = new ArrayList<>();

@@ -119,6 +119,11 @@ public class BankingControllerV2 {
         return bankingServiceV2.getCreditCardInitialize(hostelId);
     }
 
+    @GetMapping("/tenant/initialize/{hostelId}")
+    public ResponseEntity<?> getCheckedInTenants(@PathVariable("hostelId") String hostelId) {
+        return bankingServiceV2.getCheckedInTenants(hostelId);
+    }
+
     @PutMapping("/creditCard/payment/{hostelId}")
     public ResponseEntity<?> creditCardPayment(@PathVariable("hostelId") String hostelId,
             @RequestBody(required = false) CreditCardPayment payload) {

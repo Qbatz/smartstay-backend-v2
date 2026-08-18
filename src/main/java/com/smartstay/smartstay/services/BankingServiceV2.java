@@ -47,6 +47,7 @@ import com.smartstay.smartstay.responses.banking.ResponsiblePersonResponse;
 import com.smartstay.smartstay.responses.banking.TransferInitializeResponse;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -112,6 +113,11 @@ public class BankingServiceV2 {
 
     @Autowired
     private UploadFileToS3 uploadToS3;
+
+    // Tenant data is owned by the customers module; reused rather than re-queried here.
+    @Autowired
+    @Lazy
+    private CustomersService customersService;
 
     @Transactional
     public ResponseEntity<?> addBank(String hostelId, AddBankV2 payload) {
@@ -1412,6 +1418,18 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
         return new ResponseEntity<>(buildAllPaymentMethods(hostelId), HttpStatus.OK);
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getCheckedInTenants(String hostelId) {
+        Users user = currentUser();
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        return new ResponseEntity<>(customersService.getCheckedInCustomers(hostelId), HttpStatus.OK);
     }
 
     @Transactional(readOnly = true)
