@@ -1724,7 +1724,7 @@ public class CustomersService {
         }
 
         WalletInfo walletInfo = new WalletInfo(walletAmount, walletTransactions);
-        com.smartstay.smartstay.dto.customer.RetainerInfo retainerInfo = retainerService.getRetaineListByCUstomerId(customerId);
+        com.smartstay.smartstay.dto.customer.RetainerInfo retainerInfo = retainerService.getRetaineListByCUstomerId(customers.getHostelId(), customerId);
         CustomerFiles customerFiles = customerDocumentsService.getCustomerFiles(customerId, kycDocumentFromDigio);
         List<AdditionalContacts> additionalContacts = additionalContactService.getAdditionalContact(customers.getHostelId(), customerId);
 
