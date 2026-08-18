@@ -26,6 +26,7 @@ import com.smartstay.smartstay.ennum.PaymentMethod;
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
 import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
+import com.smartstay.smartstay.payloads.banking.CreditCardPayment;
 import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
 import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
@@ -641,75 +642,156 @@ public class BankingServiceV2 {
         }
 
         Date now = new Date();
-        String userId = user.getUserId();
 
-        Date transactionDate;
-        if (isPresent(payload.date())) {
-            Date parsedDate = Utils.convertYmdStringToDate(payload.date());
-            if (parsedDate == null) {
-                return new ResponseEntity<>(Utils.ADD_MONEY_TRANSACTION_DATE_INVALID, HttpStatus.BAD_REQUEST);
-            }
-            transactionDate = isSameDay(parsedDate, now) ? now : parsedDate;
-        } else {
-            transactionDate = now;
-        }
-        String description = trimToNull(payload.notes());
-
-        if (source.direct()) {
-            applyBankDelta(source.directAccount(), -amount, now, userId);
-        } else {
-            applyMethodDelta(source.method(), -amount, now, userId);
-            applyBankDelta(source.parentBank(), -amount, now, userId);
+        Date transactionDate = resolveTransactionDate(payload.date(), now);
+        if (transactionDate == null) {
+            return new ResponseEntity<>(Utils.ADD_MONEY_TRANSACTION_DATE_INVALID, HttpStatus.BAD_REQUEST);
         }
 
-        if (destination.direct()) {
-            applyBankDelta(destination.directAccount(), amount, now, userId);
-        } else {
-            applyMethodDelta(destination.method(), amount, now, userId);
-            applyBankDelta(destination.parentBank(), amount, now, userId);
-        }
-
-        BankTransactionsV1 sourceLatest = transactionService.getLatestTransaction(source.txnBankId(), hostelId);
-        BankTransactionsV1 debit = new BankTransactionsV1();
-        debit.setBankId(source.txnBankId());
-        debit.setHostelId(hostelId);
-        debit.setType(BankTransactionType.DEBIT.name());
-        debit.setSource(BankSource.SELF_TRANSFER.name());
-        debit.setAccountBalance(sourceLatest != null && sourceLatest.getAccountBalance() != null
-                ? sourceLatest.getAccountBalance() - amount : source.balance() - amount);
-        debit.setAmount(amount);
-        debit.setTransactionDate(transactionDate);
-        debit.setDescription(description);
-        debit.setCreatedAt(now);
-        debit.setIsDeleted(false);
-        debit.setCreatedBy(userId);
-        if (source.txnPaymentMethodId() != null) {
-            debit.setPaymentMethodId(source.txnPaymentMethodId());
-        }
-        transactionService.saveTransaction(debit);
-
-        BankTransactionsV1 destLatest = transactionService.getLatestTransaction(destination.txnBankId(), hostelId);
-        BankTransactionsV1 credit = new BankTransactionsV1();
-        credit.setBankId(destination.txnBankId());
-        credit.setHostelId(hostelId);
-        credit.setType(BankTransactionType.CREDIT.name());
-        credit.setSource(BankSource.SELF_TRANSFER.name());
-        credit.setAccountBalance(destLatest != null && destLatest.getAccountBalance() != null
-                ? destLatest.getAccountBalance() + amount : amount);
-        credit.setAmount(amount);
-        credit.setTransactionDate(transactionDate);
-        credit.setDescription(description);
-        credit.setCreatedAt(now);
-        credit.setIsDeleted(false);
-        credit.setCreatedBy(userId);
-        if (destination.txnPaymentMethodId() != null) {
-            credit.setPaymentMethodId(destination.txnPaymentMethodId());
-        }
-        transactionService.saveTransaction(credit);
+        applyTransfer(source, destination, new TransferRequest(hostelId, amount, transactionDate,
+                trimToNull(payload.notes()), null, user.getUserId(), now));
 
         usersService.addUserLog(hostelId, source.txnBankId(), ActivitySource.BANKING, ActivitySourceType.TRANSFER, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    @Transactional
+    public ResponseEntity<?> creditCardPayment(String hostelId, CreditCardPayment payload) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        if (payload == null || !isPresent(payload.creditCardAccount()) || !isPresent(payload.paymentMethod())) {
+            return badRequest(Utils.INVALID_BANK_ID);
+        }
+        if (payload.amount() == null || payload.amount() <= 0) {
+            return badRequest(Utils.ADD_MONEY_AMOUNT_INVALID);
+        }
+
+        String creditCardId = payload.creditCardAccount().trim();
+        String sourceId = payload.paymentMethod().trim();
+        double amount = payload.amount();
+
+        if (creditCardId.equals(sourceId)) {
+            return badRequest(Utils.TRANSFER_SAME_ACCOUNT);
+        }
+
+        EndpointResult from = resolveEndpoint(hostelId, sourceId, true);
+        if (from.error() != null) {
+            return badRequest(from.error());
+        }
+
+        EndpointResult to = resolveEndpoint(hostelId, creditCardId, false);
+        if (to.error() != null) {
+            return badRequest(to.error());
+        }
+        TransferEndpoint source = from.endpoint();
+        TransferEndpoint creditCard = to.endpoint();
+
+        if (!isCreditCard(creditCard)) {
+            return badRequest(Utils.CREDIT_CARD_ACCOUNT_INVALID);
+        }
+        if (source.balance() < amount) {
+            return badRequest(Utils.TRANSFER_INSUFFICIENT_BALANCE);
+        }
+
+        Date now = new Date();
+        Date settlementDate = resolveTransactionDate(payload.settlementDate(), now);
+        if (settlementDate == null) {
+            return badRequest(Utils.ADD_MONEY_TRANSACTION_DATE_INVALID);
+        }
+
+        applyTransfer(source, creditCard, new TransferRequest(hostelId, amount, settlementDate,
+                trimToNull(payload.description()), trimToNull(payload.transactionId()), user.getUserId(), now));
+
+        usersService.addUserLog(hostelId, creditCard.txnBankId(), ActivitySource.BANKING,
+                ActivitySourceType.TRANSFER, user);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    private boolean isCreditCard(TransferEndpoint endpoint) {
+        return !endpoint.direct() && endpoint.method().getPaymentMethod() == PaymentMethod.CREDIT_CARD;
+    }
+
+    private void applyTransfer(TransferEndpoint source, TransferEndpoint destination, TransferRequest request) {
+        if (source.direct()) {
+            applyBankDelta(source.directAccount(), -request.amount(), request.now(), request.userId());
+        } else {
+            applyMethodDelta(source.method(), -request.amount(), request.now(), request.userId());
+            applyBankDelta(source.parentBank(), -request.amount(), request.now(), request.userId());
+        }
+
+        if (destination.direct()) {
+            applyBankDelta(destination.directAccount(), request.amount(), request.now(), request.userId());
+        } else {
+            applyMethodDelta(destination.method(), request.amount(), request.now(), request.userId());
+            applyBankDelta(destination.parentBank(), request.amount(), request.now(), request.userId());
+        }
+
+        BankTransactionsV1 sourceLatest = transactionService.getLatestTransaction(source.txnBankId(), request.hostelId());
+        double debitBalance = sourceLatest != null && sourceLatest.getAccountBalance() != null
+                ? sourceLatest.getAccountBalance() - request.amount()
+                : source.balance() - request.amount();
+        transactionService.saveTransaction(
+                transferRow(source, BankTransactionType.DEBIT, debitBalance, request));
+
+        BankTransactionsV1 destLatest = transactionService.getLatestTransaction(destination.txnBankId(), request.hostelId());
+        double creditBalance = destLatest != null && destLatest.getAccountBalance() != null
+                ? destLatest.getAccountBalance() + request.amount()
+                : request.amount();
+        transactionService.saveTransaction(
+                transferRow(destination, BankTransactionType.CREDIT, creditBalance, request));
+    }
+
+    private BankTransactionsV1 transferRow(TransferEndpoint endpoint, BankTransactionType type,
+                                           double accountBalance, TransferRequest request) {
+        BankTransactionsV1 row = new BankTransactionsV1();
+        row.setBankId(endpoint.txnBankId());
+        row.setHostelId(request.hostelId());
+        row.setType(type.name());
+        row.setSource(BankSource.SELF_TRANSFER.name());
+        row.setAccountBalance(accountBalance);
+        row.setAmount(request.amount());
+        row.setTransactionDate(request.transactionDate());
+        row.setDescription(request.description());
+        row.setTransactionNumber(request.transactionNumber());
+        row.setCreatedAt(request.now());
+        row.setIsDeleted(false);
+        row.setCreatedBy(request.userId());
+        if (endpoint.txnPaymentMethodId() != null) {
+            row.setPaymentMethodId(endpoint.txnPaymentMethodId());
+        }
+        return row;
+    }
+
+    private Date resolveTransactionDate(String value, Date now) {
+        if (!isPresent(value)) {
+            return now;
+        }
+        Date parsed = Utils.convertYmdStringToDate(value);
+        if (parsed == null) {
+            return null;
+        }
+        return isSameDay(parsed, now) ? now : parsed;
+    }
+
+    private record TransferRequest(String hostelId, double amount, Date transactionDate, String description,
+                                   String transactionNumber, String userId, Date now) {
     }
 
     private void applyBankDelta(BankingV2 bank, double delta, Date now, String userId) {

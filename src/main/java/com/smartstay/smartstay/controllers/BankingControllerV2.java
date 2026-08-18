@@ -3,6 +3,7 @@ package com.smartstay.smartstay.controllers;
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
 import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
+import com.smartstay.smartstay.payloads.banking.CreditCardPayment;
 import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
 import com.smartstay.smartstay.services.BankingServiceV2;
 import com.smartstay.smartstay.services.QrBankTypeService;
@@ -116,6 +117,12 @@ public class BankingControllerV2 {
     @GetMapping("/creditCard/initialize/{hostelId}")
     public ResponseEntity<?> getCreditCardInitialize(@PathVariable("hostelId") String hostelId) {
         return bankingServiceV2.getCreditCardInitialize(hostelId);
+    }
+
+    @PutMapping("/creditCard/payment/{hostelId}")
+    public ResponseEntity<?> creditCardPayment(@PathVariable("hostelId") String hostelId,
+            @RequestBody(required = false) CreditCardPayment payload) {
+        return bankingServiceV2.creditCardPayment(hostelId, payload);
     }
 
     @PutMapping("/addMoney/{hostelId}")
