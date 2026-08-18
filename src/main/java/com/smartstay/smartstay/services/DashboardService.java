@@ -287,7 +287,7 @@ public class DashboardService {
                 return true;
             }
             String status = bed.getCurrentStatus();
-            return status == null || (!status.equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) && !status.equalsIgnoreCase(CustomerStatus.NOTICE.name()) && !status.equalsIgnoreCase(BedStatus.OCCUPIED.name()));
+            return status != null && (status.equalsIgnoreCase(CustomerStatus.CHECK_IN.name()) || status.equalsIgnoreCase(CustomerStatus.NOTICE.name()) || status.equalsIgnoreCase(BedStatus.OCCUPIED.name()));
         }).collect(Collectors.groupingBy(Beds::getRoomId, Collectors.counting()));
 
         int filledRooms = 0;
