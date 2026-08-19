@@ -65,6 +65,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -4053,11 +4054,11 @@ public class InvoiceV1Service {
         List<String> customerIds = null;
         if (search != null && !search.trim().isEmpty()) {
             List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
-            if (customers == null || customers.isEmpty()) {
-                customerIds = null;
+            if (customers != null && !customers.isEmpty()) {
+                customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
             }
             else {
-                customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+                customerIds = new ArrayList<>();
             }
 
         }
@@ -6472,11 +6473,11 @@ public class InvoiceV1Service {
         List<String> customerIds = null;
         if (search != null && !search.trim().isEmpty()) {
             List<Customers> customers = customersService.searchCustomerByHostelName(hostelId, search);
-            if (customers == null || customers.isEmpty()) {
-                customerIds = null;
+            if (customers != null && !customers.isEmpty()) {
+                customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
             }
             else {
-                customerIds = customers.stream().map(Customers::getCustomerId).collect(Collectors.toList());
+                customerIds = new ArrayList<>();
             }
 
         }

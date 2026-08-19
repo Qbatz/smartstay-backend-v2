@@ -49,6 +49,8 @@ public class JoiningBasedPrepaidEventListener {
         ElectricityConfig ebConfig = hostelV1.getElectricityConfig();
         String customerId = jbpe.getCustomerId();
         if (bookingsV1 != null) {
+            List<AmenitiesV1> listAmenities = amenitiesService.getAllAmenitiesByHostelId(hostelV1.getHostelId());
+
             List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getAllInvoiceNotGeneratedWallets(customerId);
             double rentAmount = bookingsV1.getRentAmount();
 
@@ -163,13 +165,33 @@ public class JoiningBasedPrepaidEventListener {
                 invoicesItems.add(item1);
             }
 
-            if (amenityAmount > 0) {
-                InvoiceItems item1 = new InvoiceItems();
-                item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
-                item1.setAmount(amenityAmount);
-                item1.setInvoice(invoicesV1);
-                invoicesItems.add(item1);
+            if (listCustomersAmenity != null) {
+                listCustomersAmenity.forEach(amenity -> {
+                    AmenitiesV1 amenitiesV1 = listAmenities
+                            .stream()
+                            .filter(amty -> amty.getAmenityId().equalsIgnoreCase(amenity.getAmenityId()))
+                            .findFirst()
+                            .orElse(null);
+                    if (amenitiesV1 != null) {
+                        InvoiceItems item1 = new InvoiceItems();
+                        item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
+                        item1.setOtherItem(amenitiesV1.getAmenityName());
+                        item1.setAmount(Utils.roundOffWithTwoDigit(amenity.getAmenityPrice()));
+                        item1.setInvoice(invoicesV1);
+                        invoicesItems.add(item1);
+                    }
+
+                });
             }
+
+
+//            if (amenityAmount > 0) {
+//                InvoiceItems item1 = new InvoiceItems();
+//                item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
+//                item1.setAmount(amenityAmount);
+//                item1.setInvoice(invoicesV1);
+//                invoicesItems.add(item1);
+//            }
 
             if (!listCustomerWallets.isEmpty()) {
                 listCustomerWallets.forEach(it -> {

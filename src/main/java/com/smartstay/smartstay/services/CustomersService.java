@@ -1465,10 +1465,15 @@ public class CustomersService {
 
         List<String> invoiceIds = originalInvoices.stream().map(InvoicesV1::getInvoiceId).toList();
         List<InvoiceDiscounts> listInvoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(customers.getHostelId(), invoiceIds);
-        Map<String, Double> discountMap = listInvoiceDiscounts.stream()
-                .filter(InvoiceDiscounts::isActive)
-                .collect(Collectors.toMap(InvoiceDiscounts::getInvoiceId, InvoiceDiscounts::getDiscountAmount));
-        
+        Map<String, Double> discountMap;
+        if (listInvoiceDiscounts != null) {
+            discountMap = listInvoiceDiscounts.stream()
+                    .filter(InvoiceDiscounts::isActive)
+                    .collect(Collectors.toMap(InvoiceDiscounts::getInvoiceId, InvoiceDiscounts::getDiscountAmount));
+        } else {
+            discountMap = new HashMap<>();
+        }
+
         boolean isSettlementGenerated = CustomerStatus.SETTLEMENT_GENERATED.name().equalsIgnoreCase(customers.getCurrentStatus());
 
         // Bulk-load the set of invoice IDs that are active redemption sources — one DB call for the whole list.

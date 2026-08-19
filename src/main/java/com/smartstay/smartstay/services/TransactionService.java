@@ -1494,7 +1494,7 @@ public class TransactionService {
 
             if (customerIds != null) {
                 if (customerIds.isEmpty()) {
-                    customerIds = null;
+//                    customerIds = null;
                 }
             }
             if (invoiceId != null) {
