@@ -781,6 +781,58 @@ public class InvoiceV1Service {
         }
     }
 
+    /**
+     * Outstanding (not fully paid) invoices for the given customers, keyed by customer id and shaped exactly
+     * like the bills API's {@code listInvoices} entries.
+     *
+     * <p>Added for the v3 tenant-initialize API and deliberately self-contained: it builds its own enrichment
+     * and shares nothing with {@link #getAllInvoices}, so the bills API cannot be affected. Everything is
+     * batched — one invoice query plus a fixed number of lookups regardless of how many tenants there are.
+     *
+     * @return an empty map when there are no customers or none of them owe anything
+     */
+    public Map<String, List<InvoicesList>> getOutstandingInvoicesByCustomerIds(String hostelId,
+                                                                              List<String> customerIds) {
+        if (customerIds == null || customerIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<InvoicesV1> outstanding = invoicesV1Repository.findOutstandingInvoicesByCustomerIds(
+                hostelId, customerIds, PaymentStatus.PAID.name());
+        if (outstanding.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<String> invoiceIds = outstanding.stream().map(InvoicesV1::getInvoiceId).toList();
+        List<String> discountedInvoiceIds = outstanding.stream()
+                .filter(InvoicesV1::isDiscounted)
+                .map(InvoicesV1::getInvoiceId)
+                .toList();
+
+        List<TransactionV1> listTransactions = transactionService.getTransactionsByInvoiceIds(invoiceIds);
+        List<InvoiceRedemption> listInvoiceRedeemed =
+                invoiceRedemptionService.getRedeemedInvoicesByInvoiceId(hostelId, invoiceIds);
+        List<InvoiceDiscounts> listInvoiceDiscounts = discountedInvoiceIds.isEmpty()
+                ? new ArrayList<>()
+                : invoiceDiscountService.getInvoiceDiscounts(hostelId, discountedInvoiceIds);
+        Set<String> sourceInvoiceIds = invoiceRedemptionService.getSourceInvoiceIds(invoiceIds);
+        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+
+        List<String> retainerTypes = List.of(InvoiceType.ADVANCE.name(),
+                InvoiceType.AMOUNT_HOLDING.name(), InvoiceType.EB_HOLDING.name());
+        List<InvoicesV1> listRetainerInvoices =
+                invoicesV1Repository.findRetainerInvoicesByHostelId(hostelId, retainerTypes);
+
+        // createdBy is never read by the mapper, so an empty list keeps it from doing a pointless user lookup.
+        NewInvoiceListMapper mapper = new NewInvoiceListMapper(listCustomers, new ArrayList<>(),
+                listInvoiceDiscounts, listInvoiceRedeemed, listRetainerInvoices, outstanding,
+                listTransactions, sourceInvoiceIds);
+
+        return outstanding.stream()
+                .map(mapper::apply)
+                .collect(Collectors.groupingBy(InvoicesList::customerId));
+    }
+
     public ResponseEntity<?> getAllInvoicesWebResponse(String hostelId, InvoiceFilterOptions filterOptions, Page<InvoicesV1> pageInvoices, List<InvoicesList> invoicesLists, List<InvoicesV1> listInvoicesForSummary) {
         PaginationSummary paginationSummary = null;
         InvoiceSummaryInfo invoiceSummaryInfo = null;

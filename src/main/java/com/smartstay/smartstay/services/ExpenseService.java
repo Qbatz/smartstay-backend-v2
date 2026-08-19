@@ -311,7 +311,14 @@ public class ExpenseService {
                 .map(expenseSummaryMapper)
                 .toList();
 
+        double totalDueAmount = expenses.stream()
+                .map(VendorExpenseSummary::totalBalance)
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
+                .sum();
+
         VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses,
+                Utils.roundOffWithTwoDigit(totalDueAmount),
                 bankingServiceV2.buildAllPaymentMethods(hostelId));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
