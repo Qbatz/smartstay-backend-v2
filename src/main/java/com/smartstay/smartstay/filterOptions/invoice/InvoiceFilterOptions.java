@@ -51,7 +51,7 @@ public class InvoiceFilterOptions {
 
         invoiceTypes.add(type1);
         invoiceTypes.add(type2);
-//        invoiceTypes.add(type3);
+        invoiceTypes.add(type3);
         invoiceTypes.add(type4);
     }
 }

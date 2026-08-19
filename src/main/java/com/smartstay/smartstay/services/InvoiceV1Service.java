@@ -808,7 +808,7 @@ public class InvoiceV1Service {
 
     public InvoiceSummaryInfo getSummary(String hostelId, Integer totalInvoices, List<InvoicesV1> invoiceList) {
         if (invoiceList == null) {
-            return new InvoiceSummaryInfo(totalInvoices, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            return new InvoiceSummaryInfo(totalInvoices, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
         }
 
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
@@ -817,31 +817,43 @@ public class InvoiceV1Service {
                 .filter(i -> !i.isCancelled())
                 .toList();
 
-        Double totalAmount = validInvoices.stream()
+        List<InvoicesV1> refundInvoices = validInvoices.stream()
+                .filter(i -> i.getInvoiceType() != null
+                        && i.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())
+                        && i.getTotalAmount() != null
+                        && i.getTotalAmount() < 0)
+                .toList();
+
+        List<InvoicesV1> nonRefundInvoices = validInvoices.stream()
+                .filter(i -> !refundInvoices.contains(i))
+                .toList();
+
+        // All receivables figures operate only on non-refund invoices.
+        Double totalAmount = nonRefundInvoices.stream()
                 .mapToDouble(i -> i.getTotalAmount() != null ? i.getTotalAmount() : 0.0)
                 .sum();
 
-        Double totalPaidAmount = validInvoices.stream()
+        Double outstandingPaid = nonRefundInvoices.stream()
                 .mapToDouble(i -> i.getPaidAmount() != null ? i.getPaidAmount() : 0.0)
                 .sum();
 
-        Double outstandingAmount = totalAmount - totalPaidAmount;
+        Double outstandingAmount = totalAmount - outstandingPaid;
 
         Double collectedThisMonth = 0.0;
         Double dueToday = 0.0;
         Double overDueToday = 0.0;
 
         if (billingDates != null) {
-            collectedThisMonth = validInvoices.stream()
-                    .filter(i -> Utils.compareWithTwoDates(i.getInvoiceStartDate(), billingDates.currentBillStartDate()) >= 0)
-                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+            collectedThisMonth = nonRefundInvoices.stream()
+                    .filter(i -> i.getInvoiceStartDate() != null && Utils.compareWithTwoDates(i.getInvoiceStartDate(), billingDates.currentBillStartDate()) >= 0)
+                    .filter(i -> i.getPaymentStatus() != null && (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())))
                     .mapToDouble(i -> i.getPaidAmount() != null ? i.getPaidAmount() : 0.0)
                     .sum();
 
-            dueToday = validInvoices.stream()
-                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+            dueToday = nonRefundInvoices.stream()
+                    .filter(i -> i.getPaymentStatus() != null && (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())))
                     .filter(i -> i.getInvoiceDueDate() != null)
-                    .filter(i -> Utils.compareWithTwoDates(i.getInvoiceStartDate(), billingDates.currentBillStartDate()) >= 0)
+                    .filter(i -> i.getInvoiceStartDate() != null && Utils.compareWithTwoDates(i.getInvoiceStartDate(), billingDates.currentBillStartDate()) >= 0)
                     .filter(i -> Utils.compareWithTwoDates(i.getInvoiceDueDate(), new Date()) <= 0)
                     .mapToDouble(i -> {
                         double total = i.getTotalAmount() != null ? i.getTotalAmount() : 0.0;
@@ -850,8 +862,8 @@ public class InvoiceV1Service {
                     })
                     .sum();
 
-            overDueToday = validInvoices.stream()
-                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
+            overDueToday = nonRefundInvoices.stream()
+                    .filter(i -> i.getPaymentStatus() != null && (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())))
                     .filter(i -> i.getInvoiceDueDate() != null && Utils.compareWithTwoDates(i.getInvoiceDueDate(), new Date()) < 0)
                     .mapToDouble(i -> {
                         double total = i.getTotalAmount() != null ? i.getTotalAmount() : 0.0;
@@ -861,13 +873,18 @@ public class InvoiceV1Service {
                     .sum();
         }
 
+        Double refundAmount = refundInvoices.stream()
+                .mapToDouble(i -> Math.abs(i.getTotalAmount()))
+                .sum();
+
         return new InvoiceSummaryInfo(totalInvoices,
                 Utils.roundOffWithTwoDigit(collectedThisMonth),
                 Utils.roundOffWithTwoDigit(dueToday),
                 Utils.roundOffWithTwoDigit(overDueToday),
                 Utils.roundOffWithTwoDigit(outstandingAmount),
                 Utils.roundOffWithTwoDigit(totalAmount),
-                0.0);
+                0.0,
+                Utils.roundOffWithTwoDigit(refundAmount));
     }
 
 
@@ -2361,10 +2378,10 @@ public class InvoiceV1Service {
 
     public List<CancelledInvoice> cancelActiveInvoice(List<InvoicesV1> unpaidUpdated) {
         List<CancelledInvoice> listCancelledInvoices = new ArrayList<>(unpaidUpdated.stream().map(i -> {
-           CancelledInvoice ci = new CancelledInvoice();
-           ci.setInvoiceId(i.getInvoiceId());
-           ci.setPaymentStatus(i.getPaymentStatus());
-           return ci;
+            CancelledInvoice ci = new CancelledInvoice();
+            ci.setInvoiceId(i.getInvoiceId());
+            ci.setPaymentStatus(i.getPaymentStatus());
+            return ci;
         }).toList());
         List<InvoicesV1> listNewInvoices = unpaidUpdated.stream().map(i -> {
             i.setCancelled(true);
@@ -3312,7 +3329,7 @@ public class InvoiceV1Service {
                 }
             }
             else {
-                
+
             }
         }
 
@@ -3326,7 +3343,7 @@ public class InvoiceV1Service {
         if (currentMonthInvoice != null) {
             Double newRent = 0.0;
             if (Utils.compareWithTwoDates(newJoiningDate, currentMonthBillingDates.currentBillStartDate()) <= 0) {
-               newRent = rent;
+                newRent = rent;
                 Date dueDate = Utils.addDaysToDate(currentMonthBillingDates.currentBillStartDate(), currentMonthBillingDates.dueDays() - 1);
                 currentMonthInvoice.setCreatedAt(Utils.convertToTimeStamp(currentMonthBillingDates.currentBillStartDate()));
                 currentMonthInvoice.setInvoiceStartDate(currentMonthBillingDates.currentBillStartDate());
