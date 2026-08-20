@@ -123,6 +123,29 @@ public interface CustomerBedHistoryRespository extends JpaRepository<CustomersBe
             """, nativeQuery = true)
     CustomersBedHistory findByCustomerIdAndDate(@Param("customerId") String customerId, @Param("startDate") Date startDate);
 
+    /**
+     * Returns 1 when the requested joiningDate falls inside an existing
+     * CHECK_IN or REASSIGNED history period for the given bed, 0 otherwise.
+     *
+     * Overlap rule:  startDate <= joiningDate  AND  (endDate IS NULL OR endDate > joiningDate)
+     *
+     * Returns Integer (not boolean) because MySQL SELECT EXISTS(...) yields
+     * a numeric 0/1 — Spring Data JPA cannot cast Long to boolean directly.
+     * isActive is intentionally NOT included — it is never set or queried
+     * elsewhere in the codebase.
+     */
+    @Query(value = """
+            SELECT EXISTS (
+                SELECT 1 FROM customers_bed_history
+                WHERE bed_id   = :bedId
+                  AND type     IN ('CHECK_IN', 'REASSIGNED')
+                  AND DATE(start_date) <= DATE(:joiningDate)
+                  AND (end_date IS NULL OR DATE(end_date) > DATE(:joiningDate))
+            )
+            """, nativeQuery = true)
+    Integer existsOverlappingHistoryForBed(@Param("bedId") int bedId,
+                                           @Param("joiningDate") Date joiningDate);
+
 
 }
 

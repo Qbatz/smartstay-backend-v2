@@ -559,7 +559,7 @@ public class BedsService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 
-    public boolean isBedAvailable(int bedId, String parentId, Date joiningDate) {
+    public boolean  isBedAvailable(int bedId, String parentId, Date joiningDate) {
         Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
 
         if (beds.getStatus().equalsIgnoreCase(BedStatus.NOTICE.name()) || beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
@@ -574,6 +574,10 @@ public class BedsService {
         } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.OCCUPIED.name())) {
             return false;
         } else if (beds.getCurrentStatus().equalsIgnoreCase(BedStatus.VACANT.name())) {
+            // 1. Reject if the joining date falls inside an existing bed-history period.
+            if (isBedHistoryOverlapping(bedId, joiningDate)) {
+                return false;
+            }
             //check if the bed is checked in on this date
             List<BookingsV1> bookingsV1 = bookingService.findAvailableBookingOnDate(bedId, joiningDate);
             if (bookingsV1 != null) {
@@ -612,6 +616,20 @@ public class BedsService {
 
         return false;
 
+    }
+
+    /**
+     * Returns true when the given joiningDate falls inside an existing
+     * CustomersBedHistory record for the bed (type CHECK_IN or REASSIGNED).
+     *
+     * Overlap rule:  startDate &lt;= joiningDate  AND  (endDate IS NULL OR endDate &gt; joiningDate)
+     *
+     * Kept as a separate method so the logic is reusable and independently
+     * testable without touching the rest of isBedAvailable().
+     */
+    private boolean isBedHistoryOverlapping(int bedId, Date joiningDate) {
+        Integer exists = customerBedHistoryRespository.existsOverlappingHistoryForBed(bedId, joiningDate);
+        return exists != null && exists > 0;
     }
 
     public boolean isBedAvailableNew(int bedId, String parentId, String joiningDate) {
