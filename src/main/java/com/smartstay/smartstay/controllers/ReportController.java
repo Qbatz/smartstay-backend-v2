@@ -114,9 +114,13 @@ public class ReportController {
 
     @GetMapping("/download/receipts/{hostelId}")
     public ResponseEntity<?> downloadReceiptReport(@PathVariable("hostelId") String hostelId,
+                                                   @RequestParam(value = "invoiceType", required = false) List<String> invoiceType,
+                                                   @RequestParam(value = "paymentMode", required = false) List<String> paymentMode,
+                                                   @RequestParam(value = "collectedBy", required = false) List<String> collectedBy,
+                                                   @RequestParam(value = "period", required = false) String period,
                                                    @RequestParam(value = "startDate", required = false) String startDate,
                                                    @RequestParam(value = "endDate", required = false) String endDate) {
-        return reportService.downloadReceiptsReport(hostelId, startDate, endDate);
+        return reportService.downloadReceiptsReport(hostelId, invoiceType, paymentMode, collectedBy, period, startDate, endDate);
     }
 
     @GetMapping("/download/expense/{hostelId}")

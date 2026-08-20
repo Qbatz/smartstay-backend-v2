@@ -340,7 +340,7 @@ public class ReportService {
             Pageable pageableRequest = PageRequest.of(pageParams - 1, size);
 
             Page<InvoicesV1> pagedInvoices = invoiceV1Service.getInvoicesForReport(hostelId, startDate, endDate, search,
-                    paymentStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
+                    pStatus, invoiceModes, invoiceTypes, createdBy, minPaidAmount, maxPaidAmount,
                     minOutstandingAmount, maxOutstandingAmount, pageableRequest);
             return getInvoiceWebReport(invoices, pagedInvoices, options, startDate, endDate);
         }
@@ -1412,7 +1412,7 @@ public class ReportService {
 
     }
 
-    public ResponseEntity<?> downloadReceiptsReport(String hostelId, String startDate, String endDate) {
+    public ResponseEntity<?> downloadReceiptsReport(String hostelId, List<String> invoiceTypes, List<String> paymentModes, List<String> collectedBy, String period, String startDate, String endDate) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -1459,7 +1459,10 @@ public class ReportService {
         String url =  reportsUrl + "/v2/reports/receipts/report/"+hostelId;
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
                 .queryParam("startDate", sDate)
-                .queryParam("endDate", eDate);
+                .queryParam("endDate", eDate)
+                .queryParam("collectedBy", collectedBy)
+                .queryParam("paymentMode", paymentModes)
+                .queryParam("invoiceType", invoiceTypes);
 
         String pdfUrl = downloadService.downloadFromUrl(builder.toUriString());
 
@@ -1611,7 +1614,6 @@ public class ReportService {
             builder.queryParam("maxOutstandingAmount", maxOutstandingAmount);
         }
 
-        System.out.println("Invoice Report Download URL: " + builder.toUriString());
         String pdfUrl = downloadService.downloadFromUrl(builder.toUriString());
 
         if (pdfUrl == null) {
