@@ -7,6 +7,6 @@ import java.util.Date;
  * to populate the "Last Transaction" column without N+1 lookups.
  */
 public record VendorLastPayment(
-        String vendorId,
+        Integer vendorId,
         Date lastPaymentDate) {
 }

@@ -28,9 +28,12 @@ public class ExpenseReportResponse {
     public static class FiltersData {
         private List<CategoryFilter> category;
         private List<SubCategoryFilter> subCategory;
+        private List<FilterItem> vendors;
         private List<String> paymentMode;
         private List<UserFilter> createdBy;
         private List<FilterItem> period;
+        private List<FilterItem> paymentStatus;
+        private List<FilterItem> businessName;
     }
 
     @Data
@@ -92,6 +95,9 @@ public class ExpenseReportResponse {
     public static class ExpenseDetail {
         private String expenseId;
         private String date;
+        private String expenseNumber;
+        private String expenseTitle;
+        private String status;
         private String expenseCategory;
         private String expenseSubCategory;
         private String description;
@@ -101,6 +107,8 @@ public class ExpenseReportResponse {
         private String paymentMode;
         private String account;
         private Double amount;
+        private Double paidAmount;
+        private Double balanceAmount;
         private String createdBy;
     }
 

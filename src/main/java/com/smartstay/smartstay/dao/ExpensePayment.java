@@ -31,7 +31,7 @@ public class ExpensePayment {
     private String expenseId;
     private Long expenseItemId;
     private String hostelId;
-    private String vendorId;
+    private Integer vendorId;
     private Double paidAmount;
     private String paymentMethod;
     private String bankId;

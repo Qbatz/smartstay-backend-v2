@@ -5,6 +5,6 @@ package com.smartstay.smartstay.dto.vendor;
  * query so the mobile vendor list can show "Last Transaction" as an amount without N+1 lookups.
  */
 public record VendorLastPaymentAmount(
-        String vendorId,
+        Integer vendorId,
         Double amount) {
 }

@@ -36,12 +36,14 @@ import com.smartstay.smartstay.events.RecurringEvents;
 import com.smartstay.smartstay.filterOptions.bookings.BookingsFilterOptions;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
+import com.smartstay.smartstay.payloads.customer.NonRefundable;
 import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.InvoiceRedemption.AvailableInvoices;
 import com.smartstay.smartstay.responses.InvoiceRedemption.SelectedInvoiceInfo;
 import com.smartstay.smartstay.responses.bookings.AdvanceInfo;
+import com.smartstay.smartstay.responses.templates.TemplateTypes;
 import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.responses.bookings.*;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
@@ -406,6 +408,75 @@ public class InvoiceV1Service {
         }
     }
 
+    public void addRentanInvoiceForPostpaid(Customers customers, Double rentAmount, String joiningDate, Date invoiceStartDate, Date invoiceEndDate,  BillingDates invoiceRunningCycle, BillingDates currentMonthBillDates, List<NonRefundable> deductions) {
+        String invoiceNumber = fetchNextRentalInvoiceNumber(customers.getHostelId());
+
+        Date joiningDate1 = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        Date dueDate = Utils.addDaysToDate(currentMonthBillDates.currentBillStartDate(), currentMonthBillDates.dueDays() - 1);
+        Date invoiceDate = currentMonthBillDates.currentBillStartDate();
+
+        Double deductionAmount = 0.0;
+        if (deductions != null) {
+            deductionAmount = deductions
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.amount() != null) {
+                            return i.amount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+        }
+
+        InvoicesV1 invoicesV1 = new InvoicesV1();
+        invoicesV1.setTotalAmount(Utils.roundOfDouble(rentAmount));
+        invoicesV1.setBasePrice(Utils.roundOfDouble(rentAmount));
+        invoicesV1.setSubTotal(Utils.roundOfDouble(rentAmount));
+        invoicesV1.setDeductionAmount(deductionAmount);
+        invoicesV1.setDeductions(null);
+        invoicesV1.setBalanceAmount(0.0);
+        invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+        invoicesV1.setCustomerId(customers.getCustomerId());
+        invoicesV1.setInvoiceNumber(invoiceNumber.toString());
+        invoicesV1.setPaidAmount(0.0);
+        invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        invoicesV1.setCreatedBy(authentication.getName());
+        invoicesV1.setGst(0.0);
+        invoicesV1.setCgst(0.0);
+        invoicesV1.setSgst(0.0);
+        invoicesV1.setGstPercentile(0.0);
+        invoicesV1.setInvoiceDueDate(Utils.convertToTimeStamp(dueDate));
+        invoicesV1.setCustomerMobile(customers.getMobile());
+        invoicesV1.setCustomerMailId(customers.getEmailId());
+        invoicesV1.setCreatedAt(new Date());
+        invoicesV1.setInvoiceDate(invoiceDate);
+        invoicesV1.setInvoiceStartDate(Utils.convertToTimeStamp(invoiceStartDate));
+        invoicesV1.setInvoiceEndDate(Utils.convertToTimeStamp(invoiceEndDate));
+        invoicesV1.setInvoiceGeneratedDate(Utils.convertToTimeStamp(invoiceStartDate));
+        invoicesV1.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+        invoicesV1.setCancelled(false);
+        invoicesV1.setHostelId(customers.getHostelId());
+
+        List<InvoiceItems> listInvoiceItems = new ArrayList<>();
+
+        InvoiceItems invoiceItems = new InvoiceItems();
+        invoiceItems.setInvoice(invoicesV1);
+        invoiceItems.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+
+        invoiceItems.setAmount(rentAmount);
+        listInvoiceItems.add(invoiceItems);
+
+        invoicesV1.setInvoiceItems(listInvoiceItems);
+
+        invoicesV1Repository.save(invoicesV1);
+        String status = "Active";
+
+
+        PaymentSummary summary = new PaymentSummary(customers.getHostelId(), customers.getCustomerId(), invoiceNumber.toString(), rentAmount, customers.getEmailId(), customers.getMobile(), status);
+        paymentSummaryService.addInvoice(summary);
+
+    }
+
     public void addInvoice(String customerId, Double amount, String type, String hostelId, String customerMobile, String customerMailId, String joiningDate, BillingDates billingDates, double rentAmount, double deductionAmount, List<Deductions> listDeductions) {
         if (authentication.isAuthenticated()) {
             StringBuilder invoiceNumber = new StringBuilder();
@@ -517,6 +588,43 @@ public class InvoiceV1Service {
             PaymentSummary summary = new PaymentSummary(hostelId, customerId, invoiceNumber.toString(), amount, customerMailId, customerMobile, status);
             paymentSummaryService.addInvoice(summary);
         }
+    }
+
+    public String fetchNextRentalInvoiceNumber(String hostelId) {
+        StringBuilder invoiceNumber = new StringBuilder();
+        BillTemplates templates = templateService.getBillTemplate(hostelId, BillConfigTypes.RENTAL.name());
+        InvoicesV1 existingV1 = null;
+
+        double gstAmount = 0;
+        double gstPercentile = 0;
+        double baseAmount = 0;
+        double cgst = 0;
+        double sgst = 0;
+
+        if (templates != null) {
+
+            invoiceNumber.append(templates.prefix());
+            invoiceNumber.append("-");
+            invoiceNumber.append(templates.suffix());
+            existingV1 = invoicesV1Repository.findLatestInvoiceByPrefix(templates.prefix(), hostelId);
+        }
+        if (existingV1 != null) {
+            invoiceNumber = new StringBuilder();
+            invoiceNumber.append(templates.prefix());
+
+            String[] suffix = existingV1.getInvoiceNumber().split("-");
+            if (suffix.length > 1) {
+                invoiceNumber.append("-");
+                int suff = Integer.parseInt(suffix[1]) + 1;
+                invoiceNumber.append(String.format("%03d", suff));
+            } else {
+                invoiceNumber.append("-00");
+                invoiceNumber.append("1");
+
+            }
+        }
+
+        return invoiceNumber.toString();
     }
 
     /**
@@ -6290,6 +6398,8 @@ public class InvoiceV1Service {
         return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
 
     }
+
+
 
     public void createNewInvoiceForCurrentMonth(String customerId, Double rentAmount, String hostelId, BillingDates currentMonthBillingDates, String customerMobile, String customerMailId) {
         if (authentication.isAuthenticated()) {

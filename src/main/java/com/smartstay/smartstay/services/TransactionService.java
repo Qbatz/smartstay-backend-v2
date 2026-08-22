@@ -1027,9 +1027,6 @@ public class TransactionService {
             itemsPerPage = webTransactions.getPageable().getPageSize();
             secondaryTransactions = webTransactions.getContent();
         }
-        else {
-
-        }
 
 
         Double receivedAmount = 0.0;
@@ -1043,7 +1040,7 @@ public class TransactionService {
 
         receivedAmount = listTransactions
                 .stream()
-                .filter(i -> i.getType() == null)
+                .filter(i -> i.getType() == null || (i.getType() != null && i.getType().equalsIgnoreCase(TransactionType.ADVANCE_HOLDING.name())))
                 .mapToDouble(TransactionV1::getPaidAmount)
                 .sum();
 

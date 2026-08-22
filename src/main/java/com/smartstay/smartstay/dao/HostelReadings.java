@@ -30,6 +30,7 @@ public class HostelReadings {
     private Double consumption;
     private boolean isFirstEntry;
     private boolean isMissedEntry;
+    private Boolean isResetEntry;
     private Date createdAt;
     private Date updatedAt;
     private String createdBy;
