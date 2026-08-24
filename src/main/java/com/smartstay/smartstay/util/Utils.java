@@ -58,6 +58,8 @@ public class Utils {
     public static final String OTP_EXPIRED = "Otp Expired";
     public static final String ASSET_NAME_ALREADY_EXISTS = "Asset name already exists";
     public static final String SERIAL_NUMBER_ALREADY_EXISTS = "Serial number already exists";
+    public static final String INVALID_PURCHASE_DATE = "Invalid purchase date";
+    public static final String PURCHASE_DATE_AFTER_ASSIGNED_DATE = "Purchase date cannot be later than the date the asset was assigned";
     public static final String PASSWORD_RESET_SUCCESS = "Password reset successfully.";
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
     public static final String PASSWORD_MISMATCH = "New password and confirm password is not matching";
