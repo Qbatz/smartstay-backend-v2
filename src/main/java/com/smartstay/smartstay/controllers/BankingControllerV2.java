@@ -5,8 +5,10 @@ import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
 import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
 import com.smartstay.smartstay.payloads.banking.CreditCardPayment;
 import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
+import com.smartstay.smartstay.payloads.transactions.TenantPayment;
 import com.smartstay.smartstay.services.BankingServiceV2;
 import com.smartstay.smartstay.services.QrBankTypeService;
+import com.smartstay.smartstay.services.TransactionService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
@@ -29,6 +31,15 @@ public class BankingControllerV2 {
 
     @Autowired
     private QrBankTypeService qrBankTypeService;
+
+    @Autowired
+    private TransactionService transactionService;
+
+    @PostMapping("/tenantPayment/{hostelId}")
+    public ResponseEntity<?> tenantPayment(@PathVariable("hostelId") String hostelId,
+            @RequestBody(required = false) TenantPayment payload) {
+        return transactionService.recordTenantPayment(hostelId, payload);
+    }
 
     // Create a v3 bank / cash account under a hostel.
     @PostMapping("/{hostelId}")

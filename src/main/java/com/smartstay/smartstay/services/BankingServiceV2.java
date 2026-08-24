@@ -1707,6 +1707,45 @@ public class BankingServiceV2 {
         return name.isEmpty() ? null : name;
     }
 
+    @Transactional(readOnly = true)
+    public boolean isValidBankOrPaymentMethod(String bankId) {
+        String resolvedId = trimToNull(bankId);
+        if (resolvedId == null) {
+            return false;
+        }
+        return bankingV2Repository.existsById(resolvedId) || bankingMethodsRepository.existsById(resolvedId);
+    }
+
+    @Transactional
+    public PaymentSourceRef creditPaymentSource(String bankId, double amount, String userId) {
+        String resolvedId = trimToNull(bankId);
+        if (resolvedId == null) {
+            return null;
+        }
+        Date now = new Date();
+
+        BankingV2 bank = bankingV2Repository.findById(resolvedId).orElse(null);
+        if (bank != null) {
+            applyBankDelta(bank, amount, now, userId);
+            return new PaymentSourceRef(bank.getBankId(), null);
+        }
+
+        BankingMethods method = bankingMethodsRepository.findById(resolvedId).orElse(null);
+        if (method == null) {
+            return null;
+        }
+        applyMethodDelta(method, amount, now, userId);
+        if (method.getBank() != null) {
+            applyBankDelta(method.getBank(), amount, now, userId);
+        }
+        return new PaymentSourceRef(
+                method.getBank() != null ? method.getBank().getBankId() : null,
+                method.getPaymentMethodId());
+    }
+
+    public record PaymentSourceRef(String bankId, String paymentMethodId) {
+    }
+
     private String trimToNull(String value) {
         return (value != null && !value.trim().isEmpty()) ? value.trim() : null;
     }

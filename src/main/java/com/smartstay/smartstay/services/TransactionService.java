@@ -20,6 +20,9 @@ import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.payloads.retainer.LoadBalance;
 import com.smartstay.smartstay.payloads.transactions.AddPayment;
+import com.smartstay.smartstay.payloads.transactions.TenantPayment;
+import com.smartstay.smartstay.payloads.transactions.TenantPaymentInvoice;
+import org.springframework.transaction.annotation.Transactional;
 import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.TransactionV1Repository;
 import com.smartstay.smartstay.repositories.InvoiceRedemptionRepository;
@@ -71,6 +74,10 @@ public class TransactionService {
     private PaymentSummaryService paymentSummaryService;
     @Autowired
     private BankingService bankingService;
+
+    @Autowired
+    @Lazy
+    private BankingServiceV2 bankingServiceV2;
     @Autowired
     private CreditDebitNoteService creditDebitNoteService;
     @Autowired
@@ -230,6 +237,142 @@ public class TransactionService {
         }
 
         return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+    }
+
+    @Transactional
+    public ResponseEntity<?> recordTenantPayment(String hostelId, TenantPayment payload) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BILLS, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (payload == null || !Utils.checkNullOrEmpty(payload.tenantId())) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!Utils.checkNullOrEmpty(payload.bankId())) {
+            return new ResponseEntity<>(Utils.REQUIRED_TRANSACTION_MODE, HttpStatus.BAD_REQUEST);
+        }
+        if (payload.invoices() == null || payload.invoices().isEmpty()) {
+            return new ResponseEntity<>(Utils.INVOICES_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (!bankingServiceV2.isValidBankOrPaymentMethod(payload.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        List<InvoicesV1> invoicesToPay = new ArrayList<>();
+        Set<String> seenInvoiceIds = new HashSet<>();
+        for (TenantPaymentInvoice line : payload.invoices()) {
+            if (line == null || !Utils.checkNullOrEmpty(line.invoiceId())) {
+                return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+            }
+            if (line.amount() == null || line.amount() <= 0) {
+                return new ResponseEntity<>(Utils.AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            if (!seenInvoiceIds.add(line.invoiceId())) {
+                return new ResponseEntity<>(Utils.DUPLICATE_INVOICE_IN_PAYMENT, HttpStatus.BAD_REQUEST);
+            }
+
+            InvoicesV1 invoice = invoiceService.findInvoiceDetails(line.invoiceId());
+            if (invoice == null || !hostelId.equalsIgnoreCase(invoice.getHostelId())) {
+                return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+            }
+            if (!payload.tenantId().equalsIgnoreCase(invoice.getCustomerId())) {
+                return new ResponseEntity<>(Utils.INVOICE_NOT_FOR_TENANT, HttpStatus.BAD_REQUEST);
+            }
+            if (invoice.isCancelled()) {
+                return new ResponseEntity<>(Utils.CANNOT_MAKE_PAYMENT_CANCELLED_INVOICES, HttpStatus.BAD_REQUEST);
+            }
+            if (line.amount() > outstandingAmount(invoice) + AMOUNT_TOLERANCE) {
+                return new ResponseEntity<>(Utils.PAYMENT_EXCEEDS_INVOICE_BALANCE, HttpStatus.BAD_REQUEST);
+            }
+            invoicesToPay.add(invoice);
+        }
+
+        String transactionNumber = generateRandomNumber();
+        for (int i = 0; i < invoicesToPay.size(); i++) {
+            applyTenantInvoicePayment(hostelId, invoicesToPay.get(i), payload.invoices().get(i).amount(),
+                    payload, transactionNumber, user);
+        }
+
+        return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
+    }
+
+    private double outstandingAmount(InvoicesV1 invoice) {
+        double totalAmount = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : 0.0;
+        double paidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0.0;
+        return totalAmount - paidAmount;
+    }
+
+    private static final double AMOUNT_TOLERANCE = 0.001;
+
+    private void applyTenantInvoicePayment(String hostelId, InvoicesV1 invoicesV1, double amount,
+                                           TenantPayment payload, String transactionNumber, Users user) {
+        double paidAmount = invoicesV1.getPaidAmount() != null ? invoicesV1.getPaidAmount() : 0.0;
+        double totalAmount = invoicesV1.getTotalAmount() != null ? invoicesV1.getTotalAmount() : 0.0;
+
+        boolean settlesInvoice = paidAmount + amount >= totalAmount - AMOUNT_TOLERANCE;
+        String typeOfPayment = settlesInvoice ? PaymentStatus.PAID.name() : PaymentStatus.PARTIAL_PAYMENT.name();
+
+        TransactionV1 transactionV1 = new TransactionV1();
+        transactionV1.setStatus(typeOfPayment);
+        transactionV1.setPaidAmount(amount);
+
+        Date paymentDate = payload.paymentDate() == null
+                ? new Date()
+                : Utils.stringToDate(payload.paymentDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        transactionV1.setPaidAt(paymentDate);
+
+        transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
+        transactionV1.setHostelId(hostelId);
+        transactionV1.setBankId(payload.bankId());
+        transactionV1.setReferenceNumber(payload.referenceId());
+        transactionV1.setUpdatedBy(authentication.getName());
+        transactionV1.setTransactionReferenceId(transactionNumber);
+        transactionV1.setInvoiceId(invoicesV1.getInvoiceId());
+        transactionV1.setCustomerId(invoicesV1.getCustomerId());
+        transactionV1.setCreatedAt(new Date());
+        transactionV1.setCreatedBy(authentication.getName());
+        transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
+        transactionV1.setDescription(payload.description());
+
+        BankingServiceV2.PaymentSourceRef paymentSource = bankingServiceV2.creditPaymentSource(
+                payload.bankId(), amount, authentication.getName());
+
+        TransactionV1 trnsV1 = transactionRespository.save(transactionV1);
+
+        PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(),
+                invoicesV1.getInvoiceNumber(), amount, invoicesV1.getCustomerMobile(),
+                invoicesV1.getCustomerMailId(), "Active");
+        paymentSummaryService.addPayment(summary);
+
+        invoiceService.recordPayment(invoicesV1.getInvoiceId(), typeOfPayment, amount);
+
+        String ledgerBankId = paymentSource != null && paymentSource.bankId() != null
+                ? paymentSource.bankId() : payload.bankId();
+        String ledgerPaymentMethodId = paymentSource != null ? paymentSource.paymentMethodId() : null;
+
+        TransactionDto transaction = new TransactionDto(ledgerBankId, payload.referenceId(), amount,
+                BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payload.paymentDate(),
+                trnsV1.getTransactionId());
+        bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId(), ledgerPaymentMethodId);
+
+        usersService.addUserLog(hostelId, trnsV1.getTransactionId(), ActivitySource.TRANSACTIONS,
+                ActivitySourceType.CREATE, user);
     }
 
     public ResponseEntity<?> recordPayment(String hostelId, String invoiceId, AddPayment payment) {

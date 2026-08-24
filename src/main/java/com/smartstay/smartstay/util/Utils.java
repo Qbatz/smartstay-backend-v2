@@ -257,6 +257,10 @@ public class Utils {
     public static final String FINAL_SETTLEMENT_NOT_PAID = "Final Settlement is not fully paid";
     public static final String CHANGE_BED_SAME_BED_ERROR = "Customer is currently staying on the same bed";
     public static final String CANNOT_MAKE_PAYMENT_CANCELLED_INVOICES = "Cannot make the payments for cancelled invoices";
+    public static final String INVOICE_NOT_FOR_TENANT = "Invoice does not belong to this tenant";
+    public static final String DUPLICATE_INVOICE_IN_PAYMENT = "The same invoice cannot be paid twice in one payment";
+    public static final String PAYMENT_EXCEEDS_INVOICE_BALANCE = "Payment amount cannot be greater than the invoice balance";
+    public static final String INVOICES_REQUIRED = "At least one invoice is required";
     public static final String CHANGE_BED_SAME_DAY_ERROR = "Cannot change the bed on the same day customer is joined";
     public static final String DISCOUNT_AMOUNT_REQUIRED = "Discount amount is required";
     public static final String DISCOUNT_AMOUNT_VALIDATION = "Discount amount should not be greater than invoice amount";

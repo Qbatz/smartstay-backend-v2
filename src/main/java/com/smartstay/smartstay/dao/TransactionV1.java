@@ -41,4 +41,5 @@ public class TransactionV1 {
     private String referenceNumber;
     private Date paidAt;
     private String updatedBy;
+    private String description;
 }
