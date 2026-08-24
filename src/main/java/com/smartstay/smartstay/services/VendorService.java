@@ -13,6 +13,7 @@ import com.smartstay.smartstay.dao.RolesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dao.VendorCategories;
 import com.smartstay.smartstay.dao.VendorV1;
+import com.smartstay.smartstay.dto.vendor.VendorFilters;
 import com.smartstay.smartstay.dto.vendor.VendorMonthSummaryProjection;
 import com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary;
 import com.smartstay.smartstay.ennum.FilterOptionsModule;
@@ -140,6 +141,8 @@ public class VendorService {
     }
 
     public ResponseEntity<?> getAllVendors(String hostelId, String name, Integer categoryId, List<String> paymentStatus,
+                                           List<String> createdBy, String fromDate, String toDate,
+                                           Long subCategoryId, Double minAmount, Double maxAmount,
                                            Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -158,14 +161,36 @@ public class VendorService {
         // Maps the UI status values (display name or enum name, single or multiple) to the stored
         // enum; null => no status filter (covers omitted, "ALL", and unrecognised values).
         List<VendorPaymentStatus> statusFilters = parsePaymentStatuses(paymentStatus);
+        List<String> createdByFilter = trimToNullList(createdBy);
+
+        Date createdFrom;
+        Date createdTo;
+        try {
+            createdFrom = startOfDay(fromDate != null ? fromDate : toDate);
+            createdTo = endOfDay(toDate != null ? toDate : fromDate);
+        } catch (RuntimeException ex) {
+            return new ResponseEntity<>(Utils.INVALID_DATE_FILTER, HttpStatus.BAD_REQUEST);
+        }
+        if ((fromDate != null && createdFrom == null) || (toDate != null && createdTo == null)) {
+            return new ResponseEntity<>(Utils.INVALID_DATE_FILTER, HttpStatus.BAD_REQUEST);
+        }
+        if (minAmount != null && maxAmount != null && minAmount > maxAmount) {
+            return new ResponseEntity<>(Utils.INVALID_AMOUNT_RANGE, HttpStatus.BAD_REQUEST);
+        }
+
+        VendorFilters filters = new VendorFilters(searchName, categoryId, statusFilters, createdByFilter,
+                createdFrom, createdTo, subCategoryId, minAmount, maxAmount);
+
         int pageNumber = (page == null || page < 1) ? 1 : page;
         int pageSize = (size == null || size < 1) ? 10 : size;
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
         // Pagination, the filtered page, and the summary are identical for web and mobile.
-        Page<VendorV1> vendorPage = vendorRepository.listVendors(hostelId, searchName, categoryId, statusFilters, pageable);
+        Page<VendorV1> vendorPage = vendorRepository.listVendors(hostelId, filters.name(), filters.categoryId(),
+                filters.paymentStatuses(), filters.createdBy(), filters.createdFrom(), filters.createdTo(),
+                filters.subCategoryId(), filters.minBalance(), filters.maxBalance(), pageable);
         List<VendorV1> vendors = vendorPage.getContent();
-        VendorSummary vendorSummary = buildVendorSummary(hostelId, searchName, categoryId, statusFilters, vendorPage.getTotalElements());
+        VendorSummary vendorSummary = buildVendorSummary(hostelId, filters, vendorPage.getTotalElements());
         Map<Integer, String> categoryNamesById = resolveCategoryNames(vendors);
 
         int currentPage = vendorPage.getPageable().getPageNumber() + 1;
@@ -214,12 +239,45 @@ public class VendorService {
         return new ResponseEntity<>(vendors, HttpStatus.OK);
     }
 
-    private VendorSummary buildVendorSummary(String hostelId, String searchName, Integer categoryId,
-                                             List<VendorPaymentStatus> statusFilters, long totalVendors) {
+    private List<String> trimToNullList(List<String> values) {
+        if (values == null) {
+            return null;
+        }
+        List<String> cleaned = values.stream()
+                .filter(value -> value != null && !value.trim().isEmpty())
+                .map(String::trim)
+                .toList();
+        return cleaned.isEmpty() ? null : cleaned;
+    }
+
+    private Date startOfDay(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return Utils.stringToDate(value.trim(), Utils.DATE_FORMAT_ZOHO);
+    }
+
+    private Date endOfDay(String value) {
+        Date day = startOfDay(value);
+        if (day == null) {
+            return null;
+        }
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(day);
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
+        return calendar.getTime();
+    }
+
+    private VendorSummary buildVendorSummary(String hostelId, VendorFilters filters, long totalVendors) {
         // Aggregated from the stored vendor columns over the full filtered result set.
         double totalPurchase = 0.0;
         double totalPaid = 0.0;
-        VendorPurchaseSummary purchaseSummary = vendorRepository.summarizeVendors(hostelId, searchName, categoryId, statusFilters);
+        VendorPurchaseSummary purchaseSummary = vendorRepository.summarizeVendors(hostelId, filters.name(),
+                filters.categoryId(), filters.paymentStatuses(), filters.createdBy(), filters.createdFrom(),
+                filters.createdTo(), filters.subCategoryId(), filters.minBalance(), filters.maxBalance());
         if (purchaseSummary != null) {
             totalPurchase = purchaseSummary.totalPurchase() != null ? purchaseSummary.totalPurchase() : 0.0;
             totalPaid = purchaseSummary.totalPaid() != null ? purchaseSummary.totalPaid() : 0.0;
