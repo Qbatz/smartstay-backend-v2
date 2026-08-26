@@ -1441,7 +1441,7 @@ public class ExpenseService {
 
     public ExpenseReportResponse getExpenseReportDetails(String hostelId, String period, String customStartDate,
             String customEndDate, List<Long> categoryIds, List<Long> subCategoryIds,
-            List<String> paymentModes, List<String> paidTo, List<String> createdBy,
+            List<String> paymentModes, List<String> paymentStatus, List<Integer> paidTo, List<String> createdBy,
             int pageFromParam, int size) {
 
         Date startDate = null;
@@ -1495,45 +1495,86 @@ public class ExpenseService {
             }
         }
 
-        List<String> bankIdsFromPaidTo = null;
-        if (paidTo != null && !paidTo.isEmpty()) {
-            bankIdsFromPaidTo = bankingService.findBankIdsByAccountHolderNames(hostelId, paidTo);
-            if (bankIdsFromPaidTo.isEmpty()) {
-                return buildEmptyResponse(hostelId, startDate, endDate, page, size);
-            }
+        List<Long> catId = null;
+        List<Long> subCatId = null;
+        List<Integer> pTo = null;
+        List<String> pModes = null;
+        List<String> cBy = null;
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            catId = categoryIds;
         }
 
-        List<String> finalBankIds = null;
-        if (bankIdsFromModes != null && bankIdsFromPaidTo != null) {
-            finalBankIds = bankIdsFromModes.stream().filter(bankIdsFromPaidTo::contains).collect(Collectors.toList());
-            if (finalBankIds.isEmpty()) {
-                return buildEmptyResponse(hostelId, startDate, endDate, page, size);
-            }
-        } else if (bankIdsFromModes != null) {
-            finalBankIds = bankIdsFromModes;
-        } else if (bankIdsFromPaidTo != null) {
-            finalBankIds = bankIdsFromPaidTo;
+        if (subCategoryIds != null && !subCategoryIds.isEmpty()) {
+            subCatId = subCategoryIds;
         }
+        if (paidTo != null && !paidTo.isEmpty()) {
+            pTo = paidTo;
+        }
+        if (paymentModes != null && !paymentModes.isEmpty()) {
+            pModes = paymentModes;
+        }
+        if (createdBy != null && !createdBy.isEmpty()) {
+            cBy = createdBy;
+        }
+
+//        List<String> bankIdsFromPaidTo = null;
+//        if (paidTo != null && !paidTo.isEmpty()) {
+//            bankIdsFromPaidTo = bankingService.findBankIdsByAccountHolderNames(hostelId, paidTo);
+//            if (bankIdsFromPaidTo.isEmpty()) {
+//                return buildEmptyResponse(hostelId, startDate, endDate, page, size);
+//            }
+//        }
+
+        List<String> pStatus = null;
+        if (paymentStatus != null && !paymentStatus.isEmpty()) {
+            pStatus = paymentStatus.stream()
+                    .toList();
+        }
+
+//        List<String> finalBankIds = null;
+//        if (bankIdsFromModes != null && bankIdsFromPaidTo != null) {
+//            finalBankIds = bankIdsFromModes.stream().filter(bankIdsFromPaidTo::contains).collect(Collectors.toList());
+//            if (finalBankIds.isEmpty()) {
+//                return buildEmptyResponse(hostelId, startDate, endDate, page, size);
+//            }
+//        } else if (bankIdsFromModes != null) {
+//            finalBankIds = bankIdsFromModes;
+//        } else if (bankIdsFromPaidTo != null) {
+//            finalBankIds = bankIdsFromPaidTo;
+//        }
 
         int totalRecords = 0;
         int currentPage = 0;
         int noOfItemsPerPage = 0;
         int totalPages = 0;
 
-        ExpenseSummaryProjection summaryProj = expensesRepository.getExpenseSummary(hostelId, categoryIds,
-                subCategoryIds, finalBankIds, null, createdBy, startDate, endDate);
-        Double totalAmount = (summaryProj != null) ? summaryProj.getTotalAmount() : 0.0;
+//        ExpenseSummaryProjection summaryProj = expensesRepository.getExpenseSummary(hostelId, categoryIds,
+//                subCategoryIds, finalBankIds, null, createdBy, startDate, endDate);
+//        Double totalAmount = (summaryProj != null) ? summaryProj.getTotalAmount() : 0.0;
 
+        double totalAmounts = 0.0;
 
-        List<ExpensesV1> primaryExpenses = expensesRepository.findExpensesWithFiltersV2(hostelId, categoryIds,
-                subCategoryIds, finalBankIds, null, createdBy, startDate, endDate);
+        List<ExpensesV1> primaryExpenses = expensesRepository.findExpensesWithFiltersV2(hostelId, catId,
+                subCatId, pStatus, null, pTo, cBy, startDate, endDate);
         List<ExpensesV1> secondaryExpenses = primaryExpenses;
         totalRecords = primaryExpenses.size();
 
+        if (primaryExpenses != null && !primaryExpenses.isEmpty()) {
+            totalAmounts = primaryExpenses
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getTransactionAmount() != null) {
+                            return i.getTransactionAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+        }
+
         if (authentication.getSource().equalsIgnoreCase("web")) {
             Pageable pageable = PageRequest.of(page, size);
-            Page<ExpensesV1> pagedExpenses = expensesRepository.findExpensesWithFiltersV2(hostelId, categoryIds,
-                    subCategoryIds, finalBankIds, null, createdBy, startDate, endDate, pageable);
+            Page<ExpensesV1> pagedExpenses = expensesRepository.findExpensesWithFiltersV2(hostelId, catId,
+                    subCategoryIds, null, pStatus, pTo, cBy, startDate, endDate, pageable);
             secondaryExpenses = pagedExpenses.getContent();
             currentPage = pagedExpenses.getPageable().getPageNumber()+1;
             noOfItemsPerPage = pagedExpenses.getNumberOfElements();
@@ -1590,7 +1631,7 @@ public class ExpenseService {
                 .filtersData(filtersData)
                 .summary(ExpenseReportResponse.Summary.builder()
                         .totalExpenses(totalRecords)
-                        .totalAmount(totalAmount)
+                        .totalAmount(totalAmounts)
                         .startDate(Utils.dateToString(startDate))
                         .endDate(Utils.dateToString(endDate))
                         .build())

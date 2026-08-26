@@ -130,4 +130,8 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             t.paymentDate DESC LIMIT 1)
             """)
     List<TransactionV1> findLatestTransactionsByHostelIdAndInvoiceIds(String hostelId, List<String> invoiceIds);
+    @Query("""
+            SELECT trns FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND DATE(trns.paymentDate) >= DATE(:startDate)
+            """)
+    List<TransactionV1> findCurrentMonthByHostelId(String hostelId, Date startDate);
 }

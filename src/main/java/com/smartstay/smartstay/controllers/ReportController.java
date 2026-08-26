@@ -74,12 +74,13 @@ public class ReportController {
                                                      @RequestParam(value = "categoryId", required = false) List<Long> categoryId,
                                                      @RequestParam(value = "subCategoryId", required = false) List<Long> subCategoryId,
                                                      @RequestParam(value = "paymentMode", required = false) List<String> paymentMode,
-                                                     @RequestParam(value = "paidTo", required = false) List<String> paidTo,
+                                                     @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus,
+                                                     @RequestParam(value = "paidTo", required = false) List<Integer> paidTo,
                                                      @RequestParam(value = "createdBy", required = false) List<String> createdBy,
                                                      @RequestParam(value = "page", defaultValue = "1") int page,
                                                      @RequestParam(value = "size", defaultValue = "10") int size) {
         return reportService.getExpenseDetails(hostelId, period, customStartDate, customEndDate, categoryId,
-                subCategoryId, paymentMode, paidTo, createdBy, page, size);
+                subCategoryId, paymentMode, paymentStatus, paidTo, createdBy, page, size);
     }
 
     @GetMapping("/tenants/{hostelId}")
@@ -126,8 +127,14 @@ public class ReportController {
     @GetMapping("/download/expense/{hostelId}")
     public ResponseEntity<?> downloadExpenseReport(@PathVariable("hostelId") String hostelId,
                                                    @RequestParam(value = "startDate", required = false) String startDate,
-                                                   @RequestParam(value = "endDate", required = false) String endDate) {
-        return reportService.downloadExpenseReport(hostelId, startDate, endDate);
+                                                   @RequestParam(value = "endDate", required = false) String endDate,
+                                                   @RequestParam(value = "categoryId", required = false) List<Long> categoryId,
+                                                   @RequestParam(value = "subCategoryId", required = false) List<Long> subCategoryId,
+                                                   @RequestParam(value = "paymentMode", required = false) List<String> paymentMode,
+                                                   @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus,
+                                                   @RequestParam(value = "paidTo", required = false) List<String> paidTo,
+                                                   @RequestParam(value = "createdBy", required = false) List<String> createdBy) {
+        return reportService.downloadExpenseReport(hostelId, startDate, endDate, categoryId, subCategoryId, paymentMode, paymentStatus, paidTo, createdBy);
     }
 
     @GetMapping("/download/invoice/{hostelId}")

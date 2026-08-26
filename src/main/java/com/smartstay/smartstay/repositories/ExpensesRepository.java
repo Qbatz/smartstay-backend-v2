@@ -222,69 +222,52 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
         Double sumAmountByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
                                                @Param("endDate") Date endDate);
 
-        @Query("SELECT e FROM ExpensesV1 e " +
-                "WHERE e.hostelId = :hostelId " +
-                "AND e.isActive = true " +
-                "AND (:categoryIds IS NULL OR e.categoryId IN :categoryIds) " +
-                "AND (:subCategoryIds IS NULL OR e.subCategoryId IN :subCategoryIds) " +
-                "AND (:bankIds IS NULL OR e.bankId IN :bankIds) " +
-                "AND (:vendorIds IS NULL OR e.vendorId IN :vendorIds) " +
-                "AND (:createdByList IS NULL OR e.createdBy IN :createdByList) " +
-                "AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) " +
-                "AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate)) " +
-                "ORDER BY e.transactionDate DESC")
+        @Query("""
+                SELECT e FROM ExpensesV1 e WHERE e.hostelId = :hostelId AND e.isActive = true 
+                AND (:categoryIds IS NULL OR e.categoryId IN :categoryIds) 
+                AND (:subCategoryIds IS NULL OR e.subCategoryId IN :subCategoryIds) 
+                AND (:bankIds IS NULL OR e.bankId IN :bankIds) 
+                AND (:paymentStatus IS NULL OR e.paymentStatus IN :paymentStatus)
+                AND (:vendorIds IS NULL OR e.vendorId IN :vendorIds) 
+                AND (:createdByList IS NULL OR e.createdBy IN :createdByList) 
+                AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) 
+                AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate)) 
+                ORDER BY e.transactionDate DESC
+                """)
         Page<ExpensesV1> findExpensesWithFiltersV2(
                 @Param("hostelId") String hostelId,
                 @Param("categoryIds") List<Long> categoryIds,
                 @Param("subCategoryIds") List<Long> subCategoryIds,
                 @Param("bankIds") List<String> bankIds,
-                @Param("vendorIds") List<String> vendorIds,
+                @Param("paymentStatus") List<String> paymentStatus,
+                @Param("vendorIds") List<Integer> vendorIds,
                 @Param("createdByList") List<String> createdByList,
                 @Param("startDate") Date startDate,
                 @Param("endDate") Date endDate,
                 Pageable pageable);
 
-    @Query("SELECT e FROM ExpensesV1 e " +
-            "WHERE e.hostelId = :hostelId " +
-            "AND e.isActive = true " +
-            "AND (:categoryIds IS NULL OR e.categoryId IN :categoryIds) " +
-            "AND (:subCategoryIds IS NULL OR e.subCategoryId IN :subCategoryIds) " +
-            "AND (:bankIds IS NULL OR e.bankId IN :bankIds) " +
-            "AND (:vendorIds IS NULL OR e.vendorId IN :vendorIds) " +
-            "AND (:createdByList IS NULL OR e.createdBy IN :createdByList) " +
-            "AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) " +
-            "AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate)) " +
-            "ORDER BY e.transactionDate DESC")
+    @Query("""
+            SELECT e FROM ExpensesV1 e WHERE e.hostelId = :hostelId AND e.isActive = true 
+            AND (:categoryIds IS NULL OR e.categoryId IN :categoryIds) 
+            AND (:subCategoryIds IS NULL OR e.subCategoryId IN :subCategoryIds) 
+            AND (:bankIds IS NULL OR e.bankId IN :bankIds) 
+            AND (:paymentStatus IS NULL OR e.paymentStatus IN :paymentStatus)
+            AND (:vendorIds IS NULL OR e.vendorId IN :vendorIds) 
+            AND (:createdByList IS NULL OR e.createdBy IN :createdByList) 
+            AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) 
+            AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate)) 
+            ORDER BY e.transactionDate DESC
+            """)
     List<ExpensesV1> findExpensesWithFiltersV2(
             @Param("hostelId") String hostelId,
             @Param("categoryIds") List<Long> categoryIds,
             @Param("subCategoryIds") List<Long> subCategoryIds,
+            @Param("paymentStatus") List<String> paymentStatus,
             @Param("bankIds") List<String> bankIds,
-            @Param("vendorIds") List<String> vendorIds,
+            @Param("vendorIds") List<Integer> vendorIds,
             @Param("createdByList") List<String> createdByList,
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
-
-        @Query("SELECT COUNT(e) as totalRecords, COALESCE(SUM(e.transactionAmount), 0) as totalAmount " +
-                "FROM ExpensesV1 e " +
-                "WHERE e.hostelId = :hostelId " +
-                "AND e.isActive = true " +
-                "AND (:categoryIds IS NULL OR e.categoryId IN :categoryIds) " +
-                "AND (:subCategoryIds IS NULL OR e.subCategoryId IN :subCategoryIds) " +
-                "AND (:bankIds IS NULL OR e.bankId IN :bankIds) " +
-                "AND (:vendorIds IS NULL OR e.vendorId IN :vendorIds) " +
-                "AND (:createdByList IS NULL OR e.createdBy IN :createdByList) " +
-                "AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) " +
-                "AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate))")
-        ExpenseSummaryProjection getExpenseSummary(
-                @Param("hostelId") String hostelId,
-                @Param("categoryIds") List<Long> categoryIds,
-                @Param("subCategoryIds") List<Long> subCategoryIds,
-                @Param("bankIds") List<String> bankIds,
-                @Param("vendorIds") List<String> vendorIds,
-                @Param("createdByList") List<String> createdByList,
-                @Param("startDate") Date startDate,
-                @Param("endDate") Date endDate);
 
         List<ExpensesV1> findByHostelIdAndIsActiveTrue(String hostelId);
 

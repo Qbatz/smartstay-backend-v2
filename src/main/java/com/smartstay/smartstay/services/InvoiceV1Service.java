@@ -945,6 +945,8 @@ public class InvoiceV1Service {
     public ResponseEntity<?> getAllInvoicesWebResponse(String hostelId, InvoiceFilterOptions filterOptions, Page<InvoicesV1> pageInvoices, List<InvoicesList> invoicesLists, List<InvoicesV1> listInvoicesForSummary) {
         PaginationSummary paginationSummary = null;
         InvoiceSummaryInfo invoiceSummaryInfo = null;
+
+        double currentMonthCollection = transactionService.getCurrentMonthCollection(hostelId);
         int totalInvoices = 0;
 
         if (pageInvoices != null) {
@@ -960,14 +962,14 @@ public class InvoiceV1Service {
         }
 
         if (listInvoicesForSummary != null) {
-            invoiceSummaryInfo = getSummary(hostelId, totalInvoices, listInvoicesForSummary);
+            invoiceSummaryInfo = getSummary(hostelId, totalInvoices, listInvoicesForSummary, currentMonthCollection);
         }
 
         InvoiceWebResponses invoiceWebResponses = new InvoiceWebResponses(hostelId, filterOptions, paginationSummary, invoiceSummaryInfo, invoicesLists);
         return new ResponseEntity<>(invoiceWebResponses, HttpStatus.OK);
     }
 
-    public InvoiceSummaryInfo getSummary(String hostelId, Integer totalInvoices, List<InvoicesV1> invoiceList) {
+    public InvoiceSummaryInfo getSummary(String hostelId, Integer totalInvoices, List<InvoicesV1> invoiceList, double currentMonthCollection) {
         if (invoiceList == null) {
             return new InvoiceSummaryInfo(totalInvoices, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
         }
@@ -1000,17 +1002,10 @@ public class InvoiceV1Service {
 
         Double outstandingAmount = totalAmount - outstandingPaid;
 
-        Double collectedThisMonth = 0.0;
         Double dueToday = 0.0;
         Double overDueToday = 0.0;
 
         if (billingDates != null) {
-            collectedThisMonth = nonRefundInvoices.stream()
-                    .filter(i -> i.getInvoiceStartDate() != null && Utils.compareWithTwoDates(i.getInvoiceStartDate(), billingDates.currentBillStartDate()) >= 0)
-                    .filter(i -> i.getPaymentStatus() != null && (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())))
-                    .mapToDouble(i -> i.getPaidAmount() != null ? i.getPaidAmount() : 0.0)
-                    .sum();
-
             dueToday = nonRefundInvoices.stream()
                     .filter(i -> i.getPaymentStatus() != null && (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())))
                     .filter(i -> i.getInvoiceDueDate() != null)
@@ -1039,7 +1034,7 @@ public class InvoiceV1Service {
                 .sum();
 
         return new InvoiceSummaryInfo(totalInvoices,
-                Utils.roundOffWithTwoDigit(collectedThisMonth),
+                Utils.roundOffWithTwoDigit(currentMonthCollection),
                 Utils.roundOffWithTwoDigit(dueToday),
                 Utils.roundOffWithTwoDigit(overDueToday),
                 Utils.roundOffWithTwoDigit(outstandingAmount),
@@ -2494,14 +2489,39 @@ public class InvoiceV1Service {
         } else {
             totalPayable = walletAmount;
         }
+
+        if (currentPayablemount < 0) {
+            totalRefundable = totalRefundable + (currentPayablemount * -1);
+        }
 //       totalRefundable = totalRefundable;
 //       totalPayable = totalPayable + unpaidInvoiceAmount + deductionAmount;
         totalPayable = totalPayable + currentMonthPayableAmount - currentPaidAmount;
+        if (totalPayable < 0) {
+            totalPayable = 0;
+        }
 
 
         com.smartstay.smartstay.responses.settlement.InvoiceInfo invoiceInfo = null;
         if (invoicesV1 != null) {
-            invoiceInfo = new com.smartstay.smartstay.responses.settlement.InvoiceInfo(invoicesV1.getInvoiceId(), invoicesV1.getInvoiceNumber(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), null, null, Utils.roundOffWithTwoDigit(subTotal), Utils.roundOffWithTwoDigit(totalRefundable), Utils.roundOffWithTwoDigit(totalPayable), Utils.roundOffWithTwoDigit(discountAmount), discountPercentage, Utils.roundOffWithTwoDigit(deductionAmount), Utils.roundOffWithTwoDigit(unpaidInvoiceAmount), Utils.roundOffWithTwoDigit(electricityAmount), Utils.roundOfDouble(invoicesV1.getTotalAmount()), true, isDiscounted, discountReason, invoicesV1.getPaymentStatus());
+            invoiceInfo = new com.smartstay.smartstay.responses.settlement.InvoiceInfo(invoicesV1.getInvoiceId(),
+                    invoicesV1.getInvoiceNumber(),
+                    Utils.dateToString(invoicesV1.getInvoiceStartDate()),
+                    Utils.dateToString(invoicesV1.getInvoiceDueDate()),
+                    null,
+                    null,
+                    Utils.roundOffWithTwoDigit(subTotal),
+                    Utils.roundOffWithTwoDigit(totalRefundable),
+                    Utils.roundOffWithTwoDigit(totalPayable),
+                    Utils.roundOffWithTwoDigit(discountAmount),
+                    discountPercentage,
+                    Utils.roundOffWithTwoDigit(deductionAmount),
+                    Utils.roundOffWithTwoDigit(unpaidInvoiceAmount),
+                    Utils.roundOffWithTwoDigit(electricityAmount),
+                    Utils.roundOfDouble(invoicesV1.getTotalAmount()),
+                    true,
+                    isDiscounted,
+                    discountReason,
+                    invoicesV1.getPaymentStatus());
         }
 
         List<String> invoicesList = invoicesV1.getCancelledInvoices();
@@ -6121,24 +6141,21 @@ public class InvoiceV1Service {
         }
 
 
-        if (authentication.getSource().equalsIgnoreCase("web")) {
-            return getBookingWebResponse(hostelId, name, period, floor, room, minAmount, maxAmount, page, size);
-        }
-
-
-        return getAdvanceInvoicesForRedemptionOld(hostelId, page, size);
+        return getBookingResponse(hostelId, name, period, floor, room, minAmount, maxAmount, page, size);
     }
 
 
-    private ResponseEntity<?> getBookingWebResponse(String hostelId, String name, String period, String floor, String room, String minAmount, String maxAmount, int page, int size) {
+    private ResponseEntity<?> getBookingResponse(String hostelId, String name, String period, String floor, String room, String minAmount, String maxAmount, int page, int size) {
         List<BookingsV1> listAllCheckedInCustomers = new ArrayList<>();
         List<Floors> listFloor = floorsService.findByHostelId(hostelId);
         List<Rooms> roomsList = roomsService.findByHostelId(hostelId);
         List<Beds> listBeds = bedService.findByHostelId(hostelId);
-        List<BedDetails> listBedDetails = new ArrayList<>();
+        List<BedDetails> listBedDetails;
         if (!listBeds.isEmpty()) {
             List<Integer> bedIds = listBeds.stream().map(Beds::getBedId).toList();
             listBedDetails = bedService.getBedDetails(bedIds);
+        } else {
+            listBedDetails = new ArrayList<>();
         }
 
 
@@ -6196,7 +6213,7 @@ public class InvoiceV1Service {
 
             Pageable pageableRequest = PageRequest.of(page - 1, size);
             List<InvoicesV1> listInvoices = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, listCustomerIds, invoiceTypes);
-
+            List<InvoicesV1> secondaryInvoices = null;
             Double totalRetainerAmount = 0.0;
             Double totalAdvanceAmount = 0.0;
             Double totalBookingAmount = 0.0;
@@ -6263,27 +6280,63 @@ public class InvoiceV1Service {
                     Utils.roundOffWithTwoDigit(totalRentAmount),
                     0.0);
 
-            Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, minimumAmount, maximumAmount, pageableRequest);
+            if (authentication.getSource().equalsIgnoreCase("Web")) {
+                Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, minimumAmount, maximumAmount, pageableRequest);
+                secondaryInvoices = pagebleAdvances.stream().toList();
 
-            totalAdvanceInvoice = (int) pagebleAdvances.getTotalElements();
-            currentPage = pagebleAdvances.getPageable().getPageNumber() + 1;
-            totalPages = pagebleAdvances.getTotalPages();
-            noOfItemsPerPage = pagebleAdvances.getSize();
+                currentPage = pagebleAdvances.getPageable().getPageNumber() + 1;
+                totalPages = pagebleAdvances.getTotalPages();
+                noOfItemsPerPage = pagebleAdvances.getSize();
 
-            List<InvoicesV1> listAdvanceInvoices = pagebleAdvances.getContent();
+                totalAdvanceInvoice = listInvoices.size();
 
-            List<ColumnFilters> listColumns = tableColumnService.getBookingsColumns(hostelId, FilterOptionsModule.MODULE_BOOKINGS.name());
-            List<ColumnFilters> activeColumns = listColumns.stream().filter(ColumnFilters::isSelected).sorted(Comparator.comparingInt(ColumnFilters::getOrder)).toList();
-            List<String> tableColumns = activeColumns.stream().map(ColumnFilters::getFieldName).toList();
+                List<ColumnFilters> listColumns = tableColumnService.getBookingsColumns(hostelId, FilterOptionsModule.MODULE_BOOKINGS.name());
+                List<ColumnFilters> activeColumns = listColumns.stream().filter(ColumnFilters::isSelected).sorted(Comparator.comparingInt(ColumnFilters::getOrder)).toList();
+                List<String> tableColumns = activeColumns.stream().map(ColumnFilters::getFieldName).toList();
 
 
-            List<BookingsV1> finalListAllCheckedInCustomers = listAllCheckedInCustomers;
-            List<BedDetails> finalListBedDetails = listBedDetails;
-            List<List<Object>> listBookingInvoices = listAdvanceInvoices.stream().map(i -> new BookingsTableMapper(tableColumns, listCustomers, finalListAllCheckedInCustomers, finalListBedDetails).apply(i)).toList();
+                List<BookingsV1> finalListAllCheckedInCustomers = listAllCheckedInCustomers;
+                List<BedDetails> finalListBedDetails = listBedDetails;
+                List<List<Object>> listBookingInvoices = secondaryInvoices.stream().map(i -> new BookingsTableMapper(tableColumns, listCustomers, finalListAllCheckedInCustomers, finalListBedDetails).apply(i)).toList();
 
-            BookingsWebResponse bookingsWebResponse = new BookingsWebResponse(totalAdvanceInvoice, currentPage, totalPages, noOfItemsPerPage, retainerSummary, bookingsFilterOptions, tableColumns, listColumns, listBookingInvoices);
+                BookingsWebResponse bookingsWebResponse = new BookingsWebResponse(totalAdvanceInvoice, currentPage, totalPages, noOfItemsPerPage, retainerSummary, bookingsFilterOptions, tableColumns, listColumns, listBookingInvoices);
 
-            return new ResponseEntity<>(bookingsWebResponse, HttpStatus.OK);
+                return new ResponseEntity<>(bookingsWebResponse, HttpStatus.OK);
+            }
+            else {
+                secondaryInvoices = listInvoices;
+                List<String> customerIds = listInvoices.stream().map(InvoicesV1::getCustomerId).distinct().toList();
+                List<BookingsV1> listBookings = bookingsService.getBookings(hostelId, customerIds);
+                List<InvoicesV1> listInvoiceList = invoicesV1Repository.findUnpaidInvoicesByCustomerIds(listCustomerIds);
+                List<String> invoiceIds = listInvoices
+                        .stream()
+                        .map(InvoicesV1::getInvoiceId)
+                        .toList();
+                List<TransactionV1> latestTransactions = transactionService.getLatestTransactions(hostelId, invoiceIds);
+                List<BankingV1> listBanks;
+                if (latestTransactions != null) {
+                    Set<String> bankIds = latestTransactions
+                            .stream()
+                            .map(TransactionV1::getBankId)
+                            .collect(Collectors.toSet());
+                    listBanks = bankingService.findAllBanksById(bankIds);
+                } else {
+                    listBanks = new ArrayList<>();
+                }
+                List<AdvanceListItems> advanceListItems = listInvoices.stream().map(i -> new AdvanceInvoicesMapper(listBookings, listBedDetails, listCustomers, listInvoiceList, latestTransactions, listBanks).apply(i)).toList();
+
+                AdvanceList advanceList = new AdvanceList(totalAdvanceInvoice,
+                        currentPage,
+                        totalPages,
+                        noOfItemsPerPage,
+                        retainerSummary,
+                        advanceListItems);
+
+                return new ResponseEntity<>(advanceList, HttpStatus.OK);
+            }
+
+
+
         }
 
 

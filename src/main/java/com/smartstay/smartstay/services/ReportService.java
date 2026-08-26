@@ -834,9 +834,12 @@ public class ReportService {
     }
 
     public ResponseEntity<?> getExpenseDetails(String hostelId, String period, String customStartDate,
-                                               String customEndDate, List<Long> categoryIds, List<Long> subCategoryIds,
+                                               String customEndDate,
+                                               List<Long> categoryIds,
+                                               List<Long> subCategoryIds,
                                                List<String> paymentModes,
-                                               List<String> paidTo, List<String> createdBy, int pageParams, int size) {
+                                               List<String> paymentStatus,
+                                               List<Integer> paidTo, List<String> createdBy, int pageParams, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -852,7 +855,8 @@ public class ReportService {
         }
 
         return new ResponseEntity<>(expenseService.getExpenseReportDetails(hostelId, period, customStartDate,
-                customEndDate, categoryIds, subCategoryIds, paymentModes, paidTo, createdBy, pageParams,
+                customEndDate, categoryIds, subCategoryIds,
+                paymentModes, paymentStatus, paidTo, createdBy, pageParams,
                 size),
                 HttpStatus.OK);
     }
@@ -1473,7 +1477,15 @@ public class ReportService {
 
     }
 
-    public ResponseEntity<?> downloadExpenseReport(String hostelId, String startDate, String endDate) {
+    public ResponseEntity<?> downloadExpenseReport(String hostelId,
+                                                   String startDate,
+                                                   String endDate,
+                                                   List<Long> categoryId,
+                                                   List<Long> subCatId,
+                                                   List<String> paymentMode,
+                                                   List<String> paymentStatus,
+                                                   List<String> paidTo,
+                                                   List<String> createdBy) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -1520,7 +1532,13 @@ public class ReportService {
         String url =  reportsUrl + "/v2/expense/"+hostelId;
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
                 .queryParam("startDate", sDate)
-                .queryParam("endDate", eDate);
+                .queryParam("endDate", eDate)
+                .queryParam("categoryId", categoryId)
+                .queryParam("subCategoryId", subCatId)
+                .queryParam("paymentMode", paymentMode)
+                .queryParam("paymentStatus", paymentStatus)
+                .queryParam("paidTo", paidTo)
+                .queryParam("createdBy", createdBy);
 
         String pdfUrl = downloadService.downloadFromUrl(builder.toUriString());
 
