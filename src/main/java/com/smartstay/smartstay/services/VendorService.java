@@ -205,7 +205,7 @@ public class VendorService {
         }
         // Mobile "Last Transaction" is the amount of the latest payment (one bulk query, no N+1).
         Map<String, Double> lastPaymentAmounts = resolveLastPaymentAmounts(vendors);
-        return buildVendorMobileResponse(vendors, categoryNamesById, lastPaymentAmounts, vendorSummary,
+        return buildVendorMobileResponse(hostelId, vendors, categoryNamesById, lastPaymentAmounts, vendorSummary,
                 totalVendors, currentPage, totalPages, pageSize);
     }
 
@@ -363,7 +363,8 @@ public class VendorService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    private ResponseEntity<?> buildVendorMobileResponse(List<VendorV1> vendors, Map<Integer, String> categoryNamesById,
+    private ResponseEntity<?> buildVendorMobileResponse(String hostelId, List<VendorV1> vendors,
+                                                        Map<Integer, String> categoryNamesById,
                                                         Map<String, Double> lastPaymentAmounts, VendorSummary vendorSummary,
                                                         int totalVendors, int currentPage, int totalPages, int pageSize) {
         // Resolve country names for the current page in one bulk lookup (no N+1).
@@ -379,9 +380,9 @@ public class VendorService {
                 .map(v -> toMobileResponse(v, categoryNamesById, countryNamesById, lastPaymentAmounts))
                 .toList();
 
-        // filterOptions / tableHeaders / columnList are intentionally null for mobile.
+        VendorFilterOptions filterOptions = buildVendorFilterOptions(hostelId);
         VendorMobileListResponse response = new VendorMobileListResponse(totalVendors, currentPage, totalPages, pageSize,
-                vendorSummary, null, null, null, mobileVendors);
+                vendorSummary, filterOptions, null, null, mobileVendors);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
