@@ -35,10 +35,11 @@ public class BankingControllerV2 {
     @Autowired
     private TransactionService transactionService;
 
-    @PostMapping("/tenantPayment/{hostelId}")
+    @PostMapping(value = "/tenantPayment/{hostelId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> tenantPayment(@PathVariable("hostelId") String hostelId,
-            @RequestBody(required = false) TenantPayment payload) {
-        return transactionService.recordTenantPayment(hostelId, payload);
+            @RequestPart(value = "payload", required = false) TenantPayment payload,
+            @RequestPart(value = "paymentImage", required = false) MultipartFile paymentImage) {
+        return transactionService.recordTenantPayment(hostelId, payload, paymentImage);
     }
 
     // Create a v3 bank / cash account under a hostel.

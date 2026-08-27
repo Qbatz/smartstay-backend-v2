@@ -261,6 +261,7 @@ public class Utils {
     public static final String DUPLICATE_INVOICE_IN_PAYMENT = "The same invoice cannot be paid twice in one payment";
     public static final String PAYMENT_EXCEEDS_INVOICE_BALANCE = "Payment amount cannot be greater than the invoice balance";
     public static final String INVOICES_REQUIRED = "At least one invoice is required";
+    public static final String RECEIPT_UPLOAD_FAILED = "Could not upload the payment receipt, please try again";
     public static final String CHANGE_BED_SAME_DAY_ERROR = "Cannot change the bed on the same day customer is joined";
     public static final String DISCOUNT_AMOUNT_REQUIRED = "Discount amount is required";
     public static final String DISCOUNT_AMOUNT_VALIDATION = "Discount amount should not be greater than invoice amount";

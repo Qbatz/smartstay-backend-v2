@@ -4,7 +4,10 @@ import com.smartstay.smartstay.Wrappers.transactions.InvoiceRefundMapper;
 import com.smartstay.smartstay.Wrappers.transactions.TransactionForCustomerDetailsMapper;
 import com.smartstay.smartstay.Wrappers.transactions.TransactionsListMapper;
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
+import com.smartstay.smartstay.config.UploadFileToS3;
+import org.springframework.web.multipart.MultipartFile;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
@@ -78,6 +81,8 @@ public class TransactionService {
     @Autowired
     @Lazy
     private BankingServiceV2 bankingServiceV2;
+    @Autowired
+    private UploadFileToS3 uploadToS3;
     @Autowired
     private CreditDebitNoteService creditDebitNoteService;
     @Autowired
@@ -240,7 +245,7 @@ public class TransactionService {
     }
 
     @Transactional
-    public ResponseEntity<?> recordTenantPayment(String hostelId, TenantPayment payload) {
+    public ResponseEntity<?> recordTenantPayment(String hostelId, TenantPayment payload, MultipartFile paymentImage) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -303,10 +308,17 @@ public class TransactionService {
             invoicesToPay.add(invoice);
         }
 
+        String receiptUrl;
+        try {
+            receiptUrl = uploadPaymentReceipt(paymentImage);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(Utils.RECEIPT_UPLOAD_FAILED, HttpStatus.BAD_REQUEST);
+        }
+
         String transactionNumber = generateRandomNumber();
         for (int i = 0; i < invoicesToPay.size(); i++) {
             applyTenantInvoicePayment(hostelId, invoicesToPay.get(i), payload.invoices().get(i).amount(),
-                    payload, transactionNumber, user);
+                    payload, transactionNumber, receiptUrl, user);
         }
 
         return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
@@ -320,8 +332,18 @@ public class TransactionService {
 
     private static final double AMOUNT_TOLERANCE = 0.001;
 
+    private static final String RECEIPT_S3_FOLDER = "Transactions/Receipts";
+
+    private String uploadPaymentReceipt(MultipartFile paymentImage) {
+        if (paymentImage == null || paymentImage.isEmpty()) {
+            return null;
+        }
+        return uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(paymentImage), RECEIPT_S3_FOLDER);
+    }
+
     private void applyTenantInvoicePayment(String hostelId, InvoicesV1 invoicesV1, double amount,
-                                           TenantPayment payload, String transactionNumber, Users user) {
+                                           TenantPayment payload, String transactionNumber,
+                                           String receiptUrl, Users user) {
         double paidAmount = invoicesV1.getPaidAmount() != null ? invoicesV1.getPaidAmount() : 0.0;
         double totalAmount = invoicesV1.getTotalAmount() != null ? invoicesV1.getTotalAmount() : 0.0;
 
@@ -349,6 +371,7 @@ public class TransactionService {
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
         transactionV1.setDescription(payload.description());
+        transactionV1.setReceiptUrl(receiptUrl);
 
         BankingServiceV2.PaymentSourceRef paymentSource = bankingServiceV2.creditPaymentSource(
                 payload.bankId(), amount, authentication.getName());
