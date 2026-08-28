@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Date;
 import java.util.List;
 
 
@@ -48,29 +49,46 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "ORDER BY v.businessName ASC")
     List<VendorLookupProjection> findActiveVendorLookupByHostelId(@Param("hostelId") String hostelId);
 
-    @Query("SELECT v FROM VendorV1 v " +
+    String VENDOR_FILTERS =
             "WHERE v.hostelId = :hostelId AND v.isActive = true " +
             "AND (:name IS NULL OR LOWER(CONCAT(v.firstName, ' ', COALESCE(v.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))) " +
             "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId) " +
             "AND (:paymentStatuses IS NULL OR v.paymentStatus IN :paymentStatuses) " +
-            "ORDER BY v.vendorId DESC")
+            "AND (:createdBy IS NULL OR v.createdBy IN :createdBy) " +
+            "AND (:createdFrom IS NULL OR v.createdAt >= :createdFrom) " +
+            "AND (:createdTo IS NULL OR v.createdAt <= :createdTo) " +
+            "AND (:minBalance IS NULL OR COALESCE(v.balance, 0) >= :minBalance) " +
+            "AND (:maxBalance IS NULL OR COALESCE(v.balance, 0) <= :maxBalance) " +
+            "AND (:subCategoryId IS NULL OR EXISTS (SELECT e FROM ExpensesV1 e " +
+            "     WHERE e.vendorId = CAST(v.vendorId AS String) AND e.hostelId = v.hostelId " +
+            "       AND e.subCategoryId = :subCategoryId AND e.isActive = true)) ";
+
+    @Query("SELECT v FROM VendorV1 v " + VENDOR_FILTERS + "ORDER BY v.vendorId DESC")
     Page<VendorV1> listVendors(@Param("hostelId") String hostelId,
                                @Param("name") String name,
                                @Param("categoryId") Integer categoryId,
                                @Param("paymentStatuses") List<VendorPaymentStatus> paymentStatuses,
+                               @Param("createdBy") List<String> createdBy,
+                               @Param("createdFrom") Date createdFrom,
+                               @Param("createdTo") Date createdTo,
+                               @Param("subCategoryId") Long subCategoryId,
+                               @Param("minBalance") Double minBalance,
+                               @Param("maxBalance") Double maxBalance,
                                Pageable pageable);
 
     @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary(" +
             "COALESCE(SUM(v.totalExpense), 0), COALESCE(SUM(v.totalPaid), 0)) " +
-            "FROM VendorV1 v " +
-            "WHERE v.hostelId = :hostelId AND v.isActive = true " +
-            "AND (:name IS NULL OR LOWER(CONCAT(v.firstName, ' ', COALESCE(v.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))) " +
-            "AND (:categoryId IS NULL OR v.vendorCategory = :categoryId) " +
-            "AND (:paymentStatuses IS NULL OR v.paymentStatus IN :paymentStatuses)")
+            "FROM VendorV1 v " + VENDOR_FILTERS)
     VendorPurchaseSummary summarizeVendors(@Param("hostelId") String hostelId,
                                            @Param("name") String name,
                                            @Param("categoryId") Integer categoryId,
-                                           @Param("paymentStatuses") List<VendorPaymentStatus> paymentStatuses);
+                                           @Param("paymentStatuses") List<VendorPaymentStatus> paymentStatuses,
+                                           @Param("createdBy") List<String> createdBy,
+                                           @Param("createdFrom") Date createdFrom,
+                                           @Param("createdTo") Date createdTo,
+                                           @Param("subCategoryId") Long subCategoryId,
+                                           @Param("minBalance") Double minBalance,
+                                           @Param("maxBalance") Double maxBalance);
 
     VendorV1 findByVendorId(int vendorId);
 

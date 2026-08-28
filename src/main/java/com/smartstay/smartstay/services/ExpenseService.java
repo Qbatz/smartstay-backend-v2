@@ -472,7 +472,7 @@ public class ExpenseService {
 
         TransactionDto transactionDto = new TransactionDto(expense.bankId(),
                 expensesV1.getExpenseNumber(),
-                expense.totalAmount(),
+                paidForBalance,
                 BankTransactionType.DEBIT.name(),
                 BankSource.EXPENSE.name(),
                 hostelId,
@@ -523,9 +523,7 @@ public class ExpenseService {
         }
 
         usersService.addUserLog(hostelId, expV1.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.CREATE, users);
-        // No bank account (allowed for PENDING expenses): there is nothing to debit, so skip the bank
-        // transaction and return success.
-        if (!bankProvided) {
+        if (!bankProvided || paidForBalance <= 0) {
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
         if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId(), expense.paymentMethodId())) {

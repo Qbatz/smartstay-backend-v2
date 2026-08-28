@@ -2773,7 +2773,12 @@ public class InvoiceV1Service {
                 double rent = latestInvoice.getInvoiceItems().stream().filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem())).mapToDouble(InvoiceItems::getAmount).sum();
                 long noOfDaysInBillingCycle = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
 
-                double rentPerDay = rent / noOfDaysInBillingCycle;
+                BookingsV1 booking = bookingsService.findBookingsByCustomerIdAndHostelId(customers.getCustomerId(), customers.getHostelId());
+                if (booking == null || booking.getRentAmount() == null) {
+                    throw new RuntimeException("Booking or rent amount not found for customerId: " + customers.getCustomerId());
+                }
+                double oldMonthlyRent = booking.getRentAmount();
+                double rentPerDay = oldMonthlyRent / noOfDaysInBillingCycle;
                 if (Utils.compareWithTwoDates(dateJoiningDate, latestInvoice.getInvoiceStartDate()) == 0) {
                     long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
                     double rentPerDayNew = newRent / noOfDaysInCurrentMonth;
