@@ -1388,7 +1388,7 @@ public class TransactionService {
         }
 
         List<String> invoiceTypeArr = null;
-        if (invoiceType != null) {
+        if (invoiceType != null && !invoiceType.isEmpty()) {
             invoiceTypeArr = new ArrayList<>();
             if (invoiceType.equalsIgnoreCase(InvoiceType.RENT.name())) {
                 invoiceTypeArr.add(InvoiceType.RENT.name());
@@ -1413,6 +1413,8 @@ public class TransactionService {
                 invoiceTypeArr = null;
             }
         }
+        List<String> invoiceId = null;
+        List<String> customerIds = null;
 
         int page = 1;
         int size = 10;
@@ -1481,17 +1483,20 @@ public class TransactionService {
         double refundAmount = 0.0;
         List<TransactionV1> listAllTransactions = null;
         Page<TransactionV1> listPagebleTransactions = null;
-        if (keyword != null) {
+        if (keyword != null && !keyword.isEmpty()) {
             List<Customers> customersList = customersService.searchCustomerByHostelName(hostelId, keyword);
-            List<String> customerIds = customersList
+             customerIds = customersList
                     .stream()
                     .map(Customers::getCustomerId)
                     .toList();
-            List<String> invoiceId = invoiceService.getInvoiceNumbersBySearchKeyword(hostelId, keyword, invoiceTypeArr);
+//             if (customerIds.isEmpty()) {
+//                 customerIds = null;
+//             }
+            invoiceId = invoiceService.getInvoiceNumbersBySearchKeyword(hostelId, keyword, invoiceTypeArr, customerIds);
 
             if (customerIds != null) {
                 if (customerIds.isEmpty()) {
-//                    customerIds = null;
+                    customerIds = null;
                 }
             }
             if (invoiceId != null) {
@@ -1499,20 +1504,10 @@ public class TransactionService {
                     invoiceId = null;
                 }
             }
+        }
 
-            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
-            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
-
-        }
-        else if (invoiceType != null) {
-            List<String> listInvoiceIds = invoiceService.findInvoiceIdsByHostelIdAndTypeIn(hostelId, invoiceTypeArr);
-            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, null, listInvoiceIds, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
-            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, null, listInvoiceIds, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
-        }
-        else {
-            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, null, null, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
-            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, null, null, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
-        }
+        listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
+        listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
 
         List<TransactionV1> listReceipts = listPagebleTransactions.toList();
         if (listReceipts == null) {
@@ -1584,8 +1579,8 @@ public class TransactionService {
         int noOfItemsPerPage = listPagebleTransactions.getSize();
 
 
-        List<String> customerIds = listReceipts.stream().map(TransactionV1::getCustomerId).toList();
-        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+        List<String> cId = listReceipts.stream().map(TransactionV1::getCustomerId).toList();
+        List<Customers> listCustomers = customersService.getCustomerDetails(cId);
         List<String> invoiceIds = listReceipts.stream().map(TransactionV1::getInvoiceId).toList();
         List<InvoicesV1> invoices = invoiceService.findByInvoiceIdIn(invoiceIds);
         Set<String> bankIdSet = listReceipts.stream().map(TransactionV1::getBankId).collect(Collectors.toSet());

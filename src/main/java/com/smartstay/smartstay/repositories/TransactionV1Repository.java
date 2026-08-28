@@ -96,17 +96,35 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             """, nativeQuery = true)
     List<TransactionV1> findLatestTransactionByInvoicesId(@Param("hostelId") String hostelId, @Param("invoiceIds") List<String> invoiceIds);
 
+//    @Query(value = """
+//            SELECT trns FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND
+//            ((:customerIds IS NULL AND :invoiceIds IS NULL) OR (:customerIds IS NOT NULL AND trns.customerId IN :customerIds) OR (:invoiceIds IS NOT NULL AND trns.invoiceId IN :invoiceIds)) AND
+//            (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND
+//            (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND
+//            (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND
+//            (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount) ORDER BY trns.paymentDate DESC
+//            """,
+//    countQuery = """
+//            SELECT COUNT(trns) FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND
+//            ((:customerIds IS NULL AND :invoiceIds IS NULL) OR (:customerIds IS NOT NULL AND trns.customerId IN :customerIds) OR (:invoiceIds IS NOT NULL AND trns.invoiceId IN :invoiceIds)) AND
+//            (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND
+//            (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND
+//            (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND
+//            (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount) ORDER BY trns.paymentDate DESC
+//            """)
+//    Page<TransactionV1> findPagebleTransactions(String hostelId, List<String> customerIds, List<String> invoiceIds, List<String> bankIds, List<String> collectedBy, Date startDate, Date endDate, Integer minAmount, Integer maxAmount, Pageable pageable);
+
     @Query(value = """
             SELECT trns FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND 
-            ((:customerIds IS NULL AND :invoiceIds IS NULL) OR (:customerIds IS NOT NULL AND trns.customerId IN :customerIds) OR (:invoiceIds IS NOT NULL AND trns.invoiceId IN :invoiceIds)) AND 
+            (:invoiceIds IS NULL OR trns.invoiceId IN :invoiceIds) AND 
             (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND 
             (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND 
             (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
             (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount) ORDER BY trns.paymentDate DESC
             """,
-    countQuery = """
+            countQuery = """
             SELECT COUNT(trns) FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND 
-            ((:customerIds IS NULL AND :invoiceIds IS NULL) OR (:customerIds IS NOT NULL AND trns.customerId IN :customerIds) OR (:invoiceIds IS NOT NULL AND trns.invoiceId IN :invoiceIds)) AND 
+            (:invoiceIds IS NULL OR trns.invoiceId IN :invoiceIds) AND 
             (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND 
             (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND 
             (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
@@ -116,13 +134,23 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
 
     @Query("""
             SELECT trns FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND 
-            ((:customerIds IS NULL AND :invoiceIds IS NULL) OR (:customerIds IS NOT NULL AND trns.customerId IN :customerIds) OR (:invoiceIds IS NOT NULL AND trns.invoiceId IN :invoiceIds)) AND 
+            (:invoiceIds IS NULL OR trns.invoiceId IN :invoiceIds) AND 
             (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND 
             (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND 
             (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND 
             (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount) ORDER BY trns.paymentDate DESC
             """)
     List<TransactionV1> findTransactionsByHostelId(String hostelId, List<String> customerIds, List<String> invoiceIds, List<String> bankIds, List<String> collectedBy, Date startDate, Date endDate, Integer minAmount, Integer maxAmount);
+
+//    @Query("""
+//            SELECT trns FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND
+//            ((:customerIds IS NULL AND :invoiceIds IS NULL) OR (:customerIds IS NOT NULL AND trns.customerId IN :customerIds) OR (:invoiceIds IS NOT NULL AND trns.invoiceId IN :invoiceIds)) AND
+//            (:bankIds IS NULL OR trns.bankId IN :bankIds) AND (:startDate IS NULL OR DATE(trns.paymentDate) >= DATE(:startDate)) AND
+//            (:endDate IS NULL OR DATE(trns.paymentDate) <= DATE(:endDate)) AND
+//            (:collectedBy IS NULL OR trns.createdBy IN :collectedBy) AND (:minAmount IS NULL OR trns.paidAmount >= :minAmount) AND
+//            (:maxAmount IS NULL OR trns.paidAmount <= :maxAmount) ORDER BY trns.paymentDate DESC
+//            """)
+//    List<TransactionV1> findTransactionsByHostelId(String hostelId, List<String> customerIds, List<String> invoiceIds, List<String> bankIds, List<String> collectedBy, Date startDate, Date endDate, Integer minAmount, Integer maxAmount);
 
     @Query("""
             SELECT trns FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND trns.invoiceId in (:invoiceIds) AND 

@@ -232,7 +232,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     @Query("SELECT COUNT(i) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND DATE(i.invoiceStartDate) >= DATE(:startDate) AND DATE(i.invoiceStartDate) <= DATE(:endDate)")
     int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
-    @Query("SELECT COALESCE(SUM(i.totalAmount), 0) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.invoiceType != :invoiceType AND DATE(i.invoiceStartDate) >= DATE(:startDate) AND DATE(i.invoiceStartDate) <= DATE(:endDate)")
+    @Query("SELECT COALESCE(SUM(i.totalAmount), 0) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.invoiceType != :invoiceType AND DATE(i.invoiceStartDate) >= DATE(:startDate) AND DATE(i.invoiceStartDate) <= DATE(:endDate) AND i.isCancelled=false")
     Double sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(@Param("hostelId") String hostelId, @Param("invoiceType") String invoiceType, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
     @Query("SELECT COALESCE(SUM(i.paidAmount), 0) FROM InvoicesV1 i WHERE i.hostelId = :hostelId AND i.invoiceType != :invoiceType AND DATE(i.invoiceStartDate) >= DATE(:startDate) AND DATE(i.invoiceStartDate) <= DATE(:endDate)")
@@ -469,10 +469,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
                 SELECT i
                 FROM InvoicesV1 i
                 WHERE i.hostelId = :hostelId
-                  AND LOWER(i.invoiceNumber) LIKE LOWER(CONCAT('%', :invoiceNumber, '%'))
-                  AND i.invoiceType IN :invoiceType
+                  AND (LOWER(i.invoiceNumber) LIKE LOWER(CONCAT('%', :invoiceNumber, '%')) 
+                  OR (:customerIds IS NULL OR i.customerId IN :customerIds)) 
+                  AND (:invoiceType IS NULL OR i.invoiceType IN :invoiceType)
             """)
-    List<InvoicesV1> findByHostelIdAndInvoiceNumberContainingIgnoreCaseAndInvoiceTypeIn(String hostelId, String invoiceNumber, List<String> invoiceType);
+    List<InvoicesV1> findByHostelIdAndInvoiceNumberContainingIgnoreCaseAndInvoiceTypeIn(String hostelId, String invoiceNumber, List<String> invoiceType, List<String> customerIds);
 
     @Query("""
             SELECT i
@@ -538,4 +539,17 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             ORDER BY i.invoiceStartDate DESC
             """)
     Page<InvoicesV1> findRetainerBasicList(String hostelId, List<String> userId, String searchKey, List<String> types, Date startDate, Date endDate, List<String> createdBy, Pageable pageable);
+
+    /**
+     * this is for updating joining date for postpaid hostels
+     * @param customerId
+     * @param currentMonthStartDate
+     * @return
+     */
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId=:customerId 
+            AND i.invoiceType IN ('RENT', 'REASSIGN_RENT') 
+            AND DATE(i.invoiceStartDate) <= DATE(:currentMonthStartDate) 
+            """)
+    List<InvoicesV1> findOldMonthInvoices(String customerId, Date currentMonthStartDate);
 }
