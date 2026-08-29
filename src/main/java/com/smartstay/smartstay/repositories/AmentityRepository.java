@@ -50,5 +50,9 @@ public interface AmentityRepository extends JpaRepository<AmenitiesV1, String> {
              (:amenityId IS NULL OR amenity.amenityId NOT IN (:amenityId)) 
             """)
     List<AmenitiesV1> findByHostelIdAndExceptList(String hostelId, List<String> amenityId);
+    @Query("""
+            SELECT amenity FROM AmenitiesV1 amenity WHERE amenity.hostelId = :hostelId and amenity.isDeleted=false 
+            """)
+    List<AmenitiesV1> findAmenityByHostelId(String hostelId);
 
 }

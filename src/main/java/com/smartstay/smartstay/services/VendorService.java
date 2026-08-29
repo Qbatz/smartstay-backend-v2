@@ -199,12 +199,12 @@ public class VendorService {
 
         if ("web".equalsIgnoreCase(authentication.getSource())) {
             // Web "Last Transaction" column shows the latest payment date (one bulk query, no N+1).
-            Map<String, Date> lastPaymentDates = resolveLastPaymentDates(vendors);
+            Map<Integer, Date> lastPaymentDates = resolveLastPaymentDates(vendors);
             return buildVendorWebResponse(hostelId, vendors, categoryNamesById, lastPaymentDates, vendorSummary,
                     totalVendors, currentPage, totalPages, pageSize);
         }
         // Mobile "Last Transaction" is the amount of the latest payment (one bulk query, no N+1).
-        Map<String, Double> lastPaymentAmounts = resolveLastPaymentAmounts(vendors);
+        Map<Integer, Double> lastPaymentAmounts = resolveLastPaymentAmounts(vendors);
         return buildVendorMobileResponse(hostelId, vendors, categoryNamesById, lastPaymentAmounts, vendorSummary,
                 totalVendors, currentPage, totalPages, pageSize);
     }
@@ -318,9 +318,9 @@ public class VendorService {
      * Latest payment date per vendor (keyed by vendor id as String) for the given page, resolved in a
      * single bulk query to avoid per-row lookups. Vendors with no payments are simply absent from the map.
      */
-    private Map<String, Date> resolveLastPaymentDates(List<VendorV1> vendors) {
-        List<String> pageVendorIds = vendors.stream().map(v -> String.valueOf(v.getVendorId())).toList();
-        Map<String, Date> lastPaymentByVendorId = new HashMap<>();
+    private Map<Integer, Date> resolveLastPaymentDates(List<VendorV1> vendors) {
+        List<Integer> pageVendorIds = vendors.stream().map(VendorV1::getVendorId).toList();
+        Map<Integer, Date> lastPaymentByVendorId = new HashMap<>();
         if (!pageVendorIds.isEmpty()) {
             expensePaymentRepository.findLatestPaymentDates(pageVendorIds)
                     .forEach(p -> lastPaymentByVendorId.put(p.vendorId(), p.lastPaymentDate()));
@@ -332,9 +332,9 @@ public class VendorService {
      * Amount of the most recent payment per vendor (keyed by vendor id as String) for the given page,
      * resolved in a single bulk query. Vendors with no payments are simply absent from the map.
      */
-    private Map<String, Double> resolveLastPaymentAmounts(List<VendorV1> vendors) {
-        List<String> pageVendorIds = vendors.stream().map(v -> String.valueOf(v.getVendorId())).toList();
-        Map<String, Double> lastPaymentAmountByVendorId = new HashMap<>();
+    private Map<Integer, Double> resolveLastPaymentAmounts(List<VendorV1> vendors) {
+        List<Integer> pageVendorIds = vendors.stream().map(VendorV1::getVendorId).toList();
+        Map<Integer, Double> lastPaymentAmountByVendorId = new HashMap<>();
         if (!pageVendorIds.isEmpty()) {
             expensePaymentRepository.findLatestPaymentAmounts(pageVendorIds)
                     .forEach(p -> lastPaymentAmountByVendorId.put(p.vendorId(), p.amount()));
@@ -344,7 +344,7 @@ public class VendorService {
 
     private ResponseEntity<?> buildVendorWebResponse(String hostelId, List<VendorV1> vendors,
                                                      Map<Integer, String> categoryNamesById,
-                                                     Map<String, Date> lastPaymentByVendorId, VendorSummary vendorSummary,
+                                                     Map<Integer, Date> lastPaymentByVendorId, VendorSummary vendorSummary,
                                                      int totalVendors, int currentPage, int totalPages, int pageSize) {
         // Resolve the user's configured columns for this hostel; only enabled columns are rendered.
         List<ColumnFilters> listColumns = columnService.getVendorColumns(hostelId, FilterOptionsModule.MODULE_VENDOR.name());
@@ -365,7 +365,7 @@ public class VendorService {
 
     private ResponseEntity<?> buildVendorMobileResponse(String hostelId, List<VendorV1> vendors,
                                                         Map<Integer, String> categoryNamesById,
-                                                        Map<String, Double> lastPaymentAmounts, VendorSummary vendorSummary,
+                                                        Map<Integer, Double> lastPaymentAmounts, VendorSummary vendorSummary,
                                                         int totalVendors, int currentPage, int totalPages, int pageSize) {
         // Resolve country names for the current page in one bulk lookup (no N+1).
         Set<Long> countryIds = vendors.stream().map(VendorV1::getCountry).filter(Objects::nonNull)
@@ -388,7 +388,7 @@ public class VendorService {
 
     private VendorMobileResponse toMobileResponse(VendorV1 vendor, Map<Integer, String> categoryNamesById,
                                                   Map<Long, String> countryNamesById,
-                                                  Map<String, Double> lastPaymentAmounts) {
+                                                  Map<Integer, Double> lastPaymentAmounts) {
         Integer categoryId = vendor.getVendorCategory();
         String categoryName = categoryId != null ? categoryNamesById.get(categoryId) : null;
         String countryName = vendor.getCountry() != null ? countryNamesById.get(vendor.getCountry()) : null;
@@ -396,7 +396,7 @@ public class VendorService {
         // Outstanding mirrors the vendor's stored balance (same value surfaced as "Outstanding" on web).
         double outstandingAmount = nullSafe(vendor.getBalance());
         // Last Transaction = amount of this vendor's most recent payment; null when no payments yet.
-        Double lastTransaction = lastPaymentAmounts.get(String.valueOf(vendor.getVendorId()));
+        Double lastTransaction = lastPaymentAmounts.get(vendor.getVendorId());
 
         return new VendorMobileResponse(
                 vendor.getVendorId(),
@@ -483,11 +483,10 @@ public class VendorService {
         Date startDate = range != null ? range[0] : null;
         Date endDate = range != null ? range[1] : null;
 
-        String vendorId = String.valueOf(id);
-        double totalExpense = nullSafe(expensesRepository.sumVendorExpense(vendorId, startDate, endDate));
-        double totalPaid = nullSafe(expensePaymentRepository.sumVendorPaid(vendorId, startDate, endDate));
-        long expenseCount = expensesRepository.countVendorExpense(vendorId, startDate, endDate);
-        long paymentsCounts = expensePaymentRepository.countVendorPayments(vendorId, startDate, endDate);
+        double totalExpense = nullSafe(expensesRepository.sumVendorExpense(id, startDate, endDate));
+        double totalPaid = nullSafe(expensePaymentRepository.sumVendorPaid(id, startDate, endDate));
+        long expenseCount = expensesRepository.countVendorExpense(id, startDate, endDate);
+        long paymentsCounts = expensePaymentRepository.countVendorPayments(id, startDate, endDate);
         VendorFinancialSummary summary = new VendorFinancialSummary(totalExpense, totalPaid,
                 totalExpense - totalPaid, expenseCount, paymentsCounts);
 
@@ -496,7 +495,7 @@ public class VendorService {
         // Month-wise breakdown for the selected range; defaults to the last 6 months when no
         // (or an unrecognised) filter is supplied.
         Date[] monthRange = range != null ? range : new Date[]{startOfMonth(-5), endOfMonth(0)};
-        List<VendorMonthSummary> monthSummary = buildMonthSummary(vendorId, monthRange[0], monthRange[1]);
+        List<VendorMonthSummary> monthSummary = buildMonthSummary(id, monthRange[0], monthRange[1]);
 
         VendorDetailsResponse response = new VendorDetailsResponse(vendorResponse, createdAt,
                 buildPeriodFilterOptions(), summary, monthSummary);
@@ -508,7 +507,7 @@ public class VendorService {
      * single grouped aggregate query. Months with no expenses are still returned, zero-filled, so the
      * response structure is consistent across the whole range.
      */
-    private List<VendorMonthSummary> buildMonthSummary(String vendorId, Date startDate, Date endDate) {
+    private List<VendorMonthSummary> buildMonthSummary(Integer vendorId, Date startDate, Date endDate) {
         Map<Integer, VendorMonthSummaryProjection> byYearMonth = new HashMap<>();
         for (VendorMonthSummaryProjection row : expensesRepository.findVendorMonthlyExpenseSummary(vendorId, startDate, endDate)) {
             byYearMonth.put(yearMonthKey(row.getExpenseYear(), row.getExpenseMonth()), row);
@@ -660,7 +659,7 @@ public class VendorService {
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
         Page<ExpensePayment> paymentPage =
-                expensePaymentRepository.findVendorPayments(String.valueOf(vendorId), start, end, pageable);
+                expensePaymentRepository.findVendorPayments(vendorId, start, end, pageable);
         List<ExpensePayment> pagePayments = paymentPage.getContent();
 
         // Resolve banks once for the page: paymentMethod may hold a bank id (-> account type) and
@@ -1038,7 +1037,7 @@ public class VendorService {
                 return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
             }
             // A vendor that is referenced by any expense record cannot be deleted (efficient EXISTS check).
-            if (expensesRepository.existsByVendorId(String.valueOf(vendorId))) {
+            if (expensesRepository.existsByVendorId(vendorId)) {
                 return new ResponseEntity<>(Utils.VENDOR_HAS_EXPENSES, HttpStatus.BAD_REQUEST);
             }
             vendorRepository.delete(existingVendor);
@@ -1121,7 +1120,9 @@ public class VendorService {
         // -> expenses). Resolve the category's vendors, then run one efficient EXISTS check.
         List<Integer> categoryVendorIds = vendorRepository.findVendorIdsByVendorCategory(categoryId);
         if (!categoryVendorIds.isEmpty()) {
-            List<String> vendorIds = categoryVendorIds.stream().map(String::valueOf).toList();
+            List<Integer> vendorIds = categoryVendorIds
+                    .stream()
+                    .toList();
             if (expensesRepository.existsByVendorIdIn(vendorIds)) {
                 return new ResponseEntity<>(Utils.VENDOR_CATEGORY_IN_USE, HttpStatus.BAD_REQUEST);
             }
@@ -1189,5 +1190,22 @@ public class VendorService {
 
         List<VendorCategoryResponse> categories = vendorCategoriesRepository.findAllEnabledCategoriesByHostelId(hostelId);
         return new ResponseEntity<>(categories, HttpStatus.OK);
+    }
+
+    public List<VendorV1> getAllVendorsByHostelIdAndVendorIds(String hostelId, List<Integer> vendorExpenseIds) {
+        List<VendorV1> listVendors = vendorRepository.findByHostelIdAndVendorIdIn(hostelId, vendorExpenseIds);
+        if (listVendors == null) {
+            listVendors = new ArrayList<>();
+        }
+
+        return listVendors;
+    }
+
+    public List<VendorV1> findActiveByHostelId(String hostelId) {
+        List<VendorV1> listVendors = vendorRepository.findActiveByHostelId(hostelId);
+        if (listVendors == null) {
+            return new ArrayList<>();
+        }
+        return listVendors;
     }
 }

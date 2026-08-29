@@ -18,6 +18,10 @@ import java.util.List;
 public interface VendorRepository extends JpaRepository<VendorV1, String> {
 
     List<VendorV1> findAllByHostelId(String hostelId);
+    @Query("""
+            SELECT ven FROM VendorV1 ven WHERE ven.hostelId=:hostelId AND ven.isActive=true
+            """)
+    List<VendorV1> findActiveByHostelId(String hostelId);
 
     /**
      * Ids of vendors assigned to a vendor category. Used to determine whether a category is in use by
@@ -56,7 +60,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "AND (:minBalance IS NULL OR COALESCE(v.balance, 0) >= :minBalance) " +
             "AND (:maxBalance IS NULL OR COALESCE(v.balance, 0) <= :maxBalance) " +
             "AND (:subCategoryId IS NULL OR EXISTS (SELECT e FROM ExpensesV1 e " +
-            "     WHERE e.vendorId = CAST(v.vendorId AS String) AND e.hostelId = v.hostelId " +
+            "     WHERE e.vendorId = v.vendorId AND e.hostelId = v.hostelId " +
             "       AND e.subCategoryId = :subCategoryId AND e.isActive = true)) ";
 
     @Query("SELECT v FROM VendorV1 v " + VENDOR_FILTERS + "ORDER BY v.vendorId DESC")
@@ -89,6 +93,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
     VendorV1 findByVendorId(int vendorId);
 
     List<VendorV1> findByVendorIdIn(List<Integer> vendorIds);
+    List<VendorV1> findByHostelIdAndVendorIdIn(String hostelId, List<Integer> vendorIds);
 
     List<VendorV1> findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(String hostelId);
 

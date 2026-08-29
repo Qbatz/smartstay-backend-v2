@@ -62,6 +62,8 @@ public class ElectricityService {
     @Autowired
     private BedsService bedsService;
     @Autowired
+    private EbResetReasonsService ebResetReasonsService;
+    @Autowired
     private EbCalculationService ebCalculationService;
     @Autowired
     private SubscriptionService subscriptionService;
@@ -1721,7 +1723,7 @@ public class ElectricityService {
             resetDate = Utils.stringToDate(resetElectricity.resetOn().replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
 
-        if (Utils.compareWithTwoDates(new Date(), resetDate) > 0) {
+        if (Utils.compareWithTwoDates(resetDate, new Date()) > 0) {
             return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
         }
         ElectricityReadings previousReading = electricityReadingRepository.findTopByRoomIdAndHostelIdOrderByEntryDateDesc(resetElectricity.roomId(), hostelId);
@@ -1749,13 +1751,14 @@ public class ElectricityService {
         electricityReadings.setConsumption(0.0);
         electricityReadings.setFirstEntry(true);
         electricityReadings.setMissedEntry(false);
+        electricityReadings.setIsResetEntry(true);
         electricityReadings.setCreatedAt(new Date());
         electricityReadings.setUpdatedAt(new Date());
         electricityReadings.setCreatedBy(authentication.getName());
         electricityReadings.setUpdatedBy(authentication.getName());
 
         ElectricityReadings ebReadingAfterReset = electricityReadingRepository.save(electricityReadings);
-
+        ebResetReasonsService.resetReason(ebReadingAfterReset.getId().longValue(), users, resetDate, resetElectricity.resetReason(), hostelId);
         usersService.addUserLog(hostelId, String.valueOf(ebReadingAfterReset.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.RESET, users);
 
         return new ResponseEntity<>(HttpStatus.OK);

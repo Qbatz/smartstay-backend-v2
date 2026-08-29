@@ -64,6 +64,8 @@ public class DashboardService {
     private BedChangeRequestRepository bedChangeRequestRepository;
     @Autowired
     private ComplaintTypeService complaintTypeService;
+    @Autowired
+    private TransactionService transactionService;
 
     public ResponseEntity<?> getDashboardInfo(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -388,6 +390,7 @@ public class DashboardService {
         Double totalInvoiced = summary.get("totalInvoiced") != null ? ((Number) summary.get("totalInvoiced")).doubleValue() : 0.0;
         Double totalPaid = summary.get("totalPaid") != null ? ((Number) summary.get("totalPaid")).doubleValue() : 0.0;
         double totalPending = totalInvoiced - totalPaid;
+        double paidThisMonth = transactionService.getCurrentMonthCollection(hostelId);
 
         Double refundedAmount = invoiceV1Service.getRefundedAmount(hostelId, dates.startDate(), dates.endDate());
         if (refundedAmount == null) refundedAmount = 0.0;
@@ -400,7 +403,7 @@ public class DashboardService {
 
         String fromLastMonth = calculateTrend(totalInvoiced, prevTotalInvoiced) + "%";
 
-        return new BillingSummary(totalInvoiceGenerated, Utils.roundOffWithTwoDigit(totalInvoiced), Utils.roundOffWithTwoDigit(totalPaid), Utils.roundOffWithTwoDigit(totalPending), Utils.roundOffWithTwoDigit(refundedAmount), collectionRate, fromLastMonth);
+        return new BillingSummary(totalInvoiceGenerated, Utils.roundOffWithTwoDigit(totalInvoiced), Utils.roundOffWithTwoDigit(totalPaid), Utils.roundOffWithTwoDigit(paidThisMonth), Utils.roundOffWithTwoDigit(totalPending), Utils.roundOffWithTwoDigit(refundedAmount), collectionRate, fromLastMonth);
     }
 
     private StatusSummary buildTenantComplaints(String hostelId, String filter) {
@@ -734,6 +737,7 @@ public class DashboardService {
         if (currentBillingDates != null) {
             currentBillStartDate = currentBillingDates.currentBillStartDate();
         }
+
 
         switch (filter) {
             case "Today":

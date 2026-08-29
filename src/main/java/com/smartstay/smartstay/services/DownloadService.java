@@ -5,6 +5,7 @@ import com.smartstay.smartstay.ennum.PaymentStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -27,17 +28,23 @@ public class DownloadService {
         HttpEntity<Void> request =
                 new HttpEntity<>(headers);
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                request,
-                String.class
-        );
-        if (response.getStatusCode() == HttpStatus.OK) {
-            return response.getBody();
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return response.getBody();
+            }
+            else {
+                return null;
+            }
         }
-        else {
+        catch (HttpClientErrorException clientErrorException) {
             return null;
         }
+
     }
 }

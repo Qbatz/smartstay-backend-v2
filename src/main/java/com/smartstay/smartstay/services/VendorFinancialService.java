@@ -53,9 +53,8 @@ public class VendorFinancialService {
         if (vendor == null) {
             return;
         }
-        String vendorIdStr = String.valueOf(vendorId);
-        double totalExpense = nullSafe(expensesRepository.sumVendorExpense(vendorIdStr, null, null));
-        double totalPaid = nullSafe(expensePaymentRepository.sumVendorPaid(vendorIdStr, null, null));
+        double totalExpense = nullSafe(expensesRepository.sumVendorExpense(vendorId, null, null));
+        double totalPaid = nullSafe(expensePaymentRepository.sumVendorPaid(vendorId, null, null));
         double balance = totalExpense - totalPaid;
 
         vendor.setTotalExpense(totalExpense);

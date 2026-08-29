@@ -21,7 +21,7 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             "WHERE e.vendorId = :vendorId AND e.isActive = true " +
             "AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) " +
             "AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate))")
-    Double sumVendorExpense(@Param("vendorId") String vendorId,
+    Double sumVendorExpense(@Param("vendorId") Integer vendorId,
                             @Param("startDate") Date startDate,
                             @Param("endDate") Date endDate);
 
@@ -42,7 +42,7 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             "WHERE e.vendorId = :vendorId AND e.isActive = true " +
             "AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) " +
             "AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate))")
-    long countVendorExpense(@Param("vendorId") String vendorId,
+    long countVendorExpense(@Param("vendorId") Integer vendorId,
                             @Param("startDate") Date startDate,
                             @Param("endDate") Date endDate);
 
@@ -51,14 +51,14 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
      * EXISTS/LIMIT 1 query (no rows loaded) and the leading column of the (vendor_id, transaction_date)
      * index serves the vendor_id predicate. Matches any expense row for the vendor, active or not.
      */
-    boolean existsByVendorId(String vendorId);
+    boolean existsByVendorId(Integer vendorId);
 
     /**
      * Efficient existence check across a set of vendor ids (e.g. all vendors in a category). Spring Data
      * issues a single EXISTS/LIMIT 1 query backed by the (vendor_id, ...) index — no rows are loaded and
      * there is no N+1. Matches any expense row, active or not. Call only with a non-empty collection.
      */
-    boolean existsByVendorIdIn(java.util.Collection<String> vendorIds);
+    boolean existsByVendorIdIn(java.util.Collection<Integer> vendorIds);
 
     /**
      * Month-wise expense aggregate for a vendor within a date range. Counts use mutually exclusive,
@@ -101,7 +101,7 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             GROUP BY YEAR(e.transaction_date), MONTH(e.transaction_date)
             """, nativeQuery = true)
     List<com.smartstay.smartstay.dto.vendor.VendorMonthSummaryProjection> findVendorMonthlyExpenseSummary(
-            @Param("vendorId") String vendorId,
+            @Param("vendorId") Integer vendorId,
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
 
@@ -222,69 +222,52 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
         Double sumAmountByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
                                                @Param("endDate") Date endDate);
 
-        @Query("SELECT e FROM ExpensesV1 e " +
-                "WHERE e.hostelId = :hostelId " +
-                "AND e.isActive = true " +
-                "AND (:categoryIds IS NULL OR e.categoryId IN :categoryIds) " +
-                "AND (:subCategoryIds IS NULL OR e.subCategoryId IN :subCategoryIds) " +
-                "AND (:bankIds IS NULL OR e.bankId IN :bankIds) " +
-                "AND (:vendorIds IS NULL OR e.vendorId IN :vendorIds) " +
-                "AND (:createdByList IS NULL OR e.createdBy IN :createdByList) " +
-                "AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) " +
-                "AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate)) " +
-                "ORDER BY e.transactionDate DESC")
+        @Query("""
+                SELECT e FROM ExpensesV1 e WHERE e.hostelId = :hostelId AND e.isActive = true 
+                AND (:categoryIds IS NULL OR e.categoryId IN :categoryIds) 
+                AND (:subCategoryIds IS NULL OR e.subCategoryId IN :subCategoryIds) 
+                AND (:bankIds IS NULL OR e.bankId IN :bankIds) 
+                AND (:paymentStatus IS NULL OR e.paymentStatus IN :paymentStatus)
+                AND (:vendorIds IS NULL OR e.vendorId IN :vendorIds) 
+                AND (:createdByList IS NULL OR e.createdBy IN :createdByList) 
+                AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) 
+                AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate)) 
+                ORDER BY e.transactionDate DESC
+                """)
         Page<ExpensesV1> findExpensesWithFiltersV2(
                 @Param("hostelId") String hostelId,
                 @Param("categoryIds") List<Long> categoryIds,
                 @Param("subCategoryIds") List<Long> subCategoryIds,
                 @Param("bankIds") List<String> bankIds,
-                @Param("vendorIds") List<String> vendorIds,
+                @Param("paymentStatus") List<String> paymentStatus,
+                @Param("vendorIds") List<Integer> vendorIds,
                 @Param("createdByList") List<String> createdByList,
                 @Param("startDate") Date startDate,
                 @Param("endDate") Date endDate,
                 Pageable pageable);
 
-    @Query("SELECT e FROM ExpensesV1 e " +
-            "WHERE e.hostelId = :hostelId " +
-            "AND e.isActive = true " +
-            "AND (:categoryIds IS NULL OR e.categoryId IN :categoryIds) " +
-            "AND (:subCategoryIds IS NULL OR e.subCategoryId IN :subCategoryIds) " +
-            "AND (:bankIds IS NULL OR e.bankId IN :bankIds) " +
-            "AND (:vendorIds IS NULL OR e.vendorId IN :vendorIds) " +
-            "AND (:createdByList IS NULL OR e.createdBy IN :createdByList) " +
-            "AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) " +
-            "AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate)) " +
-            "ORDER BY e.transactionDate DESC")
+    @Query("""
+            SELECT e FROM ExpensesV1 e WHERE e.hostelId = :hostelId AND e.isActive = true 
+            AND (:categoryIds IS NULL OR e.categoryId IN :categoryIds) 
+            AND (:subCategoryIds IS NULL OR e.subCategoryId IN :subCategoryIds) 
+            AND (:bankIds IS NULL OR e.bankId IN :bankIds) 
+            AND (:paymentStatus IS NULL OR e.paymentStatus IN :paymentStatus)
+            AND (:vendorIds IS NULL OR e.vendorId IN :vendorIds) 
+            AND (:createdByList IS NULL OR e.createdBy IN :createdByList) 
+            AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) 
+            AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate)) 
+            ORDER BY e.transactionDate DESC
+            """)
     List<ExpensesV1> findExpensesWithFiltersV2(
             @Param("hostelId") String hostelId,
             @Param("categoryIds") List<Long> categoryIds,
             @Param("subCategoryIds") List<Long> subCategoryIds,
+            @Param("paymentStatus") List<String> paymentStatus,
             @Param("bankIds") List<String> bankIds,
-            @Param("vendorIds") List<String> vendorIds,
+            @Param("vendorIds") List<Integer> vendorIds,
             @Param("createdByList") List<String> createdByList,
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
-
-        @Query("SELECT COUNT(e) as totalRecords, COALESCE(SUM(e.transactionAmount), 0) as totalAmount " +
-                "FROM ExpensesV1 e " +
-                "WHERE e.hostelId = :hostelId " +
-                "AND e.isActive = true " +
-                "AND (:categoryIds IS NULL OR e.categoryId IN :categoryIds) " +
-                "AND (:subCategoryIds IS NULL OR e.subCategoryId IN :subCategoryIds) " +
-                "AND (:bankIds IS NULL OR e.bankId IN :bankIds) " +
-                "AND (:vendorIds IS NULL OR e.vendorId IN :vendorIds) " +
-                "AND (:createdByList IS NULL OR e.createdBy IN :createdByList) " +
-                "AND (:startDate IS NULL OR DATE(e.transactionDate) >= DATE(:startDate)) " +
-                "AND (:endDate IS NULL OR DATE(e.transactionDate) <= DATE(:endDate))")
-        ExpenseSummaryProjection getExpenseSummary(
-                @Param("hostelId") String hostelId,
-                @Param("categoryIds") List<Long> categoryIds,
-                @Param("subCategoryIds") List<Long> subCategoryIds,
-                @Param("bankIds") List<String> bankIds,
-                @Param("vendorIds") List<String> vendorIds,
-                @Param("createdByList") List<String> createdByList,
-                @Param("startDate") Date startDate,
-                @Param("endDate") Date endDate);
 
         List<ExpensesV1> findByHostelIdAndIsActiveTrue(String hostelId);
 

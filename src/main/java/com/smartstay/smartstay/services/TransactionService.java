@@ -1027,9 +1027,6 @@ public class TransactionService {
             itemsPerPage = webTransactions.getPageable().getPageSize();
             secondaryTransactions = webTransactions.getContent();
         }
-        else {
-
-        }
 
 
         Double receivedAmount = 0.0;
@@ -1043,7 +1040,7 @@ public class TransactionService {
 
         receivedAmount = listTransactions
                 .stream()
-                .filter(i -> i.getType() == null)
+                .filter(i -> i.getType() == null || (i.getType() != null && i.getType().equalsIgnoreCase(TransactionType.ADVANCE_HOLDING.name())))
                 .mapToDouble(TransactionV1::getPaidAmount)
                 .sum();
 
@@ -1391,7 +1388,7 @@ public class TransactionService {
         }
 
         List<String> invoiceTypeArr = null;
-        if (invoiceType != null) {
+        if (invoiceType != null && !invoiceType.isEmpty()) {
             invoiceTypeArr = new ArrayList<>();
             if (invoiceType.equalsIgnoreCase(InvoiceType.RENT.name())) {
                 invoiceTypeArr.add(InvoiceType.RENT.name());
@@ -1416,6 +1413,8 @@ public class TransactionService {
                 invoiceTypeArr = null;
             }
         }
+        List<String> invoiceId = null;
+        List<String> customerIds = null;
 
         int page = 1;
         int size = 10;
@@ -1484,13 +1483,16 @@ public class TransactionService {
         double refundAmount = 0.0;
         List<TransactionV1> listAllTransactions = null;
         Page<TransactionV1> listPagebleTransactions = null;
-        if (keyword != null) {
+        if (keyword != null && !keyword.isEmpty()) {
             List<Customers> customersList = customersService.searchCustomerByHostelName(hostelId, keyword);
-            List<String> customerIds = customersList
+             customerIds = customersList
                     .stream()
                     .map(Customers::getCustomerId)
                     .toList();
-            List<String> invoiceId = invoiceService.getInvoiceNumbersBySearchKeyword(hostelId, keyword, invoiceTypeArr);
+//             if (customerIds.isEmpty()) {
+//                 customerIds = null;
+//             }
+            invoiceId = invoiceService.getInvoiceNumbersBySearchKeyword(hostelId, keyword, invoiceTypeArr, customerIds);
 
             if (customerIds != null) {
                 if (customerIds.isEmpty()) {
@@ -1502,20 +1504,10 @@ public class TransactionService {
                     invoiceId = null;
                 }
             }
+        }
 
-            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
-            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
-
-        }
-        else if (invoiceType != null) {
-            List<String> listInvoiceIds = invoiceService.findInvoiceIdsByHostelIdAndTypeIn(hostelId, invoiceTypeArr);
-            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, null, listInvoiceIds, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
-            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, null, listInvoiceIds, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
-        }
-        else {
-            listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, null, null, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
-            listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, null, null, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
-        }
+        listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
+        listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
 
         List<TransactionV1> listReceipts = listPagebleTransactions.toList();
         if (listReceipts == null) {
@@ -1587,8 +1579,8 @@ public class TransactionService {
         int noOfItemsPerPage = listPagebleTransactions.getSize();
 
 
-        List<String> customerIds = listReceipts.stream().map(TransactionV1::getCustomerId).toList();
-        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+        List<String> cId = listReceipts.stream().map(TransactionV1::getCustomerId).toList();
+        List<Customers> listCustomers = customersService.getCustomerDetails(cId);
         List<String> invoiceIds = listReceipts.stream().map(TransactionV1::getInvoiceId).toList();
         List<InvoicesV1> invoices = invoiceService.findByInvoiceIdIn(invoiceIds);
         Set<String> bankIdSet = listReceipts.stream().map(TransactionV1::getBankId).collect(Collectors.toSet());
@@ -1654,5 +1646,56 @@ public class TransactionService {
             listLatestTransactions = new ArrayList<>();
         }
         return listLatestTransactions;
+    }
+
+    public double getCurrentMonthCollection(String hostelId) {
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+        if (billingDates != null) {
+            List<TransactionV1> transactionV1 = transactionRespository.findCurrentMonthByHostelId(hostelId, billingDates.currentBillStartDate());
+            if (transactionV1 != null) {
+                List<TransactionV1> onlyPaidTransactions = transactionV1
+                        .stream()
+                        .filter(i -> i.getPaidAmount() != null && i.getPaidAmount() >= 0)
+                        .toList();
+                if (onlyPaidTransactions != null) {
+                    return onlyPaidTransactions
+                            .stream()
+                            .mapToDouble(i -> {
+                                if (i.getPaidAmount() != null) {
+                                    return i.getPaidAmount();
+                                }
+                                return 0.0;
+                            })
+                            .sum();
+                }
+            }
+        }
+        return 0.0;
+    }
+
+    public double getCurrentMonthCollection(String hostelId, List<String> listInvoiceIds) {
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+        if (billingDates != null) {
+            List<TransactionV1> transactionV1 = transactionRespository.findCurrentMonthByHostelId(hostelId, listInvoiceIds, billingDates.currentBillStartDate());
+
+            if (transactionV1 != null) {
+                List<TransactionV1> onlyPaidTransactions = transactionV1
+                        .stream()
+                        .filter(i -> i.getPaidAmount() != null && i.getPaidAmount() >= 0)
+                        .toList();
+                if (onlyPaidTransactions != null) {
+                    return onlyPaidTransactions
+                            .stream()
+                            .mapToDouble(i -> {
+                                if (i.getPaidAmount() != null) {
+                                    return i.getPaidAmount();
+                                }
+                                return 0.0;
+                            })
+                            .sum();
+                }
+            }
+        }
+        return 0.0;
     }
 }

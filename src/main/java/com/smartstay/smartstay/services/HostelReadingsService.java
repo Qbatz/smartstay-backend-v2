@@ -35,6 +35,8 @@ public class HostelReadingsService {
     @Autowired
     private HostelService hostelService;
     @Autowired
+    private EbResetReasonsService ebResetReasonsService;
+    @Autowired
     private UsersService usersService;
 
     public ResponseEntity<?> addEbReadings(String hostelId, AddReading readings, Date billStartDate, Date billEndDate, ElectricityConfig electricityConfig, Users users) {
@@ -264,7 +266,7 @@ public class HostelReadingsService {
         if (resetElectricity.startReading() != null) {
             resetReading = resetElectricity.startReading();
         }
-        if (Utils.compareWithTwoDates(new Date(), resetDate) > 0) {
+        if (Utils.compareWithTwoDates(resetDate, new Date()) > 0) {
             return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
         }
 
@@ -285,13 +287,15 @@ public class HostelReadingsService {
         hr.setEntryDate(resetDate);
         hr.setConsumption(resetReading);
         hr.setFirstEntry(true);
-        hr.setMissedEntry(true);
+        hr.setMissedEntry(false);
+        hr.setIsResetEntry(true);
         hr.setCreatedAt(new Date());
         hr.setUpdatedAt(new Date());
         hr.setUpdatedBy(authentication.getName());
         hr.setCreatedBy(authentication.getName());
 
         HostelReadings hr1 = hostelEBReadingsRepository.save(hr);
+        ebResetReasonsService.resetReason(hr1.getId(), users, resetDate, resetElectricity.resetReason(), hostelId);
 
         usersService.addUserLog(hostelId, String.valueOf(hr1.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.RESET, users);
         return new ResponseEntity<>(HttpStatus.OK);
