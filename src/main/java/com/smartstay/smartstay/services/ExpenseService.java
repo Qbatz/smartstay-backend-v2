@@ -1044,7 +1044,7 @@ public class ExpenseService {
         if ("web".equalsIgnoreCase(authentication.getSource())) {
             return buildExpenseWebResponse(hostelId, projections, expenseSummary, totalExpenses, currentPage, totalPages, pageSize);
         }
-        return buildExpenseMobileResponse(projections, expenseSummary, totalExpenses, currentPage, totalPages, pageSize);
+        return buildExpenseMobileResponse(hostelId, projections, expenseSummary, totalExpenses, currentPage, totalPages, pageSize);
     }
 
     private ExpenseSummary buildExpenseSummary(String hostelId, String name, Long categoryId,
@@ -1092,7 +1092,8 @@ public class ExpenseService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    private ResponseEntity<?> buildExpenseMobileResponse(List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections,
+    private ResponseEntity<?> buildExpenseMobileResponse(String hostelId,
+                                                         List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections,
                                                          ExpenseSummary expenseSummary, int totalExpenses, int currentPage,
                                                          int totalPages, int pageSize) {
         // Bulk-load items and payments for the page in two queries (no N+1), grouped by expense id.
@@ -1137,9 +1138,9 @@ public class ExpenseService {
                         finalPaymentsByExpense.getOrDefault(item.getExpenseId(), List.of())))
                 .toList();
 
-        // filterOptions / tableHeaders / columnList are intentionally null for mobile.
+        ExpenseFilterOptions filterOptions = buildExpenseFilterOptions(hostelId);
         ExpensesMobileResponse response = new ExpensesMobileResponse(totalExpenses, currentPage, totalPages, pageSize,
-                expenseSummary, null, null, null, expenses);
+                expenseSummary, filterOptions, null, null, expenses);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
