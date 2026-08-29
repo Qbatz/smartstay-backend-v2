@@ -162,4 +162,10 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             SELECT trns FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND DATE(trns.paymentDate) >= DATE(:startDate)
             """)
     List<TransactionV1> findCurrentMonthByHostelId(String hostelId, Date startDate);
+    @Query("""
+            SELECT trns FROM TransactionV1 trns WHERE trns.hostelId=:hostelId 
+            AND trns.invoiceId IN (:invoiceIds) 
+            AND DATE(trns.paymentDate) >= DATE(:startDate) 
+            """)
+    List<TransactionV1> findCurrentMonthByHostelId(String hostelId, List<String> invoiceIds, Date startDate);
 }

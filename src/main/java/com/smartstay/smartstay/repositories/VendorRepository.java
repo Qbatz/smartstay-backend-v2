@@ -60,7 +60,7 @@ public interface VendorRepository extends JpaRepository<VendorV1, String> {
             "AND (:minBalance IS NULL OR COALESCE(v.balance, 0) >= :minBalance) " +
             "AND (:maxBalance IS NULL OR COALESCE(v.balance, 0) <= :maxBalance) " +
             "AND (:subCategoryId IS NULL OR EXISTS (SELECT e FROM ExpensesV1 e " +
-            "     WHERE e.vendorId = CAST(v.vendorId AS String) AND e.hostelId = v.hostelId " +
+            "     WHERE e.vendorId = v.vendorId AND e.hostelId = v.hostelId " +
             "       AND e.subCategoryId = :subCategoryId AND e.isActive = true)) ";
 
     @Query("SELECT v FROM VendorV1 v " + VENDOR_FILTERS + "ORDER BY v.vendorId DESC")

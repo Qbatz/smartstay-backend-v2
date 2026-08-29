@@ -1672,4 +1672,30 @@ public class TransactionService {
         }
         return 0.0;
     }
+
+    public double getCurrentMonthCollection(String hostelId, List<String> listInvoiceIds) {
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+        if (billingDates != null) {
+            List<TransactionV1> transactionV1 = transactionRespository.findCurrentMonthByHostelId(hostelId, listInvoiceIds, billingDates.currentBillStartDate());
+
+            if (transactionV1 != null) {
+                List<TransactionV1> onlyPaidTransactions = transactionV1
+                        .stream()
+                        .filter(i -> i.getPaidAmount() != null && i.getPaidAmount() >= 0)
+                        .toList();
+                if (onlyPaidTransactions != null) {
+                    return onlyPaidTransactions
+                            .stream()
+                            .mapToDouble(i -> {
+                                if (i.getPaidAmount() != null) {
+                                    return i.getPaidAmount();
+                                }
+                                return 0.0;
+                            })
+                            .sum();
+                }
+            }
+        }
+        return 0.0;
+    }
 }

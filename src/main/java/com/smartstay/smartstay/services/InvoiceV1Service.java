@@ -877,12 +877,22 @@ public class InvoiceV1Service {
             sourceInvoiceIds = Collections.emptySet();
         }
 
+
+        double currentMonthCollection = 0.0;
+        if (listAllInvoice != null) {
+            List<String> listInvoiceIds = listAllInvoice
+                    .stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList();
+            currentMonthCollection = transactionService.getCurrentMonthCollection(hostelId, listInvoiceIds);
+        }
+
         List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers,
                 listInvoiceDiscounts, listInvoiceRedeemed, listRetainerInvoices, listAllInvoiceForCustomer, listTransactions, sourceInvoiceIds).apply(i)).toList();
 
         if (authentication.getSource().equalsIgnoreCase("web")) {
 //            List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
-            return getAllInvoicesWebResponse(hostelId, invoiceFilterOptions, pageList, newInvoicesList, listAllInvoice);
+            return getAllInvoicesWebResponse(hostelId, invoiceFilterOptions, pageList, newInvoicesList, listAllInvoice, currentMonthCollection);
         }
         else {
             NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, invoiceFilterOptions, newInvoicesList);
@@ -942,11 +952,10 @@ public class InvoiceV1Service {
                 .collect(Collectors.groupingBy(InvoicesList::customerId));
     }
 
-    public ResponseEntity<?> getAllInvoicesWebResponse(String hostelId, InvoiceFilterOptions filterOptions, Page<InvoicesV1> pageInvoices, List<InvoicesList> invoicesLists, List<InvoicesV1> listInvoicesForSummary) {
+    public ResponseEntity<?> getAllInvoicesWebResponse(String hostelId, InvoiceFilterOptions filterOptions, Page<InvoicesV1> pageInvoices, List<InvoicesList> invoicesLists, List<InvoicesV1> listInvoicesForSummary, Double currentMonthCollection) {
         PaginationSummary paginationSummary = null;
         InvoiceSummaryInfo invoiceSummaryInfo = null;
 
-        double currentMonthCollection = transactionService.getCurrentMonthCollection(hostelId);
         int totalInvoices = 0;
 
         if (pageInvoices != null) {
