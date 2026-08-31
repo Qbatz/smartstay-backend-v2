@@ -127,4 +127,9 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
             """)
     List<BankingV1> findByBankIdNotInAndIsDeletedFalse(List<String> bankId, String hostelId);
 
+    @Query("""
+            SELECT b FROM BankingV1 WHERE b.accountType='CASH'
+            """)
+    List<BankingV1> findAllCashAccounts();
+
 }
