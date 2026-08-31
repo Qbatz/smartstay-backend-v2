@@ -2,6 +2,9 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.CustomerJobDetails;
+import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.ennum.ActivitySource;
+import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.payloads.customer.JobDetails;
 import com.smartstay.smartstay.payloads.customer.UpdateCustomerJob;
@@ -20,6 +23,8 @@ public class CustomerJobDetailsService {
     private Authentication authentication;
     @Autowired
     private CustomerJobDetailsRepository jobDetailsRepository;
+    @Autowired
+    private UsersService usersService;
 
     public void addJobDetails(String hostelId, String customerId, JobDetails jobDetails) {
         boolean canUpdate = false;
@@ -86,7 +91,7 @@ public class CustomerJobDetailsService {
                 customerJobDetails.getShiftEndTime());
     }
 
-    public ResponseEntity<?> updateJobInformation(String hostelId, String customerId, UpdateCustomerJob updateCustomerJob) {
+    public ResponseEntity<?> updateJobInformation(String hostelId, String customerId, UpdateCustomerJob updateCustomerJob, Users users) {
         CustomerJobDetails cjd =  jobDetailsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
         if (cjd == null) {
             cjd = new CustomerJobDetails();
@@ -163,7 +168,7 @@ public class CustomerJobDetailsService {
         cjd.setUpdatedByUserType(UserType.ADMIN.name());
 
         jobDetailsRepository.save(cjd);
-
+        usersService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.ADD_JOB, users);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }

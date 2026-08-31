@@ -10,5 +10,6 @@ public record VendorInitialize(
         String vendorId,
         List<DebitsBank> banks,
         List<VendorExpenseSummary> expenses,
+        Double totalDueAmount,
         List<PaymentMethodOptionResponse> allPaymentMethods) {
 }

@@ -28,7 +28,7 @@ public interface ExpensePaymentRepository extends JpaRepository<ExpensePayment, 
             "WHERE p.vendorId = :vendorId " +
             "AND (:startDate IS NULL OR DATE(p.paymentDate) >= DATE(:startDate)) " +
             "AND (:endDate IS NULL OR DATE(p.paymentDate) <= DATE(:endDate))")
-    Double sumVendorPaid(@Param("vendorId") String vendorId,
+    Double sumVendorPaid(@Param("vendorId") Integer vendorId,
                          @Param("startDate") Date startDate,
                          @Param("endDate") Date endDate);
 
@@ -36,24 +36,24 @@ public interface ExpensePaymentRepository extends JpaRepository<ExpensePayment, 
             "WHERE p.vendorId = :vendorId " +
             "AND (:startDate IS NULL OR DATE(p.paymentDate) >= DATE(:startDate)) " +
             "AND (:endDate IS NULL OR DATE(p.paymentDate) <= DATE(:endDate))")
-    long countVendorPayments(@Param("vendorId") String vendorId,
+    long countVendorPayments(@Param("vendorId") Integer vendorId,
                              @Param("startDate") Date startDate,
                              @Param("endDate") Date endDate);
 
     @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorLastPayment(p.vendorId, MAX(p.paymentDate)) " +
             "FROM ExpensePayment p WHERE p.vendorId IN :vendorIds GROUP BY p.vendorId")
-    List<VendorLastPayment> findLatestPaymentDates(@Param("vendorIds") List<String> vendorIds);
+    List<VendorLastPayment> findLatestPaymentDates(@Param("vendorIds") List<Integer> vendorIds);
 
     @Query("SELECT new com.smartstay.smartstay.dto.vendor.VendorLastPaymentAmount(p.vendorId, p.paidAmount) " +
             "FROM ExpensePayment p WHERE p.vendorId IN :vendorIds " +
             "AND p.paymentDate = (SELECT MAX(p2.paymentDate) FROM ExpensePayment p2 WHERE p2.vendorId = p.vendorId)")
-    List<VendorLastPaymentAmount> findLatestPaymentAmounts(@Param("vendorIds") List<String> vendorIds);
+    List<VendorLastPaymentAmount> findLatestPaymentAmounts(@Param("vendorIds") List<Integer> vendorIds);
 
     @Query("SELECT p FROM ExpensePayment p WHERE p.vendorId = :vendorId " +
             "AND (:startDate IS NULL OR DATE(p.paymentDate) >= DATE(:startDate)) " +
             "AND (:endDate IS NULL OR DATE(p.paymentDate) <= DATE(:endDate)) " +
             "ORDER BY p.paymentDate DESC")
-    Page<ExpensePayment> findVendorPayments(@Param("vendorId") String vendorId,
+    Page<ExpensePayment> findVendorPayments(@Param("vendorId") Integer vendorId,
                                             @Param("startDate") Date startDate,
                                             @Param("endDate") Date endDate,
                                             Pageable pageable);

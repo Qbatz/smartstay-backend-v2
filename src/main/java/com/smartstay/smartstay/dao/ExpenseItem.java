@@ -29,7 +29,7 @@ public class ExpenseItem {
 
     private String expenseId;
     private String hostelId;
-    private String vendorId;
+    private Integer vendorId;
     private String item;
     private Integer quantity;
     private Integer unitId;

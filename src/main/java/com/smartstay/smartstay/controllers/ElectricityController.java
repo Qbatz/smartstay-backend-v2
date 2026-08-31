@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.electricity.AddReading;
+import com.smartstay.smartstay.payloads.electricity.ResetElectricity;
 import com.smartstay.smartstay.payloads.electricity.UpdateElectricity;
 import com.smartstay.smartstay.services.ElectricityService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -70,6 +71,11 @@ public class ElectricityController {
     @DeleteMapping("/all/{hostelId}")
     public ResponseEntity<?> deleteEntries(@PathVariable("hostelId") String hostelId) {
         return electricityService.deleteReadingAll(hostelId);
+    }
+
+    @PostMapping("/reset/{hostelId}")
+    public ResponseEntity<?> resetElectricity(@PathVariable("hostelId") String hostelId, @RequestBody ResetElectricity resetElectricity) {
+        return electricityService.resetReadings(hostelId, resetElectricity);
     }
 
 }

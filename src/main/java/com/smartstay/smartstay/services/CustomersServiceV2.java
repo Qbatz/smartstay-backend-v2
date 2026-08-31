@@ -315,7 +315,9 @@ public class CustomersServiceV2 {
             return new ResponseEntity<>("Invalid JSON payload", HttpStatus.BAD_REQUEST);
         }
 
-        draftsRepository.save(draft);
+        Draft customerDrafts = draftsRepository.save(draft);
+
+        userService.addUserLog(hostelId, customerDrafts.getCustomerId(), ActivitySource.DRAFTS, ActivitySourceType.CREATE, user);
 
         return new ResponseEntity<>(Map.of(
                 "message", Utils.CREATED,
@@ -471,7 +473,7 @@ public class CustomersServiceV2 {
 
         customersRepository.save(customers);
         draftsRepository.save(draft);
-
+        userService.addUserLog(hostelId, draft.getCustomerId(), ActivitySource.DRAFTS, ActivitySourceType.UPDATE, user);
         return new ResponseEntity<>(Map.of(
                 "message", Utils.UPDATED,
                 "customerId", customers.getCustomerId(),
@@ -765,6 +767,7 @@ public class CustomersServiceV2 {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
+        userService.addUserLog(hostelId, customerId, ActivitySource.DRAFTS, ActivitySourceType.UPDATE, user);
         return customerDraftService.updateDraftInfo(customerId, updateDrafts);
 
 
@@ -952,6 +955,7 @@ public class CustomersServiceV2 {
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
                 }
             } else {
+                calculateRentAndCreateRentalInvoiceForPostpaid(customers, checkInRequest, payloads.shouldCollectFullRent(), payloads.customRent());
                 if (!environment.equalsIgnoreCase(Utils.ENVIRONMENT_LOCAL) && Utils.isCurrentMonth(joiningDate)) {
                     whatsappService.sendWelcomeMessage(customers.getMobile(), customers.getFirstName());
                 }
@@ -977,6 +981,86 @@ public class CustomersServiceV2 {
             return new CheckInRequest(request.floorId(), request.bedId(), request.roomId(), currentCycleStartDate, request.advanceAmount(), request.rentalAmount(), request.stayType(), request.deductions(), Boolean.TRUE.equals(request.proRate()));
         }
         return request;
+    }
+
+    private void calculateRentAndCreateRentalInvoiceForPostpaid(Customers customers, CheckInRequest checkInRequest, Boolean shoudlCollectFullRent, Double customRent) {
+        HostelV1 hostelV1 = hostelService.getHostelInfo(customers.getHostelId());
+        if (hostelV1 != null) {
+            BillingDates currentMonthBillingCycle = hostelService.getCurrentBillStartAndEndDates(customers.getHostelId());
+            Date currentMonthBillingCycleStartDate = new Date();
+            BillingDates invoiceRunningCycle = null;
+            Date invoiceStartDate = null;
+            Date invoiceEndDate = null;
+            if (currentMonthBillingCycle != null ) {
+                currentMonthBillingCycleStartDate = currentMonthBillingCycle.currentBillStartDate();
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(currentMonthBillingCycleStartDate);
+                cal.add(Calendar.DAY_OF_MONTH, -1);
+
+                invoiceRunningCycle = hostelService.getBillingRuleOnDate(hostelV1.getHostelId(), cal.getTime());
+            }
+            if (invoiceRunningCycle != null) {
+                Date joiningDate = Utils.stringToDate(checkInRequest.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                if (Utils.compareWithTwoDates(joiningDate, invoiceRunningCycle.currentBillStartDate()) < 0) {
+                    invoiceStartDate = invoiceRunningCycle.currentBillStartDate();
+                    invoiceEndDate = invoiceRunningCycle.currentBillEndDate();
+                    //Create a invoice with full rent
+                    invoiceV1Service.addRentanInvoiceForPostpaid(customers, checkInRequest.rentalAmount(), checkInRequest.joiningDate(), invoiceStartDate, invoiceEndDate, invoiceRunningCycle, currentMonthBillingCycle, checkInRequest.deductions());
+                }
+                else {
+                    if (Utils.compareWithTwoDates(joiningDate, currentMonthBillingCycleStartDate) < 0) {
+                        invoiceStartDate = joiningDate;
+                        invoiceEndDate = invoiceRunningCycle.currentBillEndDate();
+                        double rent = 0.0;
+                        if (invoiceRunningCycle.hasGracePeriod()) {
+                            Date gracePeriod = Utils.addDaysToDate(invoiceRunningCycle.currentBillStartDate(), invoiceRunningCycle.gracePeriodDays());
+                            if (Utils.compareWithTwoDates(joiningDate, gracePeriod) <= 0) {
+                                rent = checkInRequest.rentalAmount();
+                                invoiceV1Service.addRentanInvoiceForPostpaid(customers, checkInRequest.rentalAmount(), checkInRequest.joiningDate(), invoiceStartDate, invoiceEndDate, invoiceRunningCycle, currentMonthBillingCycle, checkInRequest.deductions());
+                            }
+                            else {
+                                if (shoudlCollectFullRent != null && shoudlCollectFullRent) {
+                                    if (customRent != null && customRent > 0) {
+                                        invoiceV1Service.addRentanInvoiceForPostpaid(customers, customRent, checkInRequest.joiningDate(), invoiceStartDate, invoiceEndDate, invoiceRunningCycle, currentMonthBillingCycle, checkInRequest.deductions());
+                                    }
+                                    else {
+                                        invoiceV1Service.addRentanInvoiceForPostpaid(customers, checkInRequest.rentalAmount(), checkInRequest.joiningDate(), invoiceStartDate, invoiceEndDate, invoiceRunningCycle, currentMonthBillingCycle, checkInRequest.deductions());
+                                    }
+                                }
+                                else {
+                                    long noOfDays = Utils.findNumberOfDays(invoiceRunningCycle.currentBillStartDate(), invoiceRunningCycle.currentBillEndDate());
+                                    double rentPerDay = checkInRequest.rentalAmount() / noOfDays;
+                                    long noOfDaysInBillingMonth = Utils.findNumberOfDays(joiningDate, invoiceRunningCycle.currentBillEndDate());
+                                    rent = rentPerDay * noOfDaysInBillingMonth;
+
+                                    invoiceV1Service.addRentanInvoiceForPostpaid(customers, rent, checkInRequest.joiningDate(), invoiceStartDate, invoiceEndDate, invoiceRunningCycle, currentMonthBillingCycle, checkInRequest.deductions());
+                                }
+
+
+                            }
+                        }
+                        else {
+                            if (shoudlCollectFullRent != null && shoudlCollectFullRent) {
+                                if (customRent != null && customRent > 0) {
+                                    invoiceV1Service.addRentanInvoiceForPostpaid(customers, customRent, checkInRequest.joiningDate(), invoiceStartDate, invoiceEndDate, invoiceRunningCycle, currentMonthBillingCycle, checkInRequest.deductions());
+                                }
+                                else {
+                                    invoiceV1Service.addRentanInvoiceForPostpaid(customers, checkInRequest.rentalAmount(), checkInRequest.joiningDate(), invoiceStartDate, invoiceEndDate, invoiceRunningCycle, currentMonthBillingCycle, checkInRequest.deductions());
+                                }
+                            }
+                            else {
+                                long noOfDays = Utils.findNumberOfDays(invoiceRunningCycle.currentBillStartDate(), invoiceRunningCycle.currentBillEndDate());
+                                double rentPerDay = checkInRequest.rentalAmount() / noOfDays;
+                                long noOfDaysInBillingMonth = Utils.findNumberOfDays(joiningDate, invoiceRunningCycle.currentBillEndDate());
+                                rent = rentPerDay * noOfDaysInBillingMonth;
+
+                                invoiceV1Service.addRentanInvoiceForPostpaid(customers, rent, checkInRequest.joiningDate(), invoiceStartDate, invoiceEndDate, invoiceRunningCycle, currentMonthBillingCycle, checkInRequest.deductions());
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public void calculateRentAndCreateRentalInvoice(Customers customers, CheckInRequest payloads, Boolean shouldCollectFullRent, Double customRent, List<NonRefundable> ontimeDeductions) {
@@ -1403,7 +1487,7 @@ public class CustomersServiceV2 {
         }
 
         customerDocumentsService.uploadManualKycFiles(hostelId, customerId, aadhaarPic, panPic);
-
+        userService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.ADDITIONAL_COTACT, user);
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
@@ -1451,6 +1535,6 @@ public class CustomersServiceV2 {
         }
 
 
-        return customerJobDetailsService.updateJobInformation(hostelId, customerId, updateCustomerJob);
+        return customerJobDetailsService.updateJobInformation(hostelId, customerId, updateCustomerJob, user);
     }
 }

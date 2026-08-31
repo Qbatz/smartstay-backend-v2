@@ -5,13 +5,13 @@ import com.smartstay.smartstay.Wrappers.retainer.InvoiceRetainerItemsMapper;
 import com.smartstay.smartstay.Wrappers.retainer.InvoicesInvoiceInfoMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.customer.RetainerListItems;
 import com.smartstay.smartstay.dto.retainer.RetainerInfo;
 import com.smartstay.smartstay.dto.retainer.RetainerItems;
 import com.smartstay.smartstay.dto.retainer.RetainerSummary;
-import com.smartstay.smartstay.ennum.InvoiceMode;
-import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.retainer.LoadBalance;
 import com.smartstay.smartstay.payloads.retainer.RedeemAmount;
@@ -27,14 +27,13 @@ import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @Service
 public class RetainerService {
@@ -71,6 +70,8 @@ public class RetainerService {
     private InvoiceDiscountService invoiceDiscountService;
     @Autowired
     private InvoiceNotesService invoiceNotesService;
+    @Autowired
+    private BankingService bankingService;
 
     public ResponseEntity<?> addMoney(String hostelId, String customerId, LoadBalance loadBalance) {
         if (!authentication.isAuthenticated()) {
@@ -200,6 +201,7 @@ public class RetainerService {
         retainerRelationService.addRelationForDeposit(customerId, hostelId, loadBalance, isRegisteredRelation, createdInvoice);
         transactionService.addRetainerTransaction(createdInvoice, loadBalance);
         tenantBankTransactionService.addRetainerTransaction(createdInvoice, loadBalance, paymentDate, isRegisteredRelation);
+        usersService.addUserLog(hostelId, createdInvoice.getInvoiceId(), ActivitySource.RETAINER, ActivitySourceType.CREATE, users);
 
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
@@ -499,6 +501,7 @@ public class RetainerService {
 
         if (!newInvoices.isEmpty()) {
             invoicesV1Repository.saveAll(newInvoices);
+            usersService.addUserLog(hostelId, invoicesV1.getCustomerId(), ActivitySource.RETAINER, ActivitySourceType.REDEEMED, users);
         }
 
         return new ResponseEntity<>(HttpStatus.OK);
@@ -642,12 +645,15 @@ public class RetainerService {
         }
     }
 
-    public com.smartstay.smartstay.dto.customer.RetainerInfo getRetaineListByCUstomerId(String customerId) {
+    public com.smartstay.smartstay.dto.customer.RetainerInfo getRetaineListByCUstomerId(String hostelId, String customerId) {
         List<String> invoiceTypes = new ArrayList<>();
         invoiceTypes.add(InvoiceType.ADVANCE.name());
         invoiceTypes.add(InvoiceType.BOOKING.name());
         invoiceTypes.add(InvoiceType.EB_HOLDING.name());
         invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
+
+        List<TransactionV1> listRetainerTransactions;
+        List<BankingV1> listBankings;
 
         List<InvoicesV1> listInvoices = invoicesV1Repository.findByCustomerIdAndInvoiceTypeIn(customerId, invoiceTypes);
         if (listInvoices != null) {
@@ -655,6 +661,31 @@ public class RetainerService {
                     .stream()
                     .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
                     .toList();
+        }
+
+        if (listInvoices != null) {
+            List<String> invoiceIds = listInvoices
+                    .stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .toList();
+            listRetainerTransactions = transactionService.getLatestTransactions(hostelId, invoiceIds);
+            if (listRetainerTransactions != null) {
+                Set<String> bankIds = listRetainerTransactions
+                        .stream()
+                        .map(TransactionV1::getBankId)
+                        .collect(Collectors.toSet());
+                if (bankIds != null) {
+                    listBankings = bankingService.findAllBanksById(bankIds);
+                }
+                else {
+                    listBankings = null;
+                }
+            } else {
+                listBankings = null;
+            }
+        } else {
+            listBankings = null;
+            listRetainerTransactions = null;
         }
 
         RetainerSummary summary = new RetainerSummary(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -728,7 +759,7 @@ public class RetainerService {
                     0.0);
             List<RetainerListItems> retainerItems = listInvoices
                     .stream()
-                    .map(i -> new InvoiceRetainerItemsMapper().apply(i))
+                    .map(i -> new InvoiceRetainerItemsMapper(listRetainerTransactions, listBankings).apply(i))
                     .toList();
 
             return new com.smartstay.smartstay.dto.customer.RetainerInfo(retainerSummary, retainerItems);

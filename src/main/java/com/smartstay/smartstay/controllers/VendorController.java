@@ -83,9 +83,16 @@ public class VendorController {
                                            @RequestParam(value = "name", required = false) String name,
                                            @RequestParam(value = "categoryId", required = false) Integer categoryId,
                                            @RequestParam(value = "paymentStatus", required = false) List<String> paymentStatus,
+                                           @RequestParam(value = "createdBy", required = false) List<String> createdBy,
+                                           @RequestParam(value = "fromDate", required = false) String fromDate,
+                                           @RequestParam(value = "toDate", required = false) String toDate,
+                                           @RequestParam(value = "subCategoryId", required = false) Long subCategoryId,
+                                           @RequestParam(value = "minAmount", required = false) Double minAmount,
+                                           @RequestParam(value = "maxAmount", required = false) Double maxAmount,
                                            @RequestParam(value = "page", defaultValue = "1") int page,
                                            @RequestParam(value = "size", defaultValue = "10") int size) {
-        return vendorService.getAllVendors(hostelId, name, categoryId, paymentStatus, page, size);
+        return vendorService.getAllVendors(hostelId, name, categoryId, paymentStatus, createdBy, fromDate, toDate,
+                subCategoryId, minAmount, maxAmount, page, size);
     }
 
     // Lightweight, unpaginated lookup of active vendors (id, name, business name) for a hostel.

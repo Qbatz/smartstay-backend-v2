@@ -198,7 +198,14 @@ public class AssetsService {
         }
         if (request.purchaseDate() != null) {
             String formattedDate = request.purchaseDate().replace("/", "-");
-            asset.setPurchaseDate(Utils.stringToDate(formattedDate, Utils.USER_INPUT_DATE_FORMAT));
+            Date purchaseDate = Utils.stringToDate(formattedDate, Utils.USER_INPUT_DATE_FORMAT);
+            if (purchaseDate == null) {
+                return new ResponseEntity<>(Utils.INVALID_PURCHASE_DATE, HttpStatus.BAD_REQUEST);
+            }
+            if (asset.getAssignedAt() != null && purchaseDate.after(asset.getAssignedAt())) {
+                return new ResponseEntity<>(Utils.PURCHASE_DATE_AFTER_ASSIGNED_DATE, HttpStatus.BAD_REQUEST);
+            }
+            asset.setPurchaseDate(purchaseDate);
         }
         if (request.price() != null) asset.setPrice(request.price());
         if (request.modeOfPayment() != null) {

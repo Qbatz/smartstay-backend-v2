@@ -2,6 +2,8 @@ package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.dto.invoices.CancelledInvoice;
+import com.smartstay.smartstay.dto.kyc.KycUsage;
 import com.smartstay.smartstay.dto.rentHistory.UpcomingRents;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
@@ -289,5 +291,7 @@ public class SmartstayApplication {
                                      Set<String> migratedMethodIds,
                                      Map<String, String> bankIdV2ByV1Id) {
     }
+
+}
 
 }

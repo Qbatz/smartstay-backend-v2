@@ -20,6 +20,7 @@ import com.smartstay.smartstay.dto.documents.CustomerFiles;
 import com.smartstay.smartstay.dto.electricity.CustomerBedsList;
 import com.smartstay.smartstay.dto.electricity.EBInfo;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
+import com.smartstay.smartstay.dto.invoices.CancelledInvoice;
 import com.smartstay.smartstay.dto.retainer.RetainerInfo;
 import com.smartstay.smartstay.dto.settlement.AvailableAmountToRedeem;
 import com.smartstay.smartstay.dto.settlement.CurrentMonthOtherItems;
@@ -457,6 +458,61 @@ public class CustomersService {
 
         CustomersList response = new CustomersList(hostelId, listCustomers.size(), null, listCustomers);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public List<com.smartstay.smartstay.responses.customer.CustomerData> getCheckedInCustomers(String hostelId) {
+        List<CustomerData> checkedInRows = customersRepository.getCustomerData(
+                hostelId, null, List.of(CustomerStatus.CHECK_IN.name()));
+
+        List<com.smartstay.smartstay.responses.customer.CustomerData> tenants = checkedInRows.stream()
+                .map(this::toCheckedInTenant)
+                .collect(Collectors.toList());
+
+        tenants.sort(Comparator.comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds))
+                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds))
+                .thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
+
+        return tenants;
+    }
+
+    private com.smartstay.smartstay.responses.customer.CustomerData toCheckedInTenant(CustomerData item) {
+        StringBuilder initials = new StringBuilder();
+        StringBuilder fullName = new StringBuilder();
+        if (item.getFirstName() != null) {
+            initials.append(item.getFirstName().toUpperCase().charAt(0));
+            fullName.append(item.getFirstName());
+        }
+        if (item.getLastName() != null && !item.getLastName().isEmpty()) {
+            fullName.append(" ");
+            fullName.append(item.getLastName());
+            initials.append(item.getLastName().toUpperCase().charAt(0));
+        } else if (item.getFirstName() != null && item.getFirstName().length() > 1) {
+            initials.append(item.getFirstName().toUpperCase().charAt(1));
+        }
+
+        return new com.smartstay.smartstay.responses.customer.CustomerData(
+                item.getFirstName(),
+                item.getLastName(),
+                fullName.toString(),
+                item.getCity(),
+                item.getState(),
+                item.getCountry(),
+                item.getMobile(),
+                "Checked In",
+                item.getEmailId(),
+                item.getProfilePic(),
+                item.getBedId(),
+                item.getFloorId(),
+                item.getRoomId(),
+                item.getCustomerId(),
+                initials.toString(),
+                Utils.dateToString(item.getExpectedJoiningDate()),
+                Utils.dateToString(item.getActualJoiningDate()),
+                item.getCountryCode(),
+                Utils.dateToString(item.getCreatedAt()),
+                item.getBedName(),
+                item.getRoomName(),
+                item.getFloorName());
     }
 
     private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, List<String> types, Integer page, Integer size, List<String> periodList, List<String> sharingTypeList) {
@@ -1464,10 +1520,15 @@ public class CustomersService {
 
         List<String> invoiceIds = originalInvoices.stream().map(InvoicesV1::getInvoiceId).toList();
         List<InvoiceDiscounts> listInvoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(customers.getHostelId(), invoiceIds);
-        Map<String, Double> discountMap = listInvoiceDiscounts.stream()
-                .filter(InvoiceDiscounts::isActive)
-                .collect(Collectors.toMap(InvoiceDiscounts::getInvoiceId, InvoiceDiscounts::getDiscountAmount));
-        
+        Map<String, Double> discountMap;
+        if (listInvoiceDiscounts != null) {
+            discountMap = listInvoiceDiscounts.stream()
+                    .filter(InvoiceDiscounts::isActive)
+                    .collect(Collectors.toMap(InvoiceDiscounts::getInvoiceId, InvoiceDiscounts::getDiscountAmount));
+        } else {
+            discountMap = new HashMap<>();
+        }
+
         boolean isSettlementGenerated = CustomerStatus.SETTLEMENT_GENERATED.name().equalsIgnoreCase(customers.getCurrentStatus());
 
         // Bulk-load the set of invoice IDs that are active redemption sources — one DB call for the whole list.
@@ -1490,16 +1551,56 @@ public class CustomersService {
             if (canUnpaid && sourceInvoiceIds.contains(inv.invoiceId())) {
                 canUnpaid = false;
             }
-            // Calculate canEdit and discountAmount
+            // Calculate canEdit and discountAmount — mirrors NewInvoiceListMapper logic
             Double discountAmount = 0.0;
-            boolean canEdit = true;
             InvoicesV1 originalInvoice = invoiceMap.get(inv.invoiceId());
+
+            // Step 1: type-based initial value
+            boolean canEdit = false;
             if (originalInvoice != null) {
-                boolean isPaid = PaymentStatus.PAID.name().equalsIgnoreCase(originalInvoice.getPaymentStatus());
-                boolean isPartiallyPaid = PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(originalInvoice.getPaymentStatus());
-                boolean isRedeemed = originalInvoice.getCancelledInvoices() != null && !originalInvoice.getCancelledInvoices().isEmpty();
-                boolean hasDiscount = originalInvoice.isDiscounted();
-                canEdit = !(isPaid || isPartiallyPaid || isRedeemed || hasDiscount);
+                String invType = originalInvoice.getInvoiceType();
+                if (InvoiceType.RENT.name().equalsIgnoreCase(invType) || InvoiceType.REASSIGN_RENT.name().equalsIgnoreCase(invType)) {
+                    canEdit = true;
+                }
+
+                // Step 2: cancelled → false
+                if (originalInvoice.isCancelled()) {
+                    canEdit = false;
+                }
+
+                // Step 3: RECURRING mode overrides back to true
+                if (InvoiceMode.RECURRING.name().equalsIgnoreCase(originalInvoice.getInvoiceMode())) {
+                    canEdit = true;
+                }
+
+                // Step 4: has a discount record → false
+                InvoiceDiscounts ids = listInvoiceDiscounts.stream()
+                        .filter(d -> d.getInvoiceId().equalsIgnoreCase(originalInvoice.getInvoiceId()))
+                        .findFirst().orElse(null);
+                if (ids != null && canEdit) {
+                    canEdit = false;
+                }
+
+                // Step 5: PAID or PARTIAL_PAYMENT → false
+                if (PaymentStatus.PAID.name().equalsIgnoreCase(originalInvoice.getPaymentStatus())
+                        || PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(originalInvoice.getPaymentStatus())) {
+                    canEdit = false;
+                }
+
+                // Step 6: BOOKING or ADVANCE type → false
+                if (InvoiceType.BOOKING.name().equalsIgnoreCase(invType) || InvoiceType.ADVANCE.name().equalsIgnoreCase(invType)) {
+                    canEdit = false;
+                }
+
+                // Step 7: cancelled (second guard, mirrors mapper) → false
+                if (originalInvoice.isCancelled()) {
+                    canEdit = false;
+                }
+
+                // Step 8: isDiscounted flag → false
+                if (originalInvoice.isDiscounted()) {
+                    canEdit = false;
+                }
 
                 // Get discount amount from invoice_discounts table
                 if (discountMap.containsKey(inv.invoiceId())) {
@@ -1683,7 +1784,7 @@ public class CustomersService {
         }
 
         WalletInfo walletInfo = new WalletInfo(walletAmount, walletTransactions);
-        com.smartstay.smartstay.dto.customer.RetainerInfo retainerInfo = retainerService.getRetaineListByCUstomerId(customerId);
+        com.smartstay.smartstay.dto.customer.RetainerInfo retainerInfo = retainerService.getRetaineListByCUstomerId(customers.getHostelId(), customerId);
         CustomerFiles customerFiles = customerDocumentsService.getCustomerFiles(customerId, kycDocumentFromDigio);
         List<AdditionalContacts> additionalContacts = additionalContactService.getAdditionalContact(customers.getHostelId(), customerId);
 
@@ -2850,14 +2951,14 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                //cancelled retainer
+                //cancelled new update completed
                 return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             } else {
                 if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-                    //cancelled retainers
+                    //cancelled new update completed
                     return generateFinalSettlementForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users, isFullRentCollected, customRent);
                 }
-                //cancelled retainers
+                //cancelled payment
                 return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             }
         } else {
@@ -3102,7 +3203,7 @@ public class CustomersService {
         totalAmountToBePaid = totalAmountToBePaid + ebAmount;
         invoiceService.cancelActiveInvoice(unpaidUpdated);
 //        if (invAdvanceInvoice != null) {
-        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users, listDeductions);
+        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), totalAmountToBePaid, unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users, listDeductions, null);
 
         SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), invoicesV1.getInvoiceId(), null, isFullRentCollected, customRent);
         if (cw != null) {
@@ -3702,6 +3803,8 @@ public class CustomersService {
                     item.setCancelledDate(settlementDetails.getLeavingDate());
                 }).toList();
 
+
+
                 if (cancellInvoices != null && !cancellInvoices.isEmpty()) {
                     invoiceService.cancelActiveInvoice(cancellInvoices);
                 }
@@ -3751,8 +3854,16 @@ public class CustomersService {
         }
 
         List<InvoicesV1> unpaidInvoiceIds = invoiceService.findUnpaidInvoices(customers.getCustomerId());
-
-        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), unpaidInvoiceIds, lisDeductions, amoutToBePaidWithoutDeductions, settlementDetails.getLeavingDate(), users, checkInDeductions);
+        List<CancelledInvoice> cancelledInvoicesList = unpaidInvoiceIds
+                .stream()
+                .map(i -> {
+                    CancelledInvoice ci = new CancelledInvoice();
+                    ci.setInvoiceId(i.getInvoiceId());
+                    ci.setPaymentStatus(i.getPaymentStatus());
+                    return ci;
+                })
+                .toList();
+        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), unpaidInvoiceIds, lisDeductions, amoutToBePaidWithoutDeductions, settlementDetails.getLeavingDate(), users, checkInDeductions, cancelledInvoicesList);
 //        InvoicesV1 invoicesV1 = invoiceService.createSettlementInvoice(customers, customers.getHostelId(), Math.round(amountToBePaid), unpaidUpdated, listDeductions, totalAmountWithoutDeductions, settlementDetails.getLeavingDate(), users);
         SettlementItems settlementItems = settlementItemService.generateSettlementItems(customers.getCustomerId(), customers.getHostelId(), invoicesV1.getInvoiceId(), settlement, isFullRentCollected, customRent);
         CustomerWallet cw = customers.getWallet();
@@ -4178,7 +4289,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.FULL_NAME_REQUIRES, HttpStatus.BAD_REQUEST);
         }
 
-        return additionalContactService.addAdditionalContacts(hostelId, customerId, additionalContacts);
+        return additionalContactService.addAdditionalContacts(hostelId, customerId, additionalContacts, users);
 
     }
 

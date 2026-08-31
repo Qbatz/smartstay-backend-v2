@@ -12,6 +12,7 @@ import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.EBReadingType;
 import com.smartstay.smartstay.ennum.ElectricityBillStatus;
 import com.smartstay.smartstay.payloads.electricity.AddReading;
+import com.smartstay.smartstay.payloads.electricity.ResetElectricity;
 import com.smartstay.smartstay.payloads.electricity.UpdateElectricity;
 import com.smartstay.smartstay.repositories.HostelEBReadingsRepository;
 import com.smartstay.smartstay.util.Utils;
@@ -33,6 +34,8 @@ public class HostelReadingsService {
     private HostelEBReadingsRepository hostelEBReadingsRepository;
     @Autowired
     private HostelService hostelService;
+    @Autowired
+    private EbResetReasonsService ebResetReasonsService;
     @Autowired
     private UsersService usersService;
 
@@ -249,5 +252,52 @@ public class HostelReadingsService {
                 .sum();
 
         return new ElectricityForReports(Utils.roundOffWithTwoDigit(totalUnits), Utils.roundOffWithTwoDigit(totalAmount), hostelReadingsList.size());
+    }
+
+    public ResponseEntity<?> resetReading(String hostelId, ElectricityConfig electricityConfig, ResetElectricity resetElectricity, Users users) {
+        HostelReadings hostelReadings = hostelEBReadingsRepository.lastReading(hostelId);
+
+        Double resetReading = 0.0;
+        Date resetDate = new Date();
+        if (resetElectricity.resetOn() != null && !resetElectricity.resetOn().isEmpty()) {
+            resetDate = Utils.stringToDate(resetElectricity.resetOn().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+        }
+
+        if (resetElectricity.startReading() != null) {
+            resetReading = resetElectricity.startReading();
+        }
+        if (Utils.compareWithTwoDates(resetDate, new Date()) > 0) {
+            return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (hostelReadings != null) {
+            if (Utils.compareWithTwoDates(resetDate, hostelReadings.getEntryDate()) <= 0) {
+                return new ResponseEntity<>(Utils.ALREADY_READING_EXIST_THIS_DATE, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        HostelReadings hr = new HostelReadings();
+        hr.setPreviousReading(0.0);
+        hr.setCurrentReading(resetReading);
+        hr.setCurrentUnitPrice(electricityConfig.getCharge());
+        hr.setHostelId(hostelId);
+        hr.setBillStatus(ElectricityBillStatus.INVOICE_GENERATED.name());
+        hr.setBillStartDate(resetDate);
+        hr.setBillEndDate(resetDate);
+        hr.setEntryDate(resetDate);
+        hr.setConsumption(resetReading);
+        hr.setFirstEntry(true);
+        hr.setMissedEntry(false);
+        hr.setIsResetEntry(true);
+        hr.setCreatedAt(new Date());
+        hr.setUpdatedAt(new Date());
+        hr.setUpdatedBy(authentication.getName());
+        hr.setCreatedBy(authentication.getName());
+
+        HostelReadings hr1 = hostelEBReadingsRepository.save(hr);
+        ebResetReasonsService.resetReason(hr1.getId(), users, resetDate, resetElectricity.resetReason(), hostelId);
+
+        usersService.addUserLog(hostelId, String.valueOf(hr1.getId()), ActivitySource.ELECTRICITY, ActivitySourceType.RESET, users);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

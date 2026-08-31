@@ -1579,34 +1579,71 @@ public class BookingsService {
             return new JoiningDateValidationResult(false, "CUSTOMER_HAS_BED_REASSIGNMENT_HISTORY", Utils.CUSTOMER_DID_THE_BED_CHANGE);
         }
 
-        List<String> rentInvoiceTypes = java.util.Arrays.asList(InvoiceType.RENT.name(), InvoiceType.REASSIGN_RENT.name());
-        List<InvoicesV1> currentMonthInvoices = invoicesV1Repository.findAllCurrentMonthInvoices(customers.getCustomerId(), hostelId, currentMonthBilling.currentBillStartDate());
-
-        if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBilling.currentBillStartDate()) == 0) {
-            if (currentMonthInvoices.size() != 1) {
-                return new JoiningDateValidationResult(false, "INVALID_INVOICE_COUNT_FOR_CURRENT_MONTH", "Current month should have exactly 1 invoice.");
-            }
-            InvoicesV1 invoice = currentMonthInvoices.getFirst();
-            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                return new JoiningDateValidationResult(false, "CANNOT_UPDATE_PAID_OR_PARTIAL_PAID_INVOICE", "Invoice is paid or partially paid.");
-            }
-        } else if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBilling.currentBillStartDate()) < 0) {
-            if (currentMonthInvoices.size() != 1) {
-                return new JoiningDateValidationResult(false, "INVALID_INVOICE_COUNT_FOR_CURRENT_MONTH", "Current month should have exactly 1 invoice.");
-            }
-            InvoicesV1 invoice = currentMonthInvoices.getFirst();
-            if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                return new JoiningDateValidationResult(false, "CANNOT_UPDATE_PAID_OR_PARTIAL_PAID_INVOICE", "Invoice is paid or partially paid.");
-            }
-
-            if (Utils.compareWithTwoDates(newJoiningDate, oldJoiningDate) > 0 && Utils.compareWithTwoDates(newJoiningDate, currentMonthBilling.currentBillStartDate()) < 0) {
-                Date endDateForQuery = Utils.addDaysToDate(newJoiningDate, -1);
-                List<InvoicesV1> skippedInvoices = invoicesV1Repository.findInvoicesByCustomerIdAndTypeInAndDate(customers.getCustomerId(), rentInvoiceTypes, oldJoiningDate, endDateForQuery);
-                if (skippedInvoices != null && !skippedInvoices.isEmpty()) {
-                    return new JoiningDateValidationResult(false, "INVOICES_EXIST_IN_SKIPPED_DATE_RANGE", "Invoices exist in the skipped date range.");
+        // Retainer invoice date validation: new joining date must not be later than any retainer invoice date
+        List<String> retainerInvoiceTypes = java.util.Arrays.asList(
+                InvoiceType.ADVANCE.name(),
+                InvoiceType.AMOUNT_HOLDING.name(),
+                InvoiceType.EB_HOLDING.name()
+        );
+        List<InvoicesV1> retainerInvoices = invoicesV1Repository.findRetainersByCustomerIdAndInvoiceTypes(
+                customers.getCustomerId(), retainerInvoiceTypes);
+        if (retainerInvoices != null && !retainerInvoices.isEmpty()) {
+            for (InvoicesV1 retainerInvoice : retainerInvoices) {
+                Date retainerDate = retainerInvoice.getInvoiceDate() != null
+                        ? retainerInvoice.getInvoiceDate()
+                        : retainerInvoice.getInvoiceStartDate();
+                if (retainerDate != null && Utils.compareWithTwoDates(newJoiningDate, retainerDate) > 0) {
+                    return new JoiningDateValidationResult(
+                            false,
+                            "CANNOT_CHANGE_JOINING_DATE_AFTER_RETAINER_INVOICE_DATE",
+                            Utils.CANNOT_CHANGE_JOINING_DATE_AFTER_RETAINER_DATE
+                    );
                 }
             }
         }
+
+        List<String> rentInvoiceTypes = java.util.Arrays.asList(InvoiceType.RENT.name(), InvoiceType.REASSIGN_RENT.name());
+        List<InvoicesV1> currentMonthInvoices = invoicesV1Repository.findAllCurrentMonthInvoices(customers.getCustomerId(), hostelId, currentMonthBilling.currentBillStartDate());
+        if (!currentMonthBilling.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
+            if (currentMonthBilling.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
+                if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBilling.currentBillStartDate()) == 0) {
+                    if (currentMonthInvoices.size() != 1) {
+                        return new JoiningDateValidationResult(false, "INVALID_INVOICE_COUNT_FOR_CURRENT_MONTH", "Current month should have exactly 1 invoice.");
+                    }
+                    InvoicesV1 invoice = currentMonthInvoices.getFirst();
+                    if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                        return new JoiningDateValidationResult(false, "CANNOT_UPDATE_PAID_OR_PARTIAL_PAID_INVOICE", "Invoice is paid or partially paid.");
+                    }
+                } else if (Utils.compareWithTwoDates(oldJoiningDate, currentMonthBilling.currentBillStartDate()) < 0) {
+                    if (currentMonthInvoices.size() != 1) {
+                        return new JoiningDateValidationResult(false, "INVALID_INVOICE_COUNT_FOR_CURRENT_MONTH", "Current month should have exactly 1 invoice.");
+                    }
+                    InvoicesV1 invoice = currentMonthInvoices.getFirst();
+                    if (invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                        return new JoiningDateValidationResult(false, "CANNOT_UPDATE_PAID_OR_PARTIAL_PAID_INVOICE", "Invoice is paid or partially paid.");
+                    }
+
+                    if (Utils.compareWithTwoDates(newJoiningDate, oldJoiningDate) > 0 && Utils.compareWithTwoDates(newJoiningDate, currentMonthBilling.currentBillStartDate()) < 0) {
+                        Date endDateForQuery = Utils.addDaysToDate(newJoiningDate, -1);
+                        List<InvoicesV1> skippedInvoices = invoicesV1Repository.findInvoicesByCustomerIdAndTypeInAndDate(customers.getCustomerId(), rentInvoiceTypes, oldJoiningDate, endDateForQuery);
+                        if (skippedInvoices != null && !skippedInvoices.isEmpty()) {
+                            return new JoiningDateValidationResult(false, "INVOICES_EXIST_IN_SKIPPED_DATE_RANGE", "Invoices exist in the skipped date range.");
+                        }
+                    }
+                }
+            }
+            else {
+                if (currentMonthInvoices != null && !currentMonthInvoices.isEmpty()) {
+                    return new JoiningDateValidationResult(false, "INVALID_INVOICE_COUNT_FOR_CURRENT_MONTH", "Current month should have exactly 1 invoice.");
+                }
+                List<InvoicesV1> oldInvoices = invoiceService.findOldRentalInvoices(customers.getCustomerId(), currentMonthBilling.currentBillStartDate());
+                if (oldInvoices.size() > 1) {
+                    return new JoiningDateValidationResult(false, "INVALID_INVOICE_COUNT_FOR_CURRENT_MONTH", "Current month should have exactly 1 invoice.");
+                }
+            }
+        }
+
+
 
         return new JoiningDateValidationResult(true, null, null);
     }

@@ -136,6 +136,12 @@ public class ActivityLogUtils {
         if (activitySource.equalsIgnoreCase(ActivitySource.DRAFTS.name())) {
             return getDraftsOperations(operationType);
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.KYC.name())) {
+            return getKycOperations(operationType);
+        }
+        if (activitySource.equalsIgnoreCase(ActivitySource.RETAINER.name())) {
+            return getRetainerOperations(operationType);
+        }
 
         return null;
     }
@@ -298,6 +304,12 @@ public class ActivityLogUtils {
         if (operationName.equalsIgnoreCase(ActivitySourceType.FILE_DELETE.name())) {
             return "Deleted a file";
         }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.ADDITIONAL_COTACT.name())) {
+            return "Additional contact has been added";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.ADD_JOB.name())) {
+            return "Job details has been added";
+        }
         return null;
     }
 
@@ -313,6 +325,9 @@ public class ActivityLogUtils {
         }
         if (operationName.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
             return "Deleted electricity entry";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.RESET.name())) {
+            return "Eb has been reset successfully";
         }
         return null;
     }
@@ -487,6 +502,26 @@ public class ActivityLogUtils {
     private static String getDraftsOperations(String operationName) {
         if (operationName.equalsIgnoreCase(ActivitySourceType.UPDATE.name())) {
             return "Draft information has been updated";
+        }
+        else if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Added tenant to drafts";
+        }
+        return null;
+    }
+
+    public static String getKycOperations(String operationName) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.REQUEST.name())) {
+            return "KYC completion is requested";
+        }
+        return null;
+    }
+
+    public static String getRetainerOperations(String operations) {
+        if (operations.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            return "Retainer Invoice has been created";
+        }
+        if (operations.equalsIgnoreCase(ActivitySourceType.REDEEMED.name())) {
+            return "Retainer Invoice has been redeemed";
         }
         return null;
     }

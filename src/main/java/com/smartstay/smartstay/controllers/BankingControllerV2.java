@@ -3,6 +3,7 @@ package com.smartstay.smartstay.controllers;
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
 import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
+import com.smartstay.smartstay.payloads.banking.CreditCardPayment;
 import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
 import com.smartstay.smartstay.services.BankingServiceV2;
 import com.smartstay.smartstay.services.QrBankTypeService;
@@ -36,12 +37,10 @@ public class BankingControllerV2 {
         return bankingServiceV2.addBank(hostelId, payload);
     }
 
-    // Paginated list of a hostel's bank accounts.
+    // All of a hostel's bank accounts & newest first.
     @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getBanks(@PathVariable("hostelId") String hostelId,
-            @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
-        return bankingServiceV2.getBanks(hostelId, page, size);
+    public ResponseEntity<?> getBanks(@PathVariable("hostelId") String hostelId) {
+        return bankingServiceV2.getBanks(hostelId);
     }
 
     // Users (with roles) mapped to the hostel, for the CASH account "responsible person" picker.
@@ -113,6 +112,22 @@ public class BankingControllerV2 {
     @GetMapping("/allPaymentMethods/{hostelId}")
     public ResponseEntity<?> getAllPaymentMethods(@PathVariable("hostelId") String hostelId) {
         return bankingServiceV2.getAllPaymentMethods(hostelId);
+    }
+
+    @GetMapping("/creditCard/initialize/{hostelId}")
+    public ResponseEntity<?> getCreditCardInitialize(@PathVariable("hostelId") String hostelId) {
+        return bankingServiceV2.getCreditCardInitialize(hostelId);
+    }
+
+    @GetMapping("/tenant/initialize/{hostelId}")
+    public ResponseEntity<?> getCheckedInTenants(@PathVariable("hostelId") String hostelId) {
+        return bankingServiceV2.getCheckedInTenants(hostelId);
+    }
+
+    @PutMapping("/creditCard/payment/{hostelId}")
+    public ResponseEntity<?> creditCardPayment(@PathVariable("hostelId") String hostelId,
+            @RequestBody(required = false) CreditCardPayment payload) {
+        return bankingServiceV2.creditCardPayment(hostelId, payload);
     }
 
     @PutMapping("/addMoney/{hostelId}")

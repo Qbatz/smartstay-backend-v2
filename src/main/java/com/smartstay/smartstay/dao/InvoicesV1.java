@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.dao;
 
+import com.smartstay.smartstay.converters.CancelledInvoiceConverter;
 import com.smartstay.smartstay.dto.customer.Deductions;
+import com.smartstay.smartstay.dto.invoices.CancelledInvoice;
 import com.smartstay.smartstay.handlers.DeductionsConverter;
 import com.smartstay.smartstay.handlers.StringListConverter;
 import jakarta.persistence.*;
@@ -46,6 +48,9 @@ public class InvoicesV1 {
     @Convert(converter = StringListConverter.class)
     @Column(columnDefinition = "TEXT")
     List<String> cancelledInvoices;
+    @Convert(converter = CancelledInvoiceConverter.class)
+    @Column(columnDefinition = "TEXT")
+    List<CancelledInvoice> newCancelledInvoices;
     @Column(columnDefinition = "TEXT")
     @Convert(converter = DeductionsConverter.class)
     List<Deductions> deductions;

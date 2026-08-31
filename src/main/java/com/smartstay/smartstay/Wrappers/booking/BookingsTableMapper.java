@@ -144,6 +144,15 @@ public class BookingsTableMapper implements Function<InvoicesV1, List<Object>> {
             }
             return "Fully Adjusted";
         }
+        else if (columnName.equalsIgnoreCase(BookingColumnUtils.INVOIE_DATE)) {
+            if (invoicesV1.getInvoiceDate() != null) {
+                return Utils.dateToString(invoicesV1.getInvoiceDate());
+            }
+            else if (invoicesV1.getInvoiceStartDate() != null) {
+                return Utils.dateToString(invoicesV1.getInvoiceStartDate());
+            }
+            return "NA";
+        }
         return "NA";
     }
 

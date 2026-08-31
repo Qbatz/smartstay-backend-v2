@@ -217,7 +217,10 @@ public class PlansService {
             listOrderHistory = new ArrayList<>();
         }
 
-        List<BillingHistoryItem> billingHistory = listSubscriptions.stream().map(sub -> new SubscriptionOrderHistoryMapper(listOrderHistory, paidByUserMap, listPlans).apply(sub)).toList();
+        List<BillingHistoryItem> billingHistory = listSubscriptions.stream()
+                .map(sub -> new SubscriptionOrderHistoryMapper(listOrderHistory, paidByUserMap, listPlans).apply(sub))
+                .sorted(Comparator.comparing(BillingHistoryItem::planStartDate, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
 
 
         PlanDetails planDetails = new PlanDetails(

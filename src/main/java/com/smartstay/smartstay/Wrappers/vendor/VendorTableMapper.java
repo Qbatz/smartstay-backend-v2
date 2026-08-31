@@ -27,11 +27,11 @@ public class VendorTableMapper implements Function<VendorV1, List<Object>> {
 
     private final List<String> columns;
     private final Map<Integer, String> categoryNamesById;
-    private final Map<String, Date> lastPaymentByVendorId;
+    private final Map<Integer, Date> lastPaymentByVendorId;
 
     public VendorTableMapper(List<String> columns,
                              Map<Integer, String> categoryNamesById,
-                             Map<String, Date> lastPaymentByVendorId) {
+                             Map<Integer, Date> lastPaymentByVendorId) {
         this.columns = columns != null ? columns : List.of();
         this.categoryNamesById = categoryNamesById != null ? categoryNamesById : Collections.emptyMap();
         this.lastPaymentByVendorId = lastPaymentByVendorId != null ? lastPaymentByVendorId : Collections.emptyMap();

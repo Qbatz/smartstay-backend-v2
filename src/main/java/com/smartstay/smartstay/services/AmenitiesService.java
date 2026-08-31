@@ -603,4 +603,12 @@ public class AmenitiesService {
             customerAmenityRepository.saveAll(customersAmenitiesToUpdate);
         }
     }
+
+    public List<AmenitiesV1> getAllAmenitiesByHostelId(String hostelId) {
+        List<AmenitiesV1> listAmenities = amentityRepository.findAmenityByHostelId(hostelId);
+        if (listAmenities == null) {
+            return new ArrayList<>();
+        }
+        return listAmenities;
+    }
 }

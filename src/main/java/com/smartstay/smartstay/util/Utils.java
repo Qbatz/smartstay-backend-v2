@@ -58,6 +58,10 @@ public class Utils {
     public static final String OTP_EXPIRED = "Otp Expired";
     public static final String ASSET_NAME_ALREADY_EXISTS = "Asset name already exists";
     public static final String SERIAL_NUMBER_ALREADY_EXISTS = "Serial number already exists";
+    public static final String INVALID_PURCHASE_DATE = "Invalid purchase date";
+    public static final String INVALID_DATE_FILTER = "Date filter must be in yyyy-MM-dd format";
+    public static final String INVALID_AMOUNT_RANGE = "Minimum amount cannot be greater than maximum amount";
+    public static final String PURCHASE_DATE_AFTER_ASSIGNED_DATE = "Purchase date cannot be later than the date the asset was assigned";
     public static final String PASSWORD_RESET_SUCCESS = "Password reset successfully.";
     public static final String PASSWORD_CHANGED_SUCCESS = "Password changed successfully";
     public static final String PASSWORD_MISMATCH = "New password and confirm password is not matching";
@@ -66,6 +70,7 @@ public class Utils {
     public static final String INVALID_JOINING_DATE = "Invalid Joining Date";
     public static final String ELECTRICITY_CONFIG_NOT_SET_UP = "Electricity configuration is not setup";
     public static final String ALREADY_READING_TAKEN_THIS_DATE = "Already Reading taken for this date";
+    public static final String ALREADY_READING_EXIST_THIS_DATE = "Already reading exist for this date";
     public static final String PREVIOUS_CURRENT_READING_NOT_MATCHING = "Previous reading and current readings are not matching";
     public static final String USER_NOT_FOUND = "User not found.";
     public static final String UPDATED = "Updated Successfully";
@@ -174,6 +179,7 @@ public class Utils {
     public static final String TRANSFER_ACCOUNT_INACTIVE = "This account or payment method is inactive";
     public static final String TRANSFER_SAME_ACCOUNT = "Source and destination cannot be the same";
     public static final String TRANSFER_INSUFFICIENT_BALANCE = "Insufficient balance to complete the transfer";
+    public static final String CREDIT_CARD_ACCOUNT_INVALID = "Invalid credit card account";
     public static final String TRANSACTION_DATE_FILTER_INVALID = "Date filter should be ALL, THIS_MONTH, LAST_3_MONTHS, LAST_6_MONTHS or CUSTOM";
     public static final String TRANSACTION_SOURCE_INVALID = "Invalid source filter";
     public static final String TRANSACTION_CUSTOM_DATES_REQUIRED = "fromDate and toDate are required for a CUSTOM date filter";
@@ -339,6 +345,7 @@ public class Utils {
     public static final String CANNOT_UPDATE_JOB_DETAILS_VACATED_TENANT = "Cannot update job details for vacated tenants";
     public static final String CANNOT_UPDATE_JOB_DETAILS_CANCELLED_TENANT = "Cannot update job details for cancelled tenants";
     public static final String CANNOT_CHANGE_JOINING_DATE_CUSTOMER_NOT_CHECKEDIN = "Cannot change the joining date, seems customer is not checked-In";
+    public static final String CANNOT_CHANGE_JOINING_DATE_AFTER_RETAINER_DATE = "Joining Date cannot be later than the Retainer invoice date.";
     public static final String BED_OCCUPIED_ON_DATE = "Cannot change joining date. The bed was occupied by another tenant during the selected period.";
     public static final String RENT_AMOUNT_REQUIRED_TO_UPDATE_RENT = "Rent amount required";
     public static final String CANNOT_CHANGE_RENT_FOR_OLD_DATES = "Cannot change rent for old dates";

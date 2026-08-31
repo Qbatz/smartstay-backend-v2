@@ -174,4 +174,20 @@ public class InvoiceController {
     public ResponseEntity<?> initializeToRecordPayment(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
         return invoiceV1Service.initializeRecordPayment(hostelId, invoiceId);
     }
+
+    @GetMapping("/advances/basic-list/{hostelId}")
+    public ResponseEntity<?> getAdvanceBasicList(@PathVariable("hostelId") String hostelId,
+                                                 @RequestParam(value = "page", defaultValue = "1", required = false) int page,
+                                                 @RequestParam(value = "size", defaultValue = "50", required = false) int size,
+                                                 @RequestParam(value = "searchKey", required = false) String searchKey,
+                                                 @RequestParam(value = "period", required = false) String period,
+                                                 @RequestParam(value = "floor", required = false) String floor,
+                                                 @RequestParam(value = "room",required = false) String room,
+                                                 @RequestParam(value = "minAmount", required = false) String minimumAmount,
+                                                 @RequestParam(value = "maxAmount", required = false) String maxAmount,
+                                                 @RequestParam(value = "startDate", required = false) String startDate,
+                                                 @RequestParam(value = "endDate", required = false) String endDate) {
+        return invoiceV1Service.getRetainerInvoicesBasicList(hostelId, page, size, searchKey, period, floor, room, minimumAmount, maxAmount, startDate, endDate);
+
+    }
 }
