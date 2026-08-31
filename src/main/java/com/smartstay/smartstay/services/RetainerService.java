@@ -474,7 +474,7 @@ public class RetainerService {
             invoicesV1.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
         }
 
-        invoiceRedemptionService.applyInvoiceFromRetainer(hostelId, invoicesV1.getInvoiceId(), appliedInvoicesList, redeemedAt);
+        invoiceRedemptionService.applyRetainerToInvoice(hostelId, invoicesV1.getInvoiceId(), appliedInvoicesList, redeemedAt);
         tenantBankTransactionService.addRetainerTransactionForRedemption(hostelId, invoicesV1.getInvoiceId(), invoicesV1.getCustomerId(), appliedInvoicesList, appliedAmount, redeemedAt);
         invoicesV1Repository.save(invoicesV1);
 
