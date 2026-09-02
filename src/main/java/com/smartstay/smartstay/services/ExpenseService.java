@@ -1517,7 +1517,8 @@ public class ExpenseService {
         int totalPages = 0;
 
         ExpenseSummaryProjection summaryProj = expensesRepository.getExpenseSummary(hostelId, categoryIds,
-                subCategoryIds, finalBankIds, null, createdBy, startDate, endDate);
+                subCategoryIds, finalBankIds, null, createdBy, startDate, endDate,
+                ExpensePaymentStatus.Full, ExpensePaymentStatus.Partial);
         Double totalAmount = (summaryProj != null) ? summaryProj.getTotalAmount() : 0.0;
 
 
@@ -1611,6 +1612,10 @@ public class ExpenseService {
                 .summary(ExpenseReportResponse.Summary.builder()
                         .totalExpenses(totalRecords)
                         .totalAmount(totalAmount)
+                        .totalExpenseAmount(summaryProj != null ? nullSafe(summaryProj.getTotalExpenseAmount()) : 0.0)
+                        .totalPaidAmount(summaryProj != null ? nullSafe(summaryProj.getTotalPaidAmount()) : 0.0)
+                        .totalUnPaidAmount(summaryProj != null ? nullSafe(summaryProj.getTotalUnPaidAmount()) : 0.0)
+                        .totalPartialPaidAmount(summaryProj != null ? nullSafe(summaryProj.getTotalPartialPaidAmount()) : 0.0)
                         .startDate(Utils.dateToString(startDate))
                         .endDate(Utils.dateToString(endDate))
                         .build())
@@ -1666,6 +1671,10 @@ public class ExpenseService {
                 .summary(ExpenseReportResponse.Summary.builder()
                         .totalExpenses(0)
                         .totalAmount(0.0)
+                        .totalExpenseAmount(0.0)
+                        .totalPaidAmount(0.0)
+                        .totalUnPaidAmount(0.0)
+                        .totalPartialPaidAmount(0.0)
                         .startDate(Utils.dateToString(startDate))
                         .endDate(Utils.dateToString(endDate))
                         .build())

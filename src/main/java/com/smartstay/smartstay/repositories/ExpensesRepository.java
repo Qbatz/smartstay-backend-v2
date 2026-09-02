@@ -265,7 +265,11 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             @Param("startDate") Date startDate,
             @Param("endDate") Date endDate);
 
-        @Query("SELECT COUNT(e) as totalRecords, COALESCE(SUM(e.transactionAmount), 0) as totalAmount " +
+     @Query("SELECT COUNT(e) as totalRecords, COALESCE(SUM(e.transactionAmount), 0) as totalAmount, " +
+                "COALESCE(SUM(e.totalPrice), 0) as totalExpenseAmount, " +
+                "COALESCE(SUM(CASE WHEN e.paymentStatus = :fullStatus THEN e.totalPrice ELSE 0 END), 0) as totalPaidAmount, " +
+                "COALESCE(SUM(COALESCE(e.balanceAmount, 0)), 0) as totalUnPaidAmount, " +
+                "COALESCE(SUM(CASE WHEN e.paymentStatus = :partialStatus THEN COALESCE(e.paidAmount, 0) ELSE 0 END), 0) as totalPartialPaidAmount " +
                 "FROM ExpensesV1 e " +
                 "WHERE e.hostelId = :hostelId " +
                 "AND e.isActive = true " +
@@ -284,7 +288,9 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
                 @Param("vendorIds") List<String> vendorIds,
                 @Param("createdByList") List<String> createdByList,
                 @Param("startDate") Date startDate,
-                @Param("endDate") Date endDate);
+                @Param("endDate") Date endDate,
+                @Param("fullStatus") ExpensePaymentStatus fullStatus,
+                @Param("partialStatus") ExpensePaymentStatus partialStatus);
 
         List<ExpensesV1> findByHostelIdAndIsActiveTrue(String hostelId);
 
