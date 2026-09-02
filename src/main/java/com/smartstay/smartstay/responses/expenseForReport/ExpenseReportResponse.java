@@ -71,6 +71,10 @@ public class ExpenseReportResponse {
     public static class Summary {
         private long totalExpenses;
         private Double totalAmount;
+        private Double totalExpenseAmount;
+        private Double totalPaidAmount;
+        private Double totalUnPaidAmount;
+        private Double totalPartialPaidAmount;
         private String startDate;
         private String endDate;
     }

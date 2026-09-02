@@ -1570,6 +1570,27 @@ public class ExpenseService {
                     .sum();
         }
 
+        double totalExpenseAmount = 0.0;
+        double totalPaidAmount = 0.0;
+        double totalUnPaidAmount = 0.0;
+        double totalPartialPaidAmount = 0.0;
+        if (primaryExpenses != null && !primaryExpenses.isEmpty()) {
+            totalExpenseAmount = primaryExpenses.stream()
+                    .mapToDouble(i -> nullSafe(i.getTotalPrice()))
+                    .sum();
+            totalPaidAmount = primaryExpenses.stream()
+                    .filter(i -> i.getPaymentStatus() == ExpensePaymentStatus.Full)
+                    .mapToDouble(i -> nullSafe(i.getTotalPrice()))
+                    .sum();
+            totalUnPaidAmount = primaryExpenses.stream()
+                    .mapToDouble(i -> nullSafe(i.getBalanceAmount()))
+                    .sum();
+            totalPartialPaidAmount = primaryExpenses.stream()
+                    .filter(i -> i.getPaymentStatus() == ExpensePaymentStatus.Partial)
+                    .mapToDouble(i -> nullSafe(i.getPaidAmount()))
+                    .sum();
+        }
+
         if (authentication.getSource().equalsIgnoreCase("web")) {
             Pageable pageable = PageRequest.of(page, size);
             Page<ExpensesV1> pagedExpenses = expensesRepository.findExpensesWithFiltersV2(hostelId, catId,
@@ -1631,6 +1652,10 @@ public class ExpenseService {
                 .summary(ExpenseReportResponse.Summary.builder()
                         .totalExpenses(totalRecords)
                         .totalAmount(totalAmounts)
+                        .totalExpenseAmount(totalExpenseAmount)
+                        .totalPaidAmount(totalPaidAmount)
+                        .totalUnPaidAmount(totalUnPaidAmount)
+                        .totalPartialPaidAmount(totalPartialPaidAmount)
                         .startDate(Utils.dateToString(startDate))
                         .endDate(Utils.dateToString(endDate))
                         .build())
@@ -1699,6 +1724,10 @@ public class ExpenseService {
                 .summary(ExpenseReportResponse.Summary.builder()
                         .totalExpenses(0)
                         .totalAmount(0.0)
+                        .totalExpenseAmount(0.0)
+                        .totalPaidAmount(0.0)
+                        .totalUnPaidAmount(0.0)
+                        .totalPartialPaidAmount(0.0)
                         .startDate(Utils.dateToString(startDate))
                         .endDate(Utils.dateToString(endDate))
                         .build())
