@@ -15,6 +15,21 @@ import java.util.Date;
 import java.util.List;
 
 public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
+
+    String EXPENSE_LIST_FILTERS =
+            " AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%') OR exp.expense_id = :name) " +
+            " AND (:categoryId IS NULL OR exp.category_id = :categoryId) " +
+            " AND (:paymentStatus IS NULL OR exp.payment_status = :paymentStatus) " +
+            " AND (:paymentDate IS NULL OR DATE(exp.created_at) = DATE(:paymentDate)) " +
+            " AND (:vendorId IS NULL OR exp.vendor_id = :vendorId) " +
+            " AND (:subCategoryId IS NULL OR exp.sub_category_id = :subCategoryId) " +
+            " AND (:paymentMode IS NULL OR exp.bank_id = :paymentMode) " +
+            " AND (:createdBy IS NULL OR exp.created_by = :createdBy) " +
+            " AND (:minAmount IS NULL OR COALESCE(exp.total_price, 0) >= :minAmount) " +
+            " AND (:maxAmount IS NULL OR COALESCE(exp.total_price, 0) <= :maxAmount) " +
+            " AND (:startDate IS NULL OR DATE(exp.transaction_date) >= DATE(:startDate)) " +
+            " AND (:endDate IS NULL OR DATE(exp.transaction_date) <= DATE(:endDate)) ";
+
     ExpensesV1 findByExpenseNumberAndHostelId(String expenseNumber, String hostelId);
 
     @Query("SELECT COALESCE(SUM(e.totalPrice), 0) FROM ExpensesV1 e " +
@@ -170,26 +185,27 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             LEFT OUTER JOIN expense_category expCat on expCat.category_id=exp.category_id
             LEFT OUTER JOIN expense_sub_category expSub on expSub.sub_category_id=exp.sub_category_id
             WHERE exp.hostel_id=:hostelId AND exp.is_active=true
-            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%') OR exp.expense_id = :name)
-            AND (:categoryId IS NULL OR exp.category_id=:categoryId)
-            AND (:paymentStatus IS NULL OR exp.payment_status = :paymentStatus)
-            AND (:paymentDate IS NULL OR DATE(exp.created_at) = DATE(:paymentDate))
+            """ + EXPENSE_LIST_FILTERS + """
             ORDER BY exp.transaction_date DESC
             """,
             countQuery = """
             SELECT COUNT(*) FROM expensesv1 exp
             WHERE exp.hostel_id=:hostelId AND exp.is_active=true
-            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%') OR exp.expense_id = :name)
-            AND (:categoryId IS NULL OR exp.category_id=:categoryId)
-            AND (:paymentStatus IS NULL OR exp.payment_status = :paymentStatus)
-            AND (:paymentDate IS NULL OR DATE(exp.created_at) = DATE(:paymentDate))
-            """,
+            """ + EXPENSE_LIST_FILTERS,
             nativeQuery = true)
     org.springframework.data.domain.Page<ExpenseList> findExpensesForHostel(@Param("hostelId") String hostelId,
                                                                              @Param("name") String name,
                                                                              @Param("categoryId") Long categoryId,
                                                                              @Param("paymentStatus") String paymentStatus,
                                                                              @Param("paymentDate") Date paymentDate,
+                                                                             @Param("vendorId") Integer vendorId,
+                                                                             @Param("subCategoryId") Long subCategoryId,
+                                                                             @Param("paymentMode") String paymentMode,
+                                                                             @Param("createdBy") String createdBy,
+                                                                             @Param("minAmount") Double minAmount,
+                                                                             @Param("maxAmount") Double maxAmount,
+                                                                             @Param("startDate") Date startDate,
+                                                                             @Param("endDate") Date endDate,
                                                                              Pageable pageable);
 
     @Query(value = """
@@ -200,16 +216,20 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
               COALESCE(SUM(CASE WHEN exp.payment_status = 'Partial' THEN COALESCE(exp.paid_amount, 0) ELSE 0 END), 0) as totalPartialPaidAmount
             FROM expensesv1 exp
             WHERE exp.hostel_id=:hostelId AND exp.is_active=true
-            AND (:name IS NULL OR exp.title LIKE CONCAT('%', :name, '%') OR exp.expense_number LIKE CONCAT('%', :name, '%') OR exp.expense_id = :name)
-            AND (:categoryId IS NULL OR exp.category_id=:categoryId)
-            AND (:paymentStatus IS NULL OR exp.payment_status = :paymentStatus)
-            AND (:paymentDate IS NULL OR DATE(exp.created_at) = DATE(:paymentDate))
-            """, nativeQuery = true)
+            """ + EXPENSE_LIST_FILTERS, nativeQuery = true)
     com.smartstay.smartstay.dto.expenses.ExpenseSummaryView getExpenseListSummary(@Param("hostelId") String hostelId,
                                                                                   @Param("name") String name,
                                                                                   @Param("categoryId") Long categoryId,
                                                                                   @Param("paymentStatus") String paymentStatus,
-                                                                                  @Param("paymentDate") Date paymentDate);
+                                                                                  @Param("paymentDate") Date paymentDate,
+                                                                                  @Param("vendorId") Integer vendorId,
+                                                                                  @Param("subCategoryId") Long subCategoryId,
+                                                                                  @Param("paymentMode") String paymentMode,
+                                                                                  @Param("createdBy") String createdBy,
+                                                                                  @Param("minAmount") Double minAmount,
+                                                                                  @Param("maxAmount") Double maxAmount,
+                                                                                  @Param("startDate") Date startDate,
+                                                                                  @Param("endDate") Date endDate);
 
     @Modifying
     @Query("UPDATE ExpensesV1 e SET e.paymentStatus = :status WHERE e.expenseId IN :expenseIds")

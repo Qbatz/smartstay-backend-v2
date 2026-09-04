@@ -68,13 +68,23 @@ public class ExpenseController {
                                          @RequestParam(value = "categoryId", required = false) Integer categoryId,
                                          @RequestParam(value = "paymentStatus", required = false) String paymentStatus,
                                          @RequestParam(value = "paymentDate", required = false) String paymentDate,
+                                         @RequestParam(value = "vendorId", required = false) Integer vendorId,
+                                         @RequestParam(value = "subCategoryId", required = false) Long subCategoryId,
+                                         @RequestParam(value = "paymentMode", required = false) String paymentMode,
+                                         @RequestParam(value = "createdBy", required = false) String createdBy,
+                                         @RequestParam(value = "minAmount", required = false) Double minAmount,
+                                         @RequestParam(value = "maxAmount", required = false) Double maxAmount,
+                                         @RequestParam(value = "startDate", required = false) String startDate,
+                                         @RequestParam(value = "endDate", required = false) String endDate,
                                          @RequestParam(value = "page", defaultValue = "1") int page,
                                          @RequestParam(value = "size", defaultValue = "10") int size) {
         // Prefer the documented parameter names (query/category); fall back to the legacy names
         // (name/categoryId) for backward compatibility.
         String search = (query != null && !query.isBlank()) ? query : name;
         Integer categoryFilter = category != null ? category : categoryId;
-        return expenseService.getAllExpenses(hostelId, search, categoryFilter, paymentStatus, paymentDate, page, size);
+        return expenseService.getAllExpenses(hostelId, search, categoryFilter, paymentStatus, paymentDate,
+                vendorId, subCategoryId, paymentMode, createdBy, minAmount, maxAmount, startDate, endDate,
+                page, size);
     }
 
     @GetMapping("/{hostelId}/{expenseId}")

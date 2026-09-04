@@ -60,6 +60,7 @@ public class Utils {
     public static final String SERIAL_NUMBER_ALREADY_EXISTS = "Serial number already exists";
     public static final String INVALID_PURCHASE_DATE = "Invalid purchase date";
     public static final String INVALID_DATE_FILTER = "Date filter must be in yyyy-MM-dd format";
+    public static final String INVALID_DATE_FILTER_DD_MM_YYYY = "Date filter must be in dd-MM-yyyy format";
     public static final String INVALID_AMOUNT_RANGE = "Minimum amount cannot be greater than maximum amount";
     public static final String PURCHASE_DATE_AFTER_ASSIGNED_DATE = "Purchase date cannot be later than the date the asset was assigned";
     public static final String PASSWORD_RESET_SUCCESS = "Password reset successfully.";
