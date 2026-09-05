@@ -995,7 +995,11 @@ public class ExpenseService {
 
     @Transactional
     public ResponseEntity<?> getAllExpenses(String hostelId, String name, Integer categoryId,
-                                            String paymentStatus, String paymentDate, Integer page, Integer size) {
+                                            String paymentStatus, String paymentDate,
+                                            Integer vendorId, Long subCategoryId, String paymentMode,
+                                            String createdBy, Double minAmount, Double maxAmount,
+                                            String startDate, String endDate,
+                                            Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -1027,15 +1031,33 @@ public class ExpenseService {
                 return new ResponseEntity<>(Utils.INVALID_PAYMENT_DATE, HttpStatus.BAD_REQUEST);
             }
         }
+        String paymentModeFilter = (paymentMode != null && !paymentMode.trim().isEmpty()) ? paymentMode.trim() : null;
+        String createdByFilter = (createdBy != null && !createdBy.trim().isEmpty()) ? createdBy.trim() : null;
+
+        Date fromDate;
+        Date toDate;
+        try {
+            fromDate = parseFilterDate(startDate);
+            toDate = parseFilterDate(endDate);
+        } catch (RuntimeException ex) {
+            return new ResponseEntity<>(Utils.INVALID_DATE_FILTER_DD_MM_YYYY, HttpStatus.BAD_REQUEST);
+        }
+        if (minAmount != null && maxAmount != null && minAmount > maxAmount) {
+            return new ResponseEntity<>(Utils.INVALID_AMOUNT_RANGE, HttpStatus.BAD_REQUEST);
+        }
+
         int pageNumber = (page == null || page < 1) ? 1 : page;
         int pageSize = (size == null || size < 1) ? 10 : size;
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
         // Pagination, the filtered page, and the summary are identical for web and mobile.
         Page<com.smartstay.smartstay.dto.expenses.ExpenseList> expensePage =
-                expensesRepository.findExpensesForHostel(hostelId, searchName, categoryFilter, statusFilter, dateFilter, pageable);
+                expensesRepository.findExpensesForHostel(hostelId, searchName, categoryFilter, statusFilter, dateFilter,
+                        vendorId, subCategoryId, paymentModeFilter, createdByFilter, minAmount, maxAmount,
+                        fromDate, toDate, pageable);
         List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections = expensePage.getContent();
-        ExpenseSummary expenseSummary = buildExpenseSummary(hostelId, searchName, categoryFilter, statusFilter, dateFilter);
+        ExpenseSummary expenseSummary = buildExpenseSummary(hostelId, searchName, categoryFilter, statusFilter, dateFilter,
+                vendorId, subCategoryId, paymentModeFilter, createdByFilter, minAmount, maxAmount, fromDate, toDate);
 
         int currentPage = expensePage.getPageable().getPageNumber() + 1;
         int totalPages = expensePage.getTotalPages();
@@ -1047,9 +1069,20 @@ public class ExpenseService {
         return buildExpenseMobileResponse(hostelId, projections, expenseSummary, totalExpenses, currentPage, totalPages, pageSize);
     }
 
+    private Date parseFilterDate(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return Utils.stringToDate(value.trim(), Utils.USER_INPUT_DATE_FORMAT);
+    }
+
     private ExpenseSummary buildExpenseSummary(String hostelId, String name, Long categoryId,
-                                               String paymentStatus, Date paymentDate) {
-        ExpenseSummaryView view = expensesRepository.getExpenseListSummary(hostelId, name, categoryId, paymentStatus, paymentDate);
+                                               String paymentStatus, Date paymentDate,
+                                               Integer vendorId, Long subCategoryId, String paymentMode,
+                                               String createdBy, Double minAmount, Double maxAmount,
+                                               Date startDate, Date endDate) {
+        ExpenseSummaryView view = expensesRepository.getExpenseListSummary(hostelId, name, categoryId, paymentStatus,
+                paymentDate, vendorId, subCategoryId, paymentMode, createdBy, minAmount, maxAmount, startDate, endDate);
         if (view == null) {
             return new ExpenseSummary(0.0, 0.0, 0.0, 0.0);
         }
@@ -1570,6 +1603,27 @@ public class ExpenseService {
                     .sum();
         }
 
+        double totalExpenseAmount = 0.0;
+        double totalPaidAmount = 0.0;
+        double totalUnPaidAmount = 0.0;
+        double totalPartialPaidAmount = 0.0;
+        if (primaryExpenses != null && !primaryExpenses.isEmpty()) {
+            totalExpenseAmount = primaryExpenses.stream()
+                    .mapToDouble(i -> nullSafe(i.getTotalPrice()))
+                    .sum();
+            totalPaidAmount = primaryExpenses.stream()
+                    .filter(i -> i.getPaymentStatus() == ExpensePaymentStatus.Full)
+                    .mapToDouble(i -> nullSafe(i.getTotalPrice()))
+                    .sum();
+            totalUnPaidAmount = primaryExpenses.stream()
+                    .mapToDouble(i -> nullSafe(i.getBalanceAmount()))
+                    .sum();
+            totalPartialPaidAmount = primaryExpenses.stream()
+                    .filter(i -> i.getPaymentStatus() == ExpensePaymentStatus.Partial)
+                    .mapToDouble(i -> nullSafe(i.getPaidAmount()))
+                    .sum();
+        }
+
         if (authentication.getSource().equalsIgnoreCase("web")) {
             Pageable pageable = PageRequest.of(page, size);
             Page<ExpensesV1> pagedExpenses = expensesRepository.findExpensesWithFiltersV2(hostelId, catId,
@@ -1631,6 +1685,10 @@ public class ExpenseService {
                 .summary(ExpenseReportResponse.Summary.builder()
                         .totalExpenses(totalRecords)
                         .totalAmount(totalAmounts)
+                        .totalExpenseAmount(totalExpenseAmount)
+                        .totalPaidAmount(totalPaidAmount)
+                        .totalUnPaidAmount(totalUnPaidAmount)
+                        .totalPartialPaidAmount(totalPartialPaidAmount)
                         .startDate(Utils.dateToString(startDate))
                         .endDate(Utils.dateToString(endDate))
                         .build())
@@ -1699,6 +1757,10 @@ public class ExpenseService {
                 .summary(ExpenseReportResponse.Summary.builder()
                         .totalExpenses(0)
                         .totalAmount(0.0)
+                        .totalExpenseAmount(0.0)
+                        .totalPaidAmount(0.0)
+                        .totalUnPaidAmount(0.0)
+                        .totalPartialPaidAmount(0.0)
                         .startDate(Utils.dateToString(startDate))
                         .endDate(Utils.dateToString(endDate))
                         .build())
