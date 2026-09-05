@@ -8,6 +8,7 @@ import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.reports.ComplaintsReportFilterRequest;
 import com.smartstay.smartstay.dto.reports.ComplaintsReportResponse;
 import com.smartstay.smartstay.dto.reports.ElectricityForReports;
+import com.smartstay.smartstay.dto.reports.ReportsDto;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.responses.Reports.ReportDetailsResponse;
@@ -110,20 +111,21 @@ public class ReportService {
             }
         }
 
+        ReportsDto reportsDto = invoiceV1Service.getCurrentMonthInvoiceDetailsForReports(hostelId, startDate, endDate);
         // Invoices for hostel
-        int invoiceCount = invoiceV1Service.countByHostelIdAndDateRange(hostelId, startDate, endDate);
-        Double invoiceTotal = invoiceV1Service.sumTotalAmountByHostelIdAndDateRangeExcludingSettlement(hostelId,
-                InvoiceType.SETTLEMENT.name(), startDate, endDate);
-        Double paidTotal = invoiceV1Service.sumPaidAmountByHostelIdAndDateRangeExcludingSettlement(hostelId,
-                InvoiceType.SETTLEMENT.name(), startDate, endDate);
+        int invoiceCount = 0;
+        Double invoiceTotal = 0.0;
+        Double paidTotal = 0.0;
+        Double outstandingAmount = 0.0;
+        if (reportsDto != null) {
+            invoiceCount = reportsDto.invoiceCount();
+            invoiceTotal = reportsDto.totalAmount();
+            paidTotal = reportsDto.paidAmount();
+            outstandingAmount = reportsDto.outstandingAmount();
+        }
         ReportResponse.InvoiceReport invoiceReport = ReportResponse.InvoiceReport.builder()
                 .noOfInvoices(invoiceCount)
                 .totalAmount(Utils.roundOffWithTwoDigit(invoiceTotal)).build();
-
-        Double outstandingAmount = 0.0;
-        if (invoiceTotal != null && paidTotal != null) {
-            outstandingAmount = invoiceTotal - paidTotal;
-        }
 
         // Receipts
         int receiptCount = transactionService.countByHostelIdAndDateRange(hostelId, startDate, endDate);
@@ -173,8 +175,10 @@ public class ReportService {
         }
 
         ReportResponse.TenantReport tenantReport = ReportResponse.TenantReport.builder()
-                .totalTenants(uniqueTenants.size()).occupancyRate(occupancyRate)
-                .noticeTenantCount(noticeCount).activeTenantCount(activeCount)
+                .totalTenants(uniqueTenants.size())
+                .occupancyRate(occupancyRate)
+                .noticeTenantCount(noticeCount)
+                .activeTenantCount(activeCount)
                 .checkoutTenantsCount(checkoutCount).build();
 
         // Expenses
@@ -249,9 +253,11 @@ public class ReportService {
 
         ReportResponse response = ReportResponse.builder().hostelId(hostelId)
                 .startDate(Utils.dateToString(startDate))
-                .endDate(Utils.dateToString(endDate)).outStandingAmount(Utils.roundOffWithTwoDigit(outstandingAmount))
+                .endDate(Utils.dateToString(endDate))
+                .outStandingAmount(Utils.roundOffWithTwoDigit(outstandingAmount))
                 .totalRevenue(Utils.roundOffWithTwoDigit(totalRevenue))
-                .invoices(invoiceReport).receipts(receiptReport).banking(bankingReport)
+                .invoices(invoiceReport)
+                .receipts(receiptReport).banking(bankingReport)
                 .tenantInfo(tenantReport)
                 .expense(expenseReport).vendor(vendorReport).complaints(complaintReport)
                 .electricity(ebReportResponse)
@@ -385,7 +391,7 @@ public class ReportService {
                     .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()))
                     .mapToDouble(i -> {
                         if (i.getPaidAmount() == null) {
-                            return i.getTotalAmount();
+                            return 0.0;
                         }
                         return i.getPaidAmount();
                     })
@@ -647,7 +653,7 @@ public class ReportService {
     private <E extends Enum<E>> List<ReportDetailsResponse.FilterItem> toInvoiceTypeFilterItems(E[] values) {
         return Arrays.stream(values)
                 .filter(i -> !i.equals(InvoiceType.SETTLEMENT)
-                        && !i.equals(InvoiceType.OTHERS)
+                        && !i.equals(InvoiceType.OTHER)
                         && !i.equals(InvoiceType.AMOUNT_HOLDING)
                         && !i.equals(InvoiceType.EB_HOLDING))
                 .map(e -> new ReportDetailsResponse.FilterItem(Utils.capitalize(e.name()), e.name()))
@@ -1357,7 +1363,14 @@ public class ReportService {
         return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
     }
 
-    public ResponseEntity<?> downloadCustomersReport(String hostelId, String startDate, String endDate) {
+    public ResponseEntity<?> downloadCustomersReport(String hostelId,
+                                                     String search,
+                                                     List<String> status,
+                                                     List<Integer> room,
+                                                     List<Integer> floor,
+                                                     String period,
+                                                     List<String> sharingType,
+                                                     String startDate, String endDate) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -1376,33 +1389,33 @@ public class ReportService {
         String eDate = null;
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
 
-        if (startDate == null) {
-            sDate = Utils.dateToString(billingDates.currentBillStartDate()).replace("/", "-");
-        }
-        else {
-           Date d = Utils.stringToDate(startDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-           if (d == null) {
-               sDate = Utils.dateToString(billingDates.currentBillStartDate()).replace("/", "-");
-           }
-           else {
-               sDate = Utils.dateToString(d).replace("/", "-");
-           }
-        }
-        if (endDate == null) {
-            eDate = Utils.dateToString(billingDates.currentBillEndDate()).replace("/", "-");
-        }
-        else {
-            Date d = Utils.stringToDate(endDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
-            if (d == null) {
-                eDate = Utils.dateToString(billingDates.currentBillEndDate()).replace("/", "-");
+        if (period != null && !period.isEmpty()) {
+            BillingDates dates = calculateDateRange(period, hostelId);
+            sDate = Utils.dateToString(dates.currentBillStartDate());
+            eDate = Utils.dateToString(dates.currentBillEndDate());
+        } else if (startDate != null || endDate != null) {
+            if (startDate != null && !startDate.isEmpty()) {
+                sDate = Utils.dateToString(Utils.stringToDate(startDate, Utils.USER_INPUT_DATE_FORMAT));
+            } else {
+                sDate = Utils.dateToString(Utils.stringToDate("01/01/2000", Utils.USER_INPUT_DATE_FORMAT));
             }
-            else {
-                eDate = Utils.dateToString(d).replace("/", "-");
+            if (endDate != null && !endDate.isEmpty()) {
+                eDate = Utils.dateToString(Utils.stringToDate(endDate, Utils.USER_INPUT_DATE_FORMAT));
+            } else {
+                eDate = Utils.dateToString(new Date());
             }
+        } else {
+            sDate = Utils.dateToString(billingDates.currentBillStartDate());
+            eDate = Utils.dateToString(billingDates.currentBillEndDate());
         }
 
         String url =  reportsUrl + "/v2/tenants/"+hostelId;
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
+                .queryParam("search", search)
+                .queryParam("status", status)
+                .queryParam("room", room)
+                .queryParam("floor", floor)
+                .queryParam("sharingType", sharingType)
                 .queryParam("startDate", sDate)
                 .queryParam("endDate", eDate);
 

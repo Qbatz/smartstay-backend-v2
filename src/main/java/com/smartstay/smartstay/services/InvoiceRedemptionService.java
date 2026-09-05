@@ -216,6 +216,29 @@ public class InvoiceRedemptionService {
         invoiceRedemptionRepository.saveAll(listInvoiceRedeemed);
     }
 
+    public void applyRetainerToInvoice(String hostelId, String invoiceId, HashMap<String, Double> appliedAmountInvoiceIdMapper, Date redeemedAt) {
+        List<InvoiceRedemption> listInvoiceRedeemed = new ArrayList<>();
+        appliedAmountInvoiceIdMapper.keySet().forEach(i -> {
+            InvoiceRedemption ir = new InvoiceRedemption();
+            ir.setCreatedAt(new Date());
+            ir.setRedeemedAt(redeemedAt);
+            ir.setTargetInvoiceId(invoiceId);
+            ir.setSourceInvoiceId(i);
+            ir.setRedemptionAmount(appliedAmountInvoiceIdMapper.get(i));
+            ir.setUserType(UserType.OWNER.name());
+            ir.setIsActive(true);
+            ir.setHostelId(hostelId);
+            ir.setTransactionId(getNextReferenceNumber(hostelId));
+            ir.setReferenceNumber(null);
+            ir.setReason(null);
+            ir.setCreatedBy(authentication.getName());
+
+            listInvoiceRedeemed.add(ir);
+        });
+
+        invoiceRedemptionRepository.saveAll(listInvoiceRedeemed);
+    }
+
     /**
      * Returns the subset of the supplied invoice IDs that appear as an active
      * {@code source_invoice_id} in the {@code invoice_redemption} table.

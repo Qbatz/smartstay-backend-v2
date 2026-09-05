@@ -163,8 +163,8 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             if (invoicesV1.getBalanceAmount() != null && invoicesV1.getBalanceAmount() > 0) {
                 canRedeem = true;
             }
-        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHERS.name())) {
-            invoiceType = "Others";
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHER.name())) {
+            invoiceType = "Other";
         } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             invoiceType = "Settlement";
             canEdit = false;

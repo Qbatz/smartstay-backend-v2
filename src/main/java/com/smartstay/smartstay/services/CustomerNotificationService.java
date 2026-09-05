@@ -4,6 +4,7 @@ import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.reminders.DueReminders;
 import com.smartstay.smartstay.ennum.ComplaintStatus;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.NotificationType;
 import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.repositories.CustomerNotificationRepository;
@@ -131,6 +132,42 @@ public class CustomerNotificationService {
             customerNotificationRepository.save(customerNotifications);
 
             fcmNotificationService.sendNotificationRequest(customers.getXuid(), kycDetails, users, hostelId, customers.getMobile());
+        }
+    }
+
+    public void addManualBillNotification(String hostelId, Customers customers, String invoiceId, String invoiceType, Double invoiceAmount, Users users) {
+        if (authentication.isAuthenticated()) {
+            String type = null;
+            if (invoiceType.equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+                type = "Advance";
+            }
+            else if (invoiceType.equalsIgnoreCase(InvoiceType.RENT.name())) {
+                type = "Rent";
+            }
+            else {
+                type = "";
+            }
+            String titleMessage = "New " + type + " invoice is generated";
+            String description = "New " + invoiceType + " is generated. Please review and make the payment before the due date.";
+            CustomerNotifications customerNotifications = new CustomerNotifications();
+            customerNotifications.setActive(true);
+            customerNotifications.setNotificationType(NotificationType.MANUAL_INVOICE.name());
+            customerNotifications.setUserId(customers.getCustomerId());
+            customerNotifications.setHostelId(hostelId);
+            customerNotifications.setDescription(description);
+            customerNotifications.setSourceId(invoiceId);
+            customerNotifications.setTitle(titleMessage);
+            customerNotifications.setUserType(UserType.TENANT.name());
+            customerNotifications.setCreatedAt(new Date());
+            customerNotifications.setCreatedBy(authentication.getName());
+            customerNotifications.setActive(true);
+            customerNotifications.setDeleted(false);
+            customerNotifications.setRead(false);
+
+
+            customerNotificationRepository.save(customerNotifications);
+
+            fcmNotificationService.sendManualInvoiceNotification(customers.getXuid(), invoiceId, users, hostelId, customers.getMobile(), invoiceType);
         }
     }
 }

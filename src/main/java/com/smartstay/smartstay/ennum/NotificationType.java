@@ -10,6 +10,7 @@ public enum NotificationType {
     CHECKIN_MISSING,
     DUE_REMINDERS,
     KYC_REQUEST,
-    RECURRING_INVOICE
+    RECURRING_INVOICE,
+    MANUAL_INVOICE
 
 }

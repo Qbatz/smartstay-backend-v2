@@ -1506,6 +1506,13 @@ public class TransactionService {
             }
         }
 
+        if (invoiceTypeArr != null && !invoiceTypeArr.isEmpty()) {
+            invoiceId = invoiceService.findInvoicesByInvoiceIdAndTypes(hostelId, invoiceId, invoiceTypeArr);
+            if (invoiceId != null && invoiceId.isEmpty()) {
+                invoiceId = null;
+            }
+        }
+
         listPagebleTransactions = transactionRespository.findPagebleTransactions(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount, pageableRequest);
         listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
 
@@ -1655,6 +1662,7 @@ public class TransactionService {
             if (transactionV1 != null) {
                 List<TransactionV1> onlyPaidTransactions = transactionV1
                         .stream()
+                        .filter(i -> i.getType() == null || !i.getType().equalsIgnoreCase(TransactionType.REFUND.name()))
                         .filter(i -> i.getPaidAmount() != null && i.getPaidAmount() >= 0)
                         .toList();
                 if (onlyPaidTransactions != null) {
@@ -1694,6 +1702,25 @@ public class TransactionService {
                             })
                             .sum();
                 }
+            }
+        }
+        return 0.0;
+    }
+
+    public double getCurrentMonthReturn(String hostelId) {
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+        if (billingDates != null) {
+            List<TransactionV1> transactionV1 = transactionRespository.findCurrentMonthReturnByHostelId(hostelId, billingDates.currentBillStartDate());
+            if (transactionV1 != null) {
+                return transactionV1
+                        .stream()
+                        .mapToDouble(i -> {
+                            if (i.getPaidAmount() != null) {
+                                return i.getPaidAmount();
+                            }
+                            return 0.0;
+                        })
+                        .sum();
             }
         }
         return 0.0;

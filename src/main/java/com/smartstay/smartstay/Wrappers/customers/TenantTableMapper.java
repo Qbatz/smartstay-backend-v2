@@ -65,7 +65,7 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
         }
 
         HeaderAdditionalFields additionalFields = new HeaderAdditionalFields(customers.getCustomerId(),
-                getColumnItem(customers, null, bookingsV1, draft, TenantColumnUtils.STATUS));
+                getColumnItem(customers, null, bookingsV1, draft, TenantColumnUtils.STATUS), customers.getCurrentStatus());
         columnItems.add(additionalFields);
 
         return columnItems;

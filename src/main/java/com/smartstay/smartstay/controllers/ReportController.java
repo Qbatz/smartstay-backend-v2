@@ -108,9 +108,15 @@ public class ReportController {
 
     @GetMapping("/download/{hostelId}")
     public ResponseEntity<?> downloadCustomerReports(@PathVariable("hostelId") String hostelId,
+                                                     @RequestParam(value = "search", required = false) String search,
+                                                     @RequestParam(value = "status", required = false) List<String> status,
+                                                     @RequestParam(value = "room", required = false) List<Integer> room,
+                                                     @RequestParam(value = "floor", required = false) List<Integer> floor,
+                                                     @RequestParam(value = "period", required = false) String period,
                                                      @RequestParam(value = "startDate", required = false) String startDate,
-                                                     @RequestParam(value = "endDate", required = false) String endDate) {
-        return reportService.downloadCustomersReport(hostelId, startDate, endDate);
+                                                     @RequestParam(value = "endDate", required = false) String endDate,
+                                                     @RequestParam(value = "sharingType", required = false) List<String> sharingType) {
+        return reportService.downloadCustomersReport(hostelId, search, status, room, floor, period, sharingType, startDate, endDate);
     }
 
     @GetMapping("/download/receipts/{hostelId}")
