@@ -7,5 +7,6 @@ public record ManualInvoiceNew(String invoiceNumber,
                                String notes,
                                Boolean isDiscounted,
                                Double discountAmount,
+                               Double discountPercentage,
                                List<ItemResponse> invoiceItems) {
 }

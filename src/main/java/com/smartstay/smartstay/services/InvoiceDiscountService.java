@@ -151,15 +151,15 @@ public class InvoiceDiscountService {
         return null;
     }
 
-    public void applyDiscountDirectly(String hostelId, String invoiceId, String customerId, Double discountAmount, String reason, Double invoiceAmount) {
-        double percentage = (discountAmount/invoiceAmount) * 100;
+    public void applyDiscountDirectly(String hostelId, String invoiceId, String customerId, Double discountAmount, String reason, Double invoiceAmount, Double discountPercentage) {
+//        double percentage = (discountAmount/invoiceAmount) * 100;
         InvoiceDiscounts invoiceDiscounts = new InvoiceDiscounts();
         invoiceDiscounts.setInvoiceId(invoiceId);
         invoiceDiscounts.setHostelId(hostelId);
         invoiceDiscounts.setCustomerId(customerId);
         invoiceDiscounts.setDiscountReason(reason);
         invoiceDiscounts.setDiscountAmount(Utils.roundOffWithTwoDigit(discountAmount));
-        invoiceDiscounts.setDiscountPercentage(Utils.roundOffWithTwoDigit(percentage));
+        invoiceDiscounts.setDiscountPercentage(Utils.roundOffWithTwoDigit(discountPercentage));
         invoiceDiscounts.setInvoiceAmount(invoiceAmount);
         invoiceDiscounts.setActive(true);
         invoiceDiscounts.setCreatedAt(new Date());

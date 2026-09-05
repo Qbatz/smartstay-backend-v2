@@ -160,7 +160,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     @Query("""
             SELECT inv.customerId, inv.invoiceId FROM InvoicesV1 inv where (inv.paidAmount IS NULL OR inv.paidAmount<inv.totalAmount)
-             and inv.invoiceDueDate<DATE(:todaysDate) and inv.customerId in (:customerIds) and inv.invoiceType='RENT'
+             and inv.invoiceDueDate<DATE(:todaysDate) and inv.customerId in (:customerIds) and inv.invoiceType IN ('RENT','REASSIGN_RENT', 'ADVANCE', 'ADDITIONAL_ADVANCE')
             """)
     List<InvoiceCustomer> findByCustomerIdAndBedIdsForDue(List<String> customerIds, Date todaysDate);
 
@@ -420,10 +420,15 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
             i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false AND 
             (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate)) AND 
-            (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate)) 
+            (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate)) AND 
+            (:minAmount IS NULL OR i.balanceAmount >= :minAmount) AND 
+            (:maxAmount IS NULL OR i.balanceAmount <= :maxAmount) AND 
+            (:status IS NULL OR (:status = 'AVAILABLE' AND i.balanceAmount=(i.totalAmount - COALESCE(i.deductionAmount, 0)))
+            OR (:status = 'PARTIALLY_REDEEMED' AND i.balanceAmount > 0 AND i.balanceAmount < (i.totalAmount - COALESCE(i.deductionAmount, 0)))
+            ) 
             ORDER BY b.floorId ASC, r.roomId ASC
             """)
-    List<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Date startDate, Date endDate);
+    List<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, String status, Date startDate, Date endDate, Integer minAmount, Integer maxAmount);
 
     @Query(value = """
             SELECT i FROM InvoicesV1 i, BookingsV1 b, Rooms r, Beds bed, Floors f  WHERE b.customerId = i.customerId AND 
