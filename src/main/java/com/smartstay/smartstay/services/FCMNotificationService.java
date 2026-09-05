@@ -6,6 +6,7 @@ import com.google.firebase.messaging.Message;
 import com.smartstay.smartstay.Exceptions.SmartStayException;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.reminders.DueReminders;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.NotificationMessage;
 import com.smartstay.smartstay.util.NameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -153,6 +154,40 @@ public class FCMNotificationService {
                 payloads.put("token_id", kycDetails.getAccessTokenId());
                 payloads.put("mobile", phoneNumber);
                 payloads.put("description", "Your hostel owner wants to complete the KYC verifications. Please finish it at your earliest convenience");
+
+                Message message = Message.builder()
+                        .setToken(customerCredentials.getFcmToken())
+                        .putAllData(payloads)
+                        .build();
+
+                try {
+                    tenantMessaging.send(message);
+                } catch (FirebaseMessagingException e) {
+//                    throw new SmartStayException("Unable to send messages");
+                }
+            }
+        }
+    }
+
+    public void sendManualInvoiceNotification(String xuid, String invoiceId, Users users, String hostelId, String mobile, String invoiceType) {
+        CustomerCredentials customerCredentials = customerCredentialsService.findByXuid(xuid);
+        if (customerCredentials != null) {
+            if (customerCredentials.getFcmToken() != null && !customerCredentials.getFcmToken().isEmpty()) {
+                String type = null;
+                if (invoiceType.equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+                    type = "Advance";
+                }
+                else if (invoiceType.equalsIgnoreCase(InvoiceType.RENT.name())) {
+                    type = "Rent";
+                }
+                else {
+                    type = "";
+                }
+                HashMap<String, String> payloads = new HashMap<>();
+                payloads.put("title", "New " + type + " invoice is generated");
+                payloads.put("type", NotificationMessage.MANUAL_INVOICE.name());
+                payloads.put("invoice_id",invoiceId);
+                payloads.put("description", "New " + invoiceType + " is generated. Please review and make the payment before the due date.");
 
                 Message message = Message.builder()
                         .setToken(customerCredentials.getFcmToken())

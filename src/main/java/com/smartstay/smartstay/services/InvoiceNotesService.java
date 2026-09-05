@@ -30,4 +30,15 @@ public class InvoiceNotesService {
         }
         return null;
     }
+
+    public void addNotesForManualInvoice(String hostelId, String customerId, String invoiceId, String notes) {
+        InvoiceNotes in = new InvoiceNotes();
+        in.setInvoiceId(invoiceId);
+        in.setHostelId(hostelId);
+        in.setCustomerId(customerId);
+        in.setNotes(notes);
+        in.setDescription(null);
+
+        invoiceNotesRepository.save(in);
+    }
 }

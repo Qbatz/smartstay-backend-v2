@@ -3,7 +3,11 @@ package com.smartstay.smartstay.Wrappers.customers;
 
 import com.smartstay.smartstay.dao.BookingsV1;
 import com.smartstay.smartstay.dao.Customers;
+import com.smartstay.smartstay.dto.beds.BedDetails;
+import com.smartstay.smartstay.dto.customer.AddressInfo;
+import com.smartstay.smartstay.dto.customer.StayInfo;
 import com.smartstay.smartstay.responses.customer.GetCustomersForBills;
+import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 
@@ -13,9 +17,11 @@ import java.util.function.Function;
 public class CustomerMapperForBills implements Function<Customers, GetCustomersForBills> {
 
     private List<BookingsV1> listBookings = null;
+    private List<BedDetails> listBedDetails = null;
 
-    public CustomerMapperForBills(List<BookingsV1> listBookings) {
+    public CustomerMapperForBills(List<BookingsV1> listBookings, List<BedDetails> bedDetails) {
         this.listBookings = listBookings;
+        this.listBedDetails = bedDetails;
     }
 
     @Override
@@ -24,6 +30,7 @@ public class CustomerMapperForBills implements Function<Customers, GetCustomersF
         String expectedJoiningDate = null;
         String status = null;
         double rent = 0.0;
+        StayInfo stayInfo = null;
 
         BookingsV1 bookingsV1 = listBookings
                 .stream()
@@ -40,6 +47,17 @@ public class CustomerMapperForBills implements Function<Customers, GetCustomersF
            if (bookingsV1.getRentAmount() != null) {
                rent = bookingsV1.getRentAmount();
            }
+
+           if (listBedDetails != null) {
+               BedDetails bedDetails = listBedDetails
+                       .stream()
+                       .filter(i -> i.getBedId().equals(bookingsV1.getBedId()))
+                       .findFirst()
+                       .orElse(null);
+               if (bedDetails != null) {
+                   stayInfo = new StayInfo(bedDetails.getBedName(), bedDetails.getFloorName(), bedDetails.getRoomName());
+               }
+           }
         }
         return new GetCustomersForBills(customers.getCustomerId(),
                 NameUtils.getFullName(customers.getFirstName(), customers.getLastName()),
@@ -48,6 +66,8 @@ public class CustomerMapperForBills implements Function<Customers, GetCustomersF
                 joiningDate,
                 status,
                 expectedJoiningDate,
-                rent);
+                rent,
+                stayInfo,
+                CustomerUtils.getCustomerAddress(customers));
     }
 }

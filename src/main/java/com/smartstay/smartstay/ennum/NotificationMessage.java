@@ -4,5 +4,6 @@ public enum NotificationMessage {
     COMPLAINT_ASSIGN,
     COMPLAINT_COMMENTS,
     DUE_REMINDERS,
-    KYC_REQUESTS
+    KYC_REQUESTS,
+    MANUAL_INVOICE
 }

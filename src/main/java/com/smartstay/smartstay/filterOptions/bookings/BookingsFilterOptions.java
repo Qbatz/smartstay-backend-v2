@@ -13,6 +13,10 @@ public class BookingsFilterOptions {
 
     List<FilterItems> floors;
     List<RoomsItem> rooms;
+    List<FilterItems> invoiceTypes;
+    List<FilterItems> status;
+    List<FilterItems> period;
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor

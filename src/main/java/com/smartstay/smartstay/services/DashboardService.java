@@ -391,6 +391,7 @@ public class DashboardService {
         Double totalPaid = summary.get("totalPaid") != null ? ((Number) summary.get("totalPaid")).doubleValue() : 0.0;
         double totalPending = totalInvoiced - totalPaid;
         double paidThisMonth = transactionService.getCurrentMonthCollection(hostelId);
+        double returnedThisMonth = transactionService.getCurrentMonthReturn(hostelId);
 
         Double refundedAmount = invoiceV1Service.getRefundedAmount(hostelId, dates.startDate(), dates.endDate());
         if (refundedAmount == null) refundedAmount = 0.0;
@@ -403,7 +404,15 @@ public class DashboardService {
 
         String fromLastMonth = calculateTrend(totalInvoiced, prevTotalInvoiced) + "%";
 
-        return new BillingSummary(totalInvoiceGenerated, Utils.roundOffWithTwoDigit(totalInvoiced), Utils.roundOffWithTwoDigit(totalPaid), Utils.roundOffWithTwoDigit(paidThisMonth), Utils.roundOffWithTwoDigit(totalPending), Utils.roundOffWithTwoDigit(refundedAmount), collectionRate, fromLastMonth);
+        return new BillingSummary(totalInvoiceGenerated,
+                Utils.roundOffWithTwoDigit(totalInvoiced),
+                Utils.roundOffWithTwoDigit(totalPaid),
+                Utils.roundOffWithTwoDigit(paidThisMonth),
+                Utils.roundOffWithTwoDigit(returnedThisMonth),
+                Utils.roundOffWithTwoDigit(totalPending),
+                Utils.roundOffWithTwoDigit(refundedAmount),
+                collectionRate,
+                fromLastMonth);
     }
 
     private StatusSummary buildTenantComplaints(String hostelId, String filter) {

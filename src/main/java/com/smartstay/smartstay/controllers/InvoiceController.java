@@ -1,9 +1,6 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.payloads.invoice.ApplyDiscount;
-import com.smartstay.smartstay.payloads.invoice.InvoiceRedemption;
-import com.smartstay.smartstay.payloads.invoice.ManualInvoice;
-import com.smartstay.smartstay.payloads.invoice.UpdateRecurringInvoice;
+import com.smartstay.smartstay.payloads.invoice.*;
 import com.smartstay.smartstay.services.InvoiceV1Service;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -26,6 +23,7 @@ public class InvoiceController {
 
     @Autowired
     private InvoiceV1Service invoiceV1Service;
+
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getAllTransactions(@PathVariable("hostelId") String hostelId,
                                                 @RequestParam(value = "startDate", required = false) String startDate,
@@ -128,23 +126,32 @@ public class InvoiceController {
                                             @RequestParam(value = "size", defaultValue = "10", required = false) int size,
                                             @RequestParam(value = "name", required = false) String name,
                                             @RequestParam(value = "period", required = false) String period,
+                                            @RequestParam(value = "type", required = false) List<String> type,
+                                            @RequestParam(value = "status", required = false) String status,
+                                            @RequestParam(value = "startDate", required = false) String startDate,
+                                            @RequestParam(value = "endDate", required = false) String endDate,
                                             @RequestParam(value = "floor", required = false) String floor,
-                                            @RequestParam(value = "room",required = false) String room,
+                                            @RequestParam(value = "room", required = false) String room,
                                             @RequestParam(value = "minAmount", required = false) String minimumAmount,
                                             @RequestParam(value = "maxAmount", required = false) String maxAmount) {
-        return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, name, period, floor, room, minimumAmount, maxAmount, page, size);
+        return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, name, period, type, status, startDate, endDate, floor, room, minimumAmount, maxAmount, page, size);
     }
+
     @GetMapping("/advances/new/{hostelId}")
     public ResponseEntity<?> getAdvancesNewDuplicate(@PathVariable("hostelId") String hostelId,
-                                            @RequestParam(value = "page", defaultValue = "1", required = false) int page,
-                                            @RequestParam(value = "size", defaultValue = "10", required = false) int size,
-                                            @RequestParam(value = "name", required = false) String name,
-                                            @RequestParam(value = "period", required = false) String period,
-                                            @RequestParam(value = "floor", required = false) String floor,
-                                            @RequestParam(value = "room",required = false) String room,
-                                            @RequestParam(value = "minAmount", required = false) String minimumAmount,
-                                            @RequestParam(value = "maxAmount", required = false) String maxAmount) {
-        return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, name, period, floor, room, minimumAmount, maxAmount, page, size);
+                                                     @RequestParam(value = "page", defaultValue = "1", required = false) int page,
+                                                     @RequestParam(value = "size", defaultValue = "10", required = false) int size,
+                                                     @RequestParam(value = "name", required = false) String name,
+                                                     @RequestParam(value = "type", required = false) List<String> type,
+                                                     @RequestParam(value = "status", required = false) String status,
+                                                     @RequestParam(value = "startDate", required = false) String startDate,
+                                                     @RequestParam(value = "endDate", required = false) String endDate,
+                                                     @RequestParam(value = "period", required = false) String period,
+                                                     @RequestParam(value = "floor", required = false) String floor,
+                                                     @RequestParam(value = "room", required = false) String room,
+                                                     @RequestParam(value = "minAmount", required = false) String minimumAmount,
+                                                     @RequestParam(value = "maxAmount", required = false) String maxAmount) {
+        return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, name, period, type, status, startDate, endDate, floor, room, minimumAmount, maxAmount, page, size);
     }
 
     @GetMapping("/redeem/initialize/{hostelId}/{advanceInvoiceId}")
@@ -182,12 +189,17 @@ public class InvoiceController {
                                                  @RequestParam(value = "searchKey", required = false) String searchKey,
                                                  @RequestParam(value = "period", required = false) String period,
                                                  @RequestParam(value = "floor", required = false) String floor,
-                                                 @RequestParam(value = "room",required = false) String room,
+                                                 @RequestParam(value = "room", required = false) String room,
                                                  @RequestParam(value = "minAmount", required = false) String minimumAmount,
                                                  @RequestParam(value = "maxAmount", required = false) String maxAmount,
                                                  @RequestParam(value = "startDate", required = false) String startDate,
                                                  @RequestParam(value = "endDate", required = false) String endDate) {
         return invoiceV1Service.getRetainerInvoicesBasicList(hostelId, page, size, searchKey, period, floor, room, minimumAmount, maxAmount, startDate, endDate);
 
+    }
+
+    @PostMapping("/manual/{hostelId}/{customerId}")
+    public ResponseEntity<?> addManualInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @RequestBody ManualInvoiceNew manualInvoiceBody) {
+        return invoiceV1Service.addManualInvoice(hostelId, customerId, manualInvoiceBody);
     }
 }

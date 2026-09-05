@@ -4326,9 +4326,19 @@ public class CustomersService {
 
             List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
             List<String> customerIds = listCustomers.stream().map(Customers::getCustomerId).toList();
-            List<BookingsV1> cusotmerBookings = bookingsService.findByCustomerIds(customerIds);
+            List<BookingsV1> customerBookings = bookingsService.findByCustomerIds(customerIds);
+            List<Integer> bedIds = customerBookings
+                    .stream()
+                    .map(BookingsV1::getBedId)
+                    .toList();
+            List<BedDetails> bedDetails;
+            if (bedIds != null) {
+                bedDetails = bedsService.getBedDetails(bedIds);
+            } else {
+                bedDetails = new ArrayList<>();
+            }
 
-            List<GetCustomersForBills> customerForBills = listCustomers.stream().map(i -> new CustomerMapperForBills(cusotmerBookings).apply(i)).toList();
+            List<GetCustomersForBills> customerForBills = listCustomers.stream().map(i -> new CustomerMapperForBills(customerBookings, bedDetails).apply(i)).toList();
 
             return new ResponseEntity<>(customerForBills, HttpStatus.OK);
         } else if (purpose.equals(GetCustomersPurpose.COMPLAINTS)) {

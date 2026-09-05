@@ -1,4 +1,4 @@
 package com.smartstay.smartstay.responses.customer;
 
-public record HeaderAdditionalFields(String customerId, String status) {
+public record HeaderAdditionalFields(String customerId, String status, String statusCode) {
 }

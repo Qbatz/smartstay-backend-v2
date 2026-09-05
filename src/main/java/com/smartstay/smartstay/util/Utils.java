@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -279,6 +280,15 @@ public class Utils {
     public static final String CANNOT_REQUEST_INACTIVE_TENANT = "Cannot request for inactive tenants";
     public static final String CANNOT_REQUEST_DRAFTED_TENANT = "Cannot request for drafted tenants";
     public static final String CANNOT_REQUEST_CANCELLED_TENANT = "Cannot request for cancelled tenants";
+    public static final String CANNOT_CREATE_INVOICE_BOOKIED_CUSTOMER = "Cannot create invoice for booked customers";
+    public static final String CANNOT_CREATE_INVOICE_DRAFTED_CUSTOMER = "Cannot create invoice for drafted customers";
+    public static final String CANNOT_CREATE_INVOICE_SETTLEMENT_CUSTOMERS = "Cannot create invoice for settlement generated customers";
+    public static final String CANNOT_CREATE_INVOICE_VACATED_CUSTOMERS = "Cannot create invoice for vacated customers";
+    public static final String CANNOT_CREATE_CANCELLED_BOOKING_CUSTOMERS = "Cannot create invoice for cancelled bookings customers";
+    public static final String CANNOT_CREATE_DELETED_CUSTOMERS = "Cannot create invoice for deleted customers";
+    public static final String REQUIRED_INVOICE_ITEMS = "Required invoice items";
+    public static final String MANUAL_INVOICE_CANNOT_CREATE_BEFORE_CHECKIN = "Invoice date must be after the joining date";
+    public static final String CANNOT_CREATE_ADVANCE_RENTAL_TOGETHER = "Cannot create advance and rental invoice together";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String INVALID_DUE_DYS = "Invalid due days";
     public static final String INVALID_NOTICE_DAYS = "Invalid notice days";
@@ -532,8 +542,6 @@ public class Utils {
         return new SimpleDateFormat(OUTPUT_DATE_TIME_FORMAT).format(date);
     }
 
-
-
     public static String dateToDateMonth(Date date) {
         if (date == null) {
             return "";
@@ -562,6 +570,13 @@ public class Utils {
         }
         String d = new SimpleDateFormat(OUTPUT_DATE_ALONE_FORMAT).format(date);
         return Integer.parseInt(d);
+    }
+
+    public static Date getStartOfCurrentWeek() {
+        LocalDateTime localDateTime = LocalDate.now()
+                .with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
+                .atStartOfDay();
+        return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     public static Integer dateToYear(Date date) {

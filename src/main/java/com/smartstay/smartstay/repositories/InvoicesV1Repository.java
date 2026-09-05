@@ -418,10 +418,12 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT i FROM InvoicesV1 i, BookingsV1 b, Rooms r  WHERE i.customerId = b.customerId AND r.roomId = b.roomId AND 
             i.hostelId=:hostelId AND 
             i.customerId IN (:customerIds) AND i.invoiceType IN (:invoiceTypes) AND 
-            i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false 
+            i.paymentStatus in ('PAID', 'PARTIAL_PAYMENT') AND i.isCancelled=false AND 
+            (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate)) AND 
+            (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate)) 
             ORDER BY b.floorId ASC, r.roomId ASC
             """)
-    List<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes);
+    List<InvoicesV1> findPaidAdvanceInvoicesForRedemption(String hostelId, List<String> customerIds, List<String> invoiceTypes, Date startDate, Date endDate);
 
     @Query(value = """
             SELECT i FROM InvoicesV1 i, BookingsV1 b, Rooms r, Beds bed, Floors f  WHERE b.customerId = i.customerId AND 
@@ -552,4 +554,15 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND DATE(i.invoiceStartDate) <= DATE(:currentMonthStartDate) 
             """)
     List<InvoicesV1> findOldMonthInvoices(String customerId, Date currentMonthStartDate);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.invoiceType IN (:invoiceTypes) AND
+            DATE(i.invoiceStartDate) <= DATE(:endDate) AND DATE(i.invoiceEndDate) >= DATE(:startDate) AND isCancelled=false
+            """)
+    List<InvoicesV1> findByHostelIdAndInvoiceTypeInAndDate(String hostelId, List<String> invoiceTypes, Date startDate, Date endDate);
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND (:invoiceIds IS NULL OR i.invoiceId IN :invoiceIds) 
+            AND (:invoiceType IS NULL OR i.invoiceType IN :invoiceType)
+            """)
+    List<InvoicesV1> findByInvoiceIdAndInvoiceType(String hostelId, List<String> invoiceIds, List<String> invoiceType);
 }
