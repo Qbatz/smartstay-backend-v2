@@ -132,8 +132,8 @@ public class InvoiceController {
                                             @RequestParam(value = "endDate", required = false) String endDate,
                                             @RequestParam(value = "floor", required = false) String floor,
                                             @RequestParam(value = "room", required = false) String room,
-                                            @RequestParam(value = "minAmount", required = false) String minimumAmount,
-                                            @RequestParam(value = "maxAmount", required = false) String maxAmount) {
+                                            @RequestParam(value = "minAmount", required = false) Integer minimumAmount,
+                                            @RequestParam(value = "maxAmount", required = false) Integer maxAmount) {
         return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, name, period, type, status, startDate, endDate, floor, room, minimumAmount, maxAmount, page, size);
     }
 
@@ -149,8 +149,8 @@ public class InvoiceController {
                                                      @RequestParam(value = "period", required = false) String period,
                                                      @RequestParam(value = "floor", required = false) String floor,
                                                      @RequestParam(value = "room", required = false) String room,
-                                                     @RequestParam(value = "minAmount", required = false) String minimumAmount,
-                                                     @RequestParam(value = "maxAmount", required = false) String maxAmount) {
+                                                     @RequestParam(value = "minAmount", required = false) Integer minimumAmount,
+                                                     @RequestParam(value = "maxAmount", required = false) Integer maxAmount) {
         return invoiceV1Service.getAdvanceInvoicesForRedemption(hostelId, name, period, type, status, startDate, endDate, floor, room, minimumAmount, maxAmount, page, size);
     }
 

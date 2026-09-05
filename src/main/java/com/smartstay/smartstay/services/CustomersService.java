@@ -403,7 +403,7 @@ public class CustomersService {
         }
 
         List<CustomerData> customerData = searchAndGetCustomers(hostelId, name, type);
-        HashMap<String, String> filterOption = new HashMap<>();
+
         List<com.smartstay.smartstay.responses.customer.CustomerData> listCustomers = customerData.stream().map(item -> {
             StringBuilder initials = new StringBuilder();
             StringBuilder fullName = new StringBuilder();
@@ -442,9 +442,6 @@ public class CustomersService {
                 currentStatus = "Draft";
             }
 
-            if (!filterOption.containsKey(currentStatus)) {
-                filterOption.put(currentStatus, currentStatus);
-            }
 
             String profilePicStr = item.getProfilePic();
 //            if (profilePicStr == null || profilePicStr.trim().isEmpty()) {
@@ -455,8 +452,8 @@ public class CustomersService {
         }).collect(Collectors.toList());
 
         listCustomers.sort(Comparator.comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
-
-        CustomersList response = new CustomersList(hostelId, listCustomers.size(), null, listCustomers);
+        FilterOptions filterOptions = getTenantFilterOptions(hostelId);
+        CustomersList response = new CustomersList(hostelId, listCustomers.size(), filterOptions, listCustomers);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -3913,7 +3910,7 @@ public class CustomersService {
         }
         String userId = authentication.getName();
         Users user = userService.findUserByUserId(userId);
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_UPDATE)) {
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {

@@ -67,6 +67,11 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
     @Query("SELECT COALESCE(SUM(t.paidAmount), 0) FROM TransactionV1 t WHERE t.hostelId = :hostelId AND DATE(t.paidAt) >= DATE(:startDate) AND DATE(t.paidAt) <= DATE(:endDate)")
     Double sumPaidAmountByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
+    @Query("""
+            SELECT trns FROM TransactionV1 trns WHERE trns.hostelId=:hostelId AND DATE(trns.paymentDate) <= DATE(:endDate) 
+            AND DATE(trns.paymentDate) >= DATE(:startDate)
+            """)
+    List<TransactionV1> findTransactionsByHostelIdAndDate(String hostelId, Date startDate, Date endDate);
     @Query(value = "SELECT DISTINCT t.createdBy FROM TransactionV1 t WHERE t.hostelId = :hostelId")
     List<String> findDistinctCreatedByByHostelId(@Param("hostelId") String hostelId);
 

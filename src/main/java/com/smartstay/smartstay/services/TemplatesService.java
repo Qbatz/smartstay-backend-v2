@@ -242,7 +242,7 @@ public class TemplatesService {
         String loginId = authentication.getName();
         Users user = userService.findUserByUserId(loginId);
 
-        if (!rolesService.checkPermission(user.getRoleId(), ModuleId.BILLS.getId(), Utils.PERMISSION_WRITE)) {
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BILLS, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 

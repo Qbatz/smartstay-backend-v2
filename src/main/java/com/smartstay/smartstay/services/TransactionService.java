@@ -939,7 +939,22 @@ public class TransactionService {
     }
 
     public Double sumPaidAmountByHostelIdAndDateRange(String hostelId, Date startDate, Date endDate) {
-        return transactionRespository.sumPaidAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
+//        return transactionRespository.sumPaidAmountByHostelIdAndDateRange(hostelId, startDate, endDate);
+
+        List<TransactionV1> listTransactions = transactionRespository.findTransactionsByHostelIdAndDate(hostelId, startDate, endDate);
+        if (listTransactions == null) {
+            return 0.0;
+        }
+        return listTransactions
+                .stream()
+                .filter(i -> i.getType() == null || (!i.getType().equalsIgnoreCase(TransactionType.REFUND.name())))
+                .mapToDouble(i -> {
+                    if (i.getPaidAmount() == null) {
+                        return 0.0;
+                    }
+                    return i.getPaidAmount();
+                })
+                .sum();
     }
 
     public TransactionReportResponse getTransactionReport(String hostelId, String period, String customStartDate,

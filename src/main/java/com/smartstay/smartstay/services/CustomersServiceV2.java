@@ -1013,7 +1013,7 @@ public class CustomersServiceV2 {
                         invoiceEndDate = invoiceRunningCycle.currentBillEndDate();
                         double rent = 0.0;
                         if (invoiceRunningCycle.hasGracePeriod()) {
-                            Date gracePeriod = Utils.addDaysToDate(invoiceRunningCycle.currentBillStartDate(), invoiceRunningCycle.gracePeriodDays());
+                            Date gracePeriod = Utils.addDaysToDate(invoiceRunningCycle.currentBillStartDate(), invoiceRunningCycle.gracePeriodDays() - 1);
                             if (Utils.compareWithTwoDates(joiningDate, gracePeriod) <= 0) {
                                 rent = checkInRequest.rentalAmount();
                                 invoiceV1Service.addRentanInvoiceForPostpaid(customers, checkInRequest.rentalAmount(), checkInRequest.joiningDate(), invoiceStartDate, invoiceEndDate, invoiceRunningCycle, currentMonthBillingCycle, checkInRequest.deductions());

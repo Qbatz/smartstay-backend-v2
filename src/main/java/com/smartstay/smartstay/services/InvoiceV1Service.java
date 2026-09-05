@@ -983,7 +983,7 @@ public class InvoiceV1Service {
 
     public InvoiceSummaryInfo getSummary(String hostelId, Integer totalInvoices, List<InvoicesV1> invoiceList, double currentMonthCollection) {
         if (invoiceList == null) {
-            return new InvoiceSummaryInfo(totalInvoices, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            return new InvoiceSummaryInfo(totalInvoices, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
         }
 
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
@@ -998,6 +998,30 @@ public class InvoiceV1Service {
                         && i.getTotalAmount() != null
                         && i.getTotalAmount() < 0)
                 .toList();
+
+        double pendingRefundInvoices = validInvoices
+                .stream()
+                .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name()))
+                .mapToDouble(i -> {
+                    if (i.getTotalAmount() == null) {
+                        return 0.0;
+                    }
+                    if (i.getTotalAmount() < 0) {
+                        return i.getTotalAmount() * -1;
+                    }
+                    return i.getTotalAmount();
+                })
+                .sum();
+        double refundedInvoices = validInvoices
+                .stream()
+                .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name()))
+                .mapToDouble(i -> {
+                    if (i.getPaidAmount() == null) {
+                        return 0.0;
+                    }
+                    return i.getPaidAmount();
+                })
+                .sum();
 
         List<InvoicesV1> nonRefundInvoices = validInvoices.stream()
                 .filter(i -> !refundInvoices.contains(i))
@@ -1052,6 +1076,8 @@ public class InvoiceV1Service {
                 Utils.roundOffWithTwoDigit(outstandingAmount),
                 Utils.roundOffWithTwoDigit(totalAmount),
                 0.0,
+                Utils.roundOffWithTwoDigit(refundedInvoices),
+                Utils.roundOffWithTwoDigit(pendingRefundInvoices),
                 Utils.roundOffWithTwoDigit(refundAmount));
     }
 
@@ -5921,7 +5947,7 @@ public class InvoiceV1Service {
             listCustomerIds = customerBookings.stream().map(BookingsV1::getCustomerId).toList();
         }
 
-        List<InvoicesV1> listInvoices = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, listCustomerIds, invoiceTypes, null, null);
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, listCustomerIds, invoiceTypes, null, null, null, null, null);
         if (listInvoices != null) {
             totalAdvanceInvoice = listInvoices.size();
 //            currentPage = pagebleAdvances.getPageable().getPageNumber() + 1;
@@ -6342,7 +6368,7 @@ public class InvoiceV1Service {
         return new AdvanceItems("Refundable Bookings", availableAmount, paidAmount - availableAmount, paidAmount, advanceInvoice.getInvoiceNumber(), listRedeemedInfo);
     }
 
-    public ResponseEntity<?> getAdvanceInvoicesForRedemption(String hostelId, String name, String period, List<String> type, String status, String startDate, String endDate, String floor, String room, String minAmount, String maxAmount, int page, int size) {
+    public ResponseEntity<?> getAdvanceInvoicesForRedemption(String hostelId, String name, String period, List<String> type, String status, String startDate, String endDate, String floor, String room, Integer minAmount, Integer maxAmount, int page, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -6363,7 +6389,7 @@ public class InvoiceV1Service {
     }
 
 
-    private ResponseEntity<?> getBookingResponse(String hostelId, String name, String period, List<String> type, String status, String startDate, String endDate, String floor, String room, String minAmount, String maxAmount, int page, int size) {
+    private ResponseEntity<?> getBookingResponse(String hostelId, String name, String period, List<String> type, String status, String startDate, String endDate, String floor, String room, Integer minAmount, Integer maxAmount, int page, int size) {
         List<BookingsV1> listAllCheckedInCustomers = new ArrayList<>();
         List<Floors> listFloor = floorsService.findByHostelId(hostelId);
         List<Rooms> roomsList = roomsService.findByHostelId(hostelId);
@@ -6374,6 +6400,16 @@ public class InvoiceV1Service {
             listBedDetails = bedService.getBedDetails(bedIds);
         } else {
             listBedDetails = new ArrayList<>();
+        }
+
+        Integer minBalance = null;
+        Integer maxBalance = null;
+
+        if (minAmount != null && minAmount > 0) {
+            minBalance = minAmount;
+        }
+        if (maxAmount != null && maxAmount > 0) {
+            maxBalance = maxAmount;
         }
 
         Date dStartDate = null;
@@ -6422,8 +6458,8 @@ public class InvoiceV1Service {
         invoiceTypesFilterOptions.add(new BookingsFilterOptions.FilterItems("Advance", InvoiceType.ADVANCE.name()));
 
         List<BookingsFilterOptions.FilterItems> invoiceStatusFilterOptions = new ArrayList<>();
-        invoiceStatusFilterOptions.add(new BookingsFilterOptions.FilterItems("Available", "Available"));
-        invoiceStatusFilterOptions.add(new BookingsFilterOptions.FilterItems("Partially Adjusted", "Partially Adjusted"));
+        invoiceStatusFilterOptions.add(new BookingsFilterOptions.FilterItems("Available", "AVAILABLE"));
+        invoiceStatusFilterOptions.add(new BookingsFilterOptions.FilterItems("Partially Redeemed", "PARTIALLY_REDEEMED"));
 
         List<BookingsFilterOptions.FilterItems> listPeriods = new ArrayList<>();
         listPeriods.add(new BookingsFilterOptions.FilterItems("Today", "TODAY"));
@@ -6464,14 +6500,6 @@ public class InvoiceV1Service {
                 invoiceTypes.add(InvoiceType.EB_HOLDING.name());
             }
 
-            Integer minimumAmount = null;
-            Integer maximumAmount = null;
-            if (minAmount != null && !minAmount.trim().equalsIgnoreCase("")) {
-                minimumAmount = Integer.parseInt(minAmount);
-            }
-            if (maxAmount != null && !maxAmount.trim().equalsIgnoreCase("")) {
-                maximumAmount = Integer.parseInt(maxAmount);
-            }
 
             int totalAdvanceInvoice = 0;
             int currentPage = 1;
@@ -6480,7 +6508,7 @@ public class InvoiceV1Service {
 
 
             Pageable pageableRequest = PageRequest.of(page - 1, size);
-            List<InvoicesV1> listInvoices = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, dStartDate, dEndDate);
+            List<InvoicesV1> listInvoices = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, status, dStartDate, dEndDate, minBalance, maxBalance);
             List<InvoicesV1> secondaryInvoices = null;
             Double totalRetainerAmount = 0.0;
             Double totalAdvanceAmount = 0.0;
@@ -6549,7 +6577,7 @@ public class InvoiceV1Service {
                     0.0);
 
             if (authentication.getSource().equalsIgnoreCase("Web")) {
-                Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, minimumAmount, maximumAmount, pageableRequest);
+                Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, minBalance, maxBalance, pageableRequest);
                 secondaryInvoices = pagebleAdvances.stream().toList();
 
                 currentPage = pagebleAdvances.getPageable().getPageNumber() + 1;
@@ -7160,17 +7188,7 @@ public class InvoiceV1Service {
 
         boolean isDiscounted = false;
         Double discountAmount = 0.0;
-        if (manualInvoiceBody.isDiscounted() != null) {
-            isDiscounted = manualInvoiceBody.isDiscounted();
-            if (manualInvoiceBody.discountAmount() == null) {
-                return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
-            }
-            if (isDiscounted) {
-                if (manualInvoiceBody.discountAmount() > 0) {
-                    discountAmount = manualInvoiceBody.discountAmount();
-                }
-            }
-        }
+        Double discountPercentage = 0.0;
 
         Double invoiceAmount = 0.0;
         if (manualInvoiceBody.invoiceItems() != null && !manualInvoiceBody.invoiceItems().isEmpty()) {
@@ -7192,6 +7210,25 @@ public class InvoiceV1Service {
             }
         }
 
+        if (manualInvoiceBody.isDiscounted() != null) {
+            isDiscounted = manualInvoiceBody.isDiscounted();
+//            if (manualInvoiceBody.discountAmount() == null) {
+//                return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+//            }
+            if (isDiscounted) {
+                if (manualInvoiceBody.discountAmount() != null && manualInvoiceBody.discountAmount() > 0) {
+                    discountAmount = manualInvoiceBody.discountAmount();
+                    discountPercentage = (discountAmount/invoiceAmount) * 100;
+                }
+                else if (manualInvoiceBody.discountPercentage() != null && manualInvoiceBody.discountPercentage() > 0) {
+                    discountPercentage = manualInvoiceBody.discountPercentage();
+                    discountAmount = (discountPercentage/100) * invoiceAmount;
+                }
+            }
+
+        }
+
+        Double totalAmt = invoiceAmount - discountAmount;
         InvoicesV1 invoicesV1 = new InvoicesV1();
         invoicesV1.setCustomerId(customerId);
         invoicesV1.setHostelId(hostelId);
@@ -7200,7 +7237,7 @@ public class InvoiceV1Service {
         invoicesV1.setCustomerMailId(customers.getEmailId());
         invoicesV1.setInvoiceType(invoiceType);
         invoicesV1.setBasePrice(invoiceAmount);
-        invoicesV1.setTotalAmount(invoiceAmount);
+        invoicesV1.setTotalAmount(Utils.roundOfDouble(totalAmt));
         invoicesV1.setPaidAmount(0.0);
         invoicesV1.setBalanceAmount(0.0);
         invoicesV1.setSubTotal(invoiceAmount);
@@ -7263,7 +7300,7 @@ public class InvoiceV1Service {
             customersService.updateAdvanceAmount(customers, advance);
         }
         if (isDiscounted && discountAmount > 0) {
-            invoiceDiscountService.applyDiscountDirectly(hostelId, inv1.getInvoiceId(), customerId, discountAmount, null, invoiceAmount);
+            invoiceDiscountService.applyDiscountDirectly(hostelId, inv1.getInvoiceId(), customerId, discountAmount, null, invoiceAmount, discountPercentage);
         }
         invoiceNotesService.addNotesForManualInvoice(hostelId, customerId, inv1.getInvoiceId(), manualInvoiceBody.notes());
         customerNotificationService.addManualBillNotification(hostelId, customers, inv1.getInvoiceId(), inv1.getInvoiceType(), invoiceAmount, users);

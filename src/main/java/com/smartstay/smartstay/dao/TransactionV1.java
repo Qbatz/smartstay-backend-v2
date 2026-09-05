@@ -17,6 +17,7 @@ public class TransactionV1 {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String transactionId;
+    //Transaction type enum
     private String type;
 //    private String transactionType;
     private Double paidAmount;

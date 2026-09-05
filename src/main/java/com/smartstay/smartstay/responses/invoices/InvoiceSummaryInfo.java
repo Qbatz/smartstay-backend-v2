@@ -7,5 +7,7 @@ public record InvoiceSummaryInfo(Integer totalInvoices,
                                  Double outstandingAmount,
                                  Double totalAmount,
                                  Double settlementValue,
+                                 Double refundedAmount,
+                                 Double pendingRefund,
                                  Double refundAmount) {
 }
