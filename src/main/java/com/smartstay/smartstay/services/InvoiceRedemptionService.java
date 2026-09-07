@@ -162,7 +162,44 @@ public class InvoiceRedemptionService {
                 .toList();
     }
 
+    public List<RedeemedInfo> findRedeemedItemsFromAdvance(String hostelId, List<String> invoiceId) {
+        List<InvoiceRedemption> listInvoiceRedemption = invoiceRedemptionRepository.findByHostelIdAndSourceId(hostelId, invoiceId);
+        if (listInvoiceRedemption == null) {
+            return new ArrayList<>();
+        }
+
+        List<String> targetInvoiceIds = listInvoiceRedemption
+                .stream()
+                .map(InvoiceRedemption::getTargetInvoiceId)
+                .toList();
+
+        List<InvoicesV1> listInvoices = invoiceV1Service.findInvoices(targetInvoiceIds);
+
+
+        return listInvoiceRedemption
+                .stream()
+                .map(i -> new RedeemedInvoiceMapper(listInvoices).apply(i))
+                .toList();
+    }
+
     public double getAdvanceAmountFromBookingInvoice(String hostelId, String invoiceId) {
+        List<InvoiceRedemption> listRedeemedInvoices = invoiceRedemptionRepository.findByHostelIdAndTargetId(hostelId, invoiceId);
+        if (listRedeemedInvoices == null) {
+            return 0.0;
+        }
+
+        return listRedeemedInvoices
+                .stream()
+                .mapToDouble(i -> {
+                    if (i.getRedemptionAmount() == null) {
+                        return 0.0;
+                    }
+                    return i.getRedemptionAmount();
+                })
+                .sum();
+    }
+
+    public double getAdvanceAmountFromBookingInvoice(String hostelId, List<String> invoiceId) {
         List<InvoiceRedemption> listRedeemedInvoices = invoiceRedemptionRepository.findByHostelIdAndTargetId(hostelId, invoiceId);
         if (listRedeemedInvoices == null) {
             return 0.0;

@@ -39,6 +39,8 @@ public class InvoiceMapper {
             invoiceDate = Utils.dateToString(invoice.getInvoiceStartDate());
         }
 
+        String invoiceType = InvoiceUtils.getInvoiceType(invoice);
+
         double dueAmount = 0.0;
         if (invoice.getPaidAmount() != null) {
             if (invoice.getPaymentStatus() != null) {
@@ -95,7 +97,7 @@ public class InvoiceMapper {
         return new InvoiceResponse(
                 invoice.getInvoiceId(),
                 invoice.getInvoiceNumber(),
-                Utils.capitalize(invoice.getInvoiceType()),
+                invoiceType,
                 invoiceDate,
                 paymentStatus,
                 Utils.roundOffWithTwoDigit(invoice.getTotalAmount()),

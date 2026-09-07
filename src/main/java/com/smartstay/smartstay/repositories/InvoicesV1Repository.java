@@ -121,6 +121,12 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     InvoicesV1 findByCustomerIdAndHostelIdAndInvoiceType(String customerId, String hostelId, String invoiceType);
 
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId=:customerId AND 
+            i.invoiceType IN (:invoiceTypes)
+            """)
+    List<InvoicesV1> findByCustomerIdAndHostelIdAndInvoiceType(String customerId, String hostelId, List<String> invoiceTypes);
+
     List<InvoicesV1> findByHostelIdAndCustomerIdAndPaymentStatusNotIgnoreCaseAndIsCancelledFalse(String hostelId, String customerId, String paymentStatus);
 
     @Query(value = """
@@ -399,9 +405,19 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findOldMonthPendingInvoices(String customerId, Date currentMonth, List<String> invoiceTypes);
 
     @Query("""
-            SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType='ADVANCE' 
+            SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType='ADVANCE'
             """)
     InvoicesV1 findAdvanceInvoiceByCustomerId(String customerId);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType='ADDITIONAL_ADVANCE'
+            """)
+    List<InvoicesV1> findAdditionalAdvanceInvoiceByCustomerId(String customerId);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType IN ('ADDITIONAL_ADVANCE', 'ADVANCE')
+            """)
+    List<InvoicesV1> findAllAdvanceInvoices(String customerId);
 
     @Query("""
             SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId=:customerId AND i.invoiceType IN (:invoiceTypes) 
@@ -452,7 +468,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     @Query("""
             SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId=:customerId AND 
             i.isCancelled=false AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND 
-            i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADVANCE')
+            i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADVANCE', 'ADDITIONAL_ADVANCE', 'OTHER')
             """)
     List<InvoicesV1> findPendingByHostelIdAndCustomerId(String hostelId, String customerId);
 

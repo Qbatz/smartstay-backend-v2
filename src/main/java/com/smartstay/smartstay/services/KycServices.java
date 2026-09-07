@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -53,6 +54,8 @@ public class KycServices {
     private SubscriptionService subscriptionService;
     @Autowired
     private KYCUsageService kycUsageService;
+    @Autowired
+    private KycConfigService kycConfigService;
 
     private final RestTemplate restTemplate;
 
@@ -98,6 +101,21 @@ public class KycServices {
             return new ResponseEntity<>(Utils.CANNOT_REQUEST_CANCELLED_TENANT, HttpStatus.BAD_REQUEST);
         }
 
+        KycRequestMessage message = kycConfigService.checkKycRequestConfig(customers.getHostelId());
+        if (message != null) {
+            if (!message.canRequest()) {
+                return new ResponseEntity<>(message.errorMessage(), HttpStatus.BAD_REQUEST);
+            }
+            Calendar calendar = Calendar.getInstance();
+            calendar.set(Calendar.DAY_OF_MONTH, 1);
+            List<KycDetails> kycListForThisMonth = kycRepository.findByHostelIdAndDate(customers.getHostelId(), calendar.getTime());
+            if (kycListForThisMonth != null && !kycListForThisMonth.isEmpty()) {
+                if (kycListForThisMonth.size() >= message.count()) {
+                    return new ResponseEntity<>(Utils.KYC_REQUEST_LIMIT_EXCEEDED, HttpStatus.BAD_REQUEST);
+                }
+            }
+        }
+
         KycDetails kycDetails = customers.getKycDetails();
         if (kycDetails != null) {
             if (kycDetails.getCurrentStatus().equalsIgnoreCase(KycStatus.VERIFIED.name())) {
@@ -137,6 +155,7 @@ public class KycServices {
             if (kycDetails == null) {
                 kycDetails = new KycDetails();
                 kycDetails.setCustomers(customers);
+                kycDetails.setHostelId(customers.getHostelId());
             }
             kycDetails.setCurrentStatus(KycStatus.REQUESTED.name());
             kycDetails.setTransactionId(requestKyc.getTransactionId());
@@ -457,5 +476,181 @@ public class KycServices {
                 }
             }
         }
+    }
+
+    public ResponseEntity<?> rerequestKyc(String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Customers customers = customersService.getCustomerInformation(customerId);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!subscriptionService.validateSubscription(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.VACATED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REQUEST_VACATED_TENANT, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REQUEST_BOOKING_TENANT, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.INACTIVE.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REQUEST_INACTIVE_TENANT, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.DRAFT.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REQUEST_DRAFTED_TENANT, HttpStatus.BAD_REQUEST);
+        }
+        if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.CANCELLED_BOOKING.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_REQUEST_CANCELLED_TENANT, HttpStatus.BAD_REQUEST);
+        }
+
+        usersService.addUserLog(customers.getHostelId(), customerId, ActivitySource.KYC, ActivitySourceType.KYC_RE_REQUEST, users);
+        KycDetails kycDetails = customers.getKycDetails();
+        if (kycDetails == null) {
+            return new ResponseEntity<>(Utils.KYC_NOT_REQUESTED_ERROR, HttpStatus.BAD_REQUEST);
+        }
+
+        return getKycDetails(kycDetails.getEntityId(), customers, users);
+    }
+
+
+    public ResponseEntity<?> getKycDetails(String entityId, Customers customers, Users users) {
+        String endPoint = "client/kyc/v2/" + entityId + "/response";
+        String verifyKycUrl = KYC_BASE_URL + "/" + endPoint;
+
+        String auth = KYC_USER_NAME + ":" + KYC_PASSWORD;
+        String encodedAuth = Base64.getEncoder()
+                .encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Basic "+ encodedAuth);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(headers);
+        try {
+            ResponseEntity<VerifyKyc> responseEntity = restTemplate.exchange(verifyKycUrl, HttpMethod.POST, entity, VerifyKyc.class);
+            if (responseEntity.getStatusCode() == HttpStatus.OK) {
+                VerifyKyc verifyKycResponse = responseEntity.getBody();
+                String actionId = null;
+                if (verifyKycResponse.getActions() != null && !verifyKycResponse.getActions().isEmpty()) {
+                    VerifyKycActions verifyKycActions = verifyKycResponse.getActions().get(0);
+                    if (verifyKycActions != null) {
+                        actionId = verifyKycActions.getId();
+                    }
+                }
+                if (verifyKycResponse.getStatus().equalsIgnoreCase("requested")) {
+                    if (rerequestKycApi(customers, entityId)) {
+                        customerNotificationService.sendKycNotification(customers, customers.getKycDetails(), users, customers.getHostelId());
+                        return new ResponseEntity<>(HttpStatus.CREATED);
+                    }
+                }
+                else {
+                    if (actionId != null) {
+                        if (rerequestKYC(customers, actionId)) {
+                            customerNotificationService.sendKycNotification(customers, customers.getKycDetails(), users, customers.getHostelId());
+                            return new ResponseEntity<>(HttpStatus.CREATED);
+                        }
+                    }
+                }
+            }
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+        catch (HttpClientErrorException clientErrorException) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * this will work with  the existing entity id. Can be reused when state is requested.
+     *
+     * @param customers
+     * @param entityId
+     * @return
+     */
+    public boolean rerequestKycApi(Customers customers, String entityId) {
+        String requestKycUrl = KYC_BASE_URL + "/user/auth/generate_token";
+
+        // Encode credentials to Base64
+        String auth = KYC_USER_NAME + ":" + KYC_PASSWORD;
+        String encodedAuth = Base64.getEncoder()
+                .encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Basic "+ encodedAuth);
+
+        Map<String, Object> payloads = new HashMap<>();
+        payloads.put("entity_id", entityId);
+        payloads.put("identifier", customers.getMobile());
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payloads, headers);
+
+        ResponseEntity<KycRequestAgain> responseEntity = restTemplate.exchange(requestKycUrl, HttpMethod.POST, entity, KycRequestAgain.class);
+        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            KycRequestAgain kycRequestAgain = responseEntity.getBody();
+            if (kycRequestAgain != null) {
+                KycRequestAgain.Response response = kycRequestAgain.getResponse();
+                if (response != null) {
+                    String id = response.getId();
+                    KycDetails kycDetails = customers.getKycDetails();
+                    kycDetails.setReferenceId(id);
+                    kycDetails.setTransactionId(id);
+
+                    customers.setKycDetails(kycDetails);
+
+                    customersService.save(customers);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * this shouldbe triggered when the actions are changed
+     * eg. pending for approval to request again
+     *
+     * @param customers
+     * @param actionId
+     * @return
+     */
+    public boolean rerequestKYC(Customers customers, String actionId) {
+        String endPoint = "client/kyc/v2/request/" + customers.getMobile() + "/reattempt";
+        String verifyKycUrl = KYC_BASE_URL + "/" + endPoint;
+
+        String auth = KYC_USER_NAME + ":" + KYC_PASSWORD;
+        String encodedAuth = Base64.getEncoder()
+                .encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Basic "+ encodedAuth);
+
+        List<String> actionIds = new ArrayList<>();
+        actionIds.add(actionId);
+
+        Map<String, Object> payloads = new HashMap<>();
+        payloads.put("notifyCustomer", true);
+        payloads.put("reason", "As per the request");
+        payloads.put("action_ids", actionIds);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payloads, headers);
+        ResponseEntity<String> responseEntity = restTemplate.exchange(verifyKycUrl, HttpMethod.POST, entity, String.class);
+        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            return true;
+        }
+
+        return false;
     }
 }

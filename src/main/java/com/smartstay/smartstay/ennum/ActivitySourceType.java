@@ -49,6 +49,7 @@ public enum ActivitySourceType {
     REDEEMED,
     CREATE_SESSION,
     REQUEST,
+    KYC_RE_REQUEST,
     RESET;
 
 }

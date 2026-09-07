@@ -12,9 +12,9 @@ import java.util.List;
 @Repository
 public interface HostelPlanRepository extends JpaRepository<HostelPlan, Long> {
     @Query(value = """
-            SELECT hp FROM HostelPlan hp WHERE hp.currentPlanEndsAt <= DATE(:todaysDate)
+            SELECT hp FROM HostelPlan hp WHERE hp.currentPlanEndsAt <= DATE(:yesterday)
             """)
-    List<HostelPlan> findNotActiveHostels(@Param("todaysDate") Date todaysDate);
+    List<HostelPlan> findNotActiveHostels(@Param("yesterday") Date yesterday);
 
 
 }

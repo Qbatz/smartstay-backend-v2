@@ -276,6 +276,9 @@ public class Utils {
     public static final String CANNOT_APPLY_DISCOUNT_ADVANCE = "Cannot apply discount for advance invoices";
     public static final String CUSTOMER_VERIFIED_KYC = "Customer is already verified";
     public static final String KYC_VERIFICATION_ALREADY_REQUESTED = "Kyc verification is already requested";
+    public static final String KYC_NOT_REQUESTED_ERROR = "KYC process is not initiated for this tenant";
+    public static final String KYC_REQUEST_DISABLED = "Kyc request is disabled";
+    public static final String KYC_REQUEST_LIMIT_EXCEEDED = "KYC request limit is exceeded";
     public static final String CANNOT_REQUEST_VACATED_TENANT = "Cannot request for vacated tenant";
     public static final String CANNOT_REQUEST_BOOKING_TENANT = "Cannot request for booked tenants";
     public static final String CANNOT_REQUEST_INACTIVE_TENANT = "Cannot request for inactive tenants";
