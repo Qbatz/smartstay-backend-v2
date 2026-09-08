@@ -765,4 +765,204 @@ public class CoreSetUp {
 			}
 		};
 	}
+
+
+	@Bean
+	CommandLineRunner addVendorFilterOptions(FilterOptionsRepositories filterOptionsRepositories) {
+		return args -> {
+			FilterOptions vendorFilterOptions = filterOptionsRepositories
+					.findByModuleName(FilterOptionsModule.MODULE_VENDOR.name());
+			if (vendorFilterOptions == null) {
+				vendorFilterOptions = new FilterOptions();
+				vendorFilterOptions.setModuleName(FilterOptionsModule.MODULE_VENDOR.name());
+				vendorFilterOptions.setIsActive(true);
+				vendorFilterOptions.setCreatedAt(new Date());
+
+				List<ColumnFilters> defaultColumnFilters = new ArrayList<>();
+
+				ColumnFilters filters1 = new ColumnFilters();
+				filters1.setSelected(true);
+				filters1.setFieldName("Profile Pic");
+				filters1.setOrder(1);
+
+				ColumnFilters filters2 = new ColumnFilters();
+				filters2.setSelected(true);
+				filters2.setFieldName("Full Name");
+				filters2.setOrder(2);
+
+				ColumnFilters filters3 = new ColumnFilters();
+				filters3.setSelected(true);
+				filters3.setFieldName("Joining Date");
+				filters3.setOrder(3);
+
+				ColumnFilters filters4 = new ColumnFilters();
+				filters4.setSelected(true);
+				filters4.setFieldName("Mobile No");
+				filters4.setOrder(4);
+
+				ColumnFilters filters5 = new ColumnFilters();
+				filters5.setSelected(true);
+				filters5.setFieldName("Email ID");
+				filters5.setOrder(5);
+
+				ColumnFilters filters6 = new ColumnFilters();
+				filters6.setSelected(true);
+				filters6.setFieldName("Vendor Code");
+				filters6.setOrder(6);
+
+				ColumnFilters filters7 = new ColumnFilters();
+				filters7.setSelected(true);
+				filters7.setFieldName("Vendor Category");
+				filters7.setOrder(7);
+
+				ColumnFilters filters8 = new ColumnFilters();
+				filters8.setSelected(true);
+				filters8.setFieldName("Credit Limit");
+				filters8.setOrder(8);
+
+				ColumnFilters filters9 = new ColumnFilters();
+				filters9.setSelected(true);
+				filters9.setFieldName("Credit Period");
+				filters9.setOrder(9);
+
+				ColumnFilters filters10 = new ColumnFilters();
+				filters10.setSelected(true);
+				filters10.setFieldName("Outstanding");
+				filters10.setOrder(10);
+
+				ColumnFilters filters11 = new ColumnFilters();
+				filters11.setSelected(true);
+				filters11.setFieldName("Last Transaction");
+				filters11.setOrder(11);
+
+				ColumnFilters filters12 = new ColumnFilters();
+				filters12.setSelected(true);
+				filters12.setFieldName("Payment Status");
+				filters12.setOrder(12);
+
+				ColumnFilters filters13 = new ColumnFilters();
+				filters13.setSelected(true);
+				filters13.setFieldName("businessName");
+				filters13.setOrder(13);
+
+				ColumnFilters filters14 = new ColumnFilters();
+				filters14.setSelected(true);
+				filters14.setFieldName("vendorAddress");
+				filters14.setOrder(14);
+
+				defaultColumnFilters.add(filters1);
+				defaultColumnFilters.add(filters2);
+				defaultColumnFilters.add(filters3);
+				defaultColumnFilters.add(filters4);
+				defaultColumnFilters.add(filters5);
+				defaultColumnFilters.add(filters6);
+				defaultColumnFilters.add(filters7);
+				defaultColumnFilters.add(filters8);
+				defaultColumnFilters.add(filters9);
+				defaultColumnFilters.add(filters10);
+				defaultColumnFilters.add(filters11);
+				defaultColumnFilters.add(filters12);
+				defaultColumnFilters.add(filters13);
+				defaultColumnFilters.add(filters14);
+
+				vendorFilterOptions.setFilterOptions(defaultColumnFilters);
+
+				filterOptionsRepositories.save(vendorFilterOptions);
+			}
+		};
+	}
+
+
+	@Bean
+	CommandLineRunner addExpenseFilterOptions(FilterOptionsRepositories filterOptionsRepositories) {
+		return args -> {
+			FilterOptions expenseFilterOptions = filterOptionsRepositories
+					.findByModuleName(FilterOptionsModule.MODULE_EXPENSE.name());
+			if (expenseFilterOptions == null) {
+				expenseFilterOptions = new FilterOptions();
+				expenseFilterOptions.setModuleName(FilterOptionsModule.MODULE_EXPENSE.name());
+				expenseFilterOptions.setIsActive(true);
+				expenseFilterOptions.setCreatedAt(new Date());
+
+				List<ColumnFilters> defaultColumnFilters = new ArrayList<>();
+
+				ColumnFilters filters1 = new ColumnFilters();
+				filters1.setSelected(true);
+				filters1.setFieldName("Expense No");
+				filters1.setOrder(1);
+
+				ColumnFilters filters2 = new ColumnFilters();
+				filters2.setSelected(true);
+				filters2.setFieldName("Title");
+				filters2.setOrder(2);
+
+				ColumnFilters filters3 = new ColumnFilters();
+				filters3.setSelected(true);
+				filters3.setFieldName("Date");
+				filters3.setOrder(3);
+
+				ColumnFilters filters4 = new ColumnFilters();
+				filters4.setSelected(true);
+				filters4.setFieldName("Category");
+				filters4.setOrder(4);
+
+				ColumnFilters filters5 = new ColumnFilters();
+				filters5.setSelected(true);
+				filters5.setFieldName("Sub Category");
+				filters5.setOrder(5);
+
+				ColumnFilters filters6 = new ColumnFilters();
+				filters6.setSelected(true);
+				filters6.setFieldName("Vendor");
+				filters6.setOrder(6);
+
+				ColumnFilters filters7 = new ColumnFilters();
+				filters7.setSelected(true);
+				filters7.setFieldName("Status");
+				filters7.setOrder(7);
+
+				ColumnFilters filters8 = new ColumnFilters();
+				filters8.setSelected(true);
+				filters8.setFieldName("Payment Mode");
+				filters8.setOrder(8);
+
+				ColumnFilters filters9 = new ColumnFilters();
+				filters9.setSelected(true);
+				filters9.setFieldName("Total Amount");
+				filters9.setOrder(9);
+
+				ColumnFilters filters10 = new ColumnFilters();
+				filters10.setSelected(true);
+				filters10.setFieldName("Paid Amount");
+				filters10.setOrder(10);
+
+				ColumnFilters filters11 = new ColumnFilters();
+				filters11.setSelected(true);
+				filters11.setFieldName("Balance Amount");
+				filters11.setOrder(11);
+
+				ColumnFilters filters12 = new ColumnFilters();
+				filters12.setSelected(true);
+				filters12.setFieldName("Actual Total");
+				filters12.setOrder(12);
+
+				defaultColumnFilters.add(filters1);
+				defaultColumnFilters.add(filters2);
+				defaultColumnFilters.add(filters3);
+				defaultColumnFilters.add(filters4);
+				defaultColumnFilters.add(filters5);
+				defaultColumnFilters.add(filters6);
+				defaultColumnFilters.add(filters7);
+				defaultColumnFilters.add(filters8);
+				defaultColumnFilters.add(filters9);
+				defaultColumnFilters.add(filters10);
+				defaultColumnFilters.add(filters11);
+				defaultColumnFilters.add(filters12);
+
+				expenseFilterOptions.setFilterOptions(defaultColumnFilters);
+
+				filterOptionsRepositories.save(expenseFilterOptions);
+			}
+		};
+	}
 }
