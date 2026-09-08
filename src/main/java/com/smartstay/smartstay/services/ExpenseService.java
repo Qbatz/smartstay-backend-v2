@@ -136,6 +136,9 @@ public class ExpenseService {
         }
 
         String hostelId = payloads.hostelId();
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         String unitName = payloads.unitName().trim();
         Units existingUnit = unitsRepository.findByUnitNameIgnoreCaseAndHostelId(unitName, hostelId);
         if (existingUnit != null) {
@@ -174,6 +177,9 @@ public class ExpenseService {
         }
 
         String hostelId = payloads.hostelId();
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         Units existingUnit = unitsRepository.findByUnitIdAndHostelId(unitId, hostelId);
         if (existingUnit == null || !existingUnit.isEnabled()) {
             return new ResponseEntity<>(Utils.INVALID_UNIT, HttpStatus.BAD_REQUEST);
@@ -217,6 +223,9 @@ public class ExpenseService {
 
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         Units existingUnit = unitsRepository.findByUnitIdAndHostelId(unitId, hostelId);
@@ -716,8 +725,12 @@ public class ExpenseService {
 
         // Vendor must exist.
         Integer vendorKey = parseVendorId(vendorId);
-        if (vendorKey == null || vendorRepository.findByVendorId(vendorKey) == null) {
+        VendorV1 vendor = vendorKey != null ? vendorRepository.findByVendorId(vendorKey) : null;
+        if (vendor == null) {
             return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.BAD_REQUEST);
+        }
+        if (!subscriptionService.validateSubscription(vendor.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
         Integer vendorIdStr =vendorKey;
 
@@ -1802,6 +1815,9 @@ public class ExpenseService {
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
         }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         if (!expensesV1.isActive()) {
             return new ResponseEntity<>(Utils.EXPENSE_ALREADY_DELETED, HttpStatus.BAD_REQUEST);
         }
@@ -1926,6 +1942,9 @@ public class ExpenseService {
         }
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         Integer vendorId = expensesV1.getVendorId();
