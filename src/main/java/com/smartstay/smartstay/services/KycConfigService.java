@@ -24,12 +24,15 @@ public class KycConfigService {
         if (kycConfig.getCanRequest() != null && !kycConfig.getCanRequest()) {
             return new KycRequestMessage(false, 0, Utils.KYC_REQUEST_DISABLED);
         }
-        if (kycConfig.getLimitPerMonth() == null) {
-            return new KycRequestMessage(true, -1, null);
+        else {
+            if (kycConfig.getLimitPerMonth() == null) {
+                return new KycRequestMessage(true, -1, null);
+            }
+            if (kycConfig.getLimitPerMonth() < 0) {
+                return new KycRequestMessage(true, 0, Utils.KYC_REQUEST_DISABLED);
+            }
         }
-        if (kycConfig.getLimitPerMonth() < 0) {
-            return new KycRequestMessage(false, 0, Utils.KYC_REQUEST_DISABLED);
-        }
+
         return new KycRequestMessage(true, kycConfig.getLimitPerMonth(), null);
     }
 

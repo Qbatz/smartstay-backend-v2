@@ -2053,24 +2053,24 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                //done additional invoices
+                //done other invoice amount
                 return getInformationForPostpaidSettlements(customers, lDate, bookingDetails, billDate);
             }
         } else {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
-                //done additional invoices
+                //done other invoice amount
                 return getFinalSettlementInfoFotJoiningBasedPrepaid(customers, lDate, bookingDetails);
             }
         }
 
         if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
             settlementDetailsService.addSettlementForCustomer(customerId, lDate);
-            //done additional invoices
+            //done other invoice amount
             FinalSettlement finalSettlement = getFinalSettlementInfoForBedChange(customers, bookingDetails, billDate, lDate);
 
             return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
         }
-        //added additional invoices
+        //added other invoice amount
         settlementDetailsService.addSettlementForCustomer(customerId, lDate);
         FinalSettlement finalSettlement = getFinalSettlementForPrepaidFixed(customers, bookingDetails, billDate, lDate);
 
@@ -2200,6 +2200,7 @@ public class CustomersService {
             advanceItems = new AdvanceItems("Refundable Advance", InvoiceType.ADVANCE.name(), 0.0, 0.0, 0.0, null, null);
         }
         double walletAmount = 0.0;
+        double currentMonthOtherInvoiceAmount = 0.0;
         if (customers.getWallet() != null) {
             if (customers.getWallet().getAmount() != null) {
                 walletAmount = customers.getWallet().getAmount();
@@ -2216,6 +2217,15 @@ public class CustomersService {
             }
         }
 
+        if (currentMonthRentInfo.otherInvoicesInfo() != null) {
+
+            OtherInvoicesInfo otherInvoicesInfo = currentMonthRentInfo.otherInvoicesInfo();
+            if (otherInvoicesInfo.totalPendingAmount() != null) {
+//                payableAmount = payableAmount + otherInvoicesInfo.totalPendingAmount();
+                currentMonthOtherInvoiceAmount = otherInvoicesInfo.totalPendingAmount();
+            }
+        }
+
 
         if (ebInfo != null) {
             ebAmount = ebInfo.pendingEbAmount();
@@ -2224,7 +2234,7 @@ public class CustomersService {
         com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
         unpaidInvoiceAmount = unpaidInvoices.unpaidAmount();
-        amountToBePaid = unpaidInvoices.invoiceTotalAmount() + ebAmount + walletAmount;
+        amountToBePaid = unpaidInvoices.invoiceTotalAmount() + ebAmount + walletAmount + currentMonthOtherInvoiceAmount;
         double paidAmount = unpaidInvoices.paidAmount();
         double retainerBalance = 0.0;
         payableRent = unpaidInvoices.unpaidAmount();
@@ -2402,12 +2412,21 @@ public class CustomersService {
 
         String label = null;
         double payableAmount = 0.0;
+        double currentMonthOtherInvoiceAmount = 0.0;
         if (currentMonthRentInfo.currentRentPaid() > currentMonthRentInfo.currentPayableRent()) {
             label = "Refundable rent";
             payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
         } else {
             label = "Payable rent";
             payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+        }
+        if (currentMonthRentInfo.otherInvoicesInfo() != null) {
+
+            OtherInvoicesInfo otherInvoicesInfo = currentMonthRentInfo.otherInvoicesInfo();
+            if (otherInvoicesInfo.totalPendingAmount() != null) {
+//                payableAmount = payableAmount + otherInvoicesInfo.totalPendingAmount();
+                currentMonthOtherInvoiceAmount = otherInvoicesInfo.totalPendingAmount();
+            }
         }
         double walletAmount = 0.0;
         if (customers.getWallet() != null) {
@@ -2439,7 +2458,7 @@ public class CustomersService {
 //        }
 
         totalAmountToBePaid = totalAmountToBePaid - availableTotalAmountToReddem - paidAmount;
-        totalAmountToBePaid = totalAmountToBePaid + deductionAmount;
+        totalAmountToBePaid = totalAmountToBePaid + deductionAmount + currentMonthOtherInvoiceAmount;
         if (retainerInfo != null) {
             retainerBalance = retainerInfo.totalAvailableAmount();
             totalAmountToBePaid = totalAmountToBePaid - retainerInfo.totalAvailableAmount();
@@ -2628,12 +2647,21 @@ public class CustomersService {
 
         String label = null;
         double payableAmount = 0.0;
+        double currentMonthOtherInvoiceAmount = 0.0;
         if (currentMonthRentInfo.currentRentPaid() > currentMonthRentInfo.currentPayableRent()) {
             label = "Refundable rent";
             payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
         } else {
             label = "Payable rent";
             payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
+        }
+        if (currentMonthRentInfo.otherInvoicesInfo() != null) {
+
+            OtherInvoicesInfo otherInvoicesInfo = currentMonthRentInfo.otherInvoicesInfo();
+            if (otherInvoicesInfo.totalPendingAmount() != null) {
+//                payableAmount = payableAmount + otherInvoicesInfo.totalPendingAmount();
+                currentMonthOtherInvoiceAmount = otherInvoicesInfo.totalPendingAmount();
+            }
         }
         double walletAmount = 0.0;
         if (customers.getWallet() != null) {
@@ -2652,7 +2680,7 @@ public class CustomersService {
 
         com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
-        double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentMonthTotalAmount();
+        double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentMonthTotalAmount() + currentMonthOtherInvoiceAmount;
         double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
 //        double totalDeductions = 0.0;
         double payableRent = unpaidInvoicesInfo.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
@@ -2866,8 +2894,26 @@ public class CustomersService {
         double currentMonthRentOnly = currentMonthPayableAmount - otherItemAMount[0];
         priceDifference = fullRent - currentMonthRentOnly;
 
+        OtherInvoicesInfo otherInvoicesInfo = invoiceService.getCurrentMonthOtherInvoices(customers.getHostelId(), customers.getCustomerId(), currentMonthBillingDates);
 
-        return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent), currentRentPaid, stayDays, currentMonthRent, currentMonthPayableAmount, Utils.roundOffWithTwoDigit(currentMonthPayableAmount), currentInvoiceStartDate, currentInvoiceEndDate, null, Utils.roundOffWithTwoDigit(otherItemAMount[0]), false, 0.0, fullRent, Utils.roundOffWithTwoDigit(priceDifference), currentMonthOtherItems, listRentBreakup);
+
+        return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent),
+                currentRentPaid,
+                stayDays,
+                currentMonthRent,
+                currentMonthPayableAmount,
+                Utils.roundOffWithTwoDigit(currentMonthPayableAmount),
+                currentInvoiceStartDate,
+                currentInvoiceEndDate,
+                null,
+                Utils.roundOffWithTwoDigit(otherItemAMount[0]),
+                false,
+                0.0,
+                fullRent,
+                Utils.roundOffWithTwoDigit(priceDifference),
+                currentMonthOtherItems,
+                listRentBreakup,
+                otherInvoicesInfo);
     }
 
     /**
@@ -2910,6 +2956,7 @@ public class CustomersService {
         double availableAdvanceAmountToReddem = 0.0;
         double availableBookingAmountToRedeem = 0.0;
         double availableTotalAmountToReddem = 0.0;
+        double currentMonthOtherInvoiceAmount = 0.0;
 
         DeductionsInfo deductionsInfo = null;
         double deductionAmount = 0.0;
@@ -3004,6 +3051,14 @@ public class CustomersService {
             label = "Payable rent";
             payableAmount = currentMonthRentInfo.currentMonthPayableAmount();
         }
+        if (currentMonthRentInfo.otherInvoicesInfo() != null) {
+
+            OtherInvoicesInfo otherInvoicesInfo = currentMonthRentInfo.otherInvoicesInfo();
+            if (otherInvoicesInfo.totalPendingAmount() != null) {
+//                payableAmount = payableAmount + otherInvoicesInfo.totalPendingAmount();
+                currentMonthOtherInvoiceAmount = otherInvoicesInfo.totalPendingAmount();
+            }
+        }
         double walletAmount = 0.0;
         if (customers.getWallet() != null) {
             CustomerWallet wallet = customers.getWallet();
@@ -3020,7 +3075,7 @@ public class CustomersService {
 
         com.smartstay.smartstay.dto.wallet.WalletInfo walletInfo = new com.smartstay.smartstay.dto.wallet.WalletInfo(Utils.roundOffWithTwoDigit(walletAmount), listWallets);
 
-        double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentMonthTotalAmount();
+        double totalAmountToBePaid = unpaidInvoicesInfo.invoiceTotalAmount() + ebAmount + walletInfo.walletAmount() + currentMonthRentInfo.currentMonthTotalAmount() + currentMonthOtherInvoiceAmount;
         double paidAmount = unpaidInvoicesInfo.paidAmount() + currentMonthRentInfo.currentRentPaid();
         double totalDeductions = 0.0;
         double payableRent = unpaidInvoicesInfo.unpaidAmount() + currentMonthRentInfo.currentMonthPayableAmount();
@@ -3132,14 +3187,14 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                //cancelled new update completed
+                //done cancelling other invoices
                 return generateFinalSettlementForFixedPostpaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             } else {
                 if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
-                    //cancelled new update completed
+                    //done cancelling other invoices
                     return generateFinalSettlementForBedChange(customers, bookingDetails, billDate, cbh, settlement, settlementDetails, users, isFullRentCollected, customRent);
                 }
-                //cancelled payment
+                //done cancelling other invoices
                 return generateFinalSettlementInvoiceForFixedPrepaid(customers, settlementDetails.getLeavingDate(), bookingDetails, billDate, settlement, users, isFullRentCollected, customRent);
             }
         } else {

@@ -17,10 +17,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.bills.BillTemplates;
 import com.smartstay.smartstay.dto.bills.PaymentSummary;
-import com.smartstay.smartstay.dto.customer.Deductions;
-import com.smartstay.smartstay.dto.customer.InvoiceRefundHistory;
-import com.smartstay.smartstay.dto.customer.ReassignRent;
-import com.smartstay.smartstay.dto.customer.Summary;
+import com.smartstay.smartstay.dto.customer.*;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.invoiceNotes.InvoiceNotes;
 import com.smartstay.smartstay.dto.invoices.*;
@@ -44,6 +41,8 @@ import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.InvoiceRedemption.AvailableInvoices;
 import com.smartstay.smartstay.responses.InvoiceRedemption.SelectedInvoiceInfo;
 import com.smartstay.smartstay.responses.bookings.AdvanceInfo;
+import com.smartstay.smartstay.responses.settlement.RetainerInfo;
+import com.smartstay.smartstay.responses.settlement.WalletInfo;
 import com.smartstay.smartstay.responses.templates.TemplateTypes;
 import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.responses.bookings.*;
@@ -5288,8 +5287,24 @@ public class InvoiceV1Service {
                 }
             }
 
+            OtherInvoicesInfo otherInvoicesInfo = getCurrentMonthOtherInvoices(customers.getHostelId(), customers.getCustomerId(), billingDates);
 
-            return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent), Utils.roundOffWithTwoDigit(currentMonthPaidRent), (int) totalDaysStayed, Utils.roundOffWithTwoDigit(monthlyRent), Utils.roundOffWithTwoDigit(currentMonthTotalAmount), Utils.roundOffWithTwoDigit(currentMonthPayableAmount), Utils.dateToString(currentMonthStartDate), Utils.dateToString(billingDates.currentBillEndDate()), runningInvoice.getInvoiceId(), otherItemAmount.get(), isDiscountApplied.get(), discountAmount, fullRent, Utils.roundOffWithTwoDigit(priceDifference), otherItems, listRentBreakup);
+            return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
+                    Utils.roundOffWithTwoDigit(currentMonthPaidRent),
+                    (int) totalDaysStayed,
+                    Utils.roundOffWithTwoDigit(monthlyRent),
+                    Utils.roundOffWithTwoDigit(currentMonthTotalAmount),
+                    Utils.roundOffWithTwoDigit(currentMonthPayableAmount),
+                    Utils.dateToString(currentMonthStartDate),
+                    Utils.dateToString(billingDates.currentBillEndDate()),
+                    runningInvoice.getInvoiceId(),
+                    otherItemAmount.get(),
+                    isDiscountApplied.get(),
+                    discountAmount, fullRent,
+                    Utils.roundOffWithTwoDigit(priceDifference),
+                    otherItems,
+                    listRentBreakup,
+                    otherInvoicesInfo);
 
         }
         return null;
@@ -5440,7 +5455,24 @@ public class InvoiceV1Service {
                 }
             }
 
-            return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent), Utils.roundOffWithTwoDigit(currentMonthPaidRent), (int) totalNoOfDaysStayed, Utils.roundOffWithTwoDigit(monthlyRent), Utils.roundOffWithTwoDigit(currentMonthTotalAmount), Utils.roundOffWithTwoDigit(currentMonthPayableAmount), Utils.dateToString(currentMonthStartDate), Utils.dateToString(billingDates.currentBillEndDate()), runningInvoice.getInvoiceId(), otherItemAmount.get(), isDiscountApplied.get(), discountAmount, fullRent, Utils.roundOffWithTwoDigit(priceDifference), otherItems, listRentBreakup);
+            OtherInvoicesInfo otherInvoicesInfo = getCurrentMonthOtherInvoices(customers.getHostelId(), customers.getCustomerId(), billingDates);
+            return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
+                    Utils.roundOffWithTwoDigit(currentMonthPaidRent),
+                    (int) totalNoOfDaysStayed,
+                    Utils.roundOffWithTwoDigit(monthlyRent),
+                    Utils.roundOffWithTwoDigit(currentMonthTotalAmount),
+                    Utils.roundOffWithTwoDigit(currentMonthPayableAmount),
+                    Utils.dateToString(currentMonthStartDate),
+                    Utils.dateToString(billingDates.currentBillEndDate()),
+                    runningInvoice.getInvoiceId(),
+                    otherItemAmount.get(),
+                    isDiscountApplied.get(),
+                    discountAmount,
+                    fullRent,
+                    Utils.roundOffWithTwoDigit(priceDifference),
+                    otherItems,
+                    listRentBreakup,
+                    otherInvoicesInfo);
 
         }
 
@@ -5664,6 +5696,10 @@ public class InvoiceV1Service {
                 listInvoices.addAll(invoices);
             }
 
+        }
+        List<InvoicesV1> listOtherInvoices = invoicesV1Repository.findUnpaidOtherInvoices(customers.getCustomerId());
+        if (listOtherInvoices != null) {
+            listInvoices.addAll(listOtherInvoices);
         }
 
         List<InvoicesV1> invoicesHasToBeCancelled = listInvoices.stream().map(i -> {
@@ -6247,6 +6283,7 @@ public class InvoiceV1Service {
         String floorName = null;
         String roomName = null;
         boolean status = true;
+        String redemptionStatus = null;
         String message = "Can be redeemed";
 
         if (advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
@@ -6260,7 +6297,27 @@ public class InvoiceV1Service {
             message = "No invoices available for redemption";
         }
 
-        AdvanceInfo advanceInfo = new AdvanceInfo(advanceInvoices.getTotalAmount(), advanceInvoices.getBalanceAmount(), Utils.dateToString(advanceInvoices.getInvoiceStartDate()), advanceInvoices.getInvoiceType(), advanceInvoices.getInvoiceId(), advanceInvoices.getInvoiceNumber(), status, message, advanceInvoices.getPaymentStatus());
+        if (advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || advanceInvoices.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            if (advanceInvoices.getPaidAmount() != null) {
+                if (advanceInvoices.getBalanceAmount() != null) {
+                    double deduction = 0.0;
+                    if (advanceInvoices.getDeductionAmount() != null) {
+                        deduction = advanceInvoices.getDeductionAmount();
+                    }
+                    double totalAmount = advanceInvoices.getPaidAmount() - deduction;
+                    if (advanceInvoices.getBalanceAmount() == totalAmount) {
+                        redemptionStatus = "Available";
+                    }
+                    else if (advanceInvoices.getBalanceAmount() > 0 && advanceInvoices.getBalanceAmount() < totalAmount) {
+                        redemptionStatus = "Partially redeemed";
+                    }
+                    else {
+                        redemptionStatus = "Redeemed";
+                    }
+                }
+            }
+        }
+        AdvanceInfo advanceInfo = new AdvanceInfo(advanceInvoices.getTotalAmount(), advanceInvoices.getBalanceAmount(), Utils.dateToString(advanceInvoices.getInvoiceStartDate()), advanceInvoices.getInvoiceType(), advanceInvoices.getInvoiceId(), advanceInvoices.getInvoiceNumber(), status, message, advanceInvoices.getPaymentStatus(), redemptionStatus);
 
         BookingsV1 bookingsV1 = bookingsService.getBookingsByCustomerId(advanceInvoices.getCustomerId());
         BedDetails bedDetails = null;
@@ -6338,8 +6395,22 @@ public class InvoiceV1Service {
         if (type != null && type.trim().equalsIgnoreCase("Credit")) {
             InvoicesV1 bookingInvoice = invoicesV1Repository.findBookingInvoice(hostelId, invoicesV1.getCustomerId());
             if (bookingInvoice != null) {
-
-                invoiceInfoList = new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(bookingInvoice.getInvoiceId(), bookingInvoice.getInvoiceNumber(), bookingInvoice.getInvoiceType(), bookingInvoice.getTotalAmount(), bookingInvoice.getPaidAmount(), bookingInvoice.getBalanceAmount() != null ? Math.round(bookingInvoice.getBalanceAmount() * 100.0) / 100.0 : null, Utils.dateToString(bookingInvoice.getInvoiceStartDate()), Utils.dateToString(bookingInvoice.getInvoiceDueDate()));
+                String redemptionStatus = null;
+                if (bookingInvoice.getTotalAmount() != null) {
+                    if (bookingInvoice.getBalanceAmount() != null) {
+                        double totalAmount = bookingInvoice.getTotalAmount();
+                        if (totalAmount == bookingInvoice.getBalanceAmount()) {
+                            redemptionStatus = "Available";
+                        }
+                        else if (bookingInvoice.getBalanceAmount() < totalAmount && bookingInvoice.getBalanceAmount() > 0) {
+                            redemptionStatus = "Partially Redeemed";
+                        }
+                        else {
+                            redemptionStatus = "Redemmed";
+                        }
+                    }
+                }
+                invoiceInfoList = new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(bookingInvoice.getInvoiceId(), bookingInvoice.getInvoiceNumber(), bookingInvoice.getInvoiceType(), bookingInvoice.getTotalAmount(), bookingInvoice.getPaidAmount(), bookingInvoice.getBalanceAmount() != null ? Math.round(bookingInvoice.getBalanceAmount() * 100.0) / 100.0 : null, Utils.dateToString(bookingInvoice.getInvoiceStartDate()), Utils.dateToString(bookingInvoice.getInvoiceDueDate()), redemptionStatus);
 
                 AvailableInvoices availableInvoices = new AvailableInvoices(customerInfo, invoiceInfoList, null, selectedInvoiceInfo);
 
@@ -6354,7 +6425,22 @@ public class InvoiceV1Service {
                         .stream()
                         .filter(i -> i.getInvoiceId().equalsIgnoreCase(invoiceId))
                         .map(i -> {
-                            return new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(i.getInvoiceId(), i.getInvoiceNumber(), i.getInvoiceType(), i.getTotalAmount(), i.getPaidAmount(), i.getBalanceAmount() != null ? Utils.roundOfDouble(i.getBalanceAmount()) : null, Utils.dateToString(i.getInvoiceStartDate()), Utils.dateToString(i.getInvoiceDueDate()));
+                            String redemptionStatus = null;
+                            if (i.getTotalAmount() != null) {
+                                if (i.getBalanceAmount() != null) {
+                                    double totalAmount = i.getTotalAmount();
+                                    if (totalAmount == i.getBalanceAmount()) {
+                                        redemptionStatus = "Available";
+                                    }
+                                    else if (i.getBalanceAmount() < totalAmount && i.getBalanceAmount() > 0) {
+                                        redemptionStatus = "Partially Redeemed";
+                                    }
+                                    else {
+                                        redemptionStatus = "Redemmed";
+                                    }
+                                }
+                            }
+                            return new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(i.getInvoiceId(), i.getInvoiceNumber(), i.getInvoiceType(), i.getTotalAmount(), i.getPaidAmount(), i.getBalanceAmount() != null ? Utils.roundOfDouble(i.getBalanceAmount()) : null, Utils.dateToString(i.getInvoiceStartDate()), Utils.dateToString(i.getInvoiceDueDate()), redemptionStatus);
                         })
                         .toList();
                 existingAdvance = advanceInvoice
@@ -6364,7 +6450,22 @@ public class InvoiceV1Service {
                         .orElse(null);
 
                 if (existingAdvance != null &&  !existingAdvance.getInvoiceId().equalsIgnoreCase(invoiceId)) {
-                    invoiceInfoList = new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(existingAdvance.getInvoiceId(), existingAdvance.getInvoiceNumber(), existingAdvance.getInvoiceType(), existingAdvance.getTotalAmount(), existingAdvance.getPaidAmount(), existingAdvance.getBalanceAmount() != null ? Utils.roundOfDouble(existingAdvance.getBalanceAmount()): null, Utils.dateToString(existingAdvance.getInvoiceStartDate()), Utils.dateToString(existingAdvance.getInvoiceDueDate()));
+                    String redemptionStatus = null;
+                    if (existingAdvance.getTotalAmount() != null) {
+                        if (existingAdvance.getBalanceAmount() != null) {
+                            double totalAmount = existingAdvance.getTotalAmount();
+                            if (totalAmount == existingAdvance.getBalanceAmount()) {
+                                redemptionStatus = "Available";
+                            }
+                            else if (existingAdvance.getBalanceAmount() < totalAmount && existingAdvance.getBalanceAmount() > 0) {
+                                redemptionStatus = "Partially Redeemed";
+                            }
+                            else {
+                                redemptionStatus = "Redemmed";
+                            }
+                        }
+                    }
+                    invoiceInfoList = new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(existingAdvance.getInvoiceId(), existingAdvance.getInvoiceNumber(), existingAdvance.getInvoiceType(), existingAdvance.getTotalAmount(), existingAdvance.getPaidAmount(), existingAdvance.getBalanceAmount() != null ? Utils.roundOfDouble(existingAdvance.getBalanceAmount()): null, Utils.dateToString(existingAdvance.getInvoiceStartDate()), Utils.dateToString(existingAdvance.getInvoiceDueDate()), redemptionStatus);
                 }
 
                 AvailableInvoices availableInvoices = new AvailableInvoices(customerInfo, invoiceInfoList, invoiceInfoListArray, selectedInvoiceInfo);
@@ -6373,8 +6474,22 @@ public class InvoiceV1Service {
             } else {
                 InvoicesV1 bookingInvoice = invoicesV1Repository.findBookingInvoice(hostelId, invoicesV1.getCustomerId());
                 if (bookingInvoice != null) {
-
-                    invoiceInfoList = new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(bookingInvoice.getInvoiceId(), bookingInvoice.getInvoiceNumber(), bookingInvoice.getInvoiceType(), bookingInvoice.getTotalAmount(), bookingInvoice.getPaidAmount(), bookingInvoice.getBalanceAmount() != null ? Math.round(bookingInvoice.getBalanceAmount() * 100.0) / 100.0 : null, Utils.dateToString(bookingInvoice.getInvoiceStartDate()), Utils.dateToString(bookingInvoice.getInvoiceDueDate()));
+                    String redemptionStatus = null;
+                    if (bookingInvoice.getTotalAmount() != null) {
+                        if (bookingInvoice.getBalanceAmount() != null) {
+                            double totalAmount = bookingInvoice.getTotalAmount();
+                            if (totalAmount == bookingInvoice.getBalanceAmount()) {
+                                redemptionStatus = "Available";
+                            }
+                            else if (bookingInvoice.getBalanceAmount() < totalAmount && bookingInvoice.getBalanceAmount() > 0) {
+                                redemptionStatus = "Partially Redeemed";
+                            }
+                            else {
+                                redemptionStatus = "Redemmed";
+                            }
+                        }
+                    }
+                    invoiceInfoList = new com.smartstay.smartstay.responses.InvoiceRedemption.InvoiceInfo(bookingInvoice.getInvoiceId(), bookingInvoice.getInvoiceNumber(), bookingInvoice.getInvoiceType(), bookingInvoice.getTotalAmount(), bookingInvoice.getPaidAmount(), bookingInvoice.getBalanceAmount() != null ? Math.round(bookingInvoice.getBalanceAmount() * 100.0) / 100.0 : null, Utils.dateToString(bookingInvoice.getInvoiceStartDate()), Utils.dateToString(bookingInvoice.getInvoiceDueDate()), redemptionStatus);
 
                     AvailableInvoices availableInvoices = new AvailableInvoices(customerInfo, invoiceInfoList, null, selectedInvoiceInfo);
 
@@ -7562,5 +7677,73 @@ public class InvoiceV1Service {
         }
 
         return additionalAdvances;
+    }
+
+    public OtherInvoicesInfo getCurrentMonthOtherInvoices(String hostelId, String customerId, BillingDates currentMonthBillingDates) {
+        List<InvoicesV1> listInvoices = invoicesV1Repository.findOtherInvoicesBasedOnDate(customerId, currentMonthBillingDates.currentBillStartDate(), currentMonthBillingDates.currentBillEndDate());
+        if (listInvoices != null && !listInvoices.isEmpty()) {
+            OtherInvoicesInfo otherInvoicesInfo = null;
+            double totalInvoiceAmount = listInvoices
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getTotalAmount() != null) {
+                            return i.getTotalAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            double paidAmount = listInvoices
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getPaidAmount() != null) {
+                            return i.getPaidAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            double pendingAmount = totalInvoiceAmount - paidAmount;
+            List<OtherInvoices> listInvoicesItems = listInvoices
+                    .stream()
+                    .map(i -> {
+                        double invoiceAmount = 0.0;
+                        double pAmount = 0.0;
+                        if (i.getTotalAmount() != null) {
+                            invoiceAmount = i.getTotalAmount();
+                        }
+                        if (i.getPaidAmount() != null) {
+                            pAmount = i.getPaidAmount();
+                        }
+                        double invoicePending = invoiceAmount - pAmount;
+                        String notes = null;
+                        String invoiceDate = null;
+                        if (i.getInvoiceDate() != null) {
+                            invoiceDate = Utils.dateToString(i.getInvoiceDate());
+                        }
+                        else {
+                            invoiceDate = Utils.dateToString(i.getInvoiceStartDate());
+                        }
+                        List<InvoiceDescription> descriptions = new ArrayList<>();
+                        if (i.getInvoiceItems() != null) {
+                            descriptions = i.getInvoiceItems()
+                                    .stream()
+                                    .map(i2 -> new InvoiceDescription(i2.getOtherItem(), Utils.roundOfDouble(i2.getAmount())))
+                                    .toList();
+                        }
+                        return new OtherInvoices(i.getInvoiceNumber(),
+                                invoiceDate,
+                                i.getInvoiceId(),
+                                invoiceAmount, pAmount, invoicePending, descriptions);
+                    })
+                    .toList();
+
+            otherInvoicesInfo = new OtherInvoicesInfo(Utils.roundOffWithTwoDigit(totalInvoiceAmount),
+                    Utils.roundOffWithTwoDigit(paidAmount),
+                    Utils.roundOffWithTwoDigit(pendingAmount),
+                    listInvoices.size(),
+                    listInvoicesItems);
+
+            return otherInvoicesInfo;
+        }
+        return new OtherInvoicesInfo(0.0, 0.0, 0.0, 0, null);
     }
 }

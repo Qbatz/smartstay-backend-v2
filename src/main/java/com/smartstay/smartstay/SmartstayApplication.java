@@ -79,8 +79,8 @@ public class SmartstayApplication {
 //                        config.setCanRequest(true);
 //                        config.setHostelId(i.getHostelId());
 //                        config.setLimitPerMonth(-1);
-//                        config.setCreatedBy("79e5e371-cc94-4273-9fd9-22ec23bc37ce");
-//                        config.setUpdatedBy("79e5e371-cc94-4273-9fd9-22ec23bc37ce");
+//                        config.setCreatedBy("f1495a1c-5bfc-438d-94f9-435b07bd157f");
+//                        config.setUpdatedBy("f1495a1c-5bfc-438d-94f9-435b07bd157f");
 //                        config.setCreatedAt(new Date());
 //                        config.setUpdatedAt(new Date());
 //                        return config;

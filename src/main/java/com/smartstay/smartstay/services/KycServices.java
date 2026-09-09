@@ -555,9 +555,13 @@ public class KycServices {
                         return new ResponseEntity<>(HttpStatus.CREATED);
                     }
                 }
+                else if (verifyKycResponse.getStatus().equalsIgnoreCase("expired")) {
+                    customerNotificationService.sendKycNotification(customers, customers.getKycDetails(), users, customers.getHostelId());
+                    return new ResponseEntity<>(HttpStatus.CREATED);
+                }
                 else {
                     if (actionId != null) {
-                        if (rerequestKYC(customers, actionId)) {
+                        if (rerequestKYC(customers, actionId, entityId)) {
                             customerNotificationService.sendKycNotification(customers, customers.getKycDetails(), users, customers.getHostelId());
                             return new ResponseEntity<>(HttpStatus.CREATED);
                         }
@@ -625,8 +629,8 @@ public class KycServices {
      * @param actionId
      * @return
      */
-    public boolean rerequestKYC(Customers customers, String actionId) {
-        String endPoint = "client/kyc/v2/request/" + customers.getMobile() + "/reattempt";
+    public boolean rerequestKYC(Customers customers, String actionId, String entytyId) {
+        String endPoint = "client/kyc/v2/request/" + entytyId + "/reattempt";
         String verifyKycUrl = KYC_BASE_URL + "/" + endPoint;
 
         String auth = KYC_USER_NAME + ":" + KYC_PASSWORD;

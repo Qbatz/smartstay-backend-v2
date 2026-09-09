@@ -165,6 +165,12 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findByCustomerIdAndInvoiceTypeIn(String customerId, List<String> types);
 
     @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId=:customerId AND i.invoiceType='OTHER' AND 
+            DATE(i.invoiceStartDate) <= DATE(:endDate) AND DATE(i.invoiceEndDate) >= DATE(:startDate) AND i.isCancelled=false
+            """)
+    List<InvoicesV1> findOtherInvoicesBasedOnDate(String customerId, Date startDate, Date endDate);
+
+    @Query("""
             SELECT inv.customerId, inv.invoiceId FROM InvoicesV1 inv where (inv.paidAmount IS NULL OR inv.paidAmount<inv.totalAmount)
              and inv.invoiceDueDate<DATE(:todaysDate) and inv.customerId in (:customerIds) and inv.invoiceType IN ('RENT','REASSIGN_RENT', 'ADVANCE', 'ADDITIONAL_ADVANCE')
             """)
@@ -418,6 +424,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType IN ('ADDITIONAL_ADVANCE', 'ADVANCE')
             """)
     List<InvoicesV1> findAllAdvanceInvoices(String customerId);
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId=:customerId AND i.invoiceType='OTHER' AND i.isCancelled=false
+            """)
+    List<InvoicesV1> findUnpaidOtherInvoices(String customerId);
 
     @Query("""
             SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId=:customerId AND i.invoiceType IN (:invoiceTypes) 
@@ -473,20 +483,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findPendingByHostelIdAndCustomerId(String hostelId, String customerId);
 
     @Query("""
-            SELECT i FROM InvoicesV1 i WHERE i.invoiceType='ADVANCE' AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND i.isCancelled=false
-            """)
-    List<InvoicesV1> findPaidAdvanceInvoices();
-
-    @Query("""
-            SELECT i FROM InvoicesV1 i WHERE i.customerId=:customerId AND i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADVANCE') AND 
+            SELECT i FROM InvoicesV1 i WHERE i.customerId=:customerId AND i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADVANCE', 'OTHER', 'ADDITIONAL_ADVANCE') AND 
             i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') AND i.isCancelled=false
             """)
     List<InvoicesV1> findUnpaidInvoices(String customerId);
-
-    @Query("""
-            SELECT i FROM InvoicesV1 i WHERE i.invoiceType = 'SETTLEMENT'
-            """)
-    List<InvoicesV1> findSettlementInvoice();
 
     @Query("""
                 SELECT i

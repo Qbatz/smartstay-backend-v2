@@ -2,6 +2,7 @@ package com.smartstay.smartstay.dao;
 
 import com.smartstay.smartstay.converters.*;
 import com.smartstay.smartstay.dto.settlement.*;
+import com.smartstay.smartstay.responses.customer.AdditionalAdvances;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,6 +31,9 @@ public class SettlementItems {
     @Column(columnDefinition = "TEXT")
     @Convert(converter = CurrentOtherItemConverter.class)
     private List<CurrentOtherItems> currentMonthOtherItems;
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = AdditionalAdvanceConverter.class)
+    private List<AdditionlAdvance> additionalAdvanceItems;
     @Column(columnDefinition = "TEXT")
     @Convert(converter = SettlementEBItemsConverter.class)
     private List<EBItems> ebItems;

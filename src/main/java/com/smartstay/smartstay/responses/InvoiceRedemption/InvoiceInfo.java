@@ -7,5 +7,6 @@ public record InvoiceInfo(String invoiceId,
                           Double paidAmount,
                           Double availableBalance,
                           String invoiceDate,
-                          String dueDate) {
+                          String dueDate,
+                          String redemptionStatus) {
 }
