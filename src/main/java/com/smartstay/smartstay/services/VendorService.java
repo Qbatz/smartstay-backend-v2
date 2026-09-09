@@ -1083,6 +1083,9 @@ public class VendorService {
         }
 
         String hostelId = payloads.hostelId();
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
         String categoryName = payloads.categoryName().trim();
         VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryNameIgnoreCaseAndHostelId(categoryName, hostelId);
         if (existingCategory != null) {
@@ -1119,6 +1122,9 @@ public class VendorService {
 
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         VendorCategories existingCategory = vendorCategoriesRepository.findByCategoryIdAndHostelId(categoryId, hostelId);
@@ -1161,6 +1167,9 @@ public class VendorService {
 
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_VENDOR, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
         // Only the name is updateable; reject a blank name (bean validation covers null/empty, this
