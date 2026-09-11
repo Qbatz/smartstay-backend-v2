@@ -76,6 +76,7 @@ public class ExpenseController {
                                          @RequestParam(value = "maxAmount", required = false) Double maxAmount,
                                          @RequestParam(value = "startDate", required = false) String startDate,
                                          @RequestParam(value = "endDate", required = false) String endDate,
+                                         @RequestParam(value = "period", required = false) String period,
                                          @RequestParam(value = "page", defaultValue = "1") int page,
                                          @RequestParam(value = "size", defaultValue = "10") int size) {
         // Prefer the documented parameter names (query/category); fall back to the legacy names
@@ -83,7 +84,7 @@ public class ExpenseController {
         String search = (query != null && !query.isBlank()) ? query : name;
         Integer categoryFilter = category != null ? category : categoryId;
         return expenseService.getAllExpenses(hostelId, search, categoryFilter, paymentStatus, paymentDate,
-                vendorId, subCategoryId, paymentMode, createdBy, minAmount, maxAmount, startDate, endDate,
+                vendorId, subCategoryId, paymentMode, createdBy, minAmount, maxAmount, startDate, endDate, period,
                 page, size);
     }
 
