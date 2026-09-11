@@ -177,12 +177,21 @@ public class CustomerJobDetailsService {
 
     @Transactional
     public ResponseEntity<?> replaceJobs(String hostelId, String customerId, List<CustomerJob> jobs, Users users) {
-        for (CustomerJob job : jobs) {
-            if (job != null && (differs(job.hostelId(), hostelId) || differs(job.customerId(), customerId))) {
-                return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
-            }
+        if (!belongsToTenant(hostelId, customerId, jobs)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
         }
+        saveJobs(hostelId, customerId, jobs);
+        usersService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.ADD_JOB, users);
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
 
+    public boolean belongsToTenant(String hostelId, String customerId, List<CustomerJob> jobs) {
+        return jobs.stream().allMatch(job -> job == null
+                || (!differs(job.hostelId(), hostelId) && !differs(job.customerId(), customerId)));
+    }
+
+    @Transactional
+    public void saveJobs(String hostelId, String customerId, List<CustomerJob> jobs) {
         Date now = new Date();
         String userId = authentication.getName();
 
@@ -219,9 +228,6 @@ public class CustomerJobDetailsService {
                 })
                 .toList();
         jobDetailsRepository.saveAll(rows);
-
-        usersService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.ADD_JOB, users);
-        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
     public List<CustomerJob> getCustomerJobs(String hostelId, String customerId) {

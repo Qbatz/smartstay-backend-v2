@@ -1457,8 +1457,14 @@ public class CustomersServiceV2 {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
-        if (additionalData.guardians() == null && additionalData.jobDetails() == null) {
+        if (additionalData.guardians() == null && additionalData.jobDetails() == null && additionalData.customerJobs() == null) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        boolean useJobList = (additionalData.jobDetails() == null || !additionalData.jobDetails().hasJobFields())
+                && additionalData.customerJobs() != null;
+        if (useJobList && !customerJobDetailsService.belongsToTenant(hostelId, customerId, additionalData.customerJobs())) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
         }
 
         if (additionalData.guardians() != null) {
@@ -1482,7 +1488,9 @@ public class CustomersServiceV2 {
             additionalContactService.addAdditionalContacts(hostelId, customerId, additionalData.guardians());
 
         }
-        if (additionalData.jobDetails() != null) {
+        if (useJobList) {
+            customerJobDetailsService.saveJobs(hostelId, customerId, additionalData.customerJobs());
+        } else if (additionalData.jobDetails() != null) {
             customerJobDetailsService.addJobDetails(hostelId, customerId, additionalData.jobDetails());
         }
 
