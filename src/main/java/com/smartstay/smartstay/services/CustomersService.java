@@ -4317,7 +4317,6 @@ public class CustomersService {
         } else if (purpose.equals(GetCustomersPurpose.BILL)) {
             List<String> customerStatus = new ArrayList<>();
             customerStatus.add(CustomerStatus.ACTIVE.name());
-            customerStatus.add(CustomerStatus.VACATED.name());
             customerStatus.add(CustomerStatus.NOTICE.name());
             customerStatus.add(CustomerStatus.CHECK_IN.name());
 
