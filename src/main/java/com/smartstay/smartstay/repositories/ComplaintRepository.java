@@ -192,9 +192,9 @@ public interface ComplaintRepository
 
     @Query("""
             SELECT COUNT(c) as total,
-            SUM(CASE WHEN c.status IN ('PENDING', 'OPEN') THEN 1 ELSE 0 END) as pending,
-            SUM(CASE WHEN c.status IN ('IN_PROGRESS') THEN 1 ELSE 0 END) as inProgress,
-            SUM(CASE WHEN c.status = 'RESOLVED' THEN 1 ELSE 0 END) as resolved
+            SUM(CASE WHEN UPPER(REPLACE(REPLACE(c.status, '_', ''), ' ', '')) IN ('INPROGRESS', 'ASSIGNED', 'OPENED') THEN 1 ELSE 0 END) as inProgress,
+            SUM(CASE WHEN UPPER(REPLACE(REPLACE(c.status, '_', ''), ' ', '')) = 'RESOLVED' THEN 1 ELSE 0 END) as resolved,
+            SUM(CASE WHEN c.status IS NULL OR UPPER(REPLACE(REPLACE(c.status, '_', ''), ' ', '')) NOT IN ('INPROGRESS', 'ASSIGNED', 'OPENED', 'RESOLVED') THEN 1 ELSE 0 END) as pending
             FROM ComplaintsV1 c
             WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false
             AND (:startDate IS NULL OR DATE(c.complaintDate) >= DATE(:startDate))

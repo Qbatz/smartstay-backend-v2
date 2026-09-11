@@ -26,9 +26,9 @@ public interface AmenityRequestRepository extends JpaRepository<AmenityRequest, 
 
         @Query("""
                         SELECT COUNT(ar) as total,
-                        SUM(CASE WHEN ar.currentStatus IN ('PENDING', 'OPEN') THEN 1 ELSE 0 END) as pending,
-                        SUM(CASE WHEN ar.currentStatus IN ('IN_PROGRESS') THEN 1 ELSE 0 END) as inProgress,
-                        SUM(CASE WHEN ar.currentStatus = 'RESOLVED' THEN 1 ELSE 0 END) as resolved
+                        SUM(CASE WHEN UPPER(REPLACE(REPLACE(ar.currentStatus, '_', ''), ' ', '')) IN ('INPROGRESS', 'ASSIGNED', 'OPENED') THEN 1 ELSE 0 END) as inProgress,
+                        SUM(CASE WHEN UPPER(REPLACE(REPLACE(ar.currentStatus, '_', ''), ' ', '')) = 'RESOLVED' THEN 1 ELSE 0 END) as resolved,
+                        SUM(CASE WHEN ar.currentStatus IS NULL OR UPPER(REPLACE(REPLACE(ar.currentStatus, '_', ''), ' ', '')) NOT IN ('INPROGRESS', 'ASSIGNED', 'OPENED', 'RESOLVED') THEN 1 ELSE 0 END) as pending
                         FROM AmenityRequest ar
                         WHERE ar.hostelId = :hostelId
                         AND (:startDate IS NULL OR DATE(ar.createdAt) >= DATE(:startDate))
