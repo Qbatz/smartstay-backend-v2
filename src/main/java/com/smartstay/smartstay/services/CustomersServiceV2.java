@@ -1535,6 +1535,9 @@ public class CustomersServiceV2 {
         }
 
 
+        if (!updateCustomerJob.hasJobFields() && updateCustomerJob.customerJobs() != null) {
+            return customerJobDetailsService.replaceJobs(hostelId, customerId, updateCustomerJob.customerJobs(), user);
+        }
         return customerJobDetailsService.updateJobInformation(hostelId, customerId, updateCustomerJob, user);
     }
 }

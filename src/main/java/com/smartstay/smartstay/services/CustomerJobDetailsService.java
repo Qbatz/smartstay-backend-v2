@@ -9,13 +9,16 @@ import com.smartstay.smartstay.ennum.UserType;
 import com.smartstay.smartstay.payloads.customer.JobDetails;
 import com.smartstay.smartstay.payloads.customer.UpdateCustomerJob;
 import com.smartstay.smartstay.repositories.CustomerJobDetailsRepository;
+import com.smartstay.smartstay.dto.customer.CustomerJob;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class CustomerJobDetailsService {
@@ -170,5 +173,70 @@ public class CustomerJobDetailsService {
         jobDetailsRepository.save(cjd);
         usersService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.ADD_JOB, users);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    @Transactional
+    public ResponseEntity<?> replaceJobs(String hostelId, String customerId, List<CustomerJob> jobs, Users users) {
+        for (CustomerJob job : jobs) {
+            if (job != null && (differs(job.hostelId(), hostelId) || differs(job.customerId(), customerId))) {
+                return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        Date now = new Date();
+        String userId = authentication.getName();
+
+        List<CustomerJobDetails> current = jobDetailsRepository.findActiveJobs(customerId, hostelId);
+        current.forEach(row -> {
+            row.setIsDeleted(true);
+            row.setUpdatedAt(now);
+            row.setUpdatedBy(userId);
+            row.setUpdatedByUserType(UserType.ADMIN.name());
+        });
+        jobDetailsRepository.saveAll(current);
+
+        List<CustomerJobDetails> rows = jobs.stream()
+                .filter(job -> job != null && job.hasJobFields())
+                .map(job -> {
+                    CustomerJobDetails row = new CustomerJobDetails();
+                    row.setHostelId(hostelId);
+                    row.setCustomerId(customerId);
+                    row.setEmploymentStatus(blankToNull(job.employmentStatus()));
+                    row.setOrganizationName(blankToNull(job.organizationName()));
+                    row.setRole(blankToNull(job.role()));
+                    row.setWorkLocation(blankToNull(job.workLocation()));
+                    row.setShiftType(blankToNull(job.shiftType()));
+                    row.setShiftStartTime(blankToNull(job.shiftStartsFrom()));
+                    row.setShiftEndTime(blankToNull(job.shiftEndsAt()));
+                    row.setIsDeleted(false);
+                    row.setCreatedAt(now);
+                    row.setCreatedBy(userId);
+                    row.setCreatedByUserType(UserType.ADMIN.name());
+                    row.setUpdatedAt(now);
+                    row.setUpdatedBy(userId);
+                    row.setUpdatedByUserType(UserType.ADMIN.name());
+                    return row;
+                })
+                .toList();
+        jobDetailsRepository.saveAll(rows);
+
+        usersService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.ADD_JOB, users);
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public List<CustomerJob> getCustomerJobs(String hostelId, String customerId) {
+        return jobDetailsRepository.findActiveJobs(customerId, hostelId).stream()
+                .map(row -> new CustomerJob(row.getHostelId(), row.getCustomerId(), row.getEmploymentStatus(),
+                        row.getOrganizationName(), row.getRole(), row.getWorkLocation(), row.getShiftType(),
+                        row.getShiftStartTime(), row.getShiftEndTime()))
+                .toList();
+    }
+
+    private static boolean differs(String value, String expected) {
+        return value != null && !value.isBlank() && !value.trim().equalsIgnoreCase(expected);
+    }
+
+    private static String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 }
