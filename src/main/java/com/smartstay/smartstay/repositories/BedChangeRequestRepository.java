@@ -24,11 +24,11 @@ public interface BedChangeRequestRepository extends JpaRepository<BedChangeReque
 
     @Query("""
             SELECT COUNT(bcr) as total,
-            SUM(CASE WHEN bcr.currentStatus IN ('PENDING', 'OPEN') THEN 1 ELSE 0 END) as pending,
-             SUM(CASE WHEN bcr.currentStatus = 'IN_PROGRESS' THEN 1 ELSE 0 END) as inProgress,
-            SUM(CASE WHEN bcr.currentStatus = 'RESOLVED' THEN 1 ELSE 0 END) as resolved
+            SUM(CASE WHEN UPPER(REPLACE(REPLACE(bcr.currentStatus, '_', ''), ' ', '')) IN ('INPROGRESS', 'ASSIGNED', 'OPENED') THEN 1 ELSE 0 END) as inProgress,
+            SUM(CASE WHEN UPPER(REPLACE(REPLACE(bcr.currentStatus, '_', ''), ' ', '')) = 'RESOLVED' THEN 1 ELSE 0 END) as resolved,
+            SUM(CASE WHEN bcr.currentStatus IS NULL OR UPPER(REPLACE(REPLACE(bcr.currentStatus, '_', ''), ' ', '')) NOT IN ('INPROGRESS', 'ASSIGNED', 'OPENED', 'RESOLVED') THEN 1 ELSE 0 END) as pending
             FROM BedChangeRequest bcr
-            WHERE bcr.hostelId = :hostelId
+            WHERE bcr.hostelId = :hostelId AND bcr.isActive = true AND bcr.isDeleted = false
             AND (:startDate IS NULL OR DATE(bcr.createdAt) >= DATE(:startDate))
             AND (:endDate IS NULL OR DATE(bcr.createdAt) <= DATE(:endDate))
             """)

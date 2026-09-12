@@ -644,7 +644,7 @@ public class DashboardService {
             Rooms rm = (booking != null && booking.getRoomId() > 0) ? roomsService.findRoomByRoomId(booking.getRoomId()) : null;
             String roomName = (rm != null) ? rm.getRoomName() : null;
 
-            activities.add(new DashboardRequest(r.getAmenityRequestId(), cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown", cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null, cus != null ? CustomerUtils.getProfilePic(cus) : null, "Amenity Request", r.getCurrentStatus(), r.getCreatedAt() != null ? sdf.format(r.getCreatedAt()) : null, r.getDescription(), roomName));
+            activities.add(new DashboardRequest(r.getAmenityRequestId(), cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown", cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null, cus != null ? CustomerUtils.getProfilePic(cus) : null, "Amenity Request", statusDisplayName(r.getCurrentStatus()), r.getCreatedAt() != null ? sdf.format(r.getCreatedAt()) : null, r.getDescription(), roomName));
         }
 
         // Fetch Bed Change Requests
@@ -654,7 +654,7 @@ public class DashboardService {
             Rooms rm = (b.getRoomId() != null && b.getRoomId() > 0) ? roomsService.findRoomByRoomId(b.getRoomId()) : null;
             String roomName = (rm != null) ? rm.getRoomName() : null;
 
-            activities.add(new DashboardRequest(b.getId(), cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown", cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null, cus != null ? CustomerUtils.getProfilePic(cus) : null, "Bed Change", b.getCurrentStatus(), b.getCreatedAt() != null ? sdf.format(b.getCreatedAt()) : null, b.getReason(), roomName));
+            activities.add(new DashboardRequest(b.getId(), cus != null ? (cus.getFirstName() + (cus.getLastName() != null ? " " + cus.getLastName() : "")) : "Unknown", cus != null ? Utils.getInitials(cus.getFirstName(), cus.getLastName()) : null, cus != null ? CustomerUtils.getProfilePic(cus) : null, "Bed Change", statusDisplayName(b.getCurrentStatus()), b.getCreatedAt() != null ? sdf.format(b.getCreatedAt()) : null, b.getReason(), roomName));
         }
 
         return activities.stream().sorted((a, b1) -> {
@@ -835,7 +835,22 @@ public class DashboardService {
             String complaintTypeName = (ct != null) ? ct.getComplaintTypeName() : null;
             String formattedDate = (c.getCreatedAt() != null) ? sdf.format(c.getCreatedAt()) : null;
 
-            return new TenantComplaint(c.getCustomerId(), complaintTypeName, roomName, c.getDescription(), fullName, initials, profilePic, formattedDate, complaintTypeName);
+            return new TenantComplaint(c.getCustomerId(), complaintTypeName, roomName, c.getDescription(), fullName, initials, profilePic, formattedDate, complaintTypeName, statusDisplayName(c.getStatus()));
         }).collect(Collectors.toList());
+    }
+
+    private String statusDisplayName(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        return switch (status.replace("_", "").replace(" ", "").toUpperCase()) {
+            case "PENDING" -> "Pending";
+            case "OPEN" -> "Open";
+            case "OPENED" -> "Opened";
+            case "ASSIGNED" -> "Assigned";
+            case "INPROGRESS" -> "In Progress";
+            case "RESOLVED" -> "Resolved";
+            default -> status.trim();
+        };
     }
 }

@@ -480,6 +480,10 @@ public class BankingService {
 
     }
 
+    public List<BankingV1> getDebitBanks(String hostelId) {
+        return bankingV1Repository.findByBankIdInAndActiveAccountDebit(hostelId);
+    }
+
     public void saveAllBankInfo(List<BankingV1> listBankings) {
         bankingV1Repository.saveAll(listBankings);
     }

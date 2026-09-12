@@ -10,4 +10,13 @@ public record JobDetails(
     String shiftFrom,
     String shiftTo
 ) {
+
+    public boolean hasJobFields() {
+        return isFilled(employmentStatus) || isFilled(companyName) || isFilled(collegeName) || isFilled(jobRole)
+                || isFilled(workLocation) || isFilled(shiftType) || isFilled(shiftFrom) || isFilled(shiftTo);
+    }
+
+    private static boolean isFilled(String value) {
+        return value != null && !value.isBlank();
+    }
 }
