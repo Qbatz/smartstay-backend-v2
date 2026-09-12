@@ -6,7 +6,6 @@ import com.smartstay.smartstay.dto.retainer.RetainerInfo;
 import com.smartstay.smartstay.dto.settlement.*;
 import com.smartstay.smartstay.repositories.SettlementItemsRepository;
 import com.smartstay.smartstay.responses.customer.AdditionalAdvanceItems;
-import com.smartstay.smartstay.responses.customer.AdditionalAdvances;
 import com.smartstay.smartstay.responses.customer.FinalSettlement;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,11 +93,11 @@ public class SettlementItemService {
             if (settlementInfo.additionalAdvanceItems() != null) {
                 List<AdditionalAdvanceItems> listAdditionalAdvanceItems = settlementInfo.additionalAdvanceItems().listInvoices();
                 if (listAdditionalAdvanceItems != null) {
-                    List<AdditionlAdvance> listAdditionalAdvance = listAdditionalAdvanceItems
+                    List<AdditionalAdvance> listAdditionalAdvance = listAdditionalAdvanceItems
                             .stream()
                             .map(i -> {
                                 Double pending = i.invoiceAmount() - i.paidAmount();
-                                return new AdditionlAdvance(i.invoiceNumber(), i.invoiceId(), i.paidAmount(), i.invoiceAmount(), pending, i.invoiceBalance());
+                                return new AdditionalAdvance(i.invoiceNumber(), i.invoiceId(), i.paidAmount(), i.invoiceAmount(), pending, i.invoiceBalance());
                             })
                             .toList();
                     if (listAdditionalAdvance != null) {

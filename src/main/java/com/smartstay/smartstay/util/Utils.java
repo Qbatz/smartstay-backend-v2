@@ -293,6 +293,7 @@ public class Utils {
     public static final String REQUIRED_INVOICE_ITEMS = "Required invoice items";
     public static final String MANUAL_INVOICE_CANNOT_CREATE_BEFORE_CHECKIN = "Invoice date must be after the joining date";
     public static final String CANNOT_CREATE_ADVANCE_RENTAL_TOGETHER = "Cannot create advance and rental invoice together";
+    public static final String CANNOT_CREATE_CURRENT_MONTH_POSTPAID_INVOICE = "Cannot create current month rental invoice for postpaid hostels";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String INVALID_DUE_DYS = "Invalid due days";
     public static final String INVALID_NOTICE_DAYS = "Invalid notice days";

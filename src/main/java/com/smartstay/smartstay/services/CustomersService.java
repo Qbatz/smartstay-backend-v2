@@ -1769,7 +1769,7 @@ public class CustomersService {
         List<BankingV1> listOFBankings = bankingService.findAllBanksById(bankIds);
         List<String> userIds = listOFBankings.stream().map(BankingV1::getUserId).toList();
         List<Users> listUsers = userService.findAllUsersFromUserId(userIds);
-        JobDetails jobDetails = customerJobDetailsService.getCustomerJobDetails(customers.getHostelId(), customers.getCustomerId());
+        List<JobDetails> jobDetails = customerJobDetailsService.getCustomerJobDetails(customers.getHostelId(), customers.getCustomerId());
 
 
         List<com.smartstay.smartstay.responses.customer.TransactionDto> listTransactionResponse = listTransactions.stream().map(i -> new TransctionsForCustomerDetails(listOfInvoices, listOFBankings, listUsers).apply(i)).toList();

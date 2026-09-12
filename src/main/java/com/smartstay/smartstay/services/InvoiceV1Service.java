@@ -24,10 +24,8 @@ import com.smartstay.smartstay.dto.invoices.*;
 import com.smartstay.smartstay.dto.pagination.PaginationSummary;
 import com.smartstay.smartstay.dto.reports.ReportsDto;
 import com.smartstay.smartstay.dto.retainer.RetainerSummary;
-import com.smartstay.smartstay.dto.settlement.CurrentMonthOtherItems;
-import com.smartstay.smartstay.dto.settlement.EBItems;
+import com.smartstay.smartstay.dto.settlement.*;
 import com.smartstay.smartstay.dto.settlement.RetainerItems;
-import com.smartstay.smartstay.dto.settlement.WalltetItems;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.RecurringEvents;
@@ -41,6 +39,7 @@ import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.InvoiceRedemption.AvailableInvoices;
 import com.smartstay.smartstay.responses.InvoiceRedemption.SelectedInvoiceInfo;
 import com.smartstay.smartstay.responses.bookings.AdvanceInfo;
+import com.smartstay.smartstay.responses.customer.AdditionalAdvanceItems;
 import com.smartstay.smartstay.responses.settlement.RetainerInfo;
 import com.smartstay.smartstay.responses.settlement.WalletInfo;
 import com.smartstay.smartstay.responses.templates.TemplateTypes;
@@ -2438,6 +2437,12 @@ public class InvoiceV1Service {
                 availableBookingBalance = bookingItems.availableAdvanceBalance();
             }
         }
+
+        if (settlementItems.getAdditionalAdvanceItems() != null) {
+            List<AdditionalAdvance> listAdditionalAdvance = settlementItems.getAdditionalAdvanceItems();
+
+        }
+
         RentInfo rentInfo = null;
         WalletInfo walletInfo = null;
         CurrentRentInfo currentRentInfo = null;
@@ -2622,6 +2627,7 @@ public class InvoiceV1Service {
                 deductionsInfo,
                 advanceItems,
                 bookingItems,
+                null,
                 currentRentInfo,
                 currentMonthEbInfo,
                 walletInfo,
@@ -4284,6 +4290,9 @@ public class InvoiceV1Service {
                     double newBalance = invoicesV1.getPaidAmount() - deductionAmount;
                     invoicesV1.setBalanceAmount(newBalance);
                 }
+            }
+            else {
+               invoicesV1.setBalanceAmount(newPaidAmount);
             }
         }
 
@@ -7400,6 +7409,16 @@ public class InvoiceV1Service {
                 .filter(i -> i.invoiceItem().equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name()))
                 .findFirst()
                 .orElse(null);
+
+        if (advanceInvoice != null) {
+            if (billingDates != null) {
+                if (billingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                    if (Utils.compareWithTwoDates(billingDates.currentBillStartDate(), invoiceDate) <= 0) {
+                        return new ResponseEntity<>(Utils.CANNOT_CREATE_CURRENT_MONTH_POSTPAID_INVOICE, HttpStatus.BAD_REQUEST);
+                    }
+                }
+            }
+        }
         String invoiceNumber = null;
         if (manualInvoiceBody.invoiceNumber() != null && !manualInvoiceBody.invoiceNumber().isEmpty()) {
             if (invoicesV1Repository.findByInvoiceNumberAndHostelId(manualInvoiceBody.invoiceNumber(), customers.getHostelId()) != null) {
@@ -7670,7 +7689,7 @@ public class InvoiceV1Service {
                         if (i.getPaidAmount() != null) {
                             pAmount = i.getPaidAmount();
                         }
-                        return new AdditionalAdvanceItems(i.getInvoiceNumber(), i.getInvoiceId(), Utils.roundOffWithTwoDigit(i.getTotalAmount()), Utils.roundOffWithTwoDigit(pAmount), Utils.roundOffWithTwoDigit(invoiceBalance));
+                        return new com.smartstay.smartstay.responses.customer.AdditionalAdvanceItems(i.getInvoiceNumber(), i.getInvoiceId(), Utils.roundOffWithTwoDigit(i.getTotalAmount()), Utils.roundOffWithTwoDigit(pAmount), Utils.roundOffWithTwoDigit(invoiceBalance));
                     })
                     .toList();
             additionalAdvances = new AdditionalAdvances(Utils.roundOffWithTwoDigit(totalAdvanceAmount), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount), additionalInvoices.size(), additionalAdvanceItems);

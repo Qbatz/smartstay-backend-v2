@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class AdditionlAdvance {
+public class AdditionalAdvance {
     private String invoiceNumber;
     private String invoiceId;
     private Double paidAmount;
