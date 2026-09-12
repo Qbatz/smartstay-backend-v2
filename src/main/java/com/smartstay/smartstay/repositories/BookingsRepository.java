@@ -286,8 +286,8 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
     @Query("""
             SELECT booking FROM BookingsV1 booking WHERE booking.hostelId=:hostelId AND 
-            (DATE(booking.joiningDate) <= DATE(:endDate) OR DATE(booking.expectedJoiningDate) <= DATE(:endDate) 
-            AND (booking.leavingDate IS NULL OR DATE(booking.leavingDate) >= DATE(:startDate) AND booking.checkoutDate IS NULL OR DATE(booking.checkoutDate) >= DATE(:startDate)))
+            ((booking.joiningDate IS NOT NULL AND DATE(booking.joiningDate) >= DATE(:startDate) AND DATE(booking.joiningDate) <= DATE(:endDate)) 
+            OR (booking.joiningDate IS NULL AND DATE(booking.expectedJoiningDate) >= DATE(:startDate) AND DATE(booking.expectedJoiningDate) <= DATE(:endDate)))
             """)
     List<BookingsV1> findBookingsByHostelIdAndStartAndEndDate(String hostelId, Date startDate, Date endDate);
 
