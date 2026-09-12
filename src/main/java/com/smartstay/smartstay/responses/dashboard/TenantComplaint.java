@@ -9,5 +9,6 @@ public record TenantComplaint(
                               String initial, 
                               String profileurl, 
                               String complaintDate, 
-                              String complaintType) {
+                              String complaintType,
+                              String status) {
 }

@@ -1768,6 +1768,7 @@ public class CustomersService {
         List<String> userIds = listOFBankings.stream().map(BankingV1::getUserId).toList();
         List<Users> listUsers = userService.findAllUsersFromUserId(userIds);
         JobDetails jobDetails = customerJobDetailsService.getCustomerJobDetails(customers.getHostelId(), customers.getCustomerId());
+        List<CustomerJob> customerJobs = customerJobDetailsService.getCustomerJobs(customers.getHostelId(), customers.getCustomerId());
 
 
         List<com.smartstay.smartstay.responses.customer.TransactionDto> listTransactionResponse = listTransactions.stream().map(i -> new TransctionsForCustomerDetails(listOfInvoices, listOFBankings, listUsers).apply(i)).toList();
@@ -1825,7 +1826,7 @@ public class CustomersService {
                 additionalContacts,
                 isJoiningDateEditable, createdDate, createdTime, createdAt, createdBy,
                 createdByName, createdByInitials, createdByPic, effectiveFromMonth,
-                customers.getIdProofType(), customers.getIdProofNo());
+                customers.getIdProofType(), customers.getIdProofNo(), customerJobs);
 
         return new ResponseEntity<>(details, HttpStatus.OK);
     }
@@ -4317,7 +4318,6 @@ public class CustomersService {
         } else if (purpose.equals(GetCustomersPurpose.BILL)) {
             List<String> customerStatus = new ArrayList<>();
             customerStatus.add(CustomerStatus.ACTIVE.name());
-            customerStatus.add(CustomerStatus.VACATED.name());
             customerStatus.add(CustomerStatus.NOTICE.name());
             customerStatus.add(CustomerStatus.CHECK_IN.name());
 

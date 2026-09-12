@@ -49,5 +49,6 @@ public record CustomerDetails(String customerId,
                               String createdByPic,
                               List<EffectiveMonth> effectiveFromMonth,
                               String idProofType,
-                              String idProofNo) {
+                              String idProofNo,
+                              List<com.smartstay.smartstay.dto.customer.CustomerJob> customerJobs) {
 }

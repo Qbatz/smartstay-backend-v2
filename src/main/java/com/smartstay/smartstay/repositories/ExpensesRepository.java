@@ -23,7 +23,9 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             " AND (:paymentDate IS NULL OR DATE(exp.created_at) = DATE(:paymentDate)) " +
             " AND (:vendorId IS NULL OR exp.vendor_id = :vendorId) " +
             " AND (:subCategoryId IS NULL OR exp.sub_category_id = :subCategoryId) " +
-            " AND (:paymentMode IS NULL OR exp.bank_id = :paymentMode) " +
+            " AND (:paymentMode IS NULL OR exp.bank_id = :paymentMode" +
+            " OR EXISTS (SELECT 1 FROM expense_payments ep WHERE ep.expense_id = exp.expense_id AND ep.bank_id = :paymentMode)" +
+            " OR EXISTS (SELECT 1 FROM bank_transactionsv1 bt WHERE bt.source_id = exp.expense_id AND bt.payment_method_id = :paymentMode)) " +
             " AND (:createdBy IS NULL OR exp.created_by = :createdBy) " +
             " AND (:minAmount IS NULL OR COALESCE(exp.total_price, 0) >= :minAmount) " +
             " AND (:maxAmount IS NULL OR COALESCE(exp.total_price, 0) <= :maxAmount) " +

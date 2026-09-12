@@ -56,6 +56,7 @@ import com.smartstay.smartstay.dto.expenses.ExpenseSummaryProjection;
 import com.smartstay.smartstay.dao.ExpenseCategory;
 import com.smartstay.smartstay.dao.ExpenseSubCategory;
 import com.smartstay.smartstay.util.AddressUtils;
+import com.smartstay.smartstay.util.FilterKeywords;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1011,7 +1012,7 @@ public class ExpenseService {
                                             String paymentStatus, String paymentDate,
                                             Integer vendorId, Long subCategoryId, String paymentMode,
                                             String createdBy, Double minAmount, Double maxAmount,
-                                            String startDate, String endDate,
+                                            String startDate, String endDate, String period,
                                             Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -1055,6 +1056,13 @@ public class ExpenseService {
         } catch (RuntimeException ex) {
             return new ResponseEntity<>(Utils.INVALID_DATE_FILTER_DD_MM_YYYY, HttpStatus.BAD_REQUEST);
         }
+        if (fromDate == null && toDate == null) {
+            Date[] periodRange = resolveBillingPeriod(hostelId, period);
+            if (periodRange != null) {
+                fromDate = periodRange[0];
+                toDate = periodRange[1];
+            }
+        }
         if (minAmount != null && maxAmount != null && minAmount > maxAmount) {
             return new ResponseEntity<>(Utils.INVALID_AMOUNT_RANGE, HttpStatus.BAD_REQUEST);
         }
@@ -1087,6 +1095,42 @@ public class ExpenseService {
             return null;
         }
         return Utils.stringToDate(value.trim(), Utils.USER_INPUT_DATE_FORMAT);
+    }
+
+    private Date[] resolveBillingPeriod(String hostelId, String period) {
+        if (period == null || period.isBlank()) {
+            return null;
+        }
+        String key = period.trim();
+        BillingDates current = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        if (FilterKeywords.THIS_MONTH.equalsIgnoreCase(key)) {
+            return new Date[]{current.currentBillStartDate(), current.currentBillEndDate()};
+        }
+        int monthsBack;
+        if (FilterKeywords.LAST_MONTH.equalsIgnoreCase(key)) {
+            monthsBack = 1;
+        } else if (FilterKeywords.LAST_3_MONTH.equalsIgnoreCase(key)) {
+            monthsBack = 3;
+        } else if (FilterKeywords.LAST_6_MONTH.equalsIgnoreCase(key)) {
+            monthsBack = 6;
+        } else {
+            return null;
+        }
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(current.currentBillStartDate());
+        cal.add(Calendar.MONTH, -monthsBack);
+        BillingDates from = hostelService.getBillingRuleOnDate(hostelId, cal.getTime());
+        Date end = monthsBack == 1 ? from.currentBillEndDate() : current.currentBillEndDate();
+        return new Date[]{from.currentBillStartDate(), end};
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private ExpenseSummary buildExpenseSummary(String hostelId, String name, Long categoryId,
@@ -1221,7 +1265,47 @@ public class ExpenseService {
         List<ExpenseFilterOptions.FilterItems> categoryItems = categories.stream()
                 .map(c -> new ExpenseFilterOptions.FilterItems(c.categoryName(), String.valueOf(c.categoryId())))
                 .collect(Collectors.toList());
-        return new ExpenseFilterOptions(categoryItems);
+
+        List<ExpenseFilterOptions.SubCategoryItems> subCategoryItems = categories.stream()
+                .filter(c -> c.subCategories() != null)
+                .flatMap(c -> c.subCategories().stream())
+                .map(s -> new ExpenseFilterOptions.SubCategoryItems(s.subCategoryName(), String.valueOf(s.subCategoryId()),
+                        String.valueOf(s.categoryId())))
+                .toList();
+
+        List<ExpenseFilterOptions.FilterItems> vendorItems = vendorRepository
+                .findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(hostelId).stream()
+                .map(v -> new ExpenseFilterOptions.FilterItems(
+                        firstNonBlank(v.getBusinessName(), NameUtils.getFullName(v.getFirstName(), v.getLastName())),
+                        String.valueOf(v.getVendorId())))
+                .toList();
+
+        Map<String, ExpenseFilterOptions.PaymentModeItems> paymentModes = new LinkedHashMap<>();
+        bankingService.getDebitBanks(hostelId).forEach(b -> paymentModes.putIfAbsent(b.getBankId(),
+                new ExpenseFilterOptions.PaymentModeItems(b.getBankId(), b.getBankId(), b.getAccountType())));
+        bankingServiceV2.buildAllPaymentMethods(hostelId).forEach(p -> {
+            String value = p.paymentMethodId() != null ? p.paymentMethodId() : p.bankId();
+            paymentModes.putIfAbsent(value, new ExpenseFilterOptions.PaymentModeItems(value, p.bankId(),
+                    p.paymentMethodId() != null ? p.paymentMethod() : p.accountType()));
+        });
+        List<ExpenseFilterOptions.PaymentModeItems> paymentModeItems = new ArrayList<>(paymentModes.values());
+
+        List<ExpenseFilterOptions.FilterItems> createdByItems = usersService.findAllUsersByHostelId(hostelId).stream()
+                .map(u -> new ExpenseFilterOptions.FilterItems(NameUtils.getFullName(u.getFirstName(), u.getLastName()), u.getUserId()))
+                .toList();
+
+        List<ExpenseFilterOptions.FilterItems> statusItems = Arrays.stream(ExpensePaymentStatus.values())
+                .map(s -> new ExpenseFilterOptions.FilterItems(s.name(), s.name()))
+                .toList();
+
+        List<ExpenseFilterOptions.FilterItems> periodItems = List.of(
+                new ExpenseFilterOptions.FilterItems("This Month", FilterKeywords.THIS_MONTH),
+                new ExpenseFilterOptions.FilterItems("Last Month", FilterKeywords.LAST_MONTH),
+                new ExpenseFilterOptions.FilterItems("Last 3 Months", FilterKeywords.LAST_3_MONTH),
+                new ExpenseFilterOptions.FilterItems("Last 6 Months", FilterKeywords.LAST_6_MONTH));
+
+        return new ExpenseFilterOptions(categoryItems, subCategoryItems, vendorItems, paymentModeItems, createdByItems,
+                statusItems, periodItems);
     }
 
     /**
