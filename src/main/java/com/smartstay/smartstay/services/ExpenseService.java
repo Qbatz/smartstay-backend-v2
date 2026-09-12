@@ -1276,17 +1276,19 @@ public class ExpenseService {
         List<ExpenseFilterOptions.FilterItems> vendorItems = vendorRepository
                 .findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(hostelId).stream()
                 .map(v -> new ExpenseFilterOptions.FilterItems(
-                        firstNonBlank(v.getBusinessName(), NameUtils.getFullName(v.getFirstName(), v.getLastName())),
+                        firstNonBlank(NameUtils.getFullName(v.getFirstName(), v.getLastName()), v.getBusinessName()),
                         String.valueOf(v.getVendorId())))
                 .toList();
 
         Map<String, ExpenseFilterOptions.PaymentModeItems> paymentModes = new LinkedHashMap<>();
         bankingService.getDebitBanks(hostelId).forEach(b -> paymentModes.putIfAbsent(b.getBankId(),
-                new ExpenseFilterOptions.PaymentModeItems(b.getBankId(), b.getBankId(), b.getAccountType())));
+                new ExpenseFilterOptions.PaymentModeItems(b.getBankId(), b.getBankId(), b.getAccountType(),
+                        firstNonBlank(b.getAccountHolderName(), b.getBankName()))));
         bankingServiceV2.buildAllPaymentMethods(hostelId).forEach(p -> {
             String value = p.paymentMethodId() != null ? p.paymentMethodId() : p.bankId();
             paymentModes.putIfAbsent(value, new ExpenseFilterOptions.PaymentModeItems(value, p.bankId(),
-                    p.paymentMethodId() != null ? p.paymentMethod() : p.accountType()));
+                    p.paymentMethodId() != null ? p.paymentMethod() : p.accountType(),
+                    firstNonBlank(p.accountHolderName(), p.displayName(), p.bankName())));
         });
         List<ExpenseFilterOptions.PaymentModeItems> paymentModeItems = new ArrayList<>(paymentModes.values());
 
