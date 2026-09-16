@@ -454,6 +454,14 @@ public class VendorService {
         return new VendorFilterOptions(categoryItems, paymentStatusOptions);
     }
 
+    private String withoutCountryCode(String number) {
+        if (number == null) {
+            return null;
+        }
+        String trimmed = number.trim();
+        return trimmed.startsWith("+91") ? trimmed.substring(3).trim() : trimmed;
+    }
+
     public ResponseEntity<?> getVendorById(Integer id, String period) {
         if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
@@ -476,21 +484,17 @@ public class VendorService {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
 
-        String mobile = vendorResponse.mobile();
-        if (mobile != null && !mobile.trim().isEmpty() && !mobile.trim().startsWith("+91")) {
-            vendorResponse = new VendorResponse(vendorResponse.id(), vendorResponse.firstName(),
-                    vendorResponse.lastName(), vendorResponse.fullName(), vendorResponse.businessName(),
-                    "+91" + mobile.trim(), vendorResponse.emailId(), vendorResponse.profilePic(),
-                    vendorResponse.houseNo(), vendorResponse.area(), vendorResponse.landMark(),
-                    vendorResponse.city(), vendorResponse.pinCode(), vendorResponse.state(),
-                    vendorResponse.countryCode(), vendorResponse.country(), vendorResponse.countryId(),
-                    vendorResponse.vendorCategoryId(), vendorResponse.vendorCategoryName(),
-                    vendorResponse.contactPerson(), vendorResponse.contactPersonMobile(),
-                    vendorResponse.description(), vendorResponse.vendorCode(), vendorResponse.gst(),
-                    vendorResponse.pan(), vendorResponse.allowCredit(), vendorResponse.creditLimit(),
-                    vendorResponse.creditPeriod(), vendorResponse.businessMobileCode(),
-                    vendorResponse.contactPersonMobileCode());
-        }
+        vendorResponse = new VendorResponse(vendorResponse.id(), vendorResponse.firstName(),
+                vendorResponse.lastName(), vendorResponse.fullName(), vendorResponse.businessName(),
+                withoutCountryCode(vendorResponse.mobile()), vendorResponse.emailId(), vendorResponse.profilePic(),
+                vendorResponse.houseNo(), vendorResponse.area(), vendorResponse.landMark(),
+                vendorResponse.city(), vendorResponse.pinCode(), vendorResponse.state(),
+                vendorResponse.countryCode(), vendorResponse.country(), vendorResponse.countryId(),
+                vendorResponse.vendorCategoryId(), vendorResponse.vendorCategoryName(),
+                vendorResponse.contactPerson(), withoutCountryCode(vendorResponse.contactPersonMobile()),
+                vendorResponse.description(), vendorResponse.vendorCode(), vendorResponse.gst(),
+                vendorResponse.pan(), vendorResponse.allowCredit(), vendorResponse.creditLimit(),
+                vendorResponse.creditPeriod(), "+91", "+91");
 
         VendorV1 vendor = vendorRepository.findByVendorId(id);
 
