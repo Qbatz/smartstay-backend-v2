@@ -1516,7 +1516,7 @@ public class ElectricityService {
                 pendingEbAmount = pendingEb.stream().mapToDouble(PendingEbForSettlement::amount).sum();
             }
 
-            EBInfo ebInfo = new EBInfo(0.0, electricityConfig.getCharge(), "NA", electricityConfig.getTypeOfReading(), pendingEbAmount, false, true, missedEbForRoom, pendingEb);
+            EBInfo ebInfo = new EBInfo(0.0, electricityConfig.getCharge(), "NA", electricityConfig.getTypeOfReading(), Utils.roundOffWithTwoDigit(pendingEbAmount), false, true, missedEbForRoom, pendingEb);
 
             return ebInfo;
         }

@@ -7,8 +7,6 @@ import java.util.Date;
 
 @Entity
 @Data
-@Setter
-@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 public class KycDetails {
@@ -19,6 +17,7 @@ public class KycDetails {
     private String currentStatus;
     private String transactionId;
     private String entityId;
+    private String hostelId;
     private String templateId;
     private String accessTokenId;
     private String referenceId;

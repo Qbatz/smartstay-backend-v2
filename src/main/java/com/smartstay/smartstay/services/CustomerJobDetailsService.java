@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -31,10 +32,8 @@ public class CustomerJobDetailsService {
 
     public void addJobDetails(String hostelId, String customerId, JobDetails jobDetails) {
         boolean canUpdate = false;
-        CustomerJobDetails customerJobDetails = jobDetailsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
-        if (customerJobDetails == null) {
-            customerJobDetails = new CustomerJobDetails();
-        }
+        CustomerJobDetails customerJobDetails = new CustomerJobDetails();;
+
         if (jobDetails.employmentStatus() != null) {
             canUpdate = true;
             customerJobDetails.setEmploymentStatus(jobDetails.employmentStatus());
@@ -80,98 +79,106 @@ public class CustomerJobDetailsService {
         }
     }
 
-    public com.smartstay.smartstay.dto.customer.JobDetails getCustomerJobDetails(String hostelId, String customerId) {
-        CustomerJobDetails customerJobDetails = jobDetailsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+    public List<com.smartstay.smartstay.dto.customer.JobDetails> getCustomerJobDetails(String hostelId, String customerId) {
+        List<CustomerJobDetails> customerJobDetails = jobDetailsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
         if (customerJobDetails == null) {
-            return null;
+            return new ArrayList<>();
         }
-        return new com.smartstay.smartstay.dto.customer.JobDetails(customerJobDetails.getEmploymentStatus(),
-                customerJobDetails.getOrganizationName(),
-                customerJobDetails.getRole(),
-                customerJobDetails.getWorkLocation(),
-                customerJobDetails.getShiftType(),
-                customerJobDetails.getShiftStartTime(),
-                customerJobDetails.getShiftEndTime());
+        List<com.smartstay.smartstay.dto.customer.JobDetails> listJobs = customerJobDetails
+                .stream()
+                .map(i -> {
+                    return new com.smartstay.smartstay.dto.customer.JobDetails(i.getEmploymentStatus(),
+                            i.getOrganizationName(),
+                            i.getRole(),
+                            i.getWorkLocation(),
+                            i.getShiftType(),
+                            i.getShiftStartTime(),
+                            i.getShiftEndTime());
+                })
+                .toList();
+
+        return listJobs;
+
     }
 
     public ResponseEntity<?> updateJobInformation(String hostelId, String customerId, UpdateCustomerJob updateCustomerJob, Users users) {
-        CustomerJobDetails cjd =  jobDetailsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
-        if (cjd == null) {
-            cjd = new CustomerJobDetails();
-            cjd.setHostelId(hostelId);
-            cjd.setCustomerId(customerId);
-            cjd.setCreatedAt(new Date());
-            cjd.setUpdatedAt(new Date());
-            cjd.setUpdatedBy(authentication.getName());
-            cjd.setCreatedBy(authentication.getName());
-            cjd.setCreatedByUserType(UserType.ADMIN.name());
-            cjd.setUpdatedByUserType(UserType.ADMIN.name());
-        }
-        if (updateCustomerJob.employmentStatus() != null && !updateCustomerJob.employmentStatus().trim().equalsIgnoreCase("")) {
-            cjd.setEmploymentStatus(updateCustomerJob.employmentStatus());
-        }
-        else {
-            if (cjd.getEmploymentStatus() != null) {
-                cjd.setEmploymentStatus(null);
-            }
-        }
-
-        if (updateCustomerJob.organizationName() != null && !updateCustomerJob.organizationName().trim().equalsIgnoreCase("")) {
-            cjd.setOrganizationName(updateCustomerJob.organizationName());
-        }
-        else {
-            if (cjd.getOrganizationName() != null) {
-                cjd.setOrganizationName(null);
-            }
-        }
-
-        if (updateCustomerJob.role() != null && !updateCustomerJob.role().trim().equalsIgnoreCase("")) {
-            cjd.setRole(updateCustomerJob.role());
-        }
-        else {
-            if (cjd.getRole() != null) {
-                cjd.setRole(null);
-            }
-        }
-        if (updateCustomerJob.workLocation() != null && !updateCustomerJob.workLocation().trim().equalsIgnoreCase("")) {
-            cjd.setWorkLocation(updateCustomerJob.workLocation());
-        }
-        else {
-            if (cjd.getWorkLocation() != null) {
-                cjd.setWorkLocation(null);
-            }
-        }
-        if (updateCustomerJob.shiftType() != null && !updateCustomerJob.shiftType().trim().equalsIgnoreCase("")) {
-            cjd.setShiftType(updateCustomerJob.shiftType());
-        }
-        else {
-            if (cjd.getShiftType() != null) {
-                cjd.setShiftType(null);
-            }
-        }
-
-        if (updateCustomerJob.shiftStartsFrom() != null && !updateCustomerJob.shiftStartsFrom().trim().equalsIgnoreCase("")) {
-            cjd.setShiftStartTime(updateCustomerJob.shiftStartsFrom());
-        }
-        else {
-            if (cjd.getShiftStartTime() != null) {
-                cjd.setShiftStartTime(null);
-            }
-        }
-        if (updateCustomerJob.shiftEndsAt() != null && !updateCustomerJob.shiftEndsAt().trim().equalsIgnoreCase("")) {
-            cjd.setShiftEndTime(updateCustomerJob.shiftEndsAt());
-        }
-        else {
-            if (cjd.getShiftEndTime() != null) {
-                cjd.setShiftEndTime(null);
-            }
-        }
-        cjd.setUpdatedAt(new Date());
-        cjd.setUpdatedBy(authentication.getName());
-        cjd.setUpdatedByUserType(UserType.ADMIN.name());
-
-        jobDetailsRepository.save(cjd);
-        usersService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.ADD_JOB, users);
+//        CustomerJobDetails cjd =  jobDetailsRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+//        if (cjd == null) {
+//            cjd = new CustomerJobDetails();
+//            cjd.setHostelId(hostelId);
+//            cjd.setCustomerId(customerId);
+//            cjd.setCreatedAt(new Date());
+//            cjd.setUpdatedAt(new Date());
+//            cjd.setUpdatedBy(authentication.getName());
+//            cjd.setCreatedBy(authentication.getName());
+//            cjd.setCreatedByUserType(UserType.ADMIN.name());
+//            cjd.setUpdatedByUserType(UserType.ADMIN.name());
+//        }
+//        if (updateCustomerJob.employmentStatus() != null && !updateCustomerJob.employmentStatus().trim().equalsIgnoreCase("")) {
+//            cjd.setEmploymentStatus(updateCustomerJob.employmentStatus());
+//        }
+//        else {
+//            if (cjd.getEmploymentStatus() != null) {
+//                cjd.setEmploymentStatus(null);
+//            }
+//        }
+//
+//        if (updateCustomerJob.organizationName() != null && !updateCustomerJob.organizationName().trim().equalsIgnoreCase("")) {
+//            cjd.setOrganizationName(updateCustomerJob.organizationName());
+//        }
+//        else {
+//            if (cjd.getOrganizationName() != null) {
+//                cjd.setOrganizationName(null);
+//            }
+//        }
+//
+//        if (updateCustomerJob.role() != null && !updateCustomerJob.role().trim().equalsIgnoreCase("")) {
+//            cjd.setRole(updateCustomerJob.role());
+//        }
+//        else {
+//            if (cjd.getRole() != null) {
+//                cjd.setRole(null);
+//            }
+//        }
+//        if (updateCustomerJob.workLocation() != null && !updateCustomerJob.workLocation().trim().equalsIgnoreCase("")) {
+//            cjd.setWorkLocation(updateCustomerJob.workLocation());
+//        }
+//        else {
+//            if (cjd.getWorkLocation() != null) {
+//                cjd.setWorkLocation(null);
+//            }
+//        }
+//        if (updateCustomerJob.shiftType() != null && !updateCustomerJob.shiftType().trim().equalsIgnoreCase("")) {
+//            cjd.setShiftType(updateCustomerJob.shiftType());
+//        }
+//        else {
+//            if (cjd.getShiftType() != null) {
+//                cjd.setShiftType(null);
+//            }
+//        }
+//
+//        if (updateCustomerJob.shiftStartsFrom() != null && !updateCustomerJob.shiftStartsFrom().trim().equalsIgnoreCase("")) {
+//            cjd.setShiftStartTime(updateCustomerJob.shiftStartsFrom());
+//        }
+//        else {
+//            if (cjd.getShiftStartTime() != null) {
+//                cjd.setShiftStartTime(null);
+//            }
+//        }
+//        if (updateCustomerJob.shiftEndsAt() != null && !updateCustomerJob.shiftEndsAt().trim().equalsIgnoreCase("")) {
+//            cjd.setShiftEndTime(updateCustomerJob.shiftEndsAt());
+//        }
+//        else {
+//            if (cjd.getShiftEndTime() != null) {
+//                cjd.setShiftEndTime(null);
+//            }
+//        }
+//        cjd.setUpdatedAt(new Date());
+//        cjd.setUpdatedBy(authentication.getName());
+//        cjd.setUpdatedByUserType(UserType.ADMIN.name());
+//
+//        jobDetailsRepository.save(cjd);
+//        usersService.addUserLog(hostelId, customerId, ActivitySource.CUSTOMERS, ActivitySourceType.ADD_JOB, users);
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 

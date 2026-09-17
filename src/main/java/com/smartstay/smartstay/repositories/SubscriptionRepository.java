@@ -27,4 +27,10 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             """, nativeQuery = true)
     Subscription findLatestSubscription(String hostelId);
 
+    @Query("""
+            SELECT sub FROM Subscription sub WHERE sub.hostelId IN (:hostelIds) AND 
+            DATE(sub.planStartsAt) >= DATE(:todaysDate) AND sub.isActive=true
+            """)
+    List<Subscription> findByHostelIdsAndDate(List<String> hostelIds, Date todaysDate);
+
 }

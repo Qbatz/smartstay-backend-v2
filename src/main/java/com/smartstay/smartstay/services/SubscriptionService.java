@@ -517,4 +517,21 @@ public class SubscriptionService {
     public Subscription findCurrentSubscription(String hostelId) {
         return subscriptionRepository.checkSubscriptionForToday(hostelId, new Date());
     }
+
+    public List<String> findActiveSubscriptionHostels(List<String> hostelIds) {
+        List<Subscription> listSubscriptions = subscriptionRepository.findByHostelIdsAndDate(hostelIds, new Date());
+        if (listSubscriptions != null) {
+            List<String> activeHostelIds = listSubscriptions
+                    .stream()
+                    .map(Subscription::getHostelId)
+                    .distinct()
+                    .toList();
+            List<String> hostelsWithoutSubscription = hostelIds.stream()
+                    .filter(id -> !activeHostelIds.contains(id))
+                    .toList();
+            return hostelsWithoutSubscription;
+        }
+
+        return new ArrayList<>();
+    }
 }

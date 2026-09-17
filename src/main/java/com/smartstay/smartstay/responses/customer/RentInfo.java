@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.responses.customer;
 
+import com.smartstay.smartstay.dto.customer.OtherInvoicesInfo;
 import com.smartstay.smartstay.dto.settlement.CurrentMonthOtherItems;
 
 import java.util.List;
@@ -19,5 +20,6 @@ public record RentInfo(Double currentPayableRent,
                        Double fullRent,
                        Double rentDifference,
                        List<CurrentMonthOtherItems> currentMonthOtherItems,
-                       List<RentBreakUp> rentLists) {
+                       List<RentBreakUp> rentLists,
+                       OtherInvoicesInfo otherInvoicesInfo) {
 }

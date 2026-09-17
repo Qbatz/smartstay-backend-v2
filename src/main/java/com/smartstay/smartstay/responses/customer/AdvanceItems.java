@@ -3,6 +3,7 @@ package com.smartstay.smartstay.responses.customer;
 import java.util.List;
 
 public record AdvanceItems(String label,
+                           String type,
                            Double availableAdvanceBalance,
                            Double appliedAmount,
                            Double paidAmount,

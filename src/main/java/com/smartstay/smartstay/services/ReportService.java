@@ -1410,6 +1410,8 @@ public class ReportService {
         }
 
         String url =  reportsUrl + "/v2/tenants/"+hostelId;
+        //bearer token
+        //authentication.getToken();
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
                 .queryParam("search", search)
                 .queryParam("status", status)

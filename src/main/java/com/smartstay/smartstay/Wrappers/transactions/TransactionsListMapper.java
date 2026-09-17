@@ -55,7 +55,7 @@ public class TransactionsListMapper implements Function<TransactionV1, ReceiptsL
 
 
             String type = switch (invoice.getInvoiceType()) {
-                case "ADVANCE" -> "Advance";
+                case "ADVANCE", "ADDITIONAL_ADVANCE" -> "Advance";
                 case "BOOKING" -> "Booking";
                 case "RENT" -> "Rent";
                 case "REASSIGN_RENT" -> "Reassigned Rent";

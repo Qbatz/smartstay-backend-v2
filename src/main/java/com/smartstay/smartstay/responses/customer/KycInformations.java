@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.responses.customer;
 
 public record KycInformations(String status,
+                              boolean canRequestAgain,
                               String aadhaarImage,
                               String aadhaarNumber,
                               String nameInAadhaar,

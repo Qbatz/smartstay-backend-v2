@@ -17,6 +17,7 @@ public record FinalSettlement(CustomerInformations customerInfo,
                               WalletInfo walletInfo,
                               AdvanceItems advanceItems,
                               AdvanceItems bookingItems,
+                              AdditionalAdvances additionalAdvanceItems,
                               RetainerInfo retainerItems,
                               DeductionsInfo deductionsInfo,
                               SettlementInfo settlementInfo) {

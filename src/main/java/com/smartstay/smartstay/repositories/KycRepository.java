@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -40,4 +41,9 @@ public interface KycRepository extends JpaRepository<KycDetails, Long> {
             SELECT * FROM kyc_details kd WHERE kd.customer_id IN (:customerIds)
             """, nativeQuery = true)
     List<KycDetails> findByCustomerIds(@Param("customerIds") List<String> customerIds);
+
+    @Query("""
+            SELECT kyc FROM KycDetails kyc WHERE kyc.hostelId=:hostelId AND DATE(kyc.createdAt)>=DATE(:monthStartDate)
+            """)
+    List<KycDetails> findByHostelIdAndDate(String hostelId, Date monthStartDate);
 }

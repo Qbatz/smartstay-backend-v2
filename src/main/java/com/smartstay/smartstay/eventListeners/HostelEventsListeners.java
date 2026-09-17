@@ -32,7 +32,10 @@ public class HostelEventsListeners {
     private UsersService usersService;
     @Autowired
     private BankingService bankingService;
-
+    @Autowired
+    private KycConfigService kycConfigService;
+    @Autowired
+    private KycHistoryService kycHistoryService;
 
     @Async
     @EventListener
@@ -125,6 +128,8 @@ public class HostelEventsListeners {
                 .toList();
         bankingService.saveAllBankInfo(listBankings);
 
+        kycConfigService.addInitialKycConfig(hostelId);
+        kycHistoryService.addInitialHistory(hostelId);
 
     }
 }

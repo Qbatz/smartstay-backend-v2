@@ -27,6 +27,7 @@ public class DownloadService {
 
         HttpEntity<Void> request =
                 new HttpEntity<>(headers);
+        //read tokem from credentials
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(

@@ -36,8 +36,11 @@ public class UnpaidInvoicesMapper implements Function<InvoicesV1, UnpaidInvoices
         if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
             invoiceType = "Rent";
         }
-        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name())) {
             invoiceType = "Advance";
+        }
+        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHER.name())) {
+            invoiceType = "Other";
         }
 
         return  new UnpaidInvoices(invoicesV1.getInvoiceNumber(),
