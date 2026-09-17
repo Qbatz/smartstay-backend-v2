@@ -27,6 +27,23 @@ public final class AddressUtils {
         return String.join(", ", parts);
     }
 
+    public static String formatCustomerAddress(String houseNo, String street, String city, String state, int pincode) {
+        List<String> parts = new ArrayList<>();
+        appendIfPresent(parts, houseNo);
+        appendIfPresent(parts, street);
+        appendIfPresent(parts, city);
+        boolean hasState = state != null && !state.trim().isEmpty();
+        boolean hasPincode = pincode > 0;
+        if (hasState && hasPincode) {
+            parts.add(state.trim() + "-" + pincode);
+        } else if (hasState) {
+            parts.add(state.trim());
+        } else if (hasPincode) {
+            parts.add(String.valueOf(pincode));
+        }
+        return String.join(", ", parts);
+    }
+
     private static void appendIfPresent(List<String> parts, String value) {
         if (value != null && !value.trim().isEmpty()) {
             parts.add(value.trim());

@@ -43,5 +43,6 @@ public class ExpenseFilterOptions {
         private String paymentMethod;
         private String bankId;
         private String paymentMode;
+        private String accountName;
     }
 }
