@@ -381,6 +381,9 @@ public class TemplatesService {
         if (type.equalsIgnoreCase(InvoiceType.RENT.name())) {
             type = BillConfigTypes.RENTAL.name();
         }
+        else if (type.equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name()) || type.equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            type = BillConfigTypes.ADVANCE.name();
+        }
 
         BillTemplates tmp = templateRepository.getByHostelId(hostelId);
         if (tmp == null) {

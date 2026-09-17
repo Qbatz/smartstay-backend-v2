@@ -2054,19 +2054,19 @@ public class CustomersService {
 
         if (!billDate.typeOfBilling().equalsIgnoreCase(BillingType.JOINING_DATE_BASED.name())) {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
-                //done other invoice amount
+                //done remapping
                 return getInformationForPostpaidSettlements(customers, lDate, bookingDetails, billDate);
             }
         } else {
             if (billDate.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
-                //done other invoice amount
+                //done remapping
                 return getFinalSettlementInfoFotJoiningBasedPrepaid(customers, lDate, bookingDetails);
             }
         }
 
         if (Utils.compareWithTwoDates(cbh.getStartDate(), billDate.currentBillStartDate()) > 0) {
             settlementDetailsService.addSettlementForCustomer(customerId, lDate);
-            //done other invoice amount
+            //done remapping
             FinalSettlement finalSettlement = getFinalSettlementInfoForBedChange(customers, bookingDetails, billDate, lDate);
 
             return new ResponseEntity<>(finalSettlement, HttpStatus.OK);
@@ -2895,7 +2895,7 @@ public class CustomersService {
         double currentMonthRentOnly = currentMonthPayableAmount - otherItemAMount[0];
         priceDifference = fullRent - currentMonthRentOnly;
 
-        OtherInvoicesInfo otherInvoicesInfo = invoiceService.getCurrentMonthOtherInvoices(customers.getHostelId(), customers.getCustomerId(), currentMonthBillingDates);
+//        OtherInvoicesInfo otherInvoicesInfo = invoiceService.getCurrentMonthOtherInvoices(customers.getHostelId(), customers.getCustomerId(), currentMonthBillingDates);
 
 
         return new RentInfo(Utils.roundOffWithTwoDigit(currentPayableRent),
@@ -2914,7 +2914,7 @@ public class CustomersService {
                 Utils.roundOffWithTwoDigit(priceDifference),
                 currentMonthOtherItems,
                 listRentBreakup,
-                otherInvoicesInfo);
+                null);
     }
 
     /**

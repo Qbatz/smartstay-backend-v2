@@ -1016,7 +1016,7 @@ public class InvoiceV1Service {
                 .sum();
         double refundedInvoices = validInvoices
                 .stream()
-                .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING_REFUND.name()))
+                .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.REFUNDED.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_REFUND.name()))
                 .mapToDouble(i -> {
                     if (i.getPaidAmount() == null) {
                         return 0.0;
@@ -3521,6 +3521,8 @@ public class InvoiceV1Service {
             List<String> invoicesTypes = new ArrayList<>();
             invoicesTypes.add(InvoiceType.RENT.name());
             invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
+            invoicesTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
+            invoicesTypes.add(InvoiceType.OTHER.name());
 
             List<InvoicesV1> listInvoices = invoicesV1Repository.findInvoicesByCustomerIdAndTypeIn(customers.getCustomerId(), invoicesTypes);
             if (exceedsJoiningDateChangeInvoiceLimit(listInvoices, currentMonthBillingDates)) {
@@ -3565,11 +3567,16 @@ public class InvoiceV1Service {
                     return true;
                 }
             }
-        } else {
+        }
+        else {
             if (currentMonthBillingDates.billingModel().equalsIgnoreCase(BillingModel.PREPAID.name())) {
 
                 List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesExceptCurrentMonth(customers.getCustomerId(), hostelId, currentMonthBillingDates.currentBillStartDate());
                 if (listInvoices != null && listInvoices.size() > 1) {
+                    return false;
+                }
+                List<InvoicesV1> listCurrentMonthOtherInvoices = invoicesV1Repository.findCurrentMonthOtherInvoices(customers.getCustomerId(), customers.getHostelId(), currentMonthBillingDates.currentBillStartDate());
+                if (listCurrentMonthOtherInvoices != null && !listCurrentMonthOtherInvoices.isEmpty()) {
                     return false;
                 }
                 //old to old
@@ -3603,9 +3610,14 @@ public class InvoiceV1Service {
                     }
 
                 }
-            } else {
+            }
+            else {
                 List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesExceptCurrentMonth(customers.getCustomerId(), hostelId, currentMonthBillingDates.currentBillStartDate());
                 if (listInvoices != null && listInvoices.size() > 1) {
+                    return false;
+                }
+                List<InvoicesV1> listCurrentMonthOtherInvoices = invoicesV1Repository.findCurrentMonthOtherInvoices(customers.getCustomerId(), customers.getHostelId(), currentMonthBillingDates.currentBillStartDate());
+                if (listCurrentMonthOtherInvoices != null && !listCurrentMonthOtherInvoices.isEmpty()) {
                     return false;
                 }
                 Calendar calendar = Calendar.getInstance();
@@ -5296,7 +5308,7 @@ public class InvoiceV1Service {
                 }
             }
 
-            OtherInvoicesInfo otherInvoicesInfo = getCurrentMonthOtherInvoices(customers.getHostelId(), customers.getCustomerId(), billingDates);
+//            OtherInvoicesInfo otherInvoicesInfo = getCurrentMonthOtherInvoices(customers.getHostelId(), customers.getCustomerId(), billingDates);
 
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
                     Utils.roundOffWithTwoDigit(currentMonthPaidRent),
@@ -5313,7 +5325,7 @@ public class InvoiceV1Service {
                     Utils.roundOffWithTwoDigit(priceDifference),
                     otherItems,
                     listRentBreakup,
-                    otherInvoicesInfo);
+                    null);
 
         }
         return null;
@@ -5464,7 +5476,7 @@ public class InvoiceV1Service {
                 }
             }
 
-            OtherInvoicesInfo otherInvoicesInfo = getCurrentMonthOtherInvoices(customers.getHostelId(), customers.getCustomerId(), billingDates);
+//            OtherInvoicesInfo otherInvoicesInfo = getCurrentMonthOtherInvoices(customers.getHostelId(), customers.getCustomerId(), billingDates);
             return new RentInfo(Utils.roundOffWithTwoDigit(payableAmountForCurrentInvoiceRent),
                     Utils.roundOffWithTwoDigit(currentMonthPaidRent),
                     (int) totalNoOfDaysStayed,
@@ -5481,7 +5493,7 @@ public class InvoiceV1Service {
                     Utils.roundOffWithTwoDigit(priceDifference),
                     otherItems,
                     listRentBreakup,
-                    otherInvoicesInfo);
+                    null);
 
         }
 
@@ -5496,6 +5508,16 @@ public class InvoiceV1Service {
         invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
         invoicesTypes.add(InvoiceType.OTHER.name());
         List<InvoicesV1> listOldInvoices = invoicesV1Repository.findOldMonthPendingInvoices(customerId, billingDates.currentBillStartDate(), invoicesTypes);
+        List<InvoicesV1> listCurrentMonthOtherInvoices = invoicesV1Repository.findCurrentMonthOtherInvoices(customerId, billingDates.currentBillStartDate());
+        if (listOldInvoices != null) {
+            if (listCurrentMonthOtherInvoices != null && !listCurrentMonthOtherInvoices.isEmpty()) {
+                listOldInvoices.addAll(listCurrentMonthOtherInvoices);
+            }
+        }
+        else {
+            listOldInvoices = new ArrayList<>(listCurrentMonthOtherInvoices);
+        }
+
         double unpaidAmount = listOldInvoices.stream().mapToDouble(i -> {
             if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
                 return i.getTotalAmount();
@@ -5530,7 +5552,17 @@ public class InvoiceV1Service {
         List<String> invoicesTypes = new ArrayList<>();
         invoicesTypes.add(InvoiceType.RENT.name());
         invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
+        invoicesTypes.add(InvoiceType.OTHER.name());
         List<InvoicesV1> listOldInvoices = invoicesV1Repository.findOldMonthPendingInvoices(customerId, billingDates.currentBillStartDate(), invoicesTypes);
+        List<InvoicesV1> listCurrentMonthOtherInvoices = invoicesV1Repository.findCurrentMonthOtherInvoices(customerId, billingDates.currentBillStartDate());
+        if (listOldInvoices != null) {
+            listOldInvoices.addAll(listCurrentMonthOtherInvoices);
+        }
+        else {
+            if (listCurrentMonthOtherInvoices != null) {
+                listOldInvoices = new ArrayList<>(listCurrentMonthOtherInvoices);
+            }
+        }
         double unpaidAmount = listOldInvoices.stream().mapToDouble(i -> {
             if (i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name())) {
                 return i.getTotalAmount();
@@ -5954,15 +5986,18 @@ public class InvoiceV1Service {
                                     i.setDeductions(newDeductions);
 
                                     i.setBalanceAmount(amountAfterDeduction);
-                                } else {
+                                }
+                                else {
+                                    double redeemedAmount = invoiceRedemptionService.getRedeemedAmountFromINvoiceId(hostelId, i.getInvoiceId());
                                     if (i.getBalanceAmount() != null) {
-                                        i.setBalanceAmount(amountAfterDeduction);
+                                        i.setBalanceAmount(amountAfterDeduction - redeemedAmount);
                                     } else {
-                                        i.setBalanceAmount(amountAfterDeduction);
+                                        i.setBalanceAmount(amountAfterDeduction - redeemedAmount);
                                     }
                                 }
 
-                            } else {
+                            }
+                            else {
                                 final double[] tempAmount = {invoiceRedemption1.getRedemptionAmount()};
                                 List<Deductions> newDeductions = i.getDeductions().stream().map(i2 -> {
                                     if (tempAmount[0] > 0) {
@@ -6005,162 +6040,6 @@ public class InvoiceV1Service {
             usersService.addUserLog(hostelId, invoicesV1.getInvoiceId(), ActivitySource.INVOICE, ActivitySourceType.REDEEMED, users);
 
             return new ResponseEntity<>(HttpStatus.CREATED);
-        }
-
-        return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
-    }
-
-    public ResponseEntity<?> getAdvanceInvoicesForRedemptionOld(String hostelId, int page, int size) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        Users users = usersService.findUserByUserId(authentication.getName());
-        if (users == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-        }
-
-        List<String> invoiceTypes = new ArrayList<>();
-        invoiceTypes.add(InvoiceType.BOOKING.name());
-        invoiceTypes.add(InvoiceType.ADVANCE.name());
-        invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
-        invoiceTypes.add(InvoiceType.EB_HOLDING.name());
-
-        int totalAdvanceInvoice = 0;
-        int currentPage = 1;
-        int noOfItemsPerPage = 10;
-        int totalPages = 1;
-
-        List<BookingsV1> customerBookings = bookingsService.getAllCheckedInCustomer(hostelId);
-        List<String> listCustomerIds = new ArrayList<>();
-        if (customerBookings != null) {
-            listCustomerIds = customerBookings.stream().map(BookingsV1::getCustomerId).toList();
-        }
-
-        List<InvoicesV1> listInvoices = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, listCustomerIds, invoiceTypes, null, null, null, null, null);
-        if (listInvoices != null) {
-            totalAdvanceInvoice = listInvoices.size();
-//            currentPage = pagebleAdvances.getPageable().getPageNumber() + 1;
-//            totalPages = pagebleAdvances.getTotalPages();
-//            noOfItemsPerPage = pagebleAdvances.getSize();
-
-//            List<InvoicesV1> listAdvanceInvoices = pagebleAdvances.getContent();
-
-            List<String> invoiceIds = listInvoices
-                    .stream()
-                    .map(InvoicesV1::getInvoiceId)
-                    .toList();
-            List<TransactionV1> latestTransactions = transactionService.getLatestTransactions(hostelId, invoiceIds);
-            List<BankingV1> listBanks;
-            if (latestTransactions != null) {
-                Set<String> bankIds = latestTransactions
-                        .stream()
-                        .map(TransactionV1::getBankId)
-                        .collect(Collectors.toSet());
-                listBanks = bankingService.findAllBanksById(bankIds);
-            } else {
-                listBanks = new ArrayList<>();
-            }
-
-            List<String> customerIds = listInvoices.stream().map(InvoicesV1::getCustomerId).distinct().toList();
-            List<BookingsV1> listBookings = bookingsService.getBookings(hostelId, customerIds);
-            List<Integer> bedIds = new ArrayList<>();
-            if (listBookings != null) {
-                bedIds = listBookings.stream().map(BookingsV1::getBedId).toList();
-            }
-
-            List<BedDetails> listBedDetails = bedService.getBedDetails(bedIds);
-            List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
-            List<InvoicesV1> listInvoiceList = invoicesV1Repository.findUnpaidInvoicesByCustomerIds(customerIds);
-
-            List<AdvanceListItems> advanceListItems = listInvoices.stream().map(i -> new AdvanceInvoicesMapper(listBookings, listBedDetails, listCustomers, listInvoiceList, latestTransactions, listBanks).apply(i)).toList();
-
-            if (advanceListItems == null) {
-                advanceListItems = new ArrayList<>();
-            }
-
-            Double totalRetainerAmount = 0.0;
-            Double totalAdvanceAmount = 0.0;
-            Double totalBookingAmount = 0.0;
-            Double totalRentAmount = 0.0;
-            Double totalEbAmount = 0.0;
-            Double totalOtherAmount = 0.0;
-
-            totalRetainerAmount = listInvoices
-                    .stream()
-                    .mapToDouble(i -> {
-                        if (i.getBalanceAmount() != null) {
-                            return i.getBalanceAmount();
-                        }
-                        return 0.0;
-                    })
-                    .sum();
-
-            totalAdvanceAmount = listInvoices
-                    .stream()
-                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))
-                    .mapToDouble(i -> {
-                        if (i.getBalanceAmount() != null) {
-                            return i.getBalanceAmount();
-                        }
-                        return 0.0;
-                    })
-                    .sum();
-            totalBookingAmount = listInvoices
-                    .stream()
-                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()))
-                    .mapToDouble(i -> {
-                        if (i.getBalanceAmount() != null) {
-                            return i.getBalanceAmount();
-                        }
-                        return 0.0;
-                    })
-                    .sum();
-
-            totalRentAmount = listInvoices
-                    .stream()
-                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name()))
-                    .mapToDouble(i -> {
-                        if (i.getBalanceAmount() != null) {
-                            return i.getBalanceAmount();
-                        }
-                        return 0.0;
-                    })
-                    .sum();
-            totalEbAmount = listInvoices
-                    .stream()
-                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()))
-                    .mapToDouble(i -> {
-                        if (i.getBalanceAmount() != null) {
-                            return i.getBalanceAmount();
-                        }
-                        return 0.0;
-                    })
-                    .sum();
-
-            RetainerSummary retainerSummary = new RetainerSummary(Utils.roundOffWithTwoDigit(totalRetainerAmount),
-                    Utils.roundOffWithTwoDigit(totalBookingAmount),
-                    Utils.roundOffWithTwoDigit(totalAdvanceAmount),
-                    Utils.roundOffWithTwoDigit(totalEbAmount),
-                    Utils.roundOffWithTwoDigit(totalRentAmount),
-                    0.0);
-
-
-            AdvanceList advanceList = new AdvanceList(totalAdvanceInvoice,
-                    currentPage,
-                    totalPages,
-                    noOfItemsPerPage,
-                    null,
-                    retainerSummary,
-                    advanceListItems);
-
-            return new ResponseEntity<>(advanceList, HttpStatus.OK);
         }
 
         return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
@@ -6708,7 +6587,8 @@ public class InvoiceV1Service {
 
         List<BookingsFilterOptions.FilterItems> invoiceStatusFilterOptions = new ArrayList<>();
         invoiceStatusFilterOptions.add(new BookingsFilterOptions.FilterItems("Available", "AVAILABLE"));
-        invoiceStatusFilterOptions.add(new BookingsFilterOptions.FilterItems("Partially Redeemed", "PARTIALLY_REDEEMED"));
+        invoiceStatusFilterOptions.add(new BookingsFilterOptions.FilterItems("Partially Adjusted", "PARTIALLY_REDEEMED"));
+        invoiceStatusFilterOptions.add(new BookingsFilterOptions.FilterItems("Fully Adjusted", "FULLY_REDEEMED"));
 
         List<BookingsFilterOptions.FilterItems> listPeriods = new ArrayList<>();
         listPeriods.add(new BookingsFilterOptions.FilterItems("Today", "TODAY"));
@@ -6827,7 +6707,7 @@ public class InvoiceV1Service {
                     0.0);
 
             if (authentication.getSource().equalsIgnoreCase("Web")) {
-                Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, minBalance, maxBalance, pageableRequest);
+                Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, dStartDate, dEndDate, status, minBalance, maxBalance, pageableRequest);
                 secondaryInvoices = pagebleAdvances.stream().toList();
 
                 currentPage = pagebleAdvances.getPageable().getPageNumber() + 1;
@@ -7434,6 +7314,15 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.CANNOT_CREATE_ADVANCE_RENTAL_TOGETHER, HttpStatus.BAD_REQUEST);
         }
         if (rentalInvoice != null) {
+            if (billingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
+                BillingDates currentMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+                if (currentMonthBillingDates != null) {
+                    if (Utils.compareWithTwoDates(invoiceDate, currentMonthBillingDates.currentBillStartDate()) >= 0) {
+                        return new ResponseEntity<>(Utils.CANNOT_CREATE_CURRENT_MONTH_INVOICE_POSTPAID, HttpStatus.BAD_REQUEST);
+                    }
+                }
+
+            }
             List<InvoicesV1> rentalInvoices = invoicesV1Repository.findInvoiceByCustomerIdAndDate(customerId, billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
             if (rentalInvoices != null && !rentalInvoices.isEmpty()) {
                 return new ResponseEntity<>(Utils.INVOICE_ALREADY_PRESENT, HttpStatus.BAD_REQUEST);

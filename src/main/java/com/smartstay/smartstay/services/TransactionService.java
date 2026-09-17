@@ -897,7 +897,10 @@ public class TransactionService {
 
         if (invoicesV1.getInvoiceType() != null
                 && (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())
-                || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()))) {
+                || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())
+                ||invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name())
+                || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name())
+                || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name()))) {
             List<InvoiceRedemption> redemptions = invoiceRedemptionRepository.findByHostelIdAndSourceId(hostelId, invoicesV1.getInvoiceId());
             if (redemptions != null && !redemptions.isEmpty()) {
                 return new ResponseEntity<>(Utils.CANNOT_DELETE_REDEEMED_RECEIPT, HttpStatus.BAD_REQUEST);
@@ -1704,6 +1707,7 @@ public class TransactionService {
             if (transactionV1 != null) {
                 List<TransactionV1> onlyPaidTransactions = transactionV1
                         .stream()
+                        .filter(i -> i.getType() == null || !i.getType().equalsIgnoreCase(TransactionType.REFUND.name()))
                         .filter(i -> i.getPaidAmount() != null && i.getPaidAmount() >= 0)
                         .toList();
                 if (onlyPaidTransactions != null) {
