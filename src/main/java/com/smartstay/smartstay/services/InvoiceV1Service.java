@@ -1926,26 +1926,8 @@ public class InvoiceV1Service {
                 fullName.append(" ");
                 fullName.append(customers.getLastName());
             }
-            if (customers.getHouseNo() != null) {
-                fullAddress.append(customers.getHouseNo());
-                fullAddress.append(", ");
-            }
-            if (customers.getStreet() != null) {
-                fullAddress.append(customers.getStreet());
-                fullAddress.append(", ");
-            }
-            if (customers.getCity() != null) {
-                fullAddress.append(customers.getCity());
-                fullAddress.append(", ");
-            }
-            if (customers.getState() != null) {
-                fullAddress.append(customers.getState());
-                fullAddress.append("-");
-            }
-
-            if (customers.getPincode() != 0) {
-                fullAddress.append(customers.getPincode());
-            }
+            fullAddress.append(com.smartstay.smartstay.util.AddressUtils.formatCustomerAddress(customers.getHouseNo(),
+                    customers.getStreet(), customers.getCity(), customers.getState(), customers.getPincode()));
 
             customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(), com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers), NameUtils.getInitials(customers.getFirstName(), customers.getLastName()), customers.getCustomerId(), customers.getMobile(), "91", fullAddress.toString(), Utils.dateToString(customers.getJoiningDate()));
         }
