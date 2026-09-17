@@ -592,26 +592,8 @@ public class TransactionService {
                 fullName.append(" ");
                 fullName.append(customers.getLastName());
             }
-            if (customers.getHouseNo() != null && !customers.getHouseNo().trim().equalsIgnoreCase("")) {
-                fullAddress.append(customers.getHouseNo());
-                fullAddress.append(", ");
-            }
-            if (customers.getStreet() != null && !customers.getStreet().trim().equalsIgnoreCase("")) {
-                fullAddress.append(customers.getStreet());
-                fullAddress.append(", ");
-            }
-            if (customers.getCity() != null && !customers.getCity().trim().equalsIgnoreCase("")) {
-                fullAddress.append(customers.getCity());
-                fullAddress.append(", ");
-            }
-            if (customers.getState() != null && !customers.getState().trim().equalsIgnoreCase("")) {
-                fullAddress.append(customers.getState());
-                fullAddress.append("-");
-            }
-
-            if (customers.getPincode() != 0) {
-                fullAddress.append(customers.getPincode());
-            }
+            fullAddress.append(com.smartstay.smartstay.util.AddressUtils.formatCustomerAddress(customers.getHouseNo(),
+                    customers.getStreet(), customers.getCity(), customers.getState(), customers.getPincode()));
 
             customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(),
                     com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers),
