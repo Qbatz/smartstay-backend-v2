@@ -9,5 +9,6 @@ public record VendorExpensesResponse(
         int currentPage,
         int totalPages,
         int itemPerPage,
+        VendorExpenseFilterOptions filterOptions,
         List<ExpenseList> expenses) {
 }
