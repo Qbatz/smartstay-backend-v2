@@ -129,6 +129,9 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             }
 
             if (canApplyFromAdvance) {
+                if (invoicesV1.getPaymentStatus() == null) {
+                    System.out.println(invoicesV1.getInvoiceId());
+                }
                 if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
                     canApplyFromAdvance = false;
                 }

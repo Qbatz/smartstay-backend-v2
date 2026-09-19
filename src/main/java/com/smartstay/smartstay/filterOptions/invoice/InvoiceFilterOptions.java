@@ -48,10 +48,14 @@ public class InvoiceFilterOptions {
         InvoiceType type2 = new InvoiceType("Settlement", com.smartstay.smartstay.ennum.InvoiceType.SETTLEMENT.name());
         InvoiceType type3 = new InvoiceType("Advance", com.smartstay.smartstay.ennum.InvoiceType.ADVANCE.name());
         InvoiceType type4 = new InvoiceType("Reassign Rent", com.smartstay.smartstay.ennum.InvoiceType.REASSIGN_RENT.name());
+        InvoiceType type5 = new InvoiceType("Additional Advance", com.smartstay.smartstay.ennum.InvoiceType.ADDITIONAL_ADVANCE.name());
+        InvoiceType type6 = new InvoiceType("Other", com.smartstay.smartstay.ennum.InvoiceType.OTHER.name());
 
         invoiceTypes.add(type1);
         invoiceTypes.add(type2);
         invoiceTypes.add(type3);
         invoiceTypes.add(type4);
+        invoiceTypes.add(type5);
+        invoiceTypes.add(type6);
     }
 }

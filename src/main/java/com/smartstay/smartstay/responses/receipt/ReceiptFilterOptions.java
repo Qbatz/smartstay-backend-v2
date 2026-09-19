@@ -3,6 +3,7 @@ package com.smartstay.smartstay.responses.receipt;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.Admin.CommonType;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.util.NameUtils;
 import lombok.AllArgsConstructor;
@@ -34,6 +35,7 @@ public class ReceiptFilterOptions {
         invoiceType.add(new CommonType("Booking", "BOOKING"));
         invoiceType.add(new CommonType("Advance Holding", "AMOUNT_HOLDING"));
         invoiceType.add(new CommonType("EB Holding", "EB_HOLDING"));
+        invoiceType.add(new CommonType("Other", InvoiceType.OTHER.name()));
     }
 
     public void setCollectedBy(List<Users> listCollectedByUsers) {

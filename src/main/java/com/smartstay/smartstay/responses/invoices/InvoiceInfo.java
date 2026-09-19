@@ -39,5 +39,7 @@ public record InvoiceInfo(String invoiceId,
                           Double advanceAvailableAmount,
                           List<InvoiceItems> invoiceItems,
                           List<Deductions> listDeductions,
-                          AmountSettled redemptionInfo) {
+                          AmountSettled redemptionInfo,
+                          AmountSettled retainerApplied,
+                          AmountSettled amountSettled) {
 }

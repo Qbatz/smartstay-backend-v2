@@ -133,6 +133,14 @@ public class InvoiceRedemptionService {
         return invoiceRedemptionRepository.findByHostelIdAndTargetInvoiceId(hostelId, invoiceId);
     }
 
+    public List<InvoiceRedemption> getListAppliedToOtherInvoices(String invoiceId, String hostelId) {
+        if (!authentication.isAuthenticated()){
+            return null;
+        }
+
+        return invoiceRedemptionRepository.findByHostelIdAndSourceId(hostelId, invoiceId);
+    }
+
     public List<InvoiceRedemption> getRedeemedInvoicesByInvoiceId(String hostelId, List<String> invoicesId) {
         List<InvoiceRedemption> listInvoicesApplied = invoiceRedemptionRepository.findByHostelIdAndTargetInvoiceId(hostelId, invoicesId);
         if (listInvoicesApplied == null) {
@@ -253,7 +261,7 @@ public class InvoiceRedemptionService {
         invoiceRedemptionRepository.saveAll(listInvoiceRedeemed);
     }
 
-    public void applyRetainerToInvoice(String hostelId, String invoiceId, HashMap<String, Double> appliedAmountInvoiceIdMapper, Date redeemedAt) {
+    public List<InvoiceRedemption> applyRetainerToInvoice(String hostelId, String invoiceId, HashMap<String, Double> appliedAmountInvoiceIdMapper, Date redeemedAt) {
         List<InvoiceRedemption> listInvoiceRedeemed = new ArrayList<>();
         appliedAmountInvoiceIdMapper.keySet().forEach(i -> {
             InvoiceRedemption ir = new InvoiceRedemption();
@@ -273,7 +281,7 @@ public class InvoiceRedemptionService {
             listInvoiceRedeemed.add(ir);
         });
 
-        invoiceRedemptionRepository.saveAll(listInvoiceRedeemed);
+        return invoiceRedemptionRepository.saveAll(listInvoiceRedeemed);
     }
 
     /**

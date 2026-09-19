@@ -11,24 +11,40 @@ import java.util.function.Function;
 public class AppliedInvoicesMapper implements Function<com.smartstay.smartstay.dao.InvoiceRedemption, AppliedInvoices> {
 
     List<InvoicesV1> listInvoices = null;
+    private String type = null;
 
-    public AppliedInvoicesMapper(List<InvoicesV1> listInvoices) {
+    public AppliedInvoicesMapper(List<InvoicesV1> listInvoices, String type) {
         this.listInvoices = listInvoices;
+        this.type = type;
     }
 
     @Override
     public AppliedInvoices apply(InvoiceRedemption invoiceRedemption) {
         String invoiceNo = null;
         if (listInvoices != null) {
-            InvoicesV1 invoicesV1 = listInvoices
-                    .stream()
-                    .filter(i -> i.getInvoiceId().equalsIgnoreCase(invoiceRedemption.getSourceInvoiceId()))
-                    .findFirst()
-                    .orElse(null);
+            if (type.equalsIgnoreCase("APPLIED")) {
+                InvoicesV1 invoicesV1 = listInvoices
+                        .stream()
+                        .filter(i -> i.getInvoiceId().equalsIgnoreCase(invoiceRedemption.getSourceInvoiceId()))
+                        .findFirst()
+                        .orElse(null);
 
-            if (invoicesV1 != null) {
-                invoiceNo = invoicesV1.getInvoiceNumber();
+                if (invoicesV1 != null) {
+                    invoiceNo = invoicesV1.getInvoiceNumber();
+                }
             }
+            else {
+                InvoicesV1 invoicesV1 = listInvoices
+                        .stream()
+                        .filter(i -> i.getInvoiceId().equalsIgnoreCase(invoiceRedemption.getTargetInvoiceId()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (invoicesV1 != null) {
+                    invoiceNo = invoicesV1.getInvoiceNumber();
+                }
+            }
+
         }
 
         return new AppliedInvoices(invoiceRedemption.getSourceInvoiceId(),

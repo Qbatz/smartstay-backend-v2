@@ -2119,7 +2119,15 @@ public class InvoiceV1Service {
                     Utils.roundOffWithTwoDigit(totalDeductionAmount), false, false,
                     total1,
                     total2,
-                    0.0, false, false, 0.0, listInvoiceItems, listDeductions, null);
+                    0.0,
+                    false,
+                    false,
+                    0.0,
+                    listInvoiceItems,
+                    listDeductions,
+                    null,
+                    null,
+                    null);
             List<InvoiceSummary> invoiceSummaries = invoicesV1Repository.findInvoiceSummariesByHostelId(hostelId, invoicesList);
             Map<String, List<InvoiceRefundHistory>> historyMap = getFinalSettlementHistoryList(invoicesV1, invoiceSummaries);
             FinalSettlementResponse finalSettlementResponse = new FinalSettlementResponse(invoicesV1.getInvoiceNumber(), invoicesV1.getInvoiceId(), Utils.dateToString(invoicesV1.getInvoiceStartDate()), Utils.dateToString(invoicesV1.getInvoiceDueDate()), hostelEmail, hostelPhone, "91", InvoiceType.SETTLEMENT.name(), customers.getHostelId(), customerInfo, stayInfo, accountDetails, signatureInfo, invoiceSummaries, invoiceInfo, historyMap.get("refundHistory"), historyMap.get("paymentHistory"));
@@ -2187,9 +2195,24 @@ public class InvoiceV1Service {
         if (listInvoicesApplied != null && !listInvoicesApplied.isEmpty()) {
             List<String> sourceInvoiceIds = listInvoicesApplied.stream().map(InvoiceRedemption::getSourceInvoiceId).toList();
             List<InvoicesV1> sourceInvoices = invoicesV1Repository.findByInvoiceIdIn(sourceInvoiceIds);
-            appliedInvoicesInfo = listInvoicesApplied.stream().map(i -> new AppliedInvoicesMapper(sourceInvoices).apply(i)).toList();
+            appliedInvoicesInfo = listInvoicesApplied.stream().map(i -> new AppliedInvoicesMapper(sourceInvoices, "APPLIED").apply(i)).toList();
             double appliedAmount = listInvoicesApplied.stream().mapToDouble(InvoiceRedemption::getRedemptionAmount).sum();
             amountSettled = new AmountSettled(Utils.roundOffWithTwoDigit(appliedAmount), listInvoicesApplied.size(), appliedInvoicesInfo);
+        }
+
+        AmountSettled retainerAppliedToOtherInvoices = null;
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())
+        || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())
+        || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name())
+        || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name())) {
+            List<InvoiceRedemption> listInvoiceAppliedTo = invoiceRedemptionService.getListAppliedToOtherInvoices(invoiceId, hostelId);
+            if (listInvoiceAppliedTo != null && !listInvoiceAppliedTo.isEmpty()) {
+                List<String> targetInvoiceIds = listInvoiceAppliedTo.stream().map(InvoiceRedemption::getTargetInvoiceId).toList();
+                List<InvoicesV1> targetInvoices = invoicesV1Repository.findByInvoiceIdIn(targetInvoiceIds);
+                List<AppliedInvoices> appliedInvoicesList = listInvoiceAppliedTo.stream().map(i -> new AppliedInvoicesMapper(targetInvoices, "SETTLED").apply(i)).toList();
+                double appliedAmount = listInvoiceAppliedTo.stream().mapToDouble(InvoiceRedemption::getRedemptionAmount).sum();
+                retainerAppliedToOtherInvoices = new AmountSettled(Utils.roundOffWithTwoDigit(appliedAmount), listInvoiceAppliedTo.size(), appliedInvoicesList);
+            }
         }
 
         Double total1 = 0.0;
@@ -2251,7 +2274,9 @@ public class InvoiceV1Service {
                     false,
                     Utils.roundOffWithTwoDigit(availableAdvanceAmount),
                     listInvoiceItems, null,
-                    amountSettled);
+                    amountSettled,
+                    amountSettled,
+                    retainerAppliedToOtherInvoices);
         } else {
             String paidBy = null;
             String description = null;
@@ -2293,7 +2318,9 @@ public class InvoiceV1Service {
                     Utils.roundOffWithTwoDigit(availableAdvanceAmount),
                     listInvoiceItems,
                     listDeductions,
-                    amountSettled);
+                    amountSettled,
+                    amountSettled,
+                    retainerAppliedToOtherInvoices);
         }
 
 
@@ -2331,6 +2358,8 @@ public class InvoiceV1Service {
         double stayDays = 0.0;
         double currentMonthPayableRent = 0.0;
         String currentMonthLabelText = null;
+
+        SettlementAdditionalAdvance additionalAdvance = null;
 
         com.smartstay.smartstay.dto.invoices.InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelV1.getHostelId(), invoicesV1.getInvoiceId());
 
@@ -2422,7 +2451,35 @@ public class InvoiceV1Service {
 
         if (settlementItems.getAdditionalAdvanceItems() != null) {
             List<AdditionalAdvance> listAdditionalAdvance = settlementItems.getAdditionalAdvanceItems();
+            Double totalPaidAmount = listAdditionalAdvance
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getPaidAmount() != null) {
+                            return i.getPaidAmount();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
+            Double additionalRefundable = listAdditionalAdvance
+                    .stream()
+                    .mapToDouble(i -> {
+                        if (i.getInvoiceBalance() != null) {
+                            return i.getInvoiceBalance();
+                        }
+                        return 0.0;
+                    })
+                    .sum();
 
+            totalRefundable = totalRefundable + additionalRefundable;
+
+            List<com.smartstay.smartstay.dto.invoices.AdditionalAdvanceItems> listAdditionalAdvanceItesm = listAdditionalAdvance
+                    .stream()
+                    .map(i -> new com.smartstay.smartstay.dto.invoices.AdditionalAdvanceItems(i.getInvoiceId(), i.getInvoiceNumber(), i.getInvoiceBalance()))
+                    .toList();
+            additionalAdvance = new SettlementAdditionalAdvance(listAdditionalAdvance.size(),
+                    Utils.roundOffWithTwoDigit(totalPaidAmount),
+                    Utils.roundOffWithTwoDigit(additionalRefundable),
+                    listAdditionalAdvanceItesm);
         }
 
         RentInfo rentInfo = null;
@@ -2609,7 +2666,7 @@ public class InvoiceV1Service {
                 deductionsInfo,
                 advanceItems,
                 bookingItems,
-                null,
+                additionalAdvance,
                 currentRentInfo,
                 currentMonthEbInfo,
                 walletInfo,
@@ -5937,7 +5994,8 @@ public class InvoiceV1Service {
                     i.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
                 }
 
-                if (i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+                if (i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) ||
+                        i.getInvoiceType().equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name())) {
                     double deductions = customersService.getDeductionAmount(i.getCustomerId());
 
                     if (i.getBalanceAmount() != null) {
@@ -7108,10 +7166,11 @@ public class InvoiceV1Service {
             types = invoiceTypes;
         } else {
             types = new ArrayList<>();
-            types.add(InvoiceType.RENT.name());
-            types.add(InvoiceType.ADVANCE.name());
-            types.add(InvoiceType.REASSIGN_RENT.name());
-            types.add(InvoiceType.BOOKING.name());
+            invoiceTypes.add(InvoiceType.RENT.name());
+            invoiceTypes.add(InvoiceType.ADVANCE.name());
+            invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
+            invoiceTypes.add(InvoiceType.BOOKING.name());
+            invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
         }
 
         List<String> customerIds = null;

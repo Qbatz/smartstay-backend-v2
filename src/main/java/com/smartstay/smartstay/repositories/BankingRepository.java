@@ -73,6 +73,10 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
     BankingV1 findByBankId(String bankId);
 
     List<BankingV1> findByHostelId(String hostelId);
+    @Query("""
+            SELECT bank FROM BankingV1 bank WHERE bank.hostelId=:hostelId AND bank.isDeleted=false
+            """)
+    List<BankingV1> findActiveByHostelId(String hostelId);
 
     BankingV1 findByHostelIdAndBankId(String hostelId, String bankId);
 

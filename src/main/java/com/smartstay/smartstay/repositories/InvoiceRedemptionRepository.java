@@ -24,6 +24,12 @@ public interface InvoiceRedemptionRepository extends JpaRepository<InvoiceRedemp
     List<InvoiceRedemption> findByHostelIdAndTargetInvoiceId(String hostelId, String targetInvoiceId);
 
     @Query("""
+             SELECT ir FROM InvoiceRedemption ir WHERE ir.hostelId=:hostelId AND ir.sourceInvoiceId=:sourceInvoiceId 
+            AND ir.isActive=true
+            """)
+    List<InvoiceRedemption> findHostelIdAndSourceInvoiceId(String hostelId, String sourceInvoiceId);
+
+    @Query("""
             SELECT ir FROM InvoiceRedemption ir WHERE ir.hostelId=:hostelId AND ir.targetInvoiceId IN (:targetInvoiceId) 
             AND ir.isActive=true
             """)

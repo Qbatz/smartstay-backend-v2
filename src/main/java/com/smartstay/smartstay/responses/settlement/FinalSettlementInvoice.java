@@ -5,6 +5,7 @@ import com.smartstay.smartstay.Wrappers.settlement.CurrentMonthEbInfo;
 import com.smartstay.smartstay.Wrappers.settlement.CurrentRentInfo;
 import com.smartstay.smartstay.dto.customer.InvoiceRefundHistory;
 import com.smartstay.smartstay.dto.invoices.SettlementAdditionalAdvance;
+import com.smartstay.smartstay.dto.settlement.AdditionalAdvanceInfo;
 import com.smartstay.smartstay.responses.customer.AdvanceItems;
 import com.smartstay.smartstay.responses.customer.RentInfo;
 import com.smartstay.smartstay.responses.invoices.*;
