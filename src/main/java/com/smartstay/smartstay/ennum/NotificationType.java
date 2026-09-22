@@ -11,6 +11,7 @@ public enum NotificationType {
     DUE_REMINDERS,
     KYC_REQUEST,
     RECURRING_INVOICE,
-    MANUAL_INVOICE
+    MANUAL_INVOICE,
+    RAISE_NOTICE_REQUEST
 
 }

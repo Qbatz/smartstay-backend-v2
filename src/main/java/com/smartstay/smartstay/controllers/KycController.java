@@ -21,4 +21,10 @@ public class KycController {
     public ResponseEntity<?> requestKyc(@PathVariable("customerId") String customerId) {
         return kycServices.requestKycService(customerId);
     }
+
+    @PostMapping("/re-request/{customerId}")
+    public ResponseEntity<?> rerequestKyc(@PathVariable("customerId") String customerId) {
+        return kycServices.rerequestKyc(customerId);
+    }
 }
+

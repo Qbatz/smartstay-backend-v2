@@ -276,6 +276,9 @@ public class Utils {
     public static final String CANNOT_APPLY_DISCOUNT_ADVANCE = "Cannot apply discount for advance invoices";
     public static final String CUSTOMER_VERIFIED_KYC = "Customer is already verified";
     public static final String KYC_VERIFICATION_ALREADY_REQUESTED = "Kyc verification is already requested";
+    public static final String KYC_NOT_REQUESTED_ERROR = "KYC process is not initiated for this tenant";
+    public static final String KYC_REQUEST_DISABLED = "Kyc request is disabled";
+    public static final String KYC_REQUEST_LIMIT_EXCEEDED = "KYC request limit is exceeded";
     public static final String CANNOT_REQUEST_VACATED_TENANT = "Cannot request for vacated tenant";
     public static final String CANNOT_REQUEST_BOOKING_TENANT = "Cannot request for booked tenants";
     public static final String CANNOT_REQUEST_INACTIVE_TENANT = "Cannot request for inactive tenants";
@@ -290,6 +293,7 @@ public class Utils {
     public static final String REQUIRED_INVOICE_ITEMS = "Required invoice items";
     public static final String MANUAL_INVOICE_CANNOT_CREATE_BEFORE_CHECKIN = "Invoice date must be after the joining date";
     public static final String CANNOT_CREATE_ADVANCE_RENTAL_TOGETHER = "Cannot create advance and rental invoice together";
+    public static final String CANNOT_CREATE_CURRENT_MONTH_POSTPAID_INVOICE = "Cannot create current month rental invoice for postpaid hostels";
     public static final String INVALID_STARTING_DATE = "Invalid starting date";
     public static final String INVALID_DUE_DYS = "Invalid due days";
     public static final String INVALID_NOTICE_DAYS = "Invalid notice days";

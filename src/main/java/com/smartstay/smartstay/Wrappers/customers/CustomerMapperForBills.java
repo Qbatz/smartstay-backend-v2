@@ -28,7 +28,9 @@ public class CustomerMapperForBills implements Function<Customers, GetCustomersF
     public GetCustomersForBills apply(Customers customers) {
         String joiningDate = null;
         String expectedJoiningDate = null;
-        String status = null;
+        String status = customers.getCurrentStatus();
+        String profilePic = CustomerUtils.getProfilePic(customers);
+        String initials = NameUtils.getInitials(customers.getFirstName(), customers.getLastName());
         double rent = 0.0;
         StayInfo stayInfo = null;
 
@@ -65,6 +67,10 @@ public class CustomerMapperForBills implements Function<Customers, GetCustomersF
                 customers.getLastName(),
                 joiningDate,
                 status,
+                profilePic,
+                initials,
+                customers.getMobile(),
+                "91",
                 expectedJoiningDate,
                 rent,
                 stayInfo,

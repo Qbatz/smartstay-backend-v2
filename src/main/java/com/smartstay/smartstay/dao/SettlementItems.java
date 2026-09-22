@@ -31,6 +31,9 @@ public class SettlementItems {
     @Convert(converter = CurrentOtherItemConverter.class)
     private List<CurrentOtherItems> currentMonthOtherItems;
     @Column(columnDefinition = "TEXT")
+    @Convert(converter = AdditionalAdvanceConverter.class)
+    private List<AdditionalAdvance> additionalAdvanceItems;
+    @Column(columnDefinition = "TEXT")
     @Convert(converter = SettlementEBItemsConverter.class)
     private List<EBItems> ebItems;
     @Column(columnDefinition = "TEXT")

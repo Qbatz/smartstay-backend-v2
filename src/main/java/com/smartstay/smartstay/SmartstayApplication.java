@@ -34,6 +34,79 @@ public class SmartstayApplication {
         SpringApplication.run(SmartstayApplication.class, args);
     }
 
+    /**
+     *
+     * need to execute on prod
+     *
+     *
+     */
+//    @Bean
+//    CommandLineRunner addToKycHistory(HostelV1Repository hostelV1Repository, KycHistoryRepository kycHistoryRepository) {
+//        return args -> {
+//            List<HostelV1> listAllHostels = hostelV1Repository.findAll();
+//            List<KycHistory> listHistory = listAllHostels
+//                    .stream()
+//                    .map(i -> {
+//                        KycHistory kycHistory = new KycHistory();
+//                        kycHistory.setHostelId(i.getHostelId());
+//                        kycHistory.setStartDate(i.getCreatedAt());
+//                        kycHistory.setEndDate(null);
+//                        kycHistory.setIsCancelledDueToPlan(false);
+//                        kycHistory.setActivationReason("Activated due to initial setup");
+//                        kycHistory.setCreatedAt(new Date());
+//                        return kycHistory;
+//                    })
+//                    .toList();
+//
+//            kycHistoryRepository.saveAll(listHistory);
+//        };
+//    }
+
+    /**
+     *
+     * modify the default agent id
+     *
+     */
+
+//    @Bean
+//    CommandLineRunner addToKycConfig(HostelV1Repository hostelV1Repository, KycConfigRepository kycConfigRepository) {
+//        return args -> {
+//            List<HostelV1> listAllHostels = hostelV1Repository.findAll();
+//            List<KycConfig> listKycConfig = listAllHostels
+//                    .stream()
+//                    .map(i -> {
+//                        KycConfig config = new KycConfig();
+//                        config.setCanRequest(true);
+//                        config.setHostelId(i.getHostelId());
+//                        config.setLimitPerMonth(-1);
+//                        config.setCreatedBy("f1495a1c-5bfc-438d-94f9-435b07bd157f");
+//                        config.setUpdatedBy("f1495a1c-5bfc-438d-94f9-435b07bd157f");
+//                        config.setCreatedAt(new Date());
+//                        config.setUpdatedAt(new Date());
+//                        return config;
+//                    })
+//                    .toList();
+//            kycConfigRepository.saveAll(listKycConfig);
+//        };
+//    }
+
+//    @Bean
+//    CommandLineRunner addHostelIdToKycDetails(KycDetailsRepository kycDetailsRepository) {
+//        return args -> {
+//            List<KycDetails> listAllKycs = kycDetailsRepository.findAll();
+//            List<KycDetails> lisNewKycDetails = listAllKycs
+//                    .stream()
+//                    .map(i -> {
+//                        Customers cus = i.getCustomers();
+//                        i.setHostelId(cus.getHostelId());
+//
+//                        return i;
+//                    })
+//                    .toList();
+//            kycDetailsRepository.saveAll(lisNewKycDetails);
+//        };
+//    }
+
 //    @Bean
 //    CommandLineRunner backupTransactions(BankTransactionRepository bankTransactionRepository, TempTransactionsRepositories tempTransactionsRepositories) {
 //        return args -> {

@@ -513,6 +513,9 @@ public class ActivityLogUtils {
         if (operationName.equalsIgnoreCase(ActivitySourceType.REQUEST.name())) {
             return "KYC completion is requested";
         }
+        else if (operationName.equalsIgnoreCase(ActivitySourceType.KYC_RE_REQUEST.name())) {
+            return "KYC completion is requested again";
+        }
         return null;
     }
 

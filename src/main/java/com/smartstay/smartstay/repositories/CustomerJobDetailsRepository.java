@@ -10,6 +10,7 @@ import java.util.List;
 
 @Repository
 public interface CustomerJobDetailsRepository extends JpaRepository<CustomerJobDetails, Long> {
+    List<CustomerJobDetails> findByCustomerIdAndHostelId(String customerId, String hostelId);
 
     @Query(value = """
             SELECT * FROM customer_job_details
@@ -18,7 +19,7 @@ public interface CustomerJobDetailsRepository extends JpaRepository<CustomerJobD
             ORDER BY job_id
             LIMIT 1
             """, nativeQuery = true)
-    CustomerJobDetails findByCustomerIdAndHostelId(@Param("customerId") String customerId, @Param("hostelId") String hostelId);
+    CustomerJobDetails findLatestByCustomerIdAndHostelId(@Param("customerId") String customerId, @Param("hostelId") String hostelId);
 
     @Query("SELECT j FROM CustomerJobDetails j WHERE j.customerId = :customerId AND j.hostelId = :hostelId " +
            "AND (j.isDeleted IS NULL OR j.isDeleted = false) ORDER BY j.jobId")

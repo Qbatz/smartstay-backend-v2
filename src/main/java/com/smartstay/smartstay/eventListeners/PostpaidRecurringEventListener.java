@@ -131,7 +131,7 @@ public class PostpaidRecurringEventListener {
                             invoiceStartDate.set(item.getJoiningDate());
                             invoiceDueDate.set(Utils.addDaysToDate(new Date(), invoiceMonthBillingDates.dueDays()-1));
                             if (invoiceMonthBillingDates.hasGracePeriod()) {
-                                Date dateAfterGracePeriod = Utils.addDaysToDate(currentBillingInvoiceStartDate, invoiceMonthBillingDates.gracePeriodDays());
+                                Date dateAfterGracePeriod = Utils.addDaysToDate(currentBillingInvoiceStartDate, invoiceMonthBillingDates.gracePeriodDays() -1);
                                 if (Utils.compareWithTwoDates(item.getJoiningDate(), dateAfterGracePeriod) <= 0) {
                                     rentAmount = item.getRentAmount();
                                 }

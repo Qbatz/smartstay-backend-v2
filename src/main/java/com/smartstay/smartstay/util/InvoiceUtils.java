@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.util;
 
 import com.smartstay.smartstay.dao.InvoicesV1;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 
 public class InvoiceUtils {
@@ -65,5 +66,24 @@ public class InvoiceUtils {
             return paymentStatus;
         }
         return null;
+    }
+
+    public static String getInvoiceType(InvoicesV1 invoicesV1) {
+        String invoiceType = null;
+        if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
+            invoiceType = "Rent";
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+            invoiceType = "Booking";
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name())) {
+            invoiceType = "Advance";
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHER.name())) {
+            invoiceType = "Other";
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
+            invoiceType = "Settlement";
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
+            invoiceType = "Reassign-Rent";
+        }
+
+        return invoiceType;
     }
 }

@@ -157,7 +157,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             invoiceType = "Booking";
             canEdit = false;
             canRedeem = true;
-        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name())) {
             invoiceType = "Advance";
             canEdit = false;
             if (invoicesV1.getBalanceAmount() != null && invoicesV1.getBalanceAmount() > 0) {

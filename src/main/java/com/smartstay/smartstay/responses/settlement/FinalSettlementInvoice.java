@@ -4,6 +4,7 @@ package com.smartstay.smartstay.responses.settlement;
 import com.smartstay.smartstay.Wrappers.settlement.CurrentMonthEbInfo;
 import com.smartstay.smartstay.Wrappers.settlement.CurrentRentInfo;
 import com.smartstay.smartstay.dto.customer.InvoiceRefundHistory;
+import com.smartstay.smartstay.dto.invoices.SettlementAdditionalAdvance;
 import com.smartstay.smartstay.responses.customer.AdvanceItems;
 import com.smartstay.smartstay.responses.customer.RentInfo;
 import com.smartstay.smartstay.responses.invoices.*;
@@ -19,6 +20,7 @@ public record FinalSettlementInvoice(HeaderInfo headerInfo,
                                      DeductionsInfo deductionsInfo,
                                      AdvanceItems advanceItems,
                                      AdvanceItems bookingItems,
+                                     SettlementAdditionalAdvance additionalAdvanceItems,
                                      CurrentRentInfo currentMonthRentInfo,
                                      CurrentMonthEbInfo currentMonthEbInfo,
                                      WalletInfo walletInfo,

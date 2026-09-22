@@ -8,5 +8,6 @@ public record AdvanceInfo(Double advanceAmount,
                           String advanceInvoiceNumber,
                           boolean status,
                           String message,
-                          String paymentStatus) {
+                          String paymentStatus,
+                          String redemptionStatus) {
 }
