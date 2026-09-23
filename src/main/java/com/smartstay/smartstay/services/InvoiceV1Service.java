@@ -2619,15 +2619,17 @@ public class InvoiceV1Service {
             totalPayable = walletAmount;
         }
 
-        if (currentPayablemount < 0) {
-            totalRefundable = totalRefundable + (currentPayablemount * -1);
-        }
-//       totalRefundable = totalRefundable;
-//       totalPayable = totalPayable + unpaidInvoiceAmount + deductionAmount;
-        totalPayable = totalPayable + currentMonthPayableAmount - currentPaidAmount;
-        if (totalPayable < 0) {
-            totalPayable = 0;
-        }
+//        if (currentPayablemount < 0) {
+//            totalRefundable = totalRefundable + (currentPayablemount * -1);
+//        }
+       totalRefundable = totalRefundable + currentPaidAmount;
+       totalPayable = totalPayable + unpaidInvoiceAmount;
+//        totalPayable = totalPayable + currentMonthPayableAmount - currentPaidAmount;
+        totalPayable = totalPayable + currentMonthPayableAmount;
+
+//        if (totalPayable < 0) {
+//            totalPayable = 0;
+//        }
 
 
         com.smartstay.smartstay.responses.settlement.InvoiceInfo invoiceInfo = null;
@@ -6002,10 +6004,44 @@ public class InvoiceV1Service {
                         com.smartstay.smartstay.dao.InvoiceRedemption invoiceRedemption1 = ir.stream().filter(i2 -> i.getInvoiceId().equalsIgnoreCase(i2.getTargetInvoiceId())).findFirst().orElse(null);
                         if (invoiceRedemption1 != null) {
                             double amountAfterDeduction = i.getPaidAmount() - deductions;
-                            if (amountAfterDeduction > 0) {
-                                double unpaidDeductionAmount = i.getDeductions().stream().filter(i2 -> i.getPaidAmount() == null || i2.getPaidAmount() < i2.getAmount()).mapToDouble(i2 -> i2.getAmount() - i2.getPaidAmount()).sum();
-                                if (unpaidDeductionAmount > 0) {
-                                    final double[] tempAmount = {unpaidDeductionAmount};
+                            if (i.getDeductions() != null) {
+                                if (amountAfterDeduction > 0) {
+                                    double unpaidDeductionAmount = i.getDeductions().stream().filter(i2 -> i.getPaidAmount() == null || i2.getPaidAmount() < i2.getAmount()).mapToDouble(i2 -> i2.getAmount() - i2.getPaidAmount()).sum();
+                                    if (unpaidDeductionAmount > 0) {
+                                        final double[] tempAmount = {unpaidDeductionAmount};
+                                        List<Deductions> newDeductions = i.getDeductions().stream().map(i2 -> {
+                                            if (tempAmount[0] > 0) {
+                                                double balance = i2.getAmount() - i2.getPaidAmount();
+                                                if (i2.getPaidAmount() < i2.getAmount()) {
+                                                    if (tempAmount[0] >= balance) {
+                                                        i2.setPaidAmount(i2.getAmount());
+                                                        tempAmount[0] = tempAmount[0] - balance;
+                                                    } else if (balance > tempAmount[0]) {
+                                                        i2.setPaidAmount(i2.getPaidAmount() + tempAmount[0]);
+                                                        tempAmount[0] = 0;
+                                                    }
+                                                }
+
+                                            }
+                                            return i2;
+                                        }).toList();
+
+                                        i.setDeductions(newDeductions);
+
+                                        i.setBalanceAmount(amountAfterDeduction);
+                                    }
+                                    else {
+                                        double redeemedAmount = invoiceRedemptionService.getRedeemedAmountFromINvoiceId(hostelId, i.getInvoiceId());
+                                        if (i.getBalanceAmount() != null) {
+                                            i.setBalanceAmount(amountAfterDeduction - redeemedAmount);
+                                        } else {
+                                            i.setBalanceAmount(amountAfterDeduction - redeemedAmount);
+                                        }
+                                    }
+
+                                }
+                                else {
+                                    final double[] tempAmount = {invoiceRedemption1.getRedemptionAmount()};
                                     List<Deductions> newDeductions = i.getDeductions().stream().map(i2 -> {
                                         if (tempAmount[0] > 0) {
                                             double balance = i2.getAmount() - i2.getPaidAmount();
@@ -6024,40 +6060,12 @@ public class InvoiceV1Service {
                                     }).toList();
 
                                     i.setDeductions(newDeductions);
-
-                                    i.setBalanceAmount(amountAfterDeduction);
                                 }
-                                else {
-                                    double redeemedAmount = invoiceRedemptionService.getRedeemedAmountFromINvoiceId(hostelId, i.getInvoiceId());
-                                    if (i.getBalanceAmount() != null) {
-                                        i.setBalanceAmount(amountAfterDeduction - redeemedAmount);
-                                    } else {
-                                        i.setBalanceAmount(amountAfterDeduction - redeemedAmount);
-                                    }
-                                }
-
                             }
                             else {
-                                final double[] tempAmount = {invoiceRedemption1.getRedemptionAmount()};
-                                List<Deductions> newDeductions = i.getDeductions().stream().map(i2 -> {
-                                    if (tempAmount[0] > 0) {
-                                        double balance = i2.getAmount() - i2.getPaidAmount();
-                                        if (i2.getPaidAmount() < i2.getAmount()) {
-                                            if (tempAmount[0] >= balance) {
-                                                i2.setPaidAmount(i2.getAmount());
-                                                tempAmount[0] = tempAmount[0] - balance;
-                                            } else if (balance > tempAmount[0]) {
-                                                i2.setPaidAmount(i2.getPaidAmount() + tempAmount[0]);
-                                                tempAmount[0] = 0;
-                                            }
-                                        }
-
-                                    }
-                                    return i2;
-                                }).toList();
-
-                                i.setDeductions(newDeductions);
+                                i.setBalanceAmount(invoiceRedemption1.getRedemptionAmount());
                             }
+
                         }
                     } else {
                         com.smartstay.smartstay.dao.InvoiceRedemption invoiceRedemption1 = ir.stream().filter(i2 -> i.getInvoiceId().equalsIgnoreCase(i2.getTargetInvoiceId())).findFirst().orElse(null);
@@ -7331,7 +7339,7 @@ public class InvoiceV1Service {
                 .findFirst()
                 .orElse(null);
 
-        if (advanceInvoice != null) {
+        if (rentalInvoice != null) {
             if (billingDates != null) {
                 if (billingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
                     if (Utils.compareWithTwoDates(billingDates.currentBillStartDate(), invoiceDate) <= 0) {

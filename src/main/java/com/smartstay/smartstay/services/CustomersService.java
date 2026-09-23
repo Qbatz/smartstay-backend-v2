@@ -384,7 +384,7 @@ public class CustomersService {
         return customersRepository.getCustomerData(hostelId, name != null && !name.isBlank() ? name : null, typeArray);
     }
 
-    public ResponseEntity<?> getAllCustomersForHostel(String hostelId, String name, List<String> type, Integer page, Integer size, List<String> periods, List<String> sharingType) {
+    public ResponseEntity<?> getAllCustomersForHostel(String hostelId, String name, List<String> type, Integer page, Integer size, String periods, List<String> sharingType) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -532,42 +532,47 @@ public class CustomersService {
         return calendar.getTime();
     }
 
-    private List<String> resolveFilteredCustomerIds(String hostelId, List<String> periodList, List<String> sharingTypeList) {
+    private List<String> resolveFilteredCustomerIds(String hostelId, String period, List<String> sharingTypeList) {
         Date startDate = null;
         Date endDate = null;
         List<String> customerIds = null;
 
-        if (periodList != null && !periodList.isEmpty()) {
-            for (String period : periodList) {
-                Date pStart = null;
-                Date pEnd = null;
-                if (period.equalsIgnoreCase(FilterKeywords.THIS_MONTH)) {
-                    pStart = monthStart(0);
-                    pEnd = new Date();
-                } else if (period.equalsIgnoreCase(FilterKeywords.LAST_MONTH)) {
-                    pStart = monthStart(-1);
-                    pEnd = monthEnd(-1);
-                } else if (period.equalsIgnoreCase(FilterKeywords.LAST_3_MONTH)) {
-                    pStart = monthStart(-2);
-                    pEnd = new Date();
-                } else if (period.equalsIgnoreCase(FilterKeywords.LAST_6_MONTH)) {
-                    pStart = monthStart(-5);
-                    pEnd = new Date();
-                } else if (period.equalsIgnoreCase(FilterKeywords.LAST_1_YEAR)) {
-                    pStart = monthStart(-11);
-                    pEnd = new Date();
-                }
-                // Union: take the earliest start and latest end across all selected periods
-                if (pStart != null) {
-                    startDate = (startDate == null || pStart.before(startDate)) ? pStart : startDate;
-                }
-                if (pEnd != null) {
-                    endDate = (endDate == null || pEnd.after(endDate)) ? pEnd : endDate;
-                }
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+
+        if (period != null && !period.isEmpty()) {
+            Date pStart = null;
+            Date pEnd = null;
+            if (period.equalsIgnoreCase(FilterKeywords.THIS_MONTH)) {
+                pStart = billingDates.currentBillStartDate();
+                pEnd = billingDates.currentBillEndDate();
+            } else if (period.equalsIgnoreCase(FilterKeywords.LAST_MONTH)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.MONTH, -1);
+                BillingDates thisMonthBillingDates = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                pStart = thisMonthBillingDates.currentBillStartDate();
+                pEnd = billingDates.currentBillEndDate();
+            } else if (period.equalsIgnoreCase(FilterKeywords.LAST_3_MONTH)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.MONTH, -2);
+                BillingDates last3MonthsBillingDates = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                pStart = last3MonthsBillingDates.currentBillStartDate();
+                pEnd = billingDates.currentBillEndDate();
+            } else if (period.equalsIgnoreCase(FilterKeywords.LAST_6_MONTH)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.MONTH, -5);
+                BillingDates last3MonthsBillingDates = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                pStart = last3MonthsBillingDates.currentBillStartDate();
+                pEnd = billingDates.currentBillEndDate();
+            } else if (period.equalsIgnoreCase(FilterKeywords.LAST_1_YEAR)) {
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.MONTH, -11);
+                BillingDates last3MonthsBillingDates = hostelService.getBillingRuleOnDate(hostelId, calendar.getTime());
+                pStart = last3MonthsBillingDates.currentBillStartDate();
+                pEnd = billingDates.currentBillEndDate();
             }
 
-            if (startDate != null && endDate != null) {
-                customerIds = bookingsService.getCustomerIdsByStartAndEndDate(hostelId, startDate, endDate);
+            if (pStart != null && pEnd != null) {
+                customerIds = bookingsService.getCustomerIdsByStartAndEndDate(hostelId, pStart, pEnd);
             }
         }
         if (sharingTypeList != null && !sharingTypeList.isEmpty()) {
@@ -591,7 +596,7 @@ public class CustomersService {
         return customerIds;
     }
 
-    private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, List<String> types, Integer page, Integer size, List<String> periodList, List<String> sharingTypeList) {
+    private ResponseEntity<?> getCustomerDetailsForWeb(String hostelId, String name, List<String> types, Integer page, Integer size, String period, List<String> sharingTypeList) {
 
         List<String> typeArray = new ArrayList<>();
         if (types == null || types.isEmpty()) {
@@ -604,7 +609,7 @@ public class CustomersService {
             types.forEach(t -> typeArray.add(t.toUpperCase()));
         }
 
-        List<String> customerIds = resolveFilteredCustomerIds(hostelId, periodList, sharingTypeList);
+        List<String> customerIds = resolveFilteredCustomerIds(hostelId, period, sharingTypeList);
 
         Pageable pageableRequest = PageRequest.of(page - 1, size);
 
