@@ -16,6 +16,7 @@ import com.smartstay.smartstay.dao.VendorV1;
 import com.smartstay.smartstay.dto.vendor.VendorFilters;
 import com.smartstay.smartstay.dto.vendor.VendorMonthSummaryProjection;
 import com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary;
+import com.smartstay.smartstay.ennum.ExpensePaymentStatus;
 import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.ennum.ModuleId;
 import com.smartstay.smartstay.ennum.VendorPaymentStatus;
@@ -30,11 +31,13 @@ import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.VendorCategoriesRepository;
 import com.smartstay.smartstay.repositories.VendorRepository;
+import com.smartstay.smartstay.responses.expenses.ExpenseFilterOptions;
 import com.smartstay.smartstay.responses.expenses.ExpenseItemResponse;
 import com.smartstay.smartstay.responses.expenses.ExpensePaymentResponse;
 import com.smartstay.smartstay.responses.vendor.VendorCategoryResponse;
 import com.smartstay.smartstay.responses.vendor.VendorDetailsFilterOptions;
 import com.smartstay.smartstay.responses.vendor.VendorDetailsResponse;
+import com.smartstay.smartstay.responses.vendor.VendorExpenseFilterOptions;
 import com.smartstay.smartstay.responses.vendor.VendorExpensePaymentResponse;
 import com.smartstay.smartstay.responses.vendor.VendorExpensePaymentsResponse;
 import com.smartstay.smartstay.responses.vendor.VendorExpensesResponse;
@@ -65,6 +68,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
@@ -571,6 +575,8 @@ public class VendorService {
     }
 
     public ResponseEntity<?> getVendorExpenses(Integer vendorId, String search, String startDate, String endDate,
+                                               String paymentStatus, Integer categoryId,
+                                               Double minAmount, Double maxAmount,
                                                Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -595,12 +601,19 @@ public class VendorService {
         Date end = (endDate != null && !endDate.trim().isEmpty())
                 ? Utils.stringToDate(endDate.trim(), Utils.DATE_FORMAT_ZOHO) : null;
 
+        String statusFilter = (paymentStatus != null && !paymentStatus.trim().isEmpty()) ? paymentStatus.trim() : null;
+        Long categoryFilter = categoryId != null ? categoryId.longValue() : null;
+        if (minAmount != null && maxAmount != null && minAmount > maxAmount) {
+            return new ResponseEntity<>(Utils.INVALID_AMOUNT_RANGE, HttpStatus.BAD_REQUEST);
+        }
+
         int pageNumber = (page == null || page < 1) ? 1 : page;
         int pageSize = (size == null || size < 1) ? 10 : size;
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
         Page<com.smartstay.smartstay.dto.expenses.ExpenseList> expensePage =
-                expensesRepository.findVendorExpenses(String.valueOf(vendorId), searchTerm, start, end, pageable);
+                expensesRepository.findVendorExpenses(String.valueOf(vendorId), searchTerm, start, end,
+                        statusFilter, categoryFilter, minAmount, maxAmount, pageable);
         List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections = expensePage.getContent();
 
         // Bulk-load items and payments for the page in two queries (no N+1), grouped by expense id.
@@ -646,8 +659,21 @@ public class VendorService {
                 .toList();
 
         VendorExpensesResponse response = new VendorExpensesResponse(expensePage.getTotalElements(), pageNumber,
-                expensePage.getTotalPages(), pageSize, expenses);
+                expensePage.getTotalPages(), pageSize, buildVendorExpenseFilterOptions(vendor), expenses);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private VendorExpenseFilterOptions buildVendorExpenseFilterOptions(VendorV1 vendor) {
+        List<ExpenseFilterOptions.FilterItems> statusItems = Arrays.stream(ExpensePaymentStatus.values())
+                .map(s -> new ExpenseFilterOptions.FilterItems(s.name(), s.name()))
+                .toList();
+
+        List<ExpenseFilterOptions.FilterItems> categoryItems = expensesRepository
+                .findExpenseCategoriesForVendor(vendor.getVendorId()).stream()
+                .map(c -> new ExpenseFilterOptions.FilterItems(c.getCategoryName(), String.valueOf(c.getCategoryId())))
+                .toList();
+
+        return new VendorExpenseFilterOptions(statusItems, categoryItems);
     }
 
     public ResponseEntity<?> getVendorExpensePayments(Integer vendorId, String startDate, String endDate,

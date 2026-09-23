@@ -3,6 +3,7 @@ package com.smartstay.smartstay.responses.customer;
 import com.smartstay.smartstay.dao.ColumnFilters;
 import com.smartstay.smartstay.dto.customer.Summary;
 import com.smartstay.smartstay.filterOptions.customers.FilterOptions;
+import com.smartstay.smartstay.responses.banking.DebitsBank;
 
 import java.util.List;
 
@@ -14,5 +15,6 @@ public record CustomerWebResponse(int totalCustomers,
                                   FilterOptions filterOptions,
                                   List<String> tableHeaders,
                                   List<ColumnFilters> columnList,
-                                  List<List<Object>> tenants) {
+                                  List<List<Object>> tenants,
+                                  List<DebitsBank> banks) {
 }

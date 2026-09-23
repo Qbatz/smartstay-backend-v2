@@ -32,6 +32,15 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             " AND (:startDate IS NULL OR DATE(exp.transaction_date) >= DATE(:startDate)) " +
             " AND (:endDate IS NULL OR DATE(exp.transaction_date) <= DATE(:endDate)) ";
 
+    String VENDOR_EXPENSE_LIST_FILTERS =
+            " AND (:search IS NULL OR exp.expense_number LIKE CONCAT('%', :search, '%')) " +
+            " AND (:startDate IS NULL OR DATE(exp.transaction_date) >= DATE(:startDate)) " +
+            " AND (:endDate IS NULL OR DATE(exp.transaction_date) <= DATE(:endDate)) " +
+            " AND (:paymentStatus IS NULL OR exp.payment_status = :paymentStatus) " +
+            " AND (:categoryId IS NULL OR exp.category_id = :categoryId) " +
+            " AND (:minAmount IS NULL OR COALESCE(exp.total_price, 0) >= :minAmount) " +
+            " AND (:maxAmount IS NULL OR COALESCE(exp.total_price, 0) <= :maxAmount) ";
+
     ExpensesV1 findByExpenseNumberAndHostelId(String expenseNumber, String hostelId);
 
     @Query("SELECT COALESCE(SUM(e.totalPrice), 0) FROM ExpensesV1 e " +
@@ -153,24 +162,33 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             LEFT OUTER JOIN expense_category expCat on expCat.category_id=exp.category_id
             LEFT OUTER JOIN expense_sub_category expSub on expSub.sub_category_id=exp.sub_category_id
             WHERE exp.vendor_id=:vendorId AND exp.is_active=true
-            AND (:search IS NULL OR exp.expense_number LIKE CONCAT('%', :search, '%'))
-            AND (:startDate IS NULL OR DATE(exp.transaction_date) >= DATE(:startDate))
-            AND (:endDate IS NULL OR DATE(exp.transaction_date) <= DATE(:endDate))
+            """ + VENDOR_EXPENSE_LIST_FILTERS + """
             ORDER BY exp.transaction_date DESC
             """,
             countQuery = """
             SELECT COUNT(*) FROM expensesv1 exp
             WHERE exp.vendor_id=:vendorId AND exp.is_active=true
-            AND (:search IS NULL OR exp.expense_number LIKE CONCAT('%', :search, '%'))
-            AND (:startDate IS NULL OR DATE(exp.transaction_date) >= DATE(:startDate))
-            AND (:endDate IS NULL OR DATE(exp.transaction_date) <= DATE(:endDate))
-            """,
+            """ + VENDOR_EXPENSE_LIST_FILTERS,
             nativeQuery = true)
     org.springframework.data.domain.Page<ExpenseList> findVendorExpenses(@Param("vendorId") String vendorId,
                                                                           @Param("search") String search,
                                                                           @Param("startDate") Date startDate,
                                                                           @Param("endDate") Date endDate,
+                                                                          @Param("paymentStatus") String paymentStatus,
+                                                                          @Param("categoryId") Long categoryId,
+                                                                          @Param("minAmount") Double minAmount,
+                                                                          @Param("maxAmount") Double maxAmount,
                                                                           Pageable pageable);
+
+    @Query(value = """
+            SELECT DISTINCT expCat.category_id AS categoryId, expCat.category_name AS categoryName
+            FROM expensesv1 exp
+            JOIN expense_category expCat ON expCat.category_id = exp.category_id
+            WHERE exp.vendor_id = :vendorId AND exp.is_active = true
+            ORDER BY expCat.category_name
+            """, nativeQuery = true)
+    List<com.smartstay.smartstay.dto.expenses.VendorExpenseCategoryView> findExpenseCategoriesForVendor(
+            @Param("vendorId") Integer vendorId);
 
     @Query(value = """
             SELECT exp.expense_id as expenseId, exp.unit_count as noOfItems, exp.category_id as categoryId,
