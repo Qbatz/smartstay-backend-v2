@@ -459,7 +459,8 @@ public class CustomersService {
 
         listCustomers.sort(Comparator.comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
         FilterOptions filterOptions = getTenantFilterOptions(hostelId);
-        CustomersList response = new CustomersList(hostelId, listCustomers.size(), filterOptions, listCustomers);
+        CustomersList response = new CustomersList(hostelId, listCustomers.size(), filterOptions, listCustomers,
+                bankingService.getAllBankForReturn(hostelId));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -683,7 +684,8 @@ public class CustomersService {
 
         FilterOptions filterOptions = getTenantFilterOptions(hostelId);
 
-        CustomerWebResponse response = new CustomerWebResponse(totalCustomers, currentPage, totalPages, size, summary, filterOptions, tableColumns, listColumns, listTenants);
+        CustomerWebResponse response = new CustomerWebResponse(totalCustomers, currentPage, totalPages, size, summary, filterOptions, tableColumns, listColumns, listTenants,
+                bankingService.getAllBankForReturn(hostelId));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

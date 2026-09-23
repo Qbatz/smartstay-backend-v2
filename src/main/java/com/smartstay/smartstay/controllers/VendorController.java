@@ -112,9 +112,16 @@ public class VendorController {
                                                @RequestParam(value = "search", required = false) String search,
                                                @RequestParam(value = "startDate", required = false) String startDate,
                                                @RequestParam(value = "endDate", required = false) String endDate,
+                                               @RequestParam(value = "paymentStatus", required = false) String paymentStatus,
+                                               @RequestParam(value = "category", required = false) Integer category,
+                                               @RequestParam(value = "categoryId", required = false) Integer categoryId,
+                                               @RequestParam(value = "minAmount", required = false) Double minAmount,
+                                               @RequestParam(value = "maxAmount", required = false) Double maxAmount,
                                                @RequestParam(value = "page", defaultValue = "1") int page,
                                                @RequestParam(value = "size", defaultValue = "10") int size) {
-        return vendorService.getVendorExpenses(vendorId, search, startDate, endDate, page, size);
+        Integer categoryFilter = category != null ? category : categoryId;
+        return vendorService.getVendorExpenses(vendorId, search, startDate, endDate, paymentStatus, categoryFilter,
+                minAmount, maxAmount, page, size);
     }
 
     @GetMapping("/expense-payments/{vendorId}")
