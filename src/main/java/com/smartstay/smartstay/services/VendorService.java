@@ -185,9 +185,10 @@ public class VendorService {
         VendorFilters filters = new VendorFilters(searchName, categoryId, statusFilters, createdByFilter,
                 createdFrom, createdTo, subCategoryId, minAmount, maxAmount);
 
+        boolean isWeb = "web".equalsIgnoreCase(authentication.getSource());
         int pageNumber = (page == null || page < 1) ? 1 : page;
         int pageSize = (size == null || size < 1) ? 10 : size;
-        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
+        Pageable pageable = isWeb ? PageRequest.of(pageNumber - 1, pageSize) : PageRequest.of(0, Integer.MAX_VALUE);
 
         // Pagination, the filtered page, and the summary are identical for web and mobile.
         Page<VendorV1> vendorPage = vendorRepository.listVendors(hostelId, filters.name(), filters.categoryId(),
@@ -201,7 +202,7 @@ public class VendorService {
         int totalPages = vendorPage.getTotalPages();
         int totalVendors = (int) vendorPage.getTotalElements();
 
-        if ("web".equalsIgnoreCase(authentication.getSource())) {
+        if (isWeb) {
             // Web "Last Transaction" column shows the latest payment date (one bulk query, no N+1).
             Map<Integer, Date> lastPaymentDates = resolveLastPaymentDates(vendors);
             return buildVendorWebResponse(hostelId, vendors, categoryNamesById, lastPaymentDates, vendorSummary,
@@ -210,7 +211,7 @@ public class VendorService {
         // Mobile "Last Transaction" is the amount of the latest payment (one bulk query, no N+1).
         Map<Integer, Double> lastPaymentAmounts = resolveLastPaymentAmounts(vendors);
         return buildVendorMobileResponse(hostelId, vendors, categoryNamesById, lastPaymentAmounts, vendorSummary,
-                totalVendors, currentPage, totalPages, pageSize);
+                totalVendors, currentPage, totalPages, vendors.size());
     }
 
     /**
