@@ -8,5 +8,5 @@ public record HostelDetails(String hostelId, String mainImage, String city, Stri
                             int remainingDaysLeft, String currentMonthBillStartDate, String currentMonthBillEndDate,
                             int dueDays, String billingMode, String billingType, int numberOfFloors,
                             List<FloorDetails> floorDetails, int unreadNotificationCount, boolean canModifyBilling,
-                            int gracePeriod, boolean hasGracePeriod) {
+                            int gracePeriod, boolean hasGracePeriod, boolean shouldVerifyRecurring) {
 }
