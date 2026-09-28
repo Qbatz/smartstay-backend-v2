@@ -324,6 +324,7 @@ public class RecurringEventListener {
                                     billingDates.dueDays(),
                                     rentAmount,
                                     ebAmount,
+                                    amenityAmount,
                                     listCustomersAmenity,
                                     listAmenities,
                                     listCustomerWallets);
@@ -366,6 +367,7 @@ public class RecurringEventListener {
                                                 Integer dueDays,
                                                 Double rentAmount,
                                                 Double ebAmount,
+                                                Double amenityAmount,
                                                 List<CustomersAmenity> listCustomerAmenities,
                                                 List<AmenitiesV1> listAmenities,
                                                 List<CustomerWalletHistory> listCustomerWallets) {
@@ -383,6 +385,8 @@ public class RecurringEventListener {
         if (dueDays != null) {
             dDays = dueDays;
         }
+
+        finalAmount = finalAmount + rentAmount + ebAmount + amenityAmount;
 
         Date dueDate = Utils.addDaysToDate(invoiceStartDate, dDays-1);
 

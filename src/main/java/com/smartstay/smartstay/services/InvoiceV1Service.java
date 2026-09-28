@@ -2246,6 +2246,11 @@ public class InvoiceV1Service {
                     }
                 }
             }
+            if (canRedeemBooking) {
+                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
+                    canRedeemBooking = false;
+                }
+            }
             invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
                     invoiceDate,
                     Utils.roundOffWithTwoDigit(subTotal),
@@ -7416,6 +7421,10 @@ public class InvoiceV1Service {
                 if (discountAmount > invoiceAmount) {
                     return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_VALIDATION, HttpStatus.BAD_REQUEST);
                 }
+
+                if (Objects.equals(discountAmount, invoiceAmount)) {
+                    paymentStatus = PaymentStatus.PAID.name();
+                }
             }
         }
 
@@ -7524,6 +7533,8 @@ public class InvoiceV1Service {
         invoiceTypes.add(InvoiceType.ADVANCE.name());
         invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
         invoiceTypes.add(InvoiceType.BOOKING.name());
+        invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
+        invoiceTypes.add(InvoiceType.OTHER.name());
 
         List<InvoicesV1> listInvoices = invoicesV1Repository.findByHostelIdAndInvoiceTypeInAndDate(hostelId, invoiceTypes, startDate, endDate);
 
@@ -7823,6 +7834,13 @@ public class InvoiceV1Service {
         if (!validPayload) {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
+        if (updateDraft.name() != null) {
+            if (updateDraft.name().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
+                if (updateDraft.draftAmount() <= 0) {
+                    return new ResponseEntity<>(Utils.RENT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
+            }
+        }
 
         return invoiceDraftsService.updateDraftAmount(invoiceId, itemId, updateDraft);
 
@@ -7887,11 +7905,20 @@ public class InvoiceV1Service {
         if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
-
-        List<InvoiceDrafts> listInvoiceDrafts = invoiceDraftsService.getAllDraftedInvoices(hostelId, invoiceIds);
+        List<InvoiceDrafts> listInvoiceDrafts = new ArrayList<>();
+        if (invoiceIds == null) {
+            listInvoiceDrafts = invoiceDraftsService.getAvailableInvoice(hostelId);
+        }
+        else if (invoiceIds.isEmpty()) {
+            listInvoiceDrafts = invoiceDraftsService.getAvailableInvoice(hostelId);
+        }
+        else {
+            listInvoiceDrafts = invoiceDraftsService.getAllDraftedInvoices(hostelId, invoiceIds);
+        }
         if (listInvoiceDrafts.isEmpty()) {
             return new ResponseEntity<>(Utils.NO_RECORDS_FOUND, HttpStatus.BAD_REQUEST);
         }
+
         List<Long> invoicesIdsToDelete = new ArrayList<>();
         listInvoiceDrafts.forEach(item -> {
             invoicesIdsToDelete.add(item.getDraftId());

@@ -618,4 +618,9 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND i.invoiceId IN (:invoiceIds)
             """)
     List<InvoicesV1> findAdvanceInvoicesByInvoiceList(String customerId, List<String> invoiceIds);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.invoiceMode='RECURRING'
+            """)
+    List<InvoicesV1> findRecurringInvoices(String hostelId);
 }
