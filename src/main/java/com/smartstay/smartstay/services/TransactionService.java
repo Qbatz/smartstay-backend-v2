@@ -1399,6 +1399,7 @@ public class TransactionService {
             }
             else if (invoiceType.equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
                 invoiceTypeArr.add(InvoiceType.ADVANCE.name());
+                invoiceTypeArr.add(InvoiceType.ADDITIONAL_ADVANCE.name());
             }
             else if (invoiceType.equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
                 invoiceTypeArr.add(InvoiceType.SETTLEMENT.name());
@@ -1408,6 +1409,9 @@ public class TransactionService {
             }
             else if (invoiceType.equalsIgnoreCase(InvoiceType.EB_HOLDING.name())) {
                 invoiceTypeArr.add(InvoiceType.EB_HOLDING.name());
+            }
+            else if (invoiceType.equalsIgnoreCase(InvoiceType.OTHER.name())) {
+                invoiceTypeArr.add(InvoiceType.OTHER.name());
             }
             if (invoiceTypeArr.isEmpty()) {
                 invoiceTypeArr = null;
@@ -1478,6 +1482,15 @@ public class TransactionService {
                 endDate = endDateCal.getTime();
             }
         }
+
+        List<BankingV1> listBanks = bankingService.findAllBankIdsByHostelId(hostelId);
+//        List<String> collectedByUsersIds = listReceipts.stream().map(TransactionV1::getCreatedBy).toList();
+//        List<Users> collectedByUsers = usersService.findAllUsersFromUserId(collectedByUsersIds);
+        List<Users> collectedByUsers = usersService.findAllUsersByHostelId(hostelId);
+
+        ReceiptFilterOptions filterOptions = new ReceiptFilterOptions();
+        filterOptions.setCollectedBy(collectedByUsers);
+        filterOptions.setPaymentMethod(listBanks);
         double totalAmount = 0.0;
         double paidAmount = 0.0;
         double refundAmount = 0.0;
@@ -1510,6 +1523,7 @@ public class TransactionService {
             invoiceId = invoiceService.findInvoicesByInvoiceIdAndTypes(hostelId, invoiceId, invoiceTypeArr);
             if (invoiceId != null && invoiceId.isEmpty()) {
                 invoiceId = null;
+                return buildEmptyTransactionResponse(hostelId, filterOptions);
             }
         }
 
@@ -1590,15 +1604,9 @@ public class TransactionService {
         List<Customers> listCustomers = customersService.getCustomerDetails(cId);
         List<String> invoiceIds = listReceipts.stream().map(TransactionV1::getInvoiceId).toList();
         List<InvoicesV1> invoices = invoiceService.findByInvoiceIdIn(invoiceIds);
-        Set<String> bankIdSet = listReceipts.stream().map(TransactionV1::getBankId).collect(Collectors.toSet());
-        List<BankingV1> listBanks = bankingService.findAllBanksById(bankIdSet);
-//        List<String> collectedByUsersIds = listReceipts.stream().map(TransactionV1::getCreatedBy).toList();
-//        List<Users> collectedByUsers = usersService.findAllUsersFromUserId(collectedByUsersIds);
-        List<Users> collectedByUsers = usersService.findAllUsersByHostelId(hostelId);
 
-        ReceiptFilterOptions filterOptions = new ReceiptFilterOptions();
-        filterOptions.setCollectedBy(collectedByUsers);
-        filterOptions.setPaymentMethod(listBanks);
+
+
 
 
         List<ReceiptsList> receipts = listReceipts.stream().map(item -> new TransactionsListMapper(listCustomers, listBanks, invoices).apply(item)).toList();
@@ -1613,6 +1621,20 @@ public class TransactionService {
                 Utils.roundOffWithTwoDigit(refundAmount),
                 filterOptions,
                 receipts);
+        return new ResponseEntity<>(receiptResponse, HttpStatus.OK);
+    }
+
+    private ResponseEntity<?> buildEmptyTransactionResponse(String hostelId, ReceiptFilterOptions filterOptions) {
+        ReceiptResponse receiptResponse = new ReceiptResponse(hostelId,
+                0,
+                Utils.roundOffWithTwoDigit(0.0),
+                0,
+                0,
+                0,
+                Utils.roundOffWithTwoDigit(0.0),
+                Utils.roundOffWithTwoDigit(0.0),
+                filterOptions,
+                Collections.emptyList());
         return new ResponseEntity<>(receiptResponse, HttpStatus.OK);
     }
 

@@ -335,6 +335,7 @@ public class ReportService {
             invoiceTypes.add(InvoiceType.ADVANCE.name());
             invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
             invoiceTypes.add(InvoiceType.BOOKING.name());
+            invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
         }
 
         ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);
@@ -653,7 +654,6 @@ public class ReportService {
     private <E extends Enum<E>> List<ReportDetailsResponse.FilterItem> toInvoiceTypeFilterItems(E[] values) {
         return Arrays.stream(values)
                 .filter(i -> !i.equals(InvoiceType.SETTLEMENT)
-                        && !i.equals(InvoiceType.OTHER)
                         && !i.equals(InvoiceType.AMOUNT_HOLDING)
                         && !i.equals(InvoiceType.EB_HOLDING))
                 .map(e -> new ReportDetailsResponse.FilterItem(Utils.capitalize(e.name()), e.name()))

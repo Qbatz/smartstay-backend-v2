@@ -1029,4 +1029,9 @@ public class BankingService {
 
         return existingBalance + amount;
     }
+
+    public List<BankingV1> findAllBankIdsByHostelId(String hostelId) {
+        List<BankingV1> listBanks = bankingV1Repository.findActiveByHostelId(hostelId);
+        return listBanks;
+    }
 }

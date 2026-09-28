@@ -612,4 +612,10 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             AND (:invoiceType IS NULL OR i.invoiceType IN :invoiceType)
             """)
     List<InvoicesV1> findByInvoiceIdAndInvoiceType(String hostelId, List<String> invoiceIds, List<String> invoiceType);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i WHERE i.customerId=:customerId AND i.invoiceType IN ('ADVANCE', 'ADDITIONAL_ADVANCE') 
+            AND i.invoiceId IN (:invoiceIds)
+            """)
+    List<InvoicesV1> findAdvanceInvoicesByInvoiceList(String customerId, List<String> invoiceIds);
 }

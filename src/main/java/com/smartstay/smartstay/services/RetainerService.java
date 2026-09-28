@@ -465,6 +465,13 @@ public class RetainerService {
             paidAmount = invoicesV1.getPaidAmount();
         }
         double newPaidAmount = paidAmount + appliedAmountFromList;
+        if (invoicesV1.getDeductionAmount() != null) {
+            double deduction = invoicesV1.getDeductionAmount();
+            double balanceAfterDeduction = newPaidAmount - deduction;
+            if (balanceAfterDeduction > 0) {
+                invoicesV1.setBalanceAmount(balanceAfterDeduction);
+            }
+        }
 
         invoicesV1.setPaidAmount(newPaidAmount);
         if (newPaidAmount == invoicesV1.getTotalAmount()) {
@@ -474,9 +481,21 @@ public class RetainerService {
             invoicesV1.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
         }
 
-        invoiceRedemptionService.applyRetainerToInvoice(hostelId, invoicesV1.getInvoiceId(), appliedInvoicesList, redeemedAt);
+        List<InvoiceRedemption> listRedeemed = invoiceRedemptionService.applyRetainerToInvoice(hostelId, invoicesV1.getInvoiceId(), appliedInvoicesList, redeemedAt);
         tenantBankTransactionService.addRetainerTransactionForRedemption(hostelId, invoicesV1.getInvoiceId(), invoicesV1.getCustomerId(), appliedInvoicesList, appliedAmount, redeemedAt);
         invoicesV1Repository.save(invoicesV1);
+//        if (listRedeemed != null) {
+//            List<String> invoiceIdsAfterRedemption = listRedeemed
+//                    .stream()
+//                    .map(InvoiceRedemption::getTargetInvoiceId)
+//                    .toList();
+//            List<InvoicesV1> listAdvanceInvoices = invoicesV1Repository.findAdvanceInvoicesByInvoiceList(invoicesV1.getCustomerId(), invoiceIdsAfterRedemption);
+//            if (listAdvanceInvoices != null) {
+//                listAdvanceInvoices.forEach(i -> {
+//                    if ()
+//                });
+//            }
+//        }
 
         List<InvoicesV1> newInvoices = new ArrayList<>();
         if (!appliedInvoicesList.isEmpty()) {
