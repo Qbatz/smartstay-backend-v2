@@ -148,6 +148,16 @@ public class SmartstayApplication {
             BankingMethods method = bankingMethodsRepository.save(
                     toBankingMethod(v1, parentBank, paymentMethod));
             bankingIdsRepository.save(toMethodMapping(v1, parentV1, parentBank, method, paymentMethod));
+
+            BankingV2 v2 = bankingV2Repository.findById(parentBank.getBankId()).orElse(null);
+            if (v2 != null) {
+                if (v2.getBalance() != null) {
+                    v2.setBalance(v2.getBalance() + method.getBalance());
+                }
+                else {
+                    v2.setBalance(method.getBalance());
+                }
+            }
             mappings.migratedMethodIds().add(v1.getBankId());
             migrated++;
         }
@@ -157,11 +167,11 @@ public class SmartstayApplication {
 
     private BankingV2 resolveParentBank(BankingV1 parentV1, MigrationMappings mappings,
                                         BankingV2Repository bankingV2Repository) {
-        if (parentV1 == null) {
-            return null;
+        if (parentV1 != null) {
+            String parentBankIdV2 = mappings.bankIdV2ByV1Id().get(parentV1.getBankId());
+            return parentBankIdV2 != null ? bankingV2Repository.findById(parentBankIdV2).orElse(null) : null;
         }
-        String parentBankIdV2 = mappings.bankIdV2ByV1Id().get(parentV1.getBankId());
-        return parentBankIdV2 != null ? bankingV2Repository.findById(parentBankIdV2).orElse(null) : null;
+        return null;
     }
 
     private Map<String, BankingV1> indexBankAccountsByNumber(List<BankingV1> allAccounts) {
@@ -292,6 +302,6 @@ public class SmartstayApplication {
                                      Map<String, String> bankIdV2ByV1Id) {
     }
 
-}
+
 
 }
