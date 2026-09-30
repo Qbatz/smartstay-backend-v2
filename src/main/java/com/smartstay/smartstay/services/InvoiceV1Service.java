@@ -5761,15 +5761,25 @@ public class InvoiceV1Service {
 
     @Deprecated
     public InvoicesV1 createSettlementInvoiceForPostpaid(Customers customers, String hostelId, long round, List<String> listUnpaidInvoices, List<Deductions> deductions, double amoutToBePaidWithoutDeductions, Date leavingDate, Users users, boolean isAdvancePaid, List<Deductions> checkInDeductions) {
-        List<InvoicesV1> advanceInvoice = null;
+        List<InvoicesV1> advanceInvoice = invoicesV1Repository.findAllAdvanceInvoices(customers.getCustomerId());;
 
         List<InvoicesV1> listInvoices = new ArrayList<>();
-        if (!isAdvancePaid) {
-            advanceInvoice = invoicesV1Repository.findAllAdvanceInvoices(customers.getCustomerId());
-            if (advanceInvoice != null) {
-                listInvoices.addAll(advanceInvoice);
+
+        if (advanceInvoice != null) {
+            List<InvoicesV1> unpaidAdvanceInvoices = advanceInvoice
+                    .stream()
+                    .filter(i -> i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name()) || i.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PENDING.name()))
+                    .toList();
+            if (unpaidAdvanceInvoices != null) {
+                listInvoices.addAll(new ArrayList<>(unpaidAdvanceInvoices));
             }
         }
+//        if (!isAdvancePaid) {
+//
+//            if (advanceInvoice != null) {
+//                listInvoices.addAll(advanceInvoice);
+//            }
+//        }
         if (listUnpaidInvoices != null && !listUnpaidInvoices.isEmpty()) {
             List<InvoicesV1> invoices = invoicesV1Repository.findAllById(listUnpaidInvoices);
             if (invoices != null) {
