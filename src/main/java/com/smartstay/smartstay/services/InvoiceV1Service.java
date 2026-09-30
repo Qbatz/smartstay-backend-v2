@@ -34,15 +34,17 @@ import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
 import com.smartstay.smartstay.payloads.customer.NonRefundable;
 import com.smartstay.smartstay.payloads.invoice.*;
+import com.smartstay.smartstay.payloads.invoiceDrafts.AddDraftItems;
+import com.smartstay.smartstay.payloads.invoiceDrafts.UpdateDraft;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.responses.InvoiceRedemption.AvailableInvoices;
 import com.smartstay.smartstay.responses.InvoiceRedemption.SelectedInvoiceInfo;
 import com.smartstay.smartstay.responses.bookings.AdvanceInfo;
 import com.smartstay.smartstay.responses.customer.AdditionalAdvanceItems;
+import com.smartstay.smartstay.responses.invoiceDraft.DraftInvoiceList;
 import com.smartstay.smartstay.responses.settlement.RetainerInfo;
 import com.smartstay.smartstay.responses.settlement.WalletInfo;
-import com.smartstay.smartstay.responses.templates.TemplateTypes;
 import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.responses.bookings.*;
 import com.smartstay.smartstay.responses.customer.UnpaidInvoices;
@@ -66,7 +68,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -135,6 +136,8 @@ public class InvoiceV1Service {
     private TenantBankTransactionService tenantBankTransactionService;
     @Autowired
     private CustomerNotificationService customerNotificationService;
+    @Autowired
+    private InvoiceDraftsService invoiceDraftsService;
     private TransactionService transactionService;
 
     private BookingsService bookingsService;
@@ -1866,7 +1869,7 @@ public class InvoiceV1Service {
             if (!hostelTemplates.isMobileCustomized()) {
                 hostelPhone = hostelTemplates.getMobile();
             } else {
-                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name())) {
                     hostelPhone = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name())).map(BillTemplateType::getInvoicePhoneNumber).toList().getFirst();
                 } else {
                     hostelPhone = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).map(BillTemplateType::getInvoicePhoneNumber).toList().getFirst();
@@ -1877,7 +1880,7 @@ public class InvoiceV1Service {
             if (!hostelTemplates.isEmailCustomized()) {
                 hostelEmail = hostelTemplates.getEmailId();
             } else {
-                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
+                if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name())) {
                     hostelEmail = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name())).map(BillTemplateType::getInvoiceMailId).toList().getFirst();
                 } else {
                     hostelEmail = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).map(BillTemplateType::getInvoiceMailId).toList().getFirst();
@@ -1886,7 +1889,7 @@ public class InvoiceV1Service {
 
             BillTemplateType templateType = null;
 
-            if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+            if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name()) || invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name())) {
                 templateType = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.ADVANCE.name())).toList().getFirst();
             } else {
                 templateType = hostelTemplates.getTemplateTypes().stream().filter(item -> item.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name())).toList().getFirst();
@@ -2241,6 +2244,11 @@ public class InvoiceV1Service {
                     if (invoicesV1.getBalanceAmount() != null && invoicesV1.getBalanceAmount() > 0) {
                         canRedeemBooking = true;
                     }
+                }
+            }
+            if (canRedeemBooking) {
+                if (customers.getCurrentStatus().equalsIgnoreCase(CustomerStatus.BOOKED.name())) {
+                    canRedeemBooking = false;
                 }
             }
             invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
@@ -2619,15 +2627,17 @@ public class InvoiceV1Service {
             totalPayable = walletAmount;
         }
 
-        if (currentPayablemount < 0) {
-            totalRefundable = totalRefundable + (currentPayablemount * -1);
-        }
-//       totalRefundable = totalRefundable;
-//       totalPayable = totalPayable + unpaidInvoiceAmount + deductionAmount;
-        totalPayable = totalPayable + currentMonthPayableAmount - currentPaidAmount;
-        if (totalPayable < 0) {
-            totalPayable = 0;
-        }
+//        if (currentPayablemount < 0) {
+//            totalRefundable = totalRefundable + (currentPayablemount * -1);
+//        }
+       totalRefundable = totalRefundable + currentPaidAmount;
+       totalPayable = totalPayable + unpaidInvoiceAmount;
+//        totalPayable = totalPayable + currentMonthPayableAmount - currentPaidAmount;
+        totalPayable = totalPayable + currentMonthPayableAmount;
+
+//        if (totalPayable < 0) {
+//            totalPayable = 0;
+//        }
 
 
         com.smartstay.smartstay.responses.settlement.InvoiceInfo invoiceInfo = null;
@@ -6012,10 +6022,44 @@ public class InvoiceV1Service {
                         com.smartstay.smartstay.dao.InvoiceRedemption invoiceRedemption1 = ir.stream().filter(i2 -> i.getInvoiceId().equalsIgnoreCase(i2.getTargetInvoiceId())).findFirst().orElse(null);
                         if (invoiceRedemption1 != null) {
                             double amountAfterDeduction = i.getPaidAmount() - deductions;
-                            if (amountAfterDeduction > 0) {
-                                double unpaidDeductionAmount = i.getDeductions().stream().filter(i2 -> i.getPaidAmount() == null || i2.getPaidAmount() < i2.getAmount()).mapToDouble(i2 -> i2.getAmount() - i2.getPaidAmount()).sum();
-                                if (unpaidDeductionAmount > 0) {
-                                    final double[] tempAmount = {unpaidDeductionAmount};
+                            if (i.getDeductions() != null) {
+                                if (amountAfterDeduction > 0) {
+                                    double unpaidDeductionAmount = i.getDeductions().stream().filter(i2 -> i.getPaidAmount() == null || i2.getPaidAmount() < i2.getAmount()).mapToDouble(i2 -> i2.getAmount() - i2.getPaidAmount()).sum();
+                                    if (unpaidDeductionAmount > 0) {
+                                        final double[] tempAmount = {unpaidDeductionAmount};
+                                        List<Deductions> newDeductions = i.getDeductions().stream().map(i2 -> {
+                                            if (tempAmount[0] > 0) {
+                                                double balance = i2.getAmount() - i2.getPaidAmount();
+                                                if (i2.getPaidAmount() < i2.getAmount()) {
+                                                    if (tempAmount[0] >= balance) {
+                                                        i2.setPaidAmount(i2.getAmount());
+                                                        tempAmount[0] = tempAmount[0] - balance;
+                                                    } else if (balance > tempAmount[0]) {
+                                                        i2.setPaidAmount(i2.getPaidAmount() + tempAmount[0]);
+                                                        tempAmount[0] = 0;
+                                                    }
+                                                }
+
+                                            }
+                                            return i2;
+                                        }).toList();
+
+                                        i.setDeductions(newDeductions);
+
+                                        i.setBalanceAmount(amountAfterDeduction);
+                                    }
+                                    else {
+                                        double redeemedAmount = invoiceRedemptionService.getRedeemedAmountFromINvoiceId(hostelId, i.getInvoiceId());
+                                        if (i.getBalanceAmount() != null) {
+                                            i.setBalanceAmount(amountAfterDeduction - redeemedAmount);
+                                        } else {
+                                            i.setBalanceAmount(amountAfterDeduction - redeemedAmount);
+                                        }
+                                    }
+
+                                }
+                                else {
+                                    final double[] tempAmount = {invoiceRedemption1.getRedemptionAmount()};
                                     List<Deductions> newDeductions = i.getDeductions().stream().map(i2 -> {
                                         if (tempAmount[0] > 0) {
                                             double balance = i2.getAmount() - i2.getPaidAmount();
@@ -6034,40 +6078,12 @@ public class InvoiceV1Service {
                                     }).toList();
 
                                     i.setDeductions(newDeductions);
-
-                                    i.setBalanceAmount(amountAfterDeduction);
                                 }
-                                else {
-                                    double redeemedAmount = invoiceRedemptionService.getRedeemedAmountFromINvoiceId(hostelId, i.getInvoiceId());
-                                    if (i.getBalanceAmount() != null) {
-                                        i.setBalanceAmount(amountAfterDeduction - redeemedAmount);
-                                    } else {
-                                        i.setBalanceAmount(amountAfterDeduction - redeemedAmount);
-                                    }
-                                }
-
                             }
                             else {
-                                final double[] tempAmount = {invoiceRedemption1.getRedemptionAmount()};
-                                List<Deductions> newDeductions = i.getDeductions().stream().map(i2 -> {
-                                    if (tempAmount[0] > 0) {
-                                        double balance = i2.getAmount() - i2.getPaidAmount();
-                                        if (i2.getPaidAmount() < i2.getAmount()) {
-                                            if (tempAmount[0] >= balance) {
-                                                i2.setPaidAmount(i2.getAmount());
-                                                tempAmount[0] = tempAmount[0] - balance;
-                                            } else if (balance > tempAmount[0]) {
-                                                i2.setPaidAmount(i2.getPaidAmount() + tempAmount[0]);
-                                                tempAmount[0] = 0;
-                                            }
-                                        }
-
-                                    }
-                                    return i2;
-                                }).toList();
-
-                                i.setDeductions(newDeductions);
+                                i.setBalanceAmount(invoiceRedemption1.getRedemptionAmount());
                             }
+
                         }
                     } else {
                         com.smartstay.smartstay.dao.InvoiceRedemption invoiceRedemption1 = ir.stream().filter(i2 -> i.getInvoiceId().equalsIgnoreCase(i2.getTargetInvoiceId())).findFirst().orElse(null);
@@ -7341,7 +7357,7 @@ public class InvoiceV1Service {
                 .findFirst()
                 .orElse(null);
 
-        if (advanceInvoice != null) {
+        if (rentalInvoice != null) {
             if (billingDates != null) {
                 if (billingDates.billingModel().equalsIgnoreCase(BillingModel.POSTPAID.name())) {
                     if (Utils.compareWithTwoDates(billingDates.currentBillStartDate(), invoiceDate) <= 0) {
@@ -7414,6 +7430,10 @@ public class InvoiceV1Service {
             if (isDiscounted) {
                 if (discountAmount > invoiceAmount) {
                     return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_VALIDATION, HttpStatus.BAD_REQUEST);
+                }
+
+                if (Objects.equals(discountAmount, invoiceAmount)) {
+                    paymentStatus = PaymentStatus.PAID.name();
                 }
             }
         }
@@ -7523,6 +7543,8 @@ public class InvoiceV1Service {
         invoiceTypes.add(InvoiceType.ADVANCE.name());
         invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
         invoiceTypes.add(InvoiceType.BOOKING.name());
+        invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
+        invoiceTypes.add(InvoiceType.OTHER.name());
 
         List<InvoicesV1> listInvoices = invoicesV1Repository.findByHostelIdAndInvoiceTypeInAndDate(hostelId, invoiceTypes, startDate, endDate);
 
@@ -7704,5 +7726,269 @@ public class InvoiceV1Service {
             return otherInvoicesInfo;
         }
         return new OtherInvoicesInfo(0.0, 0.0, 0.0, 0, null);
+    }
+
+    public ResponseEntity<?> getRecurringInvoicesForReview(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        String invoiceDate = null;
+        List<InvoiceDrafts> listDraftedInvoices = invoiceDraftsService.getAvailableInvoice(hostelId);
+        if (!listDraftedInvoices.isEmpty()) {
+            invoiceDate = Utils.dateToString(listDraftedInvoices.get(0).getInvoiceDate());
+        }
+        List<String> customerIds = listDraftedInvoices
+                .stream()
+                .map(InvoiceDrafts::getCustomerId)
+                .toList();
+        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+        List<BookingsV1> listBookings;
+        List<BedDetails> listBedDetails;
+        if (listCustomers != null) {
+            listBookings = bookingsService.getBookings(hostelId, customerIds);
+            if (listBookings != null) {
+                List<Integer> bedIds = listBookings
+                        .stream()
+                        .map(BookingsV1::getBedId)
+                        .toList();
+                listBedDetails = bedService.getBedDetails(bedIds);
+            } else {
+                listBedDetails = new ArrayList<>();
+            }
+        } else {
+            listBookings = new ArrayList<>();
+            listBedDetails = new ArrayList<>();
+        }
+
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(hostelId, new Date());
+        List<com.smartstay.smartstay.responses.invoiceDraft.InvoiceInfo> listInvoiceInfo = listDraftedInvoices
+                .stream()
+                .map(i -> new DraftListMapper(listBedDetails, listCustomers, listBookings).apply(i))
+                .toList();
+
+        DraftInvoiceList draftInvoiceList = new DraftInvoiceList(hostelId,
+                Utils.dateToString(billingDates.currentBillStartDate()),
+                Utils.dateToString(billingDates.currentBillEndDate()),
+                invoiceDate,
+                listDraftedInvoices.size(),
+                listInvoiceInfo);
+
+        return new ResponseEntity<>(draftInvoiceList, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> removeInvoiceItemFromDraft(String hostelId, Long invoiceId, Long itemId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        return invoiceDraftsService.deleteItemFromDraftInvoice(invoiceId, itemId);
+    }
+
+    public ResponseEntity<?> updateInvoiceItems(String hostelId, Long invoiceId, Long itemId, UpdateDraft updateDraft) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (updateDraft == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        boolean validPayload = false;
+        if (updateDraft.name() != null && !updateDraft.name().isEmpty()) {
+            validPayload = true;
+        }
+        if (updateDraft.draftAmount() != null && updateDraft.draftAmount()>= 0) {
+            validPayload = true;
+        }
+        if (!validPayload) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (updateDraft.name() != null) {
+            if (updateDraft.name().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
+                if (updateDraft.draftAmount() <= 0) {
+                    return new ResponseEntity<>(Utils.RENT_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
+            }
+        }
+
+        return invoiceDraftsService.updateDraftAmount(invoiceId, itemId, updateDraft);
+
+    }
+
+    public ResponseEntity<?> addInvoiceItems(String hostelId, Long invoiceId, List<AddDraftItems> draftItems) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (draftItems == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        AtomicBoolean isValidAmount = new AtomicBoolean(true);
+
+        draftItems.forEach(item -> {
+            if (item.amount() == null) {
+                isValidAmount.set(false);
+            }
+            if (item.amount() <= 0) {
+                isValidAmount.set(false);
+            }
+        });
+
+        if (!isValidAmount.get()) {
+            return new ResponseEntity<>(Utils.INVALID_AMOUNT_PASSED, HttpStatus.BAD_REQUEST);
+        }
+
+        return invoiceDraftsService.addNewItemToDraft(invoiceId, draftItems);
+    }
+
+    public ResponseEntity<?> generateRecurringManullyAfterReview(String hostelId, List<Long> invoiceIds) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        List<InvoiceDrafts> listInvoiceDrafts = new ArrayList<>();
+        if (invoiceIds == null) {
+            listInvoiceDrafts = invoiceDraftsService.getAvailableInvoice(hostelId);
+        }
+        else if (invoiceIds.isEmpty()) {
+            listInvoiceDrafts = invoiceDraftsService.getAvailableInvoice(hostelId);
+        }
+        else {
+            listInvoiceDrafts = invoiceDraftsService.getAllDraftedInvoices(hostelId, invoiceIds);
+        }
+        if (listInvoiceDrafts.isEmpty()) {
+            return new ResponseEntity<>(Utils.NO_RECORDS_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<Long> invoicesIdsToDelete = new ArrayList<>();
+        listInvoiceDrafts.forEach(item -> {
+            invoicesIdsToDelete.add(item.getDraftId());
+            InvoicesV1 invoicesV1 = new InvoicesV1();
+            invoicesV1.setCustomerId(item.getCustomerId());
+            invoicesV1.setHostelId(item.getHostelId());
+            invoicesV1.setInvoiceNumber(generateInvoiceNumber(hostelId, InvoiceType.RENT.name()));
+            invoicesV1.setCustomerMobile(item.getCustomerMobile());
+            invoicesV1.setCustomerMailId(item.getCustomerMailId());
+            invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+            invoicesV1.setBasePrice(item.getBasePrice());
+            invoicesV1.setTotalAmount(item.getTotalAmount());
+            invoicesV1.setPaidAmount(0.0);
+            invoicesV1.setBalanceAmount(item.getBalanceAmount());
+            invoicesV1.setSubTotal(item.getSubTotal());
+            invoicesV1.setGst(item.getGst());
+            invoicesV1.setCgst(item.getCgst());
+            invoicesV1.setSgst(item.getSgst());
+            invoicesV1.setGstPercentile(item.getGstPercentile());
+            invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+            invoicesV1.setDeductions(null);
+            invoicesV1.setDeductionAmount(item.getDeductionAmount());
+            invoicesV1.setOthersDescription(item.getOthersDescription());
+            invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
+            invoicesV1.setCancelled(false);
+            invoicesV1.setDiscounted(false);
+            invoicesV1.setCancelledInvoices(null);
+            invoicesV1.setNewCancelledInvoices(null);
+            invoicesV1.setCreatedBy(authentication.getName());
+            invoicesV1.setInvoiceGeneratedDate(new Date());
+            invoicesV1.setCancelledDate(null);
+            invoicesV1.setInvoiceDueDate(item.getInvoiceDueDate());
+            invoicesV1.setInvoiceDate(item.getInvoiceDate());
+            invoicesV1.setInvoiceStartDate(item.getInvoiceStartDate());
+            invoicesV1.setInvoiceEndDate(item.getInvoiceEndDate());
+            invoicesV1.setCreatedAt(new Date());
+
+            List<InvoiceItems> invoiceItems = item.getListItems()
+                    .stream()
+                    .map(i -> {
+                       InvoiceItems i2 = new InvoiceItems();
+                       i2.setAmount(i.getAmount());
+                       if (i.getInvoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name())) {
+                           i2.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
+                           i2.setOtherItem(i.getOtherItem());
+                       } else {
+                           i2.setInvoiceItem(i.getInvoiceItem());
+                       }
+                       i2.setInvoice(invoicesV1);
+
+                       return i2;
+                    })
+                    .toList();
+            invoicesV1.setInvoiceItems(invoiceItems);
+
+            invoicesV1Repository.save(invoicesV1);
+        });
+
+        invoiceDraftsService.deleteGeneratedInvoices(hostelId, invoicesIdsToDelete);
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

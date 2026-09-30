@@ -18,5 +18,5 @@ public record HostelDetails(String hostelId, String mainImage, String city, Stri
                             int unreadNotificationCount,
                             boolean canModifyBilling,
                             int gracePeriod,
-                            boolean hasGracePeriod) {
+                            boolean hasGracePeriod, boolean shouldVerifyRecurring) {
 }

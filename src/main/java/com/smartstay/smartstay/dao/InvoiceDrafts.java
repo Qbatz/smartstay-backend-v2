@@ -48,6 +48,7 @@ public class InvoiceDrafts {
     String invoiceMode;
     boolean isCancelled;
     boolean isDiscounted;
+    boolean isEdited;
     Double discountAmount;
     String createdBy;
     String updatedBy;
