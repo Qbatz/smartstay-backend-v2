@@ -399,6 +399,9 @@ public class Utils {
     public static final String PIN_REQUIRED = "Pin is required";
     public static final String PLATFORM_REQUIRED = "Platform is required";
     public static final String INVALID_PLATFORM = "Invalid platform. Allowed values are android or ios";
+    public static final String IOS_SUBSCRIPTION_ONLY = "This action is allowed only from the iOS app";
+    public static final String IOS_SUBSCRIPTION_NOT_ALLOWED = "iOS subscription renewal is not enabled for this account";
+    public static final String IOS_SUBSCRIPTION_ALLOWED = "iOS subscription renewal allowed";
     public static final String OTP_SENT_TO_REGISTERED_MOBILE = "OTP Has been sent to the registered mobile";
     public static final String PIN_RESET_SUCCESS = "PIN Successfully changed. Please login again.";
     public static final String PIN_ALREADY_SETUP = "Pin is added for this account";

@@ -58,6 +58,9 @@ public class SubscriptionService {
     @Value("${REPORTS_URL}")
     private String reportsUrl;
 
+    @Value("${IOS_SUBSCRIPTION_ALLOWED_EMAIL:annaselvamtest@gmail.com}")
+    private String iosSubscriptionAllowedEmail;
+
     @Autowired
     public void setHostelService(@Lazy HostelService hostelService) {
         this.hostelService = hostelService;
@@ -328,6 +331,38 @@ public class SubscriptionService {
 
     public void saveFromEvents(Subscription subscription) {
         subscriptionRepository.save(subscription);
+    }
+
+    public ResponseEntity<?> checkIosSubscription(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (com.smartstay.smartstay.ennum.Platform.IOS
+                != com.smartstay.smartstay.ennum.Platform.fromValue(authentication.getSource())) {
+            return new ResponseEntity<>(Utils.IOS_SUBSCRIPTION_ONLY, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_SUBSCRIPTION, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+//        if (!validateSubscription(hostelId)) {
+//            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+//        }
+        if (!isIosSubscriptionAllowed(users)) {
+            return new ResponseEntity<>(Utils.IOS_SUBSCRIPTION_NOT_ALLOWED, HttpStatus.FORBIDDEN);
+        }
+        return new ResponseEntity<>(Utils.IOS_SUBSCRIPTION_ALLOWED, HttpStatus.OK);
+    }
+
+    private boolean isIosSubscriptionAllowed(Users users) {
+        return users.getEmailId() != null
+                && users.getEmailId().trim().equalsIgnoreCase(iosSubscriptionAllowedEmail);
     }
 
     public ResponseEntity<?> addSubscriptionMobile(String hostelId, com.smartstay.smartstay.payloads.subscription.Subscription subscription) {
