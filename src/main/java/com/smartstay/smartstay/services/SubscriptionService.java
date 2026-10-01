@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -58,8 +59,10 @@ public class SubscriptionService {
     @Value("${REPORTS_URL}")
     private String reportsUrl;
 
-    @Value("${IOS_SUBSCRIPTION_ALLOWED_EMAIL:annaselvamtest@gmail.com}")
+    @Value("${IOS_SUBSCRIPTION_ALLOWED_EMAIL:smartstay@gmail.com}")
     private String iosSubscriptionAllowedEmail;
+
+    private static final String IOS_RENEWAL_SUCCESS_STATUS = "success";
 
     @Autowired
     public void setHostelService(@Lazy HostelService hostelService) {
@@ -363,6 +366,147 @@ public class SubscriptionService {
     private boolean isIosSubscriptionAllowed(Users users) {
         return users.getEmailId() != null
                 && users.getEmailId().trim().equalsIgnoreCase(iosSubscriptionAllowedEmail);
+    }
+
+    @Transactional
+    public ResponseEntity<?> subscribeIosHostels(String hostelId,
+                                                 com.smartstay.smartstay.payloads.subscription.IosSubscription payload) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (com.smartstay.smartstay.ennum.Platform.IOS
+                != com.smartstay.smartstay.ennum.Platform.fromValue(authentication.getSource())) {
+            return new ResponseEntity<>(Utils.IOS_SUBSCRIPTION_ONLY, HttpStatus.BAD_REQUEST);
+        }
+        if (payload == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_SUBSCRIPTION, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!isIosSubscriptionAllowed(users)) {
+            return new ResponseEntity<>(Utils.IOS_SUBSCRIPTION_NOT_ALLOWED, HttpStatus.FORBIDDEN);
+        }
+        if (payload.status() == null || !payload.status().trim().equalsIgnoreCase(IOS_RENEWAL_SUCCESS_STATUS)) {
+            return new ResponseEntity<>(Utils.IOS_RENEWAL_NOT_SUCCESSFUL, HttpStatus.BAD_REQUEST);
+        }
+
+        Date transactionDate = parseIosRenewalDate(payload.transactionDate());
+        Date renewalDate = parseIosRenewalDate(payload.renewalDate());
+        if (transactionDate == null || renewalDate == null || renewalDate.before(transactionDate)) {
+            return new ResponseEntity<>(Utils.IOS_INVALID_RENEWAL_DATES, HttpStatus.BAD_REQUEST);
+        }
+
+        List<String> accountHostelIds = userHostelService.findByUserId(users.getUserId())
+                .stream()
+                .map(com.smartstay.smartstay.dao.UserHostel::getHostelId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+        if (accountHostelIds.isEmpty()) {
+            return new ResponseEntity<>(Utils.IOS_NO_HOSTELS_TO_SUBSCRIBE, HttpStatus.BAD_REQUEST);
+        }
+
+        int renewed = 0;
+        int alreadyRenewed = 0;
+        for (String accountHostelId : accountHostelIds) {
+            HostelV1 hostel = hostelService.getHostelInfo(accountHostelId);
+            if (hostel == null) {
+                continue;
+            }
+            Subscription latest = subscriptionRepository.findLatestSubscription(accountHostelId);
+            if (latest != null && latest.getPlanEndsAt() != null
+                    && Utils.compareWithTwoDates(latest.getPlanEndsAt(), renewalDate) == 0) {
+                alreadyRenewed++;
+                continue;
+            }
+            Plans plan = resolveCurrentPlan(latest, hostel);
+            if (plan == null) {
+                continue;
+            }
+            applyIosRenewal(hostel, plan, users, transactionDate, renewalDate);
+            renewed++;
+        }
+
+        if (renewed == 0 && alreadyRenewed == 0) {
+            return new ResponseEntity<>(Utils.IOS_NO_HOSTELS_TO_SUBSCRIBE, HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(Utils.IOS_HOSTELS_SUBSCRIBED, HttpStatus.OK);
+    }
+
+    private Plans resolveCurrentPlan(Subscription latest, HostelV1 hostel) {
+        String planCode = latest != null ? latest.getPlanCode() : null;
+        if (planCode == null && hostel.getHostelPlan() != null) {
+            planCode = hostel.getHostelPlan().getCurrentPlanCode();
+        }
+        if (planCode == null || planCode.isBlank()) {
+            return null;
+        }
+        return plansService.findPlanByPlanCode(planCode);
+    }
+
+    private void applyIosRenewal(HostelV1 hostel, Plans plan, Users users, Date startDate, Date endDate) {
+        Subscription subscription = new Subscription();
+        subscription.setHostelId(hostel.getHostelId());
+        subscription.setPlanCode(plan.getPlanCode());
+        subscription.setPlanName(plan.getPlanName());
+        subscription.setPlanStartsAt(startDate);
+        subscription.setPlanEndsAt(endDate);
+        subscription.setActivatedAt(startDate);
+        subscription.setNextBillingAt(endDate);
+        subscription.setPlanAmount(plan.getFinalPrice());
+        subscription.setPaidAmount(plan.getFinalPrice());
+        subscription.setDiscount(0.0);
+        subscription.setDiscountAmount(0.0);
+        subscription.setCreatedAt(new Date());
+        subscription.setCreatedBy(users.getUserId());
+        subscription.setIsActive(true);
+        subscriptionRepository.save(subscription);
+
+        com.smartstay.smartstay.dao.HostelPlan hostelPlan = hostel.getHostelPlan();
+        if (hostelPlan == null) {
+            hostelPlan = new com.smartstay.smartstay.dao.HostelPlan();
+            hostelPlan.setHostel(hostel);
+        }
+        hostelPlan.setCurrentPlanCode(plan.getPlanCode());
+        hostelPlan.setCurrentPlanName(plan.getPlanName());
+        hostelPlan.setCurrentPlanStartsAt(startDate);
+        hostelPlan.setCurrentPlanEndsAt(endDate);
+        hostelPlan.setCurrentPlanPrice(plan.getFinalPrice());
+        hostelPlan.setPaidAmount(plan.getFinalPrice());
+        hostelPlan.setTrial(false);
+        hostelPlan.setTrialEndingAt(null);
+        hostel.setHostelPlan(hostelPlan);
+        hostelService.updateHostel(hostel);
+    }
+
+    private Date parseIosRenewalDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.matches("\\d{10,14}")) {
+            return new Date(Long.parseLong(trimmed));
+        }
+        String[] patterns = {Utils.DATE_FORMAT_ZOHO, Utils.USER_INPUT_DATE_FORMAT, "yyyy-MM-dd'T'HH:mm:ss",
+                Utils.INPUT_DATE_TIME_FORMAT};
+        for (String pattern : patterns) {
+            java.text.SimpleDateFormat formatter = new java.text.SimpleDateFormat(pattern);
+            formatter.setLenient(false);
+            java.text.ParsePosition position = new java.text.ParsePosition(0);
+            Date parsed = formatter.parse(trimmed, position);
+            if (parsed != null && position.getIndex() == trimmed.length()) {
+                return parsed;
+            }
+        }
+        return null;
     }
 
     public ResponseEntity<?> addSubscriptionMobile(String hostelId, com.smartstay.smartstay.payloads.subscription.Subscription subscription) {
