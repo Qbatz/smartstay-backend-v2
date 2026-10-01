@@ -145,8 +145,8 @@ public class Utils {
     public static final String ACCOUNT_NO_ALREAY_EXISTS = "Account number already exists";
     public static final String V2_ACCOUNT_TYPE_INVALID = "Account type should be BANK or CASH";
     public static final String V2_BANK_ACCOUNT_TYPE_INVALID = "Bank account type should be Savings or Current";
-    public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name, display name, branch name, account number, IFSC code and bank account type are required for a BANK account";
-    public static final String V2_CASH_DETAILS_REQUIRED = "Cash account type and responsible person are required for a CASH account";
+    public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name and display name are required for a BANK account";
+    public static final String V2_CASH_DETAILS_REQUIRED = "Cash account type is required for a CASH account";
     public static final String V2_CASH_ACCOUNT_TYPE_INVALID = "Cash account type should be Petty Cash or Office Cash";
     public static final String QR_TYPE_INVALID = "Type should be UPI or CARD";
     public static final String QR_NAME_REQUIRED = "Name is required";
