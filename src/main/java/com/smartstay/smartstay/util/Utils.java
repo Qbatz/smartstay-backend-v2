@@ -399,6 +399,13 @@ public class Utils {
     public static final String PIN_REQUIRED = "Pin is required";
     public static final String PLATFORM_REQUIRED = "Platform is required";
     public static final String INVALID_PLATFORM = "Invalid platform. Allowed values are android or ios";
+    public static final String IOS_SUBSCRIPTION_ONLY = "This action is allowed only from the iOS app";
+    public static final String IOS_SUBSCRIPTION_NOT_ALLOWED = "iOS subscription renewal is not enabled for this account";
+    public static final String IOS_SUBSCRIPTION_ALLOWED = "iOS subscription renewal allowed";
+    public static final String IOS_RENEWAL_NOT_SUCCESSFUL = "Subscriptions were not updated because the renewal status is not success";
+    public static final String IOS_NO_HOSTELS_TO_SUBSCRIBE = "No eligible hostels found for this account";
+    public static final String IOS_INVALID_RENEWAL_DATES = "transactionDate and renewalDate are required in yyyy-MM-dd, dd-MM-yyyy or epoch milliseconds, and renewalDate cannot be before transactionDate";
+    public static final String IOS_HOSTELS_SUBSCRIBED = "Subscription renewed for all hostels of this account";
     public static final String OTP_SENT_TO_REGISTERED_MOBILE = "OTP Has been sent to the registered mobile";
     public static final String PIN_RESET_SUCCESS = "PIN Successfully changed. Please login again.";
     public static final String PIN_ALREADY_SETUP = "Pin is added for this account";
