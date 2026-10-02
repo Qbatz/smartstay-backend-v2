@@ -148,8 +148,8 @@ public class Utils {
     public static final String V2_BANK_ACCOUNT_TYPE_INVALID = "Bank account type should be Savings or Current";
     public static final String V2_BANK_ACCOUNT_NUMBER_REQUIRED = "Account number is required";
     public static final String V2_BANK_NAME_REQUIRED = "Bank name is required";
-    public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name, display name, branch name, account number, IFSC code and bank account type are required for a BANK account";
-    public static final String V2_CASH_DETAILS_REQUIRED = "Cash account type and responsible person are required for a CASH account";
+    public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name and display name are required for a BANK account";
+    public static final String V2_CASH_DETAILS_REQUIRED = "Cash account type is required for a CASH account";
     public static final String V2_CASH_ACCOUNT_TYPE_INVALID = "Cash account type should be Petty Cash or Office Cash";
     public static final String QR_TYPE_INVALID = "Type should be UPI or CARD";
     public static final String QR_NAME_REQUIRED = "Name is required";
@@ -177,7 +177,7 @@ public class Utils {
     public static final String ADD_MONEY_PAYMENT_METHOD_REQUIRED = "Payment method id is required for a BANK account";
     public static final String ADD_MONEY_INVALID_PAYMENT_METHOD = "Invalid payment method id";
     public static final String ADD_MONEY_PAYMENT_METHOD_MISMATCH = "Payment method does not belong to the specified bank";
-    public static final String ADD_MONEY_TRANSACTION_DATE_INVALID = "Transaction date must be in yyyy-MM-dd format";
+    public static final String ADD_MONEY_TRANSACTION_DATE_INVALID = "Transaction date must be in dd-MM-yyyy format";
     public static final String TRANSFER_INVALID_SOURCE = "Invalid source account";
     public static final String TRANSFER_INVALID_DESTINATION = "Invalid destination account";
     public static final String TRANSFER_BANK_ACCOUNT_NOT_ALLOWED = "A BANK account cannot be used directly; use its payment method instead";
@@ -405,6 +405,13 @@ public class Utils {
     public static final String PIN_REQUIRED = "Pin is required";
     public static final String PLATFORM_REQUIRED = "Platform is required";
     public static final String INVALID_PLATFORM = "Invalid platform. Allowed values are android or ios";
+    public static final String IOS_SUBSCRIPTION_ONLY = "This action is allowed only from the iOS app";
+    public static final String IOS_SUBSCRIPTION_NOT_ALLOWED = "iOS subscription renewal is not enabled for this account";
+    public static final String IOS_SUBSCRIPTION_ALLOWED = "iOS subscription renewal allowed";
+    public static final String IOS_RENEWAL_NOT_SUCCESSFUL = "Subscriptions were not updated because the renewal status is not success";
+    public static final String IOS_NO_HOSTELS_TO_SUBSCRIBE = "No eligible hostels found for this account";
+    public static final String IOS_INVALID_RENEWAL_DATES = "transactionDate and renewalDate are required in yyyy-MM-dd, dd-MM-yyyy or epoch milliseconds, and renewalDate cannot be before transactionDate";
+    public static final String IOS_HOSTELS_SUBSCRIBED = "Subscription renewed for all hostels of this account";
     public static final String OTP_SENT_TO_REGISTERED_MOBILE = "OTP Has been sent to the registered mobile";
     public static final String PIN_RESET_SUCCESS = "PIN Successfully changed. Please login again.";
     public static final String PIN_ALREADY_SETUP = "Pin is added for this account";
@@ -509,12 +516,11 @@ public class Utils {
         }
     }
 
-    // Parses a yyyy-MM-dd string to the start of that day; returns null on null/blank/invalid input.
-    public static Date convertYmdStringToDate(String dateStr) {
+    public static Date convertDmyStringToDate(String dateStr) {
         if (dateStr == null || dateStr.trim().isEmpty()) return null;
 
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT_ZOHO);
+            SimpleDateFormat sdf = new SimpleDateFormat(USER_INPUT_DATE_FORMAT);
             sdf.setLenient(false);
             return sdf.parse(dateStr.trim());
         } catch (ParseException e) {

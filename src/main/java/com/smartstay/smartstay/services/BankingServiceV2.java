@@ -166,11 +166,11 @@ public class BankingServiceV2 {
                 return new ResponseEntity<>(Utils.V2_BANK_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
             }
 
-            if (!isValidBankAccountType(payload.bankAccountType())) {
+            if (trimToNull(payload.bankAccountType()) != null && !isValidBankAccountType(payload.bankAccountType())) {
                 return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
             }
         } else if (accountType == BankAccountTypeV2.CASH) {
-            if (!allPresent(payload.cashAccountType(), payload.responsiblePerson())) {
+            if (!allPresent(payload.cashAccountType())) {
                 return new ResponseEntity<>(Utils.V2_CASH_DETAILS_REQUIRED, HttpStatus.BAD_REQUEST);
             }
             CashAccountType cashType = CashAccountType.fromValue(payload.cashAccountType());
@@ -551,7 +551,7 @@ public class BankingServiceV2 {
 
         Date transactionDate;
         if (isPresent(payload.transactionDate())) {
-            Date parsedDate = Utils.convertYmdStringToDate(payload.transactionDate());
+            Date parsedDate = Utils.convertDmyStringToDate(payload.transactionDate());
             if (parsedDate == null) {
                 return new ResponseEntity<>(Utils.ADD_MONEY_TRANSACTION_DATE_INVALID, HttpStatus.BAD_REQUEST);
             }
@@ -802,7 +802,7 @@ public class BankingServiceV2 {
         if (!isPresent(value)) {
             return now;
         }
-        Date parsed = Utils.convertYmdStringToDate(value);
+        Date parsed = Utils.convertDmyStringToDate(value);
         if (parsed == null) {
             return null;
         }

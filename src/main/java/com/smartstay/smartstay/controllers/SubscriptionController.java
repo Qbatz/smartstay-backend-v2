@@ -33,6 +33,17 @@ public class SubscriptionController {
     public ResponseEntity<?> addMobileSubscription(@PathVariable("hostelId") String hostelId, @RequestBody @Valid Subscription subscription) {
         return subscriptionService.addSubscriptionMobile(hostelId, subscription);
     }
+    @PostMapping("/mobile/subscribeIOSHostels/{hostelId}")
+    public ResponseEntity<?> subscribeIOSHostels(@PathVariable("hostelId") String hostelId,
+                                                @RequestBody @Valid com.smartstay.smartstay.payloads.subscription.IosSubscription iosSubscription) {
+        return subscriptionService.subscribeIosHostels(hostelId, iosSubscription);
+    }
+
+    @GetMapping("/mobile/checkIOSSubscribe/{hostelId}")
+    public ResponseEntity<?> checkIOSSubscribe(@PathVariable("hostelId") String hostelId) {
+        return subscriptionService.checkIosSubscription(hostelId);
+    }
+
     @GetMapping("/payment/verify/{hostelId}/{paymentId}")
     public ResponseEntity<?> verifyPayment(@PathVariable("hostelId") String hostelId, @PathVariable("paymentId") String paymentId) {
         return subscriptionService.verifyPayment(hostelId, paymentId);
