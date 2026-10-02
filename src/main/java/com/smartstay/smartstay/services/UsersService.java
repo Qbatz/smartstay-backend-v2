@@ -663,8 +663,8 @@ public class UsersService {
                         fullName.append(" ");
                         fullName.append(createdAccount.getLastName());
                     }
-                    eventPublisher.publishEvent(new AddAdminEvents(this, users.getParentId(),
-                            createdAccount.getUserId(), fullName.toString()));
+//                    eventPublisher.publishEvent(new AddAdminEvents(this, users.getParentId(),
+//                            createdAccount.getUserId(), fullName.toString()));
                     userActivitiesService.addLoginLog(null, null, createdAccount.getUserId(),
                             ActivitySource.PROFILE.name(), ActivitySourceType.ADD_ADMIN.name(), users);
                     return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);

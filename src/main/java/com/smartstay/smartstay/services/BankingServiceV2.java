@@ -7,13 +7,7 @@ import com.smartstay.smartstay.Wrappers.bankings.BankingV2Mapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.BankTransactionsV1;
-import com.smartstay.smartstay.dao.BankingMethods;
-import com.smartstay.smartstay.dao.BankingV2;
-import com.smartstay.smartstay.dao.QrBankType;
-import com.smartstay.smartstay.dao.RolesV1;
-import com.smartstay.smartstay.dao.UserHostel;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BankAccountTypeV2;
@@ -158,10 +152,20 @@ public class BankingServiceV2 {
 
         if (accountType == BankAccountTypeV2.BANK) {
             // All bank details are mandatory for a BANK account.
-            if (!allPresent(payload.holderName(), payload.bankName(), payload.displayName(),
-                    payload.branchName(), accountNo, payload.ifscCode(), payload.bankAccountType())) {
-                return new ResponseEntity<>(Utils.V2_BANK_DETAILS_REQUIRED, HttpStatus.BAD_REQUEST);
+            if (payload.bankName() == null) {
+                return new ResponseEntity<>(Utils.V2_BANK_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
             }
+            if (payload.bankName().isEmpty()) {
+                return new ResponseEntity<>(Utils.V2_BANK_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            if (payload.accountNo() == null) {
+                return new ResponseEntity<>(Utils.V2_BANK_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            if (payload.accountNo().isEmpty()) {
+                return new ResponseEntity<>(Utils.V2_BANK_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
             if (!isValidBankAccountType(payload.bankAccountType())) {
                 return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
             }
@@ -803,6 +807,11 @@ public class BankingServiceV2 {
             return null;
         }
         return isSameDay(parsed, now) ? now : parsed;
+    }
+
+    public boolean checkBankExist(String bankId) {
+        BankingV2 bankingV2 = bankingV2Repository.findById(bankId).orElse(null);
+        return bankingV2 != null;
     }
 
     private record TransferRequest(String hostelId, double amount, Date transactionDate, String description,
@@ -1785,5 +1794,40 @@ public class BankingServiceV2 {
     private boolean isImage(MultipartFile image) {
         String contentType = image.getContentType();
         return contentType != null && contentType.toLowerCase().startsWith("image/");
+    }
+
+    public void updateBankBalance(double paidAmount, String transactionType, String bankId, String transactionDate) {
+        BankingV2 bankingV2 = bankingV2Repository.findById(bankId).orElse(null);
+        if (bankingV2 != null) {
+            if (transactionType.equalsIgnoreCase(BankTransactionType.CREDIT.name())) {
+                if (bankingV2.getBalance() == null) {
+                    bankingV2.setBalance(paidAmount);
+                }
+                else {
+                    bankingV2.setBalance(paidAmount + bankingV2.getBalance());
+                }
+            }
+            Calendar cal = Calendar.getInstance();
+            Date dt = null;
+            if (transactionDate != null) {
+                dt = Utils.stringToDate(transactionDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            }
+            else {
+                dt = new Date();
+            }
+            cal.setTime(dt);
+            if (cal.get(Calendar.MINUTE) == 0 && cal.get(Calendar.HOUR) == 0) {
+                Calendar cal2 = Calendar.getInstance();
+                cal.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
+                cal.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
+                cal.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
+            }
+
+            bankingV2.setUpdatedBy(authentication.getName());
+            bankingV2.setUpdatedAt(cal.getTime());
+
+            bankingV2Repository.save(bankingV2);
+        }
+
     }
 }

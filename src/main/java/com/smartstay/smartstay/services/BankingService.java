@@ -440,7 +440,8 @@ public class BankingService {
     }
 
     public boolean checkBankExist(String bankId) {
-        return bankingV1Repository.findByBankId(bankId) != null;
+        return bankingServiceV2.checkBankExist(bankId);
+//        return bankingV1Repository.findByBankId(bankId) != null;
     }
 
     public boolean findBankingRecordByHostelIdAndBankId(String bankId,String hostelId) {

@@ -4955,10 +4955,11 @@ public class InvoiceV1Service {
         }
 
         double invoiceTotalAmount = invoicesV1.getBasePrice();
-        double totalAmount = Utils.roundOfDouble(invoicesV1.getTotalAmount() - discountAmount);
-        invoicesV1.setTotalAmount(totalAmount);
+        double totalAmount = Utils.roundOfDouble(invoicesV1.getTotalAmount());
+//        invoicesV1.setTotalAmount(totalAmount);
+//        invoicesV1.setDi
         invoicesV1.setDiscounted(true);
-        if (invoiceTotalAmount == discountAmount) {
+        if (totalAmount == discountAmount) {
             invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
         }
         invoicesV1Repository.save(invoicesV1);
@@ -7432,9 +7433,6 @@ public class InvoiceV1Service {
                     return new ResponseEntity<>(Utils.DISCOUNT_AMOUNT_VALIDATION, HttpStatus.BAD_REQUEST);
                 }
 
-                if (Objects.equals(discountAmount, invoiceAmount)) {
-                    paymentStatus = PaymentStatus.PAID.name();
-                }
             }
         }
 
@@ -7452,11 +7450,15 @@ public class InvoiceV1Service {
                     discountPercentage = manualInvoiceBody.discountPercentage();
                     discountAmount = (discountPercentage/100) * invoiceAmount;
                 }
+
+                if (Objects.equals(discountAmount, invoiceAmount)) {
+                    paymentStatus = PaymentStatus.PAID.name();
+                }
             }
 
         }
 
-        Double totalAmt = invoiceAmount - discountAmount;
+        Double totalAmt = invoiceAmount;
         InvoicesV1 invoicesV1 = new InvoicesV1();
         invoicesV1.setCustomerId(customerId);
         invoicesV1.setHostelId(hostelId);

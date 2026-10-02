@@ -98,6 +98,8 @@ public class TransactionService {
 
     @Autowired
     private SubscriptionService subscriptionService;
+    @Autowired
+    private BankingServiceV2 bankingServiceV2;
 
     @Autowired
     private InvoiceRedemptionRepository invoiceRedemptionRepository;
@@ -332,8 +334,9 @@ public class TransactionService {
         transactionV1.setCreatedAt(new Date());
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
+        transactionV1.setSource(authentication.getSource());
 
-        bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
+        bankingServiceV2.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
                 payment.paymentDate());
 
         TransactionV1 trnsV1 = transactionRespository.save(transactionV1);
@@ -788,6 +791,7 @@ public class TransactionService {
         transactionV1.setReferenceNumber(refundInvoice.referenceNumber());
         transactionV1.setPaidAt(Utils.convertToTimeStamp(transactionDate));
         transactionV1.setUpdatedBy(authentication.getName());
+        transactionV1.setSource(authentication.getSource());
         TransactionV1 transactionV11 = transactionRespository.save(transactionV1);
 
         bankTransactionService.refundInvoice(invoicesV1, refundInvoice, invoiceId, transactionV11.getTransactionId());

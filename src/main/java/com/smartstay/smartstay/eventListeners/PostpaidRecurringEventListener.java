@@ -313,8 +313,8 @@ public class PostpaidRecurringEventListener {
                             invoicesV1.setHostelId(postpaidRecurringEvents.getHostelId());
                             invoicesV1.setInvoiceNumber(prefixSuffix.toString());
                             invoicesV1.setInvoiceType(InvoiceType.RENT.name());
-                            invoicesV1.setBasePrice(finalAmount);
-                            invoicesV1.setTotalAmount(finalAmount);
+                            invoicesV1.setBasePrice(Utils.roundOfDouble(finalAmount));
+                            invoicesV1.setTotalAmount(Utils.roundOfDouble(finalAmount));
                             invoicesV1.setPaidAmount(0.0);
                             invoicesV1.setCgst(0.0);
                             invoicesV1.setSgst(0.0);
