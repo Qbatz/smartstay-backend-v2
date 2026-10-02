@@ -145,8 +145,8 @@ public class Utils {
     public static final String ACCOUNT_NO_ALREAY_EXISTS = "Account number already exists";
     public static final String V2_ACCOUNT_TYPE_INVALID = "Account type should be BANK or CASH";
     public static final String V2_BANK_ACCOUNT_TYPE_INVALID = "Bank account type should be Savings or Current";
-    public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name, display name, branch name, account number, IFSC code and bank account type are required for a BANK account";
-    public static final String V2_CASH_DETAILS_REQUIRED = "Cash account type and responsible person are required for a CASH account";
+    public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name and display name are required for a BANK account";
+    public static final String V2_CASH_DETAILS_REQUIRED = "Cash account type is required for a CASH account";
     public static final String V2_CASH_ACCOUNT_TYPE_INVALID = "Cash account type should be Petty Cash or Office Cash";
     public static final String QR_TYPE_INVALID = "Type should be UPI or CARD";
     public static final String QR_NAME_REQUIRED = "Name is required";
@@ -174,7 +174,7 @@ public class Utils {
     public static final String ADD_MONEY_PAYMENT_METHOD_REQUIRED = "Payment method id is required for a BANK account";
     public static final String ADD_MONEY_INVALID_PAYMENT_METHOD = "Invalid payment method id";
     public static final String ADD_MONEY_PAYMENT_METHOD_MISMATCH = "Payment method does not belong to the specified bank";
-    public static final String ADD_MONEY_TRANSACTION_DATE_INVALID = "Transaction date must be in yyyy-MM-dd format";
+    public static final String ADD_MONEY_TRANSACTION_DATE_INVALID = "Transaction date must be in dd-MM-yyyy format";
     public static final String TRANSFER_INVALID_SOURCE = "Invalid source account";
     public static final String TRANSFER_INVALID_DESTINATION = "Invalid destination account";
     public static final String TRANSFER_BANK_ACCOUNT_NOT_ALLOWED = "A BANK account cannot be used directly; use its payment method instead";
@@ -510,12 +510,11 @@ public class Utils {
         }
     }
 
-    // Parses a yyyy-MM-dd string to the start of that day; returns null on null/blank/invalid input.
-    public static Date convertYmdStringToDate(String dateStr) {
+    public static Date convertDmyStringToDate(String dateStr) {
         if (dateStr == null || dateStr.trim().isEmpty()) return null;
 
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT_ZOHO);
+            SimpleDateFormat sdf = new SimpleDateFormat(USER_INPUT_DATE_FORMAT);
             sdf.setLenient(false);
             return sdf.parse(dateStr.trim());
         } catch (ParseException e) {

@@ -31,6 +31,7 @@ import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.VendorCategoriesRepository;
 import com.smartstay.smartstay.repositories.VendorRepository;
+import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.expenses.ExpenseFilterOptions;
 import com.smartstay.smartstay.responses.expenses.ExpenseItemResponse;
 import com.smartstay.smartstay.responses.expenses.ExpensePaymentResponse;
@@ -47,6 +48,7 @@ import com.smartstay.smartstay.responses.vendor.VendorListResponse;
 import com.smartstay.smartstay.responses.vendor.VendorMonthSummary;
 import com.smartstay.smartstay.responses.vendor.VendorMobileListResponse;
 import com.smartstay.smartstay.responses.vendor.VendorLookupResponse;
+import com.smartstay.smartstay.responses.vendor.VendorLookupWithBanksResponse;
 import com.smartstay.smartstay.responses.vendor.VendorMobileResponse;
 import com.smartstay.smartstay.responses.vendor.VendorValidationError;
 import com.smartstay.smartstay.responses.vendor.VendorResponse;
@@ -241,7 +243,8 @@ public class VendorService {
         VendorLookupMapper mapper = new VendorLookupMapper();
         List<VendorLookupResponse> vendors = vendorRepository.findActiveVendorLookupByHostelId(hostelId)
                 .stream().map(mapper).toList();
-        return new ResponseEntity<>(vendors, HttpStatus.OK);
+        List<DebitsBank> banks = bankingService.getAllBankForReturn(hostelId);
+        return new ResponseEntity<>(new VendorLookupWithBanksResponse(vendors, banks), HttpStatus.OK);
     }
 
     private List<String> trimToNullList(List<String> values) {
