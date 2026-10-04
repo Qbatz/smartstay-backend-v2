@@ -1095,13 +1095,19 @@ public class UsersService {
         if (pin.pin() == null) {
             return new ResponseEntity<>(Utils.PIN_REQUIRED, HttpStatus.BAD_REQUEST);
         }
+        try {
+            int val = Integer.parseInt(pin.pin());
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
+        }
         Users users = userRepository.findUserByUserId(userId);
         if (users == null) {
             return new ResponseEntity<>(Utils.INVALID_USER, HttpStatus.BAD_REQUEST);
         }
         UsersConfig config = users.getConfig();
         if (config != null) {
-            if (config.getPin() == null || config.getPin() == 0) {
+            if (config.getPin() == null) {
                 config.setPin(pin.pin());
                 config.setUser(users);
                 users.setConfig(config);
@@ -1161,7 +1167,7 @@ public class UsersService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    private void savePin(Users users, Integer pin, ActivitySourceType activityType) {
+    private void savePin(Users users, String pin, ActivitySourceType activityType) {
         UsersConfig config = users.getConfig();
         if (config == null) {
             config = new UsersConfig();
@@ -1187,6 +1193,13 @@ public class UsersService {
         }
         if (pin.pin() == null) {
             return new ResponseEntity<>(Utils.PIN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            int p = Integer.parseInt(pin.pin());
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(Utils.INVALID_PIN, HttpStatus.BAD_REQUEST);
         }
 
         UsersConfig usersConfig = usersConfigRepository.findByUser_UserIdAndPin(userId, pin.pin()).orElse(null);

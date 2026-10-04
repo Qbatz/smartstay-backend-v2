@@ -160,10 +160,10 @@ public class BankingServiceV2 {
             }
 
             if (payload.accountNo() == null) {
-                return new ResponseEntity<>(Utils.V2_BANK_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_NUMBER_REQUIRED, HttpStatus.BAD_REQUEST);
             }
             if (payload.accountNo().isEmpty()) {
-                return new ResponseEntity<>(Utils.V2_BANK_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_NUMBER_REQUIRED, HttpStatus.BAD_REQUEST);
             }
 
             if (trimToNull(payload.bankAccountType()) != null && !isValidBankAccountType(payload.bankAccountType())) {
