@@ -336,8 +336,8 @@ public class TransactionService {
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
         transactionV1.setSource(authentication.getSource());
 
-        bankingServiceV2.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
-                payment.paymentDate());
+//        bankingServiceV2.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
+//                payment.paymentDate());
 
         TransactionV1 trnsV1 = transactionRespository.save(transactionV1);
 
