@@ -351,8 +351,8 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.BANKING_METHOD_ONLY_FOR_BANK, HttpStatus.BAD_REQUEST);
         }
 
-        PaymentMethod method = PaymentMethod.fromValue(payload.paymentMethod());
-        if (method == null) {
+
+        if (payload.paymentMethod() == null) {
             return new ResponseEntity<>(Utils.BANKING_METHOD_PAYMENT_METHOD_INVALID, HttpStatus.BAD_REQUEST);
         }
 
@@ -369,8 +369,8 @@ public class BankingServiceV2 {
         String linkedUpiId = trimToNull(payload.linkedUpiId());
 
         Date billingCycle = null;
-        switch (method) {
-            case UPI -> {
+        switch (payload.paymentMethod()) {
+            case "UPI" -> {
                 if (upiId == null) {
                     return badRequest(Utils.BANKING_METHOD_UPI_ID_REQUIRED);
                 }
@@ -378,7 +378,7 @@ public class BankingServiceV2 {
                     return badRequest(Utils.BANKING_METHOD_UPI_APP_REQUIRED);
                 }
             }
-            case CREDIT_CARD -> {
+            case "CREDIT_CARD" -> {
                 String cardError = validateCard(cardNumber, cardNetwork, cardHolderName);
                 if (cardError != null) {
                     return badRequest(cardError);
@@ -390,13 +390,13 @@ public class BankingServiceV2 {
                     }
                 }
             }
-            case DEBIT_CARD -> {
+            case "DEBIT_CARD" -> {
                 String cardError = validateCard(cardNumber, cardNetwork, cardHolderName);
                 if (cardError != null) {
                     return badRequest(cardError);
                 }
             }
-            case QR_CODE -> {
+            case "QR_CODE" -> {
                 if (upiApp == null) {
                     return badRequest(Utils.BANKING_METHOD_UPI_APP_REQUIRED);
                 }
@@ -418,11 +418,11 @@ public class BankingServiceV2 {
             }
         }
 
-        if (method == PaymentMethod.UPI
+        if (payload.paymentMethod().equalsIgnoreCase(PaymentMethod.UPI.name())
                 && bankingMethodsRepository.existsByBank_BankIdAndHostelIdAndUpiIdIgnoreCase(bankId, hostelId, upiId)) {
             return badRequest(Utils.BANKING_METHOD_UPI_ID_EXISTS);
         }
-        if ((method == PaymentMethod.CREDIT_CARD || method == PaymentMethod.DEBIT_CARD || method == PaymentMethod.QR_CODE)
+        if ((payload.paymentMethod().equalsIgnoreCase(PaymentMethod.CREDIT_CARD.name()) || payload.paymentMethod().equalsIgnoreCase(PaymentMethod.DEBIT_CARD.name()) || payload.paymentMethod().equalsIgnoreCase(PaymentMethod.QR_CODE.name()))
                 && bankingMethodsRepository.existsByBank_BankIdAndHostelIdAndCardNumber(bankId, hostelId, cardNumber)) {
             return badRequest(Utils.BANKING_METHOD_CARD_NUMBER_EXISTS);
         }
@@ -430,7 +430,7 @@ public class BankingServiceV2 {
         Date now = new Date();
         BankingMethods entity = new BankingMethods();
         entity.setBank(bank);
-        entity.setPaymentMethod(method);
+        entity.setPaymentMethod(payload.paymentMethod());
         entity.setDisplayName(displayName);
         entity.setDescription(trimToNull(payload.description()));
         entity.setHostelId(hostelId);
@@ -441,24 +441,24 @@ public class BankingServiceV2 {
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
 
-        switch (method) {
-            case UPI -> {
+        switch (payload.paymentMethod()) {
+            case "UPI" -> {
                 entity.setUpiId(upiId);
                 entity.setUpiApp(upiApp);
             }
-            case CREDIT_CARD -> {
+            case "CREDIT_CARD" -> {
                 entity.setCardNumber(cardNumber);
                 entity.setCardNetwork(cardNetwork);
                 entity.setCardHolderName(cardHolderName);
                 entity.setCreditLimit(payload.creditLimit());
                 entity.setBillingCycle(billingCycle);
             }
-            case DEBIT_CARD -> {
+            case "DEBIT_CARD" -> {
                 entity.setCardNumber(cardNumber);
                 entity.setCardNetwork(cardNetwork);
                 entity.setCardHolderName(cardHolderName);
             }
-            case QR_CODE -> {
+            case "QR_CODE" -> {
                 entity.setUpiApp(upiApp);
                 entity.setCardNumber(cardNumber);
                 entity.setLinkedUpiId(linkedUpiId);
@@ -744,7 +744,7 @@ public class BankingServiceV2 {
     }
 
     private boolean isCreditCard(TransferEndpoint endpoint) {
-        return !endpoint.direct() && endpoint.method().getPaymentMethod() == PaymentMethod.CREDIT_CARD;
+        return !endpoint.direct() && endpoint.method().getPaymentMethod().equalsIgnoreCase(PaymentMethod.CREDIT_CARD.name());
     }
 
     private void applyTransfer(TransferEndpoint source, TransferEndpoint destination, TransferRequest request) {
@@ -1590,7 +1590,7 @@ public class BankingServiceV2 {
                 continue;
             }
             for (BankingMethods method : methods) {
-                if (method.getPaymentMethod() != PaymentMethod.CREDIT_CARD) {
+                if (method.getPaymentMethod().equalsIgnoreCase(PaymentMethod.CREDIT_CARD.name())) {
                     continue;
                 }
                 response.add(mapper.bankMethod(bank, method,

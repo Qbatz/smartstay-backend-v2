@@ -4,10 +4,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.Wrappers.BankingListMapper;
 import com.smartstay.smartstay.Wrappers.invoices.RefundableBanksMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.BankTransactionsV1;
-import com.smartstay.smartstay.dao.BankingV1;
-import com.smartstay.smartstay.dao.TransactionV1;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.transaction.TransactionDto;
 import com.smartstay.smartstay.ennum.*;
@@ -83,6 +80,7 @@ public class BankingService {
         }
 
         String accountType = null;
+        String accountNumber = null;
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
             accountType = BankAccountType.BANK.name();
             if (addBank.accountNo() != null && !addBank.accountNo().isEmpty()) {
@@ -90,16 +88,27 @@ public class BankingService {
                 if (existingAccounts != null && !existingAccounts.isEmpty()) {
                     return new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
                 }
-
+                accountNumber = addBank.accountNo();
             }
         }
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
             accountType = BankAccountType.CARD.name();
             if (addBank.cardType().equalsIgnoreCase(CardType.DEBIT.name())) {
+                if (addBank.bankId() == null || addBank.bankId().equalsIgnoreCase("")) {
+                    return new ResponseEntity<>(Utils.BANK_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
                 List<String> existingAccounts = bankingV1Repository.findBankIdsByDebitCardAndAccountType(addBank.cardNumber(), accountType, hostelId, authentication.getName());
                 if (existingAccounts != null && !existingAccounts.isEmpty()) {
                         return  new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
                 }
+                BankingV1 bankingV1 = bankingV1Repository.findByBankId(addBank.bankId());
+                if (bankingV1 == null) {
+                    return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+                }
+                if (!bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+                    return new ResponseEntity<>(Utils.SELECTED_BANK_SHOULD_BE_BANK_TYPE, HttpStatus.BAD_REQUEST);
+                }
+                accountNumber = bankingV1.getAccountNumber();
             }
             else {
                 List<String> existingAccounts = bankingV1Repository.findBankIdsByCreditCardAndAccountType(addBank.cardNumber(), accountType, hostelId, authentication.getName());
@@ -116,7 +125,9 @@ public class BankingService {
         }
         if (addBank.accountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
             accountType = BankAccountType.UPI.name();
-
+            if (addBank.bankId() == null || addBank.bankId().equalsIgnoreCase("")) {
+                return new ResponseEntity<>(Utils.BANK_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
             if (addBank.upiId() != null && !addBank.upiId().isEmpty()) {
                 List<String> existingAccounts = bankingV1Repository.findBankIdsByUpiIdAndAccountType(addBank.upiId(), accountType, hostelId, authentication.getName());
                 if (existingAccounts != null && !existingAccounts.isEmpty()) {
@@ -124,6 +135,15 @@ public class BankingService {
                 }
 
             }
+
+            BankingV1 bankingV1 = bankingV1Repository.findByBankId(addBank.bankId());
+            if (bankingV1 == null) {
+                return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+            }
+            if (!bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+                return new ResponseEntity<>(Utils.SELECTED_BANK_SHOULD_BE_BANK_TYPE, HttpStatus.BAD_REQUEST);
+            }
+            accountNumber = bankingV1.getAccountNumber();
 
         }
 
@@ -139,7 +159,7 @@ public class BankingService {
         bankingV1.setBankName(addBank.bankName());
         bankingV1.setParentId(users.getParentId());
         bankingV1.setUserId(authentication.getName());
-        bankingV1.setAccountNumber(addBank.accountNo());
+        bankingV1.setAccountNumber(accountNumber);
         bankingV1.setIfscCode(addBank.ifscCode());
         bankingV1.setBranchName(addBank.branchName());
         bankingV1.setBranchCode(addBank.branchCode());

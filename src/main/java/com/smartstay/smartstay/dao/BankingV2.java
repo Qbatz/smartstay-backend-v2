@@ -27,6 +27,7 @@ public class BankingV2 {
     private String branchName;
     private String accountHolderName;
     private String transactionType;
+//    BankAccountTypeV2 enum
     private String accountType;
     private String bankAccountType;
     private String description;
@@ -42,6 +43,7 @@ public class BankingV2 {
     private Date updatedAt;
     private Date lastTransaction;
     private String platform;
+    //Cash account type enum
     private String cashAccountType;
     private String responsiblePerson;
 

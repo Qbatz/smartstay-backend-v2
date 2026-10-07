@@ -68,7 +68,7 @@ public class AllPaymentMethodsMapper {
                 bank.getResponsiblePerson(),
                 responsiblePerson,
                 method.getPaymentMethodId(),
-                method.getPaymentMethod() != null ? method.getPaymentMethod().getValue() : null,
+                method.getPaymentMethod() != null ? method.getPaymentMethod() : null,
                 method.getCardNumber(),
                 method.getUpiId(),
                 method.getCardHolderName(),

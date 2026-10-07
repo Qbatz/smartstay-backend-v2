@@ -55,6 +55,8 @@ public class AssetsService {
     private SubscriptionService subscriptionService;
     @Autowired
     private BankingServiceV2 bankingServiceV2;
+    @Autowired
+    private BankingService bankingService;
 
     public ResponseEntity<?> getAllAssets(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -99,13 +101,18 @@ public class AssetsService {
             asset.setVendorId(request.vendorId());
         }
 
-        if (!bankingServiceV2.checkBankExist(request.bankingId())) {
-            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
-        }
+//        if (!bankingServiceV2.checkBankExist(request.bankingId())) {
+//            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
+//        }
+
 //        boolean bankingV1 = bankingRepository.existsByHostelIdAndBankId(hostelId,request.bankingId());
 //        if (!bankingV1) {
 //            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
 //        }
+
+        if (bankingService.checkBankExist(request.bankingId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
+        }
 
 
         boolean assetNameExists = assetsRepository.existsByAssetNameAndIsDeletedFalseAndHostelId(request.assetName(),hostelId);
