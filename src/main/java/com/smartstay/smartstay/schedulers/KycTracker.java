@@ -33,7 +33,7 @@ public class KycTracker {
                         Thread.sleep(2000);
                         makeAPICall(listKyc, count);
                     } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
+//                        throw new RuntimeException(e);
                     }
                 }
                 else {

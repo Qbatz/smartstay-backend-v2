@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BankIdsMappingRepository extends JpaRepository<BankIdsMapping, Integer> {
+
+    BankIdsMapping findByOldBankId(String bankId);
 }

@@ -18,4 +18,9 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
     boolean existsByHostelIdAndAccountNumberAndIsDeletedFalse(String hostelId, String accountNumber);
 
     List<BankingV2> findByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
+
+    @Query("""
+           SELECT b FROM bankingv2 b WHERE b.bankId =:bankId
+            """)
+    BankingV2 findByBankId(String bankId);
 }

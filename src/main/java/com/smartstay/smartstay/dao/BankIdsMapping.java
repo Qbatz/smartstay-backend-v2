@@ -23,4 +23,5 @@ public class BankIdsMapping {
     //UPI or Bank no need for cash accounts
     private String oldBankPaymentType;
     private String newBankPaymentType;
+    private String oldPaymentType;
 }

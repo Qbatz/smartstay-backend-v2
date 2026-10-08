@@ -1,11 +1,13 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.BankingV1;
+import com.smartstay.smartstay.dao.BankingV2;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -132,9 +134,14 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
     List<BankingV1> findByBankIdNotInAndIsDeletedFalse(List<String> bankId, String hostelId);
 
     @Query("""
-            SELECT b FROM BankingV1 b WHERE b.accountType='CASH' AND b.isDeleted=false
+            SELECT b FROM BankingV1 b WHERE b.accountType='CASH' AND b.isDeleted=false AND DATE(b.createdAt) <= DATE(:date)
             """)
-    List<BankingV1> findAllCashAccounts();
+    List<BankingV1> findAllCashAccounts(Date date);
+
+    @Query("""
+            SELECT b FROM BankingV1 b WHERE b.accountType='CASH' AND b.isDeleted=false AND DATE(b.createdAt) > DATE(:startDate) and DATE(b.createdAt) <= DATE(:endDate)
+            """)
+    List<BankingV1> findAllCashAccountsBetweenTwoDates(Date startDate, Date endDate);
 
     @Query("""
             SELECT b FROM BankingV1 b WHERE b.accountType='BANK' AND b.isDeleted=false
@@ -145,5 +152,16 @@ public interface BankingRepository extends JpaRepository<BankingV1, String> {
             SELECT b FROM BankingV1 b WHERE b.accountType='UPI' AND b.isDeleted=false
             """)
     List<BankingV1> findAllUPIAccounts();
+
+    @Query("""
+            SELECT b FROM BankingV1 b WHERE b.hostelId=:hostelId AND b.accountNumber=:accountNumber 
+            AND b.accountType='BANK'
+            """)
+    BankingV1 findByHostelIdAndAccountNumber(String hostelId, String accountNumber);
+
+    @Query("""
+            SELECT b FROM BankingV1 b WHERE b.accountType='CARD' AND b.isDeleted=false
+            """)
+    List<BankingV1> findAllCards();
 
 }

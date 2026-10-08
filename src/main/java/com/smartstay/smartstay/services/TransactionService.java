@@ -899,9 +899,6 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
-        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
-                transactionV1.getBankId());
-
         PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(),
                 transactionV1.getPaidAmount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(),
                 "Active");
@@ -918,6 +915,8 @@ public class TransactionService {
         }
 
         transactionRespository.delete(transactionV1);
+        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
+                transactionV1.getBankId());
         usersService.addUserLogWithType(hostelId, transactionV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.DELETE, users, transactionV1.getInvoiceId());
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
