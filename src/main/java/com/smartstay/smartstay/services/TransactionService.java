@@ -336,9 +336,6 @@ public class TransactionService {
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
         transactionV1.setSource(authentication.getSource());
 
-//        bankingServiceV2.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
-//                payment.paymentDate());
-
         TransactionV1 trnsV1 = transactionRespository.save(transactionV1);
 
         PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(),
@@ -352,6 +349,8 @@ public class TransactionService {
                     BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(),
                     trnsV1.getTransactionId());
 
+            bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
+                    payment.paymentDate());
             bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId(), payment.paymentMethodId());
 
             usersService.addUserLog(hostelId, trnsV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.CREATE, user);
