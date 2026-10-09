@@ -545,12 +545,110 @@ public class SmartstayApplication {
 //    }
 
 
-    @Bean
-    CommandLineRunner addCreditCard(BankingRepository bankingRepository, BankingV2Repository bankingV2Repository, UserRepository userRepository, BankIdsMappingRepository bankIdsMappingRepository, BankingMethodsRepository bankingMethodsRepository) {
-        return args -> {
-            List<BankingV1> findCardsAccount = bankingRepository.findAllCards();
-        };
-    }
+//    @Bean
+//    CommandLineRunner addCreditCard(BankingRepository bankingRepository, BankingV2Repository bankingV2Repository, UserRepository userRepository, BankIdsMappingRepository bankIdsMappingRepository, BankingMethodsRepository bankingMethodsRepository) {
+//        return args -> {
+//            List<String> bankIds = new ArrayList<>();
+//            bankIds.add("15a2834c-9076-44a3-96a4-27c004214742");
+//            bankIds.add("1b581896-3438-4c21-a29c-14e7f7fbc36e");
+//            bankIds.add("2ae5ca5a-f01d-4aa8-9854-79071cb99fb3");
+//            bankIds.add("5293676c-74a3-424d-b415-cb053021f5ef");
+//            bankIds.add("6269565f-71ca-490c-b069-9d0c1ee1208d");
+//            bankIds.add("6fcd1860-ee85-4445-b446-45db99baf8af");
+//            bankIds.add("83262bac-6cea-4418-858f-50b3b4f30b04");
+//            bankIds.add("94be1238-4965-45a7-b1a5-2297b9d93af2");
+//            bankIds.add("a1095083-06dc-4d04-a29b-a67be695ed54");
+//            bankIds.add("a604d355-5972-4060-89d6-2a2ac6d3a306");
+//            bankIds.add("a8cd51af-f976-4cd9-8d4f-f45256a05be7");
+//            bankIds.add("c345bbc3-6154-484d-9ad0-cd0193ebfd29");
+//            bankIds.add("cdda0e54-e4b0-458f-96cf-67381797e635");
+//            bankIds.add("d1c15af0-5d46-48b2-aef9-a4885333858d");
+//            bankIds.add("ef2fb008-7993-4a9f-804c-fb23a64049db");
+//            bankIds.add("f0e9426c-75f5-46c1-bb3b-ad7159bac998");
+//
+//            List<BankingV1> creditCards = bankingRepository.findByBankIdIn(bankIds);
+//            if (creditCards != null) {
+//                creditCards.forEach(item -> {
+//                    Users users = userRepository.findUserByUserId(item.getUserId());
+//                    if (users != null) {
+//                        BankingV2 bankingV2 = new BankingV2();
+//                        bankingV2.setDisplayName(NameUtils.getFullName(users.getFirstName(), users.getLastName()));
+//                        bankingV2.setBankName(item.getBankName());
+//                        bankingV2.setAccountNumber(item.getAccountNumber());
+//                        bankingV2.setParentId(item.getParentId());
+//                        bankingV2.setIfscCode(null);
+//                        bankingV2.setBranchName(null);
+//                        bankingV2.setAccountHolderName(null);
+//                        bankingV2.setAccountType(BankAccountType.CARD.name());
+//                        bankingV2.setBankAccountType(CardType.CREDIT.name());
+//                        bankingV2.setResponsiblePerson(users.getUserId());
+//                        bankingV2.setDescription(null);
+//                        bankingV2.setUserId(users.getUserId());
+//                        bankingV2.setHostelId(item.getHostelId());
+//                        bankingV2.setTransactionType(BankPurpose.BOTH.name());
+//                        if (item.getBalance() != null) {
+//                            bankingV2.setBalance(Utils.roundOfDouble(item.getBalance()));
+//                        }
+//                        else {
+//                            bankingV2.setBalance(0.0);
+//                        }
+//                        bankingV2.setActive(true);
+//                        bankingV2.setDeleted(false);
+//                        bankingV2.setDefaultAccount(item.isDefaultAccount());
+//                        bankingV2.setCreatedBy(item.getCreatedBy());
+//                        bankingV2.setUpdatedBy(item.getUpdatedBy());
+//                        bankingV2.setCreatedAt(item.getCreatedAt());
+//                        bankingV2.setUpdatedAt(item.getUpdatedAt());
+//                        bankingV2.setPlatform(null);
+//
+//                        BankingMethods bankingMethods = new BankingMethods();
+//                        bankingMethods.setBank(bankingV2);
+//                        bankingMethods.setPaymentMethod(PaymentMethod.CREDIT_CARD.name());
+//                        bankingMethods.setDisplayName(NameUtils.getFullName(users.getFirstName(), users.getLastName()));
+//                        bankingMethods.setDescription(null);
+//                        bankingMethods.setCardNetwork(null);
+//                        bankingMethods.setCardNumber(item.getDebitCardNumber());
+//                        bankingMethods.setCardHolderName(item.getAccountHolderName());
+//                        bankingMethods.setHostelId(item.getHostelId());
+//                        if (item.getBalance() != null) {
+//                            bankingMethods.setBalance(item.getBalance());
+//                            if (bankingV2.getBalance() != null) {
+//                                bankingV2.setBalance(bankingV2.getBalance() + item.getBalance());
+//                            }
+//                        }
+//                        else {
+//                            bankingMethods.setBalance(0.0);
+//                        }
+//
+//                        bankingMethods.setCreatedAt(item.getCreatedAt());
+//                        bankingMethods.setCreatedBy(item.getCreatedBy());
+//                        bankingMethods.setUpdatedAt(item.getUpdatedAt());
+//                        bankingMethods.setUpdatedBy(item.getUpdatedBy());
+//
+//                        List<BankingMethods> listBankingMethods = new ArrayList<>();
+//                        listBankingMethods.add(bankingMethods);
+//                        bankingV2.setBankingMethods(listBankingMethods);
+//
+//                        BankingV2 v2 = bankingV2Repository.save(bankingV2);
+//                        BankIdsMapping bim = new BankIdsMapping();
+//                        bim.setOldBankId(item.getBankId());
+//                        bim.setNewBankId(v2.getBankId());
+//                        bim.setOldBankAccountType(BankAccountType.CARD.name());
+//                        bim.setNewBankAccountType(BankAccountType.CARD.name());
+//
+//                        bim.setOldBankPaymentType(BankAccountType.CARD.name());
+//                        bim.setNewBankPaymentType(BankAccountType.CARD.name());
+//                        bim.setOldPaymentType("CARD");
+//                        bim.setCardType("CREDIT");
+//
+//                        bankIdsMappingRepository.save(bim);
+//
+//
+//                    }
+//                });
+//            }
+//        };
+//    }
 
 
 

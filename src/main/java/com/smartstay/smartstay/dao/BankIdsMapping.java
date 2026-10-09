@@ -24,4 +24,6 @@ public class BankIdsMapping {
     private String oldBankPaymentType;
     private String newBankPaymentType;
     private String oldPaymentType;
+
+    private String cardType;
 }
