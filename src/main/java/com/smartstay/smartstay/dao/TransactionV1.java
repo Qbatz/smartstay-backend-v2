@@ -38,6 +38,8 @@ public class TransactionV1 {
     private String receiptUrl;
     //card/gpay or cash or bank
     private String bankId;
+    private String oldBankId;
+    private String paymentMethodId;
     //entered by customer
     private String referenceNumber;
     private Date paidAt;

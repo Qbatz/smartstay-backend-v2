@@ -67,4 +67,16 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     List<BankTransactionsV1> findOverviewTransactions(@Param("hostelId") String hostelId,
             @Param("bankId") String bankId, @Param("startDate") Date startDate);
 
+
+    @Query(value = """
+            SELECT t.*
+            FROM bank_transactionsv1 t
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM banking_ids m
+                WHERE (m.bank_idv1 = t.bank_id)
+            )
+            """, nativeQuery = true)
+    List<BankTransactionsV1> fetchBankWithV2Ids();
+
 }

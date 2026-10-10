@@ -262,9 +262,7 @@ public class SmartstayApplication {
 //    }
 
     /**
-     *
      * third migration
-     *
      *
      * @param bankingRepository
      * @param bankingV2Repository
@@ -650,6 +648,77 @@ public class SmartstayApplication {
 //        };
 //    }
 
+    /**
+     *
+     * no need on prod
+     *
+     */
+//    @Bean
+//    CommandLineRunner revertBankTransactions(BankingIdsRepository bankingIdsRepository, BankTransactionRepository bankTransactionRepository) {
+//
+//        return args -> {
+//            List<BankTransactionsV1> listBankTransactions = bankTransactionRepository.fetchBankWithV2Ids();
+//            if (listBankTransactions != null) {
+//                listBankTransactions.forEach(item -> {
+//                    List<BankingIds> listBankIds = bankingIdsRepository.findByBankIdV2(item.getBankId());
+//                    if (listBankIds != null) {
+//                        if (listBankIds.size() == 1) {
+//                            item.setBankId(listBankIds.get(0).getBankIdV1());
+//                            bankTransactionRepository.save(item);
+//                        }
+//                    }
+//                });
+//            }
+//        };
+//    }
+
+    /**
+     *
+     * no need production environment.
+     *
+     */
+
+//    @Bean
+//    CommandLineRunner revertTransactionsV1(BankingIdsRepository bankingIdsRepository, TransactionV1Repository transactionV1Repository) {
+//        return args -> {
+//            List<TransactionV1> listTransactions = transactionV1Repository.findAll();
+//            if (listTransactions != null) {
+//                listTransactions.forEach(item -> {
+//                    List<BankingIds> listBankIds = bankingIdsRepository.findByBankIdV2(item.getBankId());
+//                    if (listBankIds != null) {
+//                        if (listBankIds.size() == 1) {
+//                            item.setBankId(listBankIds.get(0).getBankIdV1());
+//                            transactionV1Repository.save(item);
+//                        }
+//                    }
+//                });
+//            }
+//        };
+//    }
+
+
+    /**
+     *
+     * need to execute on production environement.
+     *
+     */
+
+//    @Bean
+//    CommandLineRunner addNewFieldAndMigrate(TransactionV1Repository transactionV1Repository) {
+//        return args -> {
+//            List<TransactionV1> listTransactions = transactionV1Repository.findAllOldBankNull();
+//            if (listTransactions != null) {
+//                List<TransactionV1> listNewTransactions = listTransactions
+//                        .stream()
+//                        .map(i -> {
+//                            i.setOldBankId(i.getBankId());
+//                            return i;
+//                        })
+//                        .toList();
+//                transactionV1Repository.saveAll(listNewTransactions);
+//            }
+//        };
+//    }
 
 
 }

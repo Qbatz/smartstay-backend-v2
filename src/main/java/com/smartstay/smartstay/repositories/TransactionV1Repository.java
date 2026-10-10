@@ -178,4 +178,9 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             AND trns.type='REFUND' AND DATE(trns.paymentDate) >= DATE(:startDate)
             """)
     List<TransactionV1> findCurrentMonthReturnByHostelId(String hostelId, Date startDate);
+
+    @Query("""
+            SELECT trns FROM TransactionV1 trns WHERE trns.oldBankId IS NULL
+            """)
+    List<TransactionV1> findAllOldBankNull();
 }
