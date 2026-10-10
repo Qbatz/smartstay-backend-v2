@@ -79,4 +79,9 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             """, nativeQuery = true)
     List<BankTransactionsV1> fetchBankWithV2Ids();
 
+    @Query("""
+            SELECT b FROM BankTransactionsV1 b WHERE b.oldBankId IS NULL
+            """)
+    List<BankTransactionsV1> findBankTransactionsOldBankIsNull();
+
 }

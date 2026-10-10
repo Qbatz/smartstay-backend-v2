@@ -720,5 +720,20 @@ public class SmartstayApplication {
 //        };
 //    }
 
-
+//    @Bean
+//    CommandLineRunner addBankTransactionOldBank(BankTransactionRepository bankTransactionRepository) {
+//        return args -> {
+//            List<BankTransactionsV1> listBankTransactions = bankTransactionRepository.findBankTransactionsOldBankIsNull();
+//            if (listBankTransactions != null) {
+//                List<BankTransactionsV1> listOldBankIds = listBankTransactions
+//                        .stream()
+//                        .map(i -> {
+//                            i.setOldBankId(i.getBankId());
+//                            return i;
+//                        })
+//                        .toList();
+//                bankTransactionRepository.saveAll(listOldBankIds);
+//            }
+//        };
+//    }
 }
