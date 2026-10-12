@@ -1,13 +1,7 @@
 package com.smartstay.smartstay.Wrappers.transactions;
 
-import com.smartstay.smartstay.dao.BankingV1;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.InvoicesV1;
-import com.smartstay.smartstay.dao.TransactionV1;
-import com.smartstay.smartstay.ennum.BankAccountType;
-import com.smartstay.smartstay.ennum.InvoiceMode;
-import com.smartstay.smartstay.ennum.InvoiceType;
-import com.smartstay.smartstay.ennum.TransactionType;
+import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.util.Utils;
 
@@ -17,10 +11,10 @@ import java.util.function.Function;
 public class TransactionsListMapper implements Function<TransactionV1, ReceiptsList> {
 
     List<Customers> customers = null;
-    List<BankingV1> banking = null;
+    List<BankingV2> banking = null;
     List<InvoicesV1> invoices = null;
 
-    public TransactionsListMapper(List<Customers> customers, List<BankingV1> banking, List<InvoicesV1> invoices) {
+    public TransactionsListMapper(List<Customers> customers, List<BankingV2> banking, List<InvoicesV1> invoices) {
         this.customers = customers;
         this.banking = banking;
         this.invoices = invoices;
@@ -103,40 +97,56 @@ public class TransactionsListMapper implements Function<TransactionV1, ReceiptsL
 
         }
 
-        BankingV1 bank = banking
+        BankingV2 bank = banking
                 .stream()
                 .filter(i -> i.getBankId().equalsIgnoreCase(transactionV1.getBankId()))
                 .findFirst()
                 .orElse(null);
         if (bank != null) {
-            bankName.append(bank.getAccountHolderName());
+            bankName.append(bank.getDisplayName());
             if (bank.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
                 bankName.append("-");
                 bankName.append("Cash");
             }
             else if(bank.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+
                 if (bank.getAccountHolderName() != null) {
 
                     bankName.append("-");
-                    bankName.append("Card");
+                    bankName.append("Credit Card");
                 }
             }
             else if(bank.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
-                if (bank.getAccountHolderName() != null) {
-                    bankName.append("-");
-                    if (bank.getBankName() != null) {
-                        bankName.append(bank.getBankName());
-                    }
-                    bankName.append("Bank");
+//                if (bank.getAccountHolderName() != null) {
+//                    bankName.append("-");
+//                    if (bank.getBankName() != null) {
+//                        bankName.append(bank.getBankName());
+//                    }
+//                    bankName.append("Bank");
+//
+//                }
 
+                if (transactionV1.getPaymentMethodId() != null) {
+                    BankingMethods paymentMethod = bank
+                            .getBankingMethods()
+                            .stream()
+                            .filter(i -> i.getPaymentMethodId().equalsIgnoreCase(transactionV1.getPaymentMethodId()))
+                            .findFirst()
+                            .orElse(null);
+                    if (paymentMethod != null) {
+                        bankName.append("-");
+                        bankName.append(paymentMethod.getPaymentMethod());
+                    }
                 }
+
+
             }
-            else if(bank.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
-                if (bank.getAccountHolderName() != null) {
-                    bankName.append("-");
-                    bankName.append("Upi");
-                }
-            }
+//            else if(bank.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
+//                if (bank.getAccountHolderName() != null) {
+//                    bankName.append("-");
+//                    bankName.append("Upi");
+//                }
+//            }
         }
 
 

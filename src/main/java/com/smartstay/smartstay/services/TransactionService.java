@@ -209,7 +209,7 @@ public class TransactionService {
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
 
-        bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
+        bankingServiceV2.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
                 payment.paymentDate());
 
         TransactionV1 trns = transactionRespository.save(transactionV1);
@@ -1207,7 +1207,7 @@ public class TransactionService {
                     .map(TransactionV1::getCreatedBy)
                     .toList();
             List<Users> paidByUsers = usersService.findAllUsersFromUserId(paidBy);
-            List<BankingV1> banks = bankingService.findAllBanksById(bankIds);
+            List<BankingV2> banks = bankingServiceV2.findAllByBankId(bankIds);
 
             invoiceRefundHistory = refundHistories.stream()
                     .map(i -> new InvoiceRefundMapper(paidByUsers, banks).apply(i))
@@ -1346,7 +1346,7 @@ public class TransactionService {
                 .map(TransactionV1::getCreatedBy)
                 .distinct()
                 .toList();
-        List<BankingV1> listBanks = bankingService.findAllBanksById(bankIds);
+        List<BankingV2> listBanks = bankingServiceV2.findAllByBankId(bankIds);
         List<Users> listUsers = usersService.findAllUsersFromUserId(userIds);
 
         List<InvoiceRefundHistory> listPayments = listTransactions
@@ -1485,7 +1485,8 @@ public class TransactionService {
             }
         }
 
-        List<BankingV1> listBanks = bankingService.findAllBankIdsByHostelId(hostelId);
+//        List<BankingV1> listBanks = bankingService.findAllBankIdsByHostelId(hostelId);
+        List<BankingV2> listBanks = bankingServiceV2.findAllBanksByHostelId(hostelId);
 //        List<String> collectedByUsersIds = listReceipts.stream().map(TransactionV1::getCreatedBy).toList();
 //        List<Users> collectedByUsers = usersService.findAllUsersFromUserId(collectedByUsersIds);
         List<Users> collectedByUsers = usersService.findAllUsersByHostelId(hostelId);

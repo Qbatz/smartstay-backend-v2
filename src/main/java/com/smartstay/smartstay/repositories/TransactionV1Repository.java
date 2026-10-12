@@ -183,4 +183,9 @@ public interface TransactionV1Repository extends JpaRepository<TransactionV1, St
             SELECT trns FROM TransactionV1 trns WHERE trns.oldBankId IS NULL
             """)
     List<TransactionV1> findAllOldBankNull();
+
+    @Query("""
+            SELECT t FROM TransactionV1 t WHERE (t.isMigrated IS NULL OR t.isMigrated=false)
+            """)
+    List<TransactionV1> findUnmigratedList();
 }

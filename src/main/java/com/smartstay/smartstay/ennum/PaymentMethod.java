@@ -2,6 +2,7 @@ package com.smartstay.smartstay.ennum;
 
 public enum PaymentMethod {
     UPI("UPI"),
+    BANK("BANK"),
     CREDIT_CARD("Credit Card"),
     DEBIT_CARD("Debit Card"),
     QR_CODE("QR Code");

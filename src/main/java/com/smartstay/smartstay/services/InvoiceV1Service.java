@@ -1307,7 +1307,8 @@ public class InvoiceV1Service {
         List<String> invoiceIds = listReceipts.stream().map(TransactionV1::getInvoiceId).toList();
         List<InvoicesV1> invoices = invoicesV1Repository.findByInvoiceIdIn(invoiceIds);
         Set<String> bankIds = listReceipts.stream().map(TransactionV1::getBankId).collect(Collectors.toSet());
-        List<BankingV1> listBanks = bankingService.findAllBanksById(bankIds);
+//        List<BankingV1> listBanks = bankingService.findAllBanksById(bankIds);
+        List<BankingV2> listBanks = bankingServiceV2.findAllByBankId(bankIds);
 
 
         List<ReceiptsList> receipts = listReceipts.stream().map(item -> new TransactionsListMapper(listCustomers, listBanks, invoices).apply(item)).toList();
@@ -3294,7 +3295,7 @@ public class InvoiceV1Service {
                 roomName = bedDetails.getRoomName();
             }
         }
-        List<RefundableBanks> listBanks = bankingService.initializeRefund(invoicesV1.getHostelId());
+        List<RefundableBanks> listBanks = bankingServiceV2.initializeRefund(invoicesV1.getHostelId());
         InitializeRefund refundInitializations = new InitializeRefund(roomName, floorName, bedName, refundableAmount, refundedAmount, pendingRefund, invoiceDate, listBanks,
                 bankingServiceV2.buildAllPaymentMethods(hostelId));
         return new ResponseEntity<>(refundInitializations, HttpStatus.OK);
@@ -4767,9 +4768,9 @@ public class InvoiceV1Service {
         Map<String, TransactionV1> transactionMap = transactions.stream().collect(Collectors.toMap(TransactionV1::getInvoiceId, t -> t, (t1, t2) -> t1));
 
         Set<String> bankIds = transactions.stream().map(TransactionV1::getBankId).filter(Objects::nonNull).collect(Collectors.toSet());
-        Map<String, BankingV1> bankMap = new HashMap<>();
+        Map<String, BankingV2> bankMap = new HashMap<>();
         if (!bankIds.isEmpty()) {
-            List<BankingV1> banks = bankingService.findAllBanksById(bankIds);
+            List<BankingV2> banks = bankingServiceV2.findAllByBankId(bankIds);
             if (banks != null) {
                 banks.forEach(b -> bankMap.put(b.getBankId(), b));
             }
@@ -4779,9 +4780,25 @@ public class InvoiceV1Service {
             transactions.forEach(item -> {
                 String paymentMode = null;
                 if (item != null && item.getBankId() != null) {
-                    BankingV1 bank = bankMap.get(item.getBankId());
+                    BankingV2 bank = bankMap.get(item.getBankId());
+//                    if (bank != null) {
+//                        paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-" + (bank.getAccountType() != null ? bank.getAccountType() : "");
+//                    }
                     if (bank != null) {
-                        paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-" + (bank.getAccountType() != null ? bank.getAccountType() : "");
+                        if (bank.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+                            BankingMethods bankingMethods = bank
+                                    .getBankingMethods()
+                                    .stream()
+                                    .filter(item1 -> item1.getPaymentMethodId().equalsIgnoreCase(item.getPaymentMethodId()))
+                                    .findFirst()
+                                    .orElse(null);
+                            if (bankingMethods != null) {
+                                paymentMode = (bankingMethods.getDisplayName() != null ? bankingMethods.getDisplayName() : "") + "-" + (bankingMethods.getPaymentMethod() != null ? bankingMethods.getPaymentMethod() : "");
+                            }
+                        }
+                        else {
+                            paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-" + (bank.getAccountType() != null ? bank.getAccountType() : "");
+                        }
                     }
                 }
 
@@ -4806,9 +4823,22 @@ public class InvoiceV1Service {
             TransactionV1 settlementTransaction = transactionMap.get(settlementInvoice.getInvoiceId());
 
             if (settlementTransaction != null && settlementTransaction.getBankId() != null) {
-                BankingV1 bank = bankMap.get(settlementTransaction.getBankId());
+                BankingV2 bank = bankMap.get(settlementTransaction.getBankId());
                 if (bank != null) {
-                    paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-" + (bank.getAccountType() != null ? bank.getAccountType() : "");
+                    if (bank.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+                        BankingMethods bankingMethods = bank
+                                .getBankingMethods()
+                                .stream()
+                                .filter(item -> item.getPaymentMethodId().equalsIgnoreCase(settlementTransaction.getPaymentMethodId()))
+                                .findFirst()
+                                .orElse(null);
+                        if (bankingMethods != null) {
+                            paymentMode = (bankingMethods.getDisplayName() != null ? bankingMethods.getDisplayName() : "") + "-" + (bankingMethods.getPaymentMethod() != null ? bankingMethods.getPaymentMethod() : "");
+                        }
+                    }
+                    else {
+                        paymentMode = (bank.getAccountHolderName() != null ? bank.getAccountHolderName() : "") + "-" + (bank.getAccountType() != null ? bank.getAccountType() : "");
+                    }
                 }
             }
         }
@@ -7094,7 +7124,7 @@ public class InvoiceV1Service {
         }
         CustomerDetails customerInfo = customersService.getCustomerInformationForRecordPayment(invoicesV1.getCustomerId());
         StayInfo stayInfo = bedService.getBedInformationGeneral(bedId);
-        List<BankInfoRecordPayments> bankInfo = bankingService.getBankForReceivingPayments(invoicesV1.getHostelId());
+        List<BankInfoRecordPayments> bankInfo = bankingServiceV2.getBankForReceivingPayments(invoicesV1.getHostelId());
         RecordPayment recordPayment = new RecordPayment(invoicesV1.getInvoiceId(),
                 invoicesV1.getHostelId(),
                 invoicesV1.getInvoiceNumber(),
@@ -7104,7 +7134,7 @@ public class InvoiceV1Service {
                 customerInfo,
                 stayInfo,
                 bankInfo,
-                bankingServiceV2.buildAllPaymentMethods(hostelId));
+                null);
 
         return new ResponseEntity<>(recordPayment, HttpStatus.OK);
     }

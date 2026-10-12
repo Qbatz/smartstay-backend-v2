@@ -45,4 +45,5 @@ public class BankTransactionsV1 {
     private Date updatedAt;
     private String updatedBy;
     private String platform;
+    private Boolean isMigrated;
 }

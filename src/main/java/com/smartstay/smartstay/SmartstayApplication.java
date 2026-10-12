@@ -719,6 +719,11 @@ public class SmartstayApplication {
 //            }
 //        };
 //    }
+    /**
+     *
+     * need to execute on production environment
+     *
+     */
 
 //    @Bean
 //    CommandLineRunner addBankTransactionOldBank(BankTransactionRepository bankTransactionRepository) {
@@ -733,6 +738,272 @@ public class SmartstayApplication {
 //                        })
 //                        .toList();
 //                bankTransactionRepository.saveAll(listOldBankIds);
+//            }
+//        };
+//    }
+
+//    @Bean
+//    CommandLineRunner mapAccountNumberToPaymentMethods(BankingV2Repository bankingV2Repository, BankingMethodsRepository bankingMethodsRepository) {
+//        return args -> {
+//            List<BankingV2> listBankAccount = bankingV2Repository.findAllBankAccount();
+//            if (listBankAccount != null) {
+//                listBankAccount.forEach(item -> {
+//                    BankingMethods bankingMethods = new BankingMethods();
+//                    bankingMethods.setBank(item);
+//                    bankingMethods.setPaymentMethod(PaymentMethod.BANK.name());
+//                    bankingMethods.setDisplayName(item.getDisplayName());
+//                    bankingMethods.setDescription(null);
+//                    bankingMethods.setCardNetwork(null);
+//                    bankingMethods.setCardHolderName(item.getAccountHolderName());
+//                    bankingMethods.setHostelId(item.getHostelId());
+//                    if (item.getBalance() != null) {
+//                        bankingMethods.setBalance(item.getBalance());
+//                    }
+//                    else {
+//                        bankingMethods.setBalance(0.0);
+//                    }
+//
+//                    bankingMethods.setCreatedAt(item.getCreatedAt());
+//                    bankingMethods.setCreatedBy(item.getCreatedBy());
+//                    bankingMethods.setUpdatedAt(item.getUpdatedAt());
+//                    bankingMethods.setUpdatedBy(item.getUpdatedBy());
+//
+////                    List<BankingMethods> listBankingMethods = new ArrayList<>();
+////                    listBankingMethods.add(bankingMethods);
+////                    item.setBankingMethods(listBankingMethods);
+//
+//                    bankingMethodsRepository.save(bankingMethods);
+//
+//
+//                });
+//            }
+//        };
+//    }
+
+//    @Bean
+//    CommandLineRunner mapTransactionToNewBank(BankingV2Repository bankingV2Repository, TransactionV1Repository transactionV1Repository, BankIdsMappingRepository bankIdsMappingRepository, BankingRepository bankingRepository) {
+//        return args -> {
+//            List<TransactionV1> listTransactionsV1 = transactionV1Repository.findUnmigratedList();
+//            if (listTransactionsV1 != null) {
+//                listTransactionsV1.forEach(item -> {
+//                    BankIdsMapping bankIdsMapping = bankIdsMappingRepository.findByOldBankId(item.getBankId());
+//                    BankingV1 bankingV1 = bankingRepository.findByBankId(item.getBankId());
+//                    if (bankingV1 != null && bankIdsMapping != null) {
+//                        if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+//                            item.setBankId(bankIdsMapping.getNewBankId());
+//                            item.setIsMigrated(true);
+//                            transactionV1Repository.save(item);
+//                        }
+//                        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+//                            BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankIdsMapping.getNewBankId()).orElse(null);
+//                            if (bankingV2 != null) {
+//                                List<BankingMethods> listBankingMethods = bankingV2.getBankingMethods();
+//                                if (listBankingMethods != null) {
+//                                    BankingMethods methods = listBankingMethods
+//                                            .stream()
+//                                            .filter(i -> i.getPaymentMethod().equalsIgnoreCase(PaymentMethod.BANK.name()))
+//                                            .findFirst()
+//                                            .orElse(null);
+//                                    if (methods != null) {
+//                                        item.setBankId(bankIdsMapping.getNewBankId());
+//                                        item.setPaymentMethodId(methods.getPaymentMethodId());
+//                                        item.setIsMigrated(true);
+//                                        transactionV1Repository.save(item);
+//                                    }
+//                                }
+//                            }
+//                        }
+//                        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+//                            if (bankIdsMapping.getCardType() == null) {
+//                                BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankIdsMapping.getNewBankId()).orElse(null);
+//                                if (bankingV2 != null) {
+//                                    List<BankingMethods> listBankingMethods = bankingV2.getBankingMethods();
+//                                    if (listBankingMethods != null) {
+//                                        List<BankingMethods> methods = listBankingMethods
+//                                                .stream()
+//                                                .filter(i -> i.getPaymentMethod().equalsIgnoreCase(PaymentMethod.DEBIT_CARD.name()))
+//                                                .toList();
+//                                        if (methods != null) {
+//
+//                                            BankingMethods bm = methods
+//                                                    .stream()
+//                                                            .filter(i -> i.getCardNumber().equalsIgnoreCase(bankingV1.getDebitCardNumber()))
+//                                                                    .findFirst()
+//                                                                            .orElse(null);
+//                                            if (bm != null) {
+//                                                item.setBankId(bankIdsMapping.getNewBankId());
+//                                                item.setPaymentMethodId(bm.getPaymentMethodId());
+//                                                item.setIsMigrated(true);
+//                                                transactionV1Repository.save(item);
+//                                            }
+//
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                            else {
+//                                BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankIdsMapping.getNewBankId()).orElse(null);
+//                                if (bankingV2 != null) {
+//                                    if (bankingV2.getBankingMethods() != null) {
+//                                        BankingMethods bm = bankingV2
+//                                                .getBankingMethods()
+//                                                .stream()
+//                                                .findFirst()
+//                                                .orElse(null);
+//                                        if (bm != null) {
+//                                            item.setBankId(bankingV2.getBankId());
+//                                            item.setPaymentMethodId(bm.getPaymentMethodId());
+//                                            item.setIsMigrated(true);
+//                                            transactionV1Repository.save(item);
+//                                        }
+//                                    }
+//                                }
+//                            }
+////                            BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankIdsMapping.getNewBankId());
+//                        }
+//                        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
+//                            BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankIdsMapping.getNewBankId()).orElse(null);
+//                            if (bankingV2 != null) {
+//                                if (bankingV2.getBankingMethods() != null) {
+//                                    List<BankingMethods> listBankingMethods = bankingV2
+//                                            .getBankingMethods()
+//                                            .stream()
+//                                            .filter(i -> i.getPaymentMethod().equalsIgnoreCase(PaymentMethod.UPI.name()))
+//                                            .toList();
+//                                    if (listBankingMethods != null) {
+//                                        BankingMethods bm = listBankingMethods
+//                                                .stream()
+//                                                .filter(i -> i.getUpiId().equalsIgnoreCase(bankingV1.getUpiId()))
+//                                                .findFirst()
+//                                                .orElse(null);
+//                                        if (bm != null) {
+//                                            item.setBankId(bankingV2.getBankId());
+//                                            item.setPaymentMethodId(bm.getPaymentMethodId());
+//                                            item.setIsMigrated(true);
+//
+//                                            transactionV1Repository.save(item);
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//
+//                });
+//            }
+//        };
+//    }
+
+//    @Bean
+//    CommandLineRunner mapBankTransactionToNewBank(BankingV2Repository bankingV2Repository, BankTransactionRepository bankTransactionRepository, BankIdsMappingRepository bankIdsMappingRepository, BankingRepository bankingRepository) {
+//        return args -> {
+//            List<BankTransactionsV1> pendingTransactions = bankTransactionRepository.findPendingMigrationTransactions();
+//            if (pendingTransactions != null) {
+//                pendingTransactions.forEach(item -> {
+//                    BankIdsMapping bankIdsMapping = bankIdsMappingRepository.findByOldBankId(item.getBankId());
+//                    BankingV1 bankingV1 = bankingRepository.findByBankId(item.getBankId());
+//                    if (bankingV1 != null && bankIdsMapping != null) {
+//                        if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+//                            item.setBankId(bankIdsMapping.getNewBankId());
+//                            item.setIsMigrated(true);
+//                            bankTransactionRepository.save(item);
+//                        }
+//                        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+//                            BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankIdsMapping.getNewBankId()).orElse(null);
+//                            if (bankingV2 != null) {
+//                                List<BankingMethods> listBankingMethods = bankingV2.getBankingMethods();
+//                                if (listBankingMethods != null) {
+//                                    BankingMethods methods = listBankingMethods
+//                                            .stream()
+//                                            .filter(i -> i.getPaymentMethod().equalsIgnoreCase(PaymentMethod.BANK.name()))
+//                                            .findFirst()
+//                                            .orElse(null);
+//                                    if (methods != null) {
+//                                        item.setBankId(bankIdsMapping.getNewBankId());
+//                                        item.setPaymentMethodId(methods.getPaymentMethodId());
+//                                        item.setIsMigrated(true);
+//                                        bankTransactionRepository.save(item);
+//                                    }
+//                                }
+//                            }
+//                        }
+//                        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+//                            if (bankIdsMapping.getCardType() == null) {
+//                                BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankIdsMapping.getNewBankId()).orElse(null);
+//                                if (bankingV2 != null) {
+//                                    List<BankingMethods> listBankingMethods = bankingV2.getBankingMethods();
+//                                    if (listBankingMethods != null) {
+//                                        List<BankingMethods> methods = listBankingMethods
+//                                                .stream()
+//                                                .filter(i -> i.getPaymentMethod().equalsIgnoreCase(PaymentMethod.DEBIT_CARD.name()))
+//                                                .toList();
+//                                        if (methods != null) {
+//
+//                                            BankingMethods bm = methods
+//                                                    .stream()
+//                                                    .filter(i -> i.getCardNumber().equalsIgnoreCase(bankingV1.getDebitCardNumber()))
+//                                                    .findFirst()
+//                                                    .orElse(null);
+//                                            if (bm != null) {
+//                                                item.setBankId(bankIdsMapping.getNewBankId());
+//                                                item.setPaymentMethodId(bm.getPaymentMethodId());
+//                                                item.setIsMigrated(true);
+//                                                bankTransactionRepository.save(item);
+//                                            }
+//
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                            else {
+//                                BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankIdsMapping.getNewBankId()).orElse(null);
+//                                if (bankingV2 != null) {
+//                                    if (bankingV2.getBankingMethods() != null) {
+//                                        BankingMethods bm = bankingV2
+//                                                .getBankingMethods()
+//                                                .stream()
+//                                                .findFirst()
+//                                                .orElse(null);
+//                                        if (bm != null) {
+//                                            item.setBankId(bankingV2.getBankId());
+//                                            item.setPaymentMethodId(bm.getPaymentMethodId());
+//                                            item.setIsMigrated(true);
+//                                            bankTransactionRepository.save(item);
+//                                        }
+//                                    }
+//                                }
+//                            }
+////                            BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankIdsMapping.getNewBankId());
+//                        }
+//                        else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
+//                            BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankIdsMapping.getNewBankId()).orElse(null);
+//                            if (bankingV2 != null) {
+//                                if (bankingV2.getBankingMethods() != null) {
+//                                    List<BankingMethods> listBankingMethods = bankingV2
+//                                            .getBankingMethods()
+//                                            .stream()
+//                                            .filter(i -> i.getPaymentMethod().equalsIgnoreCase(PaymentMethod.UPI.name()))
+//                                            .toList();
+//                                    if (listBankingMethods != null) {
+//                                        BankingMethods bm = listBankingMethods
+//                                                .stream()
+//                                                .filter(i -> i.getUpiId().equalsIgnoreCase(bankingV1.getUpiId()))
+//                                                .findFirst()
+//                                                .orElse(null);
+//                                        if (bm != null) {
+//                                            item.setBankId(bankingV2.getBankId());
+//                                            item.setPaymentMethodId(bm.getPaymentMethodId());
+//                                            item.setIsMigrated(true);
+//
+//                                            bankTransactionRepository.save(item);
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//
+//                });
 //            }
 //        };
 //    }

@@ -83,5 +83,9 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             SELECT b FROM BankTransactionsV1 b WHERE b.oldBankId IS NULL
             """)
     List<BankTransactionsV1> findBankTransactionsOldBankIsNull();
+    @Query("""
+            SELECT t FROM BankTransactionsV1 t WHERE (t.isMigrated IS NULL OR t.isMigrated=false)
+            """)
+    List<BankTransactionsV1> findPendingMigrationTransactions();
 
 }
