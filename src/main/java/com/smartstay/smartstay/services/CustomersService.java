@@ -4575,6 +4575,8 @@ public class CustomersService {
             customerStatus.add(CustomerStatus.ACTIVE.name());
             customerStatus.add(CustomerStatus.NOTICE.name());
             customerStatus.add(CustomerStatus.CHECK_IN.name());
+            customerStatus.add(CustomerStatus.BOOKED.name());
+            customerStatus.add(CustomerStatus.SETTLEMENT_GENERATED.name());
 
             List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
             List<String> customerIds = listCustomers.stream().map(Customers::getCustomerId).toList();
