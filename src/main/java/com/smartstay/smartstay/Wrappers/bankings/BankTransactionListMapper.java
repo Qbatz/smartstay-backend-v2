@@ -35,7 +35,7 @@ public class BankTransactionListMapper {
                 bank != null ? bank.getDisplayName() : null,
                 bank != null ? bank.getResponsiblePerson() : null,
                 responsiblePersonName,
-                method != null && method.getPaymentMethod() != null ? method.getPaymentMethod().getValue() : null,
+                method != null && method.getPaymentMethod() != null ? method.getPaymentMethod() : null,
                 method != null ? method.getCardHolderName() : null,
                 cardNetwork,
                 method != null ? method.getCardNumber() : null,

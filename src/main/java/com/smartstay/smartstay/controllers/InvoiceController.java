@@ -1,6 +1,8 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.payloads.invoice.*;
+import com.smartstay.smartstay.payloads.invoiceDrafts.AddDraftItems;
+import com.smartstay.smartstay.payloads.invoiceDrafts.UpdateDraft;
 import com.smartstay.smartstay.services.InvoiceV1Service;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -195,4 +197,31 @@ public class InvoiceController {
     public ResponseEntity<?> addManualInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId, @RequestBody ManualInvoiceNew manualInvoiceBody) {
         return invoiceV1Service.addManualInvoice(hostelId, customerId, manualInvoiceBody);
     }
+
+    @GetMapping("/recurring/{hostelId}")
+    public ResponseEntity<?> getInvoiceForRecurring(@PathVariable("hostelId") String hostelId) {
+        return invoiceV1Service.getRecurringInvoicesForReview(hostelId);
+    }
+
+    @DeleteMapping("/recurring/{hostelId}/{invoiceId}/{itemId}")
+    public ResponseEntity<?> removeInvoiceItems(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") Long invoiceId, @PathVariable("itemId") Long itemId) {
+        return invoiceV1Service.removeInvoiceItemFromDraft(hostelId, invoiceId, itemId);
+    }
+
+    @PutMapping("/recurring/{hostelId}/{invoiceId}/{itemId}")
+    public ResponseEntity<?> updateInvoiceItems(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") Long invoiceId, @PathVariable("itemId") Long itemId, @RequestBody UpdateDraft updateDraft) {
+        return invoiceV1Service.updateInvoiceItems(hostelId, invoiceId, itemId, updateDraft);
+    }
+
+    @PostMapping("/recurring/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> addInvoiceItems(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") Long invoiceId, @Valid @RequestBody List<AddDraftItems> draftItems) {
+        return invoiceV1Service.addInvoiceItems(hostelId, invoiceId, draftItems);
+    }
+
+    @PostMapping("/recurring/manual/{hostelId}")
+    public ResponseEntity<?> generateRecurringAfterReview(@PathVariable("hostelId") String hostelId, @RequestBody(required = false) List<Long> invoiceIds) {
+        return invoiceV1Service.generateRecurringManullyAfterReview(hostelId, invoiceIds);
+    }
+
+
 }

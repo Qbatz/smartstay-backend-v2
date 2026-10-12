@@ -31,8 +31,8 @@ public class BankingMethods {
     @JoinColumn(name = "bank_id")
     private BankingV2 bank;
 
-    @Enumerated(EnumType.STRING)
-    private PaymentMethod paymentMethod;
+    //PaymentMethod ENUM
+    private String paymentMethod;
 
     private String upiId;
     private Integer upiApp;

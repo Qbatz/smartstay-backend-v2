@@ -109,6 +109,7 @@ public class Utils {
     public static final String APPLIED_AMOUNT_REQUIRED_FOR_REDEEM_LIST = "Applied amount is required for all the invoices";
     public static final String CANNOT_APPLY_TO_CANCELLED_INVOICES = "Cannot apply to cancelled invoices";
     public static final String INVALID_INVOICE_DATE = "Invalid invoice date";
+    public static final String CANNOT_DELETE_RENT_AMOUNT = "Cannot delete the rent amount";
     public static final String INVALID_SUBSCRIPTION = "Invalid subscription";
     public static final String INVALID_SUBSCRIPTION_ID = "Invalid subscription id";
     public static final String PAYMENT_SUCCESS = "Payment Success";
@@ -145,6 +146,8 @@ public class Utils {
     public static final String ACCOUNT_NO_ALREAY_EXISTS = "Account number already exists";
     public static final String V2_ACCOUNT_TYPE_INVALID = "Account type should be BANK or CASH";
     public static final String V2_BANK_ACCOUNT_TYPE_INVALID = "Bank account type should be Savings or Current";
+    public static final String V2_BANK_ACCOUNT_NUMBER_REQUIRED = "Account number is required";
+    public static final String V2_BANK_NAME_REQUIRED = "Bank name is required";
     public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name and display name are required for a BANK account";
     public static final String V2_CASH_DETAILS_REQUIRED = "Cash account type is required for a CASH account";
     public static final String V2_CASH_ACCOUNT_TYPE_INVALID = "Cash account type should be Petty Cash or Office Cash";
@@ -193,11 +196,13 @@ public class Utils {
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
     public static final String BANK_ID_REQUIRED = "Bank id required";
+    public static final String SELECTED_BANK_SHOULD_BE_BANK_TYPE = "Selected Bank should be bank type";
     public static final String EXPENSE_FULL_PAYMENT_INVALID = "For FULL payment status, paidAmount must be equal to totalAmount.";
     public static final String EXPENSE_PARTIAL_PAYMENT_INVALID = "For PARTIAL payment status, paidAmount must be greater than 0 and less than totalAmount.";
     public static final String EXPENSE_PENDING_PAYMENT_INVALID = "For PENDING payment status, paidAmount must be 0 and totalAmount must be greater than 0.";
     public static final String AMOUNT_REQUIRED = "Amount required";
     public static final String INVALID_EXPENSE_ITEM_ID = "Invalid expense item id";
+    public static final String INVALID_INVOICE_ITEMS_ID = "Invalid invoice items id";
     public static final String DUPLICATE_EXPENSE_ITEM_ID = "Duplicate expense item id";
     public static final String DUPLICATE_EXPENSE_ID = "Duplicate expense id";
     public static final String EXPENSE_ALREADY_SETTLED = "Expense is already fully settled";
@@ -340,6 +345,8 @@ public class Utils {
     public static final String TARGET_INVOICE_CANNOT_BE_CANCELLED = "Target invoice cannot be cancelled";
     public static final String REDEMPTION_AMOUNT_REQUIRED = "Invoice Redemption amount required";
     public static final String INVALID_REDEMPTION_AMOUNT = "Invalid redemption amount";
+    public static final String INVALID_AMOUNT_PASSED = "Invalid amount is passed";
+    public static final String RENT_ALREADY_EXIST = "Rent is already exist";
     public static final String SOURCE_INVOICES_REQUIRED_REDEMPTION = "Source invoice id is required";
     public static final String REDEMPTION_AMOUNT_CANNOT_EXCEED_PAYABLE_AMOUNT = "Cannot exceed payable amount";
     public static final String CANNOT_CREATE_INVOICE_SETTLEMET_CREATED_CUSTOMERS = "Settlement is created";

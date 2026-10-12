@@ -26,6 +26,7 @@ public class BankingV1 {
     String branchName;
     String branchCode;
     String accountHolderName;
+    //From bank purpose ENUM
     String transactionType;
     String upiId;
     String creditCardNumber;

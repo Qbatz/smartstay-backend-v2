@@ -68,6 +68,8 @@ public class BookingsService {
     @Autowired
     private BankingService bankingService;
     @Autowired
+    private BankingServiceV2 bankingServiceV2;
+    @Autowired
     private CustomersBedHistoryService customersBedHistoryService;
     @Autowired
     private CustomerBillingRulesService customerBillingRulesService;
@@ -660,7 +662,9 @@ public class BookingsService {
             floorName = bedInformations.getFloorName();
             bedName = bedInformations.getBedName();
         }
-        List<DebitsBank> listBanks = bankingService.getAllBankForReturn(bookingsV1.getHostelId());
+//        List<DebitsBank> listBanks = bankingService.getAllBankForReturn(bookingsV1.getHostelId());
+
+        List<DebitsBank> listBanks = bankingServiceV2.getAllBanksForReturn(bookingsV1.getHostelId());
 
         InitializeCancel initializeCancel = new InitializeCancel(bookingsV1.getHostelId(), bookingsV1.getBookingId(), bookingsV1.getCustomerId(), bookingsV1.getBookingAmount(), Utils.dateToString(bookingsV1.getExpectedJoiningDate()), roomName, bedName, floorName, listBanks);
         return new ResponseEntity<>(initializeCancel, HttpStatus.OK);

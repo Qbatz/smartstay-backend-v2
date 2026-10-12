@@ -21,6 +21,7 @@ public class BankTransactionsV1 {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int transactionId;
     private String bankId;
+    private String oldBankId;
     //user entered
     private String referenceNumber;
     private Double amount;
@@ -44,4 +45,5 @@ public class BankTransactionsV1 {
     private Date updatedAt;
     private String updatedBy;
     private String platform;
+    private Boolean isMigrated;
 }

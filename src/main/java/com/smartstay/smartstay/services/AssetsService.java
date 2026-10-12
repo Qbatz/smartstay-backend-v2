@@ -29,9 +29,6 @@ public class AssetsService {
     HostelV1Repository hostelV1Repository;
 
     @Autowired
-    BankingRepository bankingRepository;
-
-    @Autowired
     FloorRepository floorRepository;
 
     @Autowired
@@ -56,6 +53,10 @@ public class AssetsService {
     private BankTransactionService bankTransactionService;
     @Autowired
     private SubscriptionService subscriptionService;
+    @Autowired
+    private BankingServiceV2 bankingServiceV2;
+    @Autowired
+    private BankingService bankingService;
 
     public ResponseEntity<?> getAllAssets(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -99,8 +100,17 @@ public class AssetsService {
             }
             asset.setVendorId(request.vendorId());
         }
-        boolean bankingV1 = bankingRepository.existsByHostelIdAndBankId(hostelId,request.bankingId());
-        if (!bankingV1) {
+
+//        if (!bankingServiceV2.checkBankExist(request.bankingId())) {
+//            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
+//        }
+
+//        boolean bankingV1 = bankingRepository.existsByHostelIdAndBankId(hostelId,request.bankingId());
+//        if (!bankingV1) {
+//            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
+//        }
+
+        if (bankingService.checkBankExist(request.bankingId())) {
             return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
         }
 
@@ -209,8 +219,11 @@ public class AssetsService {
         }
         if (request.price() != null) asset.setPrice(request.price());
         if (request.modeOfPayment() != null) {
-            boolean bankingExist = bankingRepository.existsByHostelIdAndBankId(hostelId,request.modeOfPayment());
-            if (!bankingExist) {
+//            boolean bankingExist = bankingRepository.existsByHostelIdAndBankId(hostelId,request.modeOfPayment());
+//            if (!bankingExist) {
+//                return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
+//            }
+            if (!bankingServiceV2.checkBankExist(request.modeOfPayment())) {
                 return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
             }
             asset.setBankId(request.modeOfPayment());

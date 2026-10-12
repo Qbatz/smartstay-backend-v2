@@ -65,6 +65,8 @@ public class HostelService {
 
     @Autowired
     private Authentication authentication;
+    @Autowired
+    private RecurringConfigService recurringConfigService;
 
     @Value("${ZOHO_SUBSCRIPTION_PLAN}")
     private String zohoPlan;
@@ -347,8 +349,42 @@ public class HostelService {
 
 //        int gracePeriod = billingDates != null ? billingDates.gracePeriodDays() != null ? billingDates.gracePeriodDays() : 0;
         boolean hasGracePeriod = billingDates != null && billingDates.hasGracePeriod();
+        boolean shouldVerifyRecurring = false;
+        RecurringConfiguration recurringConfiguration = recurringConfigService.getRecurringConfig(hostelId);
+        if (recurringConfiguration != null) {
+            if (recurringConfiguration.getShouldVerify() != null) {
+                shouldVerifyRecurring = recurringConfiguration.getShouldVerify();
+            }
+        }
 
-        HostelDetails details = new HostelDetails(hostel.getHostelId(), hostel.getMainImage(), hostel.getCity(), String.valueOf(hostel.getCountry()), hostel.getEmailId(), hostel.getHostelName(), hostel.getHouseNo(), hostel.getLandmark(), hostel.getMobile(), hostel.getPincode(), hostel.getState(), hostel.getStreet(), Utils.dateToString(hostel.getUpdatedAt()), isSubscriptionActive, nextBillingDate, remainingDays, currentMonthBillStartDate, currentMonthBillEndDate, dueDays, billingMode, billingType, floorDetails.size(), floorDetails, notificationCount, canModifyBilling, gracePeriod, hasGracePeriod);
+        HostelDetails details = new HostelDetails(hostel.getHostelId(),
+                hostel.getMainImage(),
+                hostel.getCity(),
+                String.valueOf(hostel.getCountry()),
+                hostel.getEmailId(),
+                hostel.getHostelName(),
+                hostel.getHouseNo(),
+                hostel.getLandmark(),
+                hostel.getMobile(),
+                hostel.getPincode(),
+                hostel.getState(),
+                hostel.getStreet(),
+                Utils.dateToString(hostel.getUpdatedAt()),
+                isSubscriptionActive,
+                nextBillingDate,
+                remainingDays,
+                currentMonthBillStartDate,
+                currentMonthBillEndDate,
+                dueDays,
+                billingMode,
+                billingType,
+                floorDetails.size(),
+                floorDetails,
+                notificationCount,
+                canModifyBilling,
+                gracePeriod,
+                hasGracePeriod,
+                shouldVerifyRecurring);
 
         return ResponseEntity.ok(details);
     }

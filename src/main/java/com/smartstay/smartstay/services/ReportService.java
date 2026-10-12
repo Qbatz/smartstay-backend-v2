@@ -336,6 +336,7 @@ public class ReportService {
             invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
             invoiceTypes.add(InvoiceType.BOOKING.name());
             invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
+            invoiceTypes.add(InvoiceType.OTHER.name());
         }
 
         ReportDetailsResponse.FilterOptions options = buildFilterOptions(hostelId);

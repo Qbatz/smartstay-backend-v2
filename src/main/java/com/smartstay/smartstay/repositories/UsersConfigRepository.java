@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface UsersConfigRepository extends JpaRepository<UsersConfig, Long> {
-    Optional<UsersConfig> findByUser_UserIdAndPin(String userId, Integer pin);
+    Optional<UsersConfig> findByUser_UserIdAndPin(String userId, String pin);
 }

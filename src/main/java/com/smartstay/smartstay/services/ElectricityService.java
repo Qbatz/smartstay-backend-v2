@@ -237,7 +237,6 @@ public class ElectricityService {
         Date billEndDate = new Date();
 
         if (billingDates != null) {
-
             billStartDate = billingDates.currentBillStartDate();
             billEndDate = date;
 
@@ -264,8 +263,10 @@ public class ElectricityService {
                 billStartDate = Utils.addDaysToDate(electricityReadings.getEntryDate(), 1);
             }
 
-            if (readings.reading() <= previousReading) {
-                return new ResponseEntity<>(Utils.PREVIOUS_CURRENT_READING_NOT_MATCHING, HttpStatus.BAD_REQUEST);
+            if (!isFirstEntry) {
+                if (readings.reading() <= previousReading) {
+                    return new ResponseEntity<>(Utils.PREVIOUS_CURRENT_READING_NOT_MATCHING, HttpStatus.BAD_REQUEST);
+                }
             }
 
             com.smartstay.smartstay.dao.ElectricityReadings newReadings = new com.smartstay.smartstay.dao.ElectricityReadings();

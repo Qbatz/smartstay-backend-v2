@@ -515,12 +515,12 @@ public class KycServices {
             return new ResponseEntity<>(Utils.CANNOT_REQUEST_CANCELLED_TENANT, HttpStatus.BAD_REQUEST);
         }
 
-        usersService.addUserLog(customers.getHostelId(), customerId, ActivitySource.KYC, ActivitySourceType.KYC_RE_REQUEST, users);
         KycDetails kycDetails = customers.getKycDetails();
         if (kycDetails == null) {
             return new ResponseEntity<>(Utils.KYC_NOT_REQUESTED_ERROR, HttpStatus.BAD_REQUEST);
         }
 
+        usersService.addUserLog(customers.getHostelId(), customerId, ActivitySource.KYC, ActivitySourceType.KYC_RE_REQUEST, users);
         return getKycDetails(kycDetails.getEntityId(), customers, users);
     }
 

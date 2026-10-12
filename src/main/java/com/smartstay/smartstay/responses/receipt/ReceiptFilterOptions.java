@@ -1,8 +1,11 @@
 package com.smartstay.smartstay.responses.receipt;
 
+import com.smartstay.smartstay.dao.BankingMethods;
 import com.smartstay.smartstay.dao.BankingV1;
+import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.Admin.CommonType;
+import com.smartstay.smartstay.ennum.BankAccountType;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.filterOptions.invoice.CreatedBy;
 import com.smartstay.smartstay.util.NameUtils;
@@ -47,12 +50,53 @@ public class ReceiptFilterOptions {
         }
     }
 
-    public void setPaymentMethod(List<BankingV1> listBanks) {
+//    public void setPaymentMethod(List<BankingV1> listBanks) {
+//        if (listBanks != null) {
+//            paymentMethod = listBanks
+//                    .stream()
+//                    .map(i -> new CommonType( i.getAccountHolderName() + "-" + i.getAccountType(), i.getBankId()))
+//                    .toList();
+//        }
+//    }
+
+    public void setPaymentMethod(List<BankingV2> listBanks) {
         if (listBanks != null) {
-            paymentMethod = listBanks
+            List<CommonType> commonTypes = new ArrayList<>();
+            List<BankingV2> cashAndCreditCards = listBanks
                     .stream()
-                    .map(i -> new CommonType( i.getAccountHolderName() + "-" + i.getAccountType(), i.getBankId()))
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()) || i.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name()))
                     .toList();
+            if (cashAndCreditCards != null) {
+                List<CommonType> cardsAndCash = cashAndCreditCards
+                        .stream()
+                        .map(i -> new CommonType( i.getAccountHolderName() + "-" + i.getAccountType(), i.getBankId()))
+                        .toList();
+                commonTypes.addAll(cardsAndCash);
+            }
+
+            List<BankingV2> upiBankAndDebitCards = listBanks
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name()))
+                    .toList();
+            if (upiBankAndDebitCards != null) {
+                List<BankingMethods> bankingMethods = new ArrayList<>();
+                upiBankAndDebitCards.forEach(i2 -> {
+                    bankingMethods.addAll(i2.getBankingMethods());
+                });
+
+                if (bankingMethods != null) {
+                    commonTypes.addAll(bankingMethods
+                            .stream()
+                            .map(i -> new CommonType(i.getDisplayName() + "-" + i.getPaymentMethod(), i.getPaymentMethodId()))
+                            .toList());
+                }
+            }
+
+
+//            paymentMethod = listBanks
+//                    .stream()
+//                    .map(i -> new CommonType( i.getAccountHolderName() + "-" + i.getAccountType(), i.getBankId()))
+//                    .toList();
         }
     }
 }

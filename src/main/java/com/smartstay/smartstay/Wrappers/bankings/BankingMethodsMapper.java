@@ -16,7 +16,7 @@ public class BankingMethodsMapper implements Function<BankingMethods, BankingMet
         return new BankingMethodResponse(
                 entity.getPaymentMethodId(),
                 entity.getBank() != null ? entity.getBank().getBankId() : null,
-                entity.getPaymentMethod() != null ? entity.getPaymentMethod().getValue() : null,
+                entity.getPaymentMethod() != null ? entity.getPaymentMethod() : null,
                 entity.getUpiId(),
                 entity.getUpiApp(),
                 upiAppImage,

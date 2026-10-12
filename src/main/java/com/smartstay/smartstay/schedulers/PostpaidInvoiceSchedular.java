@@ -4,6 +4,8 @@ import com.smartstay.smartstay.dao.BillingRules;
 import com.smartstay.smartstay.dao.HostelV1;
 import com.smartstay.smartstay.events.PostpaidRecurringEvents;
 import com.smartstay.smartstay.services.HostelConfigService;
+import com.smartstay.smartstay.services.InvoiceDraftsService;
+import com.smartstay.smartstay.services.RecurringConfigService;
 import com.smartstay.smartstay.services.RecurringTrackerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -22,6 +24,7 @@ public class PostpaidInvoiceSchedular {
     private RecurringTrackerService recurringTrackerService;
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
+
 
     //Schedule it for morning 3;
 //    @Scheduled(cron = "0 0 3 * * *") for production

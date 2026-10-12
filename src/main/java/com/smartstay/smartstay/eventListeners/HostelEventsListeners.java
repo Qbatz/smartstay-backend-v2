@@ -98,35 +98,35 @@ public class HostelEventsListeners {
 
         hostelService.updateHostelFromEvents(hostelV1);
 
-        List<String> users = userHostelService.listAllUsersFromHostelId(events.getHostelId());
+//        List<String> users = userHostelService.listAllUsersFromHostelId(events.getHostelId());
 
-        List<Users> listUsers =  usersService.findAllUsersFromUserId(users);
+//        List<Users> listUsers =  usersService.findAllUsersFromUserId(users);
 
-        List<BankingV1> listBankings = listUsers.stream()
-                .map(item -> {
-                    StringBuilder fullName = new StringBuilder();
-                    if (item.getFirstName() != null) {
-                        fullName.append(item.getFirstName());
-                    }
-                    if (item.getLastName() != null && !item.getLastName().equalsIgnoreCase("")) {
-                        fullName.append(" ");
-                        fullName.append(item.getLastName());
-                    }
-                    BankingV1 bankingV1 = new BankingV1();
-                    bankingV1.setParentId(events.getParentId());
-                    bankingV1.setAccountType(BankAccountType.CASH.name());
-                    bankingV1.setTransactionType(BankPurpose.BOTH.name());
-                    bankingV1.setCreatedAt(new Date());
-                    bankingV1.setUserId(item.getUserId());
-                    bankingV1.setHostelId(hostelId);
-                    bankingV1.setActive(true);
-                    bankingV1.setDeleted(false);
-                    bankingV1.setCreatedBy(events.getUserId());
-                    bankingV1.setAccountHolderName(fullName.toString());
-                    return bankingV1;
-                })
-                .toList();
-        bankingService.saveAllBankInfo(listBankings);
+//        List<BankingV1> listBankings = listUsers.stream()
+//                .map(item -> {
+//                    StringBuilder fullName = new StringBuilder();
+//                    if (item.getFirstName() != null) {
+//                        fullName.append(item.getFirstName());
+//                    }
+//                    if (item.getLastName() != null && !item.getLastName().equalsIgnoreCase("")) {
+//                        fullName.append(" ");
+//                        fullName.append(item.getLastName());
+//                    }
+//                    BankingV1 bankingV1 = new BankingV1();
+//                    bankingV1.setParentId(events.getParentId());
+//                    bankingV1.setAccountType(BankAccountType.CASH.name());
+//                    bankingV1.setTransactionType(BankPurpose.BOTH.name());
+//                    bankingV1.setCreatedAt(new Date());
+//                    bankingV1.setUserId(item.getUserId());
+//                    bankingV1.setHostelId(hostelId);
+//                    bankingV1.setActive(true);
+//                    bankingV1.setDeleted(false);
+//                    bankingV1.setCreatedBy(events.getUserId());
+//                    bankingV1.setAccountHolderName(fullName.toString());
+//                    return bankingV1;
+//                })
+//                .toList();
+//        bankingService.saveAllBankInfo(listBankings);
 
         kycConfigService.addInitialKycConfig(hostelId);
         kycHistoryService.addInitialHistory(hostelId);

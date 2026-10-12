@@ -98,6 +98,8 @@ public class TransactionService {
 
     @Autowired
     private SubscriptionService subscriptionService;
+    @Autowired
+    private BankingServiceV2 bankingServiceV2;
 
     @Autowired
     private InvoiceRedemptionRepository invoiceRedemptionRepository;
@@ -207,7 +209,7 @@ public class TransactionService {
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
 
-        bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
+        bankingServiceV2.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
                 payment.paymentDate());
 
         TransactionV1 trns = transactionRespository.save(transactionV1);
@@ -332,9 +334,7 @@ public class TransactionService {
         transactionV1.setCreatedAt(new Date());
         transactionV1.setCreatedBy(authentication.getName());
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(paymentDate));
-
-        bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
-                payment.paymentDate());
+        transactionV1.setSource(authentication.getSource());
 
         TransactionV1 trnsV1 = transactionRespository.save(transactionV1);
 
@@ -349,6 +349,8 @@ public class TransactionService {
                     BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(),
                     trnsV1.getTransactionId());
 
+            bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
+                    payment.paymentDate());
             bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId(), payment.paymentMethodId());
 
             usersService.addUserLog(hostelId, trnsV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.CREATE, user);
@@ -788,6 +790,7 @@ public class TransactionService {
         transactionV1.setReferenceNumber(refundInvoice.referenceNumber());
         transactionV1.setPaidAt(Utils.convertToTimeStamp(transactionDate));
         transactionV1.setUpdatedBy(authentication.getName());
+        transactionV1.setSource(authentication.getSource());
         TransactionV1 transactionV11 = transactionRespository.save(transactionV1);
 
         bankTransactionService.refundInvoice(invoicesV1, refundInvoice, invoiceId, transactionV11.getTransactionId());
@@ -895,9 +898,6 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
-        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
-                transactionV1.getBankId());
-
         PaymentSummary summary = new PaymentSummary(hostelId, invoicesV1.getCustomerId(), invoicesV1.getInvoiceNumber(),
                 transactionV1.getPaidAmount(), invoicesV1.getCustomerMobile(), invoicesV1.getCustomerMailId(),
                 "Active");
@@ -914,6 +914,8 @@ public class TransactionService {
         }
 
         transactionRespository.delete(transactionV1);
+        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
+                transactionV1.getBankId());
         usersService.addUserLogWithType(hostelId, transactionV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.DELETE, users, transactionV1.getInvoiceId());
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -1205,7 +1207,7 @@ public class TransactionService {
                     .map(TransactionV1::getCreatedBy)
                     .toList();
             List<Users> paidByUsers = usersService.findAllUsersFromUserId(paidBy);
-            List<BankingV1> banks = bankingService.findAllBanksById(bankIds);
+            List<BankingV2> banks = bankingServiceV2.findAllByBankId(bankIds);
 
             invoiceRefundHistory = refundHistories.stream()
                     .map(i -> new InvoiceRefundMapper(paidByUsers, banks).apply(i))
@@ -1344,7 +1346,7 @@ public class TransactionService {
                 .map(TransactionV1::getCreatedBy)
                 .distinct()
                 .toList();
-        List<BankingV1> listBanks = bankingService.findAllBanksById(bankIds);
+        List<BankingV2> listBanks = bankingServiceV2.findAllByBankId(bankIds);
         List<Users> listUsers = usersService.findAllUsersFromUserId(userIds);
 
         List<InvoiceRefundHistory> listPayments = listTransactions
@@ -1483,7 +1485,8 @@ public class TransactionService {
             }
         }
 
-        List<BankingV1> listBanks = bankingService.findAllBankIdsByHostelId(hostelId);
+//        List<BankingV1> listBanks = bankingService.findAllBankIdsByHostelId(hostelId);
+        List<BankingV2> listBanks = bankingServiceV2.findAllBanksByHostelId(hostelId);
 //        List<String> collectedByUsersIds = listReceipts.stream().map(TransactionV1::getCreatedBy).toList();
 //        List<Users> collectedByUsers = usersService.findAllUsersFromUserId(collectedByUsersIds);
         List<Users> collectedByUsers = usersService.findAllUsersByHostelId(hostelId);

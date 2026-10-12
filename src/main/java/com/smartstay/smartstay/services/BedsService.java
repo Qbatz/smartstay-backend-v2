@@ -720,7 +720,7 @@ public class BedsService {
 //        Date dtJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         List<com.smartstay.smartstay.dto.beds.InitializeBooking> freeBeds = bedsRepository.getFreeBeds(hostelId, Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
 
-        List<BookingBankInfo> listBanks = bankingService.getAllAccounts(hostelId);
+        List<BookingBankInfo> listBanks = bankingServiceV2.getAllAccounts(hostelId);
 
         List<Integer> bookedBedIds = freeBeds.stream().map(com.smartstay.smartstay.dto.beds.InitializeBooking::getBedId).toList();
         List<BookingsV1> bookedBeds = bookingService.getBookingInfoByListOfBeds(bookedBedIds);
@@ -732,8 +732,7 @@ public class BedsService {
 
         List<BedInitializations> initializations = freeBeds.stream().map(i -> new BedInitializationMapper(bookedBeds).apply(i)).toList();
 
-        InitializeBooking initializeBooking = new InitializeBooking(initializations, listBanks,
-                bankingServiceV2.buildAllPaymentMethods(hostelId));
+        InitializeBooking initializeBooking = new InitializeBooking(initializations, listBanks,null);
         return new ResponseEntity<>(initializeBooking, HttpStatus.OK);
     }
 

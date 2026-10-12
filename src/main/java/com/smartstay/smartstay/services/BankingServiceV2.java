@@ -1,19 +1,11 @@
 package com.smartstay.smartstay.services;
 
-import com.smartstay.smartstay.Wrappers.bankings.AllPaymentMethodsMapper;
-import com.smartstay.smartstay.Wrappers.bankings.BankTransactionListMapper;
-import com.smartstay.smartstay.Wrappers.bankings.BankingMethodsMapper;
-import com.smartstay.smartstay.Wrappers.bankings.BankingV2Mapper;
+import com.smartstay.smartstay.Wrappers.bankings.*;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.BankTransactionsV1;
-import com.smartstay.smartstay.dao.BankingMethods;
-import com.smartstay.smartstay.dao.BankingV2;
-import com.smartstay.smartstay.dao.QrBankType;
-import com.smartstay.smartstay.dao.RolesV1;
-import com.smartstay.smartstay.dao.UserHostel;
-import com.smartstay.smartstay.dao.Users;
+import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BankAccountTypeV2;
@@ -31,23 +23,11 @@ import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
 import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.repositories.QrBankTypeRepository;
-import com.smartstay.smartstay.responses.banking.BankOverviewResponse;
-import com.smartstay.smartstay.responses.banking.BankTransactionListResponse;
-import com.smartstay.smartstay.responses.banking.BankTransactionResponse;
-import com.smartstay.smartstay.responses.banking.MonthOverview;
-import com.smartstay.smartstay.responses.banking.MonthMetric;
-import com.smartstay.smartstay.responses.banking.OverviewFilterOptions;
-import com.smartstay.smartstay.responses.banking.FilterOption;
-import com.smartstay.smartstay.responses.banking.TransactionFilterOptions;
-import com.smartstay.smartstay.responses.banking.BankV2Response;
-import com.smartstay.smartstay.responses.banking.BankingMethodResponse;
-import com.smartstay.smartstay.responses.banking.CheckedInTenantResponse;
-import com.smartstay.smartstay.responses.banking.CreditCardInitializeResponse;
+import com.smartstay.smartstay.responses.banking.*;
 import com.smartstay.smartstay.responses.customer.CustomerData;
+import com.smartstay.smartstay.responses.invoices.BankInfoRecordPayments;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
-import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
-import com.smartstay.smartstay.responses.banking.ResponsiblePersonResponse;
-import com.smartstay.smartstay.responses.banking.TransferInitializeResponse;
+import com.smartstay.smartstay.responses.invoices.RefundableBanks;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -107,6 +87,8 @@ public class BankingServiceV2 {
 
     @Autowired
     private BankingMethodsRepository bankingMethodsRepository;
+    @Autowired
+    private BankingMethodService bankingMethodService;
 
     @Autowired
     private QrBankTypeRepository qrBankTypeRepository;
@@ -157,9 +139,21 @@ public class BankingServiceV2 {
         String responsiblePerson = null;
 
         if (accountType == BankAccountTypeV2.BANK) {
-            if (!allPresent(payload.holderName(), payload.bankName(), payload.displayName())) {
-                return new ResponseEntity<>(Utils.V2_BANK_DETAILS_REQUIRED, HttpStatus.BAD_REQUEST);
+            // All bank details are mandatory for a BANK account.
+            if (payload.bankName() == null) {
+                return new ResponseEntity<>(Utils.V2_BANK_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
             }
+            if (payload.bankName().isEmpty()) {
+                return new ResponseEntity<>(Utils.V2_BANK_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            if (payload.accountNo() == null) {
+                return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_NUMBER_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            if (payload.accountNo().isEmpty()) {
+                return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_NUMBER_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
             if (trimToNull(payload.bankAccountType()) != null && !isValidBankAccountType(payload.bankAccountType())) {
                 return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
             }
@@ -345,8 +339,8 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.BANKING_METHOD_ONLY_FOR_BANK, HttpStatus.BAD_REQUEST);
         }
 
-        PaymentMethod method = PaymentMethod.fromValue(payload.paymentMethod());
-        if (method == null) {
+
+        if (payload.paymentMethod() == null) {
             return new ResponseEntity<>(Utils.BANKING_METHOD_PAYMENT_METHOD_INVALID, HttpStatus.BAD_REQUEST);
         }
 
@@ -363,8 +357,8 @@ public class BankingServiceV2 {
         String linkedUpiId = trimToNull(payload.linkedUpiId());
 
         Date billingCycle = null;
-        switch (method) {
-            case UPI -> {
+        switch (payload.paymentMethod()) {
+            case "UPI" -> {
                 if (upiId == null) {
                     return badRequest(Utils.BANKING_METHOD_UPI_ID_REQUIRED);
                 }
@@ -372,7 +366,7 @@ public class BankingServiceV2 {
                     return badRequest(Utils.BANKING_METHOD_UPI_APP_REQUIRED);
                 }
             }
-            case CREDIT_CARD -> {
+            case "CREDIT_CARD" -> {
                 String cardError = validateCard(cardNumber, cardNetwork, cardHolderName);
                 if (cardError != null) {
                     return badRequest(cardError);
@@ -384,13 +378,13 @@ public class BankingServiceV2 {
                     }
                 }
             }
-            case DEBIT_CARD -> {
+            case "DEBIT_CARD" -> {
                 String cardError = validateCard(cardNumber, cardNetwork, cardHolderName);
                 if (cardError != null) {
                     return badRequest(cardError);
                 }
             }
-            case QR_CODE -> {
+            case "QR_CODE" -> {
                 if (upiApp == null) {
                     return badRequest(Utils.BANKING_METHOD_UPI_APP_REQUIRED);
                 }
@@ -412,11 +406,11 @@ public class BankingServiceV2 {
             }
         }
 
-        if (method == PaymentMethod.UPI
+        if (payload.paymentMethod().equalsIgnoreCase(PaymentMethod.UPI.name())
                 && bankingMethodsRepository.existsByBank_BankIdAndHostelIdAndUpiIdIgnoreCase(bankId, hostelId, upiId)) {
             return badRequest(Utils.BANKING_METHOD_UPI_ID_EXISTS);
         }
-        if ((method == PaymentMethod.CREDIT_CARD || method == PaymentMethod.DEBIT_CARD || method == PaymentMethod.QR_CODE)
+        if ((payload.paymentMethod().equalsIgnoreCase(PaymentMethod.CREDIT_CARD.name()) || payload.paymentMethod().equalsIgnoreCase(PaymentMethod.DEBIT_CARD.name()) || payload.paymentMethod().equalsIgnoreCase(PaymentMethod.QR_CODE.name()))
                 && bankingMethodsRepository.existsByBank_BankIdAndHostelIdAndCardNumber(bankId, hostelId, cardNumber)) {
             return badRequest(Utils.BANKING_METHOD_CARD_NUMBER_EXISTS);
         }
@@ -424,7 +418,7 @@ public class BankingServiceV2 {
         Date now = new Date();
         BankingMethods entity = new BankingMethods();
         entity.setBank(bank);
-        entity.setPaymentMethod(method);
+        entity.setPaymentMethod(payload.paymentMethod());
         entity.setDisplayName(displayName);
         entity.setDescription(trimToNull(payload.description()));
         entity.setHostelId(hostelId);
@@ -435,24 +429,24 @@ public class BankingServiceV2 {
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
 
-        switch (method) {
-            case UPI -> {
+        switch (payload.paymentMethod()) {
+            case "UPI" -> {
                 entity.setUpiId(upiId);
                 entity.setUpiApp(upiApp);
             }
-            case CREDIT_CARD -> {
+            case "CREDIT_CARD" -> {
                 entity.setCardNumber(cardNumber);
                 entity.setCardNetwork(cardNetwork);
                 entity.setCardHolderName(cardHolderName);
                 entity.setCreditLimit(payload.creditLimit());
                 entity.setBillingCycle(billingCycle);
             }
-            case DEBIT_CARD -> {
+            case "DEBIT_CARD" -> {
                 entity.setCardNumber(cardNumber);
                 entity.setCardNetwork(cardNetwork);
                 entity.setCardHolderName(cardHolderName);
             }
-            case QR_CODE -> {
+            case "QR_CODE" -> {
                 entity.setUpiApp(upiApp);
                 entity.setCardNumber(cardNumber);
                 entity.setLinkedUpiId(linkedUpiId);
@@ -738,7 +732,7 @@ public class BankingServiceV2 {
     }
 
     private boolean isCreditCard(TransferEndpoint endpoint) {
-        return !endpoint.direct() && endpoint.method().getPaymentMethod() == PaymentMethod.CREDIT_CARD;
+        return !endpoint.direct() && endpoint.method().getPaymentMethod().equalsIgnoreCase(PaymentMethod.CREDIT_CARD.name());
     }
 
     private void applyTransfer(TransferEndpoint source, TransferEndpoint destination, TransferRequest request) {
@@ -801,6 +795,173 @@ public class BankingServiceV2 {
             return null;
         }
         return isSameDay(parsed, now) ? now : parsed;
+    }
+
+    public boolean checkBankExist(String bankId) {
+        if (bankId.startsWith("SSNBB-")) {
+            String bId = bankId.replace("SSNBB-", "");
+            BankingV2 bankingV2 = bankingV2Repository.findById(bId).orElse(null);
+            return bankingV2 != null;
+        }
+       return bankingMethodService.findBankByMethodId(bankId);
+
+    }
+
+    public List<BankingV2> findAllBanksByHostelId(String hostelId) {
+        List<BankingV2> listBanks = bankingV2Repository.findAllByHostelIdWithBankingMethods(hostelId);
+        if (listBanks == null) {
+            return new ArrayList<>();
+        }
+
+        return listBanks;
+    }
+
+    public List<BankingV2> findAllByBankId(Set<String> bankIds) {
+        List<BankingV2> listBanks = bankingV2Repository.findAllByBankIds(bankIds.stream().toList());
+        if (listBanks == null) {
+            return null;
+        }
+        return listBanks;
+    }
+
+    public List<DebitsBank> getAllBanksForReturn(String hostelId) {
+        List<BankingV2> listBanks = bankingV2Repository.findAllByHostelIdWithBankingMethods(hostelId);
+        if (listBanks != null) {
+            List<DebitsBank> listDebitBanks = new ArrayList<>();
+            List<BankingV2> filterOutBankAccount = listBanks
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                    .toList();
+            List<BankingV2> filterOtherThanBank = listBanks
+                    .stream()
+                    .filter(i -> !i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                    .toList();
+
+            if (filterOtherThanBank != null) {
+                listDebitBanks.addAll(listBanks
+                        .stream()
+                        .map(i -> new DebitBanksV2Mapper().apply(i))
+                        .toList());
+            }
+            if (filterOutBankAccount != null) {
+                filterOutBankAccount.forEach(item -> {
+                    if(item.getBankingMethods() != null) {
+                        listDebitBanks.addAll(item.getBankingMethods()
+                                .stream()
+                                .map(i2 -> new BankingMethodsMapperV2().apply(i2))
+                                .toList());
+                    }
+
+                });
+            }
+            return listDebitBanks;
+        }
+        return new ArrayList<>();
+    }
+
+    public List<BookingBankInfo> getAllAccounts(String hostelId) {
+        List<BankingV2> listBanks = bankingV2Repository.findAllByHostelIdWithBankingMethods(hostelId);
+        List<BookingBankInfo> listBookingBankInfo = new ArrayList<>();
+        if (listBanks != null) {
+            List<BankingV2> filterOutBankAccount = listBanks
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                    .toList();
+            List<BankingV2> filterOtherThanBank = listBanks
+                    .stream()
+                    .filter(i -> !i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                    .toList();
+            if (filterOtherThanBank != null) {
+                listBookingBankInfo.addAll(filterOtherThanBank
+                        .stream()
+                        .map(i -> new BookingBankInfoMapper().apply(i)).toList());
+            }
+            if (filterOutBankAccount != null) {
+                filterOutBankAccount.forEach(item -> {
+                    if (item.getBankingMethods() != null) {
+                        listBookingBankInfo.addAll(item.getBankingMethods()
+                                .stream()
+                                .map(i2 -> new BookingBankMethodsMapper().apply(i2)).toList());
+                    }
+                });
+//                listBookingBankInfo.addAll(filterOtherThanBank
+//                        .stream()
+//                        .map(i -> new BookingBankMethodsMapper().apply(i)).toList());
+            }
+
+
+        }
+        return listBookingBankInfo;
+    }
+
+    public List<RefundableBanks> initializeRefund(String hostelId) {
+        List<BankingV2> listBanks = bankingV2Repository.findAllByHostelIdWithBankingMethods(hostelId);
+        List<RefundableBanks> listBookingBankInfo = new ArrayList<>();
+        if (listBanks != null) {
+            List<BankingV2> filterOutBankAccount = listBanks
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                    .toList();
+            List<BankingV2> filterOtherThanBank = listBanks
+                    .stream()
+                    .filter(i -> !i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                    .toList();
+            if (filterOtherThanBank != null) {
+                listBookingBankInfo.addAll(filterOtherThanBank
+                        .stream()
+                        .map(i -> new RefundableBankMapper().apply(i)).toList());
+            }
+            if (filterOutBankAccount != null) {
+                filterOutBankAccount.forEach(item -> {
+                    if (item.getBankingMethods() != null) {
+                        listBookingBankInfo.addAll(item.getBankingMethods()
+                                .stream()
+                                .map(i2 -> new RefundableBankingMethodsMapper().apply(i2)).toList());
+                    }
+                });
+//                listBookingBankInfo.addAll(filterOtherThanBank
+//                        .stream()
+//                        .map(i -> new BookingBankMethodsMapper().apply(i)).toList());
+            }
+
+
+        }
+        return listBookingBankInfo;
+    }
+
+    public List<BankInfoRecordPayments> getBankForReceivingPayments(String hostelId) {
+        List<BankingV2> listBanks = bankingV2Repository.findAllByHostelIdWithBankingMethods(hostelId);
+        List<BankInfoRecordPayments> listBookingBankInfo = new ArrayList<>();
+        if (listBanks != null) {
+            List<BankingV2> filterOutBankAccount = listBanks
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                    .toList();
+            List<BankingV2> filterOtherThanBank = listBanks
+                    .stream()
+                    .filter(i -> !i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                    .toList();
+            if (filterOtherThanBank != null) {
+                listBookingBankInfo.addAll(filterOtherThanBank
+                        .stream()
+                        .map(i -> new RecordPaymentBankMapper().apply(i)).toList());
+            }
+            if (filterOutBankAccount != null) {
+                filterOutBankAccount.forEach(item -> {
+                    if (item.getBankingMethods() != null) {
+                        listBookingBankInfo.addAll(item.getBankingMethods()
+                                .stream()
+                                .map(i2 -> new RecordPaymentBankingMethodMapper().apply(i2)).toList());
+                    }
+                });
+//                listBookingBankInfo.addAll(filterOtherThanBank
+//                        .stream()
+//                        .map(i -> new BookingBankMethodsMapper().apply(i)).toList());
+            }
+
+
+        }
+        return listBookingBankInfo;
     }
 
     private record TransferRequest(String hostelId, double amount, Date transactionDate, String description,
@@ -1579,7 +1740,7 @@ public class BankingServiceV2 {
                 continue;
             }
             for (BankingMethods method : methods) {
-                if (method.getPaymentMethod() != PaymentMethod.CREDIT_CARD) {
+                if (method.getPaymentMethod().equalsIgnoreCase(PaymentMethod.CREDIT_CARD.name())) {
                     continue;
                 }
                 response.add(mapper.bankMethod(bank, method,
@@ -1783,5 +1944,76 @@ public class BankingServiceV2 {
     private boolean isImage(MultipartFile image) {
         String contentType = image.getContentType();
         return contentType != null && contentType.toLowerCase().startsWith("image/");
+    }
+
+    public void updateBankBalance(double paidAmount, String transactionType, String bankId, String transactionDate) {
+        if (bankId.startsWith("SSNBB-")) {
+            String bId = bankId.replace("SSNBB-", "");
+            BankingV2 bankingV2 = bankingV2Repository.findById(bId).orElse(null);
+            if (bankingV2 != null) {
+                if (transactionType.equalsIgnoreCase(BankTransactionType.CREDIT.name())) {
+                    if (bankingV2.getBalance() == null) {
+                        bankingV2.setBalance(paidAmount);
+                    }
+                    else {
+                        bankingV2.setBalance(paidAmount + bankingV2.getBalance());
+                    }
+                }
+                Calendar cal = Calendar.getInstance();
+                Date dt = null;
+                if (transactionDate != null) {
+                    dt = Utils.stringToDate(transactionDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                }
+                else {
+                    dt = new Date();
+                }
+                cal.setTime(dt);
+                if (cal.get(Calendar.MINUTE) == 0 && cal.get(Calendar.HOUR) == 0) {
+                    Calendar cal2 = Calendar.getInstance();
+                    cal.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
+                    cal.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
+                    cal.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
+                }
+
+                bankingV2.setUpdatedBy(authentication.getName());
+                bankingV2.setUpdatedAt(cal.getTime());
+
+                bankingV2Repository.save(bankingV2);
+            }
+        }
+        else {
+            String bId = bankingMethodService.creditAmount(paidAmount, bankId, transactionDate);
+
+            BankingV2 bankingV2 = bankingV2Repository.findById(bId).orElse(null);
+            if (bankingV2 != null) {
+                if (transactionType.equalsIgnoreCase(BankTransactionType.CREDIT.name())) {
+                    if (bankingV2.getBalance() == null) {
+                        bankingV2.setBalance(paidAmount);
+                    } else {
+                        bankingV2.setBalance(paidAmount + bankingV2.getBalance());
+                    }
+                }
+                Calendar cal = Calendar.getInstance();
+                Date dt = null;
+                if (transactionDate != null) {
+                    dt = Utils.stringToDate(transactionDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+                } else {
+                    dt = new Date();
+                }
+                cal.setTime(dt);
+                if (cal.get(Calendar.MINUTE) == 0 && cal.get(Calendar.HOUR) == 0) {
+                    Calendar cal2 = Calendar.getInstance();
+                    cal.set(Calendar.MINUTE, cal2.get(Calendar.MINUTE));
+                    cal.set(Calendar.HOUR, cal2.get(Calendar.HOUR));
+                    cal.set(Calendar.SECOND, cal2.get(Calendar.SECOND));
+                }
+
+                bankingV2.setUpdatedBy(authentication.getName());
+                bankingV2.setUpdatedAt(cal.getTime());
+
+                bankingV2Repository.save(bankingV2);
+            }
+        }
+
     }
 }

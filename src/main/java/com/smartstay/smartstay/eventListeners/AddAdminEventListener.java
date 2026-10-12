@@ -29,28 +29,28 @@ public class AddAdminEventListener {
     @Async
     @EventListener
     public void handleAdminUserCreated(AddAdminEvents events) {
-        List<UserHostel> listUserHostels = userHostelService.findByUserId(events.getAdminId());
-
-        List<BankingV1> listBanks = listUserHostels
-                .stream()
-                .map(item -> {
-                    BankingV1 bankingV1 = new BankingV1();
-                    bankingV1.setUserId(events.getAdminId());
-                    bankingV1.setActive(true);
-                    bankingV1.setHostelId(item.getHostelId());
-                    bankingV1.setParentId(events.getParentId());
-                    bankingV1.setAccountType(BankAccountType.CASH.name());
-                    bankingV1.setTransactionType(BankPurpose.BOTH.name());
-                    bankingV1.setAccountHolderName(events.getAdminName());
-                    bankingV1.setCreatedBy(events.getAdminId());
-                    bankingV1.setCreatedAt(new Date());
-
-                    return bankingV1;
-
-                })
-                .toList();
-
-        bankingService.saveAllBankInfo(listBanks);
+//        List<UserHostel> listUserHostels = userHostelService.findByUserId(events.getAdminId());
+//
+//        List<BankingV1> listBanks = listUserHostels
+//                .stream()
+//                .map(item -> {
+//                    BankingV1 bankingV1 = new BankingV1();
+//                    bankingV1.setUserId(events.getAdminId());
+//                    bankingV1.setActive(true);
+//                    bankingV1.setHostelId(item.getHostelId());
+//                    bankingV1.setParentId(events.getParentId());
+//                    bankingV1.setAccountType(BankAccountType.CASH.name());
+//                    bankingV1.setTransactionType(BankPurpose.BOTH.name());
+//                    bankingV1.setAccountHolderName(events.getAdminName());
+//                    bankingV1.setCreatedBy(events.getAdminId());
+//                    bankingV1.setCreatedAt(new Date());
+//
+//                    return bankingV1;
+//
+//                })
+//                .toList();
+//
+//        bankingService.saveAllBankInfo(listBanks);
 
     }
 }
