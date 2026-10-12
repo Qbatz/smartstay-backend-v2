@@ -47,7 +47,7 @@ public class BankTransactionService {
     private BankingServiceV2 bankingServiceV2;
 
 
-    public int addTransaction(TransactionDto transactionDto, String sourceId, String paymentMethodId) {
+    public int addTransaction(TransactionDto transactionDto, String sourceId, String paymentMethodId, String bankId) {
         if (authentication.isAuthenticated()) {
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
             BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
@@ -72,7 +72,7 @@ public class BankTransactionService {
                 }
             }
             transactionsV1.setTransactionDate(Utils.stringToDate(transactionDto.transactionDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT));
-            transactionsV1.setBankId(transactionDto.bankId());
+            transactionsV1.setBankId(bankId);
             transactionsV1.setTransactionNumber(transactionDto.transactionId());
             transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
             transactionsV1.setAmount(transactionDto.amount());

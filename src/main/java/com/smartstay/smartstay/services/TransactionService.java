@@ -6,6 +6,7 @@ import com.smartstay.smartstay.Wrappers.transactions.TransactionsListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.beds.BedDetails;
@@ -177,6 +178,11 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
 
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(payment.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
         Date paymentDate = null;
         if (payment.paymentDate() == null) {
             paymentDate = new Date();
@@ -226,7 +232,7 @@ public class TransactionService {
                     BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(),
                     trns.getTransactionId());
 
-            bankTransactionService.addTransaction(transaction, trns.getTransactionId(), payment.paymentMethodId());
+            bankTransactionService.addTransaction(transaction, trns.getTransactionId(), oldBankToNewBankInfo.paymentMethodId(), oldBankToNewBankInfo.bankId());
 
             return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
         }
@@ -266,6 +272,11 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
         }
         if (!bankingService.checkBankExist(payment.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(payment.bankId());
+        if (oldBankToNewBankInfo == null) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
 
@@ -325,7 +336,8 @@ public class TransactionService {
 
         transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
         transactionV1.setHostelId(hostelId);
-        transactionV1.setBankId(payment.bankId());
+        transactionV1.setBankId(oldBankToNewBankInfo.bankId());
+        transactionV1.setPaymentMethodId(oldBankToNewBankInfo.paymentMethodId());
         transactionV1.setReferenceNumber(payment.referenceId());
         transactionV1.setUpdatedBy(authentication.getName());
         transactionV1.setTransactionReferenceId(transactionNumber);
@@ -349,9 +361,9 @@ public class TransactionService {
                     BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(),
                     trnsV1.getTransactionId());
 
-            bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
+            bankingServiceV2.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
                     payment.paymentDate());
-            bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId(), payment.paymentMethodId());
+            bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId(), oldBankToNewBankInfo.paymentMethodId(), oldBankToNewBankInfo.bankId());
 
             usersService.addUserLog(hostelId, trnsV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.CREATE, user);
 

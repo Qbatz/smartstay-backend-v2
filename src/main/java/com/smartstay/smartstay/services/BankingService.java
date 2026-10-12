@@ -6,6 +6,7 @@ import com.smartstay.smartstay.Wrappers.invoices.RefundableBanksMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.transaction.TransactionDto;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.banking.AddBank;
@@ -1054,5 +1055,9 @@ public class BankingService {
     public List<BankingV1> findAllBankIdsByHostelId(String hostelId) {
         List<BankingV1> listBanks = bankingV1Repository.findActiveByHostelId(hostelId);
         return listBanks;
+    }
+
+    public OldBankToNewBankInfo getOldBankNewBankInfo(String s) {
+        return bankingServiceV2.getOldBankNewBankInfo(s);
     }
 }

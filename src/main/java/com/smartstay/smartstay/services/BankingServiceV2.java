@@ -6,6 +6,7 @@ import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BankAccountTypeV2;
@@ -147,12 +148,12 @@ public class BankingServiceV2 {
                 return new ResponseEntity<>(Utils.V2_BANK_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
             }
 
-            if (payload.accountNo() == null) {
-                return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_NUMBER_REQUIRED, HttpStatus.BAD_REQUEST);
-            }
-            if (payload.accountNo().isEmpty()) {
-                return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_NUMBER_REQUIRED, HttpStatus.BAD_REQUEST);
-            }
+//            if (payload.accountNo() == null) {
+//                return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_NUMBER_REQUIRED, HttpStatus.BAD_REQUEST);
+//            }
+//            if (payload.accountNo().isEmpty()) {
+//                return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_NUMBER_REQUIRED, HttpStatus.BAD_REQUEST);
+//            }
 
             if (trimToNull(payload.bankAccountType()) != null && !isValidBankAccountType(payload.bankAccountType())) {
                 return new ResponseEntity<>(Utils.V2_BANK_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
@@ -962,6 +963,36 @@ public class BankingServiceV2 {
 
         }
         return listBookingBankInfo;
+    }
+
+    public OldBankToNewBankInfo getOldBankNewBankInfo(String s) {
+        if (s.startsWith("SSNBB-")) {
+            String bankId = s.replace("SSNBB-", "");
+            BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankId).orElse(null);
+            if (bankingV2 != null) {
+                if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountTypeV2.CASH.name())) {
+
+                    return new OldBankToNewBankInfo(bankingV2.getBankId(), null);
+                }
+                else if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountTypeV2.CARD.name())) {
+                    if (bankingV2.getBankAccountType().equalsIgnoreCase("CREDIT")) {
+                        List<BankingMethods> paymentMethods = bankingV2
+                                .getBankingMethods();
+                        if (paymentMethods != null && !paymentMethods.isEmpty()) {
+                            BankingMethods bm = paymentMethods.get(0);
+                            return new OldBankToNewBankInfo(bankingV2.getBankId(), bm.getPaymentMethodId());
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            if (s.startsWith("SSBMB-")) {
+                return bankingMethodService.BankInfo(s);
+            }
+        }
+
+        return null;
     }
 
     private record TransferRequest(String hostelId, double amount, Date transactionDate, String description,

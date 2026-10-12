@@ -2,6 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.dao.BankingMethods;
 import com.smartstay.smartstay.dao.BankingV2;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,5 +42,13 @@ public class BankingMethodService {
 
         }
         return null;
+    }
+
+    public OldBankToNewBankInfo BankInfo(String bankinMethodId) {
+        BankingMethods bankingMethods = bankingMethodsRepository.findByMethodId(bankinMethodId);
+        if (bankingMethods != null) {
+            return new OldBankToNewBankInfo(bankingMethods.getBank().getBankId(), bankinMethodId);
+        }
+        return  null;
     }
 }
