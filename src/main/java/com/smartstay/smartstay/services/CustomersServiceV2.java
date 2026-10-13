@@ -212,6 +212,7 @@ public class CustomersServiceV2 {
         customers.setFirstName(payloads.firstName());
         customers.setLastName(payloads.lastName());
         customers.setCountry(1L);
+        customers.setCountryCode(91);
         customers.setMobile(payloads.mobile());
         customers.setEmailId(payloads.emailId());
         customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
