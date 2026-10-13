@@ -258,7 +258,7 @@ public class CustomersService {
         customers.setPincode(payloads.pincode());
         customers.setCity(payloads.city());
         customers.setState(payloads.state());
-        customers.setCountry(customers.getCountry());
+        customers.setCountryCode(91);
         customers.setProfilePic(profileImage);
         customers.setKycStatus(KycStatus.PENDING.name());
         customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
@@ -455,7 +455,13 @@ public class CustomersService {
 //                profilePicStr = initials.toString();
 //            }
 
-            return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(), item.getLastName(), fullName.toString(), item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), profilePicStr, item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName());
+            return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
+                    item.getLastName(),
+                    fullName.toString(),
+                    item.getCity(),
+                    item.getState(),
+                    item.getCountry(), item.getMobile(),
+                    currentStatus, item.getEmailId(), profilePicStr, item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName());
         }).collect(Collectors.toList());
 
         listCustomers.sort(Comparator.comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
@@ -791,6 +797,7 @@ public class CustomersService {
                 customers.setCurrentStatus(CustomerStatus.BOOKED.name());
                 customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
                 customers.setCountry(1L);
+                customers.setCountryCode(91);
                 customers.setCreatedBy(user.getUserId());
                 customers.setCreatedAt(new Date());
                 customers.setHostelId(hostelId);
@@ -1192,6 +1199,7 @@ public class CustomersService {
             customers.setFirstName(customerInfo.firstName());
             customers.setLastName(customerInfo.lastName());
             customers.setCountry(1L);
+            customers.setCountryCode(91);
             customers.setMobile(customerInfo.mobileNumber());
             customers.setEmailId(customerInfo.emailId());
             // Optional ID proof details; stored as-is (null when not provided).
@@ -1287,6 +1295,7 @@ public class CustomersService {
         customers.setFirstName(customerInfo.firstName());
         customers.setLastName(customerInfo.lastName());
         customers.setCountry(1L);
+        customers.setCountryCode(91);
         customers.setMobile(customerInfo.mobile());
         customers.setEmailId(customerInfo.emailId());
         customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
@@ -1847,7 +1856,7 @@ public class CustomersService {
         }
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(),
-                customers.getMobile(), "91", initials, CustomerUtils.getProfilePic(customers),
+                customers.getMobile(), customers.getCountryCode() , initials, CustomerUtils.getProfilePic(customers),
                 bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint,
                 customers.getCurrentStatus(), address, hostelInformation,
                 kycInfo, advanceInfo, checkoutInfo, bookingInfo,

@@ -19,7 +19,7 @@ public interface CustomerData {
     String getRoomName();
     String getBedName();
     String getCustomerId();
-    String getCountryCode();
+    Integer getCountryCode();
     Date getActualJoiningDate();
     Date getJoiningDate();
     Date getCreatedAt();

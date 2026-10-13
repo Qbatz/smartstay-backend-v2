@@ -7,7 +7,7 @@ public record CustomerInfo(String firstName,
                            String initials,
                            String customerId,
                            String customerMobileNo,
-                           String countryCode,
+                           Integer countryCode,
                            String fullAddress,
                            String joiningDate) {
 }
