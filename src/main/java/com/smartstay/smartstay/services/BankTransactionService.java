@@ -143,24 +143,20 @@ public class BankTransactionService {
      *
      * this is to refund the booking amount
      */
-    public void cancelBooking(TransactionDto transactionDto, String sourceId, String transactionId) {
+    public void cancelBooking(TransactionDto transactionDto, String sourceId, String transactionId, String bankId, String paymentId) {
         if (authentication.isAuthenticated()) {
-            if (!bankingService.updateBalanceForExpense(transactionDto.amount(), BankTransactionType.DEBIT.name(), transactionDto.bankId())) {
-                return;
-            }
-            bankingServiceV2.syncAccountBalance(transactionDto.bankId(), -transactionDto.amount(), authentication.getName());
-
+//            if (!bankingService.updateBalanceForExpense(transactionDto.amount(), BankTransactionType.DEBIT.name(), transactionDto.bankId())) {
+//                return;
+//            }
+//            bankingServiceV2.syncAccountBalance(transactionDto.bankId(), -transactionDto.amount(), authentication.getName());
+            double accountBalance = bankingServiceV2.cancelBooking(bankId, paymentId, transactionDto.amount(), authentication.getName());
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
-            BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
+//            BankTransactionsV1 v1 = bankRepository.findTopByBankIdOrderByTransactionDateDesc(transactionDto.bankId());
 
-            if (v1 != null) {
-                double accountBalance = 0.0;
-                if (v1.getAccountBalance() != null) {
-                    accountBalance = v1.getAccountBalance();
-                }
                 transactionsV1.setTransactionDate(Utils.stringToDate(transactionDto.transactionDate(), Utils.USER_INPUT_DATE_FORMAT));
                 transactionsV1.setAccountBalance(accountBalance - transactionDto.amount());
-                transactionsV1.setBankId(transactionDto.bankId());
+                transactionsV1.setBankId(bankId);
+                transactionsV1.setPaymentMethodId(paymentId);
                 transactionsV1.setHostelId(transactionDto.hostelId());
                 transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
                 transactionsV1.setAmount(transactionDto.amount());
@@ -173,7 +169,7 @@ public class BankTransactionService {
                 transactionsV1.setCreatedBy(authentication.getName());
 
                 bankRepository.save(transactionsV1);
-            }
+
         }
     }
 
@@ -182,15 +178,12 @@ public class BankTransactionService {
 
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
 
-            if (!bankingService.updateBalanceForExpense(transactionDto.amount(), BankTransactionType.DEBIT.name(), transactionDto.bankId())) {
-                return false;
-            }
+//            if (!bankingService.updateBalanceForExpense(transactionDto.amount(), BankTransactionType.DEBIT.name(), transactionDto.bankId())) {
+//                return false;
+//            }
 
-            BankingV1 bankingV1 = bankingService.getBankDetails(transactionDto.bankId());
-            double accountBalance = 0.0;
-            if (bankingV1 != null && bankingV1.getBalance() != null) {
-                accountBalance = bankingV1.getBalance();
-            }
+            double accountBalance = bankingServiceV2.syncExpenseAccountBalance(transactionDto.bankId(), paymentMethodId, transactionDto.amount(), authentication.getName());
+
             transactionsV1.setAccountBalance(accountBalance);
             Date dt = null;
             if (transactionDto.transactionDate() != null) {
@@ -202,6 +195,7 @@ public class BankTransactionService {
 
             transactionsV1.setTransactionDate(Utils.convertToTimeStamp(dt));
             transactionsV1.setBankId(transactionDto.bankId());
+            transactionsV1.setPaymentMethodId(paymentMethodId);
             transactionsV1.setReferenceNumber(transactionDto.referenceNumber());
             transactionsV1.setAmount(transactionDto.amount());
             transactionsV1.setType(transactionDto.type());
@@ -221,14 +215,14 @@ public class BankTransactionService {
     }
 
 
-    public boolean refundInvoice(InvoicesV1 invoicesV1, RefundInvoice refundInvoice, String sourceId, String transactionId) {
+    public boolean refundInvoice(InvoicesV1 invoicesV1, RefundInvoice refundInvoice, String sourceId, String transactionId, String bankId, String bankMethodId) {
         BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
 
-        if (!bankingService.updateBalanceForExpense(refundInvoice.refundAmount(), BankTransactionType.DEBIT.name(), refundInvoice.bankId())) {
-            return false;
-        }
-        bankingServiceV2.syncAccountBalance(refundInvoice.bankId(), -refundInvoice.refundAmount(), authentication.getName());
-
+//        if (!bankingService.updateBalanceForExpense(refundInvoice.refundAmount(), BankTransactionType.DEBIT.name(), refundInvoice.bankId())) {
+//            return false;
+//        }
+//        bankingServiceV2.syncAccountBalance(refundInvoice.bankId(), -refundInvoice.refundAmount(), authentication.getName());
+        bankingServiceV2.syncAccountBalance(bankId, bankMethodId, refundInvoice.refundAmount(), authentication.getName());
         Date dt = null;
         if (refundInvoice.refundDate() != null) {
             dt = Utils.stringToDate(refundInvoice.refundDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -239,15 +233,14 @@ public class BankTransactionService {
 
         double bankBalance = bankingService.getBankBalance(refundInvoice.bankId());
         transactionsV1.setTransactionDate(Utils.convertToTimeStamp(dt));
-        transactionsV1.setBankId(refundInvoice.bankId());
+        transactionsV1.setBankId(bankId);
         transactionsV1.setReferenceNumber(refundInvoice.referenceNumber());
         transactionsV1.setAmount(refundInvoice.refundAmount());
         transactionsV1.setType(BankTransactionType.DEBIT.name());
         transactionsV1.setSource(BankSource.INVOICE.name());
         transactionsV1.setTransactionNumber(transactionId);
         transactionsV1.setSourceId(sourceId);
-        transactionsV1.setPaymentMethodId((refundInvoice.paymentMethodId() != null && !refundInvoice.paymentMethodId().isBlank())
-                ? refundInvoice.paymentMethodId().trim() : null);
+        transactionsV1.setPaymentMethodId(bankMethodId);
         transactionsV1.setIsDeleted(false);
         transactionsV1.setHostelId(invoicesV1.getHostelId());
         transactionsV1.setCreatedAt(new Date());
@@ -344,14 +337,11 @@ public class BankTransactionService {
         return true;
     }
 
-    public void addRetainerTransaction(TransactionV1 transactionV11, InvoicesV1 invoicesV1, Date paymentDate, LoadBalance loadBalance) {
-        double newBalance = bankingService.updateRetainerAmountToBank(paymentDate, loadBalance.amount(), loadBalance.bankId());
+    public void addRetainerTransaction(TransactionV1 transactionV11, InvoicesV1 invoicesV1, Date paymentDate, LoadBalance loadBalance, String bankId, String paymentMethodId) {
+        double newBalance = bankingServiceV2.updateRetainerAmountToBank(paymentDate, loadBalance.amount(), bankId, paymentMethodId);
         BankTransactionsV1 bankTransactionsV1 = new BankTransactionsV1();
-        if (bankTransactionsV1 == null) {
-            return;
-        }
-
-        bankTransactionsV1.setBankId(loadBalance.bankId());
+        bankTransactionsV1.setBankId(bankId);
+        bankTransactionsV1.setPaymentMethodId(paymentMethodId);
         bankTransactionsV1.setReferenceNumber(loadBalance.referenceNumber());
         bankTransactionsV1.setAmount(loadBalance.amount());
         bankTransactionsV1.setAccountBalance(newBalance);

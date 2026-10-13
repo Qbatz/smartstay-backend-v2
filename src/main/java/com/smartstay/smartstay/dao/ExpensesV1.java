@@ -31,6 +31,7 @@ public class ExpensesV1 {
     private String parentId;
     private String hostelId;
     private String bankId;
+    private String paymentMethodId;
 
 //    this is for single product amount
     private Double unitPrice;

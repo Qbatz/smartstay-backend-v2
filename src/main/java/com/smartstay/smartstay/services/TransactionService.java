@@ -30,6 +30,7 @@ import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.responses.invoices.StayInfo;
 import com.smartstay.smartstay.responses.receipt.*;
 import com.smartstay.smartstay.responses.transaction.TransactionReportResponse;
+import com.smartstay.smartstay.util.BankingUtils;
 import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
@@ -204,9 +205,11 @@ public class TransactionService {
         transactionV1.setStatus(PaymentStatus.PAID.name());
         transactionV1.setPaidAmount(payment.amount());
         transactionV1.setHostelId(hostelId);
-        transactionV1.setBankId(payment.bankId());
+        transactionV1.setBankId(oldBankToNewBankInfo.bankId());
+        transactionV1.setPaymentMethodId(oldBankToNewBankInfo.paymentMethodId());
         transactionV1.setReferenceNumber(payment.referenceId());
         transactionV1.setUpdatedBy(authentication.getName());
+        transactionV1.setSource(authentication.getSource());
         transactionV1.setTransactionReferenceId(transactionRandomNo);
         transactionV1.setInvoiceId(invoiceId);
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
@@ -499,22 +502,27 @@ public class TransactionService {
             }
         }
 
-        BankingV1 bankingV1 = bankingService.getBankDetails(transactionV1.getBankId());
         String bankName = null;
-        if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
-            bankName = "Cash";
-        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
-            bankName = "Card";
-        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
-            bankName = bankingV1.getBankName() + " Bank";
-        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
-            bankName = BankAccountType.UPI.name();
+        AccountDetails accountDetails = null;
+        BankingV2 bankingV2 = bankingServiceV2.getBankDetails(transactionV1.getBankId());
+        if (bankingV2 != null) {
+            accountDetails = BankingUtils.getPaymentModeWithName(bankingV2, transactionV1.getPaymentMethodId());
+            bankName = BankingUtils.getBankName(bankingV2, transactionV1.getPaymentMethodId());
         }
-        String account = bankingV1.getAccountHolderName() +
-                "-" +
-                bankName;
-        AccountDetails accountDetails = new AccountDetails(bankingV1.getAccountNumber(), bankingV1.getIfscCode(),
-                account, bankingV1.getUpiId(), null);
+
+//        if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+//            bankName = "Cash";
+//        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+//            bankName = "Card";
+//        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+//            bankName = bankingV1.getBankName() + " Bank";
+//        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
+//            bankName = BankAccountType.UPI.name();
+//        }
+//        String account = bankingV1.getAccountHolderName() +
+//                "-" +
+//                bankName;
+
         ReceiptConfigInfo receiptConfigInfo = null;
         com.smartstay.smartstay.dao.BillTemplates hostelTemplates = templatesService.getTemplateByHostelId(hostelId);
         if (hostelTemplates != null) {
@@ -736,6 +744,10 @@ public class TransactionService {
         if (!bankingService.checkBankExist(refundInvoice.bankId())) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(refundInvoice.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
         if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), transactionDate) > 0) {
             return new ResponseEntity<>(Utils.REFUNDING_DATE_OLDER_THAN_INVOICE, HttpStatus.BAD_REQUEST);
         }
@@ -798,14 +810,15 @@ public class TransactionService {
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(transactionDate));
         transactionV1.setTransactionReferenceId(generateRandomNumber());
-        transactionV1.setBankId(refundInvoice.bankId());
+        transactionV1.setBankId(oldBankToNewBankInfo.bankId());
+        transactionV1.setPaymentMethodId(oldBankToNewBankInfo.paymentMethodId());
         transactionV1.setReferenceNumber(refundInvoice.referenceNumber());
         transactionV1.setPaidAt(Utils.convertToTimeStamp(transactionDate));
         transactionV1.setUpdatedBy(authentication.getName());
         transactionV1.setSource(authentication.getSource());
         TransactionV1 transactionV11 = transactionRespository.save(transactionV1);
 
-        bankTransactionService.refundInvoice(invoicesV1, refundInvoice, invoiceId, transactionV11.getTransactionId());
+        bankTransactionService.refundInvoice(invoicesV1, refundInvoice, invoiceId, transactionV11.getTransactionId(), oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId());
         creditDebitNoteService.refunInvoice(invoiceId, invoicesV1, refundInvoice);
 
         usersService.addUserLog(hostelId, transactionV11.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.UPDATE, users);
@@ -1621,9 +1634,6 @@ public class TransactionService {
         List<InvoicesV1> invoices = invoiceService.findByInvoiceIdIn(invoiceIds);
 
 
-
-
-
         List<ReceiptsList> receipts = listReceipts.stream().map(item -> new TransactionsListMapper(listCustomers, listBanks, invoices).apply(item)).toList();
 
         ReceiptResponse receiptResponse = new ReceiptResponse(hostelId,
@@ -1653,7 +1663,7 @@ public class TransactionService {
         return new ResponseEntity<>(receiptResponse, HttpStatus.OK);
     }
 
-    public void addRetainerTransaction(InvoicesV1 invoicesV1, LoadBalance loadBalance) {
+    public void addRetainerTransaction(InvoicesV1 invoicesV1, LoadBalance loadBalance, String bankId, String paymentMethodId) {
 
         Date paymentDate = new Date();
         if (loadBalance.paymentDate() != null) {
@@ -1674,13 +1684,14 @@ public class TransactionService {
         transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
         transactionV1.setSource(authentication.getSource());
         transactionV1.setTransactionReferenceId(generateRandomNumber());
-        transactionV1.setBankId(loadBalance.bankId());
+        transactionV1.setBankId(bankId);
+        transactionV1.setPaymentMethodId(paymentMethodId);
         transactionV1.setReferenceNumber(loadBalance.referenceNumber());
         transactionV1.setPaidAt(paymentDate);
 
         TransactionV1 transactionV11 = transactionRespository.save(transactionV1);
 
-        bankTransactionService.addRetainerTransaction(transactionV11, invoicesV1, paymentDate, loadBalance);
+        bankTransactionService.addRetainerTransaction(transactionV11, invoicesV1, paymentDate, loadBalance, bankId, paymentMethodId);
 
     }
 

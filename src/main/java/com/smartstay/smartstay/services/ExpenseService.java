@@ -5,17 +5,10 @@ import com.smartstay.smartstay.Wrappers.expenses.ExpenseListMapper;
 import com.smartstay.smartstay.Wrappers.expenses.ExpenseTableMapper;
 import com.smartstay.smartstay.Wrappers.expenses.VendorExpenseSummaryMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.ColumnFilters;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
-import com.smartstay.smartstay.dao.BankTransactionsV1;
-import com.smartstay.smartstay.dao.BankingV1;
-import com.smartstay.smartstay.dao.ExpenseItem;
-import com.smartstay.smartstay.dao.ExpensePayment;
-import com.smartstay.smartstay.dao.ExpensesV1;
-import com.smartstay.smartstay.dao.Units;
-import com.smartstay.smartstay.dao.Users;
-import com.smartstay.smartstay.dao.VendorV1;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.expenses.ExpensesCategory;
 import com.smartstay.smartstay.dto.expenses.ExpenseSummaryView;
@@ -53,8 +46,6 @@ import com.smartstay.smartstay.responses.expenses.ExpenseList;
 import com.smartstay.smartstay.responses.expenses.InitializeExpenses;
 import com.smartstay.smartstay.responses.expenseForReport.ExpenseReportResponse;
 import com.smartstay.smartstay.dto.expenses.ExpenseSummaryProjection;
-import com.smartstay.smartstay.dao.ExpenseCategory;
-import com.smartstay.smartstay.dao.ExpenseSubCategory;
 import com.smartstay.smartstay.util.AddressUtils;
 import com.smartstay.smartstay.util.FilterKeywords;
 import com.smartstay.smartstay.util.NameUtils;
@@ -261,7 +252,7 @@ public class ExpenseService {
         }
 
         List<ExpensesCategory> listExpensesCategory = expenseCategoryService.getAllActiveCategories(hostelId);
-        List<DebitsBank> listBanks = bankingService.getAllBankForReturn(hostelId);
+        List<DebitsBank> listBanks = bankingServiceV2.getAllBankForExpense(hostelId);
 
         // Vendor financials are denormalized on the vendor row, so this is a single read with no
         // per-vendor aggregation (no N+1). Only the fields needed by the picker are exposed.
@@ -277,8 +268,7 @@ public class ExpenseService {
                         nullSafe(v.getBalance())))
                 .toList();
 
-        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks, listVendors,
-                bankingServiceV2.buildAllPaymentMethods(hostelId));
+        InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks, listVendors, null);
 
         return new ResponseEntity<>(initializeExpenses, HttpStatus.OK);
 
@@ -364,20 +354,17 @@ public class ExpenseService {
                 ? ExpensePaymentStatus.fromString(expense.paymentStatus())
                 : ExpensePaymentStatus.Full;
         boolean bankProvided = Utils.checkNullOrEmpty(expense.bankId());
-//        if (requestedStatus != ExpensePaymentStatus.Pending && !bankProvided) {
-//            return new ResponseEntity<>(Utils.BANK_ID_REQUIRED, HttpStatus.BAD_REQUEST);
-//        }
-//        if (bankProvided && !bankingService.checkBankExist(expense.bankId())) {
-//            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
-//        }
-        // Validate the paidAmount/totalAmount relationship only for vendor expenses; non-vendor expenses
-        // are auto-settled below so their request amounts are not validated.
-//        if (isVendorExpense) {
-//            String paymentAmountError = validatePaymentAmounts(requestedStatus, expense.totalAmount(), expense.paidAmount());
-//            if (paymentAmountError != null) {
-//                return new ResponseEntity<>(paymentAmountError, HttpStatus.BAD_REQUEST);
-//            }
-//        }
+        OldBankToNewBankInfo oldBankToNewBankInfo = null;
+        if (bankProvided) {
+            if (!bankingService.checkBankExist(expense.bankId())) {
+                return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+            }
+
+            oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(expense.bankId());
+            if (oldBankToNewBankInfo == null) {
+                return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+            }
+        }
         if (!subscriptionService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
@@ -431,7 +418,12 @@ public class ExpenseService {
         expensesV1.setSubCategoryId(expense.subCategory());
         expensesV1.setParentId(users.getParentId());
         expensesV1.setHostelId(hostelId);
-        expensesV1.setBankId(expense.bankId());
+        if (bankProvided) {
+            expensesV1.setBankId(oldBankToNewBankInfo.bankId());
+            expensesV1.setPaymentMethodId(oldBankToNewBankInfo.paymentMethodId());
+            expensesV1.setPaymentMethod(oldBankToNewBankInfo.paymentMethodId());
+        }
+
         expensesV1.setUnitPrice(unitPrice);
         expensesV1.setUnitCount(count);
         expensesV1.setActualTotalPrice(actualTotalPrice);
@@ -471,7 +463,6 @@ public class ExpenseService {
         Double effectiveBalanceAmount = isVendorExpense ? (payableAmount - paidForBalance) : 0.0;
         expensesV1.setPaidAmount(effectivePaidAmount);
         expensesV1.setBalanceAmount(effectiveBalanceAmount);
-        expensesV1.setPaymentMethod(expense.paymentMethod());
         expensesV1.setNote(expense.note());
         expensesV1.setTransactionId(expense.transactionId());
         expensesV1.setTax(expense.tax());
@@ -480,14 +471,6 @@ public class ExpenseService {
         // Upload receipt images to S3; a failure aborts the (transactional) expense creation.
         expensesV1.setImages(uploadImages(images, "Expense/Images"));
 
-        TransactionDto transactionDto = new TransactionDto(expense.bankId(),
-                expensesV1.getExpenseNumber(),
-                paidForBalance,
-                BankTransactionType.DEBIT.name(),
-                BankSource.EXPENSE.name(),
-                hostelId,
-                expense.purchaseDate(),
-                expenseNumber);
 
         ExpensesV1 expV1 = expensesRepository.save(expensesV1);
 
@@ -519,8 +502,8 @@ public class ExpenseService {
             expensePayment.setHostelId(hostelId);
             expensePayment.setVendorId(vendorId);
             expensePayment.setPaidAmount(effectivePaidAmount);
-            expensePayment.setPaymentMethod(expense.paymentMethod());
-            expensePayment.setBankId(expense.bankId());
+            expensePayment.setPaymentMethod(oldBankToNewBankInfo.paymentMethodId());
+            expensePayment.setBankId(oldBankToNewBankInfo.bankId());
             expensePayment.setPaymentDate(expensesV1.getTransactionDate());
             expensePayment.setNotes(expense.note());
             stampCreate(expensePayment, authentication.getName(), new Date());
@@ -536,13 +519,22 @@ public class ExpenseService {
         if (!bankProvided || paidForBalance <= 0) {
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
-        if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId(), expense.paymentMethodId())) {
-            bankingServiceV2.debitExpenseBalances(transactionDto.bankId(), expense.paymentMethodId(),
+
+        TransactionDto transactionDto = new TransactionDto(oldBankToNewBankInfo.bankId(),
+                expensesV1.getExpenseNumber(),
+                paidForBalance,
+                BankTransactionType.DEBIT.name(),
+                BankSource.EXPENSE.name(),
+                hostelId,
+                expense.purchaseDate(),
+                expenseNumber);
+        if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId(), oldBankToNewBankInfo.paymentMethodId())) {
+            bankingServiceV2.debitExpenseBalances(oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId(),
                     transactionDto.amount(), authentication.getName());
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
         else {
-            return new ResponseEntity<>(Utils.INSUFFICIENT_FUND_ERROR, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
     }
@@ -1347,9 +1339,9 @@ public class ExpenseService {
             bankIds.add(expense.getBankId());
         }
         payments.stream().map(ExpensePayment::getBankId).filter(Objects::nonNull).forEach(bankIds::add);
-        Map<String, BankingV1> bankMap = new HashMap<>();
+        Map<String, BankingV2> bankMap = new HashMap<>();
         if (!bankIds.isEmpty()) {
-            bankingService.findAllBanksById(bankIds).forEach(b -> bankMap.put(b.getBankId(), b));
+            bankingServiceV2.findAllByBankId(bankIds).forEach(b -> bankMap.put(b.getBankId(), b));
         }
 
         // Resolve category + sub-category names.
@@ -1377,7 +1369,7 @@ public class ExpenseService {
                     creatorNamesById.put(u.getUserId(), NameUtils.getFullName(u.getFirstName(), u.getLastName())));
         }
 
-        BankingV1 expenseBank = bankMap.get(expense.getBankId());
+        BankingV2 expenseBank = bankMap.get(expense.getBankId());
 
         List<ExpenseDetailItem> itemDetails = items.stream()
                 .map(i -> new ExpenseDetailItem(
@@ -1388,7 +1380,7 @@ public class ExpenseService {
 
         List<ExpenseDetailPayment> paymentDetails = payments.stream()
                 .map(p -> {
-                    BankingV1 paymentBank = bankMap.get(p.getBankId());
+                    BankingV2 paymentBank = bankMap.get(p.getBankId());
                     return new ExpenseDetailPayment(
                             p.getId(), p.getPaidAmount(), p.getPaymentMethod(), p.getBankId(),
                             paymentBank != null ? paymentBank.getBankName() : null,

@@ -9,6 +9,7 @@ import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.booking.CustomerInfo;
@@ -769,6 +770,14 @@ public class CustomersService {
 
         if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(), hostelId)) {
             return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.BAD_REQUEST);
+        }
+        if (!bankingService.checkBankExist(payloads.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(payloads.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
         Date dt = Utils.stringToDate(payloads.bookingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);

@@ -6,6 +6,7 @@ import com.smartstay.smartstay.Wrappers.retainer.InvoicesInvoiceInfoMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.InvoiceItems;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.customer.RetainerListItems;
 import com.smartstay.smartstay.dto.retainer.RetainerInfo;
@@ -136,6 +137,7 @@ public class RetainerService {
         else {
             isRegisteredRelation = false;
         }
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(loadBalance.bankId());;
 
         Date paymentDate = new Date();
         if (loadBalance.paymentDate() != null) {
@@ -199,7 +201,7 @@ public class RetainerService {
         InvoicesV1 createdInvoice = invoicesV1Repository.save(invoicesV1);
         invoiceNotesService.addNotes(customerId, hostelId, createdInvoice.getInvoiceId(), loadBalance.description(), loadBalance.detailedDescription());
         retainerRelationService.addRelationForDeposit(customerId, hostelId, loadBalance, isRegisteredRelation, createdInvoice);
-        transactionService.addRetainerTransaction(createdInvoice, loadBalance);
+        transactionService.addRetainerTransaction(createdInvoice, loadBalance, oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId());
         tenantBankTransactionService.addRetainerTransaction(createdInvoice, loadBalance, paymentDate, isRegisteredRelation);
         usersService.addUserLog(hostelId, createdInvoice.getInvoiceId(), ActivitySource.RETAINER, ActivitySourceType.CREATE, users);
 

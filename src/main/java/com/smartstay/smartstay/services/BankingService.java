@@ -1007,19 +1007,21 @@ public class BankingService {
     }
 
     public List<BankInfoRecordPayments> getBankForReceivingPayments(String hostelId) {
-        List<BankingV1> listBanks = bankingV1Repository.findByHostelId(hostelId);
-        if (listBanks == null) {
-            return new ArrayList<>();
-        }
+//        List<BankingV1> listBanks = bankingV1Repository.findByHostelId(hostelId);
+//        if (listBanks == null) {
+//            return new ArrayList<>();
+//        }
+//
+//        return listBanks
+//                .stream()
+//                .map(i -> new BankInfoRecordPayments(
+//                        i.getBankId(),
+//                        BankingUtils.getPaymentModeWithHolder(i),
+//                        i.getAccountHolderName()
+//                ))
+//                .toList();
 
-        return listBanks
-                .stream()
-                .map(i -> new BankInfoRecordPayments(
-                        i.getBankId(),
-                        BankingUtils.getPaymentModeWithHolder(i),
-                        i.getAccountHolderName()
-                ))
-                .toList();
+        return bankingServiceV2.getBankForReceivingPayments(hostelId);
 
     }
 

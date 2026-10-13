@@ -4,6 +4,7 @@ import com.smartstay.smartstay.Wrappers.BookingsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.Bookings;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
@@ -582,6 +583,13 @@ public class BookingsService {
         if (!bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
             return new ResponseEntity<>(Utils.CANNOT_INACTIVE_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);
         }
+        if (!bankingService.checkBankExist(cancelBooking.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(cancelBooking.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
         if (!subscriptionService.validateSubscription(bookingsV1.getHostelId())) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
@@ -620,7 +628,7 @@ public class BookingsService {
             creditDebitNoteService.cancelBooking(cancelBookingDto);
 
             TransactionDto transactionDto = new TransactionDto(cancelBooking.bankId(), cancelBooking.referenceNumber(), bookingsV1.getBookingAmount(), BankTransactionType.DEBIT.name(), BankSource.INVOICE.name(), bookingsV1.getHostelId(), Utils.dateToString(cancelDate).replace("/", "-"), "");
-            bankTransactionService.cancelBooking(transactionDto, invoicesV1.getInvoiceId(), transactionId);
+            bankTransactionService.cancelBooking(transactionDto, invoicesV1.getInvoiceId(), transactionId, oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId());
         }
 
         bedsService.cancelBooking(bookingsV1.getBedId(), user.getParentId(), bookingsV1.getBookingId());

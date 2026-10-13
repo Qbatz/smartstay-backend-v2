@@ -7,15 +7,7 @@ import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
-import com.smartstay.smartstay.ennum.ActivitySource;
-import com.smartstay.smartstay.ennum.ActivitySourceType;
-import com.smartstay.smartstay.ennum.BankAccountTypeV2;
-import com.smartstay.smartstay.ennum.BankPurpose;
-import com.smartstay.smartstay.ennum.BankSource;
-import com.smartstay.smartstay.ennum.BankTransactionType;
-import com.smartstay.smartstay.ennum.CashAccountType;
-import com.smartstay.smartstay.ennum.DateFilter;
-import com.smartstay.smartstay.ennum.PaymentMethod;
+import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.banking.AddBankV2;
 import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
 import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
@@ -204,6 +196,9 @@ public class BankingServiceV2 {
         bank.setPlatform(authentication.getSource());
 
         BankingV2 bankingV2 = bankingV2Repository.save(bank);
+        if (accountType == BankAccountTypeV2.BANK) {
+            bankingMethodService.addMethodToBankAccount(bankingV2, payload.openingBalance(), payload.accountNo(), payload.displayName(), payload.responsiblePerson(), hostelId);
+        }
 
         if (payload.openingBalance() != null && payload.openingBalance() > 0) {
             double openingBalance = payload.openingBalance();
@@ -839,7 +834,7 @@ public class BankingServiceV2 {
                     .toList();
 
             if (filterOtherThanBank != null) {
-                listDebitBanks.addAll(listBanks
+                listDebitBanks.addAll(filterOtherThanBank
                         .stream()
                         .map(i -> new DebitBanksV2Mapper().apply(i))
                         .toList());
@@ -995,6 +990,119 @@ public class BankingServiceV2 {
         return null;
     }
 
+    public BankingV2 getBankDetails(String bankId) {
+        return bankingV2Repository.findByBankId(bankId).orElse(null);
+    }
+
+    public double cancelBooking(String bankId, String paymentId, Double amount, String userId) {
+        BankingV2 bank = bankingV2Repository.findByBankId(bankId).orElse(null);
+        if (bank == null || bank.isDeleted()) {
+            return 0.0;
+        }
+        if (bank.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()) || bank.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+            double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            bank.setBalance(current - amount);
+            bank.setUpdatedAt(new Date());
+            bank.setUpdatedBy(userId);
+            BankingV2 v2 = bankingV2Repository.save(bank);
+
+            return v2.getBalance() == null ? 0.0 : v2.getBalance();
+        }
+        else {
+            bankingMethodService.updateBankInfo(bank, paymentId, amount);
+            double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            bank.setBalance(current - amount);
+            bank.setUpdatedAt(new Date());
+            bank.setUpdatedBy(userId);
+            BankingV2 v2 = bankingV2Repository.save(bank);
+            return v2.getBalance() == null ? 0.0 : v2.getBalance();
+        }
+    }
+
+
+    public List<DebitsBank> getAllBankForExpense(String hostelId) {
+        List<BankingV2> listBanks = bankingV2Repository.findAllByHostelIdWithBankingMethods(hostelId);
+        if (listBanks != null) {
+            List<DebitsBank> listDebitBanks = new ArrayList<>();
+            List<BankingV2> filterOutBankAccount = listBanks
+                    .stream()
+                    .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                    .toList();
+            List<BankingV2> filterOtherThanBank = listBanks
+                    .stream()
+                    .filter(i -> !i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                    .toList();
+
+            if (filterOtherThanBank != null) {
+                listDebitBanks.addAll(filterOtherThanBank
+                        .stream()
+                        .map(i -> new DebitBanksV2Mapper().apply(i))
+                        .toList());
+            }
+            if (filterOutBankAccount != null) {
+                filterOutBankAccount.forEach(item -> {
+                    if(item.getBankingMethods() != null) {
+                        listDebitBanks.addAll(item.getBankingMethods()
+                                .stream()
+                                .map(i2 -> new BankingMethodsMapperV2().apply(i2))
+                                .toList());
+                    }
+
+                });
+            }
+            return listDebitBanks;
+        }
+        return new ArrayList<>();
+    }
+
+    public double syncExpenseAccountBalance(String bankId, String paymentMethodId, Double amount, String userId) {
+        BankingV2 bank = bankingV2Repository.findByBankId(bankId).orElse(null);
+        if (bank == null || bank.isDeleted()) {
+            return 0.0;
+        }
+        if (bank.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()) || bank.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+            double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            bank.setBalance(current - amount);
+            bank.setUpdatedAt(new Date());
+            bank.setUpdatedBy(userId);
+            BankingV2 v2 = bankingV2Repository.save(bank);
+            return v2.getBalance() == null ? 0.0 : v2.getBalance();
+        }
+        else {
+            bankingMethodService.updateBankInfo(bank, paymentMethodId, amount);
+            double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            bank.setBalance(current - amount);
+            bank.setUpdatedAt(new Date());
+            bank.setUpdatedBy(userId);
+            BankingV2 v2 = bankingV2Repository.save(bank);
+            return v2.getBalance() == null ? 0.0 : v2.getBalance();
+        }
+    }
+
+    public double updateRetainerAmountToBank(Date paymentDate, Double amount, String bankId, String paymentMethodId) {
+        BankingV2 bank = bankingV2Repository.findByBankId(bankId).orElse(null);
+        if (bank == null || bank.isDeleted()) {
+            return 0.0;
+        }
+        if (bank.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()) || bank.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+            double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            bank.setBalance(current - amount);
+            bank.setUpdatedAt(Utils.convertToTimeStamp(paymentDate));
+            bank.setUpdatedBy(authentication.getName());
+            BankingV2 v2 = bankingV2Repository.save(bank);
+            return v2.getBalance() == null ? 0.0 : v2.getBalance();
+        }
+        else {
+            bankingMethodService.updateBankInfo(bank, paymentMethodId, amount);
+            double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            bank.setBalance(current - amount);
+            bank.setUpdatedAt(Utils.convertToTimeStamp(paymentDate));
+            bank.setUpdatedBy(authentication.getName());
+            BankingV2 v2 = bankingV2Repository.save(bank);
+            return v2.getBalance() == null ? 0.0 : v2.getBalance();
+        }
+    }
+
     private record TransferRequest(String hostelId, double amount, Date transactionDate, String description,
                                    String transactionNumber, String userId, Date now) {
     }
@@ -1018,6 +1126,30 @@ public class BankingServiceV2 {
             return;
         }
         applyBankDelta(bank, signedDelta, new Date(), userId);
+    }
+
+    public void syncAccountBalance(String bankId, String bankingMethod, double signedDelta, String userId) {
+
+        BankingV2 bank = bankingV2Repository.findByBankId(bankId).orElse(null);
+        if (bank == null || bank.isDeleted()) {
+            return;
+        }
+        if (bank.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()) || bank.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+            double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            bank.setBalance(current - signedDelta);
+            bank.setUpdatedAt(new Date());
+            bank.setUpdatedBy(userId);
+            bankingV2Repository.save(bank);
+        }
+        else {
+            bankingMethodService.updateBankInfo(bank, bankingMethod, signedDelta);
+            double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            bank.setBalance(current - signedDelta);
+            bank.setUpdatedAt(new Date());
+            bank.setUpdatedBy(userId);
+            bankingV2Repository.save(bank);
+        }
+
     }
 
     private void applyMethodDelta(BankingMethods method, double delta, Date now, String userId) {

@@ -36,6 +36,7 @@ public class BankingMethods {
 
     private String upiId;
     private Integer upiApp;
+    private String accountNumber;
     private String displayName;
     private String description;
     private String cardNumber;
