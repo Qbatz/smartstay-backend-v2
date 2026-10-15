@@ -850,7 +850,7 @@ public class BankingService {
         return true;
     }
 
-    public boolean updateBalanceForAssets(double amount, String transactionType, String bankId) {
+    public boolean updateBalanceForAssets(double amount, String transactionType, String bankId, String bankMethodId) {
         BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
         if (bankingV1 == null) {
             return false;

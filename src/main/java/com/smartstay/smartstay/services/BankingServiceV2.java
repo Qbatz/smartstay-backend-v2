@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.assets.AssetsBankingMapper;
+import com.smartstay.smartstay.Wrappers.assets.AssetsBankingMethodMapper;
 import com.smartstay.smartstay.Wrappers.bankings.*;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
@@ -16,6 +18,7 @@ import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
 import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.repositories.QrBankTypeRepository;
+import com.smartstay.smartstay.responses.assets.BankForAssets;
 import com.smartstay.smartstay.responses.banking.*;
 import com.smartstay.smartstay.responses.customer.CustomerData;
 import com.smartstay.smartstay.responses.invoices.BankInfoRecordPayments;
@@ -219,8 +222,7 @@ public class BankingServiceV2 {
 
         usersService.addUserLog(hostelId, bankingV2.getBankId(), ActivitySource.BANKING, ActivitySourceType.CREATE, users);
 
-        String responsiblePersonName = getUserName(bankingV2.getResponsiblePerson());
-        return new ResponseEntity<>(new BankingV2Mapper().apply(bankingV2, responsiblePersonName), HttpStatus.CREATED);
+        return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
     public ResponseEntity<?> getBanks(String hostelId) {
@@ -240,23 +242,20 @@ public class BankingServiceV2 {
 
         List<BankingV2> content = bankingV2Repository.findBanksByHostelId(hostelId);
 
+
         List<String> personIds = content.stream()
                 .map(BankingV2::getResponsiblePerson)
                 .filter(id -> id != null && !id.isEmpty())
                 .distinct()
-                .collect(Collectors.toList());
-        Map<String, String> personNameById = personIds.isEmpty()
-                ? Collections.emptyMap()
-                : usersService.findUsersByUserIds(personIds).stream()
-                        .collect(Collectors.toMap(Users::getUserId, this::fullName, (a, b) -> a));
+                .toList();
+        List<Users> listResponsibleUsers = usersService.findUsersByUserIds(personIds);
+        List<BankV2Response> listBanks = content
+                .stream()
+                .map(i -> new BankV2Mapper(listResponsibleUsers).apply(i))
+                .toList();
+        BankV2 bankV2 = new BankV2(hostelId, listBanks.size(), listBanks);
 
-        BankingV2Mapper mapper = new BankingV2Mapper();
-        List<BankV2Response> banks = content.stream()
-                .map(bank -> mapper.apply(bank, bank.getResponsiblePerson() != null
-                        ? personNameById.get(bank.getResponsiblePerson()) : null))
-                .collect(Collectors.toList());
-
-        return new ResponseEntity<>(banks, HttpStatus.OK);
+        return new ResponseEntity<>(bankV2, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getResponsiblePersons(String hostelId) {
@@ -812,6 +811,44 @@ public class BankingServiceV2 {
         return listBanks;
     }
 
+
+    public List<BankForAssets> getAllBankForAssets(String hostelId) {
+        List<BankingV2> listBanks = bankingV2Repository.findAllByHostelIdWithBankingMethods(hostelId);
+        if (listBanks == null) {
+            return new ArrayList<>();
+        }
+        List<BankForAssets> listBankForAssets = new ArrayList<>();
+        List<BankingV2> filterOutBankAccount = listBanks
+                .stream()
+                .filter(i -> i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                .toList();
+        List<BankingV2> filterOtherThanBank = listBanks
+                .stream()
+                .filter(i -> !i.getAccountType().equalsIgnoreCase(BankAccountTypeV2.BANK.name()))
+                .toList();
+
+        if (filterOtherThanBank != null) {
+            listBankForAssets.addAll(filterOtherThanBank
+                    .stream()
+                    .map(i -> new AssetsBankingMapper().apply(i))
+                    .toList());
+        }
+        if (filterOutBankAccount != null) {
+            filterOutBankAccount.forEach(item -> {
+                if(item.getBankingMethods() != null) {
+                    listBankForAssets.addAll(item.getBankingMethods()
+                            .stream()
+                            .map(i2 -> new AssetsBankingMethodMapper().apply(i2))
+                            .toList());
+                }
+
+            });
+        }
+
+        return listBankForAssets;
+    }
+
+
     public List<BankingV2> findAllByBankId(Set<String> bankIds) {
         List<BankingV2> listBanks = bankingV2Repository.findAllByBankIds(bankIds.stream().toList());
         if (listBanks == null) {
@@ -1152,6 +1189,28 @@ public class BankingServiceV2 {
 
     }
 
+    public void updateBalanceForAssets(Double price, String name, String bankId, String bankMethodId) {
+        BankingV2 bank = bankingV2Repository.findByBankId(bankId).orElse(null);
+        if (bank == null || bank.isDeleted()) {
+            return;
+        }
+        if (bank.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name()) || bank.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+            double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            bank.setBalance(current - price);
+            bank.setUpdatedAt(new Date());
+            bank.setUpdatedBy(authentication.getName());
+            bankingV2Repository.save(bank);
+        }
+        else {
+            bankingMethodService.updateBankInfo(bank, bankMethodId, price);
+            double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
+            bank.setBalance(current - price);
+            bank.setUpdatedAt(new Date());
+            bank.setUpdatedBy(authentication.getName());
+            bankingV2Repository.save(bank);
+        }
+    }
+
     private void applyMethodDelta(BankingMethods method, double delta, Date now, String userId) {
         double current = method.getBalance() != null ? method.getBalance() : 0.0;
         method.setBalance(current + delta);
@@ -1465,6 +1524,9 @@ public class BankingServiceV2 {
         if (user == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
         }
@@ -1472,6 +1534,18 @@ public class BankingServiceV2 {
         if (bankId != null && validBankOrNull(hostelId, bankId) == null) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
+
+
+        List<BankingV2> listBanks = bankingV2Repository.findBanksByHostelId(hostelId);
+        if (listBanks == null || listBanks.isEmpty()) {
+            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+        }
+
+        List<BankV2List> bankingListV2 = listBanks
+                .stream()
+                .map(i -> new BankingV2ListMapper().apply(i))
+                .toList();
+
 
         DateFilter dateFilter = DateFilter.ALL;
         if (isPresent(dateFilterParam)) {
@@ -1583,8 +1657,10 @@ public class BankingServiceV2 {
         List<PaymentMethodOptionResponse> bankList = bankId == null
                 ? buildBankList(hostelId) : Collections.emptyList();
         BankTransactionListResponse response = new BankTransactionListResponse(
-                txnPage.getTotalElements(), pageNumber, txnPage.getTotalPages(), pageSize,
-                buildTransactionFilterOptions(), bankList, items);
+                txnPage.getTotalElements(), pageNumber,
+                txnPage.getTotalPages(), pageSize,
+                hostelId,
+                buildTransactionFilterOptions(), bankList, items, bankingListV2);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

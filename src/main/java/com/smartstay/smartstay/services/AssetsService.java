@@ -3,12 +3,16 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.assets.AssetAssignmentResponse;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.payloads.asset.AssetRequest;
 import com.smartstay.smartstay.payloads.asset.AssignAsset;
 import com.smartstay.smartstay.payloads.asset.UpdateAsset;
 import com.smartstay.smartstay.repositories.*;
+import com.smartstay.smartstay.responses.assets.BankForAssets;
+import com.smartstay.smartstay.responses.assets.InitializeAssets;
+import com.smartstay.smartstay.responses.assets.Vendors;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -57,6 +61,10 @@ public class AssetsService {
     private BankingServiceV2 bankingServiceV2;
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private HostelService hostelService;
+    @Autowired
+    private VendorService vendorService;
 
     public ResponseEntity<?> getAllAssets(String hostelId) {
         if (!authentication.isAuthenticated()) {
@@ -92,6 +100,15 @@ public class AssetsService {
         if (!subscriptionService.validateSubscription(hostelId)) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
+        if (!bankingServiceV2.checkBankExist(request.bankingId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
+        }
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(request.bankingId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
+        }
+
+
         AssetsV1 asset = new AssetsV1();
         if (request.vendorId() != null && request.vendorId() != 0) {
             VendorV1 vendorV1 = vendorRepository.findByVendorIdAndHostelId(request.vendorId(), hostelId);
@@ -99,19 +116,6 @@ public class AssetsService {
                 return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.FORBIDDEN);
             }
             asset.setVendorId(request.vendorId());
-        }
-
-//        if (!bankingServiceV2.checkBankExist(request.bankingId())) {
-//            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
-//        }
-
-//        boolean bankingV1 = bankingRepository.existsByHostelIdAndBankId(hostelId,request.bankingId());
-//        if (!bankingV1) {
-//            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
-//        }
-
-        if (bankingService.checkBankExist(request.bankingId())) {
-            return new ResponseEntity<>(Utils.INVALID_BANKING, HttpStatus.FORBIDDEN);
         }
 
 
@@ -139,7 +143,8 @@ public class AssetsService {
             asset.setPurchaseDate(purchaseDate);
         }
         asset.setPrice(request.price());
-        asset.setBankId(request.bankingId());
+        asset.setBankId(oldBankToNewBankInfo.bankId());
+        asset.setBankingMethodId(oldBankToNewBankInfo.paymentMethodId());
         asset.setCreatedBy(user.getUserId());
         asset.setCreatedAt(new Date());
         asset.setIsActive(true);
@@ -148,7 +153,7 @@ public class AssetsService {
         asset.setParentId(user.getParentId());
         AssetsV1 av1 = assetsRepository.save(asset);
 
-        bankTransactionService.addAssetsTransaction(av1.getAssetId(), request.price(), purchaseDate, request.bankingId(), hostelId, request.serialNumber());
+        bankTransactionService.addAssetsTransaction(av1.getAssetId(), request.price(), purchaseDate, oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId(), hostelId, request.serialNumber());
         usersService.addUserLog(hostelId, String.valueOf(av1.getAssetId()), ActivitySource.ASSETS, ActivitySourceType.CREATE, user);
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
@@ -390,5 +395,33 @@ public class AssetsService {
                 .sum();
 
         return Utils.roundOfDouble(assetValue);
+    }
+
+    public ResponseEntity<?> initializeAssets(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        List<Vendors> listVendors = vendorService.getAllVendorsForAssets(hostelId);
+        List<BankForAssets> listBankForAssets = bankingServiceV2.getAllBankForAssets(hostelId);
+        InitializeAssets initializeAssets = new InitializeAssets(listVendors, listBankForAssets);
+        return new ResponseEntity<>(initializeAssets, HttpStatus.OK);
     }
 }

@@ -7,8 +7,10 @@ public record BankTransactionListResponse(
         int currentPage,
         int totalPages,
         int pageSize,
+        String hostelId,
         TransactionFilterOptions filterOptions,
         List<PaymentMethodOptionResponse> bankList,
-        List<BankTransactionResponse> transactions
+        List<BankTransactionResponse> transactions,
+        List<BankV2List> bankV2Lists
 ) {
 }

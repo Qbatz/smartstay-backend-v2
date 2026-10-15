@@ -691,8 +691,7 @@ public class CustomersService {
 
         FilterOptions filterOptions = getTenantFilterOptions(hostelId);
 
-        CustomerWebResponse response = new CustomerWebResponse(totalCustomers, currentPage, totalPages, size, summary, filterOptions, tableColumns, listColumns, listTenants,
-                bankingService.getAllBankForReturn(hostelId));
+        CustomerWebResponse response = new CustomerWebResponse(totalCustomers, currentPage, totalPages, size, summary, filterOptions, tableColumns, listColumns, listTenants);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

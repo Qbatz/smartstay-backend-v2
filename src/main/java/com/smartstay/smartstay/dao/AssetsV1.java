@@ -25,6 +25,7 @@ public class AssetsV1 {
     private Date purchaseDate;
     private Double price;
     private String bankId;
+    private String bankingMethodId;
 
     private Date createdAt;
     private String createdBy;

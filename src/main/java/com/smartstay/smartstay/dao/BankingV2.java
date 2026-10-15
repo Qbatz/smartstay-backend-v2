@@ -41,7 +41,9 @@ public class BankingV2 {
     private String updatedBy;
     private Date createdAt;
     private Date updatedAt;
+    private String lastTransactionId;
     private Date lastTransaction;
+    private Double lastTransactionAmount;
     private String platform;
     //Cash account type enum
     private String cashAccountType;

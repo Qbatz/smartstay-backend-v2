@@ -1009,18 +1009,18 @@ public class SmartstayApplication {
 //        };
 //    }
 
-    @Bean
-    CommandLineRunner addCountryCode(CustomersRepository customersRepository) {
-        return args -> {
-            List<Customers> listCustomers = customersRepository
-                    .findAll()
-                    .stream()
-                    .map(i -> {
-                        i.setCountryCode(91);
-                        return i;
-                    })
-                    .toList();
-            customersRepository.saveAll(listCustomers);
-        };
-    }
+//    @Bean
+//    CommandLineRunner addCountryCode(CustomersRepository customersRepository) {
+//        return args -> {
+//            List<Customers> listCustomers = customersRepository
+//                    .findAll()
+//                    .stream()
+//                    .map(i -> {
+//                        i.setCountryCode(91);
+//                        return i;
+//                    })
+//                    .toList();
+//            customersRepository.saveAll(listCustomers);
+//        };
+//    }
 }

@@ -266,18 +266,18 @@ public class BankTransactionService {
         return bankRepository.countByHostelIdAndDateRange(hostelId, startDate, endDate);
     }
 
-    public boolean addAssetsTransaction(Long assetId, Double price, Date transactionDate, String bankId, String hostelId, String referenceNumber) {
+    public boolean addAssetsTransaction(Long assetId, Double price, Date transactionDate, String bankId, String bankMethodId, String hostelId, String referenceNumber) {
         if (!authentication.isAuthenticated()){
             return false;
         }
 
-        if (!bankingService.updateBalanceForAssets(price, BankTransactionType.DEBIT.name(), bankId)) {
-            return false;
-        }
+        bankingServiceV2.updateBalanceForAssets(price, BankTransactionType.DEBIT.name(), bankId, bankMethodId);
 
         BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
         transactionsV1.setTransactionDate(Utils.convertToTimeStamp(transactionDate));
         transactionsV1.setBankId(bankId);
+        transactionsV1.setPaymentMethodId(bankMethodId);
+        transactionsV1.setPlatform(authentication.getSource());
         transactionsV1.setReferenceNumber(referenceNumber);
         transactionsV1.setAmount(price);
         transactionsV1.setType(BankTransactionType.DEBIT.name());

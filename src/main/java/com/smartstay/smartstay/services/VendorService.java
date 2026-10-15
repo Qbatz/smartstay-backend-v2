@@ -31,6 +31,7 @@ import com.smartstay.smartstay.repositories.ExpensesRepository;
 import com.smartstay.smartstay.repositories.RolesRepository;
 import com.smartstay.smartstay.repositories.VendorCategoriesRepository;
 import com.smartstay.smartstay.repositories.VendorRepository;
+import com.smartstay.smartstay.responses.assets.Vendors;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.expenses.ExpenseFilterOptions;
 import com.smartstay.smartstay.responses.expenses.ExpenseItemResponse;
@@ -1266,5 +1267,25 @@ public class VendorService {
             return new ArrayList<>();
         }
         return listVendors;
+    }
+
+    public List<Vendors> getAllVendorsForAssets(String hostelId) {
+        List<VendorV1> listVendors = vendorRepository.findAllByHostelId(hostelId);
+        if (listVendors == null) {
+            return new ArrayList<>();
+        }
+        List<Vendors> listVendorsResponse = listVendors
+                .stream()
+                .map(i -> {
+                    return new Vendors(i.getVendorId(),
+                            i.getVendorCode(),
+                            i.getBusinessName(),
+                            Utils.fullName(i.getFirstName(), i.getLastName()),
+                            i.getFirstName(),
+                            i.getLastName(),
+                            Utils.getInitials(i.getFirstName(), i.getLastName()));
+                })
+                .toList();
+        return listVendorsResponse;
     }
 }
