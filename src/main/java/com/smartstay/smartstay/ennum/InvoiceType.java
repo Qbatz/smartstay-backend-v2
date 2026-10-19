@@ -9,5 +9,6 @@ public enum InvoiceType {
     SETTLEMENT,
     REASSIGN_RENT,
     AMOUNT_HOLDING,
-    EB_HOLDING
+    EB_HOLDING,
+    EB
 }

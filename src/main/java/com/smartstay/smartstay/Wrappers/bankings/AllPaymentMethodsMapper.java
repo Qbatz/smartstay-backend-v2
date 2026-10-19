@@ -24,23 +24,23 @@ public class AllPaymentMethodsMapper {
 
     private PaymentMethodOptionResponse account(BankingV2 bank, String responsiblePerson, String lastTransactionDate) {
         return new PaymentMethodOptionResponse(
-                bank.getHostelId(),
                 bank.getBankId(),
                 bank.getAccountHolderName(),
                 bank.getAccountNumber(),
                 bank.getAccountType(),
                 bank.getBalance(),
-                bank.getBankAccountType(),
                 bank.getBankName(),
                 bank.getBranchName(),
                 bank.getDisplayName(),
                 bank.getIfscCode(),
-                bank.isDefaultAccount(),
-                bank.getCashAccountType(),
-                bank.getResponsiblePerson(),
                 responsiblePerson,
-                null, null, null, null, null, null, null, null, null,
-                lastTransactionDate,
+                bank.getResponsiblePerson(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 null);
     }
 
@@ -51,32 +51,23 @@ public class AllPaymentMethodsMapper {
 
     public PaymentMethodOptionResponse bankMethod(BankingV2 bank, BankingMethods method,
             String cardNetwork, String upiApp, String qrCardImage, String responsiblePerson, String dueDate) {
-        return new PaymentMethodOptionResponse(
-                bank.getHostelId(),
-                bank.getBankId(),
+        return new PaymentMethodOptionResponse(bank.getBankId(),
                 bank.getAccountHolderName(),
                 bank.getAccountNumber(),
                 bank.getAccountType(),
                 method.getBalance(),
-                bank.getBankAccountType(),
                 bank.getBankName(),
                 bank.getBranchName(),
                 method.getDisplayName(),
                 bank.getIfscCode(),
-                bank.isDefaultAccount(),
-                bank.getCashAccountType(),
                 bank.getResponsiblePerson(),
                 responsiblePerson,
                 method.getPaymentMethodId(),
-                method.getPaymentMethod() != null ? method.getPaymentMethod() : null,
                 method.getCardNumber(),
                 method.getUpiId(),
                 method.getCardHolderName(),
                 cardNetwork,
                 upiApp,
-                qrCardImage,
-                method.getQrImage(),
-                null,
-                dueDate);
+                null);
     }
 }

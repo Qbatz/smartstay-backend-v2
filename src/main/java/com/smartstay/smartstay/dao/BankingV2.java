@@ -48,6 +48,8 @@ public class BankingV2 {
     //Cash account type enum
     private String cashAccountType;
     private String responsiblePerson;
+    private String cardNumber;
+    private String linkedBankId;
 
     @OneToMany(mappedBy = "bank", orphanRemoval = true, cascade = CascadeType.ALL)
     private List<BankingMethods> bankingMethods;

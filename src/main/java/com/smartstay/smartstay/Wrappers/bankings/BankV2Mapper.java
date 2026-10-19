@@ -41,6 +41,7 @@ public class BankV2Mapper implements Function<BankingV2, BankV2Response> {
                 bankingV2.getBankAccountType(),
                 bankingV2.getCashAccountType(),
                 responsiblePerson,
+                bankingV2.getBranchName(),
                 bankingV2.getBalance(),
                 bankingV2.isActive(),
                 bankingV2.isDefaultAccount());

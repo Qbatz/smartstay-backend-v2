@@ -766,6 +766,7 @@ public class InvoiceV1Service {
             invoiceTypes.add(InvoiceType.ADVANCE.name());
             invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
             invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
+            invoiceTypes.add(InvoiceType.EB.name());
             invoiceTypes.add(InvoiceType.OTHER.name());
         }
 
@@ -5587,6 +5588,7 @@ public class InvoiceV1Service {
         invoicesTypes.add(InvoiceType.RENT.name());
         invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
         invoicesTypes.add(InvoiceType.OTHER.name());
+        invoicesTypes.add(InvoiceType.EB.name());
         List<InvoicesV1> listOldInvoices = invoicesV1Repository.findOldMonthPendingInvoices(customerId, billingDates.currentBillStartDate(), invoicesTypes);
         List<InvoicesV1> listCurrentMonthOtherInvoices = invoicesV1Repository.findCurrentMonthOtherInvoices(customerId, billingDates.currentBillStartDate());
         if (listOldInvoices != null) {
@@ -5633,6 +5635,7 @@ public class InvoiceV1Service {
         invoicesTypes.add(InvoiceType.RENT.name());
         invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
         invoicesTypes.add(InvoiceType.OTHER.name());
+        invoicesTypes.add(InvoiceType.EB.name());
         List<InvoicesV1> listOldInvoices = invoicesV1Repository.findOldMonthPendingInvoices(customerId, billingDates.currentBillStartDate(), invoicesTypes);
         List<InvoicesV1> listCurrentMonthOtherInvoices = invoicesV1Repository.findCurrentMonthOtherInvoices(customerId, billingDates.currentBillStartDate());
         if (listOldInvoices != null) {
@@ -7387,6 +7390,11 @@ public class InvoiceV1Service {
                 .filter(i -> i.invoiceItem().equalsIgnoreCase(InvoiceType.ADDITIONAL_ADVANCE.name()))
                 .findFirst()
                 .orElse(null);
+        ItemResponse ebInvoice = manualInvoiceBody.invoiceItems()
+                .stream()
+                .filter(i -> i.invoiceItem().equalsIgnoreCase(InvoiceType.EB.name()))
+                .findFirst()
+                .orElse(null);
 
         if (rentalInvoice != null) {
             if (billingDates != null) {
@@ -7429,13 +7437,16 @@ public class InvoiceV1Service {
             paymentStatus = PaymentStatus.PAID.name();
         } else if (advanceInvoice != null) {
             invoiceType = InvoiceType.ADDITIONAL_ADVANCE.name();
-        } else {
+        } else if (ebInvoice != null) {
+            invoiceType = InvoiceType.EB.name();
+        }
+        else {
             invoiceType = InvoiceType.OTHER.name();
         }
 
         if (manualInvoiceBody.invoiceNumber() == null || manualInvoiceBody.invoiceNumber().isEmpty()) {
             String invType = invoiceType;
-            if (invoiceType.equalsIgnoreCase(InvoiceType.OTHER.name())) {
+            if (invoiceType.equalsIgnoreCase(InvoiceType.OTHER.name()) || invoiceType.equalsIgnoreCase(InvoiceType.EB.name())) {
                 invType = InvoiceType.RENT.name();
             }
             invoiceNumber = generateInvoiceNumber(hostelId, invType);
@@ -7539,7 +7550,11 @@ public class InvoiceV1Service {
                         invItm.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.ADVANCE.name());
                     } else if (i.invoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.MAINTENANCE.name())) {
                         invItm.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.MAINTENANCE.name());
-                    } else {
+                    }
+                    else if (i.invoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
+                        invItm.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
+                    }
+                    else {
                         invItm.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
                         invItm.setOtherItem(i.invoiceItem());
                     }
@@ -7576,6 +7591,7 @@ public class InvoiceV1Service {
         invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
         invoiceTypes.add(InvoiceType.BOOKING.name());
         invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
+        invoiceTypes.add(InvoiceType.EB.name());
         invoiceTypes.add(InvoiceType.OTHER.name());
 
         List<InvoicesV1> listInvoices = invoicesV1Repository.findByHostelIdAndInvoiceTypeInAndDate(hostelId, invoiceTypes, startDate, endDate);

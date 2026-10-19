@@ -35,15 +35,15 @@ public class BankingMethods {
     private String paymentMethod;
 
     private String upiId;
-    private Integer upiApp;
+    private String upiApp;
     private String accountNumber;
     private String displayName;
     private String description;
     private String cardNumber;
-    private Integer cardNetwork;
+    private String cardNetwork;
     private String cardHolderName;
     private Double creditLimit;
-    private Date billingCycle;
+    private Integer billingCycle;
     private String linkedUpiId;
     private String qrImage;
     private String hostelId;
@@ -53,4 +53,5 @@ public class BankingMethods {
     private Date updatedAt;
     private String createdBy;
     private String updatedBy;
+    private Boolean isDeleted;
 }

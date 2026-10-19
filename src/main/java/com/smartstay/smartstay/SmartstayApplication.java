@@ -1,5 +1,6 @@
 package com.smartstay.smartstay;
 
+import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.invoices.CancelledInvoice;
@@ -1023,4 +1024,5 @@ public class SmartstayApplication {
 //            customersRepository.saveAll(listCustomers);
 //        };
 //    }
+
 }

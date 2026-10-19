@@ -1437,6 +1437,9 @@ public class TransactionService {
             else if (invoiceType.equalsIgnoreCase(InvoiceType.EB_HOLDING.name())) {
                 invoiceTypeArr.add(InvoiceType.EB_HOLDING.name());
             }
+            else if (invoiceType.equalsIgnoreCase(InvoiceType.EB.name())) {
+                invoiceTypeArr.add(InvoiceType.EB.name());
+            }
             else if (invoiceType.equalsIgnoreCase(InvoiceType.OTHER.name())) {
                 invoiceTypeArr.add(InvoiceType.OTHER.name());
             }
@@ -1563,9 +1566,9 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.NO_TRANSACTIONS_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        if (!authentication.getSource().equalsIgnoreCase("web")) {
-            listReceipts = listAllTransactions;
-        }
+//        if (!authentication.getSource().equalsIgnoreCase("web")) {
+//            listReceipts = listAllTransactions;
+//        }
         if (listAllTransactions != null) {
             totalAmount = listAllTransactions
                     .stream()

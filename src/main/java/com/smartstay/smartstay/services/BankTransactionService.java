@@ -2,10 +2,7 @@ package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.transactions.TransactionsMapper;
 import com.smartstay.smartstay.config.Authentication;
-import com.smartstay.smartstay.dao.BankTransactionsV1;
-import com.smartstay.smartstay.dao.BankingV1;
-import com.smartstay.smartstay.dao.InvoicesV1;
-import com.smartstay.smartstay.dao.TransactionV1;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.ennum.BankSource;
 import com.smartstay.smartstay.ennum.BankTransactionType;
@@ -414,5 +411,81 @@ public class BankTransactionService {
             return randomId;
         }
         return generateRandomIdForBankTransfer();
+    }
+
+    public String recordDebitTransactionForCCPayment(String hostelId, BankingV2 bankingV2, String paymentMethodId, Double amount, String description, String transactionReference, Date transactionDate) {
+        double accoutBalance = 0.0;
+        if (bankingV2.getBalance() != null) {
+            accoutBalance = bankingV2.getBalance() - amount;
+        }
+        else {
+            accoutBalance = amount * -1;
+        }
+
+       String generateReferenceId = generateRandomIdForBankTransfer();
+       BankTransactionsV1 bankTransactionsV1 = new BankTransactionsV1();
+       bankTransactionsV1.setPlatform(authentication.getSource());
+       bankTransactionsV1.setBankId(bankingV2.getBankId());
+       bankTransactionsV1.setReferenceNumber(generateReferenceId);
+       bankTransactionsV1.setAmount(amount);
+       bankTransactionsV1.setAccountBalance(accoutBalance);
+       bankTransactionsV1.setDescription(description);
+       bankTransactionsV1.setType(BankTransactionType.DEBIT.name());
+       bankTransactionsV1.setSource(BankSource.CREDIT_CARD_PAYMENT.name());
+       bankTransactionsV1.setPaymentMethodId(paymentMethodId);
+       bankTransactionsV1.setHostelId(hostelId);
+       bankTransactionsV1.setTransactionDate(Utils.convertToTimeStamp(transactionDate));
+       bankTransactionsV1.setIsDeleted(false);
+       bankTransactionsV1.setCreatedAt(new Date());
+       bankTransactionsV1.setCreatedBy(authentication.getName());
+       bankTransactionsV1.setUpdatedBy(authentication.getName());
+       bankTransactionsV1.setUpdatedAt(new Date());
+       bankTransactionsV1.setIsMigrated(true);
+       bankTransactionsV1.setTransactionNumber(transactionReference);
+
+
+       BankTransactionsV1 transactionsV1 = bankRepository.save(bankTransactionsV1);
+       if (transactionsV1 == null) {
+           return null;
+       }
+       return generateReferenceId;
+    }
+
+    public boolean recortCreditTransactionForCCPaymeent(String hostelId, BankingV2 bankingV2, double amount, String generateReferenceId,  String description, String transactionReference, Date transactionDate) {
+        double accoutBalance = 0.0;
+        String paymentMethodId = null;
+        if (bankingV2.getBalance() != null) {
+            accoutBalance = bankingV2.getBalance() - amount;
+        }
+        else {
+            accoutBalance = amount * -1;
+        }
+
+        BankTransactionsV1 bankTransactionsV1 = new BankTransactionsV1();
+        bankTransactionsV1.setPlatform(authentication.getSource());
+        bankTransactionsV1.setBankId(bankingV2.getBankId());
+        bankTransactionsV1.setReferenceNumber(generateReferenceId);
+        bankTransactionsV1.setAmount(amount);
+        bankTransactionsV1.setAccountBalance(accoutBalance);
+        bankTransactionsV1.setDescription(description);
+        bankTransactionsV1.setType(BankTransactionType.CREDIT.name());
+        bankTransactionsV1.setSource(BankSource.CREDIT_CARD_PAYMENT.name());
+        bankTransactionsV1.setPaymentMethodId(paymentMethodId);
+        bankTransactionsV1.setHostelId(hostelId);
+        bankTransactionsV1.setTransactionDate(Utils.convertToTimeStamp(transactionDate));
+        bankTransactionsV1.setIsDeleted(false);
+        bankTransactionsV1.setCreatedAt(new Date());
+        bankTransactionsV1.setCreatedBy(authentication.getName());
+        bankTransactionsV1.setUpdatedBy(authentication.getName());
+        bankTransactionsV1.setUpdatedAt(new Date());
+        bankTransactionsV1.setIsMigrated(true);
+        bankTransactionsV1.setTransactionNumber(transactionReference);
+
+
+        BankTransactionsV1 transactionsV1 = bankRepository.save(bankTransactionsV1);
+        if (transactionsV1 == null) {
+            return false;
+        }
+        return true;
     }
 }

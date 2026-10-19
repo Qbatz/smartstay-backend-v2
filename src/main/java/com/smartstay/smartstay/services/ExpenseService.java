@@ -1276,12 +1276,12 @@ public class ExpenseService {
         bankingService.getDebitBanks(hostelId).forEach(b -> paymentModes.putIfAbsent(b.getBankId(),
                 new ExpenseFilterOptions.PaymentModeItems(b.getBankId(), b.getBankId(), b.getAccountType(),
                         firstNonBlank(b.getAccountHolderName(), b.getBankName()))));
-        bankingServiceV2.buildAllPaymentMethods(hostelId).forEach(p -> {
-            String value = p.paymentMethodId() != null ? p.paymentMethodId() : p.bankId();
-            paymentModes.putIfAbsent(value, new ExpenseFilterOptions.PaymentModeItems(value, p.bankId(),
-                    p.paymentMethodId() != null ? p.paymentMethod() : p.accountType(),
-                    firstNonBlank(p.accountHolderName(), p.displayName(), p.bankName())));
-        });
+//        bankingServiceV2.buildAllPaymentMethods(hostelId).forEach(p -> {
+//            String value = p.paymentMethodId() != null ? p.paymentMethodId() : p.bankId();
+//            paymentModes.putIfAbsent(value, new ExpenseFilterOptions.PaymentModeItems(value, p.bankId(),
+//                    p.paymentMethodId() != null ? p.paymentMethod() : p.accountType(),
+//                    firstNonBlank(p.accountHolderName(), p.displayName(), p.bankName())));
+//        });
         List<ExpenseFilterOptions.PaymentModeItems> paymentModeItems = new ArrayList<>(paymentModes.values());
 
         List<ExpenseFilterOptions.FilterItems> createdByItems = usersService.findAllUsersByHostelId(hostelId).stream()

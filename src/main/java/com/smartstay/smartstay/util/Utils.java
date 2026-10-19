@@ -146,6 +146,7 @@ public class Utils {
     public static final String ACCOUNT_NO_ALREAY_EXISTS = "Account number already exists";
     public static final String V2_ACCOUNT_TYPE_INVALID = "Account type should be BANK or CASH";
     public static final String V2_BANK_ACCOUNT_TYPE_INVALID = "Bank account type should be Savings or Current";
+    public static final String V2_BANK_INVALID_PAYMENT_METHOD = "Invalid payment method";
     public static final String V2_BANK_ACCOUNT_NUMBER_REQUIRED = "Account number is required";
     public static final String V2_BANK_NAME_REQUIRED = "Bank name is required";
     public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name and display name are required for a BANK account";

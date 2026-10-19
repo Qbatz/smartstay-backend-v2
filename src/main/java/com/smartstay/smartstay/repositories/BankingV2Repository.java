@@ -61,4 +61,11 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
     List<BankingV2> findAllByBankIds(
             @Param("bankIds") List<String> bankIds
     );
+
+    @Query("""
+            SELECT b FROM bankingv2 b LEFT JOIN FETCH b.bankingMethods WHERE b.accountType='CARD' 
+            AND b.bankAccountType='CREDIT_CARD' 
+            AND b.hostelId=:hostelId AND b.isDeleted=false
+            """)
+    List<BankingV2> findAllCreditCardByHostelId(String hostelId);
 }

@@ -10,6 +10,7 @@ public record BankV2Response(
         String bankAccountType,
         String cashAccountType,
         String responsiblePerson,
+        String branchName,
         Double balance,
         boolean isActive,
         boolean isDefaultAccount
