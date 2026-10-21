@@ -180,4 +180,10 @@ public class BankingControllerV2 {
             @RequestParam(value = "toDate", required = false) String toDate) {
         return bankingServiceV2.getAllTransactions(hostelId, page, size, dateFilter, source, fromDate, toDate);
     }
+
+    @DeleteMapping("/{hostelId}/{bankId}")
+    public ResponseEntity<?> deleteBanking(@PathVariable("hostelId") String hostelId,
+                                           @PathVariable("bankId") String bankId) {
+        return bankingServiceV2.deleteBank(hostelId, bankId);
+    }
 }

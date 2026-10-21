@@ -1,25 +1,20 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.expenses.VendorExpenseSummaryMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.Wrappers.expenses.ExpenseListMapper;
 import com.smartstay.smartstay.Wrappers.vendor.VendorLookupMapper;
 import com.smartstay.smartstay.Wrappers.vendor.VendorTableMapper;
-import com.smartstay.smartstay.dao.ColumnFilters;
-import com.smartstay.smartstay.dao.ExpenseItem;
-import com.smartstay.smartstay.dao.ExpensePayment;
-import com.smartstay.smartstay.dao.RolesV1;
-import com.smartstay.smartstay.dao.Users;
-import com.smartstay.smartstay.dao.VendorCategories;
-import com.smartstay.smartstay.dao.VendorV1;
+import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.expenses.ExpenseList;
 import com.smartstay.smartstay.dto.vendor.VendorFilters;
 import com.smartstay.smartstay.dto.vendor.VendorMonthSummaryProjection;
 import com.smartstay.smartstay.dto.vendor.VendorPurchaseSummary;
-import com.smartstay.smartstay.ennum.ExpensePaymentStatus;
-import com.smartstay.smartstay.ennum.FilterOptionsModule;
-import com.smartstay.smartstay.ennum.ModuleId;
-import com.smartstay.smartstay.ennum.VendorPaymentStatus;
+import com.smartstay.smartstay.ennum.*;
+import com.smartstay.smartstay.payloads.expense.SettleVendorExpense;
+import com.smartstay.smartstay.payloads.expense.SettleVendorPayment;
 import com.smartstay.smartstay.payloads.vendor.AddVendor;
 import com.smartstay.smartstay.payloads.vendor.AddVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendorCategory;
@@ -36,24 +31,7 @@ import com.smartstay.smartstay.responses.banking.DebitsBank;
 import com.smartstay.smartstay.responses.expenses.ExpenseFilterOptions;
 import com.smartstay.smartstay.responses.expenses.ExpenseItemResponse;
 import com.smartstay.smartstay.responses.expenses.ExpensePaymentResponse;
-import com.smartstay.smartstay.responses.vendor.VendorCategoryResponse;
-import com.smartstay.smartstay.responses.vendor.VendorDetailsFilterOptions;
-import com.smartstay.smartstay.responses.vendor.VendorDetailsResponse;
-import com.smartstay.smartstay.responses.vendor.VendorExpenseFilterOptions;
-import com.smartstay.smartstay.responses.vendor.VendorExpensePaymentResponse;
-import com.smartstay.smartstay.responses.vendor.VendorExpensePaymentsResponse;
-import com.smartstay.smartstay.responses.vendor.VendorExpensesResponse;
-import com.smartstay.smartstay.responses.vendor.VendorFilterOptions;
-import com.smartstay.smartstay.responses.vendor.VendorFinancialSummary;
-import com.smartstay.smartstay.responses.vendor.VendorListResponse;
-import com.smartstay.smartstay.responses.vendor.VendorMonthSummary;
-import com.smartstay.smartstay.responses.vendor.VendorMobileListResponse;
-import com.smartstay.smartstay.responses.vendor.VendorLookupResponse;
-import com.smartstay.smartstay.responses.vendor.VendorLookupWithBanksResponse;
-import com.smartstay.smartstay.responses.vendor.VendorMobileResponse;
-import com.smartstay.smartstay.responses.vendor.VendorValidationError;
-import com.smartstay.smartstay.responses.vendor.VendorResponse;
-import com.smartstay.smartstay.responses.vendor.VendorSummary;
+import com.smartstay.smartstay.responses.vendor.*;
 import com.smartstay.smartstay.util.FilterKeywords;
 import com.smartstay.smartstay.util.AddressUtils;
 import com.smartstay.smartstay.util.NameUtils;
@@ -65,22 +43,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -121,6 +90,12 @@ public class VendorService {
 
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private UserHostelService userHostelService;
+    @Autowired
+    private BankingServiceV2 bankingServiceV2;
+    @Autowired
+    private VendorFinancialService vendorFinancialService;
 
     private String normalizeMobile(String countryCode, String mobile) {
         if (mobile == null) {
@@ -1287,5 +1262,315 @@ public class VendorService {
                 })
                 .toList();
         return listVendorsResponse;
+    }
+
+    public ResponseEntity<?> initializeVendorSettlement(String hostelId, int vendorId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!Utils.checkNullOrEmpty(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        VendorV1 vendor = vendorRepository.findByVendorId(vendorId);
+        if (vendor == null || !hostelId.equalsIgnoreCase(vendor.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.BAD_REQUEST);
+        }
+
+        List<DebitsBank> listBanks = bankingServiceV2.getAllBanksForReturn(hostelId);
+        // Only outstanding expenses (not fully settled) are eligible for settlement; filtered at
+        // the query level. Map entities -> summary via a dedicated mapper (no JPQL projection).
+        VendorExpenseSummaryMapper expenseSummaryMapper = new VendorExpenseSummaryMapper();
+        List<VendorExpenseSummary> expenses = expensesRepository
+                .findOutstandingExpensesByVendorId(String.valueOf(vendorId), ExpensePaymentStatus.Full)
+                .stream()
+                .map(expenseSummaryMapper)
+                .toList();
+
+        double totalDueAmount = expenses.stream()
+                .map(VendorExpenseSummary::totalBalance)
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
+                .sum();
+
+        VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses,
+                Utils.roundOffWithTwoDigit(totalDueAmount));
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public List<VendorInitializeResponse> findVendorsByHostelId(String hostelId) {
+        List<VendorInitializeResponse> listVendors = vendorRepository
+                .findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(hostelId).stream()
+                .map(v -> new VendorInitializeResponse(
+                        v.getVendorId(),
+                        v.getBusinessName(),
+                        NameUtils.getFullName(v.getFirstName(), v.getLastName()),
+                        v.getPaymentStatus() != null ? v.getPaymentStatus().name() : null,
+                        nullSafe(v.getTotalExpense()),
+                        nullSafe(v.getTotalPaid()),
+                        nullSafe(v.getBalance())))
+                .toList();
+
+        if (listVendors == null) {
+            return new ArrayList<>();
+        }
+        return listVendors;
+    }
+
+    public VendorV1 findVendorByHostelIdAndVendorId(String hostelId, Integer vendorId) {
+        return vendorRepository.findByVendorIdAndHostelId(vendorId, hostelId);
+    }
+
+    public List<VendorV1> findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(String hostelId) {
+        return vendorRepository.findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(hostelId);
+    }
+    public Map<String, String> resolveVendorNames(List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections) {
+        List<Integer> vendorIds = projections.stream()
+                .map(com.smartstay.smartstay.dto.expenses.ExpenseList::getVendorId)
+                .map(Integer::parseInt)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<String, String> vendorNamesById = new HashMap<>();
+        if (!vendorIds.isEmpty()) {
+            vendorRepository.findByVendorIdIn(vendorIds).forEach(v ->
+                    vendorNamesById.put(String.valueOf(v.getVendorId()), NameUtils.getFullName(v.getFirstName(), v.getLastName())));
+        }
+        return vendorNamesById;
+    }
+
+    public ResponseEntity<?> settleVendorExpenses(String hostelId, Integer vendorId, MultipartFile[] images, SettleVendorPayment payload) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        int vId = 0;
+        try {
+            vId = vendorId;
+        }
+        catch (Exception e) {
+            vId = 0;
+        }
+
+        if (vId == 0) {
+            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.BAD_REQUEST);
+        }
+
+        Integer vendorKey = vId;
+        VendorV1 vendor = vendorKey != null ? vendorRepository.findByVendorIdAndHostelId(vendorKey, hostelId) : null;
+        if (vendor == null) {
+            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.BAD_REQUEST);
+        }
+        if (!subscriptionService.validateSubscription(vendor.getHostelId())) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+        Integer vendorIdStr =vendorKey;
+
+        // Payment-method based validation (transaction id is optional for vendor settlement).
+//        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), false);
+//        if (methodError != null) {
+//            return new ResponseEntity<>(methodError, HttpStatus.BAD_REQUEST);
+//        }
+
+        // Reject blank / duplicate expense ids.
+        List<SettleVendorExpense> requestedExpenses = payload.expenses();
+        List<String> requestedIds = requestedExpenses.stream().map(SettleVendorExpense::expenseId).toList();
+        if (requestedIds.stream().anyMatch(id -> id == null || id.isBlank())) {
+            return new ResponseEntity<>(Utils.INVALID_EXPENSE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (requestedIds.stream().distinct().count() != requestedIds.size()) {
+            return new ResponseEntity<>(Utils.DUPLICATE_EXPENSE_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        // Bulk-load all requested expenses in one query (no N+1).
+        Map<String, ExpensesV1> expensesById = expensesRepository.findAllById(requestedIds).stream()
+                .collect(Collectors.toMap(ExpensesV1::getExpenseId, expense -> expense));
+
+        // Phase 1 — validate every expense without mutating, so a later failure never leaves a
+        // partial settlement behind.
+        List<ExpensesV1> expensesToUpdate = new ArrayList<>();
+        for (SettleVendorExpense requested : requestedExpenses) {
+            ExpensesV1 expense = expensesById.get(requested.expenseId());
+            if (expense == null || !expense.isActive()) {
+                return new ResponseEntity<>(Utils.INVALID_EXPENSE_ID, HttpStatus.BAD_REQUEST);
+            }
+            // Must belong to the supplied vendor.
+            if (expense.getVendorId() == null || !expense.getVendorId().equals(vendorIdStr)) {
+                return new ResponseEntity<>(Utils.VENDOR_EXPENSE_MISMATCH, HttpStatus.BAD_REQUEST);
+            }
+            // A vendor's expenses could span hostels; guard access per expense.
+            if (!userHostelService.checkHostelAccess(users.getUserId(), expense.getHostelId())) {
+                return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+            }
+            String settleError = validateExpenseSettlement(expense, requested.paidAmount() != null ? requested.paidAmount() : 0.0);
+            if (settleError != null) {
+                return new ResponseEntity<>(settleError, HttpStatus.BAD_REQUEST);
+            }
+            expensesToUpdate.add(expense);
+        }
+
+        // Validate image count before uploading anything to S3.
+//        if (exceedsImageLimit(images)) {
+//            return new ResponseEntity<>(Utils.MAX_IMAGES_EXCEEDED + ". Allowed: " + maxPaymentImages, HttpStatus.BAD_REQUEST);
+//        }
+
+        // All validations passed — upload receipts, then persist everything transactionally.
+        List<String> imageUrls = uploadPaymentImages(images);
+
+        String auditUser = authentication.getName();
+        Date auditNow = new Date();
+        Date paymentDate = Utils.stringToDate(payload.paymentDate(), Utils.USER_INPUT_DATE_FORMAT);
+
+        // Phase 2 — apply the (validated) settlements.
+        for (SettleVendorExpense requested : requestedExpenses) {
+            applyExpenseSettlement(expensesById.get(requested.expenseId()),
+                    requested.paidAmount() != null ? requested.paidAmount() : 0.0, auditUser, auditNow);
+        }
+        expensesRepository.saveAll(expensesToUpdate);
+
+        // One payment-history row per expense in the request (no expense item association).
+        List<ExpensePayment> payments = new ArrayList<>();
+        for (SettleVendorExpense requested : requestedExpenses) {
+            ExpensesV1 expense = expensesById.get(requested.expenseId());
+            payments.add(buildPayment(expense.getExpenseId(), null, expense.getHostelId(), vendorIdStr,
+                    requested.paidAmount() != null ? requested.paidAmount() : 0.0,
+                    payload.paymentMethod(), payload.bankId(), paymentDate, payload.transactionId(),
+                    payload.notes(), imageUrls, auditUser, auditNow));
+        }
+        expensePaymentRepository.saveAll(payments);
+
+        if (Utils.checkNullOrEmpty(payload.bankId())) {
+            double totalSettled = requestedExpenses.stream()
+                    .mapToDouble(requested -> requested.paidAmount() != null ? requested.paidAmount() : 0.0)
+                    .sum();
+            if (totalSettled > 0) {
+                String settleBankId = payload.bankId().trim();
+                if (bankingService.getBankDetails(settleBankId) != null) {
+                    bankingService.updateBalanceForExpense(totalSettled, BankTransactionType.DEBIT.name(), settleBankId);
+                }
+                bankingServiceV2.recordVendorExpenseDebit(settleBankId, payload.paymentMethodId(), totalSettled,
+                        expensesToUpdate.get(0).getHostelId(), auditUser);
+            }
+        }
+
+        for (ExpensesV1 expense : expensesToUpdate) {
+            usersService.addUserLog(expense.getHostelId(), expense.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
+        }
+
+        // Keep the vendor's denormalized financial summary in sync.
+        vendorFinancialService.recalculate(vendorKey);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    private List<String> uploadPaymentImages(MultipartFile[] images) {
+        return uploadImages(images, "Expense/Payments");
+    }
+
+    private List<String> uploadImages(MultipartFile[] images, String folder) {
+        List<String> urls = new ArrayList<>();
+        if (images == null) {
+            return urls;
+        }
+        for (MultipartFile file : images) {
+            if (file != null && !file.isEmpty()) {
+                urls.add(uploadToS3.uploadFileToS3(FilesConfig.convertMultipartToFile(file), folder));
+            }
+        }
+        return urls;
+    }
+
+    private void applyExpenseSettlement(ExpensesV1 expense, double requestPaid, String auditUser, Date auditNow) {
+        double existingPaid = expense.getPaidAmount() != null ? expense.getPaidAmount() : 0.0;
+        double total = expense.getTotalPrice() != null ? expense.getTotalPrice() : 0.0;
+        double newPaid = existingPaid + requestPaid;
+        expense.setPaidAmount(newPaid);
+        expense.setBalanceAmount(total - newPaid);
+        expense.setPaymentStatus(deriveExpenseStatus(newPaid, total, expense));
+        expense.setUpdatedAt(auditNow);
+        expense.setUpdatedBy(auditUser);
+    }
+
+    private ExpensePaymentStatus deriveExpenseStatus(double paid, double total, ExpensesV1 expense) {
+        if (total > 0 && paid >= total - 0.0001) {
+            return ExpensePaymentStatus.Full;
+        }
+        // Not fully paid: a vendor expense past its credit period is overdue.
+        if (Boolean.TRUE.equals(expense.getIsVendorExpense())
+                && expense.getCreditPeriod() != null && expense.getCreditPeriod() > 0
+                && expense.getCreatedAt() != null
+                && daysSince(expense.getCreatedAt()) > expense.getCreditPeriod()) {
+            return ExpensePaymentStatus.Overdue;
+        }
+        if (paid <= 0) {
+            return ExpensePaymentStatus.Pending;
+        }
+        return ExpensePaymentStatus.Partial;
+    }
+
+    private long daysSince(Date date) {
+        long diffMillis = System.currentTimeMillis() - date.getTime();
+        return diffMillis / (1000L * 60 * 60 * 24);
+    }
+
+    private ExpensePayment buildPayment(String expenseId, Long expenseItemId, String hostelId, Integer vendorId,
+                                        double paidAmount, String paymentMethod, String bankId, Date paymentDate,
+                                        String transactionId, String notes, List<String> imageUrls,
+                                        String auditUser, Date auditNow) {
+        ExpensePayment payment = new ExpensePayment();
+        payment.setExpenseId(expenseId);
+        payment.setExpenseItemId(expenseItemId);
+        payment.setHostelId(hostelId);
+        payment.setVendorId(vendorId);
+        payment.setPaidAmount(paidAmount);
+        payment.setPaymentMethod(paymentMethod);
+        payment.setBankId(bankId);
+        payment.setPaymentDate(paymentDate);
+        payment.setTransactionId(transactionId);
+        payment.setNotes(notes);
+        payment.setImageUrls(imageUrls);
+        stampCreate(payment, auditUser, auditNow);
+        return payment;
+    }
+
+    private void stampCreate(ExpensePayment payment, String userId, Date now) {
+        payment.setCreatedBy(userId);
+        payment.setUpdatedBy(userId);
+        payment.setCreatedAt(now);
+        payment.setModifiedAt(now);
+    }
+
+    private String validateExpenseSettlement(ExpensesV1 expense, double requestPaid) {
+        if (requestPaid < 0) {
+            return Utils.PAID_AMOUNT_NEGATIVE;
+        }
+        double existingPaid = expense.getPaidAmount() != null ? expense.getPaidAmount() : 0.0;
+        double total = expense.getTotalPrice() != null ? expense.getTotalPrice() : 0.0;
+        // Already fully settled expenses cannot take further payment.
+        if (requestPaid > 0 && total > 0 && existingPaid - total >= -0.0001) {
+            return Utils.EXPENSE_ALREADY_SETTLED;
+        }
+        // Cumulative paid must never exceed the expense total.
+        if (existingPaid + requestPaid - total > 0.0001) {
+            return Utils.EXPENSE_OVERPAID;
+        }
+        return null;
     }
 }

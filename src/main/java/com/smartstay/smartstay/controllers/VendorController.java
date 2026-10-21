@@ -7,7 +7,6 @@ import com.smartstay.smartstay.payloads.vendor.UpdateVendorCategory;
 import com.smartstay.smartstay.payloads.vendor.AddVendorComment;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendor;
 import com.smartstay.smartstay.payloads.vendor.UpdateVendorComment;
-import com.smartstay.smartstay.services.ExpenseService;
 import com.smartstay.smartstay.services.VendorCommentService;
 import com.smartstay.smartstay.services.VendorService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -37,9 +36,6 @@ public class VendorController {
     VendorService vendorService;
 
     @Autowired
-    ExpenseService expenseService;
-
-    @Autowired
     VendorCommentService vendorCommentService;
 
     @PostMapping("/comments")
@@ -65,17 +61,18 @@ public class VendorController {
         return vendorCommentService.deleteComment(commentId);
     }
 
-    @PostMapping("/settle/{vendorId}")
-    public ResponseEntity<?> settleVendorExpenses(@PathVariable("vendorId") String vendorId,
+    @PostMapping("/settle/{hostelId}/{vendorId}")
+    public ResponseEntity<?> settleVendorExpenses(@PathVariable("vendorId") Integer vendorId,
+                                                  @PathVariable("hostelId") String hostelId,
                                                   @RequestPart(value = "images", required = false) MultipartFile[] images,
                                                   @Valid @RequestPart SettleVendorPayment payLoads) {
-        return expenseService.settleVendorExpenses(vendorId, images, payLoads);
+        return vendorService.settleVendorExpenses(hostelId, vendorId, images, payLoads);
     }
 
     @GetMapping("/initialize/{hostelId}/{vendorId}")
     public ResponseEntity<?> initializeVendorSettlement(@PathVariable("hostelId") String hostelId,
                                                         @PathVariable("vendorId") int vendorId) {
-        return expenseService.initializeVendorSettlement(hostelId, vendorId);
+        return vendorService.initializeVendorSettlement(hostelId, vendorId);
     }
 
     @GetMapping("/all-vendors/{hostelId}")

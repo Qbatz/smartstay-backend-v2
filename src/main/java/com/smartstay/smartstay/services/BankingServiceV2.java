@@ -700,7 +700,7 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.CREDIT_CARD_ACCOUNT_INVALID, HttpStatus.BAD_REQUEST);
         }
 
-        BankingV2 bankingV2FromAccount = bankingMethodService.findBankAccountByMethodId(payload.paymentMethod());
+        BankingV2 bankingV2FromAccount = bankingV2Repository.findByBankId(payload.paymentMethod()).orElse(null);
         if (bankingV2FromAccount == null) {
             return new ResponseEntity<>(Utils.V2_BANK_INVALID_PAYMENT_METHOD, HttpStatus.BAD_REQUEST);
         }
@@ -1201,6 +1201,43 @@ public class BankingServiceV2 {
             BankingV2 v2 = bankingV2Repository.save(bank);
             return v2.getBalance() == null ? 0.0 : v2.getBalance();
         }
+    }
+
+    public ResponseEntity<?> deleteBank(String hostelId, String bankId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.BAD_REQUEST);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+        BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankId).orElse(null);
+        if (bankingV2 == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!bankingV2.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        bankingMethodService.deleteAllBankingMethods(bankingV2.getBankId());
+        bankingV2.setDeleted(true);
+        bankingV2Repository.save(bankingV2);
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
     }
 
     private record TransferRequest(String hostelId, double amount, Date transactionDate, String description,

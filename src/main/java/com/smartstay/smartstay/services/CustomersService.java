@@ -1543,6 +1543,7 @@ public class CustomersService {
         invoiceTypes.add(InvoiceType.ADVANCE.name());
         invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
         invoiceTypes.add(InvoiceType.OTHER.name());
+        invoiceTypes.add(InvoiceType.EB.name());
         invoiceTypes.add(InvoiceType.SETTLEMENT.name());
 
         boolean isNewRentAvailable = false;

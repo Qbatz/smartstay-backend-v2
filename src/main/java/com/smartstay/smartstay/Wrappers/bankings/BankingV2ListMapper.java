@@ -46,6 +46,7 @@ public class BankingV2ListMapper implements Function<BankingV2, BankV2List> {
                 bankingV2.getDisplayName(),
                 bankingV2.getAccountNumber(),
                 cardNumber,
+                bankingV2.getBranchName(),
                 cardType,
                 bankingV2.getBalance(),
                 bankingV2.getAccountHolderName(),

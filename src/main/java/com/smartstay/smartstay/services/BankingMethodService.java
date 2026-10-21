@@ -183,4 +183,18 @@ public class BankingMethodService {
             bankingMethodsRepository.save(bm);
         }
     }
+
+    public void deleteAllBankingMethods(String bankId) {
+        List<BankingMethods> listBankingMethods = bankingMethodsRepository.findMethodsByBankId(bankId);
+        if (listBankingMethods != null) {
+            List<BankingMethods> newBankingMethods = listBankingMethods
+                    .stream()
+                    .map(i -> {
+                        i.setIsDeleted(true);
+                        return i;
+                    })
+                    .toList();
+            bankingMethodsRepository.deleteAll(newBankingMethods);
+        }
+    }
 }

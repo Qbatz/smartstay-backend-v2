@@ -417,11 +417,11 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
     List<InvoicesV1> findOldMonthPendingInvoices(String customerId, Date currentMonth, List<String> invoiceTypes);
 
     @Query("""
-            SELECT i FROM InvoicesV1 i WHERE i.customerId =:customerId AND i.invoiceType='OTHER' 
+            SELECT i FROM InvoicesV1 i WHERE i.customerId =:customerId AND i.invoiceType IN :invoiceTypes 
             AND i.paymentStatus IN ('PENDING', 'PARTIAL_PAYMENT') 
             AND i.isCancelled=false AND DATE(i.invoiceStartDate) >= DATE(:currentMonth)
             """)
-    List<InvoicesV1> findCurrentMonthOtherInvoices(String customerId, Date currentMonth);
+    List<InvoicesV1> findCurrentMonthOtherInvoices(String customerId, Date currentMonth, List<String> invoiceTypes);
 
     @Query("""
             SELECT i FROM InvoicesV1 i WHERE i.customerId = :customerId AND i.invoiceType='ADVANCE'

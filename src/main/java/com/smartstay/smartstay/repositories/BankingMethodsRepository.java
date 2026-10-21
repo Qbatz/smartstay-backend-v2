@@ -3,6 +3,7 @@ package com.smartstay.smartstay.repositories;
 import com.smartstay.smartstay.dao.BankingMethods;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,7 +15,7 @@ public interface BankingMethodsRepository extends JpaRepository<BankingMethods, 
 
     List<BankingMethods> findByBank_BankIdIn(List<String> bankIds);
     @Query("""
-            SELECT bm FROM BankingMethods bm WHERE bm.paymentMethodId=:methodId
+            SELECT bm FROM BankingMethods bm WHERE bm.paymentMethodId=:methodId AND (bm.isDeleted IS NULL OR bm.isDeleted=false)
             """)
     BankingMethods findByMethodId(String methodId);
 
@@ -26,4 +27,7 @@ public interface BankingMethodsRepository extends JpaRepository<BankingMethods, 
             SELECT bm FROM BankingMethods bm WHERE bm.hostelId=:hostelId AND (bm.isDeleted IS NULL OR bm.isDeleted=false)
             """)
     List<BankingMethods> findAllPaymentMethods(String hostelId);
+
+    @Query("SELECT bm FROM BankingMethods bm WHERE bm.bank.bankId = :bankId AND (bm.isDeleted IS NULL OR bm.isDeleted=false)")
+    List<BankingMethods> findMethodsByBankId(@Param("bankId") String bankId);
 }

@@ -99,8 +99,8 @@ public class ExpenseService {
     @Autowired
     private ExpensePaymentRepository expensePaymentRepository;
 
-    @Autowired
-    private VendorRepository vendorRepository;
+//    @Autowired
+//    private VendorRepository vendorRepository;
     @Autowired
     private VendorService vendorService;
 
@@ -256,17 +256,8 @@ public class ExpenseService {
 
         // Vendor financials are denormalized on the vendor row, so this is a single read with no
         // per-vendor aggregation (no N+1). Only the fields needed by the picker are exposed.
-        List<VendorInitializeResponse> listVendors = vendorRepository
-                .findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(hostelId).stream()
-                .map(v -> new VendorInitializeResponse(
-                        v.getVendorId(),
-                        v.getBusinessName(),
-                        NameUtils.getFullName(v.getFirstName(), v.getLastName()),
-                        v.getPaymentStatus() != null ? v.getPaymentStatus().name() : null,
-                        nullSafe(v.getTotalExpense()),
-                        nullSafe(v.getTotalPaid()),
-                        nullSafe(v.getBalance())))
-                .toList();
+
+        List<VendorInitializeResponse> listVendors = vendorService.findVendorsByHostelId(hostelId);
 
         InitializeExpenses initializeExpenses = new InitializeExpenses(hostelId, listExpensesCategory, listBanks, listVendors, null);
 
@@ -279,52 +270,51 @@ public class ExpenseService {
      * {@link #initializeToAddExpense}) plus a lightweight summary of every expense raised against
      * the vendor. The expense summaries are produced by a single projection query (no N+1).
      */
-    public ResponseEntity<?> initializeVendorSettlement(String hostelId, int vendorId) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!Utils.checkNullOrEmpty(hostelId)) {
-            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
-        }
-        Users users = usersService.findUserByUserId(authentication.getName());
-        if (users == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
-            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-        }
-        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        // Vendor must exist and belong to the supplied hostel.
-        VendorV1 vendor = vendorRepository.findByVendorId(vendorId);
-        if (vendor == null || !hostelId.equalsIgnoreCase(vendor.getHostelId())) {
-            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.BAD_REQUEST);
-        }
-
-        List<DebitsBank> listBanks = bankingService.getAllBankForReturn(hostelId);
-
-        // Only outstanding expenses (not fully settled) are eligible for settlement; filtered at
-        // the query level. Map entities -> summary via a dedicated mapper (no JPQL projection).
-        VendorExpenseSummaryMapper expenseSummaryMapper = new VendorExpenseSummaryMapper();
-        List<VendorExpenseSummary> expenses = expensesRepository
-                .findOutstandingExpensesByVendorId(String.valueOf(vendorId), ExpensePaymentStatus.Full)
-                .stream()
-                .map(expenseSummaryMapper)
-                .toList();
-
-        double totalDueAmount = expenses.stream()
-                .map(VendorExpenseSummary::totalBalance)
-                .filter(Objects::nonNull)
-                .mapToDouble(Double::doubleValue)
-                .sum();
-
-        VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses,
-                Utils.roundOffWithTwoDigit(totalDueAmount),
-                bankingServiceV2.buildAllPaymentMethods(hostelId));
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
+//    public ResponseEntity<?> initializeVendorSettlement(String hostelId, int vendorId) {
+//        if (!authentication.isAuthenticated()) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//        if (!Utils.checkNullOrEmpty(hostelId)) {
+//            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+//        }
+//        Users users = usersService.findUserByUserId(authentication.getName());
+//        if (users == null) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+//            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+//        }
+//        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_READ)) {
+//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//        }
+//
+//        // Vendor must exist and belong to the supplied hostel.
+//        VendorV1 vendor = vendorRepository.findByVendorId(vendorId);
+//        if (vendor == null || !hostelId.equalsIgnoreCase(vendor.getHostelId())) {
+//            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.BAD_REQUEST);
+//        }
+//
+////        List<DebitsBank> listBanks = bankingService.getAllBankForReturn(hostelId);
+//        List<DebitsBank> listBanks = bankingServiceV2.getAllBanksForReturn(hostelId);
+//        // Only outstanding expenses (not fully settled) are eligible for settlement; filtered at
+//        // the query level. Map entities -> summary via a dedicated mapper (no JPQL projection).
+//        VendorExpenseSummaryMapper expenseSummaryMapper = new VendorExpenseSummaryMapper();
+//        List<VendorExpenseSummary> expenses = expensesRepository
+//                .findOutstandingExpensesByVendorId(String.valueOf(vendorId), ExpensePaymentStatus.Full)
+//                .stream()
+//                .map(expenseSummaryMapper)
+//                .toList();
+//
+//        double totalDueAmount = expenses.stream()
+//                .map(VendorExpenseSummary::totalBalance)
+//                .filter(Objects::nonNull)
+//                .mapToDouble(Double::doubleValue)
+//                .sum();
+//
+//        VendorInitialize response = new VendorInitialize(hostelId, String.valueOf(vendorId), listBanks, expenses,
+//                Utils.roundOffWithTwoDigit(totalDueAmount));
+//        return new ResponseEntity<>(response, HttpStatus.OK);
+//    }
 
     @Transactional
     public ResponseEntity<?> addExpense(String hostelId, MultipartFile[] images, Expense expense) {
@@ -448,7 +438,7 @@ public class ExpenseService {
         if (expense.creditPeriod() != null && expense.creditPeriod() > 0) {
             expensesV1.setCreditPeriod(expense.creditPeriod());
         } else if (Boolean.TRUE.equals(expense.isVendorExpense()) && expense.vendorId() != null) {
-            VendorV1 vendor = vendorRepository.findByVendorId(expense.vendorId());
+            VendorV1 vendor = vendorService.findVendorByHostelIdAndVendorId(hostelId, expense.vendorId());
             if (vendor != null) {
                 expensesV1.setCreditPeriod(vendor.getCreditPeriod());
             }
@@ -692,134 +682,6 @@ public class ExpenseService {
         }
 
         usersService.addUserLog(expense.getHostelId(), expense.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
-
-        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
-    }
-
-    /**
-     * Settles one or more of a vendor's expenses in a single request: for each expense the incoming
-     * paid amount is added cumulatively to the existing paid amount, the balance and payment status
-     * are recomputed, and a payment-history row (with the uploaded receipt images) is recorded.
-     * {@code expense_items} are intentionally left untouched. All writes happen in one transaction
-     * so a failure rolls everything back.
-     */
-    @Transactional
-    public ResponseEntity<?> settleVendorExpenses(String vendorId, MultipartFile[] images, SettleVendorPayment payload) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        Users users = usersService.findUserByUserId(authentication.getName());
-        if (users == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_WRITE)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        // Vendor must exist.
-        Integer vendorKey = parseVendorId(vendorId);
-        VendorV1 vendor = vendorKey != null ? vendorRepository.findByVendorId(vendorKey) : null;
-        if (vendor == null) {
-            return new ResponseEntity<>(Utils.INVALID_VENDOR, HttpStatus.BAD_REQUEST);
-        }
-        if (!subscriptionService.validateSubscription(vendor.getHostelId())) {
-            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
-        }
-        Integer vendorIdStr =vendorKey;
-
-        // Payment-method based validation (transaction id is optional for vendor settlement).
-        String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), false);
-        if (methodError != null) {
-            return new ResponseEntity<>(methodError, HttpStatus.BAD_REQUEST);
-        }
-
-        // Reject blank / duplicate expense ids.
-        List<SettleVendorExpense> requestedExpenses = payload.expenses();
-        List<String> requestedIds = requestedExpenses.stream().map(SettleVendorExpense::expenseId).toList();
-        if (requestedIds.stream().anyMatch(id -> id == null || id.isBlank())) {
-            return new ResponseEntity<>(Utils.INVALID_EXPENSE_ID, HttpStatus.BAD_REQUEST);
-        }
-        if (requestedIds.stream().distinct().count() != requestedIds.size()) {
-            return new ResponseEntity<>(Utils.DUPLICATE_EXPENSE_ID, HttpStatus.BAD_REQUEST);
-        }
-
-        // Bulk-load all requested expenses in one query (no N+1).
-        Map<String, ExpensesV1> expensesById = expensesRepository.findAllById(requestedIds).stream()
-                .collect(Collectors.toMap(ExpensesV1::getExpenseId, expense -> expense));
-
-        // Phase 1 — validate every expense without mutating, so a later failure never leaves a
-        // partial settlement behind.
-        List<ExpensesV1> expensesToUpdate = new ArrayList<>();
-        for (SettleVendorExpense requested : requestedExpenses) {
-            ExpensesV1 expense = expensesById.get(requested.expenseId());
-            if (expense == null || !expense.isActive()) {
-                return new ResponseEntity<>(Utils.INVALID_EXPENSE_ID, HttpStatus.BAD_REQUEST);
-            }
-            // Must belong to the supplied vendor.
-            if (expense.getVendorId() == null || !expense.getVendorId().equals(vendorIdStr)) {
-                return new ResponseEntity<>(Utils.VENDOR_EXPENSE_MISMATCH, HttpStatus.BAD_REQUEST);
-            }
-            // A vendor's expenses could span hostels; guard access per expense.
-            if (!userHostelService.checkHostelAccess(users.getUserId(), expense.getHostelId())) {
-                return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
-            }
-            String settleError = validateExpenseSettlement(expense, requested.paidAmount() != null ? requested.paidAmount() : 0.0);
-            if (settleError != null) {
-                return new ResponseEntity<>(settleError, HttpStatus.BAD_REQUEST);
-            }
-            expensesToUpdate.add(expense);
-        }
-
-        // Validate image count before uploading anything to S3.
-        if (exceedsImageLimit(images)) {
-            return new ResponseEntity<>(Utils.MAX_IMAGES_EXCEEDED + ". Allowed: " + maxPaymentImages, HttpStatus.BAD_REQUEST);
-        }
-
-        // All validations passed — upload receipts, then persist everything transactionally.
-        List<String> imageUrls = uploadPaymentImages(images);
-
-        String auditUser = authentication.getName();
-        Date auditNow = new Date();
-        Date paymentDate = resolvePaymentDate(payload.paymentDate());
-
-        // Phase 2 — apply the (validated) settlements.
-        for (SettleVendorExpense requested : requestedExpenses) {
-            applyExpenseSettlement(expensesById.get(requested.expenseId()),
-                    requested.paidAmount() != null ? requested.paidAmount() : 0.0, auditUser, auditNow);
-        }
-        expensesRepository.saveAll(expensesToUpdate);
-
-        // One payment-history row per expense in the request (no expense item association).
-        List<ExpensePayment> payments = new ArrayList<>();
-        for (SettleVendorExpense requested : requestedExpenses) {
-            ExpensesV1 expense = expensesById.get(requested.expenseId());
-            payments.add(buildPayment(expense.getExpenseId(), null, expense.getHostelId(), vendorIdStr,
-                    requested.paidAmount() != null ? requested.paidAmount() : 0.0,
-                    payload.paymentMethod(), payload.bankId(), paymentDate, payload.transactionId(),
-                    payload.notes(), imageUrls, auditUser, auditNow));
-        }
-        expensePaymentRepository.saveAll(payments);
-
-        if (Utils.checkNullOrEmpty(payload.bankId())) {
-            double totalSettled = requestedExpenses.stream()
-                    .mapToDouble(requested -> requested.paidAmount() != null ? requested.paidAmount() : 0.0)
-                    .sum();
-            if (totalSettled > 0) {
-                String settleBankId = payload.bankId().trim();
-                if (bankingService.getBankDetails(settleBankId) != null) {
-                    bankingService.updateBalanceForExpense(totalSettled, BankTransactionType.DEBIT.name(), settleBankId);
-                }
-                bankingServiceV2.recordVendorExpenseDebit(settleBankId, payload.paymentMethodId(), totalSettled,
-                        expensesToUpdate.get(0).getHostelId(), auditUser);
-            }
-        }
-
-        for (ExpensesV1 expense : expensesToUpdate) {
-            usersService.addUserLog(expense.getHostelId(), expense.getExpenseId(), ActivitySource.EXPENSE, ActivitySourceType.UPDATE, users);
-        }
-
-        // Keep the vendor's denormalized financial summary in sync.
-        vendorFinancialService.recalculate(vendorKey);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -1163,7 +1025,7 @@ public class ExpenseService {
                 .map(ColumnFilters::getFieldName)
                 .toList();
 
-        Map<String, String> vendorNamesById = resolveVendorNames(projections);
+        Map<String, String> vendorNamesById = vendorService.resolveVendorNames(projections);
 
         ExpenseTableMapper mapper = new ExpenseTableMapper(tableColumns, vendorNamesById);
         List<List<Object>> rows = projections.stream().map(mapper).collect(Collectors.toList());
@@ -1226,27 +1088,12 @@ public class ExpenseService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    private Map<String, String> resolveVendorNames(List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections) {
-        List<Integer> vendorIds = projections.stream()
-                .map(com.smartstay.smartstay.dto.expenses.ExpenseList::getVendorId)
-                .map(this::parseVendorId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        Map<String, String> vendorNamesById = new HashMap<>();
-        if (!vendorIds.isEmpty()) {
-            vendorRepository.findByVendorIdIn(vendorIds).forEach(v ->
-                    vendorNamesById.put(String.valueOf(v.getVendorId()), NameUtils.getFullName(v.getFirstName(), v.getLastName())));
-        }
-        return vendorNamesById;
-    }
 
-    private Integer parseVendorId(String vendorId) {
-        if (vendorId == null || vendorId.trim().isEmpty()) {
-            return null;
-        }
+
+    private Integer parseVendorId(Integer vendorId) {
+
         try {
-            return Integer.parseInt(vendorId.trim());
+            return vendorId;
         } catch (NumberFormatException ex) {
             return null;
         }
@@ -1265,7 +1112,7 @@ public class ExpenseService {
                         String.valueOf(s.categoryId())))
                 .toList();
 
-        List<ExpenseFilterOptions.FilterItems> vendorItems = vendorRepository
+        List<ExpenseFilterOptions.FilterItems> vendorItems = vendorService
                 .findByHostelIdAndIsActiveTrueOrderByVendorIdDesc(hostelId).stream()
                 .map(v -> new ExpenseFilterOptions.FilterItems(
                         firstNonBlank(NameUtils.getFullName(v.getFirstName(), v.getLastName()), v.getBusinessName()),
@@ -1398,7 +1245,7 @@ public class ExpenseService {
                 .map(ExpensePayment::getPaidAmount).filter(Objects::nonNull).mapToDouble(Double::doubleValue).sum();
 
         // Vendor's complete single-line address, reusing the shared formatter (same as the vendor APIs).
-        String vendorAddress = resolveVendorAddress(expense.getVendorId());
+        String vendorAddress = resolveVendorAddress(hostelId, expense.getVendorId());
 
         ExpenseDetailResponse response = new ExpenseDetailResponse(
                 expense.getExpenseId(),
@@ -1454,12 +1301,12 @@ public class ExpenseService {
      * formatter (the same logic used by the Vendor Details and Get All Vendors APIs). Returns
      * {@code null} for non-vendor expenses or when the vendor id is missing/non-numeric/unknown.
      */
-    private String resolveVendorAddress(Integer vendorId) {
+    private String resolveVendorAddress(String hostelId, Integer vendorId) {
         if (vendorId == null) {
             return null;
         }
         try {
-            VendorV1 vendor = vendorRepository.findByVendorId(vendorId);
+            VendorV1 vendor = vendorService.findVendorByHostelIdAndVendorId(hostelId, vendorId);
             if (vendor == null) {
                 return null;
             }

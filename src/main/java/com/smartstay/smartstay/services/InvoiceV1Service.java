@@ -5604,8 +5604,13 @@ public class InvoiceV1Service {
         invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
         invoicesTypes.add(InvoiceType.OTHER.name());
         invoicesTypes.add(InvoiceType.EB.name());
+
+        List<String> invoiceTypesOther = new ArrayList<>();
+        invoiceTypesOther.add(InvoiceType.OTHER.name());
+        invoiceTypesOther.add(InvoiceType.EB.name());
+
         List<InvoicesV1> listOldInvoices = invoicesV1Repository.findOldMonthPendingInvoices(customerId, billingDates.currentBillStartDate(), invoicesTypes);
-        List<InvoicesV1> listCurrentMonthOtherInvoices = invoicesV1Repository.findCurrentMonthOtherInvoices(customerId, billingDates.currentBillStartDate());
+        List<InvoicesV1> listCurrentMonthOtherInvoices = invoicesV1Repository.findCurrentMonthOtherInvoices(customerId, billingDates.currentBillStartDate(), invoiceTypesOther);
         if (listOldInvoices != null) {
             if (listCurrentMonthOtherInvoices != null && !listCurrentMonthOtherInvoices.isEmpty()) {
                 listOldInvoices.addAll(listCurrentMonthOtherInvoices);
@@ -5651,8 +5656,12 @@ public class InvoiceV1Service {
         invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
         invoicesTypes.add(InvoiceType.OTHER.name());
         invoicesTypes.add(InvoiceType.EB.name());
+
+        List<String> invoiceTypesOther = new ArrayList<>();
+        invoiceTypesOther.add(InvoiceType.OTHER.name());
+        invoiceTypesOther.add(InvoiceType.EB.name());
         List<InvoicesV1> listOldInvoices = invoicesV1Repository.findOldMonthPendingInvoices(customerId, billingDates.currentBillStartDate(), invoicesTypes);
-        List<InvoicesV1> listCurrentMonthOtherInvoices = invoicesV1Repository.findCurrentMonthOtherInvoices(customerId, billingDates.currentBillStartDate());
+        List<InvoicesV1> listCurrentMonthOtherInvoices = invoicesV1Repository.findCurrentMonthOtherInvoices(customerId, billingDates.currentBillStartDate(), invoiceTypesOther);
         if (listOldInvoices != null) {
             listOldInvoices.addAll(listCurrentMonthOtherInvoices);
         }
