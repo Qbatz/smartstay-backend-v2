@@ -529,8 +529,8 @@ public class ExpenseService {
                 expense.purchaseDate(),
                 expenseNumber);
         if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId(), oldBankToNewBankInfo.paymentMethodId())) {
-            bankingServiceV2.debitExpenseBalances(oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId(),
-                    transactionDto.amount(), authentication.getName());
+//            bankingServiceV2.debitExpenseBalances(oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId(),
+//                    transactionDto.amount(), authentication.getName());
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
         else {

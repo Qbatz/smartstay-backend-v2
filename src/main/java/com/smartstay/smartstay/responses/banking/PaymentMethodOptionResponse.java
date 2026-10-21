@@ -5,20 +5,13 @@ public record PaymentMethodOptionResponse(
         String accountHolderName,
         String accountNumber,
         String accountType,
+        String bankAccountType,
         Double balance,
         String bankName,
         String branchName,
         String displayName,
         String ifscCode,
         String responsiblePersonId,
-        String responsiblePerson,
-        //from banking_methods (null for CASH)
-        String paymentMethodId,
-        String cardNumber,
-        String upiId,
-        String cardHolderName,
-        String cardNetwork,
-        String upiApp,
-        String upiAppIcon
+        String responsiblePerson
 ) {
 }

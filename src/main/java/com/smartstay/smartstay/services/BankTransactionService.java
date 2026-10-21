@@ -198,7 +198,7 @@ public class BankTransactionService {
             transactionsV1.setType(transactionDto.type());
             transactionsV1.setSource(transactionDto.source());
             transactionsV1.setSourceId(sourceId);
-            transactionsV1.setPaymentMethodId((paymentMethodId != null && !paymentMethodId.isBlank()) ? paymentMethodId.trim() : null);
+//            transactionsV1.setPaymentMethodId((paymentMethodId != null && !paymentMethodId.isBlank()) ? paymentMethodId.trim() : null);
             transactionsV1.setHostelId(transactionDto.hostelId());
             transactionsV1.setCreatedAt(new Date());
             transactionsV1.setIsDeleted(false);

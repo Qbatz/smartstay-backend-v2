@@ -62,7 +62,7 @@ public class BankingMethodService {
             String bId = bankinMethodId.replace("SSBMB-", "");
             BankingMethods bankingMethods = bankingMethodsRepository.findByMethodId(bId);
             if (bankingMethods != null) {
-                return new OldBankToNewBankInfo(bankingMethods.getBank().getBankId(), bankinMethodId);
+                return new OldBankToNewBankInfo(bankingMethods.getBank().getBankId(), bankingMethods.getPaymentMethodId());
             }
         }
 
@@ -81,10 +81,10 @@ public class BankingMethodService {
             if (bm != null) {
                 double balance = 0.0;
                 if (bm.getBalance() != null) {
-                    balance = bm.getBalance() - amount;
+                    balance = bm.getBalance() + amount;
                 }
                 else {
-                    balance = amount * -1;
+                    balance = amount;
                 }
                 bm.setBalance(balance);
                 bm.setUpdatedAt(new Date());

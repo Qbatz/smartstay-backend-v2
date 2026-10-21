@@ -841,6 +841,8 @@ public class InvoiceV1Service {
         List<InvoiceRedemption> listInvoiceRedeemed;
         List<String> invoiceIds = new ArrayList<>();
         List<TransactionV1> listTransactions;
+//        List<InvoicesV1> discountedInvoices = new ArrayList<>();
+//        List<InvoiceDiscounts> listInvoiceDiscountes = new ArrayList<>();
         if (!listAllInvoice.isEmpty()) {
             invoiceIds = listAllInvoice
                     .stream()
@@ -853,6 +855,19 @@ public class InvoiceV1Service {
                     .toList();
             listTransactions = transactionService.getTransactionsByInvoiceIds(invoicesId);
             listInvoiceRedeemed = invoiceRedemptionService.getRedeemedInvoicesByInvoiceId(hostelId, invoicesId);
+//            discountedInvoices = listAllInvoice
+//                    .stream()
+//                    .filter(InvoicesV1::isDiscounted)
+//                    .toList();
+//
+//            if (discountedInvoices != null && !discountedInvoices.isEmpty()) {
+//                List<String> discountedInvoiceIds = discountedInvoices
+//                        .stream()
+//                        .map(InvoicesV1::getInvoiceId)
+//                        .toList();
+//                listInvoiceDiscountes = invoiceDiscountService.getInvoiceDiscounts(hostelId, discountedInvoiceIds);
+//            }
+
         } else {
             listTransactions = new ArrayList<>();
             listInvoiceRedeemed = null;
@@ -4985,7 +5000,7 @@ public class InvoiceV1Service {
 
         }
 
-        double invoiceTotalAmount = invoicesV1.getBasePrice();
+        double invoiceTotalAmount = invoicesV1.getTotalAmount();
         double totalAmount = Utils.roundOfDouble(invoicesV1.getTotalAmount());
 //        invoicesV1.setTotalAmount(totalAmount);
 //        invoicesV1.setDi

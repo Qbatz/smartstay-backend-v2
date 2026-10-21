@@ -83,7 +83,18 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             totalAmount = totalAmount + invoicesV1.getGst();
         }
 
-        if (invoicesV1.getTotalAmount() < 0) {
+        if (invoicesV1.isDiscounted()) {
+            if (invoicesV1.getTotalAmount() != null) {
+                if (invoicesV1.getTotalAmount() < 0) {
+                    dueAmount = invoicesV1.getTotalAmount() + paidAmount + discountAmount;
+                } else {
+                    dueAmount = invoicesV1.getTotalAmount() - paidAmount - discountAmount;
+                }
+            }
+
+
+        }
+        else if (invoicesV1.getTotalAmount() < 0) {
             dueAmount = invoicesV1.getTotalAmount() + paidAmount;
         } else {
             dueAmount = invoicesV1.getTotalAmount() - paidAmount;
@@ -219,6 +230,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 }
                 if (ids.getDiscountAmount() != null) {
                     discountAmount = Utils.roundOffWithTwoDigit(ids.getDiscountAmount());
+                    dueAmount = dueAmount - discountAmount;
                 }
             }
         }

@@ -16,6 +16,12 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
             "ORDER BY b.createdAt DESC")
     List<BankingV2> findBanksByHostelId(@Param("hostelId") String hostelId);
 
+    @Query("""
+            SELECT b FROM bankingv2 b WHERE b.hostelId = :hostelId AND b.isDeleted=false 
+            AND b.bankId != :bankId
+            """)
+    List<BankingV2> findBanksByHostelIdNotByBankId(String hostelId, String bankId);
+
     boolean existsByHostelIdAndAccountNumberAndIsDeletedFalse(String hostelId, String accountNumber);
 
     List<BankingV2> findByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
