@@ -329,4 +329,12 @@ public class ExpenseCategoryService {
     public List<com.smartstay.smartstay.dao.ExpenseCategory> findAllByHostelIdAndIsActiveTrue(String hostelId) {
         return expensesCategoryRepository.findAllByHostelIdAndIsActiveTrue(hostelId);
     }
+
+    public List<com.smartstay.smartstay.dao.ExpenseCategory> getCategoriesByHostelIdAndCategoryId(String hostelId, List<Long> expenseCategories) {
+        List<com.smartstay.smartstay.dao.ExpenseCategory> listExpenseCategory = expensesCategoryRepository.findByHostelIdAndCategoryIdIn(hostelId, expenseCategories);
+        if (listExpenseCategory == null) {
+            return new ArrayList<>();
+        }
+        return listExpenseCategory;
+    }
 }

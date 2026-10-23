@@ -622,7 +622,7 @@ public class BookingsService {
 
 
         if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-            String transactionId = invoiceService.cancelBookingInvoice(invoicesV1, cancelBooking.bankId(), cancelDate, cancelBooking.referenceNumber());
+            String transactionId = invoiceService.cancelBookingInvoice(invoicesV1, oldBankToNewBankInfo.bankId(), cancelDate, cancelBooking.referenceNumber(), oldBankToNewBankInfo.paymentMethodId());
             CancelBookingDto cancelBookingDto = new CancelBookingDto(cancelBooking.reason(), customerId, bookingsV1.getBookingAmount(), invoicesV1.getInvoiceId(), cancelBooking.bankId(), cancelBooking.referenceNumber());
 
             creditDebitNoteService.cancelBooking(cancelBookingDto);

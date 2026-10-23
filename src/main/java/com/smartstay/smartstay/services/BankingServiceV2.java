@@ -167,7 +167,12 @@ public class BankingServiceV2 {
             cashAccountTypeValue = cashType.getValue();
             responsiblePerson = trimToNull(payload.responsiblePerson());
         }
-        else if (accountType != BankAccountTypeV2.CARD){
+        else if (accountType == BankAccountTypeV2.CARD) {
+            if (bankingMethodService.isExists(hostelId, payload.cardNumber())) {
+                return new ResponseEntity<>(Utils.CARD_NO_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+            }
+        }
+        else {
             return new ResponseEntity<>(Utils.INVALID_ACCOUNT_TYPE, HttpStatus.BAD_REQUEST);
         }
 
@@ -743,11 +748,11 @@ public class BankingServiceV2 {
             toAccountBalanceAmount = bankingV2ToAccount.getBalance() + amount;
         }
         else {
-            toAccountBalanceAmount = amount * -1;
+            toAccountBalanceAmount = amount;
         }
         bankingV2ToAccount.setBalance(toAccountBalanceAmount);
         Date toAccountLastTransaction = settlementDate;
-        if (bankingV2FromAccount.getLastTransaction() == null) {
+        if (bankingV2ToAccount.getLastTransaction() == null) {
             bankingV2ToAccount.setLastTransaction(toAccountLastTransaction);
             bankingV2ToAccount.setLastTransactionAmount(amount);
         }
@@ -760,8 +765,8 @@ public class BankingServiceV2 {
         bankingMethodService.creditCreditCardPayment(bankingV2ToAccount, amount, settlementDate);
 
         double fromAccountBalanceAmount = 0.0;
-        if (bankingV2ToAccount.getBalance() != null) {
-            fromAccountBalanceAmount = bankingV2ToAccount.getBalance() - amount;
+        if (bankingV2FromAccount.getBalance() != null) {
+            fromAccountBalanceAmount = bankingV2FromAccount.getBalance() - amount;
         }
         else {
             fromAccountBalanceAmount = amount * -1;
@@ -769,13 +774,13 @@ public class BankingServiceV2 {
         bankingV2FromAccount.setBalance(fromAccountBalanceAmount);
         Date fromAccountLastTransaction = settlementDate;
         if (bankingV2FromAccount.getLastTransaction() == null) {
-            bankingV2ToAccount.setLastTransaction(fromAccountLastTransaction);
-            bankingV2ToAccount.setLastTransactionAmount(amount);
+            bankingV2FromAccount.setLastTransaction(fromAccountLastTransaction);
+            bankingV2FromAccount.setLastTransactionAmount(amount);
         }
         else {
             if (Utils.compareWithTwoDates(bankingV2ToAccount.getLastTransaction(), fromAccountLastTransaction) < 0) {
-                bankingV2ToAccount.setLastTransaction(fromAccountLastTransaction);
-                bankingV2ToAccount.setLastTransactionAmount(amount);
+                bankingV2FromAccount.setLastTransaction(fromAccountLastTransaction);
+                bankingV2FromAccount.setLastTransactionAmount(amount);
             }
         }
         bankingMethodService.creditDebitPayment(payload.paymentMethod(), amount, settlementDate);
@@ -1240,6 +1245,34 @@ public class BankingServiceV2 {
 
     }
 
+    public void deleteReceipt(Double paidAmount, String transactionType, String bankId, String paymentMethodId) {
+        BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankId).orElse(null);
+        if (bankingV2 != null) {
+            if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+                if (bankingV2.getBalance() == null) {
+                    bankingV2.setBalance(-1 * paidAmount);
+                }
+                else {
+                    bankingV2.setBalance(bankingV2.getBalance() - paidAmount);
+                }
+            }
+
+            bankingV2.setUpdatedBy(authentication.getName());
+            bankingV2.setUpdatedAt(new Date());
+
+            bankingV2Repository.save(bankingV2);
+
+            if (paymentMethodId != null) {
+                bankingMethodService.deleteReceipt(paidAmount, paymentMethodId);
+            }
+        }
+
+
+//        if (transactionType.equalsIgnoreCase(BankTransactionType.DEBIT.name())) {
+//            bankingServiceV2.syncAccountBalance(bankId, -amount, authentication.getName());
+//        }
+    }
+
     private record TransferRequest(String hostelId, double amount, Date transactionDate, String description,
                                    String transactionNumber, String userId, Date now) {
     }
@@ -1669,8 +1702,8 @@ public class BankingServiceV2 {
             if (!isPresent(fromDateParam) || !isPresent(toDateParam)) {
                 return new ResponseEntity<>(Utils.TRANSACTION_CUSTOM_DATES_REQUIRED, HttpStatus.BAD_REQUEST);
             }
-            startDate = Utils.convertStringToDate(fromDateParam.trim());
-            Date toDate = Utils.convertStringToDate(toDateParam.trim());
+            startDate = Utils.stringToDate(fromDateParam.trim().replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+            Date toDate = Utils.stringToDate(toDateParam.trim().replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
             if (startDate == null || toDate == null) {
                 return new ResponseEntity<>(Utils.TRANSACTION_DATE_FORMAT_INVALID, HttpStatus.BAD_REQUEST);
             }

@@ -25,7 +25,7 @@ public record ExpenseDetailResponse(
         String subCategoryName,
         String title,
         Boolean isVendorExpense,
-        ExpensePaymentStatus paymentStatus,
+        String paymentStatus,
         Double paidAmount,
         Double balanceAmount,
         String paymentMethod,

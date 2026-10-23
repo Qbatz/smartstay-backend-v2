@@ -674,7 +674,7 @@ public class RetainerService {
         invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
 
         List<TransactionV1> listRetainerTransactions;
-        List<BankingV1> listBankings;
+        List<BankingV2> listBankings;
 
         List<InvoicesV1> listInvoices = invoicesV1Repository.findByCustomerIdAndInvoiceTypeIn(customerId, invoiceTypes);
         if (listInvoices != null) {

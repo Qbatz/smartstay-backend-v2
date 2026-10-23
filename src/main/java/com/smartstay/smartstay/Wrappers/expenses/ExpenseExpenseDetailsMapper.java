@@ -13,11 +13,11 @@ import java.util.function.Function;
 public class ExpenseExpenseDetailsMapper implements Function<ExpensesV1, ExpenseReportResponse.ExpenseDetail> {
 
     Map<Long, ExpenseCategory> categoryMap = null;
-    Map<String, BankingV1> bankMap = null;
+    Map<String, BankingV2> bankMap = null;
     Map<String, Users> userMap = null;
     List<VendorV1> listVendors = null;
 
-    public ExpenseExpenseDetailsMapper(Map<Long, ExpenseCategory> categoryMap, Map<String, BankingV1> bankingMap, Map<String, Users> userMap, List<VendorV1> listVendors) {
+    public ExpenseExpenseDetailsMapper(Map<Long, ExpenseCategory> categoryMap, Map<String, BankingV2> bankingMap, Map<String, Users> userMap, List<VendorV1> listVendors) {
         this.categoryMap = categoryMap;
         this.bankMap = bankingMap;
         this.userMap = userMap;
@@ -37,7 +37,7 @@ public class ExpenseExpenseDetailsMapper implements Function<ExpensesV1, Expense
                     .map(ExpenseSubCategory::getSubCategoryName).findFirst().orElse(null);
         }
 
-        BankingV1 b = bankMap.get(e.getBankId());
+        BankingV2 b = bankMap.get(e.getBankId());
         String pMode = (b != null) ? Utils.capitalize(b.getAccountType()) : null;
         String account = (b != null) ? (b.getAccountHolderName() + "-" + Utils.capitalize(b.getAccountType()))
                 : null;
@@ -57,16 +57,16 @@ public class ExpenseExpenseDetailsMapper implements Function<ExpensesV1, Expense
             }
         }
 
-        if (e.getPaymentStatus().name().equalsIgnoreCase(ExpensePaymentStatus.Full.name())) {
+        if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Full.name())) {
             status = "Full";
         }
-        else if (e.getPaymentStatus().name().equalsIgnoreCase(ExpensePaymentStatus.Partial.name())) {
+        else if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Partial.name())) {
             status = "Partial";
         }
-        else if (e.getPaymentStatus().name().equalsIgnoreCase(ExpensePaymentStatus.Pending.name())) {
+        else if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Pending.name())) {
             status = "Pending";
         }
-        else if (e.getPaymentStatus().name().equalsIgnoreCase(ExpensePaymentStatus.Overdue.name())) {
+        else if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Overdue.name())) {
             status = "Overdue";
         }
 

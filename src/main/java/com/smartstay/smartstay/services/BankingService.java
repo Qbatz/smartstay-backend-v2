@@ -517,12 +517,12 @@ public class BankingService {
                 .toList();
     }
 
-    public List<BankingV1> findAllBanksById(Set<String> bankLists) {
-        List<BankingV1> listBanks = bankingV1Repository.findByBankIdIn(bankLists.stream().toList());
-        if (listBanks == null) {
-            listBanks = new ArrayList<>();
-        }
-        return listBanks;
+    public List<BankingV2> findAllBanksById(Set<String> bankLists) {
+//        List<BankingV1> listBanks = bankingV1Repository.findByBankIdIn(bankLists.stream().toList());
+//        if (listBanks == null) {
+//            listBanks = new ArrayList<>();
+//        }
+        return bankingServiceV2.findAllByBankId(bankLists);
     }
 
     public ResponseEntity<?> addMoney(String hostelId, UpdateBankBalance balance) {

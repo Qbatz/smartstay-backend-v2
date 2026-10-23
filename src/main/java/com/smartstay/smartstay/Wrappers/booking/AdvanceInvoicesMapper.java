@@ -18,8 +18,8 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
 
     private List<InvoicesV1> listInvoices = null;
     private List<TransactionV1> listLatestPayments = null;
-    private List<BankingV1> listBanks = null;
-    public AdvanceInvoicesMapper(List<BookingsV1> listBookings, List<BedDetails> listBedDetails, List<Customers> listCustomers, List<InvoicesV1> listInvoices, List<TransactionV1> listTransactions, List<BankingV1> listBanks) {
+    private List<BankingV2> listBanks = null;
+    public AdvanceInvoicesMapper(List<BookingsV1> listBookings, List<BedDetails> listBedDetails, List<Customers> listCustomers, List<InvoicesV1> listInvoices, List<TransactionV1> listTransactions, List<BankingV2> listBanks) {
         this.listBookings = listBookings;
         this.listBedDetails = listBedDetails;
         this.listCustomers = listCustomers;
@@ -147,7 +147,7 @@ public class AdvanceInvoicesMapper implements Function<InvoicesV1, AdvanceListIt
                 latestTransactionAmount = Utils.roundOffWithTwoDigit(transactionV1.getPaidAmount());
                 latestTransactionDate = Utils.dateToString(transactionV1.getPaymentDate());
                 if (listBanks != null) {
-                    BankingV1 bankingV1 = listBanks
+                    BankingV2 bankingV1 = listBanks
                             .stream()
                             .filter(i -> i.getBankId().equalsIgnoreCase(transactionV1.getBankId()))
                             .findFirst()

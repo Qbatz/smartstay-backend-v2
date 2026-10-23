@@ -1292,7 +1292,7 @@ public class VendorService {
         // the query level. Map entities -> summary via a dedicated mapper (no JPQL projection).
         VendorExpenseSummaryMapper expenseSummaryMapper = new VendorExpenseSummaryMapper();
         List<VendorExpenseSummary> expenses = expensesRepository
-                .findOutstandingExpensesByVendorId(String.valueOf(vendorId), ExpensePaymentStatus.Full)
+                .findOutstandingExpensesByVendorId(String.valueOf(vendorId), ExpensePaymentStatus.Full.name())
                 .stream()
                 .map(expenseSummaryMapper)
                 .toList();
@@ -1337,7 +1337,6 @@ public class VendorService {
     public Map<String, String> resolveVendorNames(List<com.smartstay.smartstay.dto.expenses.ExpenseList> projections) {
         List<Integer> vendorIds = projections.stream()
                 .map(com.smartstay.smartstay.dto.expenses.ExpenseList::getVendorId)
-                .map(Integer::parseInt)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
@@ -1508,21 +1507,21 @@ public class VendorService {
         expense.setUpdatedBy(auditUser);
     }
 
-    private ExpensePaymentStatus deriveExpenseStatus(double paid, double total, ExpensesV1 expense) {
+    private String deriveExpenseStatus(double paid, double total, ExpensesV1 expense) {
         if (total > 0 && paid >= total - 0.0001) {
-            return ExpensePaymentStatus.Full;
+            return ExpensePaymentStatus.Full.name();
         }
         // Not fully paid: a vendor expense past its credit period is overdue.
         if (Boolean.TRUE.equals(expense.getIsVendorExpense())
                 && expense.getCreditPeriod() != null && expense.getCreditPeriod() > 0
                 && expense.getCreatedAt() != null
                 && daysSince(expense.getCreatedAt()) > expense.getCreditPeriod()) {
-            return ExpensePaymentStatus.Overdue;
+            return ExpensePaymentStatus.Overdue.name();
         }
         if (paid <= 0) {
-            return ExpensePaymentStatus.Pending;
+            return ExpensePaymentStatus.Pending.name();
         }
-        return ExpensePaymentStatus.Partial;
+        return ExpensePaymentStatus.Partial.name();
     }
 
     private long daysSince(Date date) {

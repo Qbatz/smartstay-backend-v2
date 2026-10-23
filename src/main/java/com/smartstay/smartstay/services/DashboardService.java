@@ -145,7 +145,11 @@ public class DashboardService {
                 buildTenantRequests(hostelId, complaintRequestFilter),
                 buildFinanceSummary(hostelId, financeFilter),
                 buildRevenueSummary(hostelId, financeFilter),
-                buildRevenueTrend(hostelId), buildRecentCheckins(hostelId), buildOverdueInvoices(hostelId), buildRecentActivities(hostelId, complaintRequestFilter), buildTenantComplaintList(hostelId), DASHBOARD_FILTERS);
+                buildRevenueTrend(hostelId),
+                buildRecentCheckins(hostelId),
+                buildOverdueInvoices(hostelId),
+                buildRecentActivities(hostelId, complaintRequestFilter),
+                buildTenantComplaintList(hostelId), DASHBOARD_FILTERS);
 
         return new ResponseEntity<>(dashboardNew, HttpStatus.OK);
     }

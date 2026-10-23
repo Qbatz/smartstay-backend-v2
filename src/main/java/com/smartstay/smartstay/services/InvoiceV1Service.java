@@ -827,15 +827,9 @@ public class InvoiceV1Service {
 
         Pageable pageableRequest = PageRequest.of(pageFromParams - 1, size);
         List<InvoicesV1> listAllInvoice = new ArrayList<>();
-        Page<InvoicesV1> pageList = null;
+        Page<InvoicesV1> pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey, pageableRequest);
 
         listAllInvoice = invoicesV1Repository.findAllInvoicesByHostelIdForInvoice(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey);
-        if (authentication.getSource().equalsIgnoreCase("web")) {
-            pageList = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds, searchKey, pageableRequest);
-            if (pageList != null) {
-                listAllInvoice = pageList.getContent();
-            }
-        }
 
 
         List<InvoiceRedemption> listInvoiceRedeemed;
@@ -908,14 +902,28 @@ public class InvoiceV1Service {
             currentMonthCollection = transactionService.getCurrentMonthCollection(hostelId, listInvoiceIds);
         }
 
-        List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers,
-                listInvoiceDiscounts, listInvoiceRedeemed, listRetainerInvoices, listAllInvoiceForCustomer, listTransactions, sourceInvoiceIds).apply(i)).toList();
+        List<InvoicesList> newInvoicesList = new ArrayList<>();
+        if (pageList != null) {
+            newInvoicesList = pageList.getContent().stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers,
+                    listInvoiceDiscounts, listInvoiceRedeemed, listRetainerInvoices, listAllInvoiceForCustomer, listTransactions, sourceInvoiceIds).apply(i)).toList();
+        }
+
+//        List<InvoicesList> newInvoicesList = listAllInvoice.stream().map(i -> new NewInvoiceListMapper(lisAllCustomersForInvoices, adminUsers,
+//                listInvoiceDiscounts, listInvoiceRedeemed, listRetainerInvoices, listAllInvoiceForCustomer, listTransactions, sourceInvoiceIds).apply(i)).toList();
 
         if (authentication.getSource().equalsIgnoreCase("web")) {
 //            List<InvoicesV1> listInvoices = invoicesV1Repository.findAllInvoicesByHostelId(hostelId, dStartDate, dEndDate, invoiceTypes, createdByUsers, modes, pStatus, userIds);
             return getAllInvoicesWebResponse(hostelId, invoiceFilterOptions, pageList, newInvoicesList, listAllInvoice, currentMonthCollection);
         } else {
-            NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, invoiceFilterOptions, newInvoicesList);
+            PaginationSummary paginationSummary = null;
+            if (pageList != null) {
+                Long totalItems =  pageList.getTotalElements();
+                paginationSummary = new PaginationSummary(pageList.getTotalPages(),
+                        totalItems.intValue(),
+                        pageList.getPageable().getPageNumber() + 1,
+                        pageList.getPageable().getPageSize());
+            }
+            NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, paginationSummary, invoiceFilterOptions, newInvoicesList);
             return new ResponseEntity<>(newInvoicesListResponse, HttpStatus.OK);
         }
     }
@@ -1377,13 +1385,13 @@ public class InvoiceV1Service {
         return listInvoices;
     }
 
-    public String cancelBookingInvoice(InvoicesV1 invoicesV1, String bankId, Date cancelledDate, String referenceNumber) {
+    public String cancelBookingInvoice(InvoicesV1 invoicesV1, String bankId, Date cancelledDate, String referenceNumber, String paymentId) {
         invoicesV1.setPaymentStatus(PaymentStatus.CANCELLED.name());
         invoicesV1.setCancelledDate(cancelledDate);
         invoicesV1.setCancelled(true);
         invoicesV1Repository.save(invoicesV1);
 
-        TransactionV1 transactionV1 = transactionService.cancelBooking(invoicesV1.getCustomerId(), invoicesV1.getInvoiceId(), invoicesV1.getHostelId(), invoicesV1.getTotalAmount(), bankId, cancelledDate, referenceNumber);
+        TransactionV1 transactionV1 = transactionService.cancelBooking(invoicesV1.getCustomerId(), invoicesV1.getInvoiceId(), invoicesV1.getHostelId(), invoicesV1.getTotalAmount(), bankId, paymentId, cancelledDate, referenceNumber);
         return transactionV1.getTransactionId();
     }
 
@@ -6264,7 +6272,7 @@ public class InvoiceV1Service {
         List<InvoicesV1> listPendingInvoices = invoicesV1Repository.findPendingByHostelIdAndCustomerId(hostelId, customerId);
         List<InvoicesV1> invoiceItemsToShow = listPendingInvoices;
         List<TransactionV1> listTransactions;
-        List<BankingV1> listBanks;
+        List<BankingV2> listBanks;
         if (listPendingInvoices != null) {
             List<String> invoiceIds = listPendingInvoices.stream().map(InvoicesV1::getInvoiceId).toList();
 
@@ -6862,7 +6870,7 @@ public class InvoiceV1Service {
                         .map(InvoicesV1::getInvoiceId)
                         .toList();
                 List<TransactionV1> latestTransactions = transactionService.getLatestTransactions(hostelId, invoiceIds);
-                List<BankingV1> listBanks;
+                List<BankingV2> listBanks;
                 if (latestTransactions != null) {
                     Set<String> bankIds = latestTransactions
                             .stream()

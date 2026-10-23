@@ -66,14 +66,15 @@ public class ExpensesV1 {
     private String title;
     private Boolean isVendorExpense;
 
-    @Enumerated(EnumType.STRING)
-    private ExpensePaymentStatus paymentStatus;
+    //from expense payment status ENUM
+    private String paymentStatus;
 
     private Double paidAmount;
     private Double balanceAmount;
     private String paymentMethod;
     private String note;
     private Integer creditPeriod;
+    private Boolean isMigrated;
 
     // Payment/transaction reference for the expense.
     private String transactionId;

@@ -197,4 +197,28 @@ public class BankingMethodService {
             bankingMethodsRepository.deleteAll(newBankingMethods);
         }
     }
+
+    public void deleteReceipt(Double paidAmount, String paymentMethodId) {
+        BankingMethods bm = bankingMethodsRepository.findByMethodId(paymentMethodId);
+        if (bm != null) {
+            if (bm.getBalance() == null) {
+                bm.setBalance(-1 * paidAmount);
+            }
+            else {
+                bm.setBalance(bm.getBalance() - paidAmount);
+            }
+
+            bm.setUpdatedAt(new Date());
+            bm.setUpdatedBy(authentication.getName());
+            bankingMethodsRepository.save(bm);
+        }
+    }
+
+    public boolean isExists(String hostelId, String cardNumber) {
+        BankingMethods bm = bankingMethodsRepository.findByHostelIdAndCardNumber(hostelId, cardNumber);
+        if (bm == null) {
+            return true;
+        }
+        return false;
+    }
 }

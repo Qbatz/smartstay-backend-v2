@@ -166,6 +166,7 @@ public class Utils {
     public static final String BANKING_METHOD_CARD_NUMBER_REQUIRED = "Card number is required";
     public static final String BANKING_METHOD_CARD_NUMBER_INVALID = "Card number must be at least 4 digits";
     public static final String BANKING_METHOD_CARD_NETWORK_REQUIRED = "Card network is required for Credit Card and Debit Card";
+    public static final String CARD_NO_ALREADY_EXISTS = "Card number already exists";
     public static final String BANKING_METHOD_CARD_HOLDER_REQUIRED = "Card holder name is required for Credit Card and Debit Card";
     public static final String BANKING_METHOD_LINKED_UPI_REQUIRED = "Linked UPI id is required for QR Code";
     public static final String BANKING_METHOD_QR_IMAGE_REQUIRED = "QR image is required for QR Code";

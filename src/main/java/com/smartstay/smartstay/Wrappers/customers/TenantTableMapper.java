@@ -23,9 +23,6 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
     private final List<String> columns;
     private final Map<String, Draft> draftsByCustomerId;
 
-    public TenantTableMapper(List<BedDetails> listBedDetails, List<BookingsV1> listBookings, List<String> columns) {
-        this(listBedDetails, listBookings, columns, Collections.emptyMap());
-    }
 
     public TenantTableMapper(List<BedDetails> listBedDetails, List<BookingsV1> listBookings, List<String> columns,
                              Map<String, Draft> draftsByCustomerId) {

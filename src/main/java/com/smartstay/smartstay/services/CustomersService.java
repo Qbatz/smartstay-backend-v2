@@ -1805,8 +1805,8 @@ public class CustomersService {
         List<String> invoicesIds = listTransactions.stream().map(TransactionDto::invoiceId).toList();
         Set<String> bankIds = listTransactions.stream().map(TransactionDto::bankId).collect(Collectors.toSet());
         List<InvoicesV1> listOfInvoices = invoiceService.findInvoices(invoicesIds);
-        List<BankingV1> listOFBankings = bankingService.findAllBanksById(bankIds);
-        List<String> userIds = listOFBankings.stream().map(BankingV1::getUserId).toList();
+        List<BankingV2> listOFBankings = bankingService.findAllBanksById(bankIds);
+        List<String> userIds = listOFBankings.stream().map(BankingV2::getResponsiblePerson).toList();
         List<Users> listUsers = userService.findAllUsersFromUserId(userIds);
         List<JobDetails> jobDetails = customerJobDetailsService.getCustomerJobDetails(customers.getHostelId(), customers.getCustomerId());
         List<CustomerJob> customerJobs = customerJobDetailsService.getCustomerJobs(customers.getHostelId(), customers.getCustomerId());
@@ -2257,14 +2257,17 @@ public class CustomersService {
             }
         }
 
-        if (currentMonthRentInfo.otherInvoicesInfo() != null) {
+        if (currentMonthRentInfo != null) {
+            if (currentMonthRentInfo.otherInvoicesInfo() != null) {
 
-            OtherInvoicesInfo otherInvoicesInfo = currentMonthRentInfo.otherInvoicesInfo();
-            if (otherInvoicesInfo.totalPendingAmount() != null) {
+                OtherInvoicesInfo otherInvoicesInfo = currentMonthRentInfo.otherInvoicesInfo();
+                if (otherInvoicesInfo.totalPendingAmount() != null) {
 //                payableAmount = payableAmount + otherInvoicesInfo.totalPendingAmount();
-                currentMonthOtherInvoiceAmount = otherInvoicesInfo.totalPendingAmount();
+                    currentMonthOtherInvoiceAmount = otherInvoicesInfo.totalPendingAmount();
+                }
             }
         }
+
 
 
         if (ebInfo != null) {

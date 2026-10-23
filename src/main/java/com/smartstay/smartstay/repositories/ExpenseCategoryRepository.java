@@ -28,5 +28,9 @@ public interface ExpenseCategoryRepository extends JpaRepository<ExpenseCategory
             """)
     List<ExpenseCategory> findByCategoryName(String hostelId, String categoryName, Long catId);
     ExpenseCategory findByHostelIdAndCategoryId(String hostelId, Long categoryId);
+    @Query("""
+            SELECT ec FROM ExpenseCategory ec WHERE ec.hostelId=:hostelId AND ec.categoryId IN (:catId)
+            """)
+    List<ExpenseCategory> findByHostelIdAndCategoryIdIn(String hostelId, List<Long> catId);
 
 }

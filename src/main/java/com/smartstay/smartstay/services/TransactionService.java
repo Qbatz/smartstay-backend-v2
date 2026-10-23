@@ -939,8 +939,10 @@ public class TransactionService {
         }
 
         transactionRespository.delete(transactionV1);
-        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
-                transactionV1.getBankId());
+//        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
+//                transactionV1.getBankId());
+        bankingServiceV2.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
+                transactionV1.getBankId(), transactionV1.getPaymentMethodId());
         usersService.addUserLogWithType(hostelId, transactionV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.DELETE, users, transactionV1.getInvoiceId());
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -1036,25 +1038,24 @@ public class TransactionService {
         int numberOfPages = 0;
         int itemsPerPage = 0;
         int totalItems = 0;
+        Pageable pageable = PageRequest.of(page-1, size);
 
         List<TransactionV1> transactionsMain = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
                 endDate, bankIds, collectedBy, invoiceIds);
-        List<TransactionV1> secondaryTransactions = transactionsMain;
 
-        totalItems = transactionsMain.size();
-
-        if (authentication.getSource().equalsIgnoreCase("web")) {
-            Pageable pageable = PageRequest.of(page-1, size);
-            Page<TransactionV1> webTransactions = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
-                    endDate, bankIds, collectedBy, invoiceIds, pageable);
-            currentPage = webTransactions.getPageable().getPageNumber() + 1;
-            pageSize = webTransactions.getTotalPages();
-            numberOfPages = webTransactions.getNumberOfElements();
-            totalItems = (int) webTransactions.getTotalElements();
-            itemsPerPage = webTransactions.getPageable().getPageSize();
-            secondaryTransactions = webTransactions.getContent();
+        Page<TransactionV1> pageTransaction = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
+                endDate, bankIds, collectedBy, invoiceIds, pageable);
+        List<TransactionV1> secondaryTransactions = new ArrayList<>();
+        if (pageTransaction != null) {
+            currentPage = pageTransaction.getPageable().getPageNumber() + 1;
+            pageSize = pageTransaction.getTotalPages();
+            numberOfPages = pageTransaction.getNumberOfElements();
+            totalItems = (int) pageTransaction.getTotalElements();
+            itemsPerPage = pageTransaction.getPageable().getPageSize();
+            secondaryTransactions = pageTransaction.getContent();
         }
 
+        totalItems = transactionsMain.size();
 
         Double receivedAmount = 0.0;
         Double returnedAmount = 0.0;
@@ -1099,9 +1100,11 @@ public class TransactionService {
         if (!customerIds.isEmpty())
             customersService.getCustomerDetails(customerIds).forEach(c -> customerMap.put(c.getCustomerId(), c));
 
-        Map<String, BankingV1> bankMap = new HashMap<>();
-        if (!tBankIds.isEmpty())
+        Map<String, BankingV2> bankMap = new HashMap<>();
+        if (!tBankIds.isEmpty()) {
             bankingService.findAllBanksById(new HashSet<>(tBankIds)).forEach(b -> bankMap.put(b.getBankId(), b));
+        }
+
 
         Map<String, Users> userMap = new HashMap<>();
         if (!tUserIds.isEmpty())
@@ -1113,7 +1116,7 @@ public class TransactionService {
 
         List<TransactionReportResponse.TransactionData> dataList = secondaryTransactions.stream().map(t -> {
             Customers c = customerMap.get(t.getCustomerId());
-            BankingV1 b = bankMap.get(t.getBankId());
+            BankingV2 b = bankMap.get(t.getBankId());
             Users u = userMap.get(t.getCreatedBy());
             InvoicesV1 inv = invoiceMap.get(t.getInvoiceId());
 
@@ -1280,7 +1283,7 @@ public class TransactionService {
         return new ResponseEntity<>(url, HttpStatus.OK);
     }
 
-    public TransactionV1 cancelBooking(String customerId, String invoiceId, String hostelId, Double totalAmount, String bankId,
+    public TransactionV1 cancelBooking(String customerId, String invoiceId, String hostelId, Double totalAmount, String bankId, String paymentId,
             Date cancelledDate, String referenceNumber) {
         TransactionV1 transactionV1 = new TransactionV1();
         transactionV1.setType(TransactionType.REFUND.name());
@@ -1295,6 +1298,8 @@ public class TransactionService {
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(cancelledDate));
         transactionV1.setTransactionReferenceId(generateRandomNumber());
         transactionV1.setBankId(bankId);
+        transactionV1.setPaymentMethodId(paymentId);
+        transactionV1.setSource(authentication.getSource());
         transactionV1.setReferenceNumber(referenceNumber);
         transactionV1.setPaidAt(new Date());
         transactionV1.setUpdatedBy(authentication.getName());

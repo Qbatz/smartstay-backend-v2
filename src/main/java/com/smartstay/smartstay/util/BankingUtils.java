@@ -5,6 +5,7 @@ import com.smartstay.smartstay.dao.BankingMethods;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.ennum.BankAccountType;
+import com.smartstay.smartstay.ennum.PaymentMethod;
 import com.smartstay.smartstay.responses.invoices.AccountDetails;
 
 import java.util.List;
@@ -104,5 +105,44 @@ public class BankingUtils {
             }
             return null;
         }
+    }
+
+    public static String getPaymentMethod(BankingV2 bankingV2, String paymentMethod) {
+        if (bankingV2 != null) {
+            List<BankingMethods> listBankMethods = bankingV2
+                    .getBankingMethods();
+            if (listBankMethods != null) {
+                BankingMethods bm = listBankMethods
+                        .stream()
+                        .filter(i -> i.getPaymentMethodId().equalsIgnoreCase(paymentMethod))
+                        .findFirst()
+                        .orElse(null);
+
+                if (bm != null) {
+                    return bm.getPaymentMethod();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static String getPaymentMethodName(BankingMethods bm) {
+        if (bm != null) {
+            if (bm.getPaymentMethod().equalsIgnoreCase(PaymentMethod.BANK.name())) {
+                return bm.getDisplayName();
+            }
+            if (bm.getPaymentMethod().equalsIgnoreCase(PaymentMethod.UPI.name())) {
+                return bm.getUpiApp();
+            }
+            if (bm.getPaymentMethod().equalsIgnoreCase(PaymentMethod.DEBIT_CARD.name())) {
+                return bm.getPaymentMethod();
+            }
+            if (bm.getPaymentMethod().equalsIgnoreCase(PaymentMethod.CREDIT_CARD.name())) {
+                return bm.getPaymentMethod();
+            }
+        }
+
+        return "";
     }
 }
