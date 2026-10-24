@@ -221,4 +221,32 @@ public class BankingMethodService {
         }
         return false;
     }
+
+    public void deleteExpensePayment(String hostelId, String paymentMethodId, Double amount) {
+        BankingMethods bm = bankingMethodsRepository.findByMethodId(paymentMethodId);
+        if (bm != null) {
+            if (bm.getBalance() != null) {
+                bm.setBalance(bm.getBalance() + amount);
+            }
+            else {
+                bm.setBalance(amount);
+            }
+
+            bankingMethodsRepository.save(bm);
+        }
+    }
+
+    public void deleteAssetsPayment(String paymentMethodId, Double amount) {
+        BankingMethods bm = bankingMethodsRepository.findByMethodId(paymentMethodId);
+        if (bm != null) {
+            if (bm.getBalance() != null) {
+                bm.setBalance(bm.getBalance() + amount);
+            }
+            else {
+                bm.setBalance(amount);
+            }
+
+            bankingMethodsRepository.save(bm);
+        }
+    }
 }

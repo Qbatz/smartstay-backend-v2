@@ -38,5 +38,6 @@ public class AssetsV1 {
     private Integer roomId;
     private Integer bedId;
     private String parentId;
+    private String platform;
 
 }

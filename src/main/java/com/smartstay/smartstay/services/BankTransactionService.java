@@ -170,7 +170,7 @@ public class BankTransactionService {
         }
     }
 
-    public boolean addExpenseTransaction(TransactionDto transactionDto, String sourceId, String paymentMethodId) {
+    public Integer addExpenseTransaction(TransactionDto transactionDto, String sourceId, String paymentMethodId) {
         if (authentication.isAuthenticated()) {
 
             BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
@@ -204,11 +204,11 @@ public class BankTransactionService {
             transactionsV1.setIsDeleted(false);
             transactionsV1.setCreatedBy(authentication.getName());
 
-            bankRepository.save(transactionsV1);
+            BankTransactionsV1 transactionsV11 = bankRepository.save(transactionsV1);
 
-            return true;
+            return transactionsV11.getTransactionId();
         }
-        return false;
+        return null;
     }
 
 
@@ -268,7 +268,7 @@ public class BankTransactionService {
             return false;
         }
 
-        bankingServiceV2.updateBalanceForAssets(price, BankTransactionType.DEBIT.name(), bankId, bankMethodId);
+        Double bankBalance = bankingServiceV2.updateBalanceForAssets(price, BankTransactionType.DEBIT.name(), bankId, bankMethodId);
 
         BankTransactionsV1 transactionsV1 = new BankTransactionsV1();
         transactionsV1.setTransactionDate(Utils.convertToTimeStamp(transactionDate));
@@ -277,6 +277,8 @@ public class BankTransactionService {
         transactionsV1.setPlatform(authentication.getSource());
         transactionsV1.setReferenceNumber(referenceNumber);
         transactionsV1.setAmount(price);
+        transactionsV1.setAccountBalance(bankBalance);
+        transactionsV1.setPlatform(authentication.getSource());
         transactionsV1.setType(BankTransactionType.DEBIT.name());
         transactionsV1.setSource(BankSource.ASSETS.name());
         transactionsV1.setSourceId(String.valueOf(assetId));
@@ -327,7 +329,7 @@ public class BankTransactionService {
             bankTransactionsV1.setUpdatedAt(new Date());
             bankTransactionsV1.setUpdatedBy(authentication.getName());
 
-            bankingService.updateAccountBalanceByDeleteExpense(hostelId, bankTransactionsV1.getBankId(), bankTransactionsV1.getAmount());
+            bankingServiceV2.updateAccountBalanceByDeleteExpense(hostelId, bankTransactionsV1.getBankId(), bankTransactionsV1.getAmount(), bankTransactionsV1.getPaymentMethodId());
         }
         // No bank transaction (e.g. a PENDING expense created without a bank) means there is nothing to
         // reverse — the expense is still safely deletable, so report success either way.
@@ -487,5 +489,18 @@ public class BankTransactionService {
             return false;
         }
         return true;
+    }
+
+    public void deleteAssets(String hostelId, Long assetId) {
+        BankTransactionsV1 bankTransactionsV1 = bankRepository.findByHostelIdAndAssetsId(hostelId, String.valueOf(assetId));
+        if (bankTransactionsV1 != null) {
+            bankingServiceV2.updateAccountBalanceByDeletingAssets(bankTransactionsV1.getBankId(), bankTransactionsV1.getPaymentMethodId(), bankTransactionsV1.getAmount());
+            bankTransactionsV1.setIsDeleted(true);
+
+            bankRepository.save(bankTransactionsV1);
+        }
+
+
+
     }
 }

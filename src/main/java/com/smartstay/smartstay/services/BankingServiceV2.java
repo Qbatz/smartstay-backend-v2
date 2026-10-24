@@ -1273,6 +1273,39 @@ public class BankingServiceV2 {
 //        }
     }
 
+    public void updateAccountBalanceByDeleteExpense(String hostelId, String bankId, Double amount, String paymentMethodId) {
+        if (paymentMethodId != null) {
+            bankingMethodService.deleteExpensePayment(hostelId, paymentMethodId, amount);
+        }
+        BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankId).orElse(null);
+        if (bankingV2 != null) {
+            if (bankingV2.getBalance() != null) {
+                bankingV2.setBalance(bankingV2.getBalance() + amount);
+            }
+            else {
+                bankingV2.setBalance(amount);
+            }
+            bankingV2Repository.save(bankingV2);
+        }
+
+    }
+
+    public void updateAccountBalanceByDeletingAssets(String bankId, String paymentMethodId, Double amount) {
+        if (paymentMethodId != null) {
+            bankingMethodService.deleteAssetsPayment(paymentMethodId, amount);
+        }
+        BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankId).orElse(null);
+        if (bankingV2 != null) {
+            if (bankingV2.getBalance() != null) {
+                bankingV2.setBalance(bankingV2.getBalance() + amount);
+            }
+            else {
+                bankingV2.setBalance(amount);
+            }
+            bankingV2Repository.save(bankingV2);
+        }
+    }
+
     private record TransferRequest(String hostelId, double amount, Date transactionDate, String description,
                                    String transactionNumber, String userId, Date now) {
     }
@@ -1322,17 +1355,18 @@ public class BankingServiceV2 {
 
     }
 
-    public void updateBalanceForAssets(Double price, String name, String bankId, String bankMethodId) {
+    public Double updateBalanceForAssets(Double price, String name, String bankId, String bankMethodId) {
         BankingV2 bank = bankingV2Repository.findByBankId(bankId).orElse(null);
         if (bank == null || bank.isDeleted()) {
-            return;
+            return null;
         }
         if (bank.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
             double current = bank.getBalance() != null ? bank.getBalance() : 0.0;
             bank.setBalance(current - price);
             bank.setUpdatedAt(new Date());
             bank.setUpdatedBy(authentication.getName());
-            bankingV2Repository.save(bank);
+            BankingV2 bankingV2 = bankingV2Repository.save(bank);
+            return bankingV2.getBalance();
         }
         else {
             bankingMethodService.updateBankInfo(bank, bankMethodId, price);
@@ -1340,7 +1374,8 @@ public class BankingServiceV2 {
             bank.setBalance(current - price);
             bank.setUpdatedAt(new Date());
             bank.setUpdatedBy(authentication.getName());
-            bankingV2Repository.save(bank);
+            BankingV2 bankingV2 = bankingV2Repository.save(bank);
+            return bankingV2.getBalance();
         }
     }
 

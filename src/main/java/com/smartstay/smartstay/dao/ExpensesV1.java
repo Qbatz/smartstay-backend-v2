@@ -78,6 +78,8 @@ public class ExpensesV1 {
 
     // Payment/transaction reference for the expense.
     private String transactionId;
+    //Id from bank transaction v1
+    private String bankTransactionId;
     // Tax amount applicable to the expense.
     private Double tax;
     // Discount amount applied to the expense.

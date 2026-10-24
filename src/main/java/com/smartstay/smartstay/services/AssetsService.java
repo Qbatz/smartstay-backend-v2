@@ -151,6 +151,7 @@ public class AssetsService {
         asset.setIsDeleted(false);
         asset.setHostelId(hostelId);
         asset.setParentId(user.getParentId());
+        asset.setPlatform(authentication.getSource());
         AssetsV1 av1 = assetsRepository.save(asset);
 
         bankTransactionService.addAssetsTransaction(av1.getAssetId(), request.price(), purchaseDate, oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId(), hostelId, request.serialNumber());
@@ -356,6 +357,7 @@ public class AssetsService {
         existingAsset.setIsDeleted(true);
         existingAsset.setUpdatedAt(new Date());
         assetsRepository.save(existingAsset);
+        bankTransactionService.deleteAssets(existingAsset.getHostelId(), existingAsset.getAssetId());
         return new ResponseEntity<>("Deleted", HttpStatus.OK);
     }
 

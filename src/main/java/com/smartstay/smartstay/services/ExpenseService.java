@@ -527,9 +527,13 @@ public class ExpenseService {
                 hostelId,
                 expense.purchaseDate(),
                 expenseNumber);
-        if (bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId(), oldBankToNewBankInfo.paymentMethodId())) {
+
+        Integer transactionId = bankTransactionService.addExpenseTransaction(transactionDto, expV1.getExpenseId(), oldBankToNewBankInfo.paymentMethodId());
+        if (transactionId != null) {
 //            bankingServiceV2.debitExpenseBalances(oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId(),
 //                    transactionDto.amount(), authentication.getName());
+            expV1.setBankTransactionId(String.valueOf(transactionId));
+            expensesRepository.save(expV1);
             return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
         }
         else {

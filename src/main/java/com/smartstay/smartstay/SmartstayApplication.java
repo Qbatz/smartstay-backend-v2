@@ -2,6 +2,7 @@ package com.smartstay.smartstay;
 
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.invoices.CancelledInvoice;
 import com.smartstay.smartstay.dto.kyc.KycUsage;
@@ -1131,6 +1132,17 @@ public class SmartstayApplication {
 //                }
 //
 //            });
+//        };
+//    }
+
+//    @Bean
+//    CommandLineRunner deleteBankAccount(BankingV2Repository bankingV2Repository) {
+//        return args -> {
+//            BankingV2 bankingV2 = bankingV2Repository.findByBankId("f0fd4d17-14da-401a-89c9-0cdcf65c3519").orElse(null);
+//            if (bankingV2 != null) {
+//                bankingV2Repository.delete(bankingV2);
+//            }
+//
 //        };
 //    }
 }

@@ -88,4 +88,10 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             """)
     List<BankTransactionsV1> findPendingMigrationTransactions();
 
+    @Query("""
+            SELECT trans FROM BankTransactionsV1 trans WHERE trans.hostelId=:hostelId 
+            AND trans.sourceId=:sourceId AND trans.source='ASSETS'
+            """)
+    BankTransactionsV1 findByHostelIdAndAssetsId(String hostelId, String sourceId);
+
 }
