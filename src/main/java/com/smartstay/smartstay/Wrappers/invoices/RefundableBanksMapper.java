@@ -8,14 +8,18 @@ import java.util.function.Function;
 
 public class RefundableBanksMapper implements Function<BankingV1, RefundableBanks> {
     @Override
-    public RefundableBanks apply(BankingV1 bankingV1) {
+    public RefundableBanks apply(BankingV1 bankingV2) {
 
-        String bankName = bankingV1.getAccountHolderName() +
-                "-" +
-                bankingV1.getAccountType();
+        String bankName = bankingV2.getBankName();
+        String holderName = bankingV2.getAccountHolderName();
+        if (bankingV2.getAccountHolderName() != null) {
+            holderName = bankingV2.getAccountHolderName();
+        }
 
-        return new RefundableBanks(bankingV1.getBankId(),
+        return new RefundableBanks("SSNBB-" + bankingV2.getBankId(),
+                false,
                 bankName,
-                bankingV1.getAccountHolderName());
+                bankingV2.getAccountType(),
+                holderName);
     }
 }

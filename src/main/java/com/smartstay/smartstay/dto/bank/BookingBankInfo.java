@@ -1,9 +1,11 @@
 package com.smartstay.smartstay.dto.bank;
 
 public record BookingBankInfo(String bankId,
-                              String holderName,
+                              boolean isBank,
                               String bankName,
-                              String upiId,
-                              String type,
-                              boolean isUpi) {
+                              String accountType,
+                              String displayName,
+                              String accountHolderName,
+                              boolean isUpi,
+                              String upiIcon) {
 }

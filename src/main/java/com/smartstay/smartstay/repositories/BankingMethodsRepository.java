@@ -23,7 +23,7 @@ public interface BankingMethodsRepository extends JpaRepository<BankingMethods, 
             SELECT bm FROM BankingMethods bm WHERE bm.hostelId=:hostelId AND bm.paymentMethod IN ('CREDIT_CARD', 'DEBIT_CARD') 
             AND bm.cardNumber=:cardNumber AND (bm.isDeleted=false OR bm.isDeleted IS NULL)
             """)
-    BankingMethods findByHostelIdAndCardNumber(String hostelId, String cardNumber);
+    List<BankingMethods> findByHostelIdAndCardNumber(String hostelId, String cardNumber);
     @Query("""
             SELECT bm FROM BankingMethods bm WHERE bm.paymentMethodId=:paymentMethodId
             """)

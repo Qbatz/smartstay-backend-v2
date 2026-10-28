@@ -168,7 +168,7 @@ public class BankingServiceV2 {
             responsiblePerson = trimToNull(payload.responsiblePerson());
         }
         else if (accountType == BankAccountTypeV2.CARD) {
-            if (bankingMethodService.isExists(hostelId, payload.cardNumber())) {
+            if (bankingMethodService.isExists(hostelId, payload.cardNumber(), "CREDIT_CARD")) {
                 return new ResponseEntity<>(Utils.CARD_NO_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
             }
         }
@@ -392,6 +392,9 @@ public class BankingServiceV2 {
                 }
             }
             case "DEBIT_CARD" -> {
+                if (bankingMethodService.isExists(hostelId, cardNumber, "DEBIT_CARD")) {
+                    return badRequest(Utils.CARD_NO_ALREADY_EXISTS);
+                }
                 String cardError = validateCard(cardNumber, cardNetwork, cardHolderName);
                 if (cardError != null) {
                     return badRequest(cardError);
@@ -428,10 +431,31 @@ public class BankingServiceV2 {
             return badRequest(Utils.BANKING_METHOD_CARD_NUMBER_EXISTS);
         }
 
+        if (payload.paymentMethod().equalsIgnoreCase("DEBIT CARD")) {
+            if (bankingMethodService.isExists(hostelId, cardNumber, "DEBIT_CARD")) {
+                return badRequest(Utils.CARD_NO_ALREADY_EXISTS);
+            }
+        }
+
+        if (payload.paymentMethod().equalsIgnoreCase("DEBIT CARD")) {
+            if (bankingMethodService.isExists(hostelId, cardNumber, "DEBIT_CARD")) {
+                return badRequest(Utils.CARD_NO_ALREADY_EXISTS);
+            }
+        }
+
+
         Date now = new Date();
         BankingMethods entity = new BankingMethods();
         entity.setBank(bank);
-        entity.setPaymentMethod(payload.paymentMethod());
+        if (payload.paymentMethod().equalsIgnoreCase("DEBIT CARD")) {
+            entity.setPaymentMethod("DEBIT_CARD");
+            entity.setCardNumber(cardNumber);
+            entity.setCardNetwork(cardNetwork);
+            entity.setCardHolderName(cardHolderName);
+        }
+        else {
+            entity.setPaymentMethod(payload.paymentMethod());
+        }
         entity.setDisplayName(displayName);
         entity.setDescription(trimToNull(payload.description()));
         entity.setHostelId(hostelId);
@@ -474,6 +498,8 @@ public class BankingServiceV2 {
                 entity.setQrImage(imgQr);
             }
         }
+
+
 
         BankingMethods saved = bankingMethodsRepository.save(entity);
         return new ResponseEntity<>(new BankingMethodsMapper(upiTypes).apply(saved), HttpStatus.CREATED);
@@ -949,7 +975,7 @@ public class BankingServiceV2 {
                     if(item.getBankingMethods() != null) {
                         listDebitBanks.addAll(item.getBankingMethods()
                                 .stream()
-                                .map(i2 -> new BankingMethodsMapperV2().apply(i2))
+                                .map(i2 -> new BankingMethodsMapperV2(upiTypes).apply(i2))
                                 .toList());
                     }
 
@@ -982,7 +1008,7 @@ public class BankingServiceV2 {
                     if (item.getBankingMethods() != null) {
                         listBookingBankInfo.addAll(item.getBankingMethods()
                                 .stream()
-                                .map(i2 -> new BookingBankMethodsMapper().apply(i2)).toList());
+                                .map(i2 -> new BookingBankMethodsMapper(upiTypes).apply(i2)).toList());
                     }
                 });
 //                listBookingBankInfo.addAll(filterOtherThanBank
@@ -1149,7 +1175,7 @@ public class BankingServiceV2 {
                     if(item.getBankingMethods() != null) {
                         listDebitBanks.addAll(item.getBankingMethods()
                                 .stream()
-                                .map(i2 -> new BankingMethodsMapperV2().apply(i2))
+                                .map(i2 -> new BankingMethodsMapperV2(upiTypes).apply(i2))
                                 .toList());
                     }
 
@@ -1702,8 +1728,6 @@ public class BankingServiceV2 {
         if (bankId != null && validBankOrNull(hostelId, bankId) == null) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
-
-
         List<BankingV2> listBanks = bankingV2Repository.findBanksByHostelId(hostelId);
         if (listBanks == null || listBanks.isEmpty()) {
             return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
@@ -2020,7 +2044,7 @@ public class BankingServiceV2 {
         if (user == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_UPDATE)) {
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {

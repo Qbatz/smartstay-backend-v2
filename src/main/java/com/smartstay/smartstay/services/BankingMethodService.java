@@ -214,9 +214,21 @@ public class BankingMethodService {
         }
     }
 
-    public boolean isExists(String hostelId, String cardNumber) {
-        BankingMethods bm = bankingMethodsRepository.findByHostelIdAndCardNumber(hostelId, cardNumber);
+    public boolean isExists(String hostelId, String cardNumber, String type) {
+        List<BankingMethods> listBm = bankingMethodsRepository.findByHostelIdAndCardNumber(hostelId, cardNumber);
+        if (listBm == null) {
+            return false;
+        }
+        BankingMethods bm = listBm
+                .stream()
+                .filter(i -> i.getPaymentMethod().equalsIgnoreCase(type))
+                .findFirst()
+                .orElse(null);
         if (bm == null) {
+            return false;
+        }
+
+        if (type.equalsIgnoreCase(bm.getPaymentMethod())) {
             return true;
         }
         return false;

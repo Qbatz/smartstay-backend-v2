@@ -8,6 +8,7 @@ import com.smartstay.smartstay.Wrappers.expenses.ExpenseListMapper;
 import com.smartstay.smartstay.Wrappers.vendor.VendorLookupMapper;
 import com.smartstay.smartstay.Wrappers.vendor.VendorTableMapper;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.expenses.ExpenseList;
 import com.smartstay.smartstay.dto.vendor.VendorFilters;
 import com.smartstay.smartstay.dto.vendor.VendorMonthSummaryProjection;
@@ -1359,6 +1360,16 @@ public class VendorService {
         if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_EXPENSE, Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        if (payload.bankId() == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!bankingServiceV2.checkBankExist(payload.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingServiceV2.getOldBankNewBankInfo(payload.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
 
         int vId = 0;
         try {
@@ -1460,11 +1471,11 @@ public class VendorService {
                     .mapToDouble(requested -> requested.paidAmount() != null ? requested.paidAmount() : 0.0)
                     .sum();
             if (totalSettled > 0) {
-                String settleBankId = payload.bankId().trim();
-                if (bankingService.getBankDetails(settleBankId) != null) {
-                    bankingService.updateBalanceForExpense(totalSettled, BankTransactionType.DEBIT.name(), settleBankId);
-                }
-                bankingServiceV2.recordVendorExpenseDebit(settleBankId, payload.paymentMethodId(), totalSettled,
+//                String settleBankId = payload.bankId().trim();
+//                if (bankingService.getBankDetails(settleBankId) != null) {
+//                    bankingService.updateBalanceForExpense(totalSettled, BankTransactionType.DEBIT.name(), settleBankId);
+//                }
+                bankingServiceV2.recordVendorExpenseDebit(oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId(), totalSettled,
                         expensesToUpdate.get(0).getHostelId(), auditUser);
             }
         }

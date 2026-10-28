@@ -487,19 +487,20 @@ public class BankingService {
      */
 
     public List<DebitsBank> getAllBankForReturn(String hostelId) {
-        List<BankingV1> listBankAccounts = bankingV1Repository.findByBankIdInAndActiveAccountDebit(hostelId);
+//        List<BankingV1> listBankAccounts = bankingV1Repository.findByBankIdInAndActiveAccountDebit(hostelId);
+//
+//        return listBankAccounts
+//                .stream()
+//                .map(item -> {
+//                    String bankName = item.getBankName();
+//                    if (bankName == null || bankName.isBlank()) {
+//                        bankName = item.getAccountType();
+//                    }
+//                    return new DebitsBank(item.getBankId(),false, bankName, item.getAccountHolderName(), "", null, null);
+//                })
+//                .toList();
 
-        return listBankAccounts
-                .stream()
-                .map(item -> {
-                    String bankName = item.getBankName();
-                    if (bankName == null || bankName.isBlank()) {
-                        bankName = item.getAccountType();
-                    }
-                    return new DebitsBank(item.getBankId(), bankName, item.getAccountHolderName());
-                })
-                .toList();
-
+        return bankingServiceV2.getAllBanksForReturn(hostelId);
     }
 
     public List<BankingV1> getDebitBanks(String hostelId) {
