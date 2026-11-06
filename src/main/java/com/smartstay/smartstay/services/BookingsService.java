@@ -611,13 +611,7 @@ public class BookingsService {
         } else {
             cancelDate = new Date();
         }
-        bookingsV1.setCancelDate(cancelDate);
-        bookingsV1.setReasonForCancellation(cancelBooking.reason());
-        bookingsV1.setCurrentStatus(BookingStatus.CANCELLED.name());
 
-        bookingsRepository.save(bookingsV1);
-
-        customersService.markCustomerInactive(customers);
         InvoicesV1 invoicesV1 = invoiceService.getInvoiceDetails(customerId, bookingsV1.getHostelId());
 
 
@@ -631,7 +625,17 @@ public class BookingsService {
             bankTransactionService.cancelBooking(transactionDto, invoicesV1.getInvoiceId(), transactionId, oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId());
         }
 
+        customersService.markCustomerInactive(customers);
+
+        bookingsV1.setCancelDate(cancelDate);
+        bookingsV1.setReasonForCancellation(cancelBooking.reason());
+        bookingsV1.setCurrentStatus(BookingStatus.CANCELLED.name());
+
+        bookingsRepository.save(bookingsV1);
+
         bedsService.cancelBooking(bookingsV1.getBedId(), user.getParentId(), bookingsV1.getBookingId());
+
+
         userService.addUserLog(bookingsV1.getHostelId(), bookingsV1.getBookingId(), ActivitySource.BOOKING, ActivitySourceType.CANCEL, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);

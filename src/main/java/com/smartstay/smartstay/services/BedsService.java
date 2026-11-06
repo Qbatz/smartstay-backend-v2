@@ -773,6 +773,19 @@ public class BedsService {
                 }
                 bedsRepository.save(beds);
             }
+            else {
+                List<BookingsV1> listVaccatedCustomers = findBookingsExceptCancel
+                        .stream()
+                        .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.VACATED.name()))
+                        .toList();
+                if (listVaccatedCustomers != null && !listVaccatedCustomers.isEmpty()) {
+                    beds.setBooked(false);
+                    if (!beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+                        beds.setStatus(BedStatus.VACANT.name());
+                    }
+                    bedsRepository.save(beds);
+                }
+            }
 
         }
     }

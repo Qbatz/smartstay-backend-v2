@@ -26,6 +26,7 @@ import com.smartstay.smartstay.dto.reports.ReportsDto;
 import com.smartstay.smartstay.dto.retainer.RetainerSummary;
 import com.smartstay.smartstay.dto.settlement.*;
 import com.smartstay.smartstay.dto.settlement.RetainerItems;
+import com.smartstay.smartstay.ennum.CredentialServices;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.RecurringEvents;
@@ -136,6 +137,8 @@ public class InvoiceV1Service {
     private TenantBankTransactionService tenantBankTransactionService;
     @Autowired
     private CustomerNotificationService customerNotificationService;
+    @Autowired
+    private com.smartstay.smartstay.services.CredentialServices credentialServices;
     @Autowired
     private InvoiceDraftsService invoiceDraftsService;
     private TransactionService transactionService;
@@ -3258,7 +3261,7 @@ public class InvoiceV1Service {
         if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
         }
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_READ)) {
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_BOOKING, Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
@@ -4688,8 +4691,20 @@ public class InvoiceV1Service {
             }
         }
 
+        Credentials credentials = credentialServices.findByServiceName(com.smartstay.smartstay.ennum.CredentialServices.SS_REPORTS.name());
+        if (credentials == null) {
+            return null;
+        }
+        if (credentials.getAuthToken() == null) {
+            return  null;
+        }
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        String token = credentials.getAuthToken();
+
+        headers.setBearerAuth(token);
 
         String endpoint = reportsUrl + "/v2/reports/invoices/" + hostelId + "/" + invoiceId;
         HttpEntity<Void> request = new HttpEntity<>(headers);
@@ -4734,8 +4749,17 @@ public class InvoiceV1Service {
         if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) && invoicesV1.getInvoiceUrl() != null) {
             invoiceUrl = invoicesV1.getInvoiceUrl();
         } else {
+            Credentials credentials = credentialServices.findByServiceName(com.smartstay.smartstay.ennum.CredentialServices.SS_REPORTS.name());
+            if (credentials == null) {
+                return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+            }
+            if (credentials.getAuthToken() == null) {
+                return  new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+            }
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.setBearerAuth(credentials.getAuthToken());
             String endpoint = reportsUrl + "/v2/reports/invoices/" + hostelId + "/" + invoiceId;
             HttpEntity<Void> request = new HttpEntity<>(headers);
             try {

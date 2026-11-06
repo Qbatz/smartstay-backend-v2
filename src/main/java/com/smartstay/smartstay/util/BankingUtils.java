@@ -77,7 +77,7 @@ public class BankingUtils {
             StringBuilder builder = new StringBuilder();
             builder.append(bankingV2.getDisplayName());
             builder.append("-");
-            builder.append(bankingV2.getBankAccountType());
+            builder.append(bankingV2.getAccountType());
             return builder.toString();
         }
         else if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {

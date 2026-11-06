@@ -12,6 +12,6 @@ public enum NotificationType {
     KYC_REQUEST,
     RECURRING_INVOICE,
     MANUAL_INVOICE,
-    RAISE_NOTICE_REQUEST
-
+    RAISE_NOTICE_REQUEST,
+    RAISE_NOTICE
 }

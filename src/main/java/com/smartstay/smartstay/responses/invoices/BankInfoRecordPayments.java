@@ -5,5 +5,7 @@ public record BankInfoRecordPayments(String bankId,
                                      String bankName,
                                      String accountType,
                                      String displayName,
-                                     String accountHolderName) {
+                                     String accountHolderName,
+                                     boolean isUpi,
+                                     String upiAppIcon) {
 }

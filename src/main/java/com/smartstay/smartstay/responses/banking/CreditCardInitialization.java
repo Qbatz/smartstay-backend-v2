@@ -4,5 +4,7 @@ public record CreditCardInitialization(String cardId,
                                        String cardNumber,
                                        String cardNetwork,
                                        Double payableAmount,
-                                       String bankName) {
+                                       String bankName,
+                                       boolean isUpi,
+                                       String upiAppIcon) {
 }

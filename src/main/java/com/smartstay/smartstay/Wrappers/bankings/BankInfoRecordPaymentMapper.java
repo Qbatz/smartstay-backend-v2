@@ -14,6 +14,8 @@ public class BankInfoRecordPaymentMapper implements Function<BankingV1, BankInfo
                 null,
                 bankingV1.getAccountType(),
                 BankingUtils.getPaymentModeWithHolder(bankingV1),
-                bankingV1.getAccountHolderName());
+                bankingV1.getAccountHolderName(),
+                false,
+                null);
     }
 }

@@ -18,6 +18,8 @@ public class RecordPaymentBankMapper implements Function<BankingV2, BankInfoReco
                 bankingV2.getBankName(),
                 bankingV2.getAccountType(),
                 bankingV2.getDisplayName(),
-                accountHolderName);
+                accountHolderName,
+                false,
+                null);
     }
 }

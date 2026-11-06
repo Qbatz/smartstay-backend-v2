@@ -3,8 +3,10 @@ package com.smartstay.smartstay.Wrappers.expenses;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.ExpensePaymentStatus;
 import com.smartstay.smartstay.responses.expenseForReport.ExpenseReportResponse;
+import com.smartstay.smartstay.util.BankingUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
+import org.springframework.security.core.parameters.P;
 
 import java.util.List;
 import java.util.Map;
@@ -38,7 +40,9 @@ public class ExpenseExpenseDetailsMapper implements Function<ExpensesV1, Expense
         }
 
         BankingV2 b = bankMap.get(e.getBankId());
-        String pMode = (b != null) ? Utils.capitalize(b.getAccountType()) : null;
+        String pMode = BankingUtils.getBankName(b, e.getPaymentMethodId());
+//        String pMode = BankingUtils.getPaymentMethod(b, e.getPaymentMethodId());
+//        String pMode = (b != null) ? Utils.capitalize(b.getAccountType()) : null;
         String account = (b != null) ? (b.getAccountHolderName() + "-" + Utils.capitalize(b.getAccountType()))
                 : null;
 
@@ -57,18 +61,25 @@ public class ExpenseExpenseDetailsMapper implements Function<ExpensesV1, Expense
             }
         }
 
-        if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Full.name())) {
-            status = "Full";
+        if (e.getPaymentStatus() != null) {
+            if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Full.name())) {
+                status = "Full";
+            }
+            else if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Partial.name())) {
+                status = "Partial";
+            }
+            else if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Pending.name())) {
+                status = "Pending";
+            }
+            else if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Overdue.name())) {
+                status = "Overdue";
+            }
         }
-        else if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Partial.name())) {
-            status = "Partial";
-        }
-        else if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Pending.name())) {
+        else {
             status = "Pending";
         }
-        else if (e.getPaymentStatus().equalsIgnoreCase(ExpensePaymentStatus.Overdue.name())) {
-            status = "Overdue";
-        }
+
+
 
         return ExpenseReportResponse.ExpenseDetail.builder()
                 .expenseId(e.getExpenseId())
@@ -83,7 +94,7 @@ public class ExpenseExpenseDetailsMapper implements Function<ExpensesV1, Expense
                 .assetName(null)
                 .vendorName(vendorName)
                 .paymentMode(pMode)
-                .account(account)
+                .account(pMode)
                 .paidAmount(e.getPaidAmount())
                 .balanceAmount(e.getBalanceAmount())
                 .amount(e.getTransactionAmount())

@@ -932,7 +932,7 @@ public class BankingServiceV2 {
                 if(item.getBankingMethods() != null) {
                     listBankForAssets.addAll(item.getBankingMethods()
                             .stream()
-                            .map(i2 -> new AssetsBankingMethodMapper().apply(i2))
+                            .map(i2 -> new AssetsBankingMethodMapper(upiTypes).apply(i2))
                             .toList());
                 }
 
@@ -1043,7 +1043,7 @@ public class BankingServiceV2 {
                     if (item.getBankingMethods() != null) {
                         listBookingBankInfo.addAll(item.getBankingMethods()
                                 .stream()
-                                .map(i2 -> new RefundableBankingMethodsMapper().apply(i2)).toList());
+                                .map(i2 -> new RefundableBankingMethodsMapper(upiTypes).apply(i2)).toList());
                     }
                 });
 //                listBookingBankInfo.addAll(filterOtherThanBank
@@ -1078,7 +1078,7 @@ public class BankingServiceV2 {
                     if (item.getBankingMethods() != null) {
                         listBookingBankInfo.addAll(item.getBankingMethods()
                                 .stream()
-                                .map(i2 -> new RecordPaymentBankingMethodMapper().apply(i2)).toList());
+                                .map(i2 -> new RecordPaymentBankingMethodMapper(upiTypes).apply(i2)).toList());
                     }
                 });
 //                listBookingBankInfo.addAll(filterOtherThanBank
@@ -2064,7 +2064,7 @@ public class BankingServiceV2 {
         if (creditCards != null) {
             listInitializatioinBanks = creditCards
                     .stream()
-                    .map(i -> new BankingV2CreditCardInitializationMapper().apply(i))
+                    .map(i -> new BankingV2CreditCardInitializationMapper(upiTypes).apply(i))
                     .toList();
         }
 

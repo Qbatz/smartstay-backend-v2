@@ -4,5 +4,8 @@ public record RefundableBanks(String bankId,
                               boolean isBank,
                               String bankName,
                               String type,
-                              String accountHolderName) {
+                              String accountHolderName,
+                              String displayName,
+                              boolean isUpi,
+                              String upiIcon) {
 }

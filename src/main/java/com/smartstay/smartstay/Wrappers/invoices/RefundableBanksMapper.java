@@ -20,6 +20,9 @@ public class RefundableBanksMapper implements Function<BankingV1, RefundableBank
                 false,
                 bankName,
                 bankingV2.getAccountType(),
-                holderName);
+                holderName,
+                null,
+                false,
+                null);
     }
 }

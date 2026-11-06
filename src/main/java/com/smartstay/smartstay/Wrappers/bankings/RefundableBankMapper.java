@@ -11,14 +11,19 @@ public class RefundableBankMapper implements Function<BankingV2, RefundableBanks
     public RefundableBanks apply(BankingV2 bankingV2) {
         String bankName = bankingV2.getBankName();
         String holderName = bankingV2.getAccountHolderName();
-        if (bankingV2.getAccountHolderName() != null) {
-            holderName = bankingV2.getDisplayName();
-        }
+        String displayName = bankingV2.getDisplayName();
+
+//        if (bankingV2.getAccountHolderName() != null) {
+//            holderName = bankingV2.getDisplayName();
+//        }
 
         return new RefundableBanks("SSNBB-" + bankingV2.getBankId(),
                 false,
                 bankName,
                 bankingV2.getAccountType(),
-                holderName);
+                holderName,
+                displayName,
+                false,
+                null);
     }
 }

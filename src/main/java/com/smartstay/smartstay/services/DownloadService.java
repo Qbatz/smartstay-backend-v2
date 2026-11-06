@@ -1,7 +1,9 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
+import com.smartstay.smartstay.dao.Credentials;
 import com.smartstay.smartstay.ennum.PaymentStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,8 @@ import java.util.Collections;
 public class DownloadService {
 
     private final RestTemplate restTemplate;
+    @Autowired
+    private CredentialServices credentialServices;
 
     public DownloadService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
@@ -22,8 +26,18 @@ public class DownloadService {
     }
 
     public String downloadFromUrl(String url) {
+        Credentials credentials = credentialServices.findByServiceName(com.smartstay.smartstay.ennum.CredentialServices.SS_REPORTS.name());
+        if (credentials == null) {
+            return null;
+        }
+        if (credentials.getAuthToken() == null) {
+            return  null;
+        }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        String token = credentials.getAuthToken();
+
+        headers.setBearerAuth(token);
 
         HttpEntity<Void> request =
                 new HttpEntity<>(headers);
