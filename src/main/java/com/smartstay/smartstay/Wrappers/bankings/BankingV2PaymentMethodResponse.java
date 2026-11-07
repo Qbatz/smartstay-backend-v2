@@ -11,6 +11,8 @@ public class BankingV2PaymentMethodResponse implements Function<BankingV2, Payme
     @Override
     public PaymentMethodOptionResponse apply(BankingV2 bankingV2) {
         String bankAccountType = null;
+        boolean isUPI = false;
+
         if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
             bankAccountType = bankingV2.getCashAccountType();
         }
@@ -31,6 +33,8 @@ public class BankingV2PaymentMethodResponse implements Function<BankingV2, Payme
                 bankingV2.getDisplayName(),
                 bankingV2.getIfscCode(),
                 bankingV2.getResponsiblePerson(),
-                "");
+                "",
+                false,
+                null);
     }
 }

@@ -12,6 +12,8 @@ public record PaymentMethodOptionResponse(
         String displayName,
         String ifscCode,
         String responsiblePersonId,
-        String responsiblePerson
+        String responsiblePerson,
+        boolean isUpi,
+        String upiIcon
 ) {
 }

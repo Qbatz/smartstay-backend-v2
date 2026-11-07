@@ -766,25 +766,22 @@ public class BedsService {
         Beds beds = bedsRepository.findByBedIdAndParentId(bedId, parentId);
         if (beds != null) {
             List<BookingsV1> findBookingsExceptCancel = bookingService.findAllBookingsExceptCancel(bedId, bookingId, beds.getHostelId());
-            if (findBookingsExceptCancel.isEmpty()) {
+            boolean shouldFreeBed = findBookingsExceptCancel.isEmpty()
+                    || findBookingsExceptCancel
+                            .stream()
+                            .anyMatch(i -> BookingStatus.VACATED.name().equalsIgnoreCase(i.getCurrentStatus()));
+
+            if (shouldFreeBed) {
+                if (findBookingsExceptCancel.size() > 1) {
+                    shouldFreeBed = false;
+                }
+            }
+            if (shouldFreeBed) {
                 beds.setBooked(false);
-                if (!beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
+                if (!BedStatus.NOTICE.name().equalsIgnoreCase(beds.getCurrentStatus())) {
                     beds.setStatus(BedStatus.VACANT.name());
                 }
                 bedsRepository.save(beds);
-            }
-            else {
-                List<BookingsV1> listVaccatedCustomers = findBookingsExceptCancel
-                        .stream()
-                        .filter(i -> i.getCurrentStatus().equalsIgnoreCase(BookingStatus.VACATED.name()))
-                        .toList();
-                if (listVaccatedCustomers != null && !listVaccatedCustomers.isEmpty()) {
-                    beds.setBooked(false);
-                    if (!beds.getCurrentStatus().equalsIgnoreCase(BedStatus.NOTICE.name())) {
-                        beds.setStatus(BedStatus.VACANT.name());
-                    }
-                    bedsRepository.save(beds);
-                }
             }
 
         }

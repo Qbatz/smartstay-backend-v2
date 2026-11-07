@@ -26,7 +26,6 @@ import com.smartstay.smartstay.dto.reports.ReportsDto;
 import com.smartstay.smartstay.dto.retainer.RetainerSummary;
 import com.smartstay.smartstay.dto.settlement.*;
 import com.smartstay.smartstay.dto.settlement.RetainerItems;
-import com.smartstay.smartstay.ennum.CredentialServices;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.events.RecurringEvents;
@@ -4691,19 +4690,13 @@ public class InvoiceV1Service {
             }
         }
 
-        Credentials credentials = credentialServices.findByServiceName(com.smartstay.smartstay.ennum.CredentialServices.SS_REPORTS.name());
-        if (credentials == null) {
-            return null;
-        }
-        if (credentials.getAuthToken() == null) {
-            return  null;
+        String token = credentialServices.getReportsAuthToken();
+        if (token == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        String token = credentials.getAuthToken();
-
         headers.setBearerAuth(token);
 
         String endpoint = reportsUrl + "/v2/reports/invoices/" + hostelId + "/" + invoiceId;
@@ -4749,17 +4742,14 @@ public class InvoiceV1Service {
         if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) && invoicesV1.getInvoiceUrl() != null) {
             invoiceUrl = invoicesV1.getInvoiceUrl();
         } else {
-            Credentials credentials = credentialServices.findByServiceName(com.smartstay.smartstay.ennum.CredentialServices.SS_REPORTS.name());
-            if (credentials == null) {
+            String token = credentialServices.getReportsAuthToken();
+            if (token == null) {
                 return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
-            }
-            if (credentials.getAuthToken() == null) {
-                return  new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
             }
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            headers.setBearerAuth(credentials.getAuthToken());
+            headers.setBearerAuth(token);
             String endpoint = reportsUrl + "/v2/reports/invoices/" + hostelId + "/" + invoiceId;
             HttpEntity<Void> request = new HttpEntity<>(headers);
             try {

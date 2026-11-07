@@ -223,6 +223,7 @@ public class Utils {
     public static final String INVALID_ACCOUNT_TYPE_FROM_TO = "Invalid account type for To account";
     public static final String INVALID_TRANSACTION_TYPE_FROM_ACC = "This account does’t have Debit access";
     public static final String INVALID_TRANSACTION_TYPE = "This account does’t have Debit and Credit access";
+    public static final String BANK_ACCOUNT_HOLDER_NAME_REQUIRED = "Bank account holder is required";
     public static final String INSUFFICIENT_BALANCE = "Insufficient balance";
     public static final String INVALID_TRANSACTION_TYPE_TO_ACC = "This account does’t have Credit access";
     public static final String PLAN_CODE_REQUIRED = "Plan code is required";
@@ -380,6 +381,7 @@ public class Utils {
     public static final String RENT_AMOUNT_REQUIRED = "Rent amount is required";
     public static final String CANNOT_EDIT_PAID_INVOICES = "Cannot edit paid invoices";
     public static final String CANNOT_EDIT_DISCOUNTED_INVOICES = "Cannot edit discounted applied invoices";
+    public static final String CANNOT_ADD_ACCOUNT_NO_CASH_ACCOUNT = "Cannot add account no to cash account";
     public static final String COMPLAINT_NOT_FOUND = "Complaint not found";
     public static final String JOINING_DATE_CANNOT_BEFORE_BOOKING = "Check-in cannot be earlier than the booking date";
     public static final String CANNOT_DELETE_ACTIVE_CUSTOMERS = "Cannot delete active customers";

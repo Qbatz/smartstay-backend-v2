@@ -12,7 +12,7 @@ import java.util.function.Function;
 
 public class RecordPaymentBankingMethodMapper implements Function<BankingMethods, BankInfoRecordPayments> {
 
-    private UPITypes upiTypes;
+    private final UPITypes upiTypes;
 
     public RecordPaymentBankingMethodMapper(UPITypes upiTypes) {
         this.upiTypes = upiTypes;
@@ -35,7 +35,7 @@ public class RecordPaymentBankingMethodMapper implements Function<BankingMethods
                 accountHolderName = bankingV2.getDisplayName();
             }
         }
-        if (bankingMethods.getPaymentMethod().equalsIgnoreCase(PaymentMethod.UPI.name())) {
+        if (PaymentMethod.UPI.name().equalsIgnoreCase(bankingMethods.getPaymentMethod())) {
             isUPI = true;
             upiIcon = upiTypes.getUPIType(bankingMethods);
         }

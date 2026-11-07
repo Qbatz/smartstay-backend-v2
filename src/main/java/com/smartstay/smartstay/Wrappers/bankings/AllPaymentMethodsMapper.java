@@ -46,37 +46,9 @@ public class AllPaymentMethodsMapper {
                 bank.getDisplayName(),
                 bank.getIfscCode(),
                 responsiblePerson,
-                bank.getResponsiblePerson());
-    }
-
-    public PaymentMethodOptionResponse bankMethod(BankingV2 bank, BankingMethods method,
-            String cardNetwork, String upiApp, String qrCardImage, String responsiblePerson) {
-        return bankMethod(bank, method, cardNetwork, upiApp, qrCardImage, responsiblePerson, null);
-    }
-
-    public PaymentMethodOptionResponse bankMethod(BankingV2 bank, BankingMethods method,
-            String cardNetwork, String upiApp, String qrCardImage, String responsiblePerson, String dueDate) {
-        String bankAccountType = null;
-        if (bank.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
-            bankAccountType = bank.getCashAccountType();
-        }
-        else if (bank.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
-            bankAccountType = bank.getBankAccountType();
-        }
-        else {
-            bankAccountType = bank.getBankAccountType();
-        }
-        return new PaymentMethodOptionResponse(bank.getBankId(),
-                bank.getAccountHolderName(),
-                bank.getAccountNumber(),
-                bank.getAccountType(),
-                bankAccountType,
-                method.getBalance(),
-                bank.getBankName(),
-                bank.getBranchName(),
-                method.getDisplayName(),
-                bank.getIfscCode(),
                 bank.getResponsiblePerson(),
-                responsiblePerson);
+                false,
+                null);
     }
+
 }

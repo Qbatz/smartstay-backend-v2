@@ -9,7 +9,7 @@ import com.smartstay.smartstay.responses.assets.BankForAssets;
 import java.util.function.Function;
 
 public class AssetsBankingMethodMapper implements Function<BankingMethods, BankForAssets> {
-    private UPITypes upiTypes = null;
+    private final UPITypes upiTypes;
 
     public AssetsBankingMethodMapper(UPITypes upiTypes) {
         this.upiTypes = upiTypes;
@@ -26,14 +26,11 @@ public class AssetsBankingMethodMapper implements Function<BankingMethods, BankF
         BankingV2 bankingV2 = bankingMethods.getBank();
         if (bankingV2 != null) {
             bankName = bankingV2.getBankName();
-            if (bankingV2.getAccountHolderName() != null) {
-                accountHolderName = bankingV2.getAccountHolderName();
-            }
-            else {
-                accountHolderName = bankingV2.getDisplayName();
-            }
+            accountHolderName = bankingV2.getAccountHolderName() != null
+                    ? bankingV2.getAccountHolderName()
+                    : bankingV2.getDisplayName();
         }
-        if (bankingMethods.getPaymentMethod().equalsIgnoreCase(PaymentMethod.UPI.name())) {
+        if (PaymentMethod.UPI.name().equalsIgnoreCase(bankingMethods.getPaymentMethod())) {
             isUPI = true;
             upiIcon = upiTypes.getUPIType(bankingMethods);
         }

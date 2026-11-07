@@ -9,7 +9,7 @@ import com.smartstay.smartstay.responses.invoices.RefundableBanks;
 import java.util.function.Function;
 
 public class RefundableBankingMethodsMapper implements Function<BankingMethods, RefundableBanks> {
-    private UPITypes upiTypes;
+    private final UPITypes upiTypes;
 
     public RefundableBankingMethodsMapper(UPITypes upiTypes) {
         this.upiTypes = upiTypes;
@@ -27,7 +27,7 @@ public class RefundableBankingMethodsMapper implements Function<BankingMethods, 
             accountHolderName = bankingV2.getAccountHolderName();
         }
 
-        if (bankingMethods.getPaymentMethod().equalsIgnoreCase(PaymentMethod.UPI.name())) {
+        if (PaymentMethod.UPI.name().equalsIgnoreCase(bankingMethods.getPaymentMethod())) {
             isUPI = true;
             upiIcon = upiTypes.getUPIType(bankingMethods);
         }

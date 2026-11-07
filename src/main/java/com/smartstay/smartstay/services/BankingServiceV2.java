@@ -11,11 +11,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
 import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.ennum.*;
-import com.smartstay.smartstay.payloads.banking.AddBankV2;
-import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
-import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
-import com.smartstay.smartstay.payloads.banking.CreditCardPayment;
-import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
+import com.smartstay.smartstay.payloads.banking.*;
 import com.smartstay.smartstay.repositories.BankingMethodsRepository;
 import com.smartstay.smartstay.repositories.BankingV2Repository;
 import com.smartstay.smartstay.repositories.QrBankTypeRepository;
@@ -26,6 +22,7 @@ import com.smartstay.smartstay.responses.invoices.BankInfoRecordPayments;
 import com.smartstay.smartstay.responses.invoices.InvoicesList;
 import com.smartstay.smartstay.responses.invoices.RefundableBanks;
 import com.smartstay.smartstay.util.Utils;
+import io.swagger.v3.core.util.ReferenceTypeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -1038,12 +1035,13 @@ public class BankingServiceV2 {
                         .stream()
                         .map(i -> new RefundableBankMapper().apply(i)).toList());
             }
+            RefundableBankingMethodsMapper refundableBankingMethodsMapper = new RefundableBankingMethodsMapper(upiTypes);
             if (filterOutBankAccount != null) {
                 filterOutBankAccount.forEach(item -> {
                     if (item.getBankingMethods() != null) {
                         listBookingBankInfo.addAll(item.getBankingMethods()
                                 .stream()
-                                .map(i2 -> new RefundableBankingMethodsMapper(upiTypes).apply(i2)).toList());
+                                .map(refundableBankingMethodsMapper).toList());
                     }
                 });
 //                listBookingBankInfo.addAll(filterOtherThanBank
@@ -1073,12 +1071,13 @@ public class BankingServiceV2 {
                         .stream()
                         .map(i -> new RecordPaymentBankMapper().apply(i)).toList());
             }
+            RecordPaymentBankingMethodMapper recordPaymentBankingMethodMapper = new RecordPaymentBankingMethodMapper(upiTypes);
             if (filterOutBankAccount != null) {
                 filterOutBankAccount.forEach(item -> {
                     if (item.getBankingMethods() != null) {
                         listBookingBankInfo.addAll(item.getBankingMethods()
                                 .stream()
-                                .map(i2 -> new RecordPaymentBankingMethodMapper(upiTypes).apply(i2)).toList());
+                                .map(recordPaymentBankingMethodMapper).toList());
                     }
                 });
 //                listBookingBankInfo.addAll(filterOtherThanBank
@@ -1330,6 +1329,82 @@ public class BankingServiceV2 {
             }
             bankingV2Repository.save(bankingV2);
         }
+    }
+
+    public ResponseEntity<?> updateBankAccount(String hostelId, String bankId, UpdateBankPayload updateBankPayload) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_BANKING, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (updateBankPayload == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankId).orElse(null);
+        if (bankingV2 == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        boolean isTypeBank = false;
+        if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+            isTypeBank = true;
+        }
+        else if (updateBankPayload.newAccountType() != null) {
+            if (updateBankPayload.newAccountType().equalsIgnoreCase("BANK")) {
+                isTypeBank = true;
+            }
+        }
+
+        if (isTypeBank) {
+            if (updateBankPayload.accountNo() != null) {
+                if (!bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+                    return new ResponseEntity<>(Utils.CANNOT_ADD_ACCOUNT_NO_CASH_ACCOUNT, HttpStatus.BAD_REQUEST);
+                }
+                if (bankingV2.getAccountHolderName() == null) {
+                    if (updateBankPayload.accountHolderName() == null) {
+                        return new ResponseEntity<>(Utils.BANK_ACCOUNT_HOLDER_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+                    }
+                }
+            }
+        }
+
+
+        if (updateBankPayload.bankName() != null && !updateBankPayload.bankName().isEmpty()) {
+            bankingV2.setBankName(bankingV2.getBankName());
+        }
+        else {
+            if (bankingV2.getBankName() != null) {
+                bankingV2.setBankName(null);
+            }
+        }
+        if (updateBankPayload.displayName() != null && !updateBankPayload.displayName().isEmpty()) {
+            bankingV2.setDisplayName(updateBankPayload.displayName());
+        }
+        else {
+            if (bankingV2.getDisplayName() != null) {
+                bankingV2.setDisplayName(null);
+            }
+        }
+        if (updateBankPayload.branchName() != null && !updateBankPayload.branchName().isEmpty()) {
+            bankingV2.setBranchName(updateBankPayload.branchName());
+        }
+        else {
+            if (bankingV2.getBranchName() != null) {
+                bankingV2.setBranchName(null);
+            }
+        }
+
+        bankingV2Repository.save(bankingV2);
+        return new ResponseEntity<>(HttpStatus.OK);
+
     }
 
     private record TransferRequest(String hostelId, double amount, Date transactionDate, String description,
@@ -2059,12 +2134,31 @@ public class BankingServiceV2 {
 //                .collect(Collectors.partitioningBy(this::isCreditCard));
 
         List<BankingV2> creditCards = bankingV2Repository.findAllCreditCardByHostelId(hostelId);
+        List<BankingV2> creditCardLinkedAccounts = null;
+        List<String> creditCardLinkedBankIds = new ArrayList<>();
+        if (creditCards != null) {
+            List<BankingV2> linkedCreditCards = creditCards
+                    .stream()
+                    .filter(i -> i.getLinkedBankId() != null)
+                    .toList();
+            if (linkedCreditCards != null) {
+                creditCardLinkedBankIds = linkedCreditCards
+                        .stream()
+                        .map(BankingV2::getLinkedBankId)
+                        .toList();
+            }
+        }
+
+        if (creditCardLinkedBankIds != null) {
+            creditCardLinkedAccounts = bankingV2Repository.findAllByBankIds(creditCardLinkedBankIds);
+        }
+
         List<PaymentMethodOptionResponse> listPaymentMethods = bankingMethodService.getPaymentMethodsForCreditCard(hostelId);
         List<CreditCardInitialization> listInitializatioinBanks = null;
         if (creditCards != null) {
             listInitializatioinBanks = creditCards
                     .stream()
-                    .map(i -> new BankingV2CreditCardInitializationMapper(upiTypes).apply(i))
+                    .map(new BankingV2CreditCardInitializationMapper(upiTypes, creditCardLinkedAccounts))
                     .toList();
         }
 

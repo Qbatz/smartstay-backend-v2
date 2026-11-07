@@ -9,19 +9,20 @@ import com.smartstay.smartstay.events.JoiningBasedPrepaidEvents;
 import com.smartstay.smartstay.repositories.InvoicesV1Repository;
 import com.smartstay.smartstay.services.*;
 import com.smartstay.smartstay.services.CustomerRecurringTracker;
-import com.smartstay.smartstay.util.BillingCycleUtil;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class JoiningBasedPrepaidEventListener {
+
+    private static final String DEFAULT_INVOICE_PREFIX = "INV";
 
     @Autowired
     private HostelService hostelService;
@@ -47,228 +48,120 @@ public class JoiningBasedPrepaidEventListener {
     @Async
     @EventListener
     public void RecurringSetupForJoiningBasedPrepaid(JoiningBasedPrepaidEvents jbpe) {
-        HostelV1 hostelV1 = hostelService.getHostelInfo(jbpe.getHostelId());
-        BookingsV1 bookingsV1 = bookingsService.getBookingInfoByCustomerId(jbpe.getCustomerId());
-        Customers customers = customersService.getCustomerInformation(jbpe.getCustomerId());
-        BillingDates billingDates = hostelService.getBillingRuleOnDate(jbpe.getHostelId(), new Date());
-        ElectricityConfig ebConfig = hostelV1.getElectricityConfig();
         String customerId = jbpe.getCustomerId();
-        if (bookingsV1 != null) {
-            if (bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.CHECKIN.name()) || bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.NOTICE.name())) {
-                List<AmenitiesV1> listAmenities = amenitiesService.getAllAmenitiesByHostelId(hostelV1.getHostelId());
 
-                List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getAllInvoiceNotGeneratedWallets(customerId);
-                double rentAmount = bookingsV1.getRentAmount();
-
-                List<CustomersAmenity> listCustomersAmenity = amenitiesService.getAllCustomerAmenitiesForRecurring(customerId, new Date());
-                Double amenityAmount = listCustomersAmenity
-                        .stream()
-                        .mapToDouble(CustomersAmenity::getAmenityPrice)
-                        .sum();
-                double ebAmount = 0.0;
-                if (ebConfig != null) {
-                    if (ebConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.FLAT_RATE.name())) {
-                        if (!ebConfig.isShouldIncludeInRent()) {
-                            ebAmount = ebConfig.getFlatCharge();
-                        }
-                    }
-                }
-                double rentEbAmount = rentAmount + ebAmount;
-                double rentEbAndAmenity = rentEbAmount + amenityAmount;
-                double walletAmount = 0.0;
-                double finalAmount = rentEbAndAmenity;
-
-                CustomerWallet customerWallet = customers.getWallet();
-                if (customerWallet != null) {
-                    if (customerWallet.getAmount() != null) {
-                        walletAmount = customerWallet.getAmount();
-                        finalAmount = finalAmount + walletAmount;
-                    }
-                }
-
-                boolean shouldVerify = false;
-                RecurringConfiguration recurringConfiguration = recurringConfigService.getRecurringConfig(hostelV1.getHostelId());
-                if (recurringConfiguration != null) {
-                    if (recurringConfiguration.getShouldVerify() != null) {
-                        shouldVerify = recurringConfiguration.getShouldVerify();
-                    }
-                }
-
-                if (!shouldVerify) {
-                    StringBuilder prefixSuffix = new StringBuilder();
-
-                    String prefix = "INV";
-                    com.smartstay.smartstay.dao.BillTemplates templates = templatesService.getTemplateByHostelId(customers.getHostelId());
-                    if (templates != null && templates.getTemplateTypes() != null) {
-                        if (!templates.getTemplateTypes().isEmpty()) {
-                            BillTemplateType rentTemplateType = templates.getTemplateTypes()
-                                    .stream()
-                                    .filter(i -> i.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                                    .findFirst()
-                                    .get();
-                            prefix = rentTemplateType.getInvoicePrefix();
-                        }
-                        prefixSuffix.append(prefix);
-                    }
-
-                    InvoicesV1 inv = invoicesV1Repository.findLatestInvoiceByPrefix(prefix, hostelV1.getHostelId());
-
-                    if (inv != null) {
-                        String[] prefArr = inv.getInvoiceNumber().split("-");
-                        if (prefArr.length > 1) {
-                            int suffix = Integer.parseInt(prefArr[prefArr.length - 1]) + 1;
-                            prefixSuffix.append("-");
-                            if (suffix < 10) {
-                                prefixSuffix.append("00");
-                                prefixSuffix.append(suffix);
-                            } else if (suffix < 100) {
-                                prefixSuffix.append("0");
-                                prefixSuffix.append(suffix);
-                            } else {
-                                prefixSuffix.append(suffix);
-                            }
-                        }
-                    } else {
-                        //this is going to be the first invoice
-                        prefixSuffix.append("-");
-                        prefixSuffix.append("001");
-                    }
-
-                    Date dueDate = Utils.addDaysToDate(new Date(), billingDates.dueDays()-1);
-                    int cycleStartDate = Utils.dateToDate(new Date());
-                    Date invoiceEndDate = Utils.findLastDate(cycleStartDate, new Date());
-                    InvoicesV1 invoicesV1 = new InvoicesV1();
-                    invoicesV1.setCancelled(false);
-                    invoicesV1.setCustomerId(customerId);
-                    invoicesV1.setCustomerMailId(customers.getEmailId());
-                    invoicesV1.setCustomerMobile(customers.getMobile());
-                    invoicesV1.setHostelId(jbpe.getHostelId());
-                    invoicesV1.setInvoiceNumber(prefixSuffix.toString());
-                    invoicesV1.setInvoiceType(InvoiceType.RENT.name());
-                    invoicesV1.setBasePrice(finalAmount);
-                    invoicesV1.setTotalAmount(finalAmount);
-                    invoicesV1.setPaidAmount(0.0);
-                    invoicesV1.setCgst(0.0);
-                    invoicesV1.setSgst(0.0);
-                    invoicesV1.setGst(0.0);
-                    invoicesV1.setGstPercentile(0.0);
-                    invoicesV1.setPaymentStatus(com.smartstay.smartstay.ennum.PaymentStatus.PENDING.name());
-                    invoicesV1.setOthersDescription(null);
-                    invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
-                    invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
-                    invoicesV1.setInvoiceGeneratedDate(new Date());
-                    invoicesV1.setInvoiceDate(new Date());
-                    invoicesV1.setInvoiceDueDate(dueDate);
-                    invoicesV1.setInvoiceStartDate(new Date());
-                    invoicesV1.setInvoiceEndDate(invoiceEndDate);
-                    invoicesV1.setCreatedAt(new Date());
-
-                    List<InvoiceItems> invoicesItems = new ArrayList<>();
-                    if (rentAmount > 0) {
-                        InvoiceItems item1 = new InvoiceItems();
-                        item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
-                        item1.setAmount(rentAmount);
-                        item1.setInvoice(invoicesV1);
-                        invoicesItems.add(item1);
-                    }
-
-                    if (ebAmount > 0) {
-                        InvoiceItems item1 = new InvoiceItems();
-                        item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
-                        item1.setAmount(ebAmount);
-                        item1.setInvoice(invoicesV1);
-                        invoicesItems.add(item1);
-                    }
-
-                    if (listCustomersAmenity != null) {
-                        listCustomersAmenity.forEach(amenity -> {
-                            AmenitiesV1 amenitiesV1 = listAmenities
-                                    .stream()
-                                    .filter(amty -> amty.getAmenityId().equalsIgnoreCase(amenity.getAmenityId()))
-                                    .findFirst()
-                                    .orElse(null);
-                            if (amenitiesV1 != null) {
-                                InvoiceItems item1 = new InvoiceItems();
-                                item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
-                                item1.setOtherItem(amenitiesV1.getAmenityName());
-                                item1.setAmount(Utils.roundOffWithTwoDigit(amenity.getAmenityPrice()));
-                                item1.setInvoice(invoicesV1);
-                                invoicesItems.add(item1);
-                            }
-
-                        });
-                    }
-
-
-//            if (amenityAmount > 0) {
-//                InvoiceItems item1 = new InvoiceItems();
-//                item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name());
-//                item1.setAmount(amenityAmount);
-//                item1.setInvoice(invoicesV1);
-//                invoicesItems.add(item1);
-//            }
-
-                    if (!listCustomerWallets.isEmpty()) {
-                        listCustomerWallets.forEach(it -> {
-                            InvoiceItems itms = new InvoiceItems();
-                            if (it.getSourceType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
-                                itms.setInvoiceItem(it.getSourceType());
-                            } else if (it.getSourceType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
-                                itms.setInvoiceItem(it.getSourceType());
-                            } else {
-                                itms.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
-                                itms.setOtherItem(it.getSourceType());
-                            }
-                            itms.setAmount(it.getAmount());
-                            itms.setInvoice(invoicesV1);
-
-                            invoicesItems.add(itms);
-                        });
-                    }
-
-                    invoicesV1.setInvoiceItems(invoicesItems);
-
-                    invoicesV1Repository.save(invoicesV1);
-
-                    CustomerWallet updateWallet = customers.getWallet();
-                    if (updateWallet != null) {
-                        updateWallet.setAmount(0.0);
-                        customers.setWallet(updateWallet);
-                    }
-
-                    customersService.updateCustomersFromRecurring(customers);
-
-
-                    if (!listCustomerWallets.isEmpty()) {
-                        List<CustomerWalletHistory> whu = listCustomerWallets
-                                .stream()
-                                .map(im -> {
-                                    im.setBillingStatus(WalletBillingStatus.INVOICE_GENERATED.name());
-                                    return im;
-                                })
-                                .toList();
-
-                        customerWalletHistoryService.saveAll(whu);
-                    }
-
-                }
-                else {
-                    generateInvoiceForVerification(customers, billingDates.currentBillStartDate(),
-                            billingDates.currentBillEndDate(),
-                            hostelV1.getCreatedBy(),
-                            billingDates.dueDays(),
-                            rentAmount,
-                            ebAmount,
-                            amenityAmount,
-                            listCustomersAmenity,
-                            listAmenities,
-                            listCustomerWallets);
-                }
-
-                customerRecurringTrackerService.addToTracker(customerId, hostelV1.getHostelId(), new Date());
-            }
-
+        // Check the booking first so we skip the remaining lookups for customers who are not checked in.
+        BookingsV1 bookingsV1 = bookingsService.getBookingInfoByCustomerId(customerId);
+        if (bookingsV1 == null || !isActiveStay(bookingsV1.getCurrentStatus())) {
+            return;
         }
+
+        Date now = new Date();
+        HostelV1 hostelV1 = hostelService.getHostelInfo(jbpe.getHostelId());
+        Customers customers = customersService.getCustomerInformation(customerId);
+        BillingDates billingDates = hostelService.getBillingRuleOnDate(jbpe.getHostelId(), now);
+
+        List<AmenitiesV1> listAmenities = amenitiesService.getAllAmenitiesByHostelId(hostelV1.getHostelId());
+        List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getAllInvoiceNotGeneratedWallets(customerId);
+        List<CustomersAmenity> listCustomersAmenity = amenitiesService.getAllCustomerAmenitiesForRecurring(customerId, now);
+
+        double rentAmount = bookingsV1.getRentAmount();
+        double amenityAmount = listCustomersAmenity == null ? 0.0 : listCustomersAmenity
+                .stream()
+                .mapToDouble(CustomersAmenity::getAmenityPrice)
+                .sum();
+        double ebAmount = flatRateEbAmount(hostelV1.getElectricityConfig());
+
+        RecurringConfiguration recurringConfiguration = recurringConfigService.getRecurringConfig(hostelV1.getHostelId());
+        boolean shouldVerify = recurringConfiguration != null && Boolean.TRUE.equals(recurringConfiguration.getShouldVerify());
+
+        if (!shouldVerify) {
+            double finalAmount = rentAmount + ebAmount + amenityAmount + walletAmount(customers);
+            generateInvoice(customers, hostelV1, billingDates, now, finalAmount, rentAmount, ebAmount,
+                    listCustomersAmenity, listAmenities, listCustomerWallets);
+        } else {
+            generateInvoiceForVerification(customers, billingDates.currentBillStartDate(),
+                    billingDates.currentBillEndDate(),
+                    hostelV1.getCreatedBy(),
+                    billingDates.dueDays(),
+                    rentAmount,
+                    ebAmount,
+                    amenityAmount,
+                    listCustomersAmenity,
+                    listAmenities,
+                    listCustomerWallets);
+        }
+
+        customerRecurringTrackerService.addToTracker(customerId, hostelV1.getHostelId(), now);
+    }
+
+    private void generateInvoice(Customers customers,
+                                 HostelV1 hostelV1,
+                                 BillingDates billingDates,
+                                 Date now,
+                                 double finalAmount,
+                                 double rentAmount,
+                                 double ebAmount,
+                                 List<CustomersAmenity> listCustomersAmenity,
+                                 List<AmenitiesV1> listAmenities,
+                                 List<CustomerWalletHistory> listCustomerWallets) {
+        Date dueDate = Utils.addDaysToDate(now, billingDates.dueDays() - 1);
+        Date invoiceEndDate = Utils.findLastDate(Utils.dateToDate(now), now);
+
+        InvoicesV1 invoicesV1 = new InvoicesV1();
+        invoicesV1.setCancelled(false);
+        invoicesV1.setCustomerId(customers.getCustomerId());
+        invoicesV1.setCustomerMailId(customers.getEmailId());
+        invoicesV1.setCustomerMobile(customers.getMobile());
+        invoicesV1.setHostelId(hostelV1.getHostelId());
+        invoicesV1.setInvoiceNumber(nextInvoiceNumber(customers.getHostelId(), hostelV1.getHostelId()));
+        invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+        invoicesV1.setBasePrice(finalAmount);
+        invoicesV1.setTotalAmount(finalAmount);
+        invoicesV1.setPaidAmount(0.0);
+        invoicesV1.setCgst(0.0);
+        invoicesV1.setSgst(0.0);
+        invoicesV1.setGst(0.0);
+        invoicesV1.setGstPercentile(0.0);
+        invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+        invoicesV1.setOthersDescription(null);
+        invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
+        invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
+        invoicesV1.setInvoiceGeneratedDate(now);
+        invoicesV1.setInvoiceDate(now);
+        invoicesV1.setInvoiceDueDate(dueDate);
+        invoicesV1.setInvoiceStartDate(now);
+        invoicesV1.setInvoiceEndDate(invoiceEndDate);
+        invoicesV1.setCreatedAt(now);
+
+        List<InvoiceItems> invoicesItems = new ArrayList<>();
+        if (rentAmount > 0) {
+            invoicesItems.add(invoiceItem(invoicesV1, com.smartstay.smartstay.ennum.InvoiceItems.RENT.name(), null, rentAmount));
+        }
+        if (ebAmount > 0) {
+            invoicesItems.add(invoiceItem(invoicesV1, com.smartstay.smartstay.ennum.InvoiceItems.EB.name(), null, ebAmount));
+        }
+        if (listCustomersAmenity != null) {
+            Map<String, AmenitiesV1> amenitiesById = indexAmenities(listAmenities);
+            listCustomersAmenity.forEach(amenity -> {
+                AmenitiesV1 amenitiesV1 = findAmenity(amenitiesById, amenity.getAmenityId());
+                if (amenitiesV1 != null) {
+                    invoicesItems.add(invoiceItem(invoicesV1,
+                            com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name(),
+                            amenitiesV1.getAmenityName(),
+                            Utils.roundOffWithTwoDigit(amenity.getAmenityPrice())));
+                }
+            });
+        }
+        listCustomerWallets.forEach(it -> invoicesItems.add(invoiceItem(invoicesV1,
+                walletItemType(it.getSourceType()),
+                walletOtherItem(it.getSourceType()),
+                it.getAmount())));
+
+        invoicesV1.setInvoiceItems(invoicesItems);
+        invoicesV1Repository.save(invoicesV1);
+
+        clearWalletAndMarkInvoiced(customers, listCustomerWallets);
     }
 
     private void generateInvoiceForVerification(Customers customers,
@@ -282,24 +175,10 @@ public class JoiningBasedPrepaidEventListener {
                                                 List<CustomersAmenity> listCustomerAmenities,
                                                 List<AmenitiesV1> listAmenities,
                                                 List<CustomerWalletHistory> listCustomerWallets) {
-        double walletAmount = 0.0;
-        double finalAmount = 0.0;
-        CustomerWallet customerWallet = customers.getWallet();
-        if (customerWallet != null) {
-            if (customerWallet.getAmount() != null) {
-                walletAmount = customerWallet.getAmount();
-                finalAmount = finalAmount + walletAmount;
-            }
-        }
-
-        int dDays = 0;
-        if (dueDays != null) {
-            dDays = dueDays;
-        }
-
-        finalAmount = finalAmount + rentAmount + ebAmount + amenityAmount;
-
-        Date dueDate = Utils.addDaysToDate(invoiceStartDate, dDays-1);
+        double finalAmount = walletAmount(customers) + rentAmount + ebAmount + amenityAmount;
+        int dDays = dueDays != null ? dueDays : 0;
+        Date dueDate = Utils.addDaysToDate(invoiceStartDate, dDays - 1);
+        Date now = new Date();
 
         InvoiceDrafts invoiceDrafts = new InvoiceDrafts();
         invoiceDrafts.setCustomerId(customers.getCustomerId());
@@ -324,96 +203,145 @@ public class JoiningBasedPrepaidEventListener {
         invoiceDrafts.setDiscounted(false);
         invoiceDrafts.setDiscountAmount(0.0);
         invoiceDrafts.setCreatedBy(createdBy);
-        invoiceDrafts.setInvoiceGeneratedDate(new Date());
+        invoiceDrafts.setInvoiceGeneratedDate(now);
         invoiceDrafts.setCancelledDate(null);
         invoiceDrafts.setInvoiceDueDate(dueDate);
-        invoiceDrafts.setInvoiceDate(new Date());
+        invoiceDrafts.setInvoiceDate(now);
         invoiceDrafts.setInvoiceStartDate(invoiceStartDate);
         invoiceDrafts.setInvoiceEndDate(invoiceEndDate);
-        invoiceDrafts.setCreatedAt(new Date());
-        invoiceDrafts.setUpdatedAt(new Date());
+        invoiceDrafts.setCreatedAt(now);
+        invoiceDrafts.setUpdatedAt(now);
 
         List<DraftItems> listDraftedItem = new ArrayList<>();
         if (rentAmount > 0) {
-            DraftItems di = new DraftItems();
-            di.setAmount(rentAmount);
-            di.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
-            di.setInvoiceDrafts(invoiceDrafts);
-            listDraftedItem.add(di);
+            listDraftedItem.add(draftItem(invoiceDrafts, com.smartstay.smartstay.ennum.InvoiceItems.RENT.name(), null, rentAmount));
         }
-
         if (ebAmount > 0) {
-            DraftItems di = new DraftItems();
-            di.setAmount(ebAmount);
-            di.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.EB.name());
-            di.setInvoiceDrafts(invoiceDrafts);
-            listDraftedItem.add(di);
+            listDraftedItem.add(draftItem(invoiceDrafts, com.smartstay.smartstay.ennum.InvoiceItems.EB.name(), null, ebAmount));
         }
-
         if (listCustomerAmenities != null) {
+            Map<String, AmenitiesV1> amenitiesById = indexAmenities(listAmenities);
             listCustomerAmenities.forEach(amenity -> {
-                AmenitiesV1 amenitiesV1 = listAmenities
-                        .stream()
-                        .filter(amty -> amty.getAmenityId().equalsIgnoreCase(amenity.getAmenityId()))
-                        .findFirst()
-                        .orElse(null);
+                AmenitiesV1 amenitiesV1 = findAmenity(amenitiesById, amenity.getAmenityId());
                 if (amenitiesV1 != null) {
-                    DraftItems item1 = new DraftItems();
-                    item1.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
-                    item1.setOtherItem(amenitiesV1.getAmenityName());
-                    item1.setAmount(Utils.roundOffWithTwoDigit(amenity.getAmenityPrice()));
-                    item1.setInvoiceDrafts(invoiceDrafts);
-                    listDraftedItem.add(item1);
+                    listDraftedItem.add(draftItem(invoiceDrafts,
+                            com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name(),
+                            amenitiesV1.getAmenityName(),
+                            Utils.roundOffWithTwoDigit(amenity.getAmenityPrice())));
                 }
-
             });
         }
-
-        List<CustomerWalletHistory> wh = listCustomerWallets
-                .stream()
-                .filter(i -> i.getCustomerId().equalsIgnoreCase(customers.getCustomerId()))
-                .toList();
-        if (!wh.isEmpty()) {
-            wh.forEach(it -> {
-                DraftItems itms = new DraftItems();
-                if (it.getSourceType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.EB.name())) {
-                    itms.setInvoiceItem(it.getSourceType());
-                } else if (it.getSourceType().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name())) {
-                    itms.setInvoiceItem(it.getSourceType());
-                } else {
-                    itms.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name());
-                    itms.setOtherItem(it.getSourceType());
-                }
-                itms.setAmount(Utils.roundOffWithTwoDigit(it.getAmount()));
-                itms.setInvoiceDrafts(invoiceDrafts);
-
-                listDraftedItem.add(itms);
-            });
-        }
+        // listCustomerWallets is already scoped to this customer by the repository query
+        listCustomerWallets.forEach(it -> listDraftedItem.add(draftItem(invoiceDrafts,
+                walletItemType(it.getSourceType()),
+                walletOtherItem(it.getSourceType()),
+                Utils.roundOffWithTwoDigit(it.getAmount()))));
 
         invoiceDrafts.setListItems(listDraftedItem);
         invoiceDraftsService.saveFromRecurring(invoiceDrafts);
 
-        CustomerWallet updateWallet = customers.getWallet();
-        if (updateWallet != null) {
-            updateWallet.setAmount(0.0);
-            customers.setWallet(updateWallet);
+        clearWalletAndMarkInvoiced(customers, listCustomerWallets);
+        // Tracker entry is added once by the caller for both paths.
+    }
+
+    private static boolean isActiveStay(String bookingStatus) {
+        return BookingStatus.CHECKIN.name().equalsIgnoreCase(bookingStatus)
+                || BookingStatus.NOTICE.name().equalsIgnoreCase(bookingStatus);
+    }
+
+    private static double flatRateEbAmount(ElectricityConfig ebConfig) {
+        if (ebConfig != null
+                && EBReadingType.FLAT_RATE.name().equalsIgnoreCase(ebConfig.getTypeOfReading())
+                && !ebConfig.isShouldIncludeInRent()) {
+            return ebConfig.getFlatCharge();
+        }
+        return 0.0;
+    }
+
+    private static double walletAmount(Customers customers) {
+        CustomerWallet wallet = customers.getWallet();
+        return wallet != null && wallet.getAmount() != null ? wallet.getAmount() : 0.0;
+    }
+
+    private String nextInvoiceNumber(String customerHostelId, String hostelId) {
+        String prefix = DEFAULT_INVOICE_PREFIX;
+        BillTemplates templates = templatesService.getTemplateByHostelId(customerHostelId);
+        if (templates != null && templates.getTemplateTypes() != null) {
+            prefix = templates.getTemplateTypes()
+                    .stream()
+                    .filter(i -> BillConfigTypes.RENTAL.name().equalsIgnoreCase(i.getInvoiceType()))
+                    .map(BillTemplateType::getInvoicePrefix)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElse(DEFAULT_INVOICE_PREFIX);
         }
 
+        InvoicesV1 latest = invoicesV1Repository.findLatestInvoiceByPrefix(prefix, hostelId);
+        if (latest == null) {
+            return prefix + "-001";
+        }
+        String[] prefArr = latest.getInvoiceNumber().split("-");
+        if (prefArr.length > 1) {
+            int suffix = Integer.parseInt(prefArr[prefArr.length - 1]) + 1;
+            return prefix + "-" + String.format("%03d", suffix);
+        }
+        return prefix;
+    }
+
+    private void clearWalletAndMarkInvoiced(Customers customers, List<CustomerWalletHistory> wallets) {
+        CustomerWallet wallet = customers.getWallet();
+        if (wallet != null) {
+            wallet.setAmount(0.0);
+        }
         customersService.updateCustomersFromRecurring(customers);
 
-        if (!wh.isEmpty()) {
-            List<CustomerWalletHistory> whu = wh
-                    .stream()
-                    .map(im -> {
-                        im.setBillingStatus(WalletBillingStatus.INVOICE_GENERATED.name());
-                        return im;
-                    })
-                    .toList();
-
-            customerWalletHistoryService.saveAll(whu);
+        if (!wallets.isEmpty()) {
+            wallets.forEach(w -> w.setBillingStatus(WalletBillingStatus.INVOICE_GENERATED.name()));
+            customerWalletHistoryService.saveAll(wallets);
         }
+    }
 
-        customerRecurringTrackerService.addToTracker(customers.getCustomerId(), customers.getHostelId(), new Date());
+    private static Map<String, AmenitiesV1> indexAmenities(List<AmenitiesV1> listAmenities) {
+        if (listAmenities == null) {
+            return Map.of();
+        }
+        return listAmenities
+                .stream()
+                .filter(a -> a.getAmenityId() != null)
+                .collect(Collectors.toMap(a -> a.getAmenityId().toLowerCase(), Function.identity(), (a, b) -> a));
+    }
+
+    private static AmenitiesV1 findAmenity(Map<String, AmenitiesV1> amenitiesById, String amenityId) {
+        return amenityId == null ? null : amenitiesById.get(amenityId.toLowerCase());
+    }
+
+    private static String walletItemType(String sourceType) {
+        if (com.smartstay.smartstay.ennum.InvoiceItems.EB.name().equalsIgnoreCase(sourceType)
+                || com.smartstay.smartstay.ennum.InvoiceItems.AMENITY.name().equalsIgnoreCase(sourceType)) {
+            return sourceType;
+        }
+        return com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name();
+    }
+
+    private static String walletOtherItem(String sourceType) {
+        return com.smartstay.smartstay.ennum.InvoiceItems.OTHERS.name().equals(walletItemType(sourceType)) ? sourceType : null;
+    }
+
+    private static InvoiceItems invoiceItem(InvoicesV1 invoice, String type, String otherItem, Double amount) {
+        InvoiceItems item = new InvoiceItems();
+        item.setInvoiceItem(type);
+        item.setOtherItem(otherItem);
+        item.setAmount(amount);
+        item.setInvoice(invoice);
+        return item;
+    }
+
+    private static DraftItems draftItem(InvoiceDrafts drafts, String type, String otherItem, Double amount) {
+        DraftItems item = new DraftItems();
+        item.setInvoiceItem(type);
+        item.setOtherItem(otherItem);
+        item.setAmount(amount);
+        item.setInvoiceDrafts(drafts);
+        return item;
     }
 }

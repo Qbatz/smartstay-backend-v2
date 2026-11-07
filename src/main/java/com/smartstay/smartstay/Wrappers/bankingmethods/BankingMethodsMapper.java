@@ -4,6 +4,7 @@ import com.smartstay.smartstay.config.UPITypes;
 import com.smartstay.smartstay.dao.BankingMethods;
 import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.ennum.BankAccountType;
+import com.smartstay.smartstay.ennum.PaymentMethod;
 import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
 
 import java.util.function.Function;
@@ -25,7 +26,8 @@ public class BankingMethodsMapper implements Function<BankingMethods, PaymentMet
         String ifscCode = null;
         String responsiblePerson = null;
         String responsiblePersonId = null;
-        String upiAppIcon = upiTypes.getUPIType(bankingMethods);
+        String upiAppIcon = null;
+        boolean isUpi = false;
         String bankAccountType = null;
 
         if (bankingV2 != null) {
@@ -45,6 +47,11 @@ public class BankingMethodsMapper implements Function<BankingMethods, PaymentMet
             else {
                 bankAccountType = bankingV2.getBankAccountType();
             }
+
+            if (bankingMethods.getPaymentMethod().equalsIgnoreCase(PaymentMethod.UPI.name())) {
+               isUpi = true;
+               upiAppIcon = upiTypes.getUPIType(bankingMethods);
+            }
         }
 
         return new PaymentMethodOptionResponse(bankId,
@@ -58,6 +65,8 @@ public class BankingMethodsMapper implements Function<BankingMethods, PaymentMet
                 bankingMethods.getDisplayName(),
                 ifscCode,
                 responsiblePersonId,
-                responsiblePerson);
+                responsiblePerson,
+                isUpi,
+                upiAppIcon);
     }
 }

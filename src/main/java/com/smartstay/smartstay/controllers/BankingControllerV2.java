@@ -1,10 +1,6 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.payloads.banking.AddBankV2;
-import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
-import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
-import com.smartstay.smartstay.payloads.banking.CreditCardPayment;
-import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
+import com.smartstay.smartstay.payloads.banking.*;
 import com.smartstay.smartstay.services.BankingServiceV2;
 import com.smartstay.smartstay.services.QrBankTypeService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -185,5 +181,10 @@ public class BankingControllerV2 {
     public ResponseEntity<?> deleteBanking(@PathVariable("hostelId") String hostelId,
                                            @PathVariable("bankId") String bankId) {
         return bankingServiceV2.deleteBank(hostelId, bankId);
+    }
+
+    @PutMapping("/{hostelId}/{bankId}")
+    public ResponseEntity<?> updateBank(@PathVariable("hostelId") String hostelId, @PathVariable("bankId") String bankId, @RequestBody UpdateBankPayload updateBankPayload) {
+        return bankingServiceV2.updateBankAccount(hostelId, bankId, updateBankPayload);
     }
 }

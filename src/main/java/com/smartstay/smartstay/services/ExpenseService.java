@@ -352,6 +352,12 @@ public class ExpenseService {
                 paymentStatus = ExpensePaymentStatus.Overdue.name();
             }
         }
+        if (expense.isVendorExpense() == null) {
+            paymentStatus = ExpensePaymentStatus.Full.name();
+        }
+        else if (!expense.isVendorExpense()) {
+            paymentStatus = ExpensePaymentStatus.Full.name();
+        }
         boolean bankProvided = Utils.checkNullOrEmpty(expense.bankId());
         OldBankToNewBankInfo oldBankToNewBankInfo = null;
         if (bankProvided) {

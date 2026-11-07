@@ -13,4 +13,12 @@ public class CredentialServices {
     public Credentials findByServiceName(String serviceName) {
         return credentialsRepository.findByService(serviceName);
     }
+
+    /**
+     * @return the bearer token for the SmartStay reports service, or null when it is not configured.
+     */
+    public String getReportsAuthToken() {
+        Credentials credentials = findByServiceName(com.smartstay.smartstay.ennum.CredentialServices.SS_REPORTS.name());
+        return credentials == null ? null : credentials.getAuthToken();
+    }
 }
