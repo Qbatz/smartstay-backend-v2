@@ -544,8 +544,8 @@ public class InvoiceV1Service {
             invoicesV1.setTotalAmount(Utils.roundOfDouble(amount));
             invoicesV1.setBasePrice(Utils.roundOfDouble(baseAmount));
             invoicesV1.setSubTotal(Utils.roundOfDouble(amount));
-            invoicesV1.setPayableAmount(Utils.roundOfDouble(deductionAmount));
-            invoicesV1.setInvoiceAmount(Utils.roundOfDouble(rentAmount));
+            invoicesV1.setPayableAmount(Utils.roundOfDouble(amount));
+            invoicesV1.setInvoiceAmount(Utils.roundOffWithTwoDigit(amount));
             invoicesV1.setDeductionAmount(deductionAmount);
             invoicesV1.setDeductions(null);
             invoicesV1.setBalanceAmount(0.0);
@@ -2145,11 +2145,22 @@ public class InvoiceV1Service {
 
             }
 
+            double invoiceAmount = invoicesV1.getInvoiceAmount();
+            double payableAmount = invoicesV1.getPayableAmount();
+            double differenceAmount = Utils.roundOffWithTwoDigit(payableAmount - invoiceAmount);
+
             InvoiceInfo invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
                     invoiceDate,
                     Utils.roundOffWithTwoDigit(invoicesV1.getBasePrice()),
-                    0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
-                    Utils.roundOffWithTwoDigit(discountedAmount), discountedPercentage,
+                    0.0, 0.0,
+                    Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()),
+                    invoiceAmount,
+                    payableAmount,
+                    differenceAmount,
+                    Utils.roundOffWithTwoDigit(paidAmount),
+                    Utils.roundOffWithTwoDigit(balanceAmount),
+                    Utils.roundOffWithTwoDigit(discountedAmount),
+                    discountedPercentage,
                     invoiceRentalPeriod.toString(),
                     invoiceMonth.toString(), paymentStatus, invoicesV1.getInvoiceMode(),
                     invoicesV1.getInvoiceType(),
@@ -2292,12 +2303,20 @@ public class InvoiceV1Service {
                     canRedeemBooking = false;
                 }
             }
+
+            double invoiceAmount = invoicesV1.getInvoiceAmount();
+            double payableAmount = invoicesV1.getPayableAmount();
+            double differenceAmount = Utils.roundOffWithTwoDigit(payableAmount - invoiceAmount);
+
             invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
                     invoiceDate,
                     Utils.roundOffWithTwoDigit(subTotal),
                     0.0,
                     0.0,
                     Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()),
+                    invoiceAmount,
+                    payableAmount,
+                    differenceAmount,
                     Utils.roundOffWithTwoDigit(paidAmount),
                     Utils.roundOffWithTwoDigit(balanceAmount),
                     Utils.roundOffWithTwoDigit(discountedAmount),
@@ -2341,9 +2360,18 @@ public class InvoiceV1Service {
                 }
             }
 
+            double invoiceAmount = invoicesV1.getInvoiceAmount();
+            double payableAmount = invoicesV1.getPayableAmount();
+            double differenceAmount = Utils.roundOffWithTwoDigit(payableAmount - invoiceAmount);
+
             invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
                     invoiceDate,
-                    Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0, Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()), Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
+                    Utils.roundOffWithTwoDigit(subTotal), 0.0, 0.0,
+                    Utils.roundOffWithTwoDigit(invoicesV1.getTotalAmount()),
+                    invoiceAmount,
+                    payableAmount,
+                    differenceAmount,
+                    Utils.roundOffWithTwoDigit(paidAmount), Utils.roundOffWithTwoDigit(balanceAmount),
                     Utils.roundOffWithTwoDigit(discountedAmount),
                     discountedPercentage,
                     invoiceRentalPeriod.toString(), invoiceMonth.toString(), paymentStatus,
@@ -2672,13 +2700,9 @@ public class InvoiceV1Service {
 //            totalRefundable = totalRefundable + (currentPayablemount * -1);
 //        }
        totalRefundable = totalRefundable + currentPaidAmount;
-       totalPayable = totalPayable + unpaidInvoiceAmount;
+       totalPayable = totalPayable + unpaidInvoiceAmount + electricityAmount;
 //        totalPayable = totalPayable + currentMonthPayableAmount - currentPaidAmount;
         totalPayable = totalPayable + currentMonthPayableAmount;
-
-//        if (totalPayable < 0) {
-//            totalPayable = 0;
-//        }
 
 
         com.smartstay.smartstay.responses.settlement.InvoiceInfo invoiceInfo = null;

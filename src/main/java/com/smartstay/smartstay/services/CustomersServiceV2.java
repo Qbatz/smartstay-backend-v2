@@ -1140,7 +1140,7 @@ public class CustomersServiceV2 {
                         long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
                         long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
                         double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
-                        double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                        double finalRent =Utils.roundOffWithTwoDigit(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
                         if (finalRent > payloads.rentalAmount()) {
                             finalRent = payloads.rentalAmount();
                         }

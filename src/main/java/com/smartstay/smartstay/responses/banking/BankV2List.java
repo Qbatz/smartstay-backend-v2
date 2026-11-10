@@ -12,5 +12,6 @@ public record BankV2List(String bankId,
                          Double balance,
                          String accountHolder,
                          String lastTransactionDate,
-                         Double lastTransactionAmount) {
+                         Double lastTransactionAmount,
+                         boolean isDeleted) {
 }

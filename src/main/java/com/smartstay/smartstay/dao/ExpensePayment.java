@@ -35,6 +35,7 @@ public class ExpensePayment {
     private Double paidAmount;
     private String paymentMethod;
     private String bankId;
+    private String paymentMethodId;
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date paymentDate;

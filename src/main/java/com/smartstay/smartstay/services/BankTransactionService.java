@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -502,5 +503,16 @@ public class BankTransactionService {
 
 
 
+    }
+
+    public List<String> getBankIdsHavingActiveTransactions(String hostelId) {
+        List<BankTransactionsV1> listTransactions = bankRepository.listBankTransactionsByHostelId(hostelId);
+        if (listTransactions == null) {
+            return new ArrayList<>();
+        }
+        return listTransactions
+                .stream()
+                .map(BankTransactionsV1::getHostelId)
+                .toList();
     }
 }

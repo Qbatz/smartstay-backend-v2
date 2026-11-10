@@ -315,6 +315,8 @@ public class PostpaidRecurringEventListener {
                             invoicesV1.setInvoiceType(InvoiceType.RENT.name());
                             invoicesV1.setBasePrice(Utils.roundOfDouble(finalAmount));
                             invoicesV1.setTotalAmount(Utils.roundOfDouble(finalAmount));
+                            invoicesV1.setPayableAmount(Utils.roundOfDouble(finalAmount));
+                            invoicesV1.setInvoiceAmount(Utils.roundOffWithTwoDigit(finalAmount));
                             invoicesV1.setPaidAmount(0.0);
                             invoicesV1.setCgst(0.0);
                             invoicesV1.setSgst(0.0);

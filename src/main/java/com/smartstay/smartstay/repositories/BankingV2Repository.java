@@ -80,4 +80,7 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
             AND b.hostelId=:hostelId AND b.isDeleted=false
             """)
     List<BankingV2> findAllCreditCardByHostelId(String hostelId);
+
+    List<BankingV2> findAllByBankIdNotInAndIsActiveTrue(List<String> bankIds);
+    List<BankingV2> findAllByHostelIdAndIsActiveTrue(String hostelId);
 }

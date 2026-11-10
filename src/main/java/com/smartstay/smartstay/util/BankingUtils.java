@@ -73,38 +73,41 @@ public class BankingUtils {
     }
 
     public static String getBankName(BankingV2 bankingV2, String paymentMethodId) {
-        if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
-            StringBuilder builder = new StringBuilder();
-            builder.append(bankingV2.getDisplayName());
-            builder.append("-");
-            builder.append(bankingV2.getAccountType());
-            return builder.toString();
-        }
-        else if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
-            StringBuilder builder = new StringBuilder();
-            builder.append(bankingV2.getDisplayName());
-            builder.append("-");
-            builder.append(bankingV2.getBankAccountType());
-            return builder.toString();
-        }
-        else {
-            List<BankingMethods> bankingMethods = bankingV2.getBankingMethods();
-            if (bankingMethods != null) {
-                BankingMethods bm = bankingMethods
-                        .stream()
-                        .filter(i -> i.getPaymentMethodId().equalsIgnoreCase(paymentMethodId))
-                        .findFirst()
-                        .orElse(null);
-                if (bm != null) {
-                    StringBuilder builder = new StringBuilder();
-                    builder.append(bm.getPaymentMethod());
-                    builder.append("-");
-                    builder.append(bm.getDisplayName());
-                    return builder.toString();
-                }
+        if (bankingV2 != null) {
+            if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+                StringBuilder builder = new StringBuilder();
+                builder.append(bankingV2.getDisplayName());
+                builder.append("-");
+                builder.append(bankingV2.getAccountType());
+                return builder.toString();
             }
-            return null;
+            else if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+                StringBuilder builder = new StringBuilder();
+                builder.append(bankingV2.getDisplayName());
+                builder.append("-");
+                builder.append(bankingV2.getBankAccountType());
+                return builder.toString();
+            }
+            else {
+                List<BankingMethods> bankingMethods = bankingV2.getBankingMethods();
+                if (bankingMethods != null) {
+                    BankingMethods bm = bankingMethods
+                            .stream()
+                            .filter(i -> i.getPaymentMethodId().equalsIgnoreCase(paymentMethodId))
+                            .findFirst()
+                            .orElse(null);
+                    if (bm != null) {
+                        StringBuilder builder = new StringBuilder();
+                        builder.append(bm.getPaymentMethod());
+                        builder.append("-");
+                        builder.append(bm.getDisplayName());
+                        return builder.toString();
+                    }
+                }
+                return null;
+            }
         }
+        return null;
     }
 
     public static String getPaymentMethod(BankingV2 bankingV2, String paymentMethod) {

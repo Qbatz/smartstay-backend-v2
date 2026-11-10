@@ -117,7 +117,9 @@ public class JoiningBasedPrepaidEventListener {
         invoicesV1.setInvoiceNumber(nextInvoiceNumber(customers.getHostelId(), hostelV1.getHostelId()));
         invoicesV1.setInvoiceType(InvoiceType.RENT.name());
         invoicesV1.setBasePrice(finalAmount);
-        invoicesV1.setTotalAmount(finalAmount);
+        invoicesV1.setTotalAmount(Utils.roundOfDouble(finalAmount));
+        invoicesV1.setInvoiceAmount(Utils.roundOffWithTwoDigit(rentAmount));
+        invoicesV1.setPayableAmount(Utils.roundOfDouble(ebAmount));
         invoicesV1.setPaidAmount(0.0);
         invoicesV1.setCgst(0.0);
         invoicesV1.setSgst(0.0);

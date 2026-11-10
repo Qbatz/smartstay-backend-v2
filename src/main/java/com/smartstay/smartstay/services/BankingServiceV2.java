@@ -1910,16 +1910,10 @@ public class BankingServiceV2 {
         if (bankId != null && validBankOrNull(hostelId, bankId) == null) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
-        List<BankingV2> listBanks = bankingV2Repository.findBanksByHostelId(hostelId);
-        if (listBanks == null || listBanks.isEmpty()) {
-            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
-        }
-
-        List<BankV2List> bankingListV2 = listBanks
-                .stream()
-                .map(i -> new BankingV2ListMapper().apply(i))
-                .toList();
-
+//        List<BankingV2> listBanks = bankingV2Repository.findBanksByHostelId(hostelId);
+//        if (listBanks == null || listBanks.isEmpty()) {
+//            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+//        }
 
         DateFilter dateFilter = DateFilter.ALL;
         if (isPresent(dateFilterParam)) {
@@ -1960,16 +1954,33 @@ public class BankingServiceV2 {
         int pageSize = (size == null || size < 1) ? 20 : size;
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
 
+        List<String> bankIdsHavingActiveTransactions = transactionService.getBankIdsHavingActiveTransactions(hostelId);
+        List<BankingV2> listBankingV2 = new ArrayList<>();
+        List<BankingV2> bankWithNoTransactions =  new ArrayList<>();
+        if (!bankIdsHavingActiveTransactions.isEmpty()) {
+            listBankingV2 = bankingV2Repository.findAllByBankIds(bankIdsHavingActiveTransactions);
+            bankWithNoTransactions = bankingV2Repository.findAllByBankIdNotInAndIsActiveTrue(bankIdsHavingActiveTransactions);
+            listBankingV2.addAll(bankWithNoTransactions);
+        }
+        else {
+            listBankingV2 = bankingV2Repository.findAllByHostelIdAndIsActiveTrue(hostelId);
+        }
+
+        List<BankV2List> bankingListV2 = listBankingV2
+                .stream()
+                .map(i -> new BankingV2ListMapper().apply(i))
+                .toList();
+
         Page<BankTransactionsV1> txnPage =
                 transactionService.getTransactions(hostelId, bankId, startDate, endDate, source, pageable);
         List<BankTransactionsV1> transactions = txnPage.getContent();
 
-        List<String> bankIds = transactions.stream()
-                .map(BankTransactionsV1::getBankId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
-        List<BankingV2> listBanksByTransactions = bankingV2Repository.findAllByBankIds(bankIds);
+//        List<String> bankIds = transactions.stream()
+//                .map(BankTransactionsV1::getBankId)
+//                .filter(Objects::nonNull)
+//                .distinct()
+//                .collect(Collectors.toList());
+//        List<BankingV2> listBanksByTransactions = bankingV2Repository.findAllByBankIds(bankIds);
 //        Set<Integer> qrTypeIds = new HashSet<>();
 //        methodById.values().forEach(method -> {
 //            if (method.getCardNetwork() != null) {
@@ -1987,9 +1998,10 @@ public class BankingServiceV2 {
         Set<String> userIds = new HashSet<>();
 
         List<Users> listUsers = usersService.findUsersByUserIds(new ArrayList<>(userIds));
+        List<BankingV2> finalListBankingV = listBankingV2;
         List<BankTransactionResponse> items = transactions
                 .stream()
-                .map(txn -> new BankTransactionListMapper(listBanksByTransactions, listUsers).apply(txn))
+                .map(txn -> new BankTransactionListMapper(finalListBankingV, listUsers).apply(txn))
                 .collect(Collectors.toList());
 
 //        List<PaymentMethodOptionResponse> bankList = bankId == null

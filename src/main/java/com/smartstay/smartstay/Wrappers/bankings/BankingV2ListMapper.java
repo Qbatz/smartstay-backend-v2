@@ -15,6 +15,7 @@ public class BankingV2ListMapper implements Function<BankingV2, BankV2List> {
         String lastTransactionDate = null;
         String cardNumber = null;
         String cardType = null;
+        boolean isDeleted = false;
         if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
             if (bankingV2.getBankingMethods() != null) {
                 BankingMethods bm = bankingV2.getBankingMethods()
@@ -37,6 +38,9 @@ public class BankingV2ListMapper implements Function<BankingV2, BankV2List> {
         if (bankingV2.getLastTransactionAmount() != null) {
             lastTransactionAmount = Utils.roundOffWithTwoDigit(bankingV2.getLastTransactionAmount());
         }
+        if (!bankingV2.isActive()) {
+            isDeleted = true;
+        }
 
 
         return new BankV2List(bankingV2.getBankId(),
@@ -51,6 +55,7 @@ public class BankingV2ListMapper implements Function<BankingV2, BankV2List> {
                 bankingV2.getBalance(),
                 bankingV2.getAccountHolderName(),
                 lastTransactionDate,
-                lastTransactionAmount);
+                lastTransactionAmount,
+                isDeleted);
     }
 }

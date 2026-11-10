@@ -53,6 +53,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.parameters.P;
@@ -571,6 +572,10 @@ public class ExpenseService {
         if (!subscriptionService.validateSubscription(expensesV1.getHostelId())) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingServiceV2.getOldBankNewBankInfo(payload.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
 
         // Reject more than the configured number of images before uploading anything to S3.
         if (exceedsImageLimit(images)) {
@@ -586,8 +591,8 @@ public class ExpenseService {
         // Every payment is recorded as a new row in expense_payments (full payment history),
         // with all uploaded receipt URLs stored in image_urls.
         ExpensePayment expensePayment = buildPayment(expensesV1.getExpenseId(), null, expensesV1.getHostelId(),
-                expensesV1.getVendorId(), payload.amount(), payload.paymentMethod(), payload.bankId(),
-                paymentDate, payload.transactionId(), payload.notes(), imageUrls, auditUser, auditNow);
+                expensesV1.getVendorId(), payload.amount(), payload.paymentMethod(), oldBankToNewBankInfo.bankId(),
+                paymentDate, payload.transactionId(), payload.notes(), imageUrls, auditUser, auditNow, oldBankToNewBankInfo.paymentMethodId());
         expensePaymentRepository.save(expensePayment);
 
         Double totalPaid = expensePaymentRepository.sumPaidAmountByExpenseId(expensesV1.getExpenseId());
@@ -654,6 +659,7 @@ public class ExpenseService {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
 
+
         // Transaction id is optional for expense settlement.
         String methodError = validatePaymentMethod(payload.paymentMethod(), payload.transactionId(), false);
         if (methodError != null) {
@@ -678,13 +684,8 @@ public class ExpenseService {
         Date paymentDate = resolvePaymentDate(payload.paymentDate());
 
         // Update only the parent expense; expense_items are not modified.
-        applyExpenseSettlement(expense, requestPaid, auditUser, auditNow);
-        expensesRepository.save(expense);
 
-        ExpensePayment payment = buildPayment(expense.getExpenseId(), null, expense.getHostelId(),
-                expense.getVendorId(), requestPaid, payload.paymentMethod(), payload.bankId(),
-                paymentDate, payload.transactionId(), payload.notes(), imageUrls, auditUser, auditNow);
-        expensePaymentRepository.save(payment);
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingServiceV2.getOldBankNewBankInfo(payload.bankId());
 
         if (Utils.checkNullOrEmpty(payload.bankId()) && requestPaid > 0) {
             String settleBankId = payload.bankId().trim();
@@ -694,13 +695,21 @@ public class ExpenseService {
             if (!bankingServiceV2.checkBankExist(payload.bankId())) {
                 return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
             }
-            OldBankToNewBankInfo oldBankToNewBankInfo = bankingServiceV2.getOldBankNewBankInfo(payload.bankId());
+
             if (oldBankToNewBankInfo == null) {
                 return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
             }
             bankingServiceV2.recordVendorExpenseDebit(oldBankToNewBankInfo.bankId(),oldBankToNewBankInfo.paymentMethodId(), requestPaid,
                     expense.getHostelId(), auditUser);
         }
+
+        applyExpenseSettlement(expense, requestPaid, auditUser, auditNow);
+        expensesRepository.save(expense);
+
+        ExpensePayment payment = buildPayment(expense.getExpenseId(), null, expense.getHostelId(),
+                expense.getVendorId(), requestPaid, payload.paymentMethod(), oldBankToNewBankInfo.bankId(),
+                paymentDate, payload.transactionId(), payload.notes(), imageUrls, auditUser, auditNow, oldBankToNewBankInfo.paymentMethodId());
+        expensePaymentRepository.save(payment);
 
         // Keep the vendor's denormalized financial summary in sync.
         if (expense.getVendorId() != null) {
@@ -816,7 +825,7 @@ public class ExpenseService {
     private ExpensePayment buildPayment(String expenseId, Long expenseItemId, String hostelId, Integer vendorId,
                                         double paidAmount, String paymentMethod, String bankId, Date paymentDate,
                                         String transactionId, String notes, List<String> imageUrls,
-                                        String auditUser, Date auditNow) {
+                                        String auditUser, Date auditNow, String paymentMethodId) {
         ExpensePayment payment = new ExpensePayment();
         payment.setExpenseId(expenseId);
         payment.setExpenseItemId(expenseItemId);
@@ -825,6 +834,7 @@ public class ExpenseService {
         payment.setPaidAmount(paidAmount);
         payment.setPaymentMethod(paymentMethod);
         payment.setBankId(bankId);
+        payment.setPaymentMethodId(paymentMethodId);
         payment.setPaymentDate(paymentDate);
         payment.setTransactionId(transactionId);
         payment.setNotes(notes);
@@ -1046,7 +1056,7 @@ public class ExpenseService {
         List<String> bankIds = null;
         List<String> paymentMethodIds = null;
 
-        Pageable pageable = PageRequest.of(page-1, size);
+        Pageable pageable = PageRequest.of(page-1, size, Sort.by(Sort.Direction.DESC, "transactionDate"));
 
         if (paymentStatus != null) {
             pStatus = paymentStatus;
@@ -1435,12 +1445,20 @@ public class ExpenseService {
 
         // Bulk-resolve creator names across the expense, items and payments.
         Set<String> creatorIds = new HashSet<>();
+        List<String> userIds = new ArrayList<>();
         if (expense.getCreatedBy() != null) {
             creatorIds.add(expense.getCreatedBy());
+            userIds.add(expense.getCreatedBy());
         }
         items.stream().map(ExpenseItem::getCreatedBy).filter(Objects::nonNull).forEach(creatorIds::add);
         payments.stream().map(ExpensePayment::getCreatedBy).filter(Objects::nonNull).forEach(creatorIds::add);
         Map<String, String> creatorNamesById = new HashMap<>();
+        List<Users> listUsers;
+        if (userIds != null) {
+            listUsers = usersService.findAllUsersFromUserId(userIds);
+        } else {
+            listUsers = new ArrayList<>();
+        }
         if (!creatorIds.isEmpty()) {
             usersService.findAllUsersFromUserId(new ArrayList<>(creatorIds)).forEach(u ->
                     creatorNamesById.put(u.getUserId(), NameUtils.getFullName(u.getFirstName(), u.getLastName())));
@@ -1456,17 +1474,7 @@ public class ExpenseService {
                 .toList();
 
         List<ExpenseDetailPayment> paymentDetails = payments.stream()
-                .map(p -> {
-                    BankingV2 paymentBank = bankMap.get(p.getBankId());
-                    return new ExpenseDetailPayment(
-                            p.getId(), p.getPaidAmount(), p.getPaymentMethod(), p.getBankId(),
-                            paymentBank != null ? paymentBank.getBankName() : null,
-                            paymentBank != null ? paymentBank.getAccountType() : null,
-                            p.getPaymentDate() != null ? Utils.dateToString(p.getPaymentDate()) : null,
-                            p.getTransactionId(), p.getNotes(), p.getImageUrl(), p.getImageUrls(),
-                            p.getCreatedAt() != null ? Utils.dateToString(p.getCreatedAt()) : null,
-                            resolveCreatorName(p.getCreatedBy(), creatorNamesById));
-                })
+                .map(p -> new ExpenseDetailPaymentMapper(bankMap, listUsers).apply(p))
                 .toList();
 
         double totalExpenseAmount = items.stream()
