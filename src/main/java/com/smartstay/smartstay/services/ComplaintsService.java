@@ -331,7 +331,7 @@ public class ComplaintsService {
         return new ResponseEntity<>(Utils.STATUS_UPDATED, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getAllComplaints(String hostelId, String customerName, String status, String startDate, String endDate) {
+    public ResponseEntity<?> getAllComplaintsOld(String hostelId, String customerName, String status, String startDate, String endDate) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -354,6 +354,89 @@ public class ComplaintsService {
         List<Integer> complaintTypeIds = listComplaints.stream().map(ComplaintsV1::getComplaintTypeId).toList();
         List<ComplaintTypeV1> listComplaintTypes = complaintTypeService.getComplaintTypesById(complaintTypeIds);
         List<Users> listUsers = usersService.findByListOfUserIds(assignes);
+
+        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+        List<CustomersBedHistory> listCustomersBedHistory = customersBedHistoryService.getCurrentBedHistoryByCustomerIds(customerIds);
+
+        List<BedDetails> listBedDetails;
+        if (listCustomersBedHistory != null) {
+            List<Integer> bedIds = listCustomersBedHistory.stream().map(CustomersBedHistory::getBedId).toList();
+            listBedDetails = bedsService.getBedDetails(bedIds);
+
+        } else {
+            listBedDetails = new ArrayList<>();
+        }
+
+
+        Date start = listComplaints.stream().map(ComplaintsV1::getCreatedAt).filter(Objects::nonNull).min(Date::compareTo).orElse(null);
+        Date end = listComplaints.stream().map(ComplaintsV1::getCreatedAt).filter(Objects::nonNull).max(Date::compareTo).orElse(null);
+
+        String sDate = null;
+        String eDate = null;
+
+        if (start != null) {
+            sDate = Utils.dateToString(start);
+        }
+        if (end != null) {
+            eDate = Utils.dateToString(end);
+        }
+
+        List<ComplaintResponseDto> listComplaintsResponse = listComplaints.stream().map(i -> new ComplaintListMapper(listCustomers, listComplaintTypes, listBedDetails, listCustomersBedHistory, listUsers).apply(i)).toList();
+
+        ComplaintResponse complaintResponse = new ComplaintResponse(hostelId, sDate, eDate, listComplaints.size(), listComplaintsResponse);
+
+        return new ResponseEntity<>(complaintResponse, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllComplaints(String hostelId, String customerName, String status, String startDate, String endDate) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        String userId = authentication.getName();
+        Users user = usersService.findUserByUserId(userId);
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_COMPLAINTS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
+        }
+
+        List<String> customerIdsFromSearch = null;
+        if (customerName != null) {
+            List<Customers> listCus = customersService.searchCustomerByHostelName(hostelId, customerName);
+            if (listCus != null) {
+                customerIdsFromSearch = listCus.stream().map(Customers::getCustomerId).toList();
+            }
+        }
+
+        Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE);
+
+        Page<ComplaintsV1> listAllComplaints;
+        if (customerIdsFromSearch == null) {
+            listAllComplaints = complaintRepository.findActiveComplaintsByHostelId(hostelId, pageable);
+        } else if (customerIdsFromSearch.isEmpty()) {
+            listAllComplaints = Page.empty(pageable);
+        } else {
+            listAllComplaints = complaintRepository.findActiveComplaintsByHostelIdAndCustomerIds(hostelId, customerIdsFromSearch, pageable);
+        }
+
+        if (listAllComplaints == null) {
+            return new ResponseEntity<>(Utils.NO_COMPLAINTS_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<ComplaintsV1> listComplaints = listAllComplaints.getContent();
+//        List<ComplaintsV1> listComplaints = complaintRepository.findByHostelIdAndIsDeletedFalseOrderByComplaintDateDesc(hostelId);
+        List<String> customerIds = listComplaints.stream().map(ComplaintsV1::getCustomerId).toList();
+        List<String> assignes = listComplaints.stream().map(ComplaintsV1::getAssigneeId).toList();
+        List<Integer> roomIds = listComplaints.stream().filter(i -> i.getRoomId() != null).map(ComplaintsV1::getRoomId).toList();
+        List<Integer> complaintTypeIds = listComplaints.stream().map(ComplaintsV1::getComplaintTypeId).toList();
+        List<ComplaintTypeV1> listComplaintTypes = complaintTypeService.getComplaintTypesById(complaintTypeIds);
+        List<Users> listUsers = usersService.findByListOfUserIds(assignes);
+//        List<Integer> complaintIds = listComplaints.stream().map(ComplaintsV1::getComplaintId).toList();
+//        List<ComplaintsC>
 
         List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
         List<CustomersBedHistory> listCustomersBedHistory = customersBedHistoryService.getCurrentBedHistoryByCustomerIds(customerIds);
@@ -477,7 +560,7 @@ public class ComplaintsService {
                         }
                     }
                 }
-                return new CommentResponse(i.getCommentId(), i.getComplaint().getComplaintId(), i.getComment(), i.getUserName(), i.getCreatedAt(), initials.toString(), profilePic);
+                return new CommentResponse(i.getCommentId(), i.getComplaint().getComplaintId(), i.getComment(), i.getUserName(), Utils.dateToString(i.getCreatedAt()), initials.toString(), profilePic);
             }).toList();
             dto.setComments(commentsNew);
         }
@@ -503,7 +586,7 @@ public class ComplaintsService {
         // )
         // .toList();
 
-        // dto.setComments(comments);
+//         dto.setComments(comments);
         return new ResponseEntity<>(dto, HttpStatus.OK);
     }
 

@@ -163,6 +163,19 @@ public class ComplaintListMapper implements Function<ComplaintsV1, ComplaintResp
         complaintResponseDto.setRoomName(roomName);
         complaintResponseDto.setFloorName(floorName);
         complaintResponseDto.setBedName(bedName);
+        if (complaintsV1.getComplaintComments() != null && !complaintsV1.getComplaintComments().isEmpty()) {
+            complaintResponseDto.setComments(complaintsV1.getComplaintComments()
+                    .stream()
+                    .map(i -> new CommentResponse(i.getCommentId(),
+                            complaintsV1.getComplaintId(),
+                            i.getComment(),
+                            null,
+                            Utils.dateToString(i.getCommentDate()),
+                            null,
+                            null
+                            ))
+                    .toList());
+        }
 
 
 

@@ -139,6 +139,7 @@ public class Utils {
     public static final String BED_ALREADY_OCCUPIED = "Bed already occupied by another customer";
     public static final String IMAGES_NOT_FOUND = "Image not found";
     public static final String CANNOT_CREATE_CURRENT_MONTH_INVOICE_POSTPAID = "Current month manual bill creation is not allowed for postpaid hostels";
+    public static final String NO_COMPLAINTS_FOUND = "No complaints found";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
     public static final String FUTURE_DATES_NOT_ALLOWED = "Future Dates are not allowed";

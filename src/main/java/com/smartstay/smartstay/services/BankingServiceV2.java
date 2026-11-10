@@ -1349,62 +1349,169 @@ public class BankingServiceV2 {
             return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
         }
         BankingV2 bankingV2 = bankingV2Repository.findByBankId(bankId).orElse(null);
-        if (bankingV2 == null) {
+        if (bankingV2 == null || bankingV2.isDeleted() || !hostelId.equals(bankingV2.getHostelId())) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
 
-        boolean isTypeBank = false;
-        if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
-            isTypeBank = true;
-        }
-        else if (updateBankPayload.newAccountType() != null) {
-            if (updateBankPayload.newAccountType().equalsIgnoreCase("BANK")) {
-                isTypeBank = true;
+        String currentType = bankingV2.getAccountType();
+        String targetType = currentType;
+        if (updateBankPayload.newAccountType() != null && !updateBankPayload.newAccountType().isEmpty()) {
+            if (updateBankPayload.newAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+                targetType = BankAccountType.BANK.name();
+            }
+            else if (updateBankPayload.newAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+                targetType = BankAccountType.CASH.name();
+            }
+            else if (updateBankPayload.newAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+                targetType = BankAccountType.CARD.name();
             }
         }
+        if (targetType == null) {
+            return new ResponseEntity<>(Utils.INVALID_ACCOUNT_TYPE, HttpStatus.BAD_REQUEST);
+        }
+        boolean isTypeChanged = !targetType.equalsIgnoreCase(currentType);
 
-        if (isTypeBank) {
-            if (updateBankPayload.accountNo() != null) {
-                if (!bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
-                    return new ResponseEntity<>(Utils.CANNOT_ADD_ACCOUNT_NO_CASH_ACCOUNT, HttpStatus.BAD_REQUEST);
+        String accountHolderName = updateBankPayload.accountHolderName();
+        String accountNo = updateBankPayload.accountNo();
+        String cardNumber = updateBankPayload.cardNumber();
+
+
+
+        switch (targetType) {
+            case "BANK" -> {
+                // Converting CASH/CARD -> BANK: account holder name is mandatory.
+                if (isTypeChanged && accountHolderName == null) {
+                    return new ResponseEntity<>(Utils.BANK_ACCOUNT_HOLDER_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
                 }
-                if (bankingV2.getAccountHolderName() == null) {
-                    if (updateBankPayload.accountHolderName() == null) {
+                if (accountNo != null) {
+                    if (bankingV2.getAccountHolderName() == null && accountHolderName == null) {
                         return new ResponseEntity<>(Utils.BANK_ACCOUNT_HOLDER_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
                     }
+                    if (!accountNo.equals(bankingV2.getAccountNumber())
+                            && bankingV2Repository.existsByHostelIdAndAccountNumberAndIsDeletedFalse(hostelId, accountNo)) {
+                        return new ResponseEntity<>(Utils.ACCOUNT_NO_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
+                    }
                 }
+
+                if (isTypeChanged) {
+                    bankingV2.setCashAccountType(null);
+                    bankingV2.setResponsiblePerson(null);
+                    bankingV2.setCardNumber(null);
+                    bankingV2.setLinkedBankId(null);
+                    bankingV2.setBankAccountType(null);
+                }
+                if (accountHolderName != null) {
+                    bankingV2.setAccountHolderName(accountHolderName);
+                }
+                if (accountNo != null) {
+                    bankingV2.setAccountNumber(accountNo);
+                }
+                bankingV2.setIfscCode(trimToNull(updateBankPayload.ifscCode()));
+            }
+            case "CASH" -> {
+                if (accountNo != null) {
+                    return new ResponseEntity<>(Utils.CANNOT_ADD_ACCOUNT_NO_CASH_ACCOUNT, HttpStatus.BAD_REQUEST);
+                }
+                String cashAccountType = trimToNull(updateBankPayload.cashAccountType());
+                // Converting BANK/CARD -> CASH: cash account type is mandatory.
+                if (isTypeChanged && cashAccountType == null) {
+                    return new ResponseEntity<>(Utils.V2_CASH_DETAILS_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
+                String effectiveCashAccountType = bankingV2.getCashAccountType();
+                if (cashAccountType != null) {
+                    CashAccountType cashType = CashAccountType.fromValue(cashAccountType);
+                    if (cashType == null) {
+                        return new ResponseEntity<>(Utils.V2_CASH_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
+                    }
+                    effectiveCashAccountType = cashType.name();
+                }
+
+                // A cash account must be unique per hostel on (cash account type + responsible person).
+                String responsiblePerson = trimToNull(updateBankPayload.responsiblePerson());
+                if (effectiveCashAccountType != null
+                        && isDuplicateCashAccount(hostelId, bankId, effectiveCashAccountType, responsiblePerson)) {
+                    return new ResponseEntity<>(Utils.CASH_ACCOUNT_ALREAY_EXISTS, HttpStatus.BAD_REQUEST);
+                }
+                bankingV2.setCashAccountType(effectiveCashAccountType);
+
+                if (isTypeChanged) {
+                    bankingV2.setBankName(null);
+                    bankingV2.setAccountNumber(null);
+                    bankingV2.setIfscCode(null);
+                    bankingV2.setBranchName(null);
+                    bankingV2.setCardNumber(null);
+                    bankingV2.setLinkedBankId(null);
+                    bankingV2.setAccountHolderName(null);
+                    bankingV2.setBankAccountType(null);
+                }
+                bankingV2.setResponsiblePerson(responsiblePerson);
+            }
+            case "CARD" -> {
+                // Converting to CARD: card number and card holder name are mandatory.
+                // For an existing CARD account, fall back to the stored values.
+                String effectiveCardNumber = cardNumber != null ? cardNumber
+                        : (isTypeChanged ? null : bankingV2.getCardNumber());
+                String effectiveHolderName = accountHolderName != null ? accountHolderName
+                        : (isTypeChanged ? null : bankingV2.getAccountHolderName());
+                if (effectiveCardNumber == null) {
+                    return new ResponseEntity<>(Utils.BANKING_METHOD_CARD_NUMBER_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
+                if (!isValidCardNumber(effectiveCardNumber)) {
+                    return new ResponseEntity<>(Utils.BANKING_METHOD_CARD_NUMBER_INVALID, HttpStatus.BAD_REQUEST);
+                }
+                if (effectiveHolderName == null) {
+                    return new ResponseEntity<>(Utils.BANKING_METHOD_CARD_HOLDER_REQUIRED, HttpStatus.BAD_REQUEST);
+                }
+                if (!effectiveCardNumber.equals(bankingV2.getCardNumber())
+                        && bankingMethodService.isExists(hostelId, effectiveCardNumber, "CREDIT_CARD")) {
+                    return new ResponseEntity<>(Utils.CARD_NO_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+                }
+
+                if (isTypeChanged) {
+                    bankingV2.setBankName(null);
+                    bankingV2.setAccountNumber(null);
+                    bankingV2.setIfscCode(null);
+                    bankingV2.setBranchName(null);
+                    bankingV2.setCardNumber(null);
+                }
+                bankingV2.setCardNumber(effectiveCardNumber);
+                bankingV2.setAccountHolderName(effectiveHolderName);
+                bankingV2.setBankAccountType(PaymentMethod.CREDIT_CARD.name());
+            }
+            default -> {
+                return new ResponseEntity<>(Utils.INVALID_ACCOUNT_TYPE, HttpStatus.BAD_REQUEST);
             }
         }
 
+        bankingV2.setAccountType(targetType);
 
-        if (updateBankPayload.bankName() != null && !updateBankPayload.bankName().isEmpty()) {
-            bankingV2.setBankName(bankingV2.getBankName());
-        }
-        else {
-            if (bankingV2.getBankName() != null) {
-                bankingV2.setBankName(null);
-            }
-        }
-        if (updateBankPayload.displayName() != null && !updateBankPayload.displayName().isEmpty()) {
-            bankingV2.setDisplayName(updateBankPayload.displayName());
-        }
-        else {
-            if (bankingV2.getDisplayName() != null) {
-                bankingV2.setDisplayName(null);
-            }
-        }
-        if (updateBankPayload.branchName() != null && !updateBankPayload.branchName().isEmpty()) {
+        // Common fields: an empty/missing value clears the stored value.
+        bankingV2.setDisplayName(updateBankPayload.displayName());
+        if (targetType.equalsIgnoreCase(BankAccountTypeV2.BANK.name())) {
+            bankingV2.setBankName(updateBankPayload.bankName());
             bankingV2.setBranchName(updateBankPayload.branchName());
         }
-        else {
-            if (bankingV2.getBranchName() != null) {
-                bankingV2.setBranchName(null);
-            }
+        if (updateBankPayload.description() != null) {
+            bankingV2.setDescription(updateBankPayload.description());
         }
+
+        bankingV2.setUpdatedBy(users.getUserId());
+        bankingV2.setUpdatedAt(new Date());
 
         bankingV2Repository.save(bankingV2);
         return new ResponseEntity<>(HttpStatus.OK);
 
+    }
+    private boolean isDuplicateCashAccount(String hostelId, String bankId, String cashAccountType, String responsiblePerson) {
+        String cash = BankAccountTypeV2.CASH.name();
+        if (responsiblePerson == null) {
+            return bankingV2Repository
+                    .existsByHostelIdAndAccountTypeAndCashAccountTypeIgnoreCaseAndResponsiblePersonIsNullAndBankIdNotAndIsDeletedFalse(
+                            hostelId, cash, cashAccountType, bankId);
+        }
+        return bankingV2Repository
+                .existsByHostelIdAndAccountTypeAndCashAccountTypeIgnoreCaseAndResponsiblePersonIgnoreCaseAndBankIdNotAndIsDeletedFalse(
+                        hostelId, cash, cashAccountType, responsiblePerson, bankId);
     }
 
     private record TransferRequest(String hostelId, double amount, Date transactionDate, String description,

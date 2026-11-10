@@ -3,6 +3,7 @@ package com.smartstay.smartstay.repositories;
 import com.smartstay.smartstay.dao.ComplaintComments;
 import com.smartstay.smartstay.dao.ComplaintsV1;
 import com.smartstay.smartstay.responses.complaint.ComplaintResponse;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -23,13 +24,13 @@ public interface ComplaintRepository
     ComplaintsV1 findByComplaintIdAndParentId(int complaintId, String parentId);
 
     @Query(value = """
-    SELECT cus.* 
-    FROM customers cus
-    JOIN complaintsv1 c ON c.customer_id = cus.customer_id
-    WHERE c.complaint_id = :complaintId
-      AND c.parent_id = :parentId
-      AND cus.current_status IN (:currentStatus)
-""", nativeQuery = true)
+                SELECT cus.* 
+                FROM customers cus
+                JOIN complaintsv1 c ON c.customer_id = cus.customer_id
+                WHERE c.complaint_id = :complaintId
+                  AND c.parent_id = :parentId
+                  AND cus.current_status IN (:currentStatus)
+            """, nativeQuery = true)
     ComplaintsV1 findCustomerForComplaint(
             @Param("complaintId") int complaintId,
             @Param("parentId") String parentId,
@@ -45,26 +46,26 @@ public interface ComplaintRepository
                 CONCAT(cus.first_name, ' ', cus.last_name) AS customerName,
                 cus.profile_pic AS customerProfile,
                 c.hostel_id AS hostelId,
-
+            
                 c.floor_id AS floorId,
                 f.floor_name AS floorName,
-
+            
                 c.room_id AS roomId,
                 r.room_name AS roomName,
-
+            
                 c.bed_id AS bedId,
                 b.bed_name AS bedName,
-
+            
                 c.complaint_date AS complaintDate,
                 c.description AS description,
-
+            
                  c.assignee_id AS assigneeId,
                  c.assigned_date AS assignedDate,
                  CONCAT_WS(' ', usr.first_name, usr.last_name) AS assigneeName,
-
+            
                 ct.complaint_type_id AS complaintTypeId,
                 ct.complaint_type_name AS complaintTypeName,
-
+            
                 c.status AS status,
                 COUNT(cc.comment_id) AS commentCount
             FROM complaintsv1 c
@@ -114,71 +115,97 @@ public interface ComplaintRepository
 
 
     @Query(value = """
-    SELECT 
-        c.complaint_id AS complaintId,
-        c.customer_id AS customerId,
-        CONCAT(cus.first_name, ' ', cus.last_name) AS customerName,
-        cus.profile_pic AS customerProfile,
-        c.hostel_id AS hostelId,
-
-        c.floor_id AS floorId,
-        f.floor_name AS floorName,
-
-        c.room_id AS roomId,
-        r.room_name AS roomName,
-
-        c.bed_id AS bedId,
-        b.bed_name AS bedName,
-
-        c.complaint_date AS complaintDate,
-        c.description AS description,
-
-        c.assignee_id AS assigneeId,
-        c.assigned_date AS assignedDate,
-        CONCAT_WS(' ', usr.first_name, usr.last_name) AS assigneeName,
-
-        ct.complaint_type_id AS complaintTypeId,
-        ct.complaint_type_name AS complaintTypeName,
-
-        c.status AS status,
-          COUNT(cc.comment_id) AS commentCount
-    FROM complaintsv1 c
-    JOIN complaint_typev1 ct 
-        ON c.complaint_type_id = ct.complaint_type_id
-    JOIN customers cus 
-        ON c.customer_id = cus.customer_id
-    LEFT JOIN floors f 
-        ON c.floor_id = f.floor_id
-    LEFT JOIN rooms r 
-        ON c.room_id = r.room_id
-     LEFT JOIN users usr
-        ON c.assignee_id = usr.user_id    
-    LEFT JOIN beds b 
-        ON c.bed_id = b.bed_id
-                 LEFT JOIN complaint_comments cc ON cc.complaint_id = c.complaint_id
-    WHERE c.complaint_id = :complaintId and c.parent_id =:parentId and c.is_active=1
-     AND cus.current_status IN (:currentStatus)
-    """, nativeQuery = true)
+            SELECT 
+                c.complaint_id AS complaintId,
+                c.customer_id AS customerId,
+                CONCAT(cus.first_name, ' ', cus.last_name) AS customerName,
+                cus.profile_pic AS customerProfile,
+                c.hostel_id AS hostelId,
+            
+                c.floor_id AS floorId,
+                f.floor_name AS floorName,
+            
+                c.room_id AS roomId,
+                r.room_name AS roomName,
+            
+                c.bed_id AS bedId,
+                b.bed_name AS bedName,
+            
+                c.complaint_date AS complaintDate,
+                c.description AS description,
+            
+                c.assignee_id AS assigneeId,
+                c.assigned_date AS assignedDate,
+                CONCAT_WS(' ', usr.first_name, usr.last_name) AS assigneeName,
+            
+                ct.complaint_type_id AS complaintTypeId,
+                ct.complaint_type_name AS complaintTypeName,
+            
+                c.status AS status,
+                  COUNT(cc.comment_id) AS commentCount
+            FROM complaintsv1 c
+            JOIN complaint_typev1 ct 
+                ON c.complaint_type_id = ct.complaint_type_id
+            JOIN customers cus 
+                ON c.customer_id = cus.customer_id
+            LEFT JOIN floors f 
+                ON c.floor_id = f.floor_id
+            LEFT JOIN rooms r 
+                ON c.room_id = r.room_id
+             LEFT JOIN users usr
+                ON c.assignee_id = usr.user_id    
+            LEFT JOIN beds b 
+                ON c.bed_id = b.bed_id
+                         LEFT JOIN complaint_comments cc ON cc.complaint_id = c.complaint_id
+            WHERE c.complaint_id = :complaintId and c.parent_id =:parentId and c.is_active=1
+             AND cus.current_status IN (:currentStatus)
+            """, nativeQuery = true)
     Map<String, Object> getComplaintsWithType(@Param("complaintId") int complaintId,
-                                            @Param("parentId") String parentId,
+                                              @Param("parentId") String parentId,
                                               @Param("currentStatus") List<String> currentStatus
     );
 
-
     @Query(value = """
-    SELECT 
-        COUNT(*) AS totalComplaints
-    FROM complaintsv1 c
-    WHERE c.hostel_id = :hostelId 
-      AND c.parent_id = :parentId 
-      AND c.is_active = 1 and c.is_deleted=0
-    """, nativeQuery = true)
+            SELECT 
+                COUNT(*) AS totalComplaints
+            FROM complaintsv1 c
+            WHERE c.hostel_id = :hostelId 
+              AND c.parent_id = :parentId 
+              AND c.is_active = 1 and c.is_deleted=0
+            """, nativeQuery = true)
     Map<String, Object> getComplaintSummary(
             @Param("hostelId") String hostelId,
             @Param("parentId") String parentId
     );
 
     List<ComplaintsV1> findByHostelIdAndIsDeletedFalseOrderByComplaintDateDesc(String hostelId);
+
+    @Query(value = """
+                SELECT c FROM ComplaintsV1 c WHERE c.hostelId = :hostelId
+                AND c.isDeleted = false
+                ORDER BY c.complaintDate DESC
+            """,
+            countQuery = """
+                SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId
+                AND c.isDeleted = false
+            """)
+    Page<ComplaintsV1> findActiveComplaintsByHostelId(@Param("hostelId") String hostelId, Pageable pageable);
+
+    @Query(value = """
+                SELECT c FROM ComplaintsV1 c WHERE c.hostelId = :hostelId
+                AND c.customerId IN (:customerIds)
+                AND c.isDeleted = false
+                ORDER BY c.complaintDate DESC
+            """,
+            countQuery = """
+                SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId
+                AND c.customerId IN (:customerIds)
+                AND c.isDeleted = false
+            """)
+    Page<ComplaintsV1> findActiveComplaintsByHostelIdAndCustomerIds(@Param("hostelId") String hostelId,
+                                                                    @Param("customerIds") List<String> customerIds,
+                                                                    Pageable pageable);
+
     @Query("SELECT COUNT(c) FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false AND DATE(c.complaintDate) >= DATE(:startDate) AND DATE(c.complaintDate) <= DATE(:endDate)")
     int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
                                     @Param("endDate") Date endDate);
@@ -203,6 +230,6 @@ public interface ComplaintRepository
     Map<String, Object> getComplaintStatusSummary(@Param("hostelId") String hostelId,
                                                   @Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
-        @Query("SELECT c FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false ORDER BY c.complaintDate DESC")
-        List<ComplaintsV1> findTopComplaints(@Param("hostelId") String hostelId, Pageable pageable);
+    @Query("SELECT c FROM ComplaintsV1 c WHERE c.hostelId = :hostelId AND c.isActive = true AND c.isDeleted = false ORDER BY c.complaintDate DESC")
+    List<ComplaintsV1> findTopComplaints(@Param("hostelId") String hostelId, Pageable pageable);
 }
