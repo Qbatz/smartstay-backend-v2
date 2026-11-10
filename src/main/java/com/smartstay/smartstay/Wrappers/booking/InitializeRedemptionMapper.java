@@ -1,9 +1,6 @@
 package com.smartstay.smartstay.Wrappers.booking;
 
-import com.smartstay.smartstay.dao.BankingV1;
-import com.smartstay.smartstay.dao.Customers;
-import com.smartstay.smartstay.dao.InvoicesV1;
-import com.smartstay.smartstay.dao.TransactionV1;
+import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.responses.bookings.AdvanceInfo;
@@ -20,9 +17,9 @@ import java.util.function.Function;
 public class InitializeRedemptionMapper implements Function<InvoicesV1, InitializeInvoiceItems> {
 
     private List<TransactionV1> listTransactions = null;
-    private List<BankingV1> listBanks = null;
+    private List<BankingV2> listBanks = null;
 
-    public InitializeRedemptionMapper(List<TransactionV1> listTransactions, List<BankingV1> listBanks) {
+    public InitializeRedemptionMapper(List<TransactionV1> listTransactions, List<BankingV2> listBanks) {
         this.listTransactions = listTransactions;
         this.listBanks = listBanks;
     }
@@ -53,7 +50,7 @@ public class InitializeRedemptionMapper implements Function<InvoicesV1, Initiali
                 }
 
                 if (listBanks != null) {
-                    BankingV1 bankingV1 = listBanks
+                    BankingV2 bankingV1 = listBanks
                             .stream()
                             .filter(i -> i.getBankId().equalsIgnoreCase(transactionV1.getBankId()))
                             .findFirst()

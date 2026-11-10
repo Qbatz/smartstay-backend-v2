@@ -17,22 +17,12 @@ public record BankTransactionResponse(
         String sourceId,
         String investorName,
         // ---- bankingv2 ----
+        String accountType,
         String bankAccountType,
-        String accountNumber,
         String accountHolderName,
         String bankName,
-        String branchName,
         String cashAccountType,
         String displayName,
-        String responsiblePerson,
-        String responsiblePersonName,
-        // ---- banking_methods (null for CASH) ----
-        String paymentMethod,
-        String cardHolderName,
-        String cardNetwork,
-        String cardNumber,
-        String paymentMethodDisplayName,
-        String linkedUpiId,
-        String upiApp
+        String paymentMethod
 ) {
 }

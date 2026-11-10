@@ -31,41 +31,47 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     BankTransactionsV1 findTopByBankIdAndHostelIdOrderByCreatedAtDesc(String bankId, String hostelId);
 
     BankTransactionsV1 findByTransactionNumber(String transactionNumber);
+
     List<BankTransactionsV1> findByReferenceNumber(String referenceNumber);
 
     @Query("SELECT COUNT(bt) FROM BankTransactionsV1 bt WHERE bt.hostelId = :hostelId AND DATE(bt.transactionDate) >= DATE(:startDate) AND DATE(bt.transactionDate) <= DATE(:endDate)")
     int countByHostelIdAndDateRange(@Param("hostelId") String hostelId, @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate);
+                                    @Param("endDate") Date endDate);
 
     @Query("""
             SELECT btv FROM BankTransactionsV1 btv WHERE btv.type='DEBIT'
             """)
     List<BankTransactionsV1> findByTransactionType();
 
+    @Query("""
+            SELECT bt FROM BankTransactionsV1 bt WHERE bt.hostelId=:hostelId
+            """)
+    List<BankTransactionsV1> listBankTransactionsByHostelId(String hostelId);
+
     BankTransactionsV1 findByHostelIdAndSourceId(String hostelId, String sourceId);
 
     @Query(value = "SELECT t FROM BankTransactionsV1 t WHERE t.hostelId = :hostelId " +
             "AND (:bankId IS NULL OR t.bankId = :bankId) " +
             "AND (t.isDeleted = false OR t.isDeleted IS NULL) " +
-            "AND (:startDate IS NULL OR t.createdAt >= :startDate) " +
-            "AND (:endDate IS NULL OR t.createdAt <= :endDate) " +
+            "AND (:startDate IS NULL OR t.transactionDate >= :startDate) " +
+            "AND (:endDate IS NULL OR t.transactionDate <= :endDate) " +
             "AND (:source IS NULL OR t.source = :source)",
             countQuery = "SELECT COUNT(t) FROM BankTransactionsV1 t WHERE t.hostelId = :hostelId " +
                     "AND (:bankId IS NULL OR t.bankId = :bankId) " +
                     "AND (t.isDeleted = false OR t.isDeleted IS NULL) " +
-                    "AND (:startDate IS NULL OR t.createdAt >= :startDate) " +
-                    "AND (:endDate IS NULL OR t.createdAt <= :endDate) " +
+                    "AND (:startDate IS NULL OR t.transactionDate >= :startDate) " +
+                    "AND (:endDate IS NULL OR t.transactionDate <= :endDate) " +
                     "AND (:source IS NULL OR t.source = :source)")
     Page<BankTransactionsV1> findTransactions(@Param("hostelId") String hostelId, @Param("bankId") String bankId,
-            @Param("startDate") Date startDate, @Param("endDate") Date endDate,
-            @Param("source") String source, Pageable pageable);
+                                              @Param("startDate") Date startDate, @Param("endDate") Date endDate,
+                                              @Param("source") String source, Pageable pageable);
 
     @Query("SELECT t FROM BankTransactionsV1 t " +
             "WHERE t.hostelId = :hostelId AND t.bankId = :bankId " +
             "AND (t.isDeleted = false OR t.isDeleted IS NULL) " +
             "AND t.createdAt >= :startDate")
     List<BankTransactionsV1> findOverviewTransactions(@Param("hostelId") String hostelId,
-            @Param("bankId") String bankId, @Param("startDate") Date startDate);
+                                                      @Param("bankId") String bankId, @Param("startDate") Date startDate);
 
 
     @Query(value = """
@@ -83,9 +89,16 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             SELECT b FROM BankTransactionsV1 b WHERE b.oldBankId IS NULL
             """)
     List<BankTransactionsV1> findBankTransactionsOldBankIsNull();
+
     @Query("""
             SELECT t FROM BankTransactionsV1 t WHERE (t.isMigrated IS NULL OR t.isMigrated=false)
             """)
     List<BankTransactionsV1> findPendingMigrationTransactions();
+
+    @Query("""
+            SELECT trans FROM BankTransactionsV1 trans WHERE trans.hostelId=:hostelId 
+            AND trans.sourceId=:sourceId AND trans.source='ASSETS'
+            """)
+    BankTransactionsV1 findByHostelIdAndAssetsId(String hostelId, String sourceId);
 
 }

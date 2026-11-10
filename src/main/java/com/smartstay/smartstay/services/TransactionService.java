@@ -6,6 +6,7 @@ import com.smartstay.smartstay.Wrappers.transactions.TransactionsListMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.dao.*;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.bank.PaymentHistoryProjection;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.beds.BedDetails;
@@ -29,6 +30,7 @@ import com.smartstay.smartstay.responses.invoices.ReceiptsList;
 import com.smartstay.smartstay.responses.invoices.StayInfo;
 import com.smartstay.smartstay.responses.receipt.*;
 import com.smartstay.smartstay.responses.transaction.TransactionReportResponse;
+import com.smartstay.smartstay.util.BankingUtils;
 import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
@@ -177,6 +179,11 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
 
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(payment.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
         Date paymentDate = null;
         if (payment.paymentDate() == null) {
             paymentDate = new Date();
@@ -198,9 +205,11 @@ public class TransactionService {
         transactionV1.setStatus(PaymentStatus.PAID.name());
         transactionV1.setPaidAmount(payment.amount());
         transactionV1.setHostelId(hostelId);
-        transactionV1.setBankId(payment.bankId());
+        transactionV1.setBankId(oldBankToNewBankInfo.bankId());
+        transactionV1.setPaymentMethodId(oldBankToNewBankInfo.paymentMethodId());
         transactionV1.setReferenceNumber(payment.referenceId());
         transactionV1.setUpdatedBy(authentication.getName());
+        transactionV1.setSource(authentication.getSource());
         transactionV1.setTransactionReferenceId(transactionRandomNo);
         transactionV1.setInvoiceId(invoiceId);
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
@@ -226,7 +235,7 @@ public class TransactionService {
                     BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(),
                     trns.getTransactionId());
 
-            bankTransactionService.addTransaction(transaction, trns.getTransactionId(), payment.paymentMethodId());
+            bankTransactionService.addTransaction(transaction, trns.getTransactionId(), oldBankToNewBankInfo.paymentMethodId(), oldBankToNewBankInfo.bankId());
 
             return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
         }
@@ -266,6 +275,11 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
         }
         if (!bankingService.checkBankExist(payment.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(payment.bankId());
+        if (oldBankToNewBankInfo == null) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
 
@@ -325,7 +339,8 @@ public class TransactionService {
 
         transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
         transactionV1.setHostelId(hostelId);
-        transactionV1.setBankId(payment.bankId());
+        transactionV1.setBankId(oldBankToNewBankInfo.bankId());
+        transactionV1.setPaymentMethodId(oldBankToNewBankInfo.paymentMethodId());
         transactionV1.setReferenceNumber(payment.referenceId());
         transactionV1.setUpdatedBy(authentication.getName());
         transactionV1.setTransactionReferenceId(transactionNumber);
@@ -349,9 +364,9 @@ public class TransactionService {
                     BankTransactionType.CREDIT.name(), BankSource.INVOICE.name(), hostelId, payment.paymentDate(),
                     trnsV1.getTransactionId());
 
-            bankingService.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
+            bankingServiceV2.updateBankBalance(payment.amount(), BankTransactionType.CREDIT.name(), payment.bankId(),
                     payment.paymentDate());
-            bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId(), payment.paymentMethodId());
+            bankTransactionService.addTransaction(transaction, trnsV1.getTransactionId(), oldBankToNewBankInfo.paymentMethodId(), oldBankToNewBankInfo.bankId());
 
             usersService.addUserLog(hostelId, trnsV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.CREATE, user);
 
@@ -487,22 +502,27 @@ public class TransactionService {
             }
         }
 
-        BankingV1 bankingV1 = bankingService.getBankDetails(transactionV1.getBankId());
         String bankName = null;
-        if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
-            bankName = "Cash";
-        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
-            bankName = "Card";
-        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
-            bankName = bankingV1.getBankName() + " Bank";
-        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
-            bankName = BankAccountType.UPI.name();
+        AccountDetails accountDetails = null;
+        BankingV2 bankingV2 = bankingServiceV2.getBankDetails(transactionV1.getBankId());
+        if (bankingV2 != null) {
+            accountDetails = BankingUtils.getPaymentModeWithName(bankingV2, transactionV1.getPaymentMethodId());
+            bankName = BankingUtils.getBankName(bankingV2, transactionV1.getPaymentMethodId());
         }
-        String account = bankingV1.getAccountHolderName() +
-                "-" +
-                bankName;
-        AccountDetails accountDetails = new AccountDetails(bankingV1.getAccountNumber(), bankingV1.getIfscCode(),
-                account, bankingV1.getUpiId(), null);
+
+//        if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+//            bankName = "Cash";
+//        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+//            bankName = "Card";
+//        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+//            bankName = bankingV1.getBankName() + " Bank";
+//        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
+//            bankName = BankAccountType.UPI.name();
+//        }
+//        String account = bankingV1.getAccountHolderName() +
+//                "-" +
+//                bankName;
+
         ReceiptConfigInfo receiptConfigInfo = null;
         com.smartstay.smartstay.dao.BillTemplates hostelTemplates = templatesService.getTemplateByHostelId(hostelId);
         if (hostelTemplates != null) {
@@ -600,7 +620,7 @@ public class TransactionService {
             customerInfo = new CustomerInfo(customers.getFirstName(), customers.getLastName(), fullName.toString(),
                     com.smartstay.smartstay.util.CustomerUtils.getProfilePic(customers),
                     NameUtils.getInitials(customers.getFirstName(), customers.getLastName()),
-                    customers.getCustomerId(), customers.getMobile(), "91", fullAddress.toString(),
+                    customers.getCustomerId(), customers.getMobile(), customers.getCountryCode(), fullAddress.toString(),
                     Utils.dateToString(customers.getJoiningDate()));
         }
 
@@ -724,6 +744,10 @@ public class TransactionService {
         if (!bankingService.checkBankExist(refundInvoice.bankId())) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(refundInvoice.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
         if (Utils.compareWithTwoDates(invoicesV1.getInvoiceStartDate(), transactionDate) > 0) {
             return new ResponseEntity<>(Utils.REFUNDING_DATE_OLDER_THAN_INVOICE, HttpStatus.BAD_REQUEST);
         }
@@ -786,14 +810,15 @@ public class TransactionService {
         transactionV1.setCustomerId(invoicesV1.getCustomerId());
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(transactionDate));
         transactionV1.setTransactionReferenceId(generateRandomNumber());
-        transactionV1.setBankId(refundInvoice.bankId());
+        transactionV1.setBankId(oldBankToNewBankInfo.bankId());
+        transactionV1.setPaymentMethodId(oldBankToNewBankInfo.paymentMethodId());
         transactionV1.setReferenceNumber(refundInvoice.referenceNumber());
         transactionV1.setPaidAt(Utils.convertToTimeStamp(transactionDate));
         transactionV1.setUpdatedBy(authentication.getName());
         transactionV1.setSource(authentication.getSource());
         TransactionV1 transactionV11 = transactionRespository.save(transactionV1);
 
-        bankTransactionService.refundInvoice(invoicesV1, refundInvoice, invoiceId, transactionV11.getTransactionId());
+        bankTransactionService.refundInvoice(invoicesV1, refundInvoice, invoiceId, transactionV11.getTransactionId(), oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId());
         creditDebitNoteService.refunInvoice(invoiceId, invoicesV1, refundInvoice);
 
         usersService.addUserLog(hostelId, transactionV11.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.UPDATE, users);
@@ -914,8 +939,10 @@ public class TransactionService {
         }
 
         transactionRespository.delete(transactionV1);
-        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
-                transactionV1.getBankId());
+//        bankingService.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
+//                transactionV1.getBankId());
+        bankingServiceV2.deleteReceipt(transactionV1.getPaidAmount(), BankTransactionType.DEBIT.name(),
+                transactionV1.getBankId(), transactionV1.getPaymentMethodId());
         usersService.addUserLogWithType(hostelId, transactionV1.getTransactionId(), ActivitySource.TRANSACTIONS, ActivitySourceType.DELETE, users, transactionV1.getInvoiceId());
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -1011,25 +1038,24 @@ public class TransactionService {
         int numberOfPages = 0;
         int itemsPerPage = 0;
         int totalItems = 0;
+        Pageable pageable = PageRequest.of(page-1, size);
 
         List<TransactionV1> transactionsMain = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
                 endDate, bankIds, collectedBy, invoiceIds);
-        List<TransactionV1> secondaryTransactions = transactionsMain;
 
-        totalItems = transactionsMain.size();
-
-        if (authentication.getSource().equalsIgnoreCase("web")) {
-            Pageable pageable = PageRequest.of(page-1, size);
-            Page<TransactionV1> webTransactions = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
-                    endDate, bankIds, collectedBy, invoiceIds, pageable);
-            currentPage = webTransactions.getPageable().getPageNumber() + 1;
-            pageSize = webTransactions.getTotalPages();
-            numberOfPages = webTransactions.getNumberOfElements();
-            totalItems = (int) webTransactions.getTotalElements();
-            itemsPerPage = webTransactions.getPageable().getPageSize();
-            secondaryTransactions = webTransactions.getContent();
+        Page<TransactionV1> pageTransaction = transactionRespository.findTransactionsByFiltersNew(hostelId, startDate,
+                endDate, bankIds, collectedBy, invoiceIds, pageable);
+        List<TransactionV1> secondaryTransactions = new ArrayList<>();
+        if (pageTransaction != null) {
+            currentPage = pageTransaction.getPageable().getPageNumber() + 1;
+            pageSize = pageTransaction.getTotalPages();
+            numberOfPages = pageTransaction.getNumberOfElements();
+            totalItems = (int) pageTransaction.getTotalElements();
+            itemsPerPage = pageTransaction.getPageable().getPageSize();
+            secondaryTransactions = pageTransaction.getContent();
         }
 
+        totalItems = transactionsMain.size();
 
         Double receivedAmount = 0.0;
         Double returnedAmount = 0.0;
@@ -1074,9 +1100,11 @@ public class TransactionService {
         if (!customerIds.isEmpty())
             customersService.getCustomerDetails(customerIds).forEach(c -> customerMap.put(c.getCustomerId(), c));
 
-        Map<String, BankingV1> bankMap = new HashMap<>();
-        if (!tBankIds.isEmpty())
+        Map<String, BankingV2> bankMap = new HashMap<>();
+        if (!tBankIds.isEmpty()) {
             bankingService.findAllBanksById(new HashSet<>(tBankIds)).forEach(b -> bankMap.put(b.getBankId(), b));
+        }
+
 
         Map<String, Users> userMap = new HashMap<>();
         if (!tUserIds.isEmpty())
@@ -1088,7 +1116,7 @@ public class TransactionService {
 
         List<TransactionReportResponse.TransactionData> dataList = secondaryTransactions.stream().map(t -> {
             Customers c = customerMap.get(t.getCustomerId());
-            BankingV1 b = bankMap.get(t.getBankId());
+            BankingV2 b = bankMap.get(t.getBankId());
             Users u = userMap.get(t.getCreatedBy());
             InvoicesV1 inv = invoiceMap.get(t.getInvoiceId());
 
@@ -1255,7 +1283,7 @@ public class TransactionService {
         return new ResponseEntity<>(url, HttpStatus.OK);
     }
 
-    public TransactionV1 cancelBooking(String customerId, String invoiceId, String hostelId, Double totalAmount, String bankId,
+    public TransactionV1 cancelBooking(String customerId, String invoiceId, String hostelId, Double totalAmount, String bankId, String paymentId,
             Date cancelledDate, String referenceNumber) {
         TransactionV1 transactionV1 = new TransactionV1();
         transactionV1.setType(TransactionType.REFUND.name());
@@ -1270,6 +1298,8 @@ public class TransactionService {
         transactionV1.setPaymentDate(Utils.convertToTimeStamp(cancelledDate));
         transactionV1.setTransactionReferenceId(generateRandomNumber());
         transactionV1.setBankId(bankId);
+        transactionV1.setPaymentMethodId(paymentId);
+        transactionV1.setSource(authentication.getSource());
         transactionV1.setReferenceNumber(referenceNumber);
         transactionV1.setPaidAt(new Date());
         transactionV1.setUpdatedBy(authentication.getName());
@@ -1412,6 +1442,9 @@ public class TransactionService {
             else if (invoiceType.equalsIgnoreCase(InvoiceType.EB_HOLDING.name())) {
                 invoiceTypeArr.add(InvoiceType.EB_HOLDING.name());
             }
+            else if (invoiceType.equalsIgnoreCase(InvoiceType.EB.name())) {
+                invoiceTypeArr.add(InvoiceType.EB.name());
+            }
             else if (invoiceType.equalsIgnoreCase(InvoiceType.OTHER.name())) {
                 invoiceTypeArr.add(InvoiceType.OTHER.name());
             }
@@ -1538,9 +1571,9 @@ public class TransactionService {
             return new ResponseEntity<>(Utils.NO_TRANSACTIONS_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        if (!authentication.getSource().equalsIgnoreCase("web")) {
-            listReceipts = listAllTransactions;
-        }
+//        if (!authentication.getSource().equalsIgnoreCase("web")) {
+//            listReceipts = listAllTransactions;
+//        }
         if (listAllTransactions != null) {
             totalAmount = listAllTransactions
                     .stream()
@@ -1609,9 +1642,6 @@ public class TransactionService {
         List<InvoicesV1> invoices = invoiceService.findByInvoiceIdIn(invoiceIds);
 
 
-
-
-
         List<ReceiptsList> receipts = listReceipts.stream().map(item -> new TransactionsListMapper(listCustomers, listBanks, invoices).apply(item)).toList();
 
         ReceiptResponse receiptResponse = new ReceiptResponse(hostelId,
@@ -1641,7 +1671,7 @@ public class TransactionService {
         return new ResponseEntity<>(receiptResponse, HttpStatus.OK);
     }
 
-    public void addRetainerTransaction(InvoicesV1 invoicesV1, LoadBalance loadBalance) {
+    public void addRetainerTransaction(InvoicesV1 invoicesV1, LoadBalance loadBalance, String bankId, String paymentMethodId) {
 
         Date paymentDate = new Date();
         if (loadBalance.paymentDate() != null) {
@@ -1662,13 +1692,14 @@ public class TransactionService {
         transactionV1.setTransactionMode(ReceiptMode.MANUAL.name());
         transactionV1.setSource(authentication.getSource());
         transactionV1.setTransactionReferenceId(generateRandomNumber());
-        transactionV1.setBankId(loadBalance.bankId());
+        transactionV1.setBankId(bankId);
+        transactionV1.setPaymentMethodId(paymentMethodId);
         transactionV1.setReferenceNumber(loadBalance.referenceNumber());
         transactionV1.setPaidAt(paymentDate);
 
         TransactionV1 transactionV11 = transactionRespository.save(transactionV1);
 
-        bankTransactionService.addRetainerTransaction(transactionV11, invoicesV1, paymentDate, loadBalance);
+        bankTransactionService.addRetainerTransaction(transactionV11, invoicesV1, paymentDate, loadBalance, bankId, paymentMethodId);
 
     }
 

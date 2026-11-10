@@ -4,6 +4,7 @@ import com.smartstay.smartstay.Wrappers.BookingsMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.Bookings;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
@@ -582,6 +583,13 @@ public class BookingsService {
         if (!bookingsV1.getCurrentStatus().equalsIgnoreCase(BookingStatus.BOOKED.name())) {
             return new ResponseEntity<>(Utils.CANNOT_INACTIVE_ACTIVE_CUSTOMERS, HttpStatus.BAD_REQUEST);
         }
+        if (!bankingService.checkBankExist(cancelBooking.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(cancelBooking.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
         if (!subscriptionService.validateSubscription(bookingsV1.getHostelId())) {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
         }
@@ -603,27 +611,31 @@ public class BookingsService {
         } else {
             cancelDate = new Date();
         }
+
+        InvoicesV1 invoicesV1 = invoiceService.getInvoiceDetails(customerId, bookingsV1.getHostelId());
+
+
+        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+            String transactionId = invoiceService.cancelBookingInvoice(invoicesV1, oldBankToNewBankInfo.bankId(), cancelDate, cancelBooking.referenceNumber(), oldBankToNewBankInfo.paymentMethodId());
+            CancelBookingDto cancelBookingDto = new CancelBookingDto(cancelBooking.reason(), customerId, bookingsV1.getBookingAmount(), invoicesV1.getInvoiceId(), cancelBooking.bankId(), cancelBooking.referenceNumber());
+
+            creditDebitNoteService.cancelBooking(cancelBookingDto);
+
+            TransactionDto transactionDto = new TransactionDto(cancelBooking.bankId(), cancelBooking.referenceNumber(), bookingsV1.getBookingAmount(), BankTransactionType.DEBIT.name(), BankSource.INVOICE.name(), bookingsV1.getHostelId(), Utils.dateToString(cancelDate).replace("/", "-"), "");
+            bankTransactionService.cancelBooking(transactionDto, invoicesV1.getInvoiceId(), transactionId, oldBankToNewBankInfo.bankId(), oldBankToNewBankInfo.paymentMethodId());
+        }
+
+        customersService.markCustomerInactive(customers);
+
         bookingsV1.setCancelDate(cancelDate);
         bookingsV1.setReasonForCancellation(cancelBooking.reason());
         bookingsV1.setCurrentStatus(BookingStatus.CANCELLED.name());
 
         bookingsRepository.save(bookingsV1);
 
-        customersService.markCustomerInactive(customers);
-        InvoicesV1 invoicesV1 = invoiceService.getInvoiceDetails(customerId, bookingsV1.getHostelId());
-
-
-        if (invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) || invoicesV1.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-            String transactionId = invoiceService.cancelBookingInvoice(invoicesV1, cancelBooking.bankId(), cancelDate, cancelBooking.referenceNumber());
-            CancelBookingDto cancelBookingDto = new CancelBookingDto(cancelBooking.reason(), customerId, bookingsV1.getBookingAmount(), invoicesV1.getInvoiceId(), cancelBooking.bankId(), cancelBooking.referenceNumber());
-
-            creditDebitNoteService.cancelBooking(cancelBookingDto);
-
-            TransactionDto transactionDto = new TransactionDto(cancelBooking.bankId(), cancelBooking.referenceNumber(), bookingsV1.getBookingAmount(), BankTransactionType.DEBIT.name(), BankSource.INVOICE.name(), bookingsV1.getHostelId(), Utils.dateToString(cancelDate).replace("/", "-"), "");
-            bankTransactionService.cancelBooking(transactionDto, invoicesV1.getInvoiceId(), transactionId);
-        }
-
         bedsService.cancelBooking(bookingsV1.getBedId(), user.getParentId(), bookingsV1.getBookingId());
+
+
         userService.addUserLog(bookingsV1.getHostelId(), bookingsV1.getBookingId(), ActivitySource.BOOKING, ActivitySourceType.CANCEL, user);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);

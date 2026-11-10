@@ -28,7 +28,12 @@ public class InvoicesV1 {
     String invoiceType;
     Double basePrice;
     //this includes GST
+    //same as payable amount with round off eg. 1000.50 will be 1001
     Double totalAmount;
+    //invoice amount is whole invoice amount include gst with 2 digit.
+    Double invoiceAmount;
+    //payable amount = invoice amount - discount without round off eg. 1000.50 will be 1000.50
+    Double payableAmount;
     Double paidAmount;
     //this is for redemption.
     Double balanceAmount;

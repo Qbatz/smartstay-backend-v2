@@ -139,6 +139,7 @@ public class Utils {
     public static final String BED_ALREADY_OCCUPIED = "Bed already occupied by another customer";
     public static final String IMAGES_NOT_FOUND = "Image not found";
     public static final String CANNOT_CREATE_CURRENT_MONTH_INVOICE_POSTPAID = "Current month manual bill creation is not allowed for postpaid hostels";
+    public static final String NO_COMPLAINTS_FOUND = "No complaints found";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
     public static final String FUTURE_DATES_NOT_ALLOWED = "Future Dates are not allowed";
@@ -146,6 +147,7 @@ public class Utils {
     public static final String ACCOUNT_NO_ALREAY_EXISTS = "Account number already exists";
     public static final String V2_ACCOUNT_TYPE_INVALID = "Account type should be BANK or CASH";
     public static final String V2_BANK_ACCOUNT_TYPE_INVALID = "Bank account type should be Savings or Current";
+    public static final String V2_BANK_INVALID_PAYMENT_METHOD = "Invalid payment method";
     public static final String V2_BANK_ACCOUNT_NUMBER_REQUIRED = "Account number is required";
     public static final String V2_BANK_NAME_REQUIRED = "Bank name is required";
     public static final String V2_BANK_DETAILS_REQUIRED = "Holder name, bank name and display name are required for a BANK account";
@@ -165,6 +167,7 @@ public class Utils {
     public static final String BANKING_METHOD_CARD_NUMBER_REQUIRED = "Card number is required";
     public static final String BANKING_METHOD_CARD_NUMBER_INVALID = "Card number must be at least 4 digits";
     public static final String BANKING_METHOD_CARD_NETWORK_REQUIRED = "Card network is required for Credit Card and Debit Card";
+    public static final String CARD_NO_ALREADY_EXISTS = "Card number already exists";
     public static final String BANKING_METHOD_CARD_HOLDER_REQUIRED = "Card holder name is required for Credit Card and Debit Card";
     public static final String BANKING_METHOD_LINKED_UPI_REQUIRED = "Linked UPI id is required for QR Code";
     public static final String BANKING_METHOD_QR_IMAGE_REQUIRED = "QR image is required for QR Code";
@@ -221,6 +224,7 @@ public class Utils {
     public static final String INVALID_ACCOUNT_TYPE_FROM_TO = "Invalid account type for To account";
     public static final String INVALID_TRANSACTION_TYPE_FROM_ACC = "This account does’t have Debit access";
     public static final String INVALID_TRANSACTION_TYPE = "This account does’t have Debit and Credit access";
+    public static final String BANK_ACCOUNT_HOLDER_NAME_REQUIRED = "Bank account holder is required";
     public static final String INSUFFICIENT_BALANCE = "Insufficient balance";
     public static final String INVALID_TRANSACTION_TYPE_TO_ACC = "This account does’t have Credit access";
     public static final String PLAN_CODE_REQUIRED = "Plan code is required";
@@ -378,6 +382,7 @@ public class Utils {
     public static final String RENT_AMOUNT_REQUIRED = "Rent amount is required";
     public static final String CANNOT_EDIT_PAID_INVOICES = "Cannot edit paid invoices";
     public static final String CANNOT_EDIT_DISCOUNTED_INVOICES = "Cannot edit discounted applied invoices";
+    public static final String CANNOT_ADD_ACCOUNT_NO_CASH_ACCOUNT = "Cannot add account no to cash account";
     public static final String COMPLAINT_NOT_FOUND = "Complaint not found";
     public static final String JOINING_DATE_CANNOT_BEFORE_BOOKING = "Check-in cannot be earlier than the booking date";
     public static final String CANNOT_DELETE_ACTIVE_CUSTOMERS = "Cannot delete active customers";

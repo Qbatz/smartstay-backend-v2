@@ -6,6 +6,7 @@ import com.smartstay.smartstay.Wrappers.invoices.RefundableBanksMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.BookingBankInfo;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.transaction.TransactionDto;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.payloads.banking.AddBank;
@@ -486,19 +487,20 @@ public class BankingService {
      */
 
     public List<DebitsBank> getAllBankForReturn(String hostelId) {
-        List<BankingV1> listBankAccounts = bankingV1Repository.findByBankIdInAndActiveAccountDebit(hostelId);
+//        List<BankingV1> listBankAccounts = bankingV1Repository.findByBankIdInAndActiveAccountDebit(hostelId);
+//
+//        return listBankAccounts
+//                .stream()
+//                .map(item -> {
+//                    String bankName = item.getBankName();
+//                    if (bankName == null || bankName.isBlank()) {
+//                        bankName = item.getAccountType();
+//                    }
+//                    return new DebitsBank(item.getBankId(),false, bankName, item.getAccountHolderName(), "", null, null);
+//                })
+//                .toList();
 
-        return listBankAccounts
-                .stream()
-                .map(item -> {
-                    String bankName = item.getBankName();
-                    if (bankName == null || bankName.isBlank()) {
-                        bankName = item.getAccountType();
-                    }
-                    return new DebitsBank(item.getBankId(), bankName, item.getAccountHolderName());
-                })
-                .toList();
-
+        return bankingServiceV2.getAllBanksForReturn(hostelId);
     }
 
     public List<BankingV1> getDebitBanks(String hostelId) {
@@ -516,12 +518,12 @@ public class BankingService {
                 .toList();
     }
 
-    public List<BankingV1> findAllBanksById(Set<String> bankLists) {
-        List<BankingV1> listBanks = bankingV1Repository.findByBankIdIn(bankLists.stream().toList());
-        if (listBanks == null) {
-            listBanks = new ArrayList<>();
-        }
-        return listBanks;
+    public List<BankingV2> findAllBanksById(Set<String> bankLists) {
+//        List<BankingV1> listBanks = bankingV1Repository.findByBankIdIn(bankLists.stream().toList());
+//        if (listBanks == null) {
+//            listBanks = new ArrayList<>();
+//        }
+        return bankingServiceV2.findAllByBankId(bankLists);
     }
 
     public ResponseEntity<?> addMoney(String hostelId, UpdateBankBalance balance) {
@@ -849,7 +851,7 @@ public class BankingService {
         return true;
     }
 
-    public boolean updateBalanceForAssets(double amount, String transactionType, String bankId) {
+    public boolean updateBalanceForAssets(double amount, String transactionType, String bankId, String bankMethodId) {
         BankingV1 bankingV1 = bankingV1Repository.findByBankId(bankId);
         if (bankingV1 == null) {
             return false;
@@ -1006,19 +1008,21 @@ public class BankingService {
     }
 
     public List<BankInfoRecordPayments> getBankForReceivingPayments(String hostelId) {
-        List<BankingV1> listBanks = bankingV1Repository.findByHostelId(hostelId);
-        if (listBanks == null) {
-            return new ArrayList<>();
-        }
+//        List<BankingV1> listBanks = bankingV1Repository.findByHostelId(hostelId);
+//        if (listBanks == null) {
+//            return new ArrayList<>();
+//        }
+//
+//        return listBanks
+//                .stream()
+//                .map(i -> new BankInfoRecordPayments(
+//                        i.getBankId(),
+//                        BankingUtils.getPaymentModeWithHolder(i),
+//                        i.getAccountHolderName()
+//                ))
+//                .toList();
 
-        return listBanks
-                .stream()
-                .map(i -> new BankInfoRecordPayments(
-                        i.getBankId(),
-                        BankingUtils.getPaymentModeWithHolder(i),
-                        i.getAccountHolderName()
-                ))
-                .toList();
+        return bankingServiceV2.getBankForReceivingPayments(hostelId);
 
     }
 
@@ -1054,5 +1058,9 @@ public class BankingService {
     public List<BankingV1> findAllBankIdsByHostelId(String hostelId) {
         List<BankingV1> listBanks = bankingV1Repository.findActiveByHostelId(hostelId);
         return listBanks;
+    }
+
+    public OldBankToNewBankInfo getOldBankNewBankInfo(String s) {
+        return bankingServiceV2.getOldBankNewBankInfo(s);
     }
 }

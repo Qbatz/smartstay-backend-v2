@@ -13,26 +13,25 @@ import java.util.function.Function;
 public class ExpenseListMapper implements Function<ExpenseList, com.smartstay.smartstay.responses.expenses.ExpenseList> {
     @Override
     public com.smartstay.smartstay.responses.expenses.ExpenseList apply(ExpenseList expenseList) {
-        return apply(expenseList, List.of(), List.of(), ExpensePaymentStatus.fromString(expenseList.getPaymentStatus()));
+        return apply(expenseList, List.of(), List.of(), expenseList.getPaymentStatus());
     }
 
     public com.smartstay.smartstay.responses.expenses.ExpenseList apply(ExpenseList expenseList,
                                                                         List<ExpenseItemResponse> expenseItems,
                                                                         List<ExpensePaymentResponse> expensePayments) {
-        return apply(expenseList, expenseItems, expensePayments,
-                ExpensePaymentStatus.fromString(expenseList.getPaymentStatus()));
+        return apply(expenseList, expenseItems, expensePayments,expenseList.getPaymentStatus());
     }
 
     public com.smartstay.smartstay.responses.expenses.ExpenseList apply(ExpenseList expenseList,
                                                                         List<ExpenseItemResponse> expenseItems,
                                                                         List<ExpensePaymentResponse> expensePayments,
-                                                                        ExpensePaymentStatus paymentStatus) {
-        Integer subCategoryId = 0;
+                                                                        String paymentStatus) {
+        Long subCategoryId = 0l;
         if (expenseList.getSubCategoryId() == null) {
-            subCategoryId = 0;
+            subCategoryId = 0l;
         }
         else {
-            subCategoryId = expenseList.getSubCategoryId().intValue();
+            subCategoryId = expenseList.getSubCategoryId();
         }
         String bankName = null;
 
@@ -67,7 +66,6 @@ public class ExpenseListMapper implements Function<ExpenseList, com.smartstay.sm
                 expenseList.getCategoryId(),
                 subCategoryId,
                 expenseList.getDescription(),
-                expenseList.getHostelId(),
                 expenseList.getBankId(),
                 expenseList.getTotalAmount(),
                 Utils.dateToString(expenseList.getTransactionDate()),
@@ -76,6 +74,8 @@ public class ExpenseListMapper implements Function<ExpenseList, com.smartstay.sm
                 expenseList.getReferenceNumber(),
                 expenseList.getHolderName(),
                 bankName,
+                null,
+                null,
                 expenseList.getCategoryName(),
                 expenseList.getSubCategoryName(),
                 expenseList.getTitle(),
@@ -86,8 +86,6 @@ public class ExpenseListMapper implements Function<ExpenseList, com.smartstay.sm
                 expenseList.getPaymentMethod(),
                 expenseList.getNote(),
                 totalExpenseAmount,
-                totalExpensePaidAmount,
-                expenseItems,
-                expensePayments);
+                totalExpensePaidAmount);
     }
 }

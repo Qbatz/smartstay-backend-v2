@@ -23,9 +23,6 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
     private final List<String> columns;
     private final Map<String, Draft> draftsByCustomerId;
 
-    public TenantTableMapper(List<BedDetails> listBedDetails, List<BookingsV1> listBookings, List<String> columns) {
-        this(listBedDetails, listBookings, columns, Collections.emptyMap());
-    }
 
     public TenantTableMapper(List<BedDetails> listBedDetails, List<BookingsV1> listBookings, List<String> columns,
                              Map<String, Draft> draftsByCustomerId) {
@@ -139,7 +136,7 @@ public class TenantTableMapper implements Function<Customers, List<Object>> {
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.MOBILE_NUMBER)) {
             // Avoid rendering "+91 null" for incomplete/draft customers with no mobile number.
             String mobile = customers.getMobile();
-            return (mobile != null && !mobile.trim().isEmpty()) ? "+91 " + mobile : "";
+            return (mobile != null && !mobile.trim().isEmpty()) ? "+" + customers.getCountryCode() + " " + mobile : "";
         }
         if (columnItem.equalsIgnoreCase(TenantColumnUtils.FLOOR)) {
             if (bedDetail != null) {

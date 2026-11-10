@@ -67,7 +67,6 @@ public class ExpenseController {
                                          @RequestParam(value = "category", required = false) Integer category,
                                          @RequestParam(value = "categoryId", required = false) Integer categoryId,
                                          @RequestParam(value = "paymentStatus", required = false) String paymentStatus,
-                                         @RequestParam(value = "paymentDate", required = false) String paymentDate,
                                          @RequestParam(value = "vendorId", required = false) Integer vendorId,
                                          @RequestParam(value = "subCategoryId", required = false) Long subCategoryId,
                                          @RequestParam(value = "paymentMode", required = false) String paymentMode,
@@ -83,7 +82,7 @@ public class ExpenseController {
         // (name/categoryId) for backward compatibility.
         String search = (query != null && !query.isBlank()) ? query : name;
         Integer categoryFilter = category != null ? category : categoryId;
-        return expenseService.getAllExpenses(hostelId, search, categoryFilter, paymentStatus, paymentDate,
+        return expenseService.getAllExpenses(hostelId, search, categoryFilter, paymentStatus,
                 vendorId, subCategoryId, paymentMode, createdBy, minAmount, maxAmount, startDate, endDate, period,
                 page, size);
     }

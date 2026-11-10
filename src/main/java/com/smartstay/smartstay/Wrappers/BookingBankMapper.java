@@ -17,11 +17,13 @@ public class BookingBankMapper implements Function<BankingV1, BookingBankInfo> {
         }
         return new BookingBankInfo(
                 bankingV1.getBankId(),
+                false,
                 bankingV1.getAccountHolderName(),
                 bankName,
                 bankingV1.getUpiId(),
                 bankingV1.getAccountType(),
-                isUpi
+                isUpi,
+                null
         );
     }
 }

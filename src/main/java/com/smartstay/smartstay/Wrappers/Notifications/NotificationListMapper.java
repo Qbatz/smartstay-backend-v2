@@ -57,6 +57,14 @@ public class NotificationListMapper implements Function<AdminNotifications, Noti
             notificationType = "Notice Request";
             typeCode = 8;
         }
+        else if (notificationsV1.getNotificationType().equalsIgnoreCase(NotificationType.RAISE_NOTICE.name())) {
+            notificationType = "Notice Request";
+            typeCode = 8;
+        }
+        else if (notificationsV1.getNotificationType().equalsIgnoreCase(NotificationType.COMPLAINT_COMMENTS.name())) {
+            notificationType = "Complaints Comments";
+            typeCode = 9;
+        }
 
         if (notificationsV1.getUserId() != null) {
             if (customers != null) {

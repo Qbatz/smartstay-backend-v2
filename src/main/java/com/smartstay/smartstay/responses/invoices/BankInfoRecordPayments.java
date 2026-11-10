@@ -1,6 +1,11 @@
 package com.smartstay.smartstay.responses.invoices;
 
 public record BankInfoRecordPayments(String bankId,
+                                     boolean isBank,
                                      String bankName,
-                                     String accountHolderName) {
+                                     String accountType,
+                                     String displayName,
+                                     String accountHolderName,
+                                     boolean isUpi,
+                                     String upiAppIcon) {
 }

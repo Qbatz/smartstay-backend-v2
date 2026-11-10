@@ -83,6 +83,9 @@ public class InvoiceUtils {
         } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
             invoiceType = "Reassign-Rent";
         }
+        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB.name())) {
+            invoiceType = "EB";
+        }
 
         return invoiceType;
     }

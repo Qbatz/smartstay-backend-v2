@@ -5,21 +5,14 @@ public record BankV2Response(
         String displayName,
         String bankName,
         String accountNumber,
-        String ifscCode,
-        String branchName,
         String accountHolderName,
         String accountType,
         String bankAccountType,
         String cashAccountType,
         String responsiblePerson,
-        String responsiblePersonName,
-        String description,
+        String branchName,
         Double balance,
         boolean isActive,
-        boolean isDefaultAccount,
-        String hostelId,
-        String platform,
-        String createdBy,
-        String createdAt
+        boolean isDefaultAccount
 ) {
 }

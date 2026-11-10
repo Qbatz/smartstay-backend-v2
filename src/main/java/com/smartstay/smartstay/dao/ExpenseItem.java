@@ -38,8 +38,9 @@ public class ExpenseItem {
     private Double totalAmount;
 
     // Per-item payment details, initialized from the parent expense on creation.
-    @Enumerated(EnumType.STRING)
-    private ExpensePaymentStatus paymentStatus;
+//    @Enumerated(EnumType.STRING)
+    //From expensePaymentStatus ENUM
+    private String paymentStatus;
     private Double paidAmount;
 
     // Audit fields, populated by the service on create/update.

@@ -10,13 +10,12 @@ import java.util.List;
  * {@code null} and expenses are returned as flat key-value objects ({@link ExpenseList}) instead of
  * dynamic column rows.
  */
-public record ExpensesMobileResponse(int totalExpenses,
+public record ExpensesMobileResponse(String hostelId,
+                                     int totalExpenses,
                                      int currentPage,
                                      int totalPages,
                                      int itemPerPage,
                                      ExpenseSummary expenseSummary,
                                      ExpenseFilterOptions filterOptions,
-                                     List<String> tableHeaders,
-                                     List<ColumnFilters> columnList,
                                      List<ExpenseList> expenses) {
 }

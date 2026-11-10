@@ -49,6 +49,8 @@ public class SubscriptionService {
     private OrderHistoryService orderHistoryService;
     @Autowired
     private PaymentSessionService paymentSessionService;
+    @Autowired
+    private CredentialServices credentialServices;
     @Value("${PAYMENT_URL}")
     private String paymentUrl;
     @Value("${PAYMENT_API_KEY}")
@@ -244,7 +246,7 @@ public class SubscriptionService {
             hostelService.updateHostel(hostelV1);
         }
 
-        usersService.addUserLog(hostelId,String.valueOf(sub.getSubscriptionId()), ActivitySource.SUBSCRIPTION, ActivitySourceType.CREATE, users);
+        usersService.addUserLog(hostelId, String.valueOf(sub.getSubscriptionId()), ActivitySource.SUBSCRIPTION, ActivitySourceType.CREATE, users);
 
         return new ResponseEntity<>(HttpStatus.OK);
 
@@ -304,7 +306,7 @@ public class SubscriptionService {
         requestBody.put("currency", "INR");
         requestBody.put("description", "Plan renewal");
 
-        String paymentLink = paymentUrl + "/v2/payments/generate/" + hostelId ;
+        String paymentLink = paymentUrl + "/v2/payments/generate/" + hostelId;
 
 //        String paymentUrl = "http://localhost:8083/v2/payments/generate/" + hostelId ;
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody);
@@ -321,8 +323,7 @@ public class SubscriptionService {
 //                throw new RuntimeException(e);
             }
             return new ResponseEntity<>(responseEntity.getBody(), HttpStatus.OK);
-        }
-        else {
+        } else {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
 
@@ -576,7 +577,7 @@ public class SubscriptionService {
         requestBody.put("currency", "INR");
         requestBody.put("description", "Plan renewal");
 
-        String paymentLink = paymentUrl +  "/v2/payments/session/" + hostelId ;
+        String paymentLink = paymentUrl + "/v2/payments/session/" + hostelId;
 
 //        String paymentUrl = "http://localhost:8083/v2/payments/session/" + hostelId ;
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody);
@@ -629,7 +630,7 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.INVALID_PLATFORM, HttpStatus.BAD_REQUEST);
         }
 
-        String paymentStatusUrl = paymentUrl + "/v2/payments/" + paymentId ;
+        String paymentStatusUrl = paymentUrl + "/v2/payments/" + paymentId;
         ResponseEntity<String> responseEntity = restTemplate.getForEntity(paymentStatusUrl, String.class);
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
             return new ResponseEntity<>(Utils.PAYMENT_SUCCESS, HttpStatus.OK);
@@ -661,13 +662,20 @@ public class SubscriptionService {
         }
 
 //        if (subscription.getPaymentStatus().equalsIgnoreCase(com.smartstay.smartstay.ennum.PaymentStatus.PAID.name())) {
-            if (subscription.getInvoiceUrl() != null) {
-                return new ResponseEntity<>(subscription.getInvoiceUrl(), HttpStatus.OK);
-            }
+        if (subscription.getInvoiceUrl() != null) {
+            return new ResponseEntity<>(subscription.getInvoiceUrl(), HttpStatus.OK);
+        }
 //        }
+
+        Credentials credentials = credentialServices.findByServiceName(com.smartstay.smartstay.ennum.CredentialServices.SS_REPORTS.name());
+        if (credentials == null) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setBearerAuth(credentials.getAuthToken());
+
 
         String endpoint = reportsUrl + "/v2/reports/subscriptions/" + hostelId + "/" + subscriptionId;
         HttpEntity<Void> request = new HttpEntity<>(headers);
@@ -675,8 +683,8 @@ public class SubscriptionService {
         ResponseEntity<String> response = restTemplate.exchange(endpoint, HttpMethod.GET, request, String.class);
         if (response.getStatusCode() == HttpStatus.OK) {
 //            if (subscription.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name())) {
-                subscription.setInvoiceUrl(response.getBody());
-                subscriptionRepository.save(subscription);
+            subscription.setInvoiceUrl(response.getBody());
+            subscriptionRepository.save(subscription);
 //            }
             return new ResponseEntity<>(response.getBody(), HttpStatus.OK);
         } else {

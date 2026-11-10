@@ -83,7 +83,18 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             totalAmount = totalAmount + invoicesV1.getGst();
         }
 
-        if (invoicesV1.getTotalAmount() < 0) {
+        if (invoicesV1.isDiscounted()) {
+            if (invoicesV1.getTotalAmount() != null) {
+                if (invoicesV1.getTotalAmount() < 0) {
+                    dueAmount = invoicesV1.getTotalAmount() + paidAmount + discountAmount;
+                } else {
+                    dueAmount = invoicesV1.getTotalAmount() - paidAmount - discountAmount;
+                }
+            }
+
+
+        }
+        else if (invoicesV1.getTotalAmount() < 0) {
             dueAmount = invoicesV1.getTotalAmount() + paidAmount;
         } else {
             dueAmount = invoicesV1.getTotalAmount() - paidAmount;
@@ -166,7 +177,11 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
             if (invoicesV1.getBalanceAmount() != null && invoicesV1.getBalanceAmount() > 0) {
                 canRedeem = true;
             }
-        } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHER.name())) {
+        }
+        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB.name())) {
+            invoiceType = "EB";
+        }
+        else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.OTHER.name())) {
             invoiceType = "Other";
         } else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
             invoiceType = "Settlement";
@@ -215,6 +230,7 @@ public class NewInvoiceListMapper implements Function<InvoicesV1, InvoicesList> 
                 }
                 if (ids.getDiscountAmount() != null) {
                     discountAmount = Utils.roundOffWithTwoDigit(ids.getDiscountAmount());
+                    dueAmount = dueAmount - discountAmount;
                 }
             }
         }

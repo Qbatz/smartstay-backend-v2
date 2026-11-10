@@ -15,6 +15,5 @@ public record CustomerWebResponse(int totalCustomers,
                                   FilterOptions filterOptions,
                                   List<String> tableHeaders,
                                   List<ColumnFilters> columnList,
-                                  List<List<Object>> tenants,
-                                  List<DebitsBank> banks) {
+                                  List<List<Object>> tenants) {
 }

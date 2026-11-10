@@ -31,6 +31,7 @@ public class ExpensesV1 {
     private String parentId;
     private String hostelId;
     private String bankId;
+    private String paymentMethodId;
 
 //    this is for single product amount
     private Double unitPrice;
@@ -65,17 +66,20 @@ public class ExpensesV1 {
     private String title;
     private Boolean isVendorExpense;
 
-    @Enumerated(EnumType.STRING)
-    private ExpensePaymentStatus paymentStatus;
+    //from expense payment status ENUM
+    private String paymentStatus;
 
     private Double paidAmount;
     private Double balanceAmount;
     private String paymentMethod;
     private String note;
     private Integer creditPeriod;
+    private Boolean isMigrated;
 
     // Payment/transaction reference for the expense.
     private String transactionId;
+    //Id from bank transaction v1
+    private String bankTransactionId;
     // Tax amount applicable to the expense.
     private Double tax;
     // Discount amount applied to the expense.

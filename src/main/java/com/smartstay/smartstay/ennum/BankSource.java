@@ -7,5 +7,6 @@ public enum BankSource {
     DEPOSIT,
     SELF_TRANSFER,
     RENT_REFUND,
-    EXPENSE
+    EXPENSE,
+    CREDIT_CARD_PAYMENT
 }

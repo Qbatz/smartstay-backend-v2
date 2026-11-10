@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.Wrappers.customers;
 
 import com.smartstay.smartstay.dao.BankingV1;
+import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.customer.TransactionDto;
@@ -15,10 +16,10 @@ import java.util.function.Function;
 public class TransctionsForCustomerDetails implements Function<TransactionDto, com.smartstay.smartstay.responses.customer.TransactionDto> {
 
     List<InvoicesV1> listInvoices = null;
-    List<BankingV1> listBankings = null;
+    List<BankingV2> listBankings = null;
     List<Users> listUsers = null;
 
-    public TransctionsForCustomerDetails(List<InvoicesV1> listInvoices, List<BankingV1> listBankings, List<Users> listUsers) {
+    public TransctionsForCustomerDetails(List<InvoicesV1> listInvoices, List<BankingV2> listBankings, List<Users> listUsers) {
         this.listInvoices = listInvoices;
         this.listBankings = listBankings;
         this.listUsers = listUsers;
@@ -38,7 +39,7 @@ public class TransctionsForCustomerDetails implements Function<TransactionDto, c
                 .findFirst()
                 .orElse(null);
 
-        BankingV1 bankingV1 = listBankings
+        BankingV2 bankingV2 = listBankings
                 .stream()
                 .filter(i -> i.getBankId().equalsIgnoreCase(transactionDto.bankId()))
                 .findFirst()
@@ -85,22 +86,19 @@ public class TransctionsForCustomerDetails implements Function<TransactionDto, c
             }
         }
 
-        if (bankingV1 != null) {
-            if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+        if (bankingV2 != null) {
+            if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
                 paymentMode = "Cash";
             }
-            else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+            else if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
                 paymentMode = "Card";
             }
-            else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
-                paymentMode = "Upi";
-            }
-            else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+            else if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
                 paymentMode = "Bank";
             }
 
             Users users = listUsers.stream()
-                    .filter(i -> i.getUserId().equalsIgnoreCase(bankingV1.getUserId()))
+                    .filter(i -> i.getUserId().equalsIgnoreCase(bankingV2.getUserId()))
                     .findFirst()
                     .orElse(null);
             if (users != null) {

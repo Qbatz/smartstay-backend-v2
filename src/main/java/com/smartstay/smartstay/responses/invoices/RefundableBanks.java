@@ -1,6 +1,11 @@
 package com.smartstay.smartstay.responses.invoices;
 
 public record RefundableBanks(String bankId,
+                              boolean isBank,
                               String bankName,
-                              String accountHolderName) {
+                              String type,
+                              String accountHolderName,
+                              String displayName,
+                              boolean isUpi,
+                              String upiIcon) {
 }

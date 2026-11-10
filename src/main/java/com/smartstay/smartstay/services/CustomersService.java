@@ -9,6 +9,7 @@ import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
+import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.BedRoomFloor;
 import com.smartstay.smartstay.dto.booking.CustomerInfo;
@@ -257,7 +258,7 @@ public class CustomersService {
         customers.setPincode(payloads.pincode());
         customers.setCity(payloads.city());
         customers.setState(payloads.state());
-        customers.setCountry(customers.getCountry());
+        customers.setCountryCode(91);
         customers.setProfilePic(profileImage);
         customers.setKycStatus(KycStatus.PENDING.name());
         customers.setCurrentStatus(CustomerStatus.CHECK_IN.name());
@@ -454,7 +455,13 @@ public class CustomersService {
 //                profilePicStr = initials.toString();
 //            }
 
-            return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(), item.getLastName(), fullName.toString(), item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), profilePicStr, item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName());
+            return new com.smartstay.smartstay.responses.customer.CustomerData(item.getFirstName(),
+                    item.getLastName(),
+                    fullName.toString(),
+                    item.getCity(),
+                    item.getState(),
+                    item.getCountry(), item.getMobile(),
+                    currentStatus, item.getEmailId(), profilePicStr, item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials.toString(), Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName());
         }).collect(Collectors.toList());
 
         listCustomers.sort(Comparator.comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
@@ -684,8 +691,7 @@ public class CustomersService {
 
         FilterOptions filterOptions = getTenantFilterOptions(hostelId);
 
-        CustomerWebResponse response = new CustomerWebResponse(totalCustomers, currentPage, totalPages, size, summary, filterOptions, tableColumns, listColumns, listTenants,
-                bankingService.getAllBankForReturn(hostelId));
+        CustomerWebResponse response = new CustomerWebResponse(totalCustomers, currentPage, totalPages, size, summary, filterOptions, tableColumns, listColumns, listTenants);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -770,6 +776,14 @@ public class CustomersService {
         if (!bedsService.checkBedExistForRoom(payloads.bedId(), payloads.roomId(), hostelId)) {
             return new ResponseEntity<>(Utils.N0_BED_FOUND_ROOM, HttpStatus.BAD_REQUEST);
         }
+        if (!bankingService.checkBankExist(payloads.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        OldBankToNewBankInfo oldBankToNewBankInfo = bankingService.getOldBankNewBankInfo(payloads.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
         Date dt = Utils.stringToDate(payloads.bookingDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         Date joiningDate = Utils.stringToDate(payloads.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         if (bedsService.isBedAvailableNew(payloads.bedId(), user.getParentId(), payloads.joiningDate())) {
@@ -782,6 +796,7 @@ public class CustomersService {
                 customers.setCurrentStatus(CustomerStatus.BOOKED.name());
                 customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
                 customers.setCountry(1L);
+                customers.setCountryCode(91);
                 customers.setCreatedBy(user.getUserId());
                 customers.setCreatedAt(new Date());
                 customers.setHostelId(hostelId);
@@ -1183,6 +1198,7 @@ public class CustomersService {
             customers.setFirstName(customerInfo.firstName());
             customers.setLastName(customerInfo.lastName());
             customers.setCountry(1L);
+            customers.setCountryCode(91);
             customers.setMobile(customerInfo.mobileNumber());
             customers.setEmailId(customerInfo.emailId());
             // Optional ID proof details; stored as-is (null when not provided).
@@ -1278,6 +1294,7 @@ public class CustomersService {
         customers.setFirstName(customerInfo.firstName());
         customers.setLastName(customerInfo.lastName());
         customers.setCountry(1L);
+        customers.setCountryCode(91);
         customers.setMobile(customerInfo.mobile());
         customers.setEmailId(customerInfo.emailId());
         customers.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
@@ -1526,6 +1543,7 @@ public class CustomersService {
         invoiceTypes.add(InvoiceType.ADVANCE.name());
         invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
         invoiceTypes.add(InvoiceType.OTHER.name());
+        invoiceTypes.add(InvoiceType.EB.name());
         invoiceTypes.add(InvoiceType.SETTLEMENT.name());
 
         boolean isNewRentAvailable = false;
@@ -1787,8 +1805,8 @@ public class CustomersService {
         List<String> invoicesIds = listTransactions.stream().map(TransactionDto::invoiceId).toList();
         Set<String> bankIds = listTransactions.stream().map(TransactionDto::bankId).collect(Collectors.toSet());
         List<InvoicesV1> listOfInvoices = invoiceService.findInvoices(invoicesIds);
-        List<BankingV1> listOFBankings = bankingService.findAllBanksById(bankIds);
-        List<String> userIds = listOFBankings.stream().map(BankingV1::getUserId).toList();
+        List<BankingV2> listOFBankings = bankingService.findAllBanksById(bankIds);
+        List<String> userIds = listOFBankings.stream().map(BankingV2::getResponsiblePerson).toList();
         List<Users> listUsers = userService.findAllUsersFromUserId(userIds);
         List<JobDetails> jobDetails = customerJobDetailsService.getCustomerJobDetails(customers.getHostelId(), customers.getCustomerId());
         List<CustomerJob> customerJobs = customerJobDetailsService.getCustomerJobs(customers.getHostelId(), customers.getCustomerId());
@@ -1838,7 +1856,7 @@ public class CustomersService {
         }
 
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(),
-                customers.getMobile(), "91", initials, CustomerUtils.getProfilePic(customers),
+                customers.getMobile(), customers.getCountryCode() , initials, CustomerUtils.getProfilePic(customers),
                 bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint,
                 customers.getCurrentStatus(), address, hostelInformation,
                 kycInfo, advanceInfo, checkoutInfo, bookingInfo,
@@ -1911,7 +1929,7 @@ public class CustomersService {
                     long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
                     long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
                     double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
-                    double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                    double finalRent = Utils.roundOffWithTwoDigit(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
                     if (finalRent > payloads.rentalAmount()) {
                         finalRent = payloads.rentalAmount();
                     }
@@ -1925,7 +1943,7 @@ public class CustomersService {
                         long noOfDaysInCurrentMonth = Utils.findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
                         long noOfDaysLeftInCurrentMonth = Utils.findNumberOfDays(c.getTime(), billingDates.currentBillEndDate());
                         double calculateRentPerDay = payloads.rentalAmount() / noOfDaysInCurrentMonth;
-                        double finalRent = Math.round(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
+                        double finalRent = Utils.roundOffWithTwoDigit(calculateRentPerDay * noOfDaysLeftInCurrentMonth);
                         if (finalRent > payloads.rentalAmount()) {
                             finalRent = payloads.rentalAmount();
                         }
@@ -2239,14 +2257,17 @@ public class CustomersService {
             }
         }
 
-        if (currentMonthRentInfo.otherInvoicesInfo() != null) {
+        if (currentMonthRentInfo != null) {
+            if (currentMonthRentInfo.otherInvoicesInfo() != null) {
 
-            OtherInvoicesInfo otherInvoicesInfo = currentMonthRentInfo.otherInvoicesInfo();
-            if (otherInvoicesInfo.totalPendingAmount() != null) {
+                OtherInvoicesInfo otherInvoicesInfo = currentMonthRentInfo.otherInvoicesInfo();
+                if (otherInvoicesInfo.totalPendingAmount() != null) {
 //                payableAmount = payableAmount + otherInvoicesInfo.totalPendingAmount();
-                currentMonthOtherInvoiceAmount = otherInvoicesInfo.totalPendingAmount();
+                    currentMonthOtherInvoiceAmount = otherInvoicesInfo.totalPendingAmount();
+                }
             }
         }
+
 
 
         if (ebInfo != null) {

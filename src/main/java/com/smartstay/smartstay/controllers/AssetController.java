@@ -56,4 +56,9 @@ public class AssetController {
         return assetsService.deleteAssetById(assetId);
     }
 
+    @GetMapping("/initialize/{hostelId}")
+    public ResponseEntity<?> initializeAssets(@PathVariable("hostelId") String hostelId) {
+        return assetsService.initializeAssets(hostelId);
+    }
+
 }

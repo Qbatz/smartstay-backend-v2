@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.repositories;
 
 import com.smartstay.smartstay.dao.InvoiceDiscounts;
+import com.smartstay.smartstay.responses.discount.InvoiceDiscount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -26,4 +27,9 @@ public interface InvoiceDiscountRepository extends JpaRepository<InvoiceDiscount
             AND ids.isActive=true 
             """)
     List<InvoiceDiscounts> findByHostelIdAndInvoiceIdsAndIsActive(String hostelId, List<String> invoiceId);
+
+    @Query("""
+            SELECT i FROM InvoiceDiscounts i WHERE i.isActive=true
+            """)
+    List<InvoiceDiscounts> findActiveInvoices();
 }

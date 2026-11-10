@@ -44,7 +44,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             cus.created_at, cus.country, cus.current_status AS currentStatus,
             cus.customer_id as customerId, cus.email_id AS emailId,
             cus.profile_pic AS profilePic, cus.joining_date as actualJoiningDate, cus.exp_joining_date as joiningDate,
-            ct.country_code as countryCode,
+            cus.country_code as countryCode,
             COALESCE(booking.floor_id, d.floor_id) as floorId,
             COALESCE(booking.room_id, d.room_id) as roomId,
             COALESCE(booking.bed_id, d.bed_id) as bedId,

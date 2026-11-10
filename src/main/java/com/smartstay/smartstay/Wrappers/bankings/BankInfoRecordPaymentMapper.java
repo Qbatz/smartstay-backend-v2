@@ -10,7 +10,12 @@ public class BankInfoRecordPaymentMapper implements Function<BankingV1, BankInfo
     @Override
     public BankInfoRecordPayments apply(BankingV1 bankingV1) {
         return new BankInfoRecordPayments(bankingV1.getBankId(),
+                false,
+                null,
+                bankingV1.getAccountType(),
                 BankingUtils.getPaymentModeWithHolder(bankingV1),
-                bankingV1.getAccountHolderName());
+                bankingV1.getAccountHolderName(),
+                false,
+                null);
     }
 }

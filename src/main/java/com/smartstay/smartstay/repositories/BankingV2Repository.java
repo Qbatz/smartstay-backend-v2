@@ -16,7 +16,19 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
             "ORDER BY b.createdAt DESC")
     List<BankingV2> findBanksByHostelId(@Param("hostelId") String hostelId);
 
+    @Query("""
+            SELECT b FROM bankingv2 b WHERE b.hostelId = :hostelId AND b.isDeleted=false 
+            AND b.bankId != :bankId
+            """)
+    List<BankingV2> findBanksByHostelIdNotByBankId(String hostelId, String bankId);
+
     boolean existsByHostelIdAndAccountNumberAndIsDeletedFalse(String hostelId, String accountNumber);
+
+    boolean existsByHostelIdAndAccountTypeAndCashAccountTypeIgnoreCaseAndResponsiblePersonIgnoreCaseAndBankIdNotAndIsDeletedFalse(
+            String hostelId, String accountType, String cashAccountType, String responsiblePerson, String bankId);
+
+    boolean existsByHostelIdAndAccountTypeAndCashAccountTypeIgnoreCaseAndResponsiblePersonIsNullAndBankIdNotAndIsDeletedFalse(
+            String hostelId, String accountType, String cashAccountType, String bankId);
 
     List<BankingV2> findByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
 
@@ -61,4 +73,14 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
     List<BankingV2> findAllByBankIds(
             @Param("bankIds") List<String> bankIds
     );
+
+    @Query("""
+            SELECT b FROM bankingv2 b LEFT JOIN FETCH b.bankingMethods WHERE b.accountType='CARD' 
+            AND b.bankAccountType='CREDIT_CARD' 
+            AND b.hostelId=:hostelId AND b.isDeleted=false
+            """)
+    List<BankingV2> findAllCreditCardByHostelId(String hostelId);
+
+    List<BankingV2> findAllByBankIdNotInAndIsActiveTrue(List<String> bankIds);
+    List<BankingV2> findAllByHostelIdAndIsActiveTrue(String hostelId);
 }

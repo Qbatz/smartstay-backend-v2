@@ -2,6 +2,7 @@ package com.smartstay.smartstay.Wrappers.bankings;
 
 import com.smartstay.smartstay.dao.BankingMethods;
 import com.smartstay.smartstay.dao.BankingV2;
+import com.smartstay.smartstay.ennum.BankAccountType;
 import com.smartstay.smartstay.responses.banking.PaymentMethodOptionResponse;
 
 public class AllPaymentMethodsMapper {
@@ -23,60 +24,31 @@ public class AllPaymentMethodsMapper {
     }
 
     private PaymentMethodOptionResponse account(BankingV2 bank, String responsiblePerson, String lastTransactionDate) {
+        String bankAccountType = null;
+        if (bank.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+            bankAccountType = bank.getCashAccountType();
+        }
+        else if (bank.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+            bankAccountType = bank.getBankAccountType();
+        }
+        else {
+            bankAccountType = bank.getBankAccountType();
+        }
         return new PaymentMethodOptionResponse(
-                bank.getHostelId(),
                 bank.getBankId(),
                 bank.getAccountHolderName(),
                 bank.getAccountNumber(),
                 bank.getAccountType(),
+                bankAccountType,
                 bank.getBalance(),
-                bank.getBankAccountType(),
                 bank.getBankName(),
                 bank.getBranchName(),
                 bank.getDisplayName(),
                 bank.getIfscCode(),
-                bank.isDefaultAccount(),
-                bank.getCashAccountType(),
-                bank.getResponsiblePerson(),
                 responsiblePerson,
-                null, null, null, null, null, null, null, null, null,
-                lastTransactionDate,
+                bank.getResponsiblePerson(),
+                false,
                 null);
     }
 
-    public PaymentMethodOptionResponse bankMethod(BankingV2 bank, BankingMethods method,
-            String cardNetwork, String upiApp, String qrCardImage, String responsiblePerson) {
-        return bankMethod(bank, method, cardNetwork, upiApp, qrCardImage, responsiblePerson, null);
-    }
-
-    public PaymentMethodOptionResponse bankMethod(BankingV2 bank, BankingMethods method,
-            String cardNetwork, String upiApp, String qrCardImage, String responsiblePerson, String dueDate) {
-        return new PaymentMethodOptionResponse(
-                bank.getHostelId(),
-                bank.getBankId(),
-                bank.getAccountHolderName(),
-                bank.getAccountNumber(),
-                bank.getAccountType(),
-                method.getBalance(),
-                bank.getBankAccountType(),
-                bank.getBankName(),
-                bank.getBranchName(),
-                method.getDisplayName(),
-                bank.getIfscCode(),
-                bank.isDefaultAccount(),
-                bank.getCashAccountType(),
-                bank.getResponsiblePerson(),
-                responsiblePerson,
-                method.getPaymentMethodId(),
-                method.getPaymentMethod() != null ? method.getPaymentMethod() : null,
-                method.getCardNumber(),
-                method.getUpiId(),
-                method.getCardHolderName(),
-                cardNetwork,
-                upiApp,
-                qrCardImage,
-                method.getQrImage(),
-                null,
-                dueDate);
-    }
 }

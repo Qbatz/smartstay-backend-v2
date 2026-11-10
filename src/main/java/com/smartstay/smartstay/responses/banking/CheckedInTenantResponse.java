@@ -22,7 +22,7 @@ public record CheckedInTenantResponse(
         String initials,
         String expectedJoiningDate,
         String actualJoining,
-        String countryCode,
+        Integer countryCode,
         String bookedAt,
         String bedName,
         String roomName,

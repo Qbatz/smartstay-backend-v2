@@ -16,7 +16,7 @@ public interface ExpenseList {
     Double getTransactionAmount();
     Date getTransactionDate();
     Double getUnitPrice();
-    String getVendorId();
+    Integer getVendorId();
     String getReferenceNumber();
     String getHolderName();
     String getAccountType();

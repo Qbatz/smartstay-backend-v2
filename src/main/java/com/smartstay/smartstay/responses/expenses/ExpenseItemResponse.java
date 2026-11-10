@@ -10,6 +10,6 @@ public record ExpenseItemResponse(
         String unit,
         Double unitPrice,
         Double totalAmount,
-        ExpensePaymentStatus paymentStatus,
+        String paymentStatus,
         Double paidAmount) {
 }

@@ -1,10 +1,6 @@
 package com.smartstay.smartstay.controllers;
 
-import com.smartstay.smartstay.payloads.banking.AddBankV2;
-import com.smartstay.smartstay.payloads.banking.AddBankingMethod;
-import com.smartstay.smartstay.payloads.banking.AddMoneyV2;
-import com.smartstay.smartstay.payloads.banking.CreditCardPayment;
-import com.smartstay.smartstay.payloads.banking.MoneyTransferV2;
+import com.smartstay.smartstay.payloads.banking.*;
 import com.smartstay.smartstay.services.BankingServiceV2;
 import com.smartstay.smartstay.services.QrBankTypeService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -87,11 +83,11 @@ public class BankingControllerV2 {
             @PathVariable("bankId") String bankId,
             @RequestParam(value = "paymentMethod", required = false) String paymentMethod,
             @RequestParam(value = "upiId", required = false) String upiId,
-            @RequestParam(value = "upiApp", required = false) Integer upiApp,
+            @RequestParam(value = "upiApp", required = false) String upiApp,
             @RequestParam(value = "displayName", required = false) String displayName,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "cardNumber", required = false) String cardNumber,
-            @RequestParam(value = "cardNetwork", required = false) Integer cardNetwork,
+            @RequestParam(value = "cardNetwork", required = false) String cardNetwork,
             @RequestParam(value = "cardHolderName", required = false) String cardHolderName,
             @RequestParam(value = "creditLimit", required = false) Double creditLimit,
             @RequestParam(value = "billingCycle", required = false) String billingCycle,
@@ -179,5 +175,16 @@ public class BankingControllerV2 {
             @RequestParam(value = "fromDate", required = false) String fromDate,
             @RequestParam(value = "toDate", required = false) String toDate) {
         return bankingServiceV2.getAllTransactions(hostelId, page, size, dateFilter, source, fromDate, toDate);
+    }
+
+    @DeleteMapping("/{hostelId}/{bankId}")
+    public ResponseEntity<?> deleteBanking(@PathVariable("hostelId") String hostelId,
+                                           @PathVariable("bankId") String bankId) {
+        return bankingServiceV2.deleteBank(hostelId, bankId);
+    }
+
+    @PutMapping("/{hostelId}/{bankId}")
+    public ResponseEntity<?> updateBank(@PathVariable("hostelId") String hostelId, @PathVariable("bankId") String bankId, @RequestBody UpdateBankPayload updateBankPayload) {
+        return bankingServiceV2.updateBankAccount(hostelId, bankId, updateBankPayload);
     }
 }

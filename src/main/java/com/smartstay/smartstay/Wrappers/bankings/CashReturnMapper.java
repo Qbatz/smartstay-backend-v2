@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.Wrappers.bankings;
 
+import com.smartstay.smartstay.config.UPITypes;
 import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.responses.banking.DebitsBank;
 
@@ -17,7 +18,11 @@ public class CashReturnMapper implements Function<BankingV1, DebitsBank> {
         }
 
         return new DebitsBank(bankingV1.getBankId(),
+                false,
                 bankName,
-                bankingV1.getAccountHolderName());
+                bankingV1.getAccountHolderName(),
+                null,
+                null,
+                null);
     }
 }

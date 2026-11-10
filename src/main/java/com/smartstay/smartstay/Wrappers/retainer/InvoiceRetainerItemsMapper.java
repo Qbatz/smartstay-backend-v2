@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.Wrappers.retainer;
 
 import com.smartstay.smartstay.dao.BankingV1;
+import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.TransactionV1;
 import com.smartstay.smartstay.dto.customer.RetainerListItems;
@@ -13,9 +14,9 @@ import java.util.function.Function;
 
 public class InvoiceRetainerItemsMapper implements Function<InvoicesV1, RetainerListItems>  {
     List<TransactionV1> listTransactions = null;
-    List<BankingV1> listBanks = null;
+    List<BankingV2> listBanks = null;
 
-    public InvoiceRetainerItemsMapper(List<TransactionV1> listTransactions, List<BankingV1> listBanks) {
+    public InvoiceRetainerItemsMapper(List<TransactionV1> listTransactions, List<BankingV2> listBanks) {
         this.listTransactions = listTransactions;
         this.listBanks = listBanks;
     }
@@ -33,13 +34,13 @@ public class InvoiceRetainerItemsMapper implements Function<InvoicesV1, Retainer
                     .orElse(null);
             if (transactionV1 != null) {
                 if (listBanks != null) {
-                    BankingV1 bankingV1 = listBanks
+                    BankingV2 bankingV1 = listBanks
                             .stream()
                             .filter(i -> i.getBankId().equalsIgnoreCase(transactionV1.getBankId()))
                             .findFirst()
                             .orElse(null);
                     if (bankingV1 != null) {
-                        bankName = BankingUtils.getPaymentModeWithHolder(bankingV1);
+                        bankName = BankingUtils.getPaymentMethod(bankingV1, transactionV1.getPaymentMethodId());
                     }
                 }
             }
