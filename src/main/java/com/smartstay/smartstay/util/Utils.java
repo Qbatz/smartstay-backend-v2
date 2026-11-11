@@ -188,6 +188,8 @@ public class Utils {
     public static final String TRANSFER_SAME_ACCOUNT = "Source and destination cannot be the same";
     public static final String TRANSFER_INSUFFICIENT_BALANCE = "Insufficient balance to complete the transfer";
     public static final String CREDIT_CARD_ACCOUNT_INVALID = "Invalid credit card account";
+    public static final String SETTLEMENT_DATE_INVALID = "Settlement date must be in dd-MM-yyyy format";
+    public static final String SETTLEMENT_DATE_FUTURE_NOT_ALLOWED = "Settlement date cannot be a future date";
     public static final String TRANSACTION_DATE_FILTER_INVALID = "Date filter should be ALL, THIS_MONTH, LAST_3_MONTHS, LAST_6_MONTHS or CUSTOM";
     public static final String TRANSACTION_SOURCE_INVALID = "Invalid source filter";
     public static final String TRANSACTION_CUSTOM_DATES_REQUIRED = "fromDate and toDate are required for a CUSTOM date filter";
