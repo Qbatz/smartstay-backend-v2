@@ -1806,8 +1806,13 @@ public class CustomersService {
         Set<String> bankIds = listTransactions.stream().map(TransactionDto::bankId).collect(Collectors.toSet());
         List<InvoicesV1> listOfInvoices = invoiceService.findInvoices(invoicesIds);
         List<BankingV2> listOFBankings = bankingService.findAllBanksById(bankIds);
-        List<String> userIds = listOFBankings.stream().map(BankingV2::getResponsiblePerson).toList();
-        List<Users> listUsers = userService.findAllUsersFromUserId(userIds);
+        List<String> userIds = listTransactions
+                .stream()
+                .map(TransactionDto::collectedBy)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<Users> listUsers = userService.findUsersByUserIds(userIds);
         List<JobDetails> jobDetails = customerJobDetailsService.getCustomerJobDetails(customers.getHostelId(), customers.getCustomerId());
         List<CustomerJob> customerJobs = customerJobDetailsService.getCustomerJobs(customers.getHostelId(), customers.getCustomerId());
 
