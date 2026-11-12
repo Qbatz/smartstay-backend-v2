@@ -6586,7 +6586,6 @@ public class InvoiceV1Service {
             int totalPages = 1;
 
 
-            Pageable pageableRequest = PageRequest.of(page - 1, size);
             List<InvoicesV1> listInvoices = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, status, dStartDate, dEndDate, minBalance, maxBalance);
             List<InvoicesV1> secondaryInvoices = null;
             Double totalRetainerAmount = 0.0;
@@ -6656,6 +6655,7 @@ public class InvoiceV1Service {
                     0.0);
 
             if (authentication.getSource().equalsIgnoreCase("Web")) {
+                Pageable pageableRequest = PageRequest.of(page - 1, size);
                 Page<InvoicesV1> pagebleAdvances = invoicesV1Repository.findPaidAdvanceInvoicesForRedemption(hostelId, filteredIds, invoiceTypes, dStartDate, dEndDate, status, minBalance, maxBalance, pageableRequest);
                 secondaryInvoices = pagebleAdvances.stream().toList();
 
@@ -6678,7 +6678,15 @@ public class InvoiceV1Service {
 
                 return new ResponseEntity<>(bookingsWebResponse, HttpStatus.OK);
             } else {
-                secondaryInvoices = listInvoices;
+                noOfItemsPerPage = size <= 0 ? 10 : size;
+                currentPage = page <= 0 ? 1 : page;
+                totalPages = (int) Math.ceil((double) listInvoices.size() / noOfItemsPerPage);
+
+                long offset = (long) (currentPage - 1) * noOfItemsPerPage;
+                int fromIndex = (int) Math.min(offset, listInvoices.size());
+                int toIndex = (int) Math.min(offset + noOfItemsPerPage, listInvoices.size());
+                secondaryInvoices = new ArrayList<>(listInvoices.subList(fromIndex, toIndex));
+
                 List<String> customerIds = listInvoices.stream().map(InvoicesV1::getCustomerId).distinct().toList();
                 List<BookingsV1> listBookings = bookingsService.getBookings(hostelId, customerIds);
                 List<InvoicesV1> listInvoiceList = invoicesV1Repository.findUnpaidInvoicesByCustomerIds(listCustomerIds);
@@ -6697,7 +6705,7 @@ public class InvoiceV1Service {
                 } else {
                     listBanks = new ArrayList<>();
                 }
-                List<AdvanceListItems> advanceListItems = listInvoices.stream().map(i -> new AdvanceInvoicesMapper(listBookings, listBedDetails, listCustomers, listInvoiceList, latestTransactions, listBanks).apply(i)).toList();
+                List<AdvanceListItems> advanceListItems = secondaryInvoices.stream().map(i -> new AdvanceInvoicesMapper(listBookings, listBedDetails, listCustomers, listInvoiceList, latestTransactions, listBanks).apply(i)).toList();
 
                 AdvanceList advanceList = new AdvanceList(listInvoices.size(),
                         currentPage,
