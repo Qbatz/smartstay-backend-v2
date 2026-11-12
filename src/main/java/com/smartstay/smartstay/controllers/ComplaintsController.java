@@ -47,7 +47,7 @@ public class ComplaintsController {
     }
 
     @GetMapping("/all-complaints/{hostelId}")
-    public ResponseEntity<?> getAllComplaints(@PathVariable("hostelId") String hostelId,@RequestParam(value = "customerName", required=false) String customerName, @RequestParam(value = "status", required = false) String status,@RequestParam(value = "startDate", required = false) String startDate,@RequestParam(value = "endDate", required = false) String endDate) {
+    public ResponseEntity<?> getAllComplaints(@PathVariable("hostelId") String hostelId, @RequestParam(value = "customerName", required=false) String customerName, @RequestParam(value = "status", required = false) String status,@RequestParam(value = "startDate", required = false) String startDate,@RequestParam(value = "endDate", required = false) String endDate) {
         return complaintsService.getAllComplaints(hostelId,customerName,status,startDate,endDate);
     }
 

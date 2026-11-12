@@ -686,19 +686,23 @@ public class ExpenseService {
         // Update only the parent expense; expense_items are not modified.
 
         OldBankToNewBankInfo oldBankToNewBankInfo = bankingServiceV2.getOldBankNewBankInfo(payload.bankId());
+        if (oldBankToNewBankInfo == null) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!bankingServiceV2.checkBankExist(payload.bankId())) {
+            return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+        }
+
 
         if (Utils.checkNullOrEmpty(payload.bankId()) && requestPaid > 0) {
             String settleBankId = payload.bankId().trim();
 //            if (bankingServiceV2.getBankDetails(settleBankId) != null) {
 //                bankingServiceV2.updateBalanceForExpense(requestPaid, BankTransactionType.DEBIT.name(), settleBankId);
 //            }
-            if (!bankingServiceV2.checkBankExist(payload.bankId())) {
-                return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
-            }
 
-            if (oldBankToNewBankInfo == null) {
-                return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
-            }
+//            if (oldBankToNewBankInfo == null) {
+//                return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
+//            }
             bankingServiceV2.recordVendorExpenseDebit(oldBankToNewBankInfo.bankId(),oldBankToNewBankInfo.paymentMethodId(), requestPaid,
                     expense.getHostelId(), auditUser);
         }
@@ -832,7 +836,6 @@ public class ExpenseService {
         payment.setHostelId(hostelId);
         payment.setVendorId(vendorId);
         payment.setPaidAmount(paidAmount);
-        payment.setPaymentMethod(paymentMethod);
         payment.setBankId(bankId);
         payment.setPaymentMethodId(paymentMethodId);
         payment.setPaymentDate(paymentDate);

@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.Wrappers.expenses.VendorExpenseSummaryMapper;
+import com.smartstay.smartstay.Wrappers.vendor.VendorExpenseResponseMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.config.FilesConfig;
 import com.smartstay.smartstay.config.UploadFileToS3;
@@ -688,40 +689,23 @@ public class VendorService {
         Page<ExpensePayment> paymentPage =
                 expensePaymentRepository.findVendorPayments(vendorId, start, end, pageable);
         List<ExpensePayment> pagePayments = paymentPage.getContent();
-
-        // Resolve banks once for the page: paymentMethod may hold a bank id (-> account type) and
-        // bankId resolves to the bank name. Both come from a single bulk lookup (no N+1).
-        Set<String> bankLookupIds = new HashSet<>();
-        pagePayments.forEach(p -> {
-            if (p.getPaymentMethod() != null && !p.getPaymentMethod().trim().isEmpty()) {
-                bankLookupIds.add(p.getPaymentMethod());
+        List<BankingV2> listBanks;
+        if (pagePayments != null) {
+            Set<String> bankIds = pagePayments
+                    .stream()
+                    .map(ExpensePayment::getBankId)
+                    .collect(Collectors.toSet());
+            if (bankIds != null) {
+                listBanks = bankingServiceV2.findAllByBankId(bankIds);
+            } else {
+                listBanks = new ArrayList<>();
             }
-            if (p.getBankId() != null && !p.getBankId().trim().isEmpty()) {
-                bankLookupIds.add(p.getBankId());
-            }
-        });
-        Map<String, String> accountTypeById = new HashMap<>();
-        Map<String, String> bankNameById = new HashMap<>();
-        if (!bankLookupIds.isEmpty()) {
-            bankingService.findAllBanksById(bankLookupIds).forEach(b -> {
-                accountTypeById.put(b.getBankId(), b.getAccountType());
-                bankNameById.put(b.getBankId(), b.getBankName());
-            });
+        } else {
+            listBanks = new ArrayList<>();
         }
 
         List<VendorExpensePaymentResponse> payments = pagePayments.stream()
-                .map(p -> new VendorExpensePaymentResponse(
-                        p.getId(),
-                        p.getPaidAmount(),
-                        resolvePaymentMethodName(p.getPaymentMethod(), accountTypeById),
-                        p.getExpenseId(),
-                        p.getBankId(),
-                        resolveBankName(p.getBankId(), bankNameById),
-                        p.getHostelId(),
-                        Utils.dateToString(p.getPaymentDate()),
-                        p.getTransactionId(),
-                        p.getNotes(),
-                        p.getImageUrl()))
+                .map(p -> new VendorExpenseResponseMapper(listBanks).apply(p))
                 .toList();
 
         VendorExpensePaymentsResponse response = new VendorExpensePaymentsResponse(paymentPage.getTotalElements(),

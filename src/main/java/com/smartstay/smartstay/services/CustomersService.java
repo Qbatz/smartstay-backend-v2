@@ -2074,9 +2074,9 @@ public class CustomersService {
             if (Utils.compareWithTwoDates(lDate, new Date()) > 0) {
                 return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
             }
-             if (Utils.compareWithTwoDates(lDate, billDate.currentBillStartDate()) < 0) {
-                    return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
-            }
+//             if (Utils.compareWithTwoDates(lDate, billDate.currentBillStartDate()) < 0) {
+//                    return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+//            }
         } else {
             lDate = new Date();
         }

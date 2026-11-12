@@ -842,13 +842,19 @@ public class CoreSetUp {
 
 				ColumnFilters filters13 = new ColumnFilters();
 				filters13.setSelected(true);
-				filters13.setFieldName("businessName");
+				filters13.setFieldName("Name");
 				filters13.setOrder(13);
 
 				ColumnFilters filters14 = new ColumnFilters();
 				filters14.setSelected(true);
-				filters14.setFieldName("vendorAddress");
+				filters14.setFieldName("Address");
 				filters14.setOrder(14);
+
+				ColumnFilters filters15 = new ColumnFilters();
+				filters15.setSelected(false);
+				filters15.setFieldName("Business Name");
+				filters15.setOrder(15);
+
 
 				defaultColumnFilters.add(filters1);
 				defaultColumnFilters.add(filters2);
@@ -864,6 +870,7 @@ public class CoreSetUp {
 				defaultColumnFilters.add(filters12);
 				defaultColumnFilters.add(filters13);
 				defaultColumnFilters.add(filters14);
+				defaultColumnFilters.add(filters15);
 
 				vendorFilterOptions.setFilterOptions(defaultColumnFilters);
 
