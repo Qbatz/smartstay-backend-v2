@@ -140,6 +140,8 @@ public class Utils {
     public static final String IMAGES_NOT_FOUND = "Image not found";
     public static final String CANNOT_CREATE_CURRENT_MONTH_INVOICE_POSTPAID = "Current month manual bill creation is not allowed for postpaid hostels";
     public static final String NO_COMPLAINTS_FOUND = "No complaints found";
+    public static final String COMPLAINT_DATE_FILTER_INVALID = "startDate and endDate must be in dd-MM-yyyy format";
+    public static final String COMPLAINT_DATE_RANGE_INVALID = "startDate cannot be after endDate";
     public static final String CANNOT_DELETE_DEFAULT_ROLES = "Cannot delete default roles";
     public static final String CANNOT_EDIT_DEFAULT_ROLES = "Cannot edit default roles";
     public static final String FUTURE_DATES_NOT_ALLOWED = "Future Dates are not allowed";
@@ -188,6 +190,8 @@ public class Utils {
     public static final String TRANSFER_SAME_ACCOUNT = "Source and destination cannot be the same";
     public static final String TRANSFER_INSUFFICIENT_BALANCE = "Insufficient balance to complete the transfer";
     public static final String CREDIT_CARD_ACCOUNT_INVALID = "Invalid credit card account";
+    public static final String SETTLEMENT_DATE_INVALID = "Settlement date must be in dd-MM-yyyy format";
+    public static final String SETTLEMENT_DATE_FUTURE_NOT_ALLOWED = "Settlement date cannot be a future date";
     public static final String TRANSACTION_DATE_FILTER_INVALID = "Date filter should be ALL, THIS_MONTH, LAST_3_MONTHS, LAST_6_MONTHS or CUSTOM";
     public static final String TRANSACTION_SOURCE_INVALID = "Invalid source filter";
     public static final String TRANSACTION_CUSTOM_DATES_REQUIRED = "fromDate and toDate are required for a CUSTOM date filter";

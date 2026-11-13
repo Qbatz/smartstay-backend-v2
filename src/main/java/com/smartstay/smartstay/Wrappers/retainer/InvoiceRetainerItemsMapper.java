@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.Wrappers.retainer;
 
-import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.TransactionV1;
@@ -24,7 +23,9 @@ public class InvoiceRetainerItemsMapper implements Function<InvoicesV1, Retainer
     @Override
     public RetainerListItems apply(InvoicesV1 invoicesV1) {
         String status = null;
+        String paymentMode = null;
         String bankName = null;
+        String accountHolderName = null;
 
         if (listTransactions != null) {
             TransactionV1 transactionV1 = listTransactions
@@ -34,13 +35,15 @@ public class InvoiceRetainerItemsMapper implements Function<InvoicesV1, Retainer
                     .orElse(null);
             if (transactionV1 != null) {
                 if (listBanks != null) {
-                    BankingV2 bankingV1 = listBanks
+                    BankingV2 bankingV2 = listBanks
                             .stream()
                             .filter(i -> i.getBankId().equalsIgnoreCase(transactionV1.getBankId()))
                             .findFirst()
                             .orElse(null);
-                    if (bankingV1 != null) {
-                        bankName = BankingUtils.getPaymentMethod(bankingV1, transactionV1.getPaymentMethodId());
+                    if (bankingV2 != null) {
+                        paymentMode = BankingUtils.getPaymentMethod(bankingV2, transactionV1.getPaymentMethodId());
+                        bankName = isPresent(bankingV2.getBankName()) ? bankingV2.getBankName() : bankingV2.getDisplayName();
+                        accountHolderName = bankingV2.getAccountHolderName();
                     }
                 }
             }
@@ -89,6 +92,12 @@ public class InvoiceRetainerItemsMapper implements Function<InvoicesV1, Retainer
                 invoicesV1.getInvoiceType(),
                 invoiceTotalAmount,
                 invoicesV1.getBalanceAmount(),
-                bankName);
+                paymentMode,
+                bankName,
+                accountHolderName);
+    }
+
+    private boolean isPresent(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

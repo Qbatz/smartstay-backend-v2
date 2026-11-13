@@ -1806,8 +1806,13 @@ public class CustomersService {
         Set<String> bankIds = listTransactions.stream().map(TransactionDto::bankId).collect(Collectors.toSet());
         List<InvoicesV1> listOfInvoices = invoiceService.findInvoices(invoicesIds);
         List<BankingV2> listOFBankings = bankingService.findAllBanksById(bankIds);
-        List<String> userIds = listOFBankings.stream().map(BankingV2::getResponsiblePerson).toList();
-        List<Users> listUsers = userService.findAllUsersFromUserId(userIds);
+        List<String> userIds = listTransactions
+                .stream()
+                .map(TransactionDto::collectedBy)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<Users> listUsers = userService.findUsersByUserIds(userIds);
         List<JobDetails> jobDetails = customerJobDetailsService.getCustomerJobDetails(customers.getHostelId(), customers.getCustomerId());
         List<CustomerJob> customerJobs = customerJobDetailsService.getCustomerJobs(customers.getHostelId(), customers.getCustomerId());
 
@@ -4455,6 +4460,17 @@ public class CustomersService {
 
     public List<Customers> searchCustomerByHostelName(String hostelId, String keyword) {
         List<Customers> listCustomers = customersRepository.findByHostelIdAndFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(hostelId, keyword, keyword);
+        if (listCustomers == null) {
+            return new ArrayList<>();
+        }
+        return listCustomers;
+    }
+
+    public List<Customers> searchCustomerByFullName(String hostelId, String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Customers> listCustomers = customersRepository.searchByHostelIdAndFullName(hostelId, keyword.trim());
         if (listCustomers == null) {
             return new ArrayList<>();
         }

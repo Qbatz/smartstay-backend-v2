@@ -8,6 +8,7 @@ import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
 import com.smartstay.smartstay.ennum.*;
+import com.smartstay.smartstay.filterOptions.complaints.ComplaintFilterOptions;
 import com.smartstay.smartstay.payloads.complaints.*;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.responses.complaint.CommentResponse;
@@ -27,6 +28,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service
@@ -383,7 +386,7 @@ public class ComplaintsService {
 
         List<ComplaintResponseDto> listComplaintsResponse = listComplaints.stream().map(i -> new ComplaintListMapper(listCustomers, listComplaintTypes, listBedDetails, listCustomersBedHistory, listUsers).apply(i)).toList();
 
-        ComplaintResponse complaintResponse = new ComplaintResponse(hostelId, sDate, eDate, listComplaints.size(), listComplaintsResponse);
+        ComplaintResponse complaintResponse = new ComplaintResponse(hostelId, sDate, eDate, listComplaints.size(), buildComplaintFilterOptions(), listComplaintsResponse);
 
         return new ResponseEntity<>(complaintResponse, HttpStatus.OK);
     }
@@ -404,31 +407,69 @@ public class ComplaintsService {
             return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.BAD_REQUEST);
         }
 
+        String searchName = (customerName != null && !customerName.trim().isEmpty()) ? customerName.trim() : null;
+
         List<String> customerIdsFromSearch = null;
-        if (customerName != null) {
-            List<Customers> listCus = customersService.searchCustomerByHostelName(hostelId, customerName);
-            if (listCus != null) {
-                customerIdsFromSearch = listCus.stream().map(Customers::getCustomerId).toList();
+        if (searchName != null) {
+            List<Customers> listCus = customersService.searchCustomerByFullName(hostelId, searchName);
+            customerIdsFromSearch = listCus.stream().map(Customers::getCustomerId).distinct().toList();
+        }
+
+        String statusFilter = resolveComplaintStatus(status);
+
+        Date filterStartDate = null;
+        Date filterEndDate = null;
+        if (startDate != null && !startDate.trim().isEmpty()) {
+            filterStartDate = parseComplaintFilterDate(startDate);
+            if (filterStartDate == null) {
+                return new ResponseEntity<>(Utils.COMPLAINT_DATE_FILTER_INVALID, HttpStatus.BAD_REQUEST);
             }
         }
-
-        Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE);
-
-        Page<ComplaintsV1> listAllComplaints;
-        if (customerIdsFromSearch == null) {
-            listAllComplaints = complaintRepository.findActiveComplaintsByHostelId(hostelId, pageable);
-        } else if (customerIdsFromSearch.isEmpty()) {
-            listAllComplaints = Page.empty(pageable);
-        } else {
-            listAllComplaints = complaintRepository.findActiveComplaintsByHostelIdAndCustomerIds(hostelId, customerIdsFromSearch, pageable);
+        if (endDate != null && !endDate.trim().isEmpty()) {
+            Date parsedEndDate = parseComplaintFilterDate(endDate);
+            if (parsedEndDate == null) {
+                return new ResponseEntity<>(Utils.COMPLAINT_DATE_FILTER_INVALID, HttpStatus.BAD_REQUEST);
+            }
+            filterEndDate = endOfDay(parsedEndDate);
+        }
+        if (filterStartDate != null && filterEndDate != null && filterStartDate.after(filterEndDate)) {
+            return new ResponseEntity<>(Utils.COMPLAINT_DATE_RANGE_INVALID, HttpStatus.BAD_REQUEST);
         }
 
-        if (listAllComplaints == null) {
+        List<ComplaintsV1> listComplaints;
+        if (customerIdsFromSearch != null && customerIdsFromSearch.isEmpty()) {
+            listComplaints = new ArrayList<>();
+        } else {
+            List<String> filterCustomerIds = customerIdsFromSearch;
+            Date rangeStart = filterStartDate;
+            Date rangeEnd = filterEndDate;
+            Specification<ComplaintsV1> spec = (root, query, cb) -> {
+                List<Predicate> predicates = new ArrayList<>();
+
+                predicates.add(cb.equal(root.get("hostelId"), hostelId));
+                predicates.add(cb.equal(root.get("isDeleted"), false));
+
+                if (filterCustomerIds != null) {
+                    predicates.add(root.get("customerId").in(filterCustomerIds));
+                }
+                if (statusFilter != null) {
+                    predicates.add(cb.equal(root.get("status"), statusFilter));
+                }
+                if (rangeStart != null) {
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("complaintDate"), rangeStart));
+                }
+                if (rangeEnd != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("complaintDate"), rangeEnd));
+                }
+
+                return cb.and(predicates.toArray(new Predicate[0]));
+            };
+            listComplaints = complaintRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "complaintDate"));
+        }
+
+        if (listComplaints == null) {
             return new ResponseEntity<>(Utils.NO_COMPLAINTS_FOUND, HttpStatus.BAD_REQUEST);
         }
-
-        List<ComplaintsV1> listComplaints = listAllComplaints.getContent();
-//        List<ComplaintsV1> listComplaints = complaintRepository.findByHostelIdAndIsDeletedFalseOrderByComplaintDateDesc(hostelId);
         List<String> customerIds = listComplaints.stream().map(ComplaintsV1::getCustomerId).toList();
         List<String> assignes = listComplaints.stream().map(ComplaintsV1::getAssigneeId).toList();
         List<Integer> roomIds = listComplaints.stream().filter(i -> i.getRoomId() != null).map(ComplaintsV1::getRoomId).toList();
@@ -466,7 +507,7 @@ public class ComplaintsService {
 
         List<ComplaintResponseDto> listComplaintsResponse = listComplaints.stream().map(i -> new ComplaintListMapper(listCustomers, listComplaintTypes, listBedDetails, listCustomersBedHistory, listUsers).apply(i)).toList();
 
-        ComplaintResponse complaintResponse = new ComplaintResponse(hostelId, sDate, eDate, listComplaints.size(), listComplaintsResponse);
+        ComplaintResponse complaintResponse = new ComplaintResponse(hostelId, sDate, eDate, listComplaints.size(), buildComplaintFilterOptions(), listComplaintsResponse);
 
         return new ResponseEntity<>(complaintResponse, HttpStatus.OK);
     }
@@ -858,5 +899,58 @@ public class ComplaintsService {
 
     public List<String> getDistinctCustomerIdsByHostelId(String hostelId) {
         return complaintRepository.findDistinctCustomerIdsByHostelId(hostelId);
+    }
+
+    private ComplaintFilterOptions buildComplaintFilterOptions() {
+        List<ComplaintFilterOptions.FilterItems> listStatus = Arrays.stream(ComplaintStatus.values())
+                .map(i -> new ComplaintFilterOptions.FilterItems(Utils.capitalize(i.name()), i.name()))
+                .toList();
+        return new ComplaintFilterOptions(listStatus);
+    }
+
+    private String resolveComplaintStatus(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        String normalized = value.trim().replace(' ', '_').replace('-', '_');
+        return Arrays.stream(ComplaintStatus.values())
+                .filter(i -> i.name().equalsIgnoreCase(normalized))
+                .map(ComplaintStatus::name)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private Date parseComplaintFilterDate(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        String normalized = value.trim().replace('/', '-');
+        if (normalized.matches("\\d{4}-\\d{1,2}-\\d{1,2}")) {
+            return parseStrict(normalized, Utils.DATE_FORMAT_ZOHO);
+        }
+        if (normalized.matches("\\d{1,2}-\\d{1,2}-\\d{4}")) {
+            return parseStrict(normalized, Utils.USER_INPUT_DATE_FORMAT);
+        }
+        return null;
+    }
+
+    private Date parseStrict(String value, String pattern) {
+        try {
+            SimpleDateFormat formatter = new SimpleDateFormat(pattern);
+            formatter.setLenient(false);
+            return formatter.parse(value);
+        } catch (ParseException e) {
+            return null;
+        }
+    }
+
+    private Date endOfDay(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
+        return calendar.getTime();
     }
 }

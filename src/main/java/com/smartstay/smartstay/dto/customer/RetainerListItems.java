@@ -7,5 +7,7 @@ public record RetainerListItems(String invoiceId,
                                 String invoiceType,
                                 Double amount,
                                 Double availableBalance,
-                                String paymentMode) {
+                                String paymentMode,
+                                String bankName,
+                                String accountHolderName) {
 }
