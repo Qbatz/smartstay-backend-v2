@@ -5,6 +5,7 @@ import com.smartstay.smartstay.Wrappers.complaints.ComplaintUpdatesMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
+import com.smartstay.smartstay.dto.complaint.ComplaintMobileResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponse;
 import com.smartstay.smartstay.dto.complaint.ComplaintResponseDto;
 import com.smartstay.smartstay.ennum.*;
@@ -391,7 +392,7 @@ public class ComplaintsService {
         return new ResponseEntity<>(complaintResponse, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getAllComplaints(String hostelId, String customerName, String status, String startDate, String endDate) {
+    public ResponseEntity<?> getAllComplaints(String hostelId, String customerName, String status, String startDate, String endDate, int page, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -505,9 +506,35 @@ public class ComplaintsService {
             eDate = Utils.dateToString(end);
         }
 
-        List<ComplaintResponseDto> listComplaintsResponse = listComplaints.stream().map(i -> new ComplaintListMapper(listCustomers, listComplaintTypes, listBedDetails, listCustomersBedHistory, listUsers).apply(i)).toList();
+        if ("web".equalsIgnoreCase(authentication.getSource())) {
+            List<ComplaintResponseDto> listComplaintsResponse = listComplaints.stream().map(i -> new ComplaintListMapper(listCustomers, listComplaintTypes, listBedDetails, listCustomersBedHistory, listUsers).apply(i)).toList();
 
-        ComplaintResponse complaintResponse = new ComplaintResponse(hostelId, sDate, eDate, listComplaints.size(), buildComplaintFilterOptions(), listComplaintsResponse);
+            ComplaintResponse complaintResponse = new ComplaintResponse(hostelId, sDate, eDate, listComplaints.size(), buildComplaintFilterOptions(), listComplaintsResponse);
+
+            return new ResponseEntity<>(complaintResponse, HttpStatus.OK);
+        }
+
+        int complaintCount = listComplaints.size();
+        int itemPerPage = size <= 0 ? 10 : size;
+        int currentPage = page <= 0 ? 1 : page;
+        int totalPages = (int) Math.ceil((double) complaintCount / itemPerPage);
+
+        long offset = (long) (currentPage - 1) * itemPerPage;
+        int fromIndex = (int) Math.min(offset, complaintCount);
+        int toIndex = (int) Math.min(offset + itemPerPage, complaintCount);
+        List<ComplaintsV1> pagedComplaints = new ArrayList<>(listComplaints.subList(fromIndex, toIndex));
+
+        List<ComplaintResponseDto> listComplaintsResponse = pagedComplaints.stream().map(i -> new ComplaintListMapper(listCustomers, listComplaintTypes, listBedDetails, listCustomersBedHistory, listUsers).apply(i)).toList();
+
+        ComplaintMobileResponse complaintResponse = new ComplaintMobileResponse(hostelId,
+                sDate,
+                eDate,
+                complaintCount,
+                currentPage,
+                totalPages,
+                itemPerPage,
+                buildComplaintFilterOptions(),
+                listComplaintsResponse);
 
         return new ResponseEntity<>(complaintResponse, HttpStatus.OK);
     }

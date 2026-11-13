@@ -683,7 +683,7 @@ public class ElectricityService {
         return electricityReadingRepository.findTopByHostelIdOrderByEntryDateDesc(hostelId);
     }
 
-    public ResponseEntity<?> getEbReadings(String hostelId) {
+    public ResponseEntity<?> getEbReadings(String hostelId, int page, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -761,8 +761,32 @@ public class ElectricityService {
         }
         listUsages.sort(Comparator.comparing(ElectricityUsage::floorId, Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(ElectricityUsage::roomId, Comparator.nullsLast(Comparator.naturalOrder())));
 
+        boolean isWeb = "web".equalsIgnoreCase(authentication.getSource());
+
+        int totalReadings = listUsages.size();
+        int itemPerPage = size <= 0 ? 10 : size;
+        int currentPage = page <= 0 ? 1 : page;
+        int totalPages = (int) Math.ceil((double) totalReadings / itemPerPage);
+
+        long offset = (long) (currentPage - 1) * itemPerPage;
+        int fromIndex = (int) Math.min(offset, totalReadings);
+        int toIndex = (int) Math.min(offset + itemPerPage, totalReadings);
+        List<ElectricityUsage> pagedUsages = new ArrayList<>(listUsages.subList(fromIndex, toIndex));
+
         if (electricityConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.ROOM_READING.name())) {
-            ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
+            if (isWeb) {
+                ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
+
+                return new ResponseEntity<>(list, HttpStatus.OK);
+            }
+
+            ElectricityMobileList list = new ElectricityMobileList(hostelId,
+                    lastReading,
+                    isHostelBased,
+                    currentPage,
+                    totalPages,
+                    itemPerPage,
+                    pagedUsages);
 
             return new ResponseEntity<>(list, HttpStatus.OK);
         } else {
@@ -804,15 +828,28 @@ public class ElectricityService {
 
             }
             HostelInfo hostelInfo = new HostelInfo(hostelName.toString(), hostelImage, initials.toString(), noOfTenants, billingMonth, previousEntry, currentConsumption, totalAmount);
-//            ElectricityList list = new ElectricityList(hostelId, lastReading, isHostelBased, listUsages);
-            ElectricityListHostelReadings list = new ElectricityListHostelReadings(hostelId, lastReading, isHostelBased, hostelInfo, listUsages, listHostelReadings);
+            if (isWeb) {
+                ElectricityListHostelReadings list = new ElectricityListHostelReadings(hostelId, lastReading, isHostelBased, hostelInfo, listUsages, listHostelReadings);
+
+                return new ResponseEntity<>(list, HttpStatus.OK);
+            }
+
+            ElectricityMobileListHostelReadings list = new ElectricityMobileListHostelReadings(hostelId,
+                    lastReading,
+                    isHostelBased,
+                    currentPage,
+                    totalPages,
+                    itemPerPage,
+                    hostelInfo,
+                    pagedUsages,
+                    listHostelReadings);
 
             return new ResponseEntity<>(list, HttpStatus.OK);
         }
 
     }
 
-    public ResponseEntity<?> getCustomersListElectricity(String hostelId) {
+    public ResponseEntity<?> getCustomersListElectricity(String hostelId, int page, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -841,15 +878,43 @@ public class ElectricityService {
         List<Integer> deletedRooms = listRooms.stream().map(Rooms::getRoomId).toList();
 
 
-        List<CustomersList> listCustomers = new ArrayList<>();
         List<Integer> roomIds = electricityReadingRepository.getRoomIds(hostelId, deletedRooms);
         List<ElectricityCustomersList> electricityCustomersLists = ebHistoryService.getCustomerListFromRooms(roomIds);
-        listCustomers.addAll(electricityCustomersLists.stream().map(item -> {
-            return new CustomersListMapper().apply(item);
-        }).toList());
 
+        if ("web".equalsIgnoreCase(authentication.getSource())) {
+            List<CustomersList> listCustomers = new ArrayList<>();
+            listCustomers.addAll(electricityCustomersLists.stream().map(item -> {
+                return new CustomersListMapper().apply(item);
+            }).toList());
 
-        return new ResponseEntity<>(listCustomers, HttpStatus.OK);
+            return new ResponseEntity<>(listCustomers, HttpStatus.OK);
+        }
+
+        List<ElectricityCustomersList> sortedReadings = new ArrayList<>(electricityCustomersLists);
+        sortedReadings.sort(Comparator.comparing(ElectricityCustomersList::getEndDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(ElectricityCustomersList::getCustomerId, Comparator.nullsLast(Comparator.naturalOrder())));
+
+        int totalReadings = sortedReadings.size();
+        int itemPerPage = size <= 0 ? 10 : size;
+        int currentPage = page <= 0 ? 1 : page;
+        int totalPages = (int) Math.ceil((double) totalReadings / itemPerPage);
+
+        long offset = (long) (currentPage - 1) * itemPerPage;
+        int fromIndex = (int) Math.min(offset, totalReadings);
+        int toIndex = (int) Math.min(offset + itemPerPage, totalReadings);
+
+        List<CustomersList> pagedReadings = sortedReadings.subList(fromIndex, toIndex)
+                .stream()
+                .map(item -> new CustomersListMapper().apply(item))
+                .toList();
+
+        ElectricityCustomersMobileList response = new ElectricityCustomersMobileList(hostelId,
+                currentPage,
+                totalPages,
+                itemPerPage,
+                pagedReadings);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getRoomReadingsHistory(String hostelId, Integer roomId) {

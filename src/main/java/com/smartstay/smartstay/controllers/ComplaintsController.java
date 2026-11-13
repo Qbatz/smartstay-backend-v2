@@ -47,8 +47,10 @@ public class ComplaintsController {
     }
 
     @GetMapping("/all-complaints/{hostelId}")
-    public ResponseEntity<?> getAllComplaints(@PathVariable("hostelId") String hostelId,@RequestParam(value = "customerName", required=false) String customerName, @RequestParam(value = "status", required = false) String status,@RequestParam(value = "startDate", required = false) String startDate,@RequestParam(value = "endDate", required = false) String endDate) {
-        return complaintsService.getAllComplaints(hostelId,customerName,status,startDate,endDate);
+    public ResponseEntity<?> getAllComplaints(@PathVariable("hostelId") String hostelId,@RequestParam(value = "customerName", required=false) String customerName, @RequestParam(value = "status", required = false) String status,@RequestParam(value = "startDate", required = false) String startDate,@RequestParam(value = "endDate", required = false) String endDate,
+                                             @RequestParam(value = "page", defaultValue = "1", required = false) int page,
+                                             @RequestParam(value = "size", defaultValue = "10", required = false) int size) {
+        return complaintsService.getAllComplaints(hostelId,customerName,status,startDate,endDate,page,size);
     }
 
     @GetMapping("/{complaintId}")

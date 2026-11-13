@@ -3,6 +3,7 @@ package com.smartstay.smartstay.services;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.assets.AssetAssignmentResponse;
+import com.smartstay.smartstay.dto.assets.AssetsMobileList;
 import com.smartstay.smartstay.dto.bank.OldBankToNewBankInfo;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
@@ -66,7 +67,7 @@ public class AssetsService {
     @Autowired
     private VendorService vendorService;
 
-    public ResponseEntity<?> getAllAssets(String hostelId) {
+    public ResponseEntity<?> getAllAssets(String hostelId, int page, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -81,7 +82,24 @@ public class AssetsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<AssetAssignmentResponse> listAssets = assetsRepository.findAssetAssignmentDetails(hostelId);
-        return new ResponseEntity<>(listAssets, HttpStatus.OK);
+
+        if ("web".equalsIgnoreCase(authentication.getSource())) {
+            return new ResponseEntity<>(listAssets, HttpStatus.OK);
+        }
+
+        int totalAssets = listAssets.size();
+        int itemPerPage = size <= 0 ? 10 : size;
+        int currentPage = page <= 0 ? 1 : page;
+        int totalPages = (int) Math.ceil((double) totalAssets / itemPerPage);
+
+        long offset = (long) (currentPage - 1) * itemPerPage;
+        int fromIndex = (int) Math.min(offset, totalAssets);
+        int toIndex = (int) Math.min(offset + itemPerPage, totalAssets);
+        List<AssetAssignmentResponse> pagedAssets = new ArrayList<>(listAssets.subList(fromIndex, toIndex));
+
+        AssetsMobileList response = new AssetsMobileList(hostelId, currentPage, totalPages, itemPerPage, pagedAssets);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> addAsset(AssetRequest request, String hostelId) {
