@@ -1126,34 +1126,23 @@ public class ExpenseService {
         double totalPartialPaidAmount = 0.0;
 
         if (listAllExpenses != null) {
-            totalExpenseAmount = listExpenses
+            totalExpenseAmount = listAllExpenses
                     .stream()
-                    .mapToDouble(i -> {
-                        if (i.getTransactionAmount() != null) {
-                            return i.getTransactionAmount();
-                        }
-                        return 0.0;
-                    })
+                    .mapToDouble(i -> i.getTotalPrice() != null ? i.getTotalPrice() : 0.0)
                     .sum();
-            totalPaidAmount = listExpenses
+            totalPaidAmount = listAllExpenses
                     .stream()
-                    .mapToDouble(i -> {
-                        if (i.getPaidAmount() != null) {
-                            return i.getPaidAmount();
-                        }
-                        return 0.0;
-                    })
+                    .filter(i -> hasPaymentStatus(i.getPaymentStatus(), ExpensePaymentStatus.Full))
+                    .mapToDouble(i -> i.getTotalPrice() != null ? i.getTotalPrice() : 0.0)
                     .sum();
-            totalUnpaidAmount = totalExpenseAmount - totalPaidAmount;
+            totalUnpaidAmount = listAllExpenses
+                    .stream()
+                    .mapToDouble(i -> i.getBalanceAmount() != null ? i.getBalanceAmount() : 0.0)
+                    .sum();
             totalPartialPaidAmount = listAllExpenses
                     .stream()
-                    .filter(i -> i.getPaidAmount() != null && i.getPaidAmount() > 0)
-                    .mapToDouble(i -> {
-                        if (i.getTransactionAmount() != null) {
-                            return i.getTransactionAmount() - i.getPaidAmount();
-                        }
-                        return 0.0;
-                    })
+                    .filter(i -> hasPaymentStatus(i.getPaymentStatus(), ExpensePaymentStatus.Partial))
+                    .mapToDouble(i -> i.getPaidAmount() != null ? i.getPaidAmount() : 0.0)
                     .sum();
         }
 
@@ -1161,7 +1150,6 @@ public class ExpenseService {
                 totalPaidAmount,
                 totalUnpaidAmount,
                 totalPartialPaidAmount);
-
         ExpenseFilterOptions filterOptions = buildExpenseFilterOptions(hostelId);
         if (listExpenses.getContent() != null) {
             if (authentication.getSource().equalsIgnoreCase("web")) {
@@ -1256,6 +1244,10 @@ public class ExpenseService {
                 nullSafe(view.getTotalPaidAmount()),
                 nullSafe(view.getTotalUnPaidAmount()),
                 nullSafe(view.getTotalPartialPaidAmount()));
+    }
+
+    private boolean hasPaymentStatus(String value, ExpensePaymentStatus status) {
+        return value != null && status.name().equalsIgnoreCase(value.trim());
     }
 
     private double nullSafe(Double value) {

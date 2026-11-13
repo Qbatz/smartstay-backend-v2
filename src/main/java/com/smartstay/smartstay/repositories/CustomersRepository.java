@@ -158,6 +158,12 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     );
 
     @Query("""
+            SELECT c FROM Customers c WHERE c.hostelId = :hostelId AND
+            LOWER(CONCAT(COALESCE(c.firstName, ''), ' ', COALESCE(c.lastName, ''))) LIKE LOWER(CONCAT('%', :name, '%'))
+            """)
+    List<Customers> searchByHostelIdAndFullName(@Param("hostelId") String hostelId, @Param("name") String name);
+
+    @Query("""
             SELECT c FROM Customers c WHERE c.hostelId = :hostelId AND c.currentStatus IN :statuses
             """)
     List<Customers> findCustomerByHostelId(@Param("hostelId") String hostelId, @Param("statuses") List<String> statuses);
