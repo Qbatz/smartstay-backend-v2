@@ -4632,7 +4632,7 @@ public class CustomersService {
         if (purpose.equals(GetCustomersPurpose.WALK_IN)) {
             List<String> customerStatus = new ArrayList<>();
             customerStatus.add(CustomerStatus.INACTIVE.name());
-            List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
+            List<Customers> listCustomers = customersRepository.findWalkInCustomerByHostelId(hostelId, customerStatus);
             if (listCustomers != null) {
                 List<WalkInCustomers> listWalkInCustomers = listCustomers.stream().map(i -> new WalkInCustomers(i.getCustomerId(), NameUtils.getFullName(i.getFirstName(), i.getLastName()), CustomerUtils.getProfilePic(i), NameUtils.getInitials(i.getFirstName(), i.getLastName()), "+91 " + i.getMobile(), i.getEmailId())).toList();
 

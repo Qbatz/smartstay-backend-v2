@@ -28,7 +28,7 @@ public class VendorExpenseResponseMapper implements Function<ExpensePayment, Ven
                     .findFirst()
                     .orElse(null);
             if (bankingV2 != null) {
-                bankName = BankUtils.getBankName(bankingV2, expensePayment.getPaymentMethodId()).toString();
+                bankName = BankUtils.getBankName(bankingV2, expensePayment.getPaymentMethod()).toString();
             }
         }
         return new VendorExpensePaymentResponse(

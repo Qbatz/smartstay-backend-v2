@@ -1365,12 +1365,29 @@ public class BankingServiceV2 {
         if (updateBankPayload.newAccountType() != null && !updateBankPayload.newAccountType().isEmpty()) {
             if (updateBankPayload.newAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
                 targetType = BankAccountType.BANK.name();
+                if (updateBankPayload.bankAccountType() !=null) {
+
+                }
             }
             else if (updateBankPayload.newAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
                 targetType = BankAccountType.CASH.name();
             }
             else if (updateBankPayload.newAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
                 targetType = BankAccountType.CARD.name();
+                if (updateBankPayload.linkedBankId() != null) {
+                    String linkedBankId = updateBankPayload.linkedBankId();
+                    if (linkedBankId.equals(bankId)) {
+                        return new ResponseEntity<>(Utils.INVALID_LINKED_BANK_ID, HttpStatus.BAD_REQUEST);
+                    }
+                    BankingV2 linkedBank = bankingV2Repository.findByBankId(linkedBankId).orElse(null);
+                    if (linkedBank == null || linkedBank.isDeleted() || !hostelId.equals(linkedBank.getHostelId())) {
+                        return new ResponseEntity<>(Utils.INVALID_LINKED_BANK_ID, HttpStatus.BAD_REQUEST);
+                    }
+                    if (!BankAccountTypeV2.BANK.name().equalsIgnoreCase(linkedBank.getAccountType())) {
+                        return new ResponseEntity<>(Utils.SELECTED_BANK_SHOULD_BE_BANK_TYPE, HttpStatus.BAD_REQUEST);
+                    }
+                    bankingV2.setLinkedBankId(linkedBankId);
+                }
             }
         }
         if (targetType == null) {
@@ -1381,7 +1398,6 @@ public class BankingServiceV2 {
         String accountHolderName = updateBankPayload.accountHolderName();
         String accountNo = updateBankPayload.accountNo();
         String cardNumber = updateBankPayload.cardNumber();
-
 
 
         switch (targetType) {
@@ -1972,10 +1988,20 @@ public class BankingServiceV2 {
         else {
             listBankingV2 = bankingV2Repository.findAllByHostelIdAndIsActiveTrue(hostelId);
         }
+        List<Users> listUsers = new ArrayList<>();
+        if (listBankingV2 != null) {
+            List<String> responsiblePersons = listBankingV2
+                    .stream()
+                    .filter(i -> i.getResponsiblePerson() != null)
+                    .map(BankingV2::getResponsiblePerson)
+                    .toList();
+            listUsers = usersService.findAllUsersFromUserId(responsiblePersons);
+        }
 
+        List<BankingV2> finalListBankingV1 = listBankingV2;
         List<BankV2List> bankingListV2 = listBankingV2
                 .stream()
-                .map(i -> new BankingV2ListMapper().apply(i))
+                .map(i -> new BankingV2ListMapper(finalListBankingV1, listUsers).apply(i))
                 .toList();
 
         Page<BankTransactionsV1> txnPage =

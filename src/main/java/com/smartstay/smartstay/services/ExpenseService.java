@@ -837,7 +837,7 @@ public class ExpenseService {
         payment.setVendorId(vendorId);
         payment.setPaidAmount(paidAmount);
         payment.setBankId(bankId);
-        payment.setPaymentMethodId(paymentMethodId);
+        payment.setPaymentMethod(paymentMethodId);
         payment.setPaymentDate(paymentDate);
         payment.setTransactionId(transactionId);
         payment.setNotes(notes);

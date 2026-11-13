@@ -2360,8 +2360,14 @@ public class InvoiceV1Service {
                 }
             }
 
-            double invoiceAmount = invoicesV1.getInvoiceAmount();
-            double payableAmount = invoicesV1.getPayableAmount();
+            double invoiceAmount = 0.0;
+            if (invoicesV1.getInvoiceAmount() != null) {
+                invoiceAmount = invoicesV1.getInvoiceAmount();
+            }
+            double payableAmount = 0.0;
+            if (invoicesV1.getPayableAmount() != null) {
+                payableAmount = invoicesV1.getPayableAmount();
+            }
             double differenceAmount = Utils.roundOffWithTwoDigit(payableAmount - invoiceAmount);
 
             invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
@@ -7367,6 +7373,8 @@ public class InvoiceV1Service {
         invoicesV1.setInvoiceType(invoiceType);
         invoicesV1.setBasePrice(invoiceAmount);
         invoicesV1.setTotalAmount(Utils.roundOfDouble(totalAmt));
+        invoicesV1.setInvoiceAmount(Utils.roundOffWithTwoDigit(totalAmt));
+        invoicesV1.setPayableAmount(Utils.roundOfDouble(totalAmt));
         invoicesV1.setPaidAmount(0.0);
         invoicesV1.setBalanceAmount(0.0);
         invoicesV1.setSubTotal(invoiceAmount);
@@ -7400,7 +7408,7 @@ public class InvoiceV1Service {
                 .stream()
                 .map(i -> {
                     InvoiceItems invItm = new InvoiceItems();
-                    invItm.setAmount(i.amount());
+                    invItm.setAmount(Utils.roundOffWithTwoDigit(i.amount()));
                     invItm.setInvoice(invoicesV1);
                     if (i.invoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
                         invItm.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());

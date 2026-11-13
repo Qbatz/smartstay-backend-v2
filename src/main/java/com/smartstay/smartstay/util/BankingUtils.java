@@ -61,7 +61,11 @@ public class BankingUtils {
                             .findFirst()
                             .orElse(null);
                     if (bm != null) {
-                        return new AccountDetails(bankingV2.getAccountNumber(), bankingV2.getIfscCode(), bankingV2.getBankName(), bm.getUpiId(), bm.getQrImage());
+                        StringBuilder builder = new StringBuilder();
+                        builder.append(bm.getPaymentMethod());
+                        builder.append("-");
+                        builder.append(bm.getDisplayName());
+                        return new AccountDetails(bankingV2.getAccountNumber(), bankingV2.getIfscCode(), builder.toString(), bm.getUpiId(), bm.getQrImage());
                     }
                 }
                 return null;

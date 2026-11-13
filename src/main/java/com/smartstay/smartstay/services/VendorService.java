@@ -1445,7 +1445,7 @@ public class VendorService {
             ExpensesV1 expense = expensesById.get(requested.expenseId());
             payments.add(buildPayment(expense.getExpenseId(), null, expense.getHostelId(), vendorIdStr,
                     requested.paidAmount() != null ? requested.paidAmount() : 0.0,
-                    payload.paymentMethod(), payload.bankId(), paymentDate, payload.transactionId(),
+                    oldBankToNewBankInfo.paymentMethodId(), oldBankToNewBankInfo.bankId(), paymentDate, payload.transactionId(),
                     payload.notes(), imageUrls, auditUser, auditNow));
         }
         expensePaymentRepository.saveAll(payments);
