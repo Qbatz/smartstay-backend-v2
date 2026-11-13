@@ -4466,6 +4466,17 @@ public class CustomersService {
         return listCustomers;
     }
 
+    public List<Customers> searchCustomerByFullName(String hostelId, String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Customers> listCustomers = customersRepository.searchByHostelIdAndFullName(hostelId, keyword.trim());
+        if (listCustomers == null) {
+            return new ArrayList<>();
+        }
+        return listCustomers;
+    }
+
     public ResponseEntity<?> initializeCancelCheckout(String hostelId, String customerId) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
