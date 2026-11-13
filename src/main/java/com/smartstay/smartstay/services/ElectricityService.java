@@ -849,7 +849,7 @@ public class ElectricityService {
 
     }
 
-    public ResponseEntity<?> getCustomersListElectricity(String hostelId) {
+    public ResponseEntity<?> getCustomersListElectricity(String hostelId, int page, int size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -878,15 +878,43 @@ public class ElectricityService {
         List<Integer> deletedRooms = listRooms.stream().map(Rooms::getRoomId).toList();
 
 
-        List<CustomersList> listCustomers = new ArrayList<>();
         List<Integer> roomIds = electricityReadingRepository.getRoomIds(hostelId, deletedRooms);
         List<ElectricityCustomersList> electricityCustomersLists = ebHistoryService.getCustomerListFromRooms(roomIds);
-        listCustomers.addAll(electricityCustomersLists.stream().map(item -> {
-            return new CustomersListMapper().apply(item);
-        }).toList());
 
+        if ("web".equalsIgnoreCase(authentication.getSource())) {
+            List<CustomersList> listCustomers = new ArrayList<>();
+            listCustomers.addAll(electricityCustomersLists.stream().map(item -> {
+                return new CustomersListMapper().apply(item);
+            }).toList());
 
-        return new ResponseEntity<>(listCustomers, HttpStatus.OK);
+            return new ResponseEntity<>(listCustomers, HttpStatus.OK);
+        }
+
+        List<ElectricityCustomersList> sortedReadings = new ArrayList<>(electricityCustomersLists);
+        sortedReadings.sort(Comparator.comparing(ElectricityCustomersList::getEndDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(ElectricityCustomersList::getCustomerId, Comparator.nullsLast(Comparator.naturalOrder())));
+
+        int totalReadings = sortedReadings.size();
+        int itemPerPage = size <= 0 ? 10 : size;
+        int currentPage = page <= 0 ? 1 : page;
+        int totalPages = (int) Math.ceil((double) totalReadings / itemPerPage);
+
+        long offset = (long) (currentPage - 1) * itemPerPage;
+        int fromIndex = (int) Math.min(offset, totalReadings);
+        int toIndex = (int) Math.min(offset + itemPerPage, totalReadings);
+
+        List<CustomersList> pagedReadings = sortedReadings.subList(fromIndex, toIndex)
+                .stream()
+                .map(item -> new CustomersListMapper().apply(item))
+                .toList();
+
+        ElectricityCustomersMobileList response = new ElectricityCustomersMobileList(hostelId,
+                currentPage,
+                totalPages,
+                itemPerPage,
+                pagedReadings);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getRoomReadingsHistory(String hostelId, Integer roomId) {
