@@ -465,9 +465,20 @@ public class CustomersService {
         }).collect(Collectors.toList());
 
         listCustomers.sort(Comparator.comparing(com.smartstay.smartstay.responses.customer.CustomerData::floorId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::roomId, Comparator.nullsFirst(Utils::compareNumericIds)).thenComparing(com.smartstay.smartstay.responses.customer.CustomerData::bedId, Comparator.nullsFirst(Utils::compareNumericIds)));
+        int noOfTenants = listCustomers.size();
+        int itemPerPage = (size == null || size <= 0) ? 10 : size;
+        int currentPage = (page == null || page <= 0) ? 1 : page;
+        int totalPages = (int) Math.ceil((double) noOfTenants / itemPerPage);
+
+        long offset = (long) (currentPage - 1) * itemPerPage;
+        int fromIndex = (int) Math.min(offset, noOfTenants);
+        int toIndex = (int) Math.min(offset + itemPerPage, noOfTenants);
+        List<com.smartstay.smartstay.responses.customer.CustomerData> pagedCustomers =
+                new ArrayList<>(listCustomers.subList(fromIndex, toIndex));
+
         FilterOptions filterOptions = getTenantFilterOptions(hostelId);
-        CustomersList response = new CustomersList(hostelId, listCustomers.size(), filterOptions, listCustomers,
-                bankingService.getAllBankForReturn(hostelId));
+        CustomersList response = new CustomersList(hostelId, noOfTenants, currentPage, totalPages, itemPerPage,
+                filterOptions, pagedCustomers, bankingService.getAllBankForReturn(hostelId));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -4358,7 +4369,7 @@ public class CustomersService {
         customersRepository.save(customers);
     }
 
-    public ResponseEntity<?> getCheckoutCustomers(String hostelId, String name) {
+    public ResponseEntity<?> getCheckoutCustomers(String hostelId, String name, Integer page, Integer size) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -4387,7 +4398,23 @@ public class CustomersService {
             return new CheckoutCustomers(item.getFirstName(), item.getLastName(), fullName, item.getCity(), item.getState(), item.getCountry(), item.getMobile(), currentStatus, item.getEmailId(), profilePicStr, item.getBedId(), item.getFloorId(), item.getRoomId(), item.getCustomerId(), initials, Utils.dateToString(item.getExpectedJoiningDate()), Utils.dateToString(item.getActualJoiningDate()), item.getCountryCode(), Utils.dateToString(item.getCreatedAt()), item.getBedName(), item.getRoomName(), item.getFloorName(), Utils.dateToString(item.getCheckoutDate()));
         }).toList();
 
-        CheckoutList checkoutList = new CheckoutList(hostelId, listCustomers.size(), null, listCustomers);
+        if ("web".equalsIgnoreCase(authentication.getSource())) {
+            CheckoutList checkoutList = new CheckoutList(hostelId, listCustomers.size(), null, listCustomers);
+            return new ResponseEntity<>(checkoutList, HttpStatus.OK);
+        }
+
+        int noOfTenants = listCustomers.size();
+        int itemPerPage = (size == null || size <= 0) ? 10 : size;
+        int currentPage = (page == null || page <= 0) ? 1 : page;
+        int totalPages = (int) Math.ceil((double) noOfTenants / itemPerPage);
+
+        long offset = (long) (currentPage - 1) * itemPerPage;
+        int fromIndex = (int) Math.min(offset, noOfTenants);
+        int toIndex = (int) Math.min(offset + itemPerPage, noOfTenants);
+        List<CheckoutCustomers> pagedCustomers = new ArrayList<>(listCustomers.subList(fromIndex, toIndex));
+
+        CheckoutMobileList checkoutList = new CheckoutMobileList(hostelId, noOfTenants, currentPage, totalPages,
+                itemPerPage, null, pagedCustomers);
 
         return new ResponseEntity<>(checkoutList, HttpStatus.OK);
     }

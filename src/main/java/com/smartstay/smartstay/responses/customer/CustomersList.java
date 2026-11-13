@@ -5,6 +5,12 @@ import com.smartstay.smartstay.responses.banking.DebitsBank;
 
 import java.util.List;
 
-public record CustomersList(String hostelId, int noOfTenants, FilterOptions filterOption, List<CustomerData> listCustomers,
+public record CustomersList(String hostelId,
+                            int noOfTenants,
+                            int currentPage,
+                            int totalPages,
+                            int itemPerPage,
+                            FilterOptions filterOption,
+                            List<CustomerData> listCustomers,
                             List<DebitsBank> banks) {
 }

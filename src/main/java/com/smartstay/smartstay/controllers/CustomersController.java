@@ -125,8 +125,11 @@ public class CustomersController {
         return customersService.initializeCancelCheckout(hostelId, customerId);
     }
     @GetMapping("/checkout/{hostelId}")
-    public ResponseEntity<?> checkoutCustomers(@PathVariable("hostelId") String hostelId, @RequestParam(value = "name", required = false) String name) {
-        return customersService.getCheckoutCustomers(hostelId, name);
+    public ResponseEntity<?> checkoutCustomers(@PathVariable("hostelId") String hostelId,
+                                               @RequestParam(value = "name", required = false) String name,
+                                               @RequestParam(value = "page", defaultValue = "1") int page,
+                                               @RequestParam(value = "size", defaultValue = "10") int size) {
+        return customersService.getCheckoutCustomers(hostelId, name, page, size);
     }
     @DeleteMapping("/{hostelId}/{customerId}")
     public ResponseEntity<?> deleteCustomers(@PathVariable("hostelId") String hostelId, @PathVariable("customerId") String customerId) {
