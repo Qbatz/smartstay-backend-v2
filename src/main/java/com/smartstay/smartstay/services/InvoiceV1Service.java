@@ -6775,6 +6775,7 @@ public class InvoiceV1Service {
             invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
             invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
             invoiceTypes.add(InvoiceType.OTHER.name());
+            invoiceTypes.add(InvoiceType.EB.name());
         }
 
         List<String> createdByUsers = null;
