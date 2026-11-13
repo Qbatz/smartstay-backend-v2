@@ -533,6 +533,7 @@ public class ComplaintsService {
                 currentPage,
                 totalPages,
                 itemPerPage,
+                buildComplaintFilterOptions(),
                 listComplaintsResponse);
 
         return new ResponseEntity<>(complaintResponse, HttpStatus.OK);

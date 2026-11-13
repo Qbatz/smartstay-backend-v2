@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.dto.complaint;
 
+import com.smartstay.smartstay.filterOptions.complaints.ComplaintFilterOptions;
+
 import java.util.List;
 
 public record ComplaintMobileResponse(String hostelId,
@@ -9,5 +11,6 @@ public record ComplaintMobileResponse(String hostelId,
                                       int currentPage,
                                       int totalPages,
                                       int itemPerPage,
+                                      ComplaintFilterOptions filterOption,
                                       List<ComplaintResponseDto> complaintsList) {
 }
