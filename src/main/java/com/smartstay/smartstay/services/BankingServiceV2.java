@@ -1966,7 +1966,7 @@ public class BankingServiceV2 {
         List<BankingV2> bankWithNoTransactions =  new ArrayList<>();
         if (!bankIdsHavingActiveTransactions.isEmpty()) {
             listBankingV2 = bankingV2Repository.findAllByBankIds(bankIdsHavingActiveTransactions);
-            bankWithNoTransactions = bankingV2Repository.findAllByBankIdNotInAndIsActiveTrue(bankIdsHavingActiveTransactions);
+            bankWithNoTransactions = bankingV2Repository.findAllByBankIdNotInAndIsActiveTrue(hostelId, bankIdsHavingActiveTransactions);
             listBankingV2.addAll(bankWithNoTransactions);
         }
         else {
