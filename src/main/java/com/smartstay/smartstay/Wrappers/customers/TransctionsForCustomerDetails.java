@@ -1,14 +1,12 @@
 package com.smartstay.smartstay.Wrappers.customers;
 
-import com.smartstay.smartstay.dao.BankingV1;
 import com.smartstay.smartstay.dao.BankingV2;
 import com.smartstay.smartstay.dao.InvoicesV1;
 import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.dto.customer.TransactionDto;
 import com.smartstay.smartstay.ennum.BankAccountType;
-import com.smartstay.smartstay.ennum.InvoiceType;
+import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
-import org.apache.catalina.User;
 
 import java.util.List;
 import java.util.function.Function;
@@ -29,56 +27,52 @@ public class TransctionsForCustomerDetails implements Function<TransactionDto, c
     public com.smartstay.smartstay.responses.customer.TransactionDto apply(TransactionDto transactionDto) {
         String billName = null;
         String paymentMode = null;
+        String bankName = null;
+        String accountHolderName = null;
         String paidTo = null;
         StringBuilder rentMonth = new StringBuilder();
         boolean isInvoiceCancelled = false;
 
-        InvoicesV1 invoicesV1 = listInvoices
-                .stream()
-                .filter(i -> i.getInvoiceId().equalsIgnoreCase(transactionDto.invoiceId()))
-                .findFirst()
-                .orElse(null);
+        InvoicesV1 invoicesV1 = null;
+        if (listInvoices != null) {
+            invoicesV1 = listInvoices
+                    .stream()
+                    .filter(i -> i.getInvoiceId().equalsIgnoreCase(transactionDto.invoiceId()))
+                    .findFirst()
+                    .orElse(null);
+        }
 
-        BankingV2 bankingV2 = listBankings
-                .stream()
-                .filter(i -> i.getBankId().equalsIgnoreCase(transactionDto.bankId()))
-                .findFirst()
-                .orElse(null);
+        BankingV2 bankingV2 = null;
+        if (listBankings != null) {
+            bankingV2 = listBankings
+                    .stream()
+                    .filter(i -> i.getBankId().equalsIgnoreCase(transactionDto.bankId()))
+                    .findFirst()
+                    .orElse(null);
+        }
 
         if (invoicesV1 != null) {
-            if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
-                billName = "Advance";
-            }
-            else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.SETTLEMENT.name())) {
-                billName = "Settlement";
-            }
-            else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())) {
-                billName = "Rent";
-                String invoiceStart = Utils.dateToDateMonth(invoicesV1.getInvoiceStartDate());
-                String invoiceEnd = Utils.dateToDateMonth(invoicesV1.getInvoiceEndDate());
+            String invoiceType = invoicesV1.getInvoiceType() != null
+                    ? invoicesV1.getInvoiceType().trim().toUpperCase()
+                    : "";
 
-                rentMonth.append(invoiceStart);
+            billName = switch (invoiceType) {
+                case "ADVANCE" -> "Advance";
+                case "ADDITIONAL_ADVANCE" -> "Additional Advance";
+                case "SETTLEMENT" -> "Settlement";
+                case "RENT" -> "Rent";
+                case "REASSIGN_RENT" -> "Bed change - Rent";
+                case "BOOKING" -> "Booking";
+                case "AMOUNT_HOLDING" -> "Advance Holding";
+                case "EB_HOLDING" -> "EB Holding";
+                case "EB" -> "EB";
+                default -> "Other";
+            };
+
+            if (invoiceType.equals("RENT") || invoiceType.equals("REASSIGN_RENT")) {
+                rentMonth.append(Utils.dateToDateMonth(invoicesV1.getInvoiceStartDate()));
                 rentMonth.append(" - ");
-                rentMonth.append(invoiceEnd);
-            }
-            else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
-                billName = "Bed change - Rent";
-
-                String invoiceStart = Utils.dateToDateMonth(invoicesV1.getInvoiceStartDate());
-                String invoiceEnd = Utils.dateToDateMonth(invoicesV1.getInvoiceEndDate());
-
-                rentMonth.append(invoiceStart);
-                rentMonth.append(" - ");
-                rentMonth.append(invoiceEnd);
-            }
-            else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.BOOKING.name())) {
-                billName = "Booking";
-            }
-            else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.AMOUNT_HOLDING.name())) {
-                billName = "Advance Holding";
-            }
-            else if (invoicesV1.getInvoiceType().equalsIgnoreCase(InvoiceType.EB_HOLDING.name())) {
-                billName = "EB Holding";
+                rentMonth.append(Utils.dateToDateMonth(invoicesV1.getInvoiceEndDate()));
             }
 
             if (invoicesV1.isCancelled()) {
@@ -87,33 +81,30 @@ public class TransctionsForCustomerDetails implements Function<TransactionDto, c
         }
 
         if (bankingV2 != null) {
-            if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
-                paymentMode = "Cash";
-            }
-            else if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
-                paymentMode = "Card";
-            }
-            else if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
-                paymentMode = "Bank";
+            if (bankingV2.getAccountType() != null) {
+                if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
+                    paymentMode = "Cash";
+                }
+                else if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
+                    paymentMode = "Card";
+                }
+                else if (bankingV2.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
+                    paymentMode = "Bank";
+                }
             }
 
-            Users users = listUsers.stream()
-                    .filter(i -> i.getUserId().equalsIgnoreCase(bankingV2.getUserId()))
+            bankName = isPresent(bankingV2.getBankName()) ? bankingV2.getBankName() : bankingV2.getDisplayName();
+            accountHolderName = bankingV2.getAccountHolderName();
+        }
+
+        if (listUsers != null && transactionDto.collectedBy() != null) {
+            Users collectedBy = listUsers
+                    .stream()
+                    .filter(i -> i.getUserId().equalsIgnoreCase(transactionDto.collectedBy()))
                     .findFirst()
                     .orElse(null);
-            if (users != null) {
-                StringBuilder fullName = new StringBuilder();
-                if (users.getFirstName() != null) {
-                    fullName.append(users.getFirstName());
-                }
-                if (users.getLastName() != null) {
-                    if (users.getFirstName() != null && !users.getFirstName().equalsIgnoreCase(" ")) {
-                        fullName.append(" ");
-                    }
-                    fullName.append(users.getLastName());
-                }
-
-                paidTo = fullName.toString();
+            if (collectedBy != null) {
+                paidTo = NameUtils.getFullName(collectedBy.getFirstName(), collectedBy.getLastName());
             }
         }
 
@@ -127,7 +118,13 @@ public class TransctionsForCustomerDetails implements Function<TransactionDto, c
                 "Paid",
                 paidTo,
                 paymentMode,
+                bankName,
+                accountHolderName,
                 rentMonth.toString(),
                 isInvoiceCancelled);
+    }
+
+    private boolean isPresent(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

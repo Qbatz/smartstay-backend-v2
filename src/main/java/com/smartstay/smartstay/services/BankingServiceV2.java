@@ -754,9 +754,16 @@ public class BankingServiceV2 {
         TransferEndpoint creditCard = to.endpoint();
 
         Date now = new Date();
-        Date settlementDate = resolveTransactionDate(payload.settlementDate(), now);
-        if (settlementDate == null) {
-            return badRequest(Utils.ADD_MONEY_TRANSACTION_DATE_INVALID);
+        Date settlementDate = now;
+        if (isPresent(payload.settlementDate())) {
+            Date parsedSettlementDate = Utils.convertDmyStringToDate(payload.settlementDate());
+            if (parsedSettlementDate == null) {
+                return badRequest(Utils.SETTLEMENT_DATE_INVALID);
+            }
+            if (Utils.compareWithTwoDates(parsedSettlementDate, now) > 0) {
+                return badRequest(Utils.SETTLEMENT_DATE_FUTURE_NOT_ALLOWED);
+            }
+            settlementDate = isSameDay(parsedSettlementDate, now) ? now : Utils.convertToTimeStamp(parsedSettlementDate);
         }
 
         String isDebitTransactionRecorded = transactionService.recordDebitTransactionForCCPayment(hostelId, bankingV2FromAccount, payload.paymentMethod(), amount, payload.description(), payload.transactionId(), settlementDate);
