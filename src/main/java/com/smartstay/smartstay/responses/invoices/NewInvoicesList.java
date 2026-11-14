@@ -7,6 +7,8 @@ import java.util.List;
 
 public record NewInvoicesList( String hostelId,
                                PaginationSummary paginationSummary,
+                               boolean hasInvoiceInReview,
+                               int reviewInvoiceCount,
                                InvoiceFilterOptions filterOptions,
                               List<InvoicesList> listInvoices) {
 }

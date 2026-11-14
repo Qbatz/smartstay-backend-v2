@@ -935,7 +935,14 @@ public class InvoiceV1Service {
                         pageList.getPageable().getPageNumber() + 1,
                         pageList.getPageable().getPageSize());
             }
-            NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, paginationSummary, invoiceFilterOptions, newInvoicesList);
+            List<InvoiceDrafts> invoiceDrafts = invoiceDraftsService.getAvailableInvoice(hostelId);
+            int reviewCount = 0;
+            boolean isInvoiceAvailableInDrafts  = false;
+            if (invoiceDrafts != null) {
+                reviewCount = invoiceDrafts.size();
+                isInvoiceAvailableInDrafts = true;
+            }
+            NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, paginationSummary, isInvoiceAvailableInDrafts, reviewCount, invoiceFilterOptions, newInvoicesList);
             return new ResponseEntity<>(newInvoicesListResponse, HttpStatus.OK);
         }
     }
@@ -1013,8 +1020,15 @@ public class InvoiceV1Service {
         if (listInvoicesForSummary != null) {
             invoiceSummaryInfo = getSummary(hostelId, totalInvoices, listInvoicesForSummary, currentMonthCollection);
         }
+        List<InvoiceDrafts> invoiceDrafts = invoiceDraftsService.getAvailableInvoice(hostelId);
+        int reviewCount = 0;
+        boolean isInvoiceAvailableInDrafts  = false;
+        if (invoiceDrafts != null) {
+            reviewCount = invoiceDrafts.size();
+            isInvoiceAvailableInDrafts = true;
+        }
 
-        InvoiceWebResponses invoiceWebResponses = new InvoiceWebResponses(hostelId, filterOptions, paginationSummary, invoiceSummaryInfo, invoicesLists);
+        InvoiceWebResponses invoiceWebResponses = new InvoiceWebResponses(hostelId, isInvoiceAvailableInDrafts, reviewCount, filterOptions, paginationSummary, invoiceSummaryInfo, invoicesLists);
         return new ResponseEntity<>(invoiceWebResponses, HttpStatus.OK);
     }
 

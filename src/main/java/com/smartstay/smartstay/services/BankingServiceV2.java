@@ -1988,7 +1988,7 @@ public class BankingServiceV2 {
         else {
             listBankingV2 = bankingV2Repository.findAllByHostelIdAndIsActiveTrue(hostelId);
         }
-        List<Users> listUsers = new ArrayList<>();
+        List<Users> listUsers;
         if (listBankingV2 != null) {
             List<String> responsiblePersons = listBankingV2
                     .stream()
@@ -1996,6 +1996,8 @@ public class BankingServiceV2 {
                     .map(BankingV2::getResponsiblePerson)
                     .toList();
             listUsers = usersService.findAllUsersFromUserId(responsiblePersons);
+        } else {
+            listUsers = new ArrayList<>();
         }
 
         List<BankingV2> finalListBankingV1 = listBankingV2;
@@ -2030,11 +2032,11 @@ public class BankingServiceV2 {
 
         Set<String> userIds = new HashSet<>();
 
-        List<Users> listUsers = usersService.findUsersByUserIds(new ArrayList<>(userIds));
+        List<Users> listUsers1 = usersService.findUsersByUserIds(new ArrayList<>(userIds));
         List<BankingV2> finalListBankingV = listBankingV2;
         List<BankTransactionResponse> items = transactions
                 .stream()
-                .map(txn -> new BankTransactionListMapper(finalListBankingV, listUsers).apply(txn))
+                .map(txn -> new BankTransactionListMapper(finalListBankingV, listUsers1).apply(txn))
                 .collect(Collectors.toList());
 
 //        List<PaymentMethodOptionResponse> bankList = bankId == null

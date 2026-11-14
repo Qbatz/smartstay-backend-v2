@@ -4,6 +4,7 @@ import com.smartstay.smartstay.Wrappers.amenity.AmenityRequestMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.AmenitiesV1;
 import com.smartstay.smartstay.dao.AmenityRequest;
+import com.smartstay.smartstay.dao.CustomersAmenity;
 import com.smartstay.smartstay.dto.amenity.AmenityRequestDTO;
 import com.smartstay.smartstay.repositories.AmenityRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
