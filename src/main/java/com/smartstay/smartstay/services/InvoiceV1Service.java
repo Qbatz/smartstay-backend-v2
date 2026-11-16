@@ -935,7 +935,14 @@ public class InvoiceV1Service {
                         pageList.getPageable().getPageNumber() + 1,
                         pageList.getPageable().getPageSize());
             }
-            NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, paginationSummary, invoiceFilterOptions, newInvoicesList);
+            List<InvoiceDrafts> invoiceDrafts = invoiceDraftsService.getAvailableInvoice(hostelId);
+            int reviewCount = 0;
+            boolean isInvoiceAvailableInDrafts  = false;
+            if (invoiceDrafts != null) {
+                reviewCount = invoiceDrafts.size();
+                isInvoiceAvailableInDrafts = true;
+            }
+            NewInvoicesList newInvoicesListResponse = new NewInvoicesList(hostelId, paginationSummary, isInvoiceAvailableInDrafts, reviewCount, invoiceFilterOptions, newInvoicesList);
             return new ResponseEntity<>(newInvoicesListResponse, HttpStatus.OK);
         }
     }
@@ -1013,8 +1020,15 @@ public class InvoiceV1Service {
         if (listInvoicesForSummary != null) {
             invoiceSummaryInfo = getSummary(hostelId, totalInvoices, listInvoicesForSummary, currentMonthCollection);
         }
+        List<InvoiceDrafts> invoiceDrafts = invoiceDraftsService.getAvailableInvoice(hostelId);
+        int reviewCount = 0;
+        boolean isInvoiceAvailableInDrafts  = false;
+        if (invoiceDrafts != null) {
+            reviewCount = invoiceDrafts.size();
+            isInvoiceAvailableInDrafts = true;
+        }
 
-        InvoiceWebResponses invoiceWebResponses = new InvoiceWebResponses(hostelId, filterOptions, paginationSummary, invoiceSummaryInfo, invoicesLists);
+        InvoiceWebResponses invoiceWebResponses = new InvoiceWebResponses(hostelId, isInvoiceAvailableInDrafts, reviewCount, filterOptions, paginationSummary, invoiceSummaryInfo, invoicesLists);
         return new ResponseEntity<>(invoiceWebResponses, HttpStatus.OK);
     }
 
@@ -2360,8 +2374,14 @@ public class InvoiceV1Service {
                 }
             }
 
-            double invoiceAmount = invoicesV1.getInvoiceAmount();
-            double payableAmount = invoicesV1.getPayableAmount();
+            double invoiceAmount = 0.0;
+            if (invoicesV1.getInvoiceAmount() != null) {
+                invoiceAmount = invoicesV1.getInvoiceAmount();
+            }
+            double payableAmount = 0.0;
+            if (invoicesV1.getPayableAmount() != null) {
+                payableAmount = invoicesV1.getPayableAmount();
+            }
             double differenceAmount = Utils.roundOffWithTwoDigit(payableAmount - invoiceAmount);
 
             invoiceInfo = new InvoiceInfo(invoicesV1.getInvoiceId(),
@@ -6783,6 +6803,7 @@ public class InvoiceV1Service {
             invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
             invoiceTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
             invoiceTypes.add(InvoiceType.OTHER.name());
+            invoiceTypes.add(InvoiceType.EB.name());
         }
 
         List<String> createdByUsers = null;
@@ -7366,6 +7387,8 @@ public class InvoiceV1Service {
         invoicesV1.setInvoiceType(invoiceType);
         invoicesV1.setBasePrice(invoiceAmount);
         invoicesV1.setTotalAmount(Utils.roundOfDouble(totalAmt));
+        invoicesV1.setInvoiceAmount(Utils.roundOffWithTwoDigit(totalAmt));
+        invoicesV1.setPayableAmount(Utils.roundOfDouble(totalAmt));
         invoicesV1.setPaidAmount(0.0);
         invoicesV1.setBalanceAmount(0.0);
         invoicesV1.setSubTotal(invoiceAmount);
@@ -7399,7 +7422,7 @@ public class InvoiceV1Service {
                 .stream()
                 .map(i -> {
                     InvoiceItems invItm = new InvoiceItems();
-                    invItm.setAmount(i.amount());
+                    invItm.setAmount(Utils.roundOffWithTwoDigit(i.amount()));
                     invItm.setInvoice(invoicesV1);
                     if (i.invoiceItem().equalsIgnoreCase(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name())) {
                         invItm.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());

@@ -6,6 +6,8 @@ import com.smartstay.smartstay.filterOptions.invoice.InvoiceFilterOptions;
 import java.util.List;
 
 public record InvoiceWebResponses(String hostelId,
+                                  boolean hasInvoiceInReview,
+                                  int reviewInvoiceCount,
                                   InvoiceFilterOptions filterOptions,
                                   PaginationSummary paginationSummary,
                                   InvoiceSummaryInfo invoiceSummary,

@@ -30,7 +30,7 @@ public class ExpenseDetailPaymentMapper implements Function<ExpensePayment, Expe
 
         String bankName = null;
         if (paymentBank != null) {
-            bankName = BankUtils.getBankName(paymentBank, p.getPaymentMethodId()).toString();
+            bankName = BankUtils.getBankName(paymentBank, p.getPaymentMethod()).toString();
         }
         String userName = null;
         if (users != null && users.size() > 0) {

@@ -115,7 +115,7 @@ public class BedsService {
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
 
-        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_PAYING_GUEST, Utils.PERMISSION_READ)) {
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         Beds beds = bedsRepository.findById(id).orElse(null);

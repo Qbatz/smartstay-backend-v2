@@ -203,7 +203,6 @@ public class BankingServiceV2 {
         }
         bank.setTransactionType(BankPurpose.BOTH.name());
         bank.setBalance(payload.openingBalance() != null ? payload.openingBalance() : 0.0);
-        bank.setActive(true);
         bank.setDeleted(false);
         bank.setDefaultAccount(Boolean.TRUE.equals(payload.isDefault()));
         bank.setCreatedBy(users.getUserId());
@@ -560,7 +559,7 @@ public class BankingServiceV2 {
         if (bank == null) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
-        if (!bank.isActive()) {
+        if (bank.isDeleted()) {
             return new ResponseEntity<>(Utils.ADD_MONEY_ACCOUNT_INACTIVE, HttpStatus.BAD_REQUEST);
         }
 
@@ -1365,12 +1364,29 @@ public class BankingServiceV2 {
         if (updateBankPayload.newAccountType() != null && !updateBankPayload.newAccountType().isEmpty()) {
             if (updateBankPayload.newAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
                 targetType = BankAccountType.BANK.name();
+                if (updateBankPayload.bankAccountType() !=null) {
+
+                }
             }
             else if (updateBankPayload.newAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
                 targetType = BankAccountType.CASH.name();
             }
             else if (updateBankPayload.newAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
                 targetType = BankAccountType.CARD.name();
+                if (updateBankPayload.linkedBankId() != null) {
+                    String linkedBankId = updateBankPayload.linkedBankId();
+                    if (linkedBankId.equals(bankId)) {
+                        return new ResponseEntity<>(Utils.INVALID_LINKED_BANK_ID, HttpStatus.BAD_REQUEST);
+                    }
+                    BankingV2 linkedBank = bankingV2Repository.findByBankId(linkedBankId).orElse(null);
+                    if (linkedBank == null || linkedBank.isDeleted() || !hostelId.equals(linkedBank.getHostelId())) {
+                        return new ResponseEntity<>(Utils.INVALID_LINKED_BANK_ID, HttpStatus.BAD_REQUEST);
+                    }
+                    if (!BankAccountTypeV2.BANK.name().equalsIgnoreCase(linkedBank.getAccountType())) {
+                        return new ResponseEntity<>(Utils.SELECTED_BANK_SHOULD_BE_BANK_TYPE, HttpStatus.BAD_REQUEST);
+                    }
+                    bankingV2.setLinkedBankId(linkedBankId);
+                }
             }
         }
         if (targetType == null) {
@@ -1381,7 +1397,6 @@ public class BankingServiceV2 {
         String accountHolderName = updateBankPayload.accountHolderName();
         String accountNo = updateBankPayload.accountNo();
         String cardNumber = updateBankPayload.cardNumber();
-
 
 
         switch (targetType) {
@@ -1676,9 +1691,6 @@ public class BankingServiceV2 {
             if (bank.isDeleted() || !hostelId.equals(bank.getHostelId())) {
                 return EndpointResult.fail(invalid);
             }
-            if (!bank.isActive()) {
-                return EndpointResult.fail(Utils.TRANSFER_ACCOUNT_INACTIVE);
-            }
             return EndpointResult.ok(new TransferEndpoint(bank, null, null));
         }
 
@@ -1691,7 +1703,7 @@ public class BankingServiceV2 {
                     || !hostelId.equals(method.getHostelId())) {
                 return EndpointResult.fail(invalid);
             }
-            if (!parent.isActive()) {
+            if (parent.isDeleted()) {
                 return EndpointResult.fail(Utils.TRANSFER_ACCOUNT_INACTIVE);
             }
             return EndpointResult.ok(new TransferEndpoint(null, method, parent));
@@ -1966,16 +1978,28 @@ public class BankingServiceV2 {
         List<BankingV2> bankWithNoTransactions =  new ArrayList<>();
         if (!bankIdsHavingActiveTransactions.isEmpty()) {
             listBankingV2 = bankingV2Repository.findAllByBankIds(bankIdsHavingActiveTransactions);
-            bankWithNoTransactions = bankingV2Repository.findAllByBankIdNotInAndIsActiveTrue(bankIdsHavingActiveTransactions);
+            bankWithNoTransactions = bankingV2Repository.findAllByBankIdNotInAndIsActiveTrue(hostelId, bankIdsHavingActiveTransactions);
             listBankingV2.addAll(bankWithNoTransactions);
         }
         else {
-            listBankingV2 = bankingV2Repository.findAllByHostelIdAndIsActiveTrue(hostelId);
+            listBankingV2 = bankingV2Repository.findAllByHostelIdAndIsDeletedFalse(hostelId);
+        }
+        List<Users> listUsers;
+        if (listBankingV2 != null) {
+            List<String> responsiblePersons = listBankingV2
+                    .stream()
+                    .filter(i -> i.getResponsiblePerson() != null)
+                    .map(BankingV2::getResponsiblePerson)
+                    .toList();
+            listUsers = usersService.findAllUsersFromUserId(responsiblePersons);
+        } else {
+            listUsers = new ArrayList<>();
         }
 
+        List<BankingV2> finalListBankingV1 = listBankingV2;
         List<BankV2List> bankingListV2 = listBankingV2
                 .stream()
-                .map(i -> new BankingV2ListMapper().apply(i))
+                .map(i -> new BankingV2ListMapper(finalListBankingV1, listUsers).apply(i))
                 .toList();
 
         Page<BankTransactionsV1> txnPage =
@@ -2004,11 +2028,11 @@ public class BankingServiceV2 {
 
         Set<String> userIds = new HashSet<>();
 
-        List<Users> listUsers = usersService.findUsersByUserIds(new ArrayList<>(userIds));
+        List<Users> listUsers1 = usersService.findUsersByUserIds(new ArrayList<>(userIds));
         List<BankingV2> finalListBankingV = listBankingV2;
         List<BankTransactionResponse> items = transactions
                 .stream()
-                .map(txn -> new BankTransactionListMapper(finalListBankingV, listUsers).apply(txn))
+                .map(txn -> new BankTransactionListMapper(finalListBankingV, listUsers1).apply(txn))
                 .collect(Collectors.toList());
 
 //        List<PaymentMethodOptionResponse> bankList = bankId == null
@@ -2127,7 +2151,7 @@ public class BankingServiceV2 {
         if (bank == null) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
-        if (!bank.isActive()) {
+        if (bank.isDeleted()) {
             return new ResponseEntity<>(Utils.ADD_MONEY_ACCOUNT_INACTIVE, HttpStatus.BAD_REQUEST);
         }
 
@@ -2398,7 +2422,7 @@ public class BankingServiceV2 {
     }
     
     private PaymentMethodContext loadPaymentMethodContext(String hostelId) {
-        List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsDeletedFalse(hostelId);
 
         List<BankingV2> cashAccounts = new ArrayList<>();
         List<BankingV2> bankAccounts = new ArrayList<>();

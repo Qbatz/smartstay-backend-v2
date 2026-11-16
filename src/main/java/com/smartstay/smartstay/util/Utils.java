@@ -202,6 +202,7 @@ public class Utils {
     public static final String CASH_ACCOUNT_ALREAY_EXISTS = "Cash Account already exists";
     public static final String REQUIRED_TRANSACTION_MODE = "Transaction mode required";
     public static final String INVALID_BANK_ID = "Invalid bank id";
+    public static final String INVALID_LINKED_BANK_ID = "Invalid linked bank id";
     public static final String BANK_ID_REQUIRED = "Bank id required";
     public static final String SELECTED_BANK_SHOULD_BE_BANK_TYPE = "Selected Bank should be bank type";
     public static final String EXPENSE_FULL_PAYMENT_INVALID = "For FULL payment status, paidAmount must be equal to totalAmount.";

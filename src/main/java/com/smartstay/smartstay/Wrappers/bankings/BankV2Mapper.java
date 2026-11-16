@@ -43,7 +43,7 @@ public class BankV2Mapper implements Function<BankingV2, BankV2Response> {
                 responsiblePerson,
                 bankingV2.getBranchName(),
                 bankingV2.getBalance(),
-                bankingV2.isActive(),
+                !bankingV2.isDeleted(),
                 bankingV2.isDefaultAccount());
     }
 }

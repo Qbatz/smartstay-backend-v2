@@ -41,6 +41,7 @@ public class AmenityRequestMapper implements Function<AmenityRequest, AmenityReq
         return new AmenityRequestDTO(amenityRequest.getAmenityId(),
                 amenityName,
                 Utils.dateToString(amenityRequest.getRequestedDate()),
-                amenityPrice, typeOfCalculation);
+                amenityPrice,
+                typeOfCalculation);
     }
 }

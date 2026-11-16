@@ -2090,9 +2090,9 @@ public class CustomersService {
             if (Utils.compareWithTwoDates(lDate, new Date()) > 0) {
                 return new ResponseEntity<>(Utils.FUTURE_DATES_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
             }
-             if (Utils.compareWithTwoDates(lDate, billDate.currentBillStartDate()) < 0) {
-                    return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
-            }
+//             if (Utils.compareWithTwoDates(lDate, billDate.currentBillStartDate()) < 0) {
+//                    return new ResponseEntity<>(Utils.OLD_BILLING_CYCLE_SETTLEMENT_GENERATION_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+//            }
         } else {
             lDate = new Date();
         }
@@ -4632,7 +4632,7 @@ public class CustomersService {
         if (purpose.equals(GetCustomersPurpose.WALK_IN)) {
             List<String> customerStatus = new ArrayList<>();
             customerStatus.add(CustomerStatus.INACTIVE.name());
-            List<Customers> listCustomers = customersRepository.findCustomerByHostelId(hostelId, customerStatus);
+            List<Customers> listCustomers = customersRepository.findWalkInCustomerByHostelId(hostelId, customerStatus);
             if (listCustomers != null) {
                 List<WalkInCustomers> listWalkInCustomers = listCustomers.stream().map(i -> new WalkInCustomers(i.getCustomerId(), NameUtils.getFullName(i.getFirstName(), i.getLastName()), CustomerUtils.getProfilePic(i), NameUtils.getInitials(i.getFirstName(), i.getLastName()), "+91 " + i.getMobile(), i.getEmailId())).toList();
 

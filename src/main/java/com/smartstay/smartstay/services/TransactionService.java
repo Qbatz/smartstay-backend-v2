@@ -510,19 +510,6 @@ public class TransactionService {
             bankName = BankingUtils.getBankName(bankingV2, transactionV1.getPaymentMethodId());
         }
 
-//        if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CASH.name())) {
-//            bankName = "Cash";
-//        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.CARD.name())) {
-//            bankName = "Card";
-//        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.BANK.name())) {
-//            bankName = bankingV1.getBankName() + " Bank";
-//        } else if (bankingV1.getAccountType().equalsIgnoreCase(BankAccountType.UPI.name())) {
-//            bankName = BankAccountType.UPI.name();
-//        }
-//        String account = bankingV1.getAccountHolderName() +
-//                "-" +
-//                bankName;
-
         ReceiptConfigInfo receiptConfigInfo = null;
         com.smartstay.smartstay.dao.BillTemplates hostelTemplates = templatesService.getTemplateByHostelId(hostelId);
         if (hostelTemplates != null) {
