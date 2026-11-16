@@ -203,7 +203,6 @@ public class BankingServiceV2 {
         }
         bank.setTransactionType(BankPurpose.BOTH.name());
         bank.setBalance(payload.openingBalance() != null ? payload.openingBalance() : 0.0);
-        bank.setActive(true);
         bank.setDeleted(false);
         bank.setDefaultAccount(Boolean.TRUE.equals(payload.isDefault()));
         bank.setCreatedBy(users.getUserId());
@@ -560,7 +559,7 @@ public class BankingServiceV2 {
         if (bank == null) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
-        if (!bank.isActive()) {
+        if (bank.isDeleted()) {
             return new ResponseEntity<>(Utils.ADD_MONEY_ACCOUNT_INACTIVE, HttpStatus.BAD_REQUEST);
         }
 
@@ -1692,9 +1691,6 @@ public class BankingServiceV2 {
             if (bank.isDeleted() || !hostelId.equals(bank.getHostelId())) {
                 return EndpointResult.fail(invalid);
             }
-            if (!bank.isActive()) {
-                return EndpointResult.fail(Utils.TRANSFER_ACCOUNT_INACTIVE);
-            }
             return EndpointResult.ok(new TransferEndpoint(bank, null, null));
         }
 
@@ -1707,7 +1703,7 @@ public class BankingServiceV2 {
                     || !hostelId.equals(method.getHostelId())) {
                 return EndpointResult.fail(invalid);
             }
-            if (!parent.isActive()) {
+            if (parent.isDeleted()) {
                 return EndpointResult.fail(Utils.TRANSFER_ACCOUNT_INACTIVE);
             }
             return EndpointResult.ok(new TransferEndpoint(null, method, parent));
@@ -1986,7 +1982,7 @@ public class BankingServiceV2 {
             listBankingV2.addAll(bankWithNoTransactions);
         }
         else {
-            listBankingV2 = bankingV2Repository.findAllByHostelIdAndIsActiveTrue(hostelId);
+            listBankingV2 = bankingV2Repository.findAllByHostelIdAndIsDeletedFalse(hostelId);
         }
         List<Users> listUsers;
         if (listBankingV2 != null) {
@@ -2155,7 +2151,7 @@ public class BankingServiceV2 {
         if (bank == null) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
-        if (!bank.isActive()) {
+        if (bank.isDeleted()) {
             return new ResponseEntity<>(Utils.ADD_MONEY_ACCOUNT_INACTIVE, HttpStatus.BAD_REQUEST);
         }
 
@@ -2426,7 +2422,7 @@ public class BankingServiceV2 {
     }
     
     private PaymentMethodContext loadPaymentMethodContext(String hostelId) {
-        List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        List<BankingV2> accounts = bankingV2Repository.findByHostelIdAndIsDeletedFalse(hostelId);
 
         List<BankingV2> cashAccounts = new ArrayList<>();
         List<BankingV2> bankAccounts = new ArrayList<>();

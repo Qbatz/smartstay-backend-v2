@@ -30,7 +30,7 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
     boolean existsByHostelIdAndAccountTypeAndCashAccountTypeIgnoreCaseAndResponsiblePersonIsNullAndBankIdNotAndIsDeletedFalse(
             String hostelId, String accountType, String cashAccountType, String bankId);
 
-    List<BankingV2> findByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
+    List<BankingV2> findByHostelIdAndIsDeletedFalse(String hostelId);
 
 //    @Query("""
 //           SELECT b FROM bankingv2 b WHERE b.bankId =:bankId
@@ -82,9 +82,9 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
     List<BankingV2> findAllCreditCardByHostelId(String hostelId);
 
     @Query("""
-            SELECT b FROM bankingv2 b WHERE b.hostelId = :hostelId AND b.bankId NOT IN (:bankIds) AND b.isActive = true
+            SELECT b FROM bankingv2 b WHERE b.hostelId = :hostelId AND b.bankId NOT IN (:bankIds) AND b.isDeleted = false
             """)
     List<BankingV2> findAllByBankIdNotInAndIsActiveTrue(@Param("hostelId") String hostelId,
                                                         @Param("bankIds") List<String> bankIds);
-    List<BankingV2> findAllByHostelIdAndIsActiveTrue(String hostelId);
+    List<BankingV2> findAllByHostelIdAndIsDeletedFalse(String hostelId);
 }

@@ -79,7 +79,7 @@ public class BankingV2ListMapper implements Function<BankingV2, BankV2List> {
         if (bankingV2.getLastTransactionAmount() != null) {
             lastTransactionAmount = Utils.roundOffWithTwoDigit(bankingV2.getLastTransactionAmount());
         }
-        if (!bankingV2.isActive()) {
+        if (bankingV2.isDeleted()) {
             isDeleted = true;
         }
 
