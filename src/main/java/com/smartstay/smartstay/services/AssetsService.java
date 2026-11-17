@@ -67,7 +67,7 @@ public class AssetsService {
     @Autowired
     private VendorService vendorService;
 
-    public ResponseEntity<?> getAllAssets(String hostelId, int page, int size) {
+    public ResponseEntity<?> getAllAssets(String hostelId, int page, int size, String keyword) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
@@ -81,7 +81,8 @@ public class AssetsService {
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        List<AssetAssignmentResponse> listAssets = assetsRepository.findAssetAssignmentDetails(hostelId);
+        String searchKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
+        List<AssetAssignmentResponse> listAssets = assetsRepository.findAssetAssignmentDetails(hostelId, searchKeyword);
 
         if ("web".equalsIgnoreCase(authentication.getSource())) {
             return new ResponseEntity<>(listAssets, HttpStatus.OK);

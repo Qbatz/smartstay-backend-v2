@@ -26,8 +26,9 @@ public class AssetController {
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getAllAssets(@PathVariable("hostelId") String hostelId,
             @RequestParam(value = "page", defaultValue = "1", required = false) int page,
-            @RequestParam(value = "size", defaultValue = "10", required = false) int size) {
-        return assetsService.getAllAssets(hostelId, page, size);
+            @RequestParam(value = "size", defaultValue = "10", required = false) int size,
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        return assetsService.getAllAssets(hostelId, page, size, keyword);
     }
 
     @PostMapping("/{hostelId}")
