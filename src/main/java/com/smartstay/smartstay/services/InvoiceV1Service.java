@@ -4856,7 +4856,16 @@ public class InvoiceV1Service {
         }
         if (invoicesV1.getTotalAmount() == 0) {
             invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+        } else {
+            double paidAmount = 0.0;
+            if (invoicesV1.getPaidAmount() != null) {
+                paidAmount = invoicesV1.getPaidAmount();
+            }
+            if (invoicesV1.getTotalAmount() == (paidAmount + discountAmount)) {
+                invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+            }
         }
+
         invoicesV1Repository.save(invoicesV1);
 
         invoiceDiscountService.applyDiscount(hostelId, invoiceId, invoicesV1.getCustomerId(), discount, discountAmount, invoiceTotalAmount);
