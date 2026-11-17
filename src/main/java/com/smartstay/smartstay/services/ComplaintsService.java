@@ -301,14 +301,7 @@ public class ComplaintsService {
         if (listComplaintUpdates == null) {
             listComplaintUpdates = new ArrayList<>();
         }
-        String status = null;
-        if (request.status().equalsIgnoreCase(ComplaintStatus.PENDING.name())) {
-            status = ComplaintStatus.PENDING.name();
-        } else if (request.status().equalsIgnoreCase(ComplaintStatus.RESOLVED.name())) {
-            status = ComplaintStatus.RESOLVED.name();
-        } else if (request.status().equalsIgnoreCase(ComplaintStatus.IN_PROGRESS.name())) {
-            status = ComplaintStatus.IN_PROGRESS.name();
-        }
+        String status = resolveComplaintStatus(request.status());
 
         ComplaintUpdates cu = new ComplaintUpdates();
         cu.setUpdatedBy(userId);
@@ -318,7 +311,7 @@ public class ComplaintsService {
         cu.setStatus(status);
         listComplaintUpdates.add(cu);
 
-        complaint.setStatus(request.status());
+        complaint.setStatus(status != null ? status : request.status());
         complaint.setUpdatedAt(new Date());
         complaintRepository.save(complaint);
 
@@ -454,7 +447,7 @@ public class ComplaintsService {
                     predicates.add(root.get("customerId").in(filterCustomerIds));
                 }
                 if (statusFilter != null) {
-                    predicates.add(cb.equal(root.get("status"), statusFilter));
+                    predicates.add(cb.lower(root.get("status").as(String.class)).in(statusVariants(statusFilter)));
                 }
                 if (rangeStart != null) {
                     predicates.add(cb.greaterThanOrEqualTo(root.get("complaintDate"), rangeStart));
@@ -939,12 +932,26 @@ public class ComplaintsService {
         if (value == null || value.trim().isEmpty()) {
             return null;
         }
-        String normalized = value.trim().replace(' ', '_').replace('-', '_');
+        String normalized = compactStatus(value);
         return Arrays.stream(ComplaintStatus.values())
-                .filter(i -> i.name().equalsIgnoreCase(normalized))
+                .filter(i -> compactStatus(i.name()).equals(normalized))
                 .map(ComplaintStatus::name)
                 .findFirst()
                 .orElse(null);
+    }
+
+    private String compactStatus(String value) {
+        return value.trim().toLowerCase().replace("_", "").replace(" ", "").replace("-", "");
+    }
+
+    private List<String> statusVariants(String canonicalStatus) {
+        String lower = canonicalStatus.toLowerCase();
+        Set<String> variants = new LinkedHashSet<>();
+        variants.add(lower);
+        variants.add(lower.replace("_", ""));
+        variants.add(lower.replace('_', ' '));
+        variants.add(lower.replace('_', '-'));
+        return new ArrayList<>(variants);
     }
 
     private Date parseComplaintFilterDate(String value) {

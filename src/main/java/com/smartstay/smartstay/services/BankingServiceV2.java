@@ -236,7 +236,13 @@ public class BankingServiceV2 {
             transactionService.saveTransaction(transaction);
         }
 
-        usersService.addUserLog(hostelId, bankingV2.getBankId(), ActivitySource.BANKING, ActivitySourceType.CREATE, users);
+        usersService.addUserLogWithType(hostelId, bankingV2.getBankId(), ActivitySource.BANKING,
+                ActivitySourceType.CREATE, users, accountType.name());
+
+        if (payload.openingBalance() != null && payload.openingBalance() > 0) {
+            usersService.addUserLog(hostelId, bankingV2.getBankId(), ActivitySource.BANKING,
+                    ActivitySourceType.ADD_MONEY, users);
+        }
 
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
@@ -498,6 +504,10 @@ public class BankingServiceV2 {
 
 
         BankingMethods saved = bankingMethodsRepository.save(entity);
+
+        usersService.addUserLogWithType(hostelId, saved.getPaymentMethodId(), ActivitySource.BANKING,
+                ActivitySourceType.ADD_PAYMENT_METHOD, user, paymentMethodLabel(payload.paymentMethod()));
+
         return new ResponseEntity<>(new BankingMethodsMapper(upiTypes).apply(saved), HttpStatus.CREATED);
     }
 
@@ -2583,6 +2593,11 @@ public class BankingServiceV2 {
 
     private ResponseEntity<?> badRequest(String message) {
         return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+    }
+
+    private String paymentMethodLabel(String paymentMethod) {
+        PaymentMethod method = PaymentMethod.fromValue(paymentMethod);
+        return method != null ? method.getValue() : paymentMethod;
     }
 
     private boolean isPresent(String value) {
