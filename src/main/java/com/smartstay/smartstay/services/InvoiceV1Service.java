@@ -4836,34 +4836,24 @@ public class InvoiceV1Service {
             discountAmount = discount.discountAmount();
         }
         if (discount.discountPercentage() != null) {
-            double percentage = 1;
-            try {
-                percentage = Double.parseDouble(String.valueOf(discount.discountPercentage()));
-            } catch (Exception e) {
+            double percentage = discount.discountPercentage();
+            if (percentage <= 0 || percentage > 100) {
                 return new ResponseEntity<>(Utils.INVALID_DISCOUNT_PERCENTAGE, HttpStatus.BAD_REQUEST);
             }
             discountAmount = Utils.roundOfDouble((percentage / 100) * invoicesV1.getBasePrice());
-
         }
 
         double invoiceTotalAmount = invoicesV1.getTotalAmount();
-        double totalAmount = Utils.roundOfDouble(invoicesV1.getTotalAmount());
-        invoicesV1.setTotalAmount(Utils.roundOfDouble(totalAmount - discountAmount));
-//        invoicesV1.setDi
+        double totalAmount = Utils.roundOfDouble(invoiceTotalAmount);
+        // payable amount is the unrounded invoice amount minus the discount
+        double invoiceAmount = invoicesV1.getInvoiceAmount() != null ? invoicesV1.getInvoiceAmount() : invoiceTotalAmount;
+        invoicesV1.setTotalAmount(Math.max(0, Utils.roundOfDouble(totalAmount - discountAmount)));
+        invoicesV1.setPayableAmount(Math.max(0, Utils.roundOffWithTwoDigit(invoiceAmount - discountAmount)));
         invoicesV1.setDiscounted(true);
-        if (totalAmount == discountAmount) {
+
+        double paidAmount = invoicesV1.getPaidAmount() != null ? invoicesV1.getPaidAmount() : 0.0;
+        if (invoicesV1.getTotalAmount() == 0 || paidAmount >= invoicesV1.getTotalAmount()) {
             invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
-        }
-        if (invoicesV1.getTotalAmount() == 0) {
-            invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
-        } else {
-            double paidAmount = 0.0;
-            if (invoicesV1.getPaidAmount() != null) {
-                paidAmount = invoicesV1.getPaidAmount();
-            }
-            if (invoicesV1.getTotalAmount() == (paidAmount + discountAmount)) {
-                invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
-            }
         }
 
         invoicesV1Repository.save(invoicesV1);
