@@ -8,6 +8,7 @@ public enum ActivitySourceType {
     UNASSIGN,
     LOGGED_IN,
     ADD_MONEY,
+    ADD_PAYMENT_METHOD,
     TRANSFER,
     UPDATE_AMOUNT,
     CANCEL,
