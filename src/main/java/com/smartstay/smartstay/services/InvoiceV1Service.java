@@ -4848,10 +4848,13 @@ public class InvoiceV1Service {
 
         double invoiceTotalAmount = invoicesV1.getTotalAmount();
         double totalAmount = Utils.roundOfDouble(invoicesV1.getTotalAmount());
-//        invoicesV1.setTotalAmount(totalAmount);
+        invoicesV1.setTotalAmount(Utils.roundOfDouble(totalAmount - discountAmount));
 //        invoicesV1.setDi
         invoicesV1.setDiscounted(true);
         if (totalAmount == discountAmount) {
+            invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
+        }
+        if (invoicesV1.getTotalAmount() == 0) {
             invoicesV1.setPaymentStatus(PaymentStatus.PAID.name());
         }
         invoicesV1Repository.save(invoicesV1);
