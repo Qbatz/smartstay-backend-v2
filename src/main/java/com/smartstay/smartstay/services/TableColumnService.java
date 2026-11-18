@@ -8,6 +8,7 @@ import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.payloads.tables.CustomersTablesColumn;
 import com.smartstay.smartstay.repositories.TableColumnsRepositories;
 import com.smartstay.smartstay.util.Utils;
+import com.smartstay.smartstay.util.columnOptions.ReceiptColumnUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,83 @@ import java.util.Set;
 
 @Service
 public class TableColumnService {
+    public ResponseEntity<?> updateReceiptTableFields(String hostelId, List<CustomersTablesColumn> receiptTables) {
+        if (!authentication.isAuthenticated() || authentication.getName() == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = usersService.findUserByUserId(authentication.getName());
+        if (user == null || user.getUserId() == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (hostelId == null || hostelId.isBlank()) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(user.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_RECEIPT, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (receiptTables == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (receiptTables.isEmpty()) {
+            return new ResponseEntity<>(Utils.ATLEAST_ONE_COLUMN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        Set<String> allowedNames = new LinkedHashSet<>();
+        ReceiptColumnUtils.defaultColumns().forEach(column -> allowedNames.add(column.getFieldName()));
+        Set<String> seenNames = new LinkedHashSet<>();
+        Set<Integer> seenOrders = new LinkedHashSet<>();
+        List<ColumnFilters> columns = new ArrayList<>();
+        for (CustomersTablesColumn column : receiptTables) {
+            if (column == null || column.fieldName() == null || column.fieldName().isBlank()
+                    || column.isSelected() == null || column.order() == null) {
+                return new ResponseEntity<>("Each receipt column requires fieldName, isSelected and order", HttpStatus.BAD_REQUEST);
+            }
+            String name = column.fieldName().trim();
+            if (!allowedNames.contains(name) || !seenNames.add(name)) {
+                return new ResponseEntity<>("Invalid or duplicate receipt column name", HttpStatus.BAD_REQUEST);
+            }
+            if (column.order() < 1 || column.order() > allowedNames.size() || !seenOrders.add(column.order())) {
+                return new ResponseEntity<>("Receipt column order must be unique and between 1 and 8", HttpStatus.BAD_REQUEST);
+            }
+            columns.add(new ColumnFilters(column.order(), name, column.isSelected()));
+        }
+        if (columns.stream().noneMatch(ColumnFilters::isSelected)) {
+            columns = filterOptionsService.findReceiptBasicFilters();
+        } else {
+            columns = ReceiptColumnUtils.validColumns(columns);
+        }
+
+        TableColumns tableColumns = tableColumnsRepositories.findByHostelIdAndUserId(
+                hostelId, user.getUserId(), FilterOptionsModule.MODULE_RECEIPT.name());
+        Date now = new Date();
+        if (tableColumns == null) {
+            tableColumns = new TableColumns();
+            tableColumns.setHostelId(hostelId);
+            tableColumns.setUserId(user.getUserId());
+            tableColumns.setModuleName(FilterOptionsModule.MODULE_RECEIPT.name());
+            tableColumns.setCreatedAt(now);
+        }
+        tableColumns.setActive(true);
+        tableColumns.setColumns(columns);
+        tableColumns.setUpdatedAt(now);
+        tableColumnsRepositories.save(tableColumns);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public List<ColumnFilters> getReceiptColumns(String hostelId) {
+        TableColumns receiptColumns = tableColumnsRepositories.findByHostelIdAndUserId(
+                hostelId, authentication.getName(), FilterOptionsModule.MODULE_RECEIPT.name());
+        List<ColumnFilters> columns = ReceiptColumnUtils.validColumns(
+                receiptColumns == null ? null : receiptColumns.getColumns());
+        if (columns.isEmpty()) {
+            return filterOptionsService.findReceiptBasicFilters();
+        }
+        return columns;
+    }
+
     @Autowired
     private FilterOptionsService filterOptionsService;
     @Autowired

@@ -5,6 +5,7 @@ import com.smartstay.smartstay.dao.FilterOptions;
 import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.repositories.FilterOptionsRepositories;
 import com.smartstay.smartstay.util.columnOptions.ExpenseColumnUtils;
+import com.smartstay.smartstay.util.columnOptions.ReceiptColumnUtils;
 import com.smartstay.smartstay.util.columnOptions.VendorColumnUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,16 @@ import java.util.List;
 
 @Service
 public class FilterOptionsService {
+    public List<ColumnFilters> findReceiptBasicFilters() {
+        FilterOptions filterOptions = filterOptionsRepositories.findByModuleName(FilterOptionsModule.MODULE_RECEIPT.name());
+        List<ColumnFilters> columns = ReceiptColumnUtils.validColumns(
+                filterOptions == null ? null : filterOptions.getFilterOptions());
+        if (!columns.isEmpty()) {
+            return columns;
+        }
+        return ReceiptColumnUtils.defaultColumns();
+    }
+
     @Autowired
     private FilterOptionsRepositories filterOptionsRepositories;
     public List<ColumnFilters> findCustomersBasicFilters() {
