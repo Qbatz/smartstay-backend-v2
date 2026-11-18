@@ -161,7 +161,7 @@ public class BankingServiceV2 {
             if (cashType == null) {
                 return new ResponseEntity<>(Utils.V2_CASH_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
             }
-            cashAccountTypeValue = cashType.getValue();
+            cashAccountTypeValue = cashType.name();
             responsiblePerson = trimToNull(payload.responsiblePerson());
         }
         else if (accountType == BankAccountTypeV2.CARD) {
