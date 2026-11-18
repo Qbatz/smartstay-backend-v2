@@ -1530,8 +1530,7 @@ public class TransactionService {
 //             }
             invoiceId = invoiceService.getInvoiceNumbersBySearchKeyword(hostelId, keyword, invoiceTypeArr, customerIds);
             
-            if ((customerIds == null || customerIds.isEmpty())
-                    && (invoiceId == null || invoiceId.isEmpty())) {
+            if (invoiceId == null || invoiceId.isEmpty()) {
                 return buildEmptyTransactionResponse(hostelId, filterOptions);
             }
 
