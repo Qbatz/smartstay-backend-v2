@@ -1549,4 +1549,35 @@ public class CustomersServiceV2 {
         }
         return customerJobDetailsService.updateJobInformation(hostelId, customerId, updateCustomerJob, user);
     }
+
+    public ResponseEntity<?> removeProfilePic(String hostelId, String customerId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users user = userService.findUserByUserId(authentication.getName());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_CUSTOMERS, Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        if (!Utils.checkNullOrEmpty(customerId)) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customers = customersRepository.findById(customerId).orElse(null);
+        if (customers == null) {
+            return new ResponseEntity<>(Utils.INVALID_CUSTOMER_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!hostelId.equalsIgnoreCase(customers.getHostelId())) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+
+        customers.setProfilePic(null);
+        customers.setLastUpdatedAt(new Date());
+        customers.setUpdatedBy(user.getUserId());
+        customersRepository.save(customers);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
 }
