@@ -42,19 +42,22 @@ public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, Compla
         String complaintTitle = null;
         String assignee = null;
 
-        if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name())) {
-            Users usr = assignedUsers
-                    .stream()
-                    .filter(i -> i.getUserId().equalsIgnoreCase(complaintUpdates.getAssignedTo()))
-                    .findFirst()
-                    .orElse(null);
-            if (usr != null) {
-                assignee = usr.getFirstName();
-                if (usr.getLastName() != null) {
-                    assignee = assignee + " " + usr.getLastName();
+        if (complaintUpdates.getStatus() != null) {
+            if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name())) {
+                Users usr = assignedUsers
+                        .stream()
+                        .filter(i -> i.getUserId().equalsIgnoreCase(complaintUpdates.getAssignedTo()))
+                        .findFirst()
+                        .orElse(null);
+                if (usr != null) {
+                    assignee = usr.getFirstName();
+                    if (usr.getLastName() != null) {
+                        assignee = assignee + " " + usr.getLastName();
+                    }
                 }
             }
         }
+
 
 
         if (complaintUpdates.getUserType().equalsIgnoreCase(UserType.TENANT.name())) {
@@ -104,22 +107,25 @@ public class ComplaintUpdatesMapper implements Function<ComplaintUpdates, Compla
                 }
             }
         }
+        if (complaintUpdates.getStatus() != null) {
+            if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.OPENED.name())) {
+                update = fullName + " is raised - " + complaintType ;
+            }
+            else if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.PENDING.name())) {
+                update = complaintUpdates.getComments();
+                description = complaintUpdates.getComments();
+            }
+            else if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name())) {
+                description = "Complaint is assigned to " + assignee;
+                update = "Complaint is assigned";
+            }
+            else if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.RESOLVED.name())) {
+                description = fullName + " is marked the complaint as Resolved";
+                update = "Complaint is resolved";
+            }
+        }
 
-        if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.OPENED.name())) {
-            update = fullName + " is raised - " + complaintType ;
-        }
-        else if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.PENDING.name())) {
-            update = complaintUpdates.getComments();
-            description = complaintUpdates.getComments();
-        }
-        else if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name())) {
-            description = "Complaint is assigned to " + assignee;
-            update = "Complaint is assigned";
-        }
-        else if (complaintUpdates.getStatus().equalsIgnoreCase(ComplaintStatus.RESOLVED.name())) {
-            description = fullName + " is marked the complaint as Resolved";
-            update = "Complaint is resolved";
-        }
+
 
         updatedAt = Utils.dateToString(complaintUpdates.getCreatedAt());
         updatedTime = Utils.dateToTime(complaintUpdates.getCreatedAt());
