@@ -125,6 +125,9 @@ public class InvoiceV1Service {
     @Autowired
     private InvoiceDiscountService invoiceDiscountService;
     @Autowired
+    @Lazy
+    private RetainerService retainerService;
+    @Autowired
     private InvoiceRedemptionService invoiceRedemptionService;
     @Autowired
     private TableColumnService tableColumnService;
@@ -5619,6 +5622,56 @@ public class InvoiceV1Service {
         usersService.addUserLog(hostelId, invoiceId, ActivitySource.INVOICE, ActivitySourceType.EDIT_DISCOUNT, users);
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @Transactional
+    public ResponseEntity<?> deleteInvoice(String hostelId, String invoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        String paymentStatus = invoicesV1.getPaymentStatus();
+        boolean isPaid = PaymentStatus.PAID.name().equalsIgnoreCase(paymentStatus)
+                || PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(paymentStatus)
+                || (invoicesV1.getPaidAmount() != null && invoicesV1.getPaidAmount() > 0);
+        if (isPaid) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_PAID_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
+        if (invoicesV1.isDiscounted() || invoiceDiscountService.isInvoiceDiscounted(hostelId, invoiceId)) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_DISCOUNTED_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
+        if (invoiceRedemptionService.isInvoiceRedeemed(hostelId, invoiceId)) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_ADJUSTED_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
+        invoicesV1Repository.delete(invoicesV1);
+        paymentSummaryService.deleteInvoice(invoicesV1.getCustomerId(), invoicesV1.getTotalAmount());
+        usersService.addUserLog(hostelId, invoiceId, ActivitySource.INVOICE, ActivitySourceType.DELETE, users);
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     public ResponseEntity<?> deleteDiscount(String hostelId, String invoiceId) {

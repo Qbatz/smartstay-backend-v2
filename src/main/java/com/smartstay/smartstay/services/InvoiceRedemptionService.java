@@ -72,6 +72,15 @@ public class InvoiceRedemptionService {
         return invoiceRedemptionRepository.saveAll(listRedemptions);
     }
 
+    public boolean isInvoiceRedeemed(String hostelId, String invoiceId) {
+        List<InvoiceRedemption> asTarget = invoiceRedemptionRepository.findByHostelIdAndTargetId(hostelId, invoiceId);
+        if (asTarget != null && !asTarget.isEmpty()) {
+            return true;
+        }
+
+        return false;
+    }
+
     private String getNextReferenceNumber(String hostelId) {
         BillTemplates billTemplates = hostelTemplateService.getTemplateByHostelId(hostelId);
         String prefix = "RED";

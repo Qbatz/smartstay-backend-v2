@@ -405,6 +405,9 @@ public class Utils {
     public static final String CANNOT_DELETE_RECEIPT_RETAINER_INVOICE = "Cannot delete receipts for retainer invoices";
     public static final String CANNOT_DELETE_REFUNDED_BOOKING_RECEIPT = "Cannot delete receipts for refunded booking invoices";
     public static final String CANNOT_DELETE_REDEEMED_RECEIPT = "Cannot delete receipt as the amount has already been redeemed";
+    public static final String CANNOT_DELETE_PAID_INVOICES = "Cannot delete paid/partially paid invoices";
+    public static final String CANNOT_DELETE_DISCOUNTED_INVOICES = "Cannot delete discounted invoices. Remove the discount and try again";
+    public static final String CANNOT_DELETE_ADJUSTED_INVOICES = "Cannot delete invoices adjusted with other invoices";
     public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
     public static final String CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL = "Only manual invoices are allowed to mark unpaid";
     public static final String CANNOT_MARK_UNPAID_DISCOUNT_APPLIED = "Cannot mark as unpaid for discounted invoices";

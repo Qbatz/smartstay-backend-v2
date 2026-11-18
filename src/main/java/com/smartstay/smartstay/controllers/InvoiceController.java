@@ -203,6 +203,11 @@ public class InvoiceController {
         return invoiceV1Service.getRecurringInvoicesForReview(hostelId);
     }
 
+    @DeleteMapping("/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> deleteInvoice(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") String invoiceId) {
+        return invoiceV1Service.deleteInvoice(hostelId, invoiceId);
+    }
+
     @DeleteMapping("/recurring/{hostelId}/{invoiceId}/{itemId}")
     public ResponseEntity<?> removeInvoiceItems(@PathVariable("hostelId") String hostelId, @PathVariable("invoiceId") Long invoiceId, @PathVariable("itemId") Long itemId) {
         return invoiceV1Service.removeInvoiceItemFromDraft(hostelId, invoiceId, itemId);
