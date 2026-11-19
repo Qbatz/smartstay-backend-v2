@@ -512,7 +512,7 @@ public class BankTransactionService {
         }
         return listTransactions
                 .stream()
-                .map(BankTransactionsV1::getHostelId)
+                .map(BankTransactionsV1::getBankId)
                 .toList();
     }
 }

@@ -93,4 +93,10 @@ public class CustomersControllerV2 {
         return customersServiceV2.updateCustomerJobInformation(hostelId, customerId, updateCustomerJob);
     }
 
+    @DeleteMapping("/profile-pic/{hostelId}/{customerId}")
+    public ResponseEntity<?> removeProfilePic(@PathVariable("hostelId") String hostelId,
+                                              @PathVariable("customerId") String customerId) {
+        return customersServiceV2.removeProfilePic(hostelId, customerId);
+    }
+
 }

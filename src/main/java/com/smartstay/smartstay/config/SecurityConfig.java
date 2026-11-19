@@ -3,6 +3,7 @@ package com.smartstay.smartstay.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -29,16 +30,28 @@ public class SecurityConfig {
     @Autowired
     JWTFilter jwtFilter;
 
+    @Autowired
+    Environment environment;
+
+    private static final String[] SWAGGER_ENDPOINTS = {"/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**"};
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        boolean isDevEnvironment = environment.matchesProfiles("dev", "local");
+
         httpSecurity.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
-                .authorizeHttpRequests(request -> request
-                        .requestMatchers("/v2/users/**", "/v2/demo/request",
-                                "/v2/mobile/**" , "/swagger-ui/**", "/v3/api-docs/**",  "/ws/**")
-                        .permitAll()
-                        .anyRequest()
-                        .authenticated())
+                .authorizeHttpRequests(request -> {
+                    request.requestMatchers("/v2/users/**", "/v2/demo/request",
+                                    "/v2/mobile/**", "/ws/**")
+                            .permitAll();
+                    if (isDevEnvironment) {
+                        request.requestMatchers(SWAGGER_ENDPOINTS).permitAll();
+                    } else {
+                        request.requestMatchers(SWAGGER_ENDPOINTS).denyAll();
+                    }
+                    request.anyRequest().authenticated();
+                })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

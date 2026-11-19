@@ -161,7 +161,7 @@ public class BankingServiceV2 {
             if (cashType == null) {
                 return new ResponseEntity<>(Utils.V2_CASH_ACCOUNT_TYPE_INVALID, HttpStatus.BAD_REQUEST);
             }
-            cashAccountTypeValue = cashType.getValue();
+            cashAccountTypeValue = cashType.name();
             responsiblePerson = trimToNull(payload.responsiblePerson());
         }
         else if (accountType == BankAccountTypeV2.CARD) {
@@ -1987,7 +1987,7 @@ public class BankingServiceV2 {
         List<BankingV2> listBankingV2 = new ArrayList<>();
         List<BankingV2> bankWithNoTransactions =  new ArrayList<>();
         if (!bankIdsHavingActiveTransactions.isEmpty()) {
-            listBankingV2 = bankingV2Repository.findAllByBankIds(bankIdsHavingActiveTransactions);
+            listBankingV2 = bankingV2Repository.findAllActiveByBankIds(bankIdsHavingActiveTransactions);
             bankWithNoTransactions = bankingV2Repository.findAllByBankIdNotInAndIsActiveTrue(hostelId, bankIdsHavingActiveTransactions);
             listBankingV2.addAll(bankWithNoTransactions);
         }
