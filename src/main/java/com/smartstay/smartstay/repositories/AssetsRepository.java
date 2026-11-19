@@ -34,8 +34,10 @@ public interface AssetsRepository extends JpaRepository<AssetsV1, Long> {
             "LEFT JOIN Rooms r ON a.roomId = r.roomId " +
             "LEFT JOIN Beds b ON a.bedId = b.bedId " +
             "WHERE a.isDeleted = false AND a.isActive = true AND a.hostelId = :hostelId " +
+            "AND (:keyword IS NULL OR LOWER(a.assetName) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "ORDER BY a.createdAt DESC")
-    List<AssetAssignmentResponse> findAssetAssignmentDetails(@Param("hostelId") String hostelId);
+    List<AssetAssignmentResponse> findAssetAssignmentDetails(@Param("hostelId") String hostelId,
+                                                            @Param("keyword") String keyword);
 
     @Query("SELECT new com.smartstay.smartstay.dto.assets.AssetAssignmentResponse(" +
            "a.assetId, a.assetName, a.brandName, a.productName, a.serialNumber, a.purchaseDate, a.price, " +
