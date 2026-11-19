@@ -1,6 +1,7 @@
 package com.smartstay.smartstay.services;
 
 import com.smartstay.smartstay.config.Authentication;
+import com.smartstay.smartstay.config.RestTemplateLoggingInterceptor;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.RoomBedCount;
@@ -22,9 +23,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
@@ -79,6 +81,15 @@ public class ReportService {
     private FloorsService floorsService;
     @Autowired
     private DownloadService downloadService;
+    @Autowired
+    private CredentialServices credentialServices;
+
+    private final RestTemplate restTemplate;
+
+    public ReportService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+        restTemplate.setInterceptors(Collections.singletonList(new RestTemplateLoggingInterceptor()));
+    }
 
     public ResponseEntity<?> getReports(String hostelId, String customStartDate, String customEndDate) {
         if (!authentication.isAuthenticated()) {
@@ -1658,5 +1669,129 @@ public class ReportService {
             return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(pdfUrl, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getInvoiceReportConsolidatedView(String hostelId, String search, List<String> paymentStatus,
+                                                              List<String> invoiceModes, List<String> invoiceTypes,
+                                                              List<String> createdBy, String period, Double minPaidAmount,
+                                                              Double maxPaidAmount, Double minOutstandingAmount,
+                                                              Double maxOutstandingAmount, String startDate, String endDate,
+                                                              List<Integer> floorIds, Boolean includePaidInvoice,
+                                                              Boolean includeEmptyBeds, String groupBy, Boolean includeSubTotals,
+                                                              Boolean includeGrandTotal, Boolean includeHostelName,
+                                                              Boolean isPaginated, int page, int size) {
+
+        String loggedInUserId = authentication.getName();
+
+        Users loggedInUser = usersService.findUserByUserId(loggedInUserId);
+        if (loggedInUser == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(loggedInUserId, hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(loggedInUser.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        String token = credentialServices.getReportsAuthToken();
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Utils.UN_AUTHORIZED);
+        }
+
+        String reportsServiceUrl =  reportsUrl + "/v2/reports/invoices";
+
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromUriString(reportsServiceUrl)
+                .path("/consolidated-details/{hostelId}/{userId}");
+
+        if (search != null && !search.isBlank()) {
+            builder.queryParam("search", search);
+        }
+        if (paymentStatus != null && !paymentStatus.isEmpty()) {
+            builder.queryParam("paymentStatus", paymentStatus);
+        }
+        if (invoiceModes != null && !invoiceModes.isEmpty()) {
+            builder.queryParam("invoiceModes", invoiceModes);
+        }
+        if (invoiceTypes != null && !invoiceTypes.isEmpty()) {
+            builder.queryParam("invoiceTypes", invoiceTypes);
+        }
+        if (createdBy != null && !createdBy.isEmpty()) {
+            builder.queryParam("createdBy", createdBy);
+        }
+        if (period != null && !period.isBlank()) {
+            builder.queryParam("period", period);
+        }
+        if (minPaidAmount != null) {
+            builder.queryParam("minPaidAmount", minPaidAmount);
+        }
+        if (maxPaidAmount != null) {
+            builder.queryParam("maxPaidAmount", maxPaidAmount);
+        }
+        if (minOutstandingAmount != null) {
+            builder.queryParam("minOutstandingAmount", minOutstandingAmount);
+        }
+        if (maxOutstandingAmount != null) {
+            builder.queryParam("maxOutstandingAmount", maxOutstandingAmount);
+        }
+        if (startDate != null && !startDate.isBlank()) {
+            builder.queryParam("startDate", startDate);
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            builder.queryParam("endDate", endDate);
+        }
+        if (floorIds != null && !floorIds.isEmpty()) {
+            builder.queryParam("floors", floorIds);
+        }
+        if (includePaidInvoice != null) {
+            builder.queryParam("includePaidInvoice", includePaidInvoice);
+        }
+        if (includeEmptyBeds != null) {
+            builder.queryParam("includeEmptyBeds", includeEmptyBeds);
+        }
+        if (groupBy != null && !groupBy.isBlank()) {
+            builder.queryParam("groupBy", groupBy);
+        }
+        if (includeSubTotals != null) {
+            builder.queryParam("includeSubTotals", includeSubTotals);
+        }
+        if (includeGrandTotal != null) {
+            builder.queryParam("includeGrandTotal", includeGrandTotal);
+        }
+        if (includeHostelName != null) {
+            builder.queryParam("includeHostelName", includeHostelName);
+        }
+        if (isPaginated != null) {
+            builder.queryParam("isPaginated", isPaginated);
+        }
+        builder.queryParam("page", page);
+        builder.queryParam("size", size);
+
+        String url = builder
+                .buildAndExpand(hostelId, loggedInUserId)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setBearerAuth(token);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        try {
+            return restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+        } catch (HttpStatusCodeException exception) {
+            return ResponseEntity
+                    .status(exception.getStatusCode())
+                    .headers(exception.getResponseHeaders())
+                    .body(exception.getResponseBodyAsString());
+        }
     }
 }
