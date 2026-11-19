@@ -364,6 +364,9 @@ public class Utils {
     public static final String REQUEST_DATE_MUST_AFTER_JOINING_DATE = "Request date must be after joining date.";
     public static final String CHECKOUT_DATE_MUST_AFTER_REQUEST_DATE = "Checkout date must be after request date.";
     public static final String REQUEST_DATE_MUST_AFTER_BILLING_START_DATE = "Request date must be after current billing cycle start date: ";
+    public static final String BED_CHANGE_DATE_MUST_BE_AFTER_JOINING_DATE = "Bed change date must be after the joining date: ";
+    public static final String BED_CHANGE_DATE_MUST_BE_AFTER_LAST_BED_CHANGE = "Bed change date must be after the last bed change date: ";
+    public static final String DELETE_RENT_INVOICES_AFTER_DATE = "Delete the rent invoices generated after ";
     public static final String CHECKOUT_DATE_MUST_AFTER_JOINING_DATE = "Checkout date must be after joining date.";
     public static final String ATLEAST_ONE_AMENITY_REQUIRED = "Atleast one amenity required";
     public static final String AMENITY_ALREADY_EXIST = "Amenity with the same name already exists in this hostel.";

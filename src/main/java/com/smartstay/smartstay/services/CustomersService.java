@@ -4240,13 +4240,18 @@ public class CustomersService {
         Date joiningDate = Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
         BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
-        if (billingDates != null && billingDates.currentBillStartDate() != null) {
-            if (Utils.compareWithTwoDates(joiningDate, billingDates.currentBillStartDate()) < 0) {
-                return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
-            }
+//        if (billingDates != null && billingDates.currentBillStartDate() != null) {
+//            if (Utils.compareWithTwoDates(joiningDate, billingDates.currentBillStartDate()) < 0) {
+//                return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
+//            }
+//        }
+
+        String reassignDateError = invoiceService.validateReassignBedDate(customers, request.joiningDate(), billingDates);
+        if (reassignDateError != null) {
+            return new ResponseEntity<>(reassignDateError, HttpStatus.BAD_REQUEST);
         }
 
-        ReassignRent reassignRent = invoiceService.calculateAndCreateInvoiceForReassign(customers, request.joiningDate(), request.rentAmount());
+        ReassignRent reassignRent = invoiceService.calculateAndCreateInvoiceForReassignBed(customers, request.joiningDate(), request.rentAmount(), billingDates);
         double balanceAmount = 0.0;
         if (reassignRent != null) {
             balanceAmount = reassignRent.balanceAmount() * -1;
