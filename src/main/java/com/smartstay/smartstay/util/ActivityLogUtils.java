@@ -2,6 +2,7 @@ package com.smartstay.smartstay.util;
 
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
+import com.smartstay.smartstay.ennum.BankAccountTypeV2;
 
 public class ActivityLogUtils {
     public static String getActivityDescription(String activitySource, String operationType) {
@@ -154,7 +155,31 @@ public class ActivityLogUtils {
         if (activitySource.equalsIgnoreCase(ActivitySource.TRANSACTIONS.name())) {
             return getTransactionsOperationsWithType(operationType, type);
         }
+        if (activitySource.equalsIgnoreCase(ActivitySource.BANKING.name())) {
+            return getBankingOperationsWithType(operationType, type);
+        }
         return null;
+    }
+
+    private static String getBankingOperationsWithType(String operationName, String type) {
+        if (operationName.equalsIgnoreCase(ActivitySourceType.CREATE.name())) {
+            if (type != null) {
+                if (type.equalsIgnoreCase(BankAccountTypeV2.CASH.name())) {
+                    return "Added a new cash account";
+                }
+                if (type.equalsIgnoreCase(BankAccountTypeV2.CARD.name())) {
+                    return "Added a new credit card account";
+                }
+            }
+            return "Added a new bank account";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.ADD_PAYMENT_METHOD.name())) {
+            if (type != null && !type.trim().isEmpty()) {
+                return "Linked " + type.trim() + " to the account";
+            }
+            return "Linked a payment method to the account";
+        }
+        return getBankingOperations(operationName);
     }
 
     private static String getExpenseSubCategoryOperations(String operationType) {
@@ -186,7 +211,10 @@ public class ActivityLogUtils {
             return "Updated bank account";
         }
         if (operationName.equalsIgnoreCase(ActivitySourceType.ADD_MONEY.name())) {
-            return "Added money to the account";
+            return "Deposited money into the account";
+        }
+        if (operationName.equalsIgnoreCase(ActivitySourceType.ADD_PAYMENT_METHOD.name())) {
+            return "Linked a payment method to the account";
         }
         if (operationName.equalsIgnoreCase(ActivitySourceType.TRANSFER.name())) {
             return "Transferred money from ";
