@@ -191,4 +191,13 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             SELECT cus FROM Customers cus WHERE cus.customerId IN (:customerIds) AND cus.currentStatus in (:status)
             """)
     List<Customers> findCheckedInCustomersByStatus(List<String> customerIds, List<String> status);
+
+    @Query("""
+            SELECT c FROM Customers c
+            WHERE c.hostelId = :hostelId
+                AND (LOWER(c.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(c.lastName) LIKE LOWER(CONCAT('%', :search, '%')))
+            """)
+    List<Customers> searchCustomer(@Param("hostelId") String hostelId,
+                                   @Param("search") String search);
 }

@@ -1375,4 +1375,8 @@ public class UsersService {
         }
         return new ResponseEntity<>("Incorrect password", HttpStatus.BAD_REQUEST);
     }
+
+    public List<Users> findByUserIds(List<String> userIds) {
+        return userRepository.findAllById(userIds);
+    }
 }

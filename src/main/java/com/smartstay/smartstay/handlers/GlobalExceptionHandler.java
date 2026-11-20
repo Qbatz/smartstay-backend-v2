@@ -1,13 +1,13 @@
 package com.smartstay.smartstay.handlers;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.smartstay.smartstay.Exceptions.BadRequestException;
 import com.smartstay.smartstay.Exceptions.SmartStayException;
 import com.smartstay.smartstay.Exceptions.SubscriptionExpiredException;
 import io.jsonwebtoken.security.SignatureException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -58,5 +58,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SubscriptionExpiredException.class)
     public ResponseEntity<?> handleSubscriptionExpiredException(SubscriptionExpiredException see) {
         return new ResponseEntity<>(see.getMessage(), HttpStatus.PAYMENT_REQUIRED);
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<?> handleBadRequestException(BadRequestException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 }
