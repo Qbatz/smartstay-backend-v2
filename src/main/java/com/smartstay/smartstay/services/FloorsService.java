@@ -9,7 +9,6 @@ import com.smartstay.smartstay.dao.Users;
 import com.smartstay.smartstay.ennum.ActivitySource;
 import com.smartstay.smartstay.ennum.ActivitySourceType;
 import com.smartstay.smartstay.ennum.BookingStatus;
-import com.smartstay.smartstay.ennum.CustomerStatus;
 import com.smartstay.smartstay.payloads.floor.AddFloors;
 import com.smartstay.smartstay.payloads.floor.UpdateFloor;
 import com.smartstay.smartstay.repositories.FloorRepository;
@@ -22,10 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class FloorsService {
@@ -228,5 +224,13 @@ public class FloorsService {
             listFloors = new ArrayList<>();
         }
         return listFloors;
+    }
+
+    public List<Floors> getAllByHostelId(String hostelId) {
+        return floorRepository.findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+    }
+
+    public List<Floors> getByFloorIds(Set<Integer> floorIds) {
+        return floorRepository.findAllByFloorIdInAndIsActiveTrueAndIsDeletedFalse(floorIds);
     }
 }

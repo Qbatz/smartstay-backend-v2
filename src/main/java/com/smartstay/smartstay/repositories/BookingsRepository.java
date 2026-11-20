@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
@@ -327,4 +328,19 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     AND booking.bookingId <> :bookingId AND booking.currentStatus <> 'CANCELLED'
     """)
     List<BookingsV1> findActiveBookings(String hostelId, Integer bedId, String bookingId);
+
+    @Query(value = """
+            select b.* from bookingsv1 b
+            join (
+                select bed_id, max(created_at) as created_at
+                from bookingsv1
+                where bed_id in (:bedIds)
+                    and current_status in (:currentStatuses)
+                group by bed_id
+            ) latest
+            on latest.bed_id = b.bed_id
+            and latest.created_at = b.created_at
+            """, nativeQuery = true)
+    List<BookingsV1> findLatestByBedIdInAndCurrentStatusIn(Set<Integer> bedIds,
+                                                           Set<String> currentStatuses);
 }

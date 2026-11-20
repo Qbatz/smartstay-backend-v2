@@ -1,5 +1,8 @@
 package com.smartstay.smartstay.util;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 public class NameUtils {
 
     public static String getFullName(String firstName, String lastName) {
@@ -49,5 +52,20 @@ public class NameUtils {
         }
 
         return initials.toString();
+    }
+
+    public static String capitalizeWordsWithUnderscore(String input) {
+
+        if (input == null || input.isBlank()) {
+            return input;
+        }
+
+        String[] words = input.toLowerCase()
+                .replace("_", " ")
+                .split("\\s+");
+
+        return Arrays.stream(words)
+                .map(word -> Character.toUpperCase(word.charAt(0)) + word.substring(1))
+                .collect(Collectors.joining(" "));
     }
 }

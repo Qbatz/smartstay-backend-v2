@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class BedsService {
@@ -1016,5 +1017,9 @@ public class BedsService {
                 bedDetails.getFloorName(),
                 bedDetails.getRoomName(),
                 null);
+    }
+
+    public List<Beds> getAllByRoomIds(Set<Integer> roomIds) {
+        return bedsRepository.findAllByRoomIdInAndIsActiveTrueAndIsDeletedFalse(roomIds);
     }
 }

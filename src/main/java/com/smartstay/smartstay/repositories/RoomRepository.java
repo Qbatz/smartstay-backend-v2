@@ -8,8 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface RoomRepository extends JpaRepository<Rooms,Integer> {
@@ -91,4 +91,5 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
             """, nativeQuery = true)
     List<RoomInfo> getAllRoomsForEb(@Param("hostelId") String hostelId, @Param("roomId") List<Integer> roomId);
 
+    List<Rooms> findAllByFloorIdInAndIsActiveTrueAndIsDeletedFalse(Set<Integer> floorIds);
 }

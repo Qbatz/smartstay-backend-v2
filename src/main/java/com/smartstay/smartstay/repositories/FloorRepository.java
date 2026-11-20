@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Set;
 
 public interface FloorRepository extends JpaRepository<Floors, Integer> {
 
@@ -77,6 +78,7 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
                                        @Param("roomId") Integer roomId,
                                        @Param("statuses") List<String> statuses);
 
+    List<Floors> findAllByFloorIdInAndIsActiveTrueAndIsDeletedFalse(Set<Integer> floorIds);
 
-
+    List<Floors> findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
 }

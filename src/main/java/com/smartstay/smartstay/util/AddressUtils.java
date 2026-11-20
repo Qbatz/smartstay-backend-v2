@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.util;
 
+import com.smartstay.smartstay.dao.HostelV1;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,5 +50,40 @@ public final class AddressUtils {
         if (value != null && !value.trim().isEmpty()) {
             parts.add(value.trim());
         }
+    }
+
+    public static String getHostelAddress(HostelV1 hostel) {
+
+        StringBuilder address = new StringBuilder();
+
+        if (hostel.getHouseNo() != null && !hostel.getHouseNo().trim().equalsIgnoreCase("")) {
+            address.append(hostel.getHouseNo());
+        }
+        if (hostel.getStreet() != null && !hostel.getStreet().trim().equalsIgnoreCase("")) {
+            if (!address.toString().isEmpty()) {
+                address.append(", ");
+            }
+            address.append(hostel.getStreet());
+        }
+        if (hostel.getCity() != null && !hostel.getCity().trim().equalsIgnoreCase("")) {
+            if (!address.toString().isEmpty()) {
+                address.append(", ");
+            }
+            address.append(hostel.getCity());
+        }
+        if (hostel.getState() != null && !hostel.getState().trim().equalsIgnoreCase("")) {
+            if (!address.toString().isEmpty()) {
+                address.append(", ");
+            }
+            address.append(hostel.getState());
+        }
+        if (hostel.getPincode() != 0) {
+            if (!address.toString().isEmpty()) {
+                address.append(", ");
+            }
+            address.append(hostel.getPincode());
+        }
+
+        return address.toString();
     }
 }
