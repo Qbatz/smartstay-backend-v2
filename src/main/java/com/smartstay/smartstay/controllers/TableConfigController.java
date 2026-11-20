@@ -17,6 +17,12 @@ import java.util.List;
 @SecurityRequirement(name = "Authorization")
 @CrossOrigin("*")
 public class TableConfigController {
+    @PutMapping("/receipts/{hostelId}")
+    public ResponseEntity<?> modifyReceiptTableColumns(@PathVariable("hostelId") String hostelId,
+            @RequestBody(required = false) List<CustomersTablesColumn> receiptTables) {
+        return tableColumnService.updateReceiptTableFields(hostelId, receiptTables);
+    }
+
     @Autowired
     private TableColumnService tableColumnService;
 

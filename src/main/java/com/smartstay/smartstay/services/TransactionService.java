@@ -34,6 +34,7 @@ import com.smartstay.smartstay.util.BankingUtils;
 import com.smartstay.smartstay.util.InvoiceUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
+import com.smartstay.smartstay.util.columnOptions.ReceiptColumnUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -50,6 +51,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class TransactionService {
+    @Autowired
+    private TableColumnService tableColumnService;
+
     @Value("${REPORTS_URL}")
     private String reportsUrl;
     @Autowired
@@ -1631,6 +1635,7 @@ public class TransactionService {
 
         List<ReceiptsList> receipts = listReceipts.stream().map(item -> new TransactionsListMapper(listCustomers, listBanks, invoices).apply(item)).toList();
 
+        List<ColumnFilters> columnList = tableColumnService.getReceiptColumns(hostelId);
         ReceiptResponse receiptResponse = new ReceiptResponse(hostelId,
                 totalReceipts,
                 Utils.roundOffWithTwoDigit(totalAmount),
@@ -1640,11 +1645,14 @@ public class TransactionService {
                 Utils.roundOffWithTwoDigit(paidAmount),
                 Utils.roundOffWithTwoDigit(refundAmount),
                 filterOptions,
+                getReceiptTableHeaders(columnList),
+                columnList,
                 receipts);
         return new ResponseEntity<>(receiptResponse, HttpStatus.OK);
     }
 
     private ResponseEntity<?> buildEmptyTransactionResponse(String hostelId, ReceiptFilterOptions filterOptions) {
+        List<ColumnFilters> columnList = tableColumnService.getReceiptColumns(hostelId);
         ReceiptResponse receiptResponse = new ReceiptResponse(hostelId,
                 0,
                 Utils.roundOffWithTwoDigit(0.0),
@@ -1654,8 +1662,18 @@ public class TransactionService {
                 Utils.roundOffWithTwoDigit(0.0),
                 Utils.roundOffWithTwoDigit(0.0),
                 filterOptions,
+                getReceiptTableHeaders(columnList),
+                columnList,
                 Collections.emptyList());
         return new ResponseEntity<>(receiptResponse, HttpStatus.OK);
+    }
+
+    private List<String> getReceiptTableHeaders(List<ColumnFilters> columnList) {
+        return ReceiptColumnUtils.validColumns(columnList).stream()
+                .filter(ColumnFilters::isSelected)
+                .sorted(Comparator.comparingInt(ColumnFilters::getOrder))
+                .map(ColumnFilters::getFieldName)
+                .toList();
     }
 
     public void addRetainerTransaction(InvoicesV1 invoicesV1, LoadBalance loadBalance, String bankId, String paymentMethodId) {
