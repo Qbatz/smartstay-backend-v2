@@ -1529,6 +1529,10 @@ public class TransactionService {
 //                 customerIds = null;
 //             }
             invoiceId = invoiceService.getInvoiceNumbersBySearchKeyword(hostelId, keyword, invoiceTypeArr, customerIds);
+            
+            if (invoiceId == null || invoiceId.isEmpty()) {
+                return buildEmptyTransactionResponse(hostelId, filterOptions);
+            }
 
             if (customerIds != null) {
                 if (customerIds.isEmpty()) {
@@ -1554,8 +1558,8 @@ public class TransactionService {
         listAllTransactions = transactionRespository.findTransactionsByHostelId(hostelId, customerIds, invoiceId, bankIds, collectedBy, startDate, endDate, minAmount, maxAmount);
 
         List<TransactionV1> listReceipts = listPagebleTransactions.toList();
-        if (listReceipts == null) {
-            return new ResponseEntity<>(Utils.NO_TRANSACTIONS_FOUND, HttpStatus.BAD_REQUEST);
+        if (listReceipts.isEmpty()) {
+            return buildEmptyTransactionResponse(hostelId, filterOptions);
         }
 
 //        if (!authentication.getSource().equalsIgnoreCase("web")) {
