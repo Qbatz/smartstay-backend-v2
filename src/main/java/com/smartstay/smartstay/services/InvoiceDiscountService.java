@@ -104,6 +104,10 @@ public class InvoiceDiscountService {
         return listInvoiceDiscounts;
     }
 
+    public boolean isInvoiceDiscounted(String hostelId, String invoiceId) {
+        return invoiceDiscountRepository.findByHostelIdAndInvoiceIdAndIsActiveTrue(hostelId, invoiceId) != null;
+    }
+
     public Double getDiscountAmount(String hostelId,String invoiceId) {
         InvoiceDiscounts discount = invoiceDiscountRepository.findByHostelIdAndInvoiceIdAndIsActiveTrue(hostelId, invoiceId);
         if (discount == null) {

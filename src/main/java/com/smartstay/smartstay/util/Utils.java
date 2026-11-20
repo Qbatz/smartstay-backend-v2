@@ -364,6 +364,9 @@ public class Utils {
     public static final String REQUEST_DATE_MUST_AFTER_JOINING_DATE = "Request date must be after joining date.";
     public static final String CHECKOUT_DATE_MUST_AFTER_REQUEST_DATE = "Checkout date must be after request date.";
     public static final String REQUEST_DATE_MUST_AFTER_BILLING_START_DATE = "Request date must be after current billing cycle start date: ";
+    public static final String BED_CHANGE_DATE_MUST_BE_AFTER_JOINING_DATE = "Bed change date must be after the joining date: ";
+    public static final String BED_CHANGE_DATE_MUST_BE_AFTER_LAST_BED_CHANGE = "Bed change date must be after the last bed change date: ";
+    public static final String DELETE_RENT_INVOICES_AFTER_DATE = "Delete the rent invoices generated after ";
     public static final String CHECKOUT_DATE_MUST_AFTER_JOINING_DATE = "Checkout date must be after joining date.";
     public static final String ATLEAST_ONE_AMENITY_REQUIRED = "Atleast one amenity required";
     public static final String AMENITY_ALREADY_EXIST = "Amenity with the same name already exists in this hostel.";
@@ -405,6 +408,9 @@ public class Utils {
     public static final String CANNOT_DELETE_RECEIPT_RETAINER_INVOICE = "Cannot delete receipts for retainer invoices";
     public static final String CANNOT_DELETE_REFUNDED_BOOKING_RECEIPT = "Cannot delete receipts for refunded booking invoices";
     public static final String CANNOT_DELETE_REDEEMED_RECEIPT = "Cannot delete receipt as the amount has already been redeemed";
+    public static final String CANNOT_DELETE_PAID_INVOICES = "Cannot delete paid/partially paid invoices";
+    public static final String CANNOT_DELETE_DISCOUNTED_INVOICES = "Cannot delete discounted invoices. Remove the discount and try again";
+    public static final String CANNOT_DELETE_ADJUSTED_INVOICES = "Cannot delete invoices adjusted with other invoices";
     public static final String EDIT_ALLOWED_ONLY_RECURRING_INVOICE = "Edit is allowed only for recurring invoice";
     public static final String CANNOT_MARK_UNPAID_OTHERTHAN_MANUAL = "Only manual invoices are allowed to mark unpaid";
     public static final String CANNOT_MARK_UNPAID_DISCOUNT_APPLIED = "Cannot mark as unpaid for discounted invoices";

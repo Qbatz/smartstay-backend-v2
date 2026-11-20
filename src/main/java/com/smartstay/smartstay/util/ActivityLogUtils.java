@@ -434,6 +434,9 @@ public class ActivityLogUtils {
         if (operation.equalsIgnoreCase(ActivitySourceType.REDEEMED.name())) {
             return "Booking/advance amount has been redeemed for ";
         }
+        if (operation.equalsIgnoreCase(ActivitySourceType.DELETE.name())) {
+            return "Invoice has been deleted";
+        }
         return null;
     }
 

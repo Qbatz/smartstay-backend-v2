@@ -813,7 +813,10 @@ public class ComplaintsService {
         List<Users> adminUsers = usersService.findByListOfUserIds(updatedByAdminUsers);
         List<Customers> tenantUsers = customersService.getCustomerDetails(updatedByTenantUsers);
 
-        List<String> assignedUsersIds = listComplaintUpdates.stream().filter(i -> i.getStatus().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name())).map(ComplaintUpdates::getAssignedTo).toList();
+        List<String> assignedUsersIds = listComplaintUpdates
+                .stream()
+                .filter(i -> i.getStatus() != null && i.getStatus().equalsIgnoreCase(ComplaintStatus.ASSIGNED.name()))
+                .map(ComplaintUpdates::getAssignedTo).toList();
         List<Users> assignedUsers = usersService.findByListOfUserIds(assignedUsersIds);
 
         List<ComplaintUpdatesList> listComments = listComplaintUpdates.stream().map(i -> new ComplaintUpdatesMapper(tenantUsers, adminUsers, listComplaintComments, complaintsV1.getDescription(), assignedUsers, complaintTypeStr).apply(i)).toList();

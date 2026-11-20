@@ -125,6 +125,9 @@ public class InvoiceV1Service {
     @Autowired
     private InvoiceDiscountService invoiceDiscountService;
     @Autowired
+    @Lazy
+    private RetainerService retainerService;
+    @Autowired
     private InvoiceRedemptionService invoiceRedemptionService;
     @Autowired
     private TableColumnService tableColumnService;
@@ -2986,6 +2989,205 @@ public class InvoiceV1Service {
         return invoiceNumber.toString();
     }
 
+    /**
+     * Validates the bed change date before any bed / invoice is modified.
+     * - change date must be after the joining date and after the latest bed change
+     * - no RENT / REASSIGN_RENT invoice may exist after the billing cycle of the change date
+     *   (those must be deleted before re-assigning the bed)
+     *
+     * @return error message, or null when the date is valid
+     */
+    public String validateReassignBedDate(Customers customers, String bedChangeDate, BillingDates billingDates) {
+        Date changeDate = Utils.stringToDate(bedChangeDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+        if (customers.getJoiningDate() != null && Utils.compareWithTwoDates(changeDate, customers.getJoiningDate()) <= 0) {
+            return Utils.BED_CHANGE_DATE_MUST_BE_AFTER_JOINING_DATE + Utils.dateToString(customers.getJoiningDate());
+        }
+
+        CustomersBedHistory latestBed = customersBedHistoryService.getLatestCustomerBed(customers.getCustomerId());
+        if (latestBed != null && latestBed.getStartDate() != null && Utils.compareWithTwoDates(changeDate, latestBed.getStartDate()) <= 0) {
+            return Utils.BED_CHANGE_DATE_MUST_BE_AFTER_LAST_BED_CHANGE + Utils.dateToString(latestBed.getStartDate());
+        }
+
+        if (billingDates == null) {
+            return null;
+        }
+        BillingDates changeCycle = findBillingCycleForReassign(customers, changeDate, billingDates);
+        boolean hasLaterRentInvoices = findActiveRentInvoices(customers.getCustomerId())
+                .stream()
+                .anyMatch(i -> Utils.compareWithTwoDates(i.getInvoiceStartDate(), changeCycle.currentBillEndDate()) > 0);
+        if (hasLaterRentInvoices) {
+            return Utils.DELETE_RENT_INVOICES_AFTER_DATE + Utils.dateToString(changeCycle.currentBillEndDate()) + " before changing the bed";
+        }
+
+        return null;
+    }
+
+    public ReassignRent calculateAndCreateInvoiceForReassignBed(Customers customers, String bedChangeDate, Double newRent, BillingDates billingDates) {
+        if (billingDates == null) {
+            return null;
+        }
+        Date changeDate = Utils.stringToDate(bedChangeDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
+
+        double oldMonthlyRent = bookingsService.getCurrentRent(customers.getCustomerId());
+        double newMonthlyRent = newRent;
+
+        BillingDates changeCycle = findBillingCycleForReassign(customers, changeDate, billingDates);
+
+        // invoice covering the change date. For postpaid hostels the current cycle is not billed yet,
+        // the recurring job will bill it from the updated booking / bed history.
+        InvoicesV1 existingInvoice = findActiveRentInvoices(customers.getCustomerId())
+                .stream()
+                .filter(i -> i.getInvoiceStartDate() != null && i.getInvoiceEndDate() != null)
+                .filter(i -> Utils.compareWithTwoDates(i.getInvoiceStartDate(), changeDate) <= 0
+                        && Utils.compareWithTwoDates(i.getInvoiceEndDate(), changeDate) >= 0)
+                .max(Comparator.comparing(InvoicesV1::getInvoiceStartDate))
+                .orElse(null);
+        if (existingInvoice == null) {
+            return null;
+        }
+
+        long noOfDaysInCycle = Utils.findNumberOfDays(changeCycle.currentBillStartDate(), changeCycle.currentBillEndDate());
+        Date invoiceEndDate = existingInvoice.getInvoiceEndDate();
+
+        double existingRentItemAmount = existingInvoice.getInvoiceItems() == null ? 0.0 : existingInvoice.getInvoiceItems()
+                .stream()
+                .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem()))
+                .mapToDouble(item -> item.getAmount() != null ? item.getAmount() : 0.0)
+                .sum();
+        double existingTotal = existingInvoice.getTotalAmount() != null ? existingInvoice.getTotalAmount() : 0.0;
+        double paidAmount = existingInvoice.getPaidAmount() != null ? existingInvoice.getPaidAmount() : 0.0;
+
+        // ---- existing invoice: start date -> day before bed change, old rent ----
+        Date oldInvoiceEndDate = Utils.addDaysToDate(changeDate, -1);
+        long noOfDaysInOldBed = Utils.findNumberOfDays(existingInvoice.getInvoiceStartDate(), oldInvoiceEndDate);
+        double rentForOldBed = Math.round((oldMonthlyRent / noOfDaysInCycle) * noOfDaysInOldBed);
+        double oldInvoiceTotal = (existingTotal - existingRentItemAmount) + rentForOldBed;
+
+        existingInvoice.getInvoiceItems()
+                .stream()
+                .filter(item -> com.smartstay.smartstay.ennum.InvoiceItems.RENT.name().equalsIgnoreCase(item.getInvoiceItem()))
+                .findFirst()
+                .ifPresent(item -> item.setAmount(rentForOldBed));
+
+        existingInvoice.setInvoiceEndDate(Utils.convertToTimeStamp(oldInvoiceEndDate));
+        existingInvoice.setBasePrice(Utils.roundOfDouble(oldInvoiceTotal));
+        existingInvoice.setSubTotal(Utils.roundOfDouble(oldInvoiceTotal));
+        existingInvoice.setTotalAmount(Utils.roundOfDouble(oldInvoiceTotal));
+        existingInvoice.setInvoiceAmount(Utils.roundOfDouble(oldInvoiceTotal));
+        existingInvoice.setPayableAmount(Utils.roundOffWithTwoDigit(oldInvoiceTotal));
+
+        double paidForOldInvoice = Math.min(paidAmount, oldInvoiceTotal);
+        double carryForward = paidAmount - paidForOldInvoice;
+        existingInvoice.setPaidAmount(paidForOldInvoice);
+        existingInvoice.setPaymentStatus(findPaymentStatus(paidForOldInvoice, oldInvoiceTotal));
+        existingInvoice.setUpdatedBy(authentication.getName());
+        existingInvoice.setUpdatedAt(new Date());
+        invoicesV1Repository.save(existingInvoice);
+
+        // ---- new invoice: bed change date -> end of the existing invoice, new rent ----
+        long noOfDaysInNewBed = Utils.findNumberOfDays(changeDate, invoiceEndDate);
+        double rentForNewBed = Math.round((newMonthlyRent / noOfDaysInCycle) * noOfDaysInNewBed);
+        double paidForNewInvoice = Math.min(carryForward, rentForNewBed);
+        double balanceAmount = carryForward - paidForNewInvoice;
+
+        int dueDays = billingDates.dueDays() != null && billingDates.dueDays() > 0 ? billingDates.dueDays() : 1;
+        Date invoiceDate;
+        Date dueDate;
+        if (BillingModel.POSTPAID.name().equalsIgnoreCase(billingDates.billingModel())) {
+            // postpaid cycles are billed after the cycle ends - keep the original bill's dates
+            invoiceDate = existingInvoice.getInvoiceDate() != null ? existingInvoice.getInvoiceDate() : Utils.addDaysToDate(invoiceEndDate, 1);
+            dueDate = existingInvoice.getInvoiceDueDate() != null ? existingInvoice.getInvoiceDueDate() : Utils.addDaysToDate(invoiceDate, dueDays - 1);
+        } else {
+            invoiceDate = changeDate;
+            dueDate = Utils.addDaysToDate(changeDate, dueDays - 1);
+        }
+
+        InvoicesV1 newInvoice = new InvoicesV1();
+        newInvoice.setCustomerId(existingInvoice.getCustomerId());
+        newInvoice.setHostelId(existingInvoice.getHostelId());
+        newInvoice.setCustomerMobile(existingInvoice.getCustomerMobile());
+        newInvoice.setCustomerMailId(existingInvoice.getCustomerMailId());
+        newInvoice.setInvoiceNumber(generateInvoiceNumber(existingInvoice.getHostelId(), InvoiceType.RENT.name()));
+        newInvoice.setInvoiceType(InvoiceType.REASSIGN_RENT.name());
+        newInvoice.setInvoiceMode(InvoiceMode.AUTOMATIC.name());
+        newInvoice.setBasePrice(rentForNewBed);
+        newInvoice.setSubTotal(rentForNewBed);
+        newInvoice.setTotalAmount(rentForNewBed);
+        newInvoice.setInvoiceAmount(Utils.roundOfDouble(rentForNewBed));
+        newInvoice.setPayableAmount(Utils.roundOffWithTwoDigit(rentForNewBed));
+        newInvoice.setPaidAmount(paidForNewInvoice);
+        newInvoice.setPaymentStatus(findPaymentStatus(paidForNewInvoice, rentForNewBed));
+        newInvoice.setGst(0.0);
+        newInvoice.setCgst(0.0);
+        newInvoice.setSgst(0.0);
+        newInvoice.setGstPercentile(0.0);
+        newInvoice.setCancelled(false);
+        newInvoice.setInvoiceStartDate(Utils.convertToTimeStamp(changeDate));
+        newInvoice.setInvoiceEndDate(Utils.convertToTimeStamp(invoiceEndDate));
+        newInvoice.setInvoiceDate(invoiceDate);
+        newInvoice.setInvoiceDueDate(Utils.convertToTimeStamp(dueDate));
+        newInvoice.setInvoiceGeneratedDate(new Date());
+        newInvoice.setCreatedBy(authentication.getName());
+        newInvoice.setCreatedAt(new Date());
+
+        InvoiceItems rentItem = new InvoiceItems();
+        rentItem.setInvoiceItem(com.smartstay.smartstay.ennum.InvoiceItems.RENT.name());
+        rentItem.setAmount(rentForNewBed);
+        rentItem.setInvoice(newInvoice);
+        List<InvoiceItems> newItems = new ArrayList<>();
+        newItems.add(rentItem);
+        newInvoice.setInvoiceItems(newItems);
+
+        InvoicesV1 savedInvoice = invoicesV1Repository.save(newInvoice);
+
+        return new ReassignRent(existingInvoice.getInvoiceId(), savedInvoice.getInvoiceId(), balanceAmount, savedInvoice.getInvoiceStartDate());
+    }
+
+    /**
+     * Billing cycle (start / end) that contains the given date.
+     * FIXED_DATE        -> cycle starts on the hostel billing start day
+     * JOINING_DATE_BASED -> cycle starts on the tenant's joining day
+     */
+    private BillingDates findBillingCycleForReassign(Customers customers, Date date, BillingDates billingDates) {
+        if (BillingType.JOINING_DATE_BASED.name().equalsIgnoreCase(billingDates.typeOfBilling())) {
+            return hostelService.getJoiningBasedCurrentMonthBillingDate(customers.getJoiningDate(), customers.getHostelId(), date);
+        }
+
+        int billStartDay = Utils.dateToDate(billingDates.currentBillStartDate());
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.set(Calendar.DAY_OF_MONTH, Math.min(billStartDay, calendar.getActualMaximum(Calendar.DAY_OF_MONTH)));
+        if (Utils.compareWithTwoDates(date, calendar.getTime()) < 0) {
+            calendar.set(Calendar.DAY_OF_MONTH, 1);
+            calendar.add(Calendar.MONTH, -1);
+            calendar.set(Calendar.DAY_OF_MONTH, Math.min(billStartDay, calendar.getActualMaximum(Calendar.DAY_OF_MONTH)));
+        }
+        Date cycleStart = calendar.getTime();
+        Date cycleEnd = Utils.findLastDate(billStartDay, cycleStart);
+
+        return new BillingDates(cycleStart, cycleEnd, null, billingDates.dueDays(), billingDates.hasGracePeriod(),
+                billingDates.gracePeriodDays(), billingDates.typeOfBilling(), billingDates.billingModel());
+    }
+
+    private List<InvoicesV1> findActiveRentInvoices(String customerId) {
+        return invoicesV1Repository.findAllRentInvoicesByCustomerId(customerId)
+                .stream()
+                .filter(i -> !i.isCancelled())
+                .filter(i -> !PaymentStatus.CANCELLED.name().equalsIgnoreCase(i.getPaymentStatus()))
+                .toList();
+    }
+
+    private String findPaymentStatus(double paidAmount, double totalAmount) {
+        if (paidAmount <= 0) {
+            return totalAmount <= 0 ? PaymentStatus.PAID.name() : PaymentStatus.PENDING.name();
+        }
+        if (paidAmount >= totalAmount) {
+            return PaymentStatus.PAID.name();
+        }
+        return PaymentStatus.PARTIAL_PAYMENT.name();
+    }
+
     public ReassignRent calculateAndCreateInvoiceForReassign(Customers customers, String joiningDate, Double newRent) {
 
         Date dateJoiningDate = Utils.stringToDate(joiningDate.replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
@@ -5619,6 +5821,56 @@ public class InvoiceV1Service {
         usersService.addUserLog(hostelId, invoiceId, ActivitySource.INVOICE, ActivitySourceType.EDIT_DISCOUNT, users);
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @Transactional
+    public ResponseEntity<?> deleteInvoice(String hostelId, String invoiceId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Users users = usersService.findUserByUserId(authentication.getName());
+        if (users == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!rolesService.checkPermission(users.getRoleId(), Utils.MODULE_ID_INVOICE, Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoicesV1 invoicesV1 = invoicesV1Repository.findById(invoiceId).orElse(null);
+        if (invoicesV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_INVOICE_ID, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoicesV1.getHostelId().equalsIgnoreCase(hostelId)) {
+            return new ResponseEntity<>(Utils.INVALID_REQUEST, HttpStatus.BAD_REQUEST);
+        }
+        if (!userHostelService.checkHostelAccess(users.getUserId(), hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+        if (!subscriptionService.validateSubscription(hostelId)) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_EXPIRED, HttpStatus.FORBIDDEN);
+        }
+
+        String paymentStatus = invoicesV1.getPaymentStatus();
+        boolean isPaid = PaymentStatus.PAID.name().equalsIgnoreCase(paymentStatus)
+                || PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(paymentStatus)
+                || (invoicesV1.getPaidAmount() != null && invoicesV1.getPaidAmount() > 0);
+        if (isPaid) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_PAID_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
+        if (invoicesV1.isDiscounted() || invoiceDiscountService.isInvoiceDiscounted(hostelId, invoiceId)) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_DISCOUNTED_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
+        if (invoiceRedemptionService.isInvoiceRedeemed(hostelId, invoiceId)) {
+            return new ResponseEntity<>(Utils.CANNOT_DELETE_ADJUSTED_INVOICES, HttpStatus.BAD_REQUEST);
+        }
+
+        invoicesV1Repository.delete(invoicesV1);
+        paymentSummaryService.deleteInvoice(invoicesV1.getCustomerId(), invoicesV1.getTotalAmount());
+        usersService.addUserLog(hostelId, invoiceId, ActivitySource.INVOICE, ActivitySourceType.DELETE, users);
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     public ResponseEntity<?> deleteDiscount(String hostelId, String invoiceId) {

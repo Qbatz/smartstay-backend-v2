@@ -189,4 +189,23 @@ public class PaymentSummaryService {
             paymentSummaryRepository.save(paymentSummary);
         }
     }
+
+    /**
+     * reverses addInvoice when an unpaid invoice is deleted
+     */
+    public void deleteInvoice(String customerId, Double invoiceAmount) {
+        if (invoiceAmount == null) {
+            return;
+        }
+        com.smartstay.smartstay.dao.PaymentSummary paymentSummary = paymentSummaryRepository.findByCustomerId(customerId);
+        if (paymentSummary != null) {
+            double debitAmount = paymentSummary.getDebitAmount() == null ? 0.0 : paymentSummary.getDebitAmount();
+            double balance = paymentSummary.getBalance() == null ? 0.0 : paymentSummary.getBalance();
+            paymentSummary.setDebitAmount(debitAmount - invoiceAmount);
+            paymentSummary.setBalance(balance + invoiceAmount);
+            paymentSummary.setLastUpdate(new Date());
+
+            paymentSummaryRepository.save(paymentSummary);
+        }
+    }
 }
