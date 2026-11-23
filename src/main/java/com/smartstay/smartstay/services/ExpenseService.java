@@ -1019,6 +1019,13 @@ public class ExpenseService {
         if (endDate != null && !endDate.isEmpty()) {
             eDate = Utils.stringToDate(endDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
+        if (sDate == null && eDate == null) {
+            Date[] periodRange = resolveBillingPeriod(hostelId, period);
+            if (periodRange != null) {
+                sDate = periodRange[0];
+                eDate = periodRange[1];
+            }
+        }
         if (categoryId != null) {
             try {
                 catId = Long.parseLong(String.valueOf(categoryId));
