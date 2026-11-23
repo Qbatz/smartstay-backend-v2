@@ -26,7 +26,7 @@ public record InvConsolidatedViewPayload(String search,
                                          Integer size) {
 
     public InvConsolidatedViewPayload {
-        page = (page == null || page < 0) ? 0 : page;
+        page = (page == null || page < 0) ? 1 : page;
         size = (size == null || size <= 0) ? 10 : size;
     }
 }

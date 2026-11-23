@@ -9,7 +9,6 @@ import com.smartstay.smartstay.ennum.BillingModel;
 import com.smartstay.smartstay.ennum.BillingType;
 import com.smartstay.smartstay.ennum.PeriodEnum;
 import com.smartstay.smartstay.repositories.BillingRuleRepository;
-import com.smartstay.smartstay.util.DateUtils;
 import com.smartstay.smartstay.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -194,7 +193,7 @@ public class HostelConfigService {
             throw new BadRequestException("Date is null");
         }
 
-        requestedDate = DateUtils.getStartOfDay(requestedDate);
+        requestedDate = Utils.getStartOfDay(requestedDate);
 
         int billStartDate = billingRules != null ? billingRules.getBillingStartDate() : 1;
         int billingRuleDueDate = billingRules != null ? billingRules.getBillDueDays() : 10;
@@ -215,12 +214,12 @@ public class HostelConfigService {
 
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
-        if (DateUtils.compareWithTwoDates(requestedDate, calendar.getTime()) < 0) {
+        if (Utils.compareWithTwoDates(requestedDate, calendar.getTime()) < 0) {
             calendar.add(Calendar.MONTH, -1);
         }
 
-        Date dueDate = DateUtils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
-        Date endDate = DateUtils.findLastDate(billStartDate, calendar.getTime());
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
+        Date endDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
         return new BillingDates(calendar.getTime(), endDate, dueDate, billingRuleDueDate,
                 hasGracePeriod, gracePeriodDays, typeOfBilling, billingModel);
@@ -239,7 +238,7 @@ public class HostelConfigService {
             throw new BadRequestException("Billing rules not found");
         }
 
-        Date today = DateUtils.getStartOfDay(new Date());
+        Date today = Utils.getStartOfDay(new Date());
 
         BillingDates currentBillingDates = computeBillingDates(billingRules, today);
 
@@ -255,7 +254,7 @@ public class HostelConfigService {
             return currentBillingDates;
         }
 
-        Date pastDate = DateUtils.getLastMonthDateByNoOfMonths(today, monthsToSubtract);
+        Date pastDate = Utils.getLastMonthDateByNoOfMonths(today, monthsToSubtract);
 
         BillingDates pastBillingDates = computeBillingDates(billingRules, pastDate);
 

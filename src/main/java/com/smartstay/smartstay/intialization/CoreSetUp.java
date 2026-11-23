@@ -1,11 +1,11 @@
 package com.smartstay.smartstay.intialization;
 
-import com.smartstay.smartstay.SmartstayApplication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.ennum.PlanType;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.util.Utils;
+import com.smartstay.smartstay.util.columnOptions.InvRegisterConsolidatedColumnUtils;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
@@ -969,6 +969,34 @@ public class CoreSetUp {
 				expenseFilterOptions.setFilterOptions(defaultColumnFilters);
 
 				filterOptionsRepositories.save(expenseFilterOptions);
+			}
+		};
+	}
+
+	@Bean
+	CommandLineRunner addInvoiceRegisterConsolidatedFilterOptions(FilterOptionsRepositories filterOptionsRepositories) {
+
+		return args -> {
+
+			FilterOptions filterOptions = filterOptionsRepositories
+					.findByModuleName(FilterOptionsModule.MODULE_INVOICE_REGISTER_CONSOLIDATED.name());
+
+			Date today = new Date();
+
+			if (filterOptions == null){
+
+				filterOptions = new FilterOptions();
+
+				filterOptions.setModuleName(FilterOptionsModule.MODULE_INVOICE_REGISTER_CONSOLIDATED.name());
+				filterOptions.setIsActive(true);
+				filterOptions.setCreatedAt(today);
+
+				List<ColumnFilters> defaultColumnFilters = new ArrayList<>();
+				defaultColumnFilters = InvRegisterConsolidatedColumnUtils.defaultColumns();
+
+				filterOptions.setFilterOptions(defaultColumnFilters);
+
+				filterOptionsRepositories.save(filterOptions);
 			}
 		};
 	}

@@ -18,6 +18,7 @@ import com.smartstay.smartstay.responses.Reports.ReportDetailsResponse;
 import com.smartstay.smartstay.responses.Reports.ReportResponse;
 import com.smartstay.smartstay.responses.Reports.TenantRegisterResponse;
 import com.smartstay.smartstay.responses.Reports.invoice.*;
+import com.smartstay.smartstay.responses.filterOptions.ColumnFiltersRes;
 import com.smartstay.smartstay.responses.filters.EnumFilterRes;
 import com.smartstay.smartstay.responses.filters.FloorsFilterRes;
 import com.smartstay.smartstay.responses.filters.UserFilterRes;
@@ -28,6 +29,7 @@ import com.smartstay.smartstay.util.AddressUtils;
 import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
+import com.smartstay.smartstay.util.columnOptions.InvRegisterConsolidatedColumnUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -39,6 +41,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -91,6 +94,8 @@ public class ReportService {
     private DownloadService downloadService;
     @Autowired
     private HostelConfigService hostelConfigService;
+    @Autowired
+    private TableColumnService tableColumnService;
 
     public ResponseEntity<?> getReports(String hostelId, String customStartDate, String customEndDate) {
         if (!authentication.isAuthenticated()) {
@@ -1699,7 +1704,30 @@ public class ReportService {
             return new ResponseEntity<>(Utils.BILLING_RULE_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
         }
 
-        // get table columns here for table order
+        List<ColumnFilters> tableColumns = tableColumnService
+                .getInvRegConsolidatedColumns(hostelId, loggedInUserId,
+                        FilterOptionsModule.MODULE_INVOICE_REGISTER_CONSOLIDATED.name());
+
+        List<ColumnFilters> activeColumns = tableColumns.stream()
+                .filter(ColumnFilters::isSelected)
+                .sorted(Comparator.comparingInt(ColumnFilters::getOrder))
+                .toList();
+
+        List<String> columnNames = activeColumns.stream()
+                .map(ColumnFilters::getFieldName)
+                .toList();
+
+        List<ColumnFiltersRes> activeColumnsRes = activeColumns.stream()
+                .map(i -> {
+
+                    boolean isLocked = InvRegisterConsolidatedColumnUtils.FLOOR.equals(i.getFieldName()) ||
+                            InvRegisterConsolidatedColumnUtils.ROOM.equals(i.getFieldName()) ||
+                            InvRegisterConsolidatedColumnUtils.BED.equals(i.getFieldName()) ||
+                            InvRegisterConsolidatedColumnUtils.TOTAL_PENDING_AMOUNT.equals(i.getFieldName());
+
+                    return new ColumnFiltersRes(i.getOrder(), i.getFieldName(),
+                            i.isSelected(), isLocked);
+                }).toList();
 
         Date today = new Date();
 
@@ -1740,7 +1768,7 @@ public class ReportService {
         Set<String> filteredCustomerIds = null;
         if (search != null){
             List<Customers> customers = customersService
-                    .searchCustomer(hostelId, search);
+                    .searchCustomerByFullName(hostelId, search);
 
             filteredCustomerIds = customers.stream()
                     .map(Customers::getCustomerId)
@@ -1781,6 +1809,10 @@ public class ReportService {
         }
 
         List<Floors> allFloors = floorsService.getAllByHostelId(hostelId);
+        Map<Integer, Floors> allFloorsMap = allFloors.stream()
+                .collect(Collectors.toMap(Floors::getFloorId,
+                        Function.identity()));
+
         List<Floors> floors = new ArrayList<>();
         List<Rooms> rooms = new ArrayList<>();
         List<Beds> beds = new ArrayList<>();
@@ -2008,9 +2040,11 @@ public class ReportService {
                 new PaginationDataRes(page + 1, size, 0, 1)
                 : null;
 
+        List<Object> columnData = new ArrayList<>();
+
         InvConsolidatedPdfRes response = new InvConsolidatedPdfRes(includePaidInvoice, includeEmptyBeds,
                 includeSubTotals, includeGrandTotal, includeHostelName, hostelInfo, invHeader, footerInfo,
-                List.of(), List.of(), filtersRes, paginationData);
+                List.of(), List.of(), filtersRes, paginationData, activeColumnsRes, columnNames, columnData);
 
         if (GroupByEnum.FLOOR_ROOM_BED.equals(groupByEnum)) {
 
@@ -2033,7 +2067,8 @@ public class ReportService {
                         continue;
                     }
 
-                    roomResponses.add(new InvRoomRes(room.getRoomId(), room.getRoomName(), bedResponses));
+                    roomResponses.add(new InvRoomRes(room.getRoomId(), room.getRoomName(), floor.getFloorId(),
+                            floor.getFloorName(), bedResponses));
                 }
 
                 if (!includeEmptyBeds && roomResponses.isEmpty()) {
@@ -2054,9 +2089,18 @@ public class ReportService {
                             (int) Math.ceil((double) totalElements / size))
                     : null;
 
+            for (InvFloorsRes floor : paginatedFloors) {
+                for (InvRoomRes room : floor.rooms()) {
+                    for (InvBedRes bed : room.beds()) {
+                        columnData.add(buildColumnData(bed, floor.floorName(),
+                                room.roomName(), columnNames));
+                    }
+                }
+            }
+
             response = new InvConsolidatedPdfRes(includePaidInvoice, includeEmptyBeds, includeSubTotals,
                     includeGrandTotal, includeHostelName, hostelInfo, invHeader, footerInfo, paginatedFloors,
-                    List.of(), filtersRes, paginationData);
+                    List.of(), filtersRes, paginationData, activeColumnsRes, columnNames, columnData);
         }
         else if (GroupByEnum.ROOM_BED.equals(groupByEnum)) {
 
@@ -2075,7 +2119,14 @@ public class ReportService {
                     continue;
                 }
 
-                roomResponses.add(new InvRoomRes(room.getRoomId(), room.getRoomName(), bedResponses));
+                Floors floor = allFloorsMap.getOrDefault(room.getFloorId(), null);
+                String floorName = null;
+                if (floor != null) {
+                    floorName = floor.getFloorName();
+                }
+
+                roomResponses.add(new InvRoomRes(room.getRoomId(), room.getRoomName(), room.getFloorId(),
+                        floorName, bedResponses));
             }
 
             long totalElements = roomResponses.size();
@@ -2089,9 +2140,16 @@ public class ReportService {
                             (int) Math.ceil((double) totalElements / size))
                     : null;
 
+            for (InvRoomRes room : paginatedRooms) {
+                for (InvBedRes bed : room.beds()) {
+                    columnData.add(buildColumnData(bed, room.floorName(),
+                            room.roomName(), columnNames));
+                }
+            }
+
             response = new InvConsolidatedPdfRes(includePaidInvoice, includeEmptyBeds, includeSubTotals,
                     includeGrandTotal, includeHostelName, hostelInfo, invHeader, footerInfo, List.of(),
-                    paginatedRooms, filtersRes, paginationData);
+                    paginatedRooms, filtersRes, paginationData, activeColumnsRes, columnNames, columnData);
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -2294,5 +2352,44 @@ public class ReportService {
         int toIndex = Math.min(fromIndex + size, data.size());
 
         return data.subList(fromIndex, toIndex);
+    }
+
+    private List<Object> buildColumnData(InvBedRes bedRes, String floorName, String roomName,
+                                         List<String> columnNames) {
+
+        List<Object> row = new ArrayList<>();
+
+        for (String column : columnNames) {
+            switch (column) {
+                case InvRegisterConsolidatedColumnUtils.FLOOR ->
+                        row.add(floorName);
+                case InvRegisterConsolidatedColumnUtils.ROOM ->
+                        row.add(roomName);
+                case InvRegisterConsolidatedColumnUtils.BED ->
+                        row.add(bedRes.bedName());
+                case InvRegisterConsolidatedColumnUtils.TENANT_NAME ->
+                        row.add(bedRes.tenantName());
+                case InvRegisterConsolidatedColumnUtils.CONTACT_NUMBER ->
+                        row.add(bedRes.tenantCountryCode() + " " + bedRes.tenantMobile());
+                case InvRegisterConsolidatedColumnUtils.ACTUAL_RENT ->
+                        row.add(bedRes.actualRent());
+                case InvRegisterConsolidatedColumnUtils.PENDING_RENT ->
+                        row.add(bedRes.pendingRent());
+                case InvRegisterConsolidatedColumnUtils.EB_AMOUNT ->
+                        row.add(bedRes.ebAmount());
+                case InvRegisterConsolidatedColumnUtils.PENDING_ADVANCE ->
+                        row.add(bedRes.pendingAdvance());
+                case InvRegisterConsolidatedColumnUtils.PENDING_NON_REFUNDABLE ->
+                        row.add(bedRes.pendingNonRefundable());
+                case InvRegisterConsolidatedColumnUtils.TOTAL_PENDING_AMOUNT ->
+                        row.add(bedRes.totalPendingAmount());
+                case InvRegisterConsolidatedColumnUtils.PENDING_INVOICES ->
+                        row.add(bedRes.invoiceCount());
+            }
+        }
+
+        row.add(bedRes.invoices());
+
+        return row;
     }
 }
