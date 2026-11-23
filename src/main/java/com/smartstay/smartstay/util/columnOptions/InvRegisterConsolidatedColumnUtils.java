@@ -17,7 +17,7 @@ public class InvRegisterConsolidatedColumnUtils {
     public static final String PENDING_ADVANCE = "Pending Advance";
     public static final String PENDING_NON_REFUNDABLE = "Pending Non-Refundable";
     public static final String TOTAL_PENDING_AMOUNT = "Total Pending Amount";
-    public static final String PENDING_INVOICES = "Pending Invoices";
+    public static final String INVOICES = "Invoices";
 
     public static List<ColumnFilters> defaultColumns() {
         return List.of(
@@ -32,6 +32,6 @@ public class InvRegisterConsolidatedColumnUtils {
                 new ColumnFilters(9, PENDING_ADVANCE, true),
                 new ColumnFilters(10, PENDING_NON_REFUNDABLE, true),
                 new ColumnFilters(11, TOTAL_PENDING_AMOUNT, true),
-                new ColumnFilters(12, PENDING_INVOICES, true));
+                new ColumnFilters(12, INVOICES, true));
     }
 }

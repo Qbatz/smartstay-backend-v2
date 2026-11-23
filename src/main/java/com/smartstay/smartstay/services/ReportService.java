@@ -2383,7 +2383,7 @@ public class ReportService {
                         row.add(bedRes.pendingNonRefundable());
                 case InvRegisterConsolidatedColumnUtils.TOTAL_PENDING_AMOUNT ->
                         row.add(bedRes.totalPendingAmount());
-                case InvRegisterConsolidatedColumnUtils.PENDING_INVOICES ->
+                case InvRegisterConsolidatedColumnUtils.INVOICES ->
                         row.add(bedRes.invoiceCount());
             }
         }
