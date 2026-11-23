@@ -351,6 +351,9 @@ public class BankingServiceV2 {
         if (bank == null) {
             return new ResponseEntity<>(Utils.INVALID_BANK_ID, HttpStatus.BAD_REQUEST);
         }
+        if (bank.isDeleted()) {
+            return new ResponseEntity<>(Utils.CANNOT_ADD_FOR_DELETED_BANKS, HttpStatus.BAD_REQUEST);
+        }
         if (!isBankAccount(bank)) {
             return new ResponseEntity<>(Utils.BANKING_METHOD_ONLY_FOR_BANK, HttpStatus.BAD_REQUEST);
         }
@@ -1873,7 +1876,8 @@ public class BankingServiceV2 {
                 bank.getAccountHolderName(),
                 bank.getAccountNumber(),
                 bank.getIfscCode(),
-                bank.getBranchName());
+                bank.getBranchName(),
+                bank.isDeleted());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -2558,7 +2562,7 @@ public class BankingServiceV2 {
             return null;
         }
         BankingV2 bank = bankOpt.get();
-        if (bank.isDeleted() || !hostelId.equals(bank.getHostelId())) {
+        if (!hostelId.equals(bank.getHostelId())) {
             return null;
         }
         return bank;

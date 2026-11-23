@@ -4236,25 +4236,34 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.BED_UNAVAILABLE_DATE, HttpStatus.BAD_REQUEST);
         }
 
-        //check is it after or equal current billing cycle
         Date joiningDate = Utils.stringToDate(request.joiningDate().replace("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
 
-        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
-//        if (billingDates != null && billingDates.currentBillStartDate() != null) {
-//            if (Utils.compareWithTwoDates(joiningDate, billingDates.currentBillStartDate()) < 0) {
-//                return new ResponseEntity<>(Utils.REQUEST_DATE_MUST_AFTER_BILLING_START_DATE + Utils.dateToString(billingDates.currentBillStartDate()), HttpStatus.BAD_REQUEST);
-//            }
-//        }
-
-        String reassignDateError = invoiceService.validateReassignBedDate(customers, request.joiningDate(), billingDates);
-        if (reassignDateError != null) {
-            return new ResponseEntity<>(reassignDateError, HttpStatus.BAD_REQUEST);
+        if (customers.getJoiningDate() != null && Utils.compareWithTwoDates(joiningDate, customers.getJoiningDate()) <= 0) {
+            return new ResponseEntity<>(Utils.BED_CHANGE_DATE_MUST_BE_AFTER_JOINING_DATE + Utils.dateToString(customers.getJoiningDate()), HttpStatus.BAD_REQUEST);
+        }
+        CustomersBedHistory latestBed = bedHistory.getLatestCustomerBed(customerId);
+        if (latestBed != null && latestBed.getStartDate() != null && Utils.compareWithTwoDates(joiningDate, latestBed.getStartDate()) <= 0) {
+            return new ResponseEntity<>(Utils.BED_CHANGE_DATE_MUST_BE_AFTER_LAST_BED_CHANGE + Utils.dateToString(latestBed.getStartDate()), HttpStatus.BAD_REQUEST);
         }
 
+        BillingDates billingDates = hostelService.getCurrentBillStartAndEndDates(hostelId);
+        // cycle re-priced at the new rent when the change is back-dated (null = nothing to re-price)
+        BillingDates repriceCycle = invoiceService.findCycleToRepriceForBedChange(hostelId, joiningDate, billingDates);
+
+        String invoiceError = invoiceService.validateRentInvoicesForBedChange(customers, joiningDate, billingDates, repriceCycle);
+        if (invoiceError != null) {
+            return new ResponseEntity<>(invoiceError, HttpStatus.BAD_REQUEST);
+        }
+
+        // split the invoice covering the change date: old rent till the day before, new rent from the change date
         ReassignRent reassignRent = invoiceService.calculateAndCreateInvoiceForReassignBed(customers, request.joiningDate(), request.rentAmount(), billingDates);
         double balanceAmount = 0.0;
         if (reassignRent != null) {
             balanceAmount = reassignRent.balanceAmount() * -1;
+        }
+
+        if (repriceCycle != null) {
+            invoiceService.checkAndUpdateCurrentMonthInvoice(customerId, hostelId, request.rentAmount(), repriceCycle);
         }
         bedsService.unassignBed(customerId, bookingsV1.getBedId());
         bedsService.reassignBed(customerId, request.bedId());

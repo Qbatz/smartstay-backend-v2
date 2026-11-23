@@ -41,6 +41,7 @@ public class Utils {
     public static final String INVALID_EMAIL = "Invalid Email";
     public static final String INVALID_VENDOR = "Invalid Vendor";
     public static final String INVALID_BANKING = "Invalid Banking";
+    public static final String CANNOT_ADD_FOR_DELETED_BANKS = "Cannot add payment methods for deleted banks";
     public static final String INVALID_BANKING_DETAILS = "Bank details not found. Please add bank details first.";
     public static final String INVALID_ASSET = "Invalid Asset";
     public static final String INVALID_TEMPLATE_ID = "Invalid template id";
@@ -347,6 +348,7 @@ public class Utils {
     public static final String REDEMPTION_AMOUNT_CANNOT_EXCEED_AVAILABLE_AMOUNT = "Redemption amount cannot exceed balance amount";
     public static final String CANNOT_REDEEM_FROM_UNPAID_INVOICES = "Cannot redeem from unpaid invoices";
     public static final String CANNOT_APPLY_FOR_PAID_INVOICES = "Cannot apply for paid invoices";
+    public static final String CANNOT_CHANGE_BED_PAID_INVOICE_EXISTS = "Cannot change bed paid invoice exists";
     public static final String CANNOT_APPLY_TO_EB_HOLDING = "Cannot apply for EB advance";
     public static final String CANNOT_APPLY_TO_ADVANCE_HOLDING = "Cannot apply for advance holding";
     public static final String CANNOT_APPLY_TO_ADVANCE_INVOICE = "Cannot apply for advance invoice";

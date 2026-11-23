@@ -1019,6 +1019,13 @@ public class ExpenseService {
         if (endDate != null && !endDate.isEmpty()) {
             eDate = Utils.stringToDate(endDate.replaceAll("/", "-"), Utils.USER_INPUT_DATE_FORMAT);
         }
+        if (sDate == null && eDate == null) {
+            Date[] periodRange = resolveBillingPeriod(hostelId, period);
+            if (periodRange != null) {
+                sDate = periodRange[0];
+                eDate = periodRange[1];
+            }
+        }
         if (categoryId != null) {
             try {
                 catId = Long.parseLong(String.valueOf(categoryId));
@@ -1056,6 +1063,8 @@ public class ExpenseService {
         }
 
 
+        String searchName = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
+
         List<String> bankIds = null;
         List<String> paymentMethodIds = null;
 
@@ -1066,8 +1075,8 @@ public class ExpenseService {
         }
 
 
-        List<ExpensesV1> listAllExpenses = expensesRepository.findExpensesForHostel(hostelId, null, catId, subCatId, pStatus, vId, bankIds, paymentMethodIds, createdBy, minAmount, maxAmount, sDate, eDate);
-        Page<ExpensesV1> listExpenses = expensesRepository.findExpensesForHostel(hostelId, null, catId, subCatId, pStatus, vId, bankIds, paymentMethodIds, createdBy, minAmount, maxAmount, sDate, eDate, pageable);
+        List<ExpensesV1> listAllExpenses = expensesRepository.findExpensesForHostel(hostelId, searchName, catId, subCatId, pStatus, vId, bankIds, paymentMethodIds, createdBy, minAmount, maxAmount, sDate, eDate);
+        Page<ExpensesV1> listExpenses = expensesRepository.findExpensesForHostel(hostelId, searchName, catId, subCatId, pStatus, vId, bankIds, paymentMethodIds, createdBy, minAmount, maxAmount, sDate, eDate, pageable);
         List<ExpenseList> expenseLists = new ArrayList<>();
         List<VendorV1> listVendors;
         List<ExpenseCategory> listExpenseCategory;
@@ -1789,14 +1798,14 @@ public class ExpenseService {
                     .mapToDouble(i -> nullSafe(i.getTotalPrice()))
                     .sum();
             totalPaidAmount = primaryExpenses.stream()
-                    .filter(i -> i.getPaymentStatus() == ExpensePaymentStatus.Full.name())
+                    .filter(i -> hasPaymentStatus(i.getPaymentStatus(), ExpensePaymentStatus.Full))
                     .mapToDouble(i -> nullSafe(i.getTotalPrice()))
                     .sum();
             totalUnPaidAmount = primaryExpenses.stream()
                     .mapToDouble(i -> nullSafe(i.getBalanceAmount()))
                     .sum();
             totalPartialPaidAmount = primaryExpenses.stream()
-                    .filter(i -> i.getPaymentStatus() == ExpensePaymentStatus.Partial.name())
+                    .filter(i -> hasPaymentStatus(i.getPaymentStatus(), ExpensePaymentStatus.Partial))
                     .mapToDouble(i -> nullSafe(i.getPaidAmount()))
                     .sum();
         }

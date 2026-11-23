@@ -24,6 +24,7 @@ public record BankOverviewResponse(
         String beneficiaryName,
         String accountNumber,
         String ifscCode,
-        String branch
+        String branch,
+        boolean isDeleted
 ) {
 }

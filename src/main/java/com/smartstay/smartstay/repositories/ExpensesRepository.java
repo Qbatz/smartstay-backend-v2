@@ -230,6 +230,9 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
 
     @Query(value = """
             SELECT exp FROM ExpensesV1 exp WHERE exp.hostelId=:hostelId 
+            AND (:name IS NULL OR LOWER(exp.title) LIKE LOWER(CONCAT('%', :name, '%')) 
+                 OR LOWER(exp.expenseNumber) LIKE LOWER(CONCAT('%', :name, '%')) 
+                 OR exp.expenseId = :name) 
             AND (:categoryId IS NULL OR exp.categoryId =:categoryId) 
             AND (:subCategoryId IS NULL OR exp.subCategoryId=:subCategoryId) 
             AND (:paymentStatus IS NULL OR exp.paymentStatus=:paymentStatus) 
@@ -243,6 +246,9 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
             AND (:endDate IS NULL OR DATE(exp.transactionDate) <= DATE(:endDate))
             """, countQuery = """
             SELECT count(exp) FROM ExpensesV1 exp WHERE exp.hostelId=:hostelId 
+            AND (:name IS NULL OR LOWER(exp.title) LIKE LOWER(CONCAT('%', :name, '%')) 
+                 OR LOWER(exp.expenseNumber) LIKE LOWER(CONCAT('%', :name, '%')) 
+                 OR exp.expenseId = :name) 
             AND (:categoryId IS NULL OR exp.categoryId =:categoryId) 
             AND (:subCategoryId IS NULL OR exp.subCategoryId=:subCategoryId) 
             AND (:paymentStatus IS NULL OR exp.paymentStatus=:paymentStatus) 
@@ -272,6 +278,9 @@ public interface ExpensesRepository extends JpaRepository<ExpensesV1, String> {
 
     @Query("""
             SELECT exp FROM ExpensesV1 exp WHERE exp.hostelId=:hostelId 
+            AND (:name IS NULL OR LOWER(exp.title) LIKE LOWER(CONCAT('%', :name, '%')) 
+                 OR LOWER(exp.expenseNumber) LIKE LOWER(CONCAT('%', :name, '%')) 
+                 OR exp.expenseId = :name) 
             AND (:categoryId IS NULL OR exp.categoryId =:categoryId) 
             AND (:subCategoryId IS NULL OR exp.subCategoryId=:subCategoryId) 
             AND (:paymentStatus IS NULL OR exp.paymentStatus=:paymentStatus) 
