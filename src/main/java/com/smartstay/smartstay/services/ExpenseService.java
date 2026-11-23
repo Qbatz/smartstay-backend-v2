@@ -1063,6 +1063,8 @@ public class ExpenseService {
         }
 
 
+        String searchName = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
+
         List<String> bankIds = null;
         List<String> paymentMethodIds = null;
 
@@ -1073,8 +1075,8 @@ public class ExpenseService {
         }
 
 
-        List<ExpensesV1> listAllExpenses = expensesRepository.findExpensesForHostel(hostelId, null, catId, subCatId, pStatus, vId, bankIds, paymentMethodIds, createdBy, minAmount, maxAmount, sDate, eDate);
-        Page<ExpensesV1> listExpenses = expensesRepository.findExpensesForHostel(hostelId, null, catId, subCatId, pStatus, vId, bankIds, paymentMethodIds, createdBy, minAmount, maxAmount, sDate, eDate, pageable);
+        List<ExpensesV1> listAllExpenses = expensesRepository.findExpensesForHostel(hostelId, searchName, catId, subCatId, pStatus, vId, bankIds, paymentMethodIds, createdBy, minAmount, maxAmount, sDate, eDate);
+        Page<ExpensesV1> listExpenses = expensesRepository.findExpensesForHostel(hostelId, searchName, catId, subCatId, pStatus, vId, bankIds, paymentMethodIds, createdBy, minAmount, maxAmount, sDate, eDate, pageable);
         List<ExpenseList> expenseLists = new ArrayList<>();
         List<VendorV1> listVendors;
         List<ExpenseCategory> listExpenseCategory;
