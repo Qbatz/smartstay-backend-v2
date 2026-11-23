@@ -163,7 +163,7 @@ public class ReportController {
                 minOutstandingAmount, maxOutstandingAmount, startDate, endDate);
     }
 
-    @PostMapping("/invoice/consolidated-details/{hostelId}")
+    @PostMapping("/invoice/consolidated/{hostelId}")
     public ResponseEntity<?> getInvoiceReportConsolidatedView(@PathVariable("hostelId") String hostelId,
                                                               @RequestBody @Valid InvConsolidatedViewPayload payload) {
         return reportService.getInvoiceReportConsolidatedView(hostelId, payload);
