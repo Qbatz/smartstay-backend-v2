@@ -26,6 +26,26 @@ public class CustomerUtils {
         return null;
     }
 
+    public static String profilePicType(Customers customers) {
+        if (customers != null) {
+            if (customers.getProfilePic() != null && !customers.getProfilePic().trim().isEmpty()) {
+                return "MANUAL";
+            }
+            KycDetails kycDetails = customers.getKycDetails();
+            if (kycDetails != null) {
+                if (kycDetails.getCurrentStatus() != null && kycDetails.getCurrentStatus().equalsIgnoreCase("VERIFIED")) {
+                    if (kycDetails.getIdPic() != null && !kycDetails.getIdPic().trim().isEmpty()) {
+                        return "KYC";
+                    }
+                }
+            }
+
+            // Fallback to initials
+            return null;
+        }
+        return null;
+    }
+
     public static AddressInfo getCustomerAddress(Customers customers) {
         if (customers != null) {
             return new AddressInfo(customers.getHouseNo(),

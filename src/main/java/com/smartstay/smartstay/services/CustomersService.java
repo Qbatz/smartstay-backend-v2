@@ -1871,8 +1871,16 @@ public class CustomersService {
             effectiveFromMonth = Utils.getEffectiveBillingMonths(new Date(), customers.getJoiningDate(), billingStartDay);
         }
 
+        boolean canRemoveProfilePic = false;
+        String profilePicType = CustomerUtils.profilePicType(customers);
+        if (profilePicType == null) {
+            canRemoveProfilePic = false;
+        }
+        if (profilePicType.equalsIgnoreCase("MANUAL")) {
+            canRemoveProfilePic = true;
+        }
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(),
-                customers.getMobile(), customers.getCountryCode() , initials, CustomerUtils.getProfilePic(customers),
+                customers.getMobile(), customers.getCountryCode() , initials, CustomerUtils.getProfilePic(customers), canRemoveProfilePic,
                 bookingId, isNewRentAvailable, newRentAmount, newRentLabelHint,
                 customers.getCurrentStatus(), address, hostelInformation,
                 kycInfo, advanceInfo, checkoutInfo, bookingInfo,
