@@ -1798,14 +1798,14 @@ public class ExpenseService {
                     .mapToDouble(i -> nullSafe(i.getTotalPrice()))
                     .sum();
             totalPaidAmount = primaryExpenses.stream()
-                    .filter(i -> i.getPaymentStatus() == ExpensePaymentStatus.Full.name())
+                    .filter(i -> hasPaymentStatus(i.getPaymentStatus(), ExpensePaymentStatus.Full))
                     .mapToDouble(i -> nullSafe(i.getTotalPrice()))
                     .sum();
             totalUnPaidAmount = primaryExpenses.stream()
                     .mapToDouble(i -> nullSafe(i.getBalanceAmount()))
                     .sum();
             totalPartialPaidAmount = primaryExpenses.stream()
-                    .filter(i -> i.getPaymentStatus() == ExpensePaymentStatus.Partial.name())
+                    .filter(i -> hasPaymentStatus(i.getPaymentStatus(), ExpensePaymentStatus.Partial))
                     .mapToDouble(i -> nullSafe(i.getPaidAmount()))
                     .sum();
         }
