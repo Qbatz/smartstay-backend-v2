@@ -10,6 +10,7 @@ public class InvRegisterConsolidatedColumnUtils {
     public static final String ROOM = "Room";
     public static final String BED = "Bed";
     public static final String TENANT_NAME = "Tenant Name";
+    public static final String STATUS = "Status";
     public static final String CONTACT_NUMBER = "Contact Number";
     public static final String ACTUAL_RENT = "Actual Rent";
     public static final String PENDING_RENT = "Pending Rent";
@@ -25,13 +26,14 @@ public class InvRegisterConsolidatedColumnUtils {
                 new ColumnFilters(2, ROOM, true),
                 new ColumnFilters(3, BED, true),
                 new ColumnFilters(4, TENANT_NAME, true),
-                new ColumnFilters(5, CONTACT_NUMBER, true),
-                new ColumnFilters(6, ACTUAL_RENT, true),
-                new ColumnFilters(7, PENDING_RENT, true),
-                new ColumnFilters(8, EB_AMOUNT, true),
-                new ColumnFilters(9, PENDING_ADVANCE, true),
-                new ColumnFilters(10, PENDING_NON_REFUNDABLE, true),
-                new ColumnFilters(11, TOTAL_PENDING_AMOUNT, true),
-                new ColumnFilters(12, INVOICES, true));
+                new ColumnFilters(5, STATUS, true),
+                new ColumnFilters(6, CONTACT_NUMBER, true),
+                new ColumnFilters(7, ACTUAL_RENT, true),
+                new ColumnFilters(8, PENDING_RENT, true),
+                new ColumnFilters(9, EB_AMOUNT, true),
+                new ColumnFilters(10, PENDING_ADVANCE, true),
+                new ColumnFilters(11, PENDING_NON_REFUNDABLE, true),
+                new ColumnFilters(12, TOTAL_PENDING_AMOUNT, true),
+                new ColumnFilters(13, INVOICES, true));
     }
 }

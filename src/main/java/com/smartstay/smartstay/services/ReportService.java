@@ -2286,6 +2286,7 @@ public class ReportService {
                 double pendingAmount = totalAmount - invPaidAmount;
                 double balanceAmount = invoice.getBalanceAmount() != null ? invoice.getBalanceAmount() : 0;
                 double deductionAmount = invoice.getDeductionAmount() != null ? invoice.getDeductionAmount() : 0;
+                double pendingDeductionAmount = deductionAmount;
 
                 List<InvoiceItems> invoiceItems = invoice.getInvoiceItems();
 
@@ -2314,10 +2315,26 @@ public class ReportService {
                     pendingAdvance += balanceAmount;
                 }
 
-                pendingNonRefundable += deductionAmount;
+                if (deductionAmount != 0){
+                    pendingDeductionAmount = deductionAmount - invPaidAmount;
+                }
+                pendingNonRefundable += pendingDeductionAmount;
             }
 
-            totalPendingAmount = pendingAdvance - pendingNonRefundable - pendingRent;
+            double payableAmount = pendingRent + pendingNonRefundable;
+
+            totalPendingAmount = payableAmount - pendingAdvance;
+
+            String status = "Pending";
+            if (totalPendingAmount == 0){
+                status = "Paid";
+            } else if (totalPendingAmount > 0 && totalPendingAmount < payableAmount) {
+                status = "Partially Paid";
+            } else if (totalPendingAmount == payableAmount) {
+                status = "Pending";
+            } else if (totalPendingAmount < 0) {
+                status = "Refund";
+            }
 
             String tenantName = null;
             String countryCode = null;
@@ -2326,10 +2343,12 @@ public class ReportService {
                 tenantName = NameUtils.getFullName(customer.getFirstName(), customer.getLastName());
                 countryCode = "+" + String.valueOf(customer.getCountryCode());
                 mobile = customer.getMobile();
+            } else {
+                status = "Vacant";
             }
 
             bedResponses.add(new InvBedRes(bed.getBedId(), bed.getBedName(), tenantName, countryCode,
-                    mobile, String.valueOf(actualRent), String.valueOf(pendingRent), String.valueOf(ebAmount),
+                    mobile, status, String.valueOf(actualRent), String.valueOf(pendingRent), String.valueOf(ebAmount),
                     String.valueOf(pendingAdvance), String.valueOf(pendingNonRefundable),
                     String.valueOf(totalPendingAmount), String.valueOf(invoiceCount), invoiceResponses));
         }
@@ -2370,6 +2389,8 @@ public class ReportService {
                         row.add(bedRes.bedName());
                 case InvRegisterConsolidatedColumnUtils.TENANT_NAME ->
                         row.add(bedRes.tenantName());
+                case InvRegisterConsolidatedColumnUtils.STATUS ->
+                        row.add(bedRes.status());
                 case InvRegisterConsolidatedColumnUtils.CONTACT_NUMBER ->
                         row.add(bedRes.tenantCountryCode() + " " + bedRes.tenantMobile());
                 case InvRegisterConsolidatedColumnUtils.ACTUAL_RENT ->
