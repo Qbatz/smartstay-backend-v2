@@ -1876,7 +1876,7 @@ public class CustomersService {
         if (profilePicType == null) {
             canRemoveProfilePic = false;
         }
-        if (profilePicType.equalsIgnoreCase("MANUAL")) {
+        else if (profilePicType.equalsIgnoreCase("MANUAL")) {
             canRemoveProfilePic = true;
         }
         CustomerDetails details = new CustomerDetails(customers.getCustomerId(), customers.getHostelId(), customers.getFirstName(), customers.getLastName(), fullName, customers.getEmailId(),
