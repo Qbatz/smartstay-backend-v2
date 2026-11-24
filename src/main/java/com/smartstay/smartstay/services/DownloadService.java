@@ -51,4 +51,36 @@ public class DownloadService {
         }
 
     }
+
+    public String downloadFromUrl(String url, Object payload) {
+
+        String token = credentialServices.getReportsAuthToken();
+        if (token == null) {
+            return null;
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(token);
+
+        HttpEntity<Object> request = new HttpEntity<>(payload, headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    request,
+                    String.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return response.getBody();
+            }
+
+            return null;
+
+        } catch (HttpClientErrorException clientErrorException) {
+            return null;
+        }
+    }
 }

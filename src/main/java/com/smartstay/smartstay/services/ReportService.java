@@ -30,6 +30,7 @@ import com.smartstay.smartstay.util.CustomerUtils;
 import com.smartstay.smartstay.util.NameUtils;
 import com.smartstay.smartstay.util.Utils;
 import com.smartstay.smartstay.util.columnOptions.InvRegisterConsolidatedColumnUtils;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -2391,5 +2392,41 @@ public class ReportService {
         row.add(bedRes.invoices());
 
         return row;
+    }
+
+    public ResponseEntity<?> downloadInvoiceReportConsolidatedView(String hostelId,
+                                                                   InvConsolidatedViewPayload payload) {
+
+        String loggedInUserId = authentication.getName();
+
+        Users loggedInUser = usersService.findUserByUserId(loggedInUserId);
+        if (loggedInUser == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(loggedInUserId, hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (!rolesService.checkPermission(loggedInUser.getRoleId(), Utils.MODULE_ID_REPORTS, Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        String reportsServiceUrl =  reportsUrl + "/v2/reports/invoices";
+
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromUriString(reportsServiceUrl)
+                .path("/consolidated/pdf/{hostelId}/{userId}");
+
+        String url = builder
+                .buildAndExpand(hostelId, loggedInUserId)
+                .toUriString();
+
+        String pdfUrl = downloadService.downloadFromUrl(url, payload);
+
+        if (pdfUrl == null) {
+            return new ResponseEntity<>(Utils.TRY_AGAIN, HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(pdfUrl, HttpStatus.OK);
     }
 }

@@ -168,4 +168,10 @@ public class ReportController {
                                                               @RequestBody @Valid InvConsolidatedViewPayload payload) {
         return reportService.getInvoiceReportConsolidatedView(hostelId, payload);
     }
+
+    @PostMapping("/download/invoice/consolidated/{hostelId}")
+    public ResponseEntity<?> downloadInvoiceReportConsolidatedView(@PathVariable("hostelId") String hostelId,
+                                                                   @RequestBody @Valid InvConsolidatedViewPayload payload) {
+        return reportService.downloadInvoiceReportConsolidatedView(hostelId, payload);
+    }
 }
