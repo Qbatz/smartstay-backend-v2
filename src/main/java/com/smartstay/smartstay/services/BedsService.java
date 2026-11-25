@@ -22,6 +22,7 @@ import com.smartstay.smartstay.payloads.beds.AddBed;
 import com.smartstay.smartstay.payloads.beds.EditBedRent;
 import com.smartstay.smartstay.payloads.beds.UpdateBed;
 import com.smartstay.smartstay.repositories.*;
+import com.smartstay.smartstay.responses.amenitity.Amenities;
 import com.smartstay.smartstay.responses.beds.BedDetails;
 import com.smartstay.smartstay.responses.beds.*;
 import com.smartstay.smartstay.responses.customer.InitializeBooking;
@@ -74,9 +75,16 @@ public class BedsService {
     @Autowired
     private SubscriptionService subscriptionService;
 
+
+    private AmenitiesService amenitiesService;
+
     @Autowired
     public void setCustomersService(@Lazy CustomersService customersService) {
         this.customersService = customersService;
+    }
+    @Autowired
+    public void setAmenitiesService(@Lazy AmenitiesService amenitiesService) {
+        this.amenitiesService = amenitiesService;
     }
 
     public ResponseEntity<?> getAllBedsNew(int roomId) {
@@ -731,8 +739,8 @@ public class BedsService {
 //                .toList();
 
         List<BedInitializations> initializations = freeBeds.stream().map(i -> new BedInitializationMapper(bookedBeds).apply(i)).toList();
-
-        InitializeBooking initializeBooking = new InitializeBooking(initializations, listBanks,null);
+        List<Amenities> availableAmenities = amenitiesService.getAvailableAmenities(hostelId);
+        InitializeBooking initializeBooking = new InitializeBooking(initializations, listBanks,null, availableAmenities);
         return new ResponseEntity<>(initializeBooking, HttpStatus.OK);
     }
 

@@ -611,4 +611,15 @@ public class AmenitiesService {
         }
         return listAmenities;
     }
+
+    public List<com.smartstay.smartstay.responses.amenitity.Amenities> getAvailableAmenities(String hostelId) {
+        List<AmenitiesV1> amenities = amentityRepository.findAmenityByHostelId(hostelId);
+        if (amenities == null) {
+            return new ArrayList<>();
+        }
+        return amenities
+                .stream()
+                .map(i -> new com.smartstay.smartstay.responses.amenitity.Amenities(i.getAmenityId(), i.getAmenityName(), i.getAmenityAmount()))
+                .toList();
+    }
 }
