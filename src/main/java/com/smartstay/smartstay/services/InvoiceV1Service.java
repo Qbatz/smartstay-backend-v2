@@ -3616,6 +3616,7 @@ public class InvoiceV1Service {
             inv1.setInvoiceDate(Utils.convertToTimeStamp(joiningDate));
             Date dueDate = Utils.addDaysToDate(joiningDate, billingDates.dueDays() - 1);
             inv1.setInvoiceDueDate(Utils.convertToTimeStamp(dueDate));
+            inv1.setInvoiceEndDate(billingDates.currentBillEndDate());
 
             invoicesV1Repository.save(inv1);
         }
@@ -3697,6 +3698,20 @@ public class InvoiceV1Service {
                     }
                     //old to current
                     if (Utils.compareWithTwoDates(newJoiningDate, currentMonthBillingDates.currentBillStartDate()) >= 0) {
+                        //the customer no longer stayed in the past month, so its rent invoice goes away
+                        List<InvoicesV1> pastRentInvoices = listInvoices == null ? List.of() : listInvoices.stream()
+                                .filter(i -> i.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name())
+                                        || i.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name()))
+                                .toList();
+                        boolean hasPayments = pastRentInvoices.stream()
+                                .anyMatch(i -> PaymentStatus.PAID.name().equalsIgnoreCase(i.getPaymentStatus())
+                                        || PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(i.getPaymentStatus()));
+                        if (hasPayments) {
+                            return false;
+                        }
+                        if (!pastRentInvoices.isEmpty()) {
+                            invoicesV1Repository.deleteAll(pastRentInvoices);
+                        }
                         updateJoiningDateOnAdvanceInvoice(customers.getCustomerId(), joinigDate);
                         findAndUpdateCurrentMonthInvoiceDates(customers.getCustomerId(), hostelId, rent, currentMonthBillingDates, newJoiningDate);
                         return true;
@@ -3802,8 +3817,9 @@ public class InvoiceV1Service {
             if (runningInvoiceDates.gracePeriodDays() != null) {
                 gracePeriodDays = runningInvoiceDates.gracePeriodDays();
             }
-            Date gracePeriodDates = Utils.addDaysToDate(newJoiningDate, gracePeriodDays);
-            if (Utils.compareWithTwoDates(newJoiningDate, gracePeriodDates) <= 0) {
+            //grace period is the first N days of the billing cycle
+            Date gracePeriodDates = Utils.addDaysToDate(runningInvoiceDates.currentBillStartDate(), gracePeriodDays - 1);
+            if (gracePeriodDays > 0 && Utils.compareWithTwoDates(newJoiningDate, gracePeriodDates) <= 0) {
                 rentForStayedDays = rent;
             }
         }

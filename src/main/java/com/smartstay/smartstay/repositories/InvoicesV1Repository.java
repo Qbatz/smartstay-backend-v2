@@ -201,7 +201,7 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
 
     @Query("""
             SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.customerId=:customerId AND 
-            i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADDITIONAL_ADVANCE', 'OTHER') AND DATE(i.invoiceStartDate) <= DATE(:currentMonthStartDate)
+            i.invoiceType IN ('RENT', 'REASSIGN_RENT', 'ADDITIONAL_ADVANCE', 'OTHER') AND DATE(i.invoiceStartDate) < DATE(:currentMonthStartDate)
             """)
     List<InvoicesV1> findAllInvoicesExceptCurrentMonth(String customerId, String hostelId, Date currentMonthStartDate);
 
