@@ -4,7 +4,7 @@ import com.smartstay.smartstay.dao.ColumnFilters;
 
 import java.util.List;
 
-public class InvRegisterConsolidatedColumnUtils {
+public class InvoiceRegisterConsolidatedColumnUtils {
 
     public static final String FLOOR = "Floor";
     public static final String ROOM = "Room";

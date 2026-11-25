@@ -8,11 +8,10 @@ import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.payloads.tables.CustomersTablesColumn;
 import com.smartstay.smartstay.repositories.TableColumnsRepositories;
 import com.smartstay.smartstay.util.Utils;
-import com.smartstay.smartstay.util.columnOptions.InvRegisterConsolidatedColumnUtils;
+import com.smartstay.smartstay.util.columnOptions.InvoiceRegisterConsolidatedColumnUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -442,10 +441,10 @@ public class TableColumnService {
                 .findInvRegisterConsolidatedBasicFilters();
 
         Set<String> lockedColumns = Set.of(
-                InvRegisterConsolidatedColumnUtils.FLOOR,
-                InvRegisterConsolidatedColumnUtils.ROOM,
-                InvRegisterConsolidatedColumnUtils.BED,
-                InvRegisterConsolidatedColumnUtils.TOTAL_PENDING_AMOUNT
+                InvoiceRegisterConsolidatedColumnUtils.FLOOR,
+                InvoiceRegisterConsolidatedColumnUtils.ROOM,
+                InvoiceRegisterConsolidatedColumnUtils.BED,
+                InvoiceRegisterConsolidatedColumnUtils.TOTAL_PENDING_AMOUNT
         );
 
         Map<String, ColumnFilters> existingLockedColumns = tableColumns != null

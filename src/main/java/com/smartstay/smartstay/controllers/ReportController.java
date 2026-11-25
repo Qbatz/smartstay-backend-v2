@@ -1,7 +1,7 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.dto.reports.ComplaintsReportFilterRequest;
-import com.smartstay.smartstay.payloads.reports.invoice.InvConsolidatedViewPayload;
+import com.smartstay.smartstay.payloads.reports.invoice.InvoiceConsolidatedViewPayload;
 import com.smartstay.smartstay.services.ReportService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -165,13 +165,13 @@ public class ReportController {
 
     @PostMapping("/invoice/consolidated/{hostelId}")
     public ResponseEntity<?> getInvoiceReportConsolidatedView(@PathVariable("hostelId") String hostelId,
-                                                              @RequestBody @Valid InvConsolidatedViewPayload payload) {
+                                                              @RequestBody @Valid InvoiceConsolidatedViewPayload payload) {
         return reportService.getInvoiceReportConsolidatedView(hostelId, payload);
     }
 
     @PostMapping("/download/invoice/consolidated/{hostelId}")
     public ResponseEntity<?> downloadInvoiceReportConsolidatedView(@PathVariable("hostelId") String hostelId,
-                                                                   @RequestBody @Valid InvConsolidatedViewPayload payload) {
+                                                                   @RequestBody @Valid InvoiceConsolidatedViewPayload payload) {
         return reportService.downloadInvoiceReportConsolidatedView(hostelId, payload);
     }
 }

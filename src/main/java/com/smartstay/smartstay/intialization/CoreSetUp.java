@@ -5,7 +5,7 @@ import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.ennum.PlanType;
 import com.smartstay.smartstay.repositories.*;
 import com.smartstay.smartstay.util.Utils;
-import com.smartstay.smartstay.util.columnOptions.InvRegisterConsolidatedColumnUtils;
+import com.smartstay.smartstay.util.columnOptions.InvoiceRegisterConsolidatedColumnUtils;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
@@ -992,7 +992,7 @@ public class CoreSetUp {
 				filterOptions.setCreatedAt(today);
 
 				List<ColumnFilters> defaultColumnFilters = new ArrayList<>();
-				defaultColumnFilters = InvRegisterConsolidatedColumnUtils.defaultColumns();
+				defaultColumnFilters = InvoiceRegisterConsolidatedColumnUtils.defaultColumns();
 
 				filterOptions.setFilterOptions(defaultColumnFilters);
 
