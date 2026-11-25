@@ -37,10 +37,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class BookingsService {
@@ -1662,5 +1659,14 @@ public class BookingsService {
 
 
         return new JoiningDateValidationResult(true, null, null);
+    }
+
+    public List<BookingsV1> getLatestBookingsByBedIds(Set<Integer> bedIds) {
+
+        Set<String> activeStatuses = new HashSet<>();
+        activeStatuses.add(BookingStatus.CHECKIN.name());
+        activeStatuses.add(BookingStatus.NOTICE.name());
+
+        return bookingsRepository.findLatestByBedIdInAndCurrentStatusIn(bedIds, activeStatuses);
     }
 }

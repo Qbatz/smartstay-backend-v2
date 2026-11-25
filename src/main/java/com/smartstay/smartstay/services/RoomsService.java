@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class RoomsService {
@@ -349,5 +350,9 @@ public class RoomsService {
         roomRepository.saveAll(deletableRooms);
 
         bedsService.deleteBedsForFloorDeletion(roomIds, hostelId);
+    }
+
+    public List<Rooms> getAllByFloorIds(Set<Integer> floorIds) {
+        return roomRepository.findAllByFloorIdInAndIsActiveTrueAndIsDeletedFalse(floorIds);
     }
 }

@@ -39,4 +39,10 @@ public class TableConfigController {
     public ResponseEntity<?> modifyExpenseTableColumns(@PathVariable("hostelId") String hostelId, @RequestBody List<CustomersTablesColumn> expenseTables) {
         return tableColumnService.updateExpenseTableFields(hostelId, expenseTables);
     }
+
+    @PutMapping("/invoice/consolidated/{hostelId}")
+    public ResponseEntity<?> modifyInvRegConsolidatedTableColumns(@PathVariable("hostelId") String hostelId,
+                                                                  @RequestBody List<CustomersTablesColumn> inputTableColumns) {
+        return tableColumnService.updateInvRegConsolidatedTableFields(hostelId, inputTableColumns);
+    }
 }

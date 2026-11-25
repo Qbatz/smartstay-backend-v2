@@ -8304,4 +8304,16 @@ public class InvoiceV1Service {
 
         invoicesV1Repository.save(currentInvoice);
     }
+
+    public List<InvoicesV1> findConsolidatedInvoicesByFilters(String hostelId, Set<String> customerIds,
+                                                              List<String> paymentStatus, List<String> invoiceModes,
+                                                              List<String> invoiceTypes, List<String> createdBy,
+                                                              Date startDate, Date endDate, Double minPaidAmount,
+                                                              Double maxPaidAmount, Double minOutstandingAmount,
+                                                              Double maxOutstandingAmount) {
+        return invoicesV1Repository
+                .findConsolidatedInvoicesByFilters(hostelId, customerIds, paymentStatus,
+                invoiceModes, invoiceTypes, createdBy, startDate, endDate, minPaidAmount,
+                maxPaidAmount, minOutstandingAmount, maxOutstandingAmount);
+    }
 }
