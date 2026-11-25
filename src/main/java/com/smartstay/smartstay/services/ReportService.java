@@ -2166,6 +2166,8 @@ public class ReportService {
         String dueAmount = "NA";
         String paymentStatus = "NA";
 
+        Date today = new Date();
+
         if (customer != null){
             name = NameUtils.getFullName(customer.getFirstName(), customer.getLastName());
         }
@@ -2237,10 +2239,17 @@ public class ReportService {
             }
         }
 
+        boolean isOverdue = false;
+        boolean isUnpaid = PaymentStatus.PENDING.name().equalsIgnoreCase(invoice.getPaymentStatus())
+                || PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(invoice.getPaymentStatus());
+        if (!invoice.isCancelled() && isUnpaid && pendingAmount > 0 && invoice.getInvoiceDueDate() != null) {
+            isOverdue = Utils.compareWithTwoDates(invoice.getInvoiceDueDate(), today) < 0;
+        }
+
         return new InvoiceConsolidatedResponse(invoice.getInvoiceNumber(), name, invoiceType,
                 Utils.dateToString(invoice.getInvoiceStartDate()), Utils.dateToString(invoice.getInvoiceDueDate()),
                 String.valueOf(invoice.getTotalAmount()), String.valueOf(paidAmount),
-                dueAmount, paymentStatus, invoice.getInvoiceUrl()
+                dueAmount, paymentStatus, invoice.getInvoiceUrl(), isOverdue
         );
     }
 
