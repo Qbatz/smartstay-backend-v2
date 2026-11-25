@@ -1,12 +1,13 @@
 package com.smartstay.smartstay.controllers;
 
 import com.smartstay.smartstay.dto.reports.ComplaintsReportFilterRequest;
+import com.smartstay.smartstay.payloads.reports.invoice.InvoiceConsolidatedViewPayload;
 import com.smartstay.smartstay.services.ReportService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -160,5 +161,17 @@ public class ReportController {
         return reportService.downloadInvoiceReport(hostelId, search, paymentStatus, invoiceModes,
                 invoiceTypes, createdBy, period, minPaidAmount, maxPaidAmount,
                 minOutstandingAmount, maxOutstandingAmount, startDate, endDate);
+    }
+
+    @PostMapping("/invoice/consolidated/{hostelId}")
+    public ResponseEntity<?> getInvoiceReportConsolidatedView(@PathVariable("hostelId") String hostelId,
+                                                              @RequestBody @Valid InvoiceConsolidatedViewPayload payload) {
+        return reportService.getInvoiceReportConsolidatedView(hostelId, payload);
+    }
+
+    @PostMapping("/download/invoice/consolidated/{hostelId}")
+    public ResponseEntity<?> downloadInvoiceReportConsolidatedView(@PathVariable("hostelId") String hostelId,
+                                                                   @RequestBody @Valid InvoiceConsolidatedViewPayload payload) {
+        return reportService.downloadInvoiceReportConsolidatedView(hostelId, payload);
     }
 }

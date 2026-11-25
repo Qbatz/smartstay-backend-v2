@@ -8,18 +8,15 @@ import com.smartstay.smartstay.ennum.FilterOptionsModule;
 import com.smartstay.smartstay.payloads.tables.CustomersTablesColumn;
 import com.smartstay.smartstay.repositories.TableColumnsRepositories;
 import com.smartstay.smartstay.util.Utils;
+import com.smartstay.smartstay.util.columnOptions.InvoiceRegisterConsolidatedColumnUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class TableColumnService {
@@ -396,6 +393,130 @@ public class TableColumnService {
 
             tableColumnsRepositories.save(tableColumns);
         }
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public List<ColumnFilters> getInvRegConsolidatedColumns(String hostelId, String userId, String moduleName){
+
+        TableColumns tableColumns = tableColumnsRepositories
+                .findByHostelIdAndUserId(hostelId, userId, moduleName);
+
+        if (tableColumns == null) {
+            return filterOptionsService.findInvRegisterConsolidatedBasicFilters();
+        }
+
+        return tableColumns.getColumns()
+                .stream()
+                .sorted(Comparator.comparing(ColumnFilters::getOrder))
+                .toList();
+    }
+
+    public ResponseEntity<?> updateInvRegConsolidatedTableFields(String hostelId, List<CustomersTablesColumn> inputTableColumns) {
+
+        String loggedInUserId = authentication.getName();
+
+        Users loggedInUser = usersService.findUserByUserId(loggedInUserId);
+        if (loggedInUser == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!userHostelService.checkHostelAccess(loggedInUserId, hostelId)) {
+            return new ResponseEntity<>(Utils.RESTRICTED_HOSTEL_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (inputTableColumns == null) {
+            return new ResponseEntity<>(Utils.PAYLOADS_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (inputTableColumns.isEmpty()) {
+            return new ResponseEntity<>(Utils.ATLEAST_ONE_COLUMN_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        TableColumns tableColumns = tableColumnsRepositories
+                .findByHostelIdAndUserId(hostelId, loggedInUserId,
+                        FilterOptionsModule.MODULE_INVOICE_REGISTER_CONSOLIDATED.name());
+
+        List<ColumnFilters> defaultColumns = filterOptionsService
+                .findInvRegisterConsolidatedBasicFilters();
+
+        Set<String> lockedColumns = Set.of(
+                InvoiceRegisterConsolidatedColumnUtils.FLOOR,
+                InvoiceRegisterConsolidatedColumnUtils.ROOM,
+                InvoiceRegisterConsolidatedColumnUtils.BED,
+                InvoiceRegisterConsolidatedColumnUtils.TOTAL_PENDING_AMOUNT
+        );
+
+        Map<String, ColumnFilters> existingLockedColumns = tableColumns != null
+                ? tableColumns.getColumns().stream()
+                .filter(i -> lockedColumns.contains(i.getFieldName()))
+                .collect(Collectors.toMap(
+                        ColumnFilters::getFieldName,
+                        Function.identity()
+                ))
+                : defaultColumns.stream()
+                .filter(i -> lockedColumns.contains(i.getFieldName()))
+                .collect(Collectors.toMap(
+                        ColumnFilters::getFieldName,
+                        Function.identity()
+                ));
+
+        boolean invalidLockedColumn = inputTableColumns.stream()
+                .filter(i -> lockedColumns.contains(i.fieldName()))
+                .anyMatch(i -> {
+                    ColumnFilters existing = existingLockedColumns.get(i.fieldName());
+
+                    return existing == null
+                            || existing.getOrder() != i.order()
+                            || !i.isSelected();
+                });
+
+        if (invalidLockedColumn) {
+            return new ResponseEntity<>(
+                    "Locked columns cannot be modified",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        Date today = new Date();
+
+        if (tableColumns == null) {
+
+            tableColumns = new TableColumns();
+
+            tableColumns.setHostelId(hostelId);
+            tableColumns.setUserId(loggedInUserId);
+            tableColumns.setModuleName(FilterOptionsModule.MODULE_INVOICE_REGISTER_CONSOLIDATED.name());
+            tableColumns.setActive(true);
+            tableColumns.setCreatedAt(today);
+        }
+
+        boolean isAnySelected = inputTableColumns.stream()
+                .filter(i -> !lockedColumns.contains(i.fieldName()))
+                .anyMatch(CustomersTablesColumn::isSelected);
+
+        if (!isAnySelected) {
+            tableColumns.setColumns(defaultColumns);
+        }
+        else {
+            List<ColumnFilters> listNewColumns = inputTableColumns
+                    .stream()
+                    .map(i -> {
+                        ColumnFilters newFilters = new ColumnFilters();
+
+                        newFilters.setSelected(i.isSelected());
+                        newFilters.setFieldName(i.fieldName());
+                        newFilters.setOrder(i.order());
+
+                        return newFilters;
+                    })
+                    .toList();
+
+
+            tableColumns.setColumns(listNewColumns);
+        }
+
+        tableColumnsRepositories.save(tableColumns);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

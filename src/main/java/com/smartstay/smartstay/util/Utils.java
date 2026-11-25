@@ -1036,5 +1036,40 @@ public class Utils {
         return oh.getPaymentType();
     }
 
+    public static Date getStartOfDay(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
+        return cal.getTime();
+    }
+
+    public static Date getLastMonthDateByNoOfMonths(Date date, int noOfMonths) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+
+        int currentDay = cal.get(Calendar.DAY_OF_MONTH);
+
+        cal.add(Calendar.MONTH, -noOfMonths);
+
+        int lastDayOfPrevMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        cal.set(Calendar.DAY_OF_MONTH, Math.min(currentDay, lastDayOfPrevMonth));
+
+        return cal.getTime();
+    }
 }
 

@@ -4812,4 +4812,8 @@ public class CustomersService {
     public void save(Customers customers) {
         customersRepository.save(customers);
     }
+
+    public List<Customers> findByCustomerIds(List<String> customerIds) {
+        return customersRepository.findAllById(customerIds);
+    }
 }

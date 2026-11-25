@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Repository
 public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> {
@@ -623,4 +624,34 @@ public interface InvoicesV1Repository extends JpaRepository<InvoicesV1, String> 
             SELECT i FROM InvoicesV1 i WHERE i.hostelId=:hostelId AND i.invoiceMode='RECURRING'
             """)
     List<InvoicesV1> findRecurringInvoices(String hostelId);
+
+    @Query("""
+            SELECT i FROM InvoicesV1 i
+            WHERE i.hostelId = :hostelId
+            AND i.invoiceType != 'SETTLEMENT'
+            AND (:customerIds IS NULL OR i.customerId IN :customerIds)
+            AND (:paymentStatus IS NULL OR i.paymentStatus in (:paymentStatus))
+            AND (:invoiceModes IS NULL OR i.invoiceMode IN :invoiceModes)
+            AND (:invoiceTypes IS NULL OR i.invoiceType IN :invoiceTypes)
+            AND (:createdBy IS NULL OR i.createdBy IN :createdBy)
+            AND (:startDate IS NULL OR DATE(i.invoiceStartDate) >= DATE(:startDate))
+            AND (:endDate IS NULL OR DATE(i.invoiceStartDate) <= DATE(:endDate))
+            AND (:minPaidAmount IS NULL OR i.paidAmount >= :minPaidAmount)
+            AND (:maxPaidAmount IS NULL OR i.paidAmount <= :maxPaidAmount)
+            AND (:minOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) >= :minOutstandingAmount)
+            AND (:maxOutstandingAmount IS NULL OR (i.totalAmount - i.paidAmount) <= :maxOutstandingAmount)
+            ORDER BY i.invoiceStartDate DESC
+            """)
+    List<InvoicesV1> findConsolidatedInvoicesByFilters(@Param("hostelId") String hostelId,
+                                                       @Param("customerIds") Set<String> customerIds,
+                                                       @Param("paymentStatus") List<String> paymentStatus,
+                                                       @Param("invoiceModes") List<String> invoiceModes,
+                                                       @Param("invoiceTypes") List<String> invoiceTypes,
+                                                       @Param("createdBy") List<String> createdBy,
+                                                       @Param("startDate") Date startDate,
+                                                       @Param("endDate") Date endDate,
+                                                       @Param("minPaidAmount") Double minPaidAmount,
+                                                       @Param("maxPaidAmount") Double maxPaidAmount,
+                                                       @Param("minOutstandingAmount") Double minOutstandingAmount,
+                                                       @Param("maxOutstandingAmount") Double maxOutstandingAmount);
 }
