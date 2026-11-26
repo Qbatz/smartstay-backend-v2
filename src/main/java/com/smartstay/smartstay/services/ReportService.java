@@ -1708,16 +1708,15 @@ public class ReportService {
                 .getInvRegConsolidatedColumns(hostelId, loggedInUserId,
                         FilterOptionsModule.MODULE_INVOICE_REGISTER_CONSOLIDATED.name());
 
-        List<ColumnFilters> activeColumns = tableColumns.stream()
-                .filter(ColumnFilters::isSelected)
+        List<ColumnFilters> orderedTableColumns = tableColumns.stream()
                 .sorted(Comparator.comparingInt(ColumnFilters::getOrder))
                 .toList();
 
-        List<String> columnNames = activeColumns.stream()
+        List<String> columnNames = orderedTableColumns.stream()
                 .map(ColumnFilters::getFieldName)
                 .toList();
 
-        List<ColumnFiltersResponse> activeColumnsRes = activeColumns.stream()
+        List<ColumnFiltersResponse> columnsRes = orderedTableColumns.stream()
                 .map(i -> {
 
                     boolean isLocked = InvoiceRegisterConsolidatedColumnUtils.FLOOR.equals(i.getFieldName()) ||
@@ -2044,7 +2043,7 @@ public class ReportService {
 
         InvoiceConsolidatedPdfResponse response = new InvoiceConsolidatedPdfResponse(includePaidInvoice, includeEmptyBeds,
                 includeSubTotals, includeGrandTotal, includeHostelName, hostelInfo, invHeader, footerInfo,
-                List.of(), List.of(), filtersRes, paginationData, activeColumnsRes, columnNames, columnData);
+                List.of(), List.of(), filtersRes, paginationData, columnsRes, columnNames, columnData);
 
         if (GroupByEnum.FLOOR_ROOM_BED.equals(groupByEnum)) {
 
@@ -2100,7 +2099,7 @@ public class ReportService {
 
             response = new InvoiceConsolidatedPdfResponse(includePaidInvoice, includeEmptyBeds, includeSubTotals,
                     includeGrandTotal, includeHostelName, hostelInfo, invHeader, footerInfo, paginatedFloors,
-                    List.of(), filtersRes, paginationData, activeColumnsRes, columnNames, columnData);
+                    List.of(), filtersRes, paginationData, columnsRes, columnNames, columnData);
         }
         else if (GroupByEnum.ROOM_BED.equals(groupByEnum)) {
 
@@ -2149,7 +2148,7 @@ public class ReportService {
 
             response = new InvoiceConsolidatedPdfResponse(includePaidInvoice, includeEmptyBeds, includeSubTotals,
                     includeGrandTotal, includeHostelName, hostelInfo, invHeader, footerInfo, List.of(),
-                    paginatedRooms, filtersRes, paginationData, activeColumnsRes, columnNames, columnData);
+                    paginatedRooms, filtersRes, paginationData, columnsRes, columnNames, columnData);
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK);
