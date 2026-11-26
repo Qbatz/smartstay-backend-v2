@@ -2461,7 +2461,8 @@ public class InvoiceV1Service {
 
         SettlementAdditionalAdvance additionalAdvance = null;
 
-        com.smartstay.smartstay.dto.invoices.InvoiceDiscounts invoiceDiscounts = invoiceDiscountService.getInvoiceDiscounts(hostelV1.getHostelId(), invoicesV1.getInvoiceId());
+        com.smartstay.smartstay.dto.invoices.InvoiceDiscounts invoiceDiscounts = invoiceDiscountService
+                .getInvoiceDiscounts(hostelV1.getHostelId(), invoicesV1.getInvoiceId());
 
         if (invoiceDiscounts != null) {
             discountPercentage = invoiceDiscounts.discountPercentage();
