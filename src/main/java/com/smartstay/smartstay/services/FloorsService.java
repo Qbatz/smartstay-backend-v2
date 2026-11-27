@@ -27,13 +27,13 @@ import java.util.*;
 public class FloorsService {
 
     @Autowired
-    RolesRepository rolesRepository;
+    private RolesRepository rolesRepository;
 
     @Autowired
-    HostelV1Repository hostelV1Repository;
+    private HostelV1Repository hostelV1Repository;
 
     @Autowired
-    FloorRepository floorRepository;
+    private FloorRepository floorRepository;
     @Autowired
     private RolesService rolesService;
     @Autowired
@@ -232,5 +232,9 @@ public class FloorsService {
 
     public List<Floors> getByFloorIds(Set<Integer> floorIds) {
         return floorRepository.findAllByFloorIdInAndIsActiveTrueAndIsDeletedFalse(floorIds);
+    }
+
+    public Floors getByFloorId(Integer floorId) {
+        return floorRepository.findByFloorIdAndIsActiveTrueAndIsDeletedFalse(floorId);
     }
 }

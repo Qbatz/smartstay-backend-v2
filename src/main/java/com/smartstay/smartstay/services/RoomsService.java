@@ -32,13 +32,13 @@ import java.util.Set;
 public class RoomsService {
 
     @Autowired
-    RolesRepository rolesRepository;
+    private RolesRepository rolesRepository;
     @Autowired
-    HostelV1Repository hostelV1Repository;
+    private HostelV1Repository hostelV1Repository;
     @Autowired
-    FloorRepository floorRepository;
+    private FloorRepository floorRepository;
     @Autowired
-    RoomRepository roomRepository;
+    private RoomRepository roomRepository;
     @Autowired
     private RolesService rolesService;
     @Autowired
@@ -354,5 +354,9 @@ public class RoomsService {
 
     public List<Rooms> getAllByFloorIds(Set<Integer> floorIds) {
         return roomRepository.findAllByFloorIdInAndIsActiveTrueAndIsDeletedFalse(floorIds);
+    }
+
+    public List<Rooms> getAllByRoomIds(Set<Integer> roomIds) {
+        return roomRepository.findAllByRoomIdInAndIsActiveTrueAndIsDeletedFalse(roomIds);
     }
 }

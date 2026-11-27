@@ -92,4 +92,6 @@ public interface RoomRepository extends JpaRepository<Rooms,Integer> {
     List<RoomInfo> getAllRoomsForEb(@Param("hostelId") String hostelId, @Param("roomId") List<Integer> roomId);
 
     List<Rooms> findAllByFloorIdInAndIsActiveTrueAndIsDeletedFalse(Set<Integer> floorIds);
+
+    List<Rooms> findAllByRoomIdInAndIsActiveTrueAndIsDeletedFalse(Set<Integer> roomIds);
 }

@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Wrappers.assets.AssetAssignmentResponseMapper;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.assets.AssetAssignmentResponse;
@@ -20,9 +21,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class AssetsService {
@@ -66,23 +66,104 @@ public class AssetsService {
     private HostelService hostelService;
     @Autowired
     private VendorService vendorService;
+    @Autowired
+    private FloorsService floorsService;
+    @Autowired
+    private RoomsService roomsService;
+    @Autowired
+    private BedsService bedsService;
 
     public ResponseEntity<?> getAllAssets(String hostelId, int page, int size, String keyword) {
+
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
+
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        Users users = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(users.getRoleId());
+
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
+        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
         String searchKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
-        List<AssetAssignmentResponse> listAssets = assetsRepository.findAssetAssignmentDetails(hostelId, searchKeyword);
+
+        List<AssetsV1> assets = searchKeyword == null
+                ? assetsRepository.findAllByHostelIdAndIsActiveTrueAndIsDeletedFalseOrderByCreatedAtDesc(hostelId)
+                : assetsRepository.findAllByHostelIdAndIsActiveTrueAndIsDeletedFalseAndAssetNameContainingIgnoreCaseOrderByCreatedAtDesc
+                (hostelId, searchKeyword);
+
+        Set<Integer> vendorIds = new HashSet<>();
+        Set<Integer> floorIds = new HashSet<>();
+        Set<Integer> roomIds = new HashSet<>();
+        Set<Integer> bedIds = new HashSet<>();
+        Set<String> bankIds = new HashSet<>();
+
+        for (AssetsV1 asset : assets) {
+
+            vendorIds.add(asset.getVendorId());
+            if (asset.getFloorId() != null){
+                floorIds.add(asset.getFloorId());
+            }
+            if (asset.getRoomId() != null){
+                roomIds.add(asset.getRoomId());
+            }
+            if (asset.getBedId() != null){
+                bedIds.add(asset.getBedId());
+            }
+            if (asset.getBankId() != null){
+                bankIds.add(asset.getBankId());
+            }
+        }
+
+        List<VendorV1> vendors = vendorService
+                .getAllVendorsByHostelIdAndVendorIds(hostelId, new ArrayList<>(vendorIds));
+        Map<Integer, VendorV1> vendorMap = vendors.stream()
+                .collect(Collectors.toMap(VendorV1::getVendorId, vendor -> vendor));
+
+        List<Floors> floors = floorsService
+                .getByFloorIds(floorIds);
+        Map<Integer, Floors> floorsMap = floors.stream()
+                .collect(Collectors.toMap(Floors::getFloorId, floor -> floor));
+
+        List<Rooms> rooms = roomsService
+                .getAllByRoomIds(roomIds);
+        Map<Integer, Rooms> roomsMap = rooms.stream()
+                .collect(Collectors.toMap(Rooms::getRoomId, room -> room));
+
+        List<Beds> beds = bedsService
+                .getAllByBedIds(bedIds);
+        Map<Integer, Beds> bedsMap = beds.stream()
+                .collect(Collectors.toMap(Beds::getBedId, bed -> bed));
+
+        List<BankingV2> banks = bankingServiceV2
+                .findAllByBankId(bankIds);
+        Map<String, BankingV2> bankingMap = banks.stream()
+                .collect(Collectors.toMap(BankingV2::getBankId, bank -> bank));
+
+        List<AssetAssignmentResponse> listAssets = assets.stream()
+                .map(i -> {
+
+                    VendorV1 vendor = vendorMap.getOrDefault(i.getVendorId(), null);
+                    Floors floor = floorsMap.getOrDefault(i.getFloorId(), null);
+                    Rooms room = roomsMap.getOrDefault(i.getRoomId(), null);
+                    Beds bed = bedsMap.getOrDefault(i.getBedId(), null);
+                    BankingV2 bank = bankingMap.getOrDefault(i.getBankId(), null);
+
+                    return new AssetAssignmentResponseMapper(hostel, vendor, floor, room, bed, bank)
+                            .apply(i);
+                })
+                .toList();
 
         if ("web".equalsIgnoreCase(authentication.getSource())) {
             return new ResponseEntity<>(listAssets, HttpStatus.OK);
@@ -267,29 +348,69 @@ public class AssetsService {
     }
 
     public ResponseEntity<?> getAssetById(Integer id) {
+
         if (id == null || id == 0) {
             return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
         }
+
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
         }
+
         String userId = authentication.getName();
         Users user = usersService.findUserByUserId(userId);
-        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
 
+        RolesV1 rolesV1 = rolesRepository.findByRoleId(user.getRoleId());
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
         if (!rolesService.checkPermission(user.getRoleId(), Utils.MODULE_ID_ASSETS, Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        AssetAssignmentResponse asset = assetsRepository.findAssetAssignmentDetailsById(id);
-        if (asset != null) {
-            return new ResponseEntity<>(asset, HttpStatus.OK);
+
+        AssetsV1 asset = assetsRepository
+                .findByAssetIdAndIsActiveTrueAndIsDeletedFalse(Long.valueOf(id));
+        if (asset == null) {
+            return new ResponseEntity<>(Utils.INVALID_ASSET, HttpStatus.BAD_REQUEST);
         }
 
-        return new ResponseEntity<>(Utils.INVALID, HttpStatus.NO_CONTENT);
+        String hostelId = asset.getHostelId();
+        Integer vendorId = asset.getVendorId();
+        Integer floorId = asset.getFloorId();
+        Integer roomId = asset.getRoomId();
+        Integer bedId = asset.getBedId();
+        String bankId = asset.getBankId();
 
+        HostelV1 hostel = null;
+        VendorV1 vendor = null;
+        Floors floor = null;
+        Rooms room = null;
+        Beds bed = null;
+        BankingV2 bank = null;
+
+        if (hostelId != null) {
+            hostel = hostelService.getHostelInfo(hostelId);
+        }
+        vendor = vendorService.findVendorByHostelIdAndVendorId(hostelId, vendorId);
+        if (floorId != null) {
+            floor = floorsService.getByFloorId(floorId);
+        }
+        if (roomId != null) {
+            room = roomsService.findRoomByRoomId(roomId);
+        }
+        if (bedId != null) {
+            bed = bedsService.findBedById(bedId);
+        }
+        if (bankId != null) {
+            bank = bankingServiceV2.getBankDetails(bankId);
+        }
+
+        AssetAssignmentResponse assetResponse = new AssetAssignmentResponseMapper
+                (hostel, vendor, floor, room, bed, bank)
+                .apply(asset);
+
+        return new ResponseEntity<>(assetResponse, HttpStatus.OK);
     }
 
     public ResponseEntity<?> assignAsset(int assetId, AssignAsset request) {

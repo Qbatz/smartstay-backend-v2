@@ -168,4 +168,6 @@ public interface BedsRepository extends JpaRepository<com.smartstay.smartstay.da
     List<RoomBedCount> countOccupiedBedsByRoomForHostel(@Param("hostelId") String hostelId);
 
     List<com.smartstay.smartstay.dao.Beds> findAllByRoomIdInAndIsActiveTrueAndIsDeletedFalse(Set<Integer> roomIds);
+
+    List<com.smartstay.smartstay.dao.Beds> findAllByBedIdInAndIsActiveTrueAndIsDeletedFalse(Set<Integer> bedIds);
 }
