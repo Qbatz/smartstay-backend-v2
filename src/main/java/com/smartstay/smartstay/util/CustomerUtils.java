@@ -1,6 +1,5 @@
 package com.smartstay.smartstay.util;
 
-import com.smartstay.smartstay.dao.Address;
 import com.smartstay.smartstay.dao.Customers;
 import com.smartstay.smartstay.dao.KycDetails;
 import com.smartstay.smartstay.dto.customer.AddressInfo;
