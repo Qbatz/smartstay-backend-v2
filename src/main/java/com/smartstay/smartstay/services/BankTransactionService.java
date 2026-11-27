@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dto.bank.TransactionDto;
 import com.smartstay.smartstay.ennum.BankSource;
 import com.smartstay.smartstay.ennum.BankTransactionType;
+import com.smartstay.smartstay.ennum.InvoiceType;
 import com.smartstay.smartstay.payloads.invoice.RefundInvoice;
 import com.smartstay.smartstay.payloads.retainer.LoadBalance;
 import com.smartstay.smartstay.repositories.BankTransactionRepository;
@@ -235,7 +236,9 @@ public class BankTransactionService {
         transactionsV1.setReferenceNumber(refundInvoice.referenceNumber());
         transactionsV1.setAmount(refundInvoice.refundAmount());
         transactionsV1.setType(BankTransactionType.DEBIT.name());
-        transactionsV1.setSource(BankSource.INVOICE.name());
+        // Settlement refunds are rent refunds; refunds on any other invoice stay under INVOICE
+        boolean isSettlement = InvoiceType.SETTLEMENT.name().equalsIgnoreCase(invoicesV1.getInvoiceType());
+        transactionsV1.setSource(isSettlement ? BankSource.RENT_REFUND.name() : BankSource.INVOICE.name());
         transactionsV1.setTransactionNumber(transactionId);
         transactionsV1.setSourceId(sourceId);
         transactionsV1.setPaymentMethodId(bankMethodId);
