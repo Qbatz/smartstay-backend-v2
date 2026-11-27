@@ -43,15 +43,15 @@ import java.util.Set;
 public class BedsService {
 
     @Autowired
-    RolesRepository rolesRepository;
+    private RolesRepository rolesRepository;
     @Autowired
-    BedsRepository bedsRepository;
+    private BedsRepository bedsRepository;
     @Autowired
-    RoomRepository roomRepository;
+    private RoomRepository roomRepository;
     @Autowired
-    CustomerBedHistoryRespository customerBedHistoryRespository;
+    private CustomerBedHistoryRespository customerBedHistoryRespository;
     @Autowired
-    BookingsRepository bookingsRepository;
+    private BookingsRepository bookingsRepository;
     @Autowired
     private RolesService rolesService;
     @Autowired
@@ -1021,5 +1021,9 @@ public class BedsService {
 
     public List<Beds> getAllByRoomIds(Set<Integer> roomIds) {
         return bedsRepository.findAllByRoomIdInAndIsActiveTrueAndIsDeletedFalse(roomIds);
+    }
+
+    public List<Beds> getAllByBedIds(Set<Integer> bedIds) {
+        return bedsRepository.findAllByBedIdInAndIsActiveTrueAndIsDeletedFalse(bedIds);
     }
 }

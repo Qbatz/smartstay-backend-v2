@@ -1,13 +1,8 @@
 package com.smartstay.smartstay.dto.assets;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Date;
-
-import static com.smartstay.smartstay.util.Utils.OUTPUT_DATE_FORMAT;
 
 @Data
 @AllArgsConstructor
@@ -18,20 +13,19 @@ public class AssetAssignmentResponse {
     private String brandName;
     private String productName;
     private String serialNumber;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = OUTPUT_DATE_FORMAT, timezone = "Asia/Kolkata")
-    private Date purchaseDate;
+    private String purchaseDate;
     private Double price;
-    private String hostelName;
+    private String bankId;
+    private String paymentMode;
     private String hostelId;
-    private Integer floorId;
     private Integer vendorId;
     private String vendorName;
+    private Integer floorId;
     private String floorName;
     private Integer roomId;
     private String roomName;
     private Integer bedId;
     private String bedName;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = OUTPUT_DATE_FORMAT, timezone = "Asia/Kolkata")
-    private Date assignedAt;
+    private String assignedAt;
     private String assignmentStatus;
 }

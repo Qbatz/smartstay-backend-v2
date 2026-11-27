@@ -58,11 +58,11 @@ import java.util.stream.Collectors;
 public class VendorService {
 
     @Autowired
-    VendorRepository vendorRepository;
+    private VendorRepository vendorRepository;
     @Autowired
-    VendorCategoriesRepository vendorCategoriesRepository;
+    private VendorCategoriesRepository vendorCategoriesRepository;
     @Autowired
-    RolesRepository rolesRepository;
+    private RolesRepository rolesRepository;
     @Autowired
     private Authentication authentication;
     @Autowired

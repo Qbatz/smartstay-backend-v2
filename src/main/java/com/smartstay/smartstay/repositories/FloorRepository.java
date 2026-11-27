@@ -81,4 +81,6 @@ public interface FloorRepository extends JpaRepository<Floors, Integer> {
     List<Floors> findAllByFloorIdInAndIsActiveTrueAndIsDeletedFalse(Set<Integer> floorIds);
 
     List<Floors> findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
+
+    Floors findByFloorIdAndIsActiveTrueAndIsDeletedFalse(Integer floorId);
 }
