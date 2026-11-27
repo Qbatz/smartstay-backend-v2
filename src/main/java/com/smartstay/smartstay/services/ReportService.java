@@ -2374,7 +2374,6 @@ public class ReportService {
                 double pendingAmount = totalAmount - invPaidAmount;
                 double balanceAmount = invoice.getBalanceAmount() != null ? invoice.getBalanceAmount() : 0;
                 double deductionAmount = invoice.getDeductionAmount() != null ? invoice.getDeductionAmount() : 0;
-                double pendingDeductionAmount = deductionAmount;
 
                 List<InvoiceItems> invoiceItems = invoice.getInvoiceItems();
 
@@ -2403,23 +2402,17 @@ public class ReportService {
                     pendingAdvance += balanceAmount;
                 }
 
-                if (deductionAmount != 0){
-                    pendingDeductionAmount = deductionAmount - invPaidAmount;
-                }
-                pendingNonRefundable += pendingDeductionAmount;
+                pendingNonRefundable += deductionAmount;
             }
 
-            double actualAmount = actualRent + pendingNonRefundable;
-            double payableAmount = pendingRent + pendingNonRefundable;
-
-            totalPendingAmount = payableAmount - pendingAdvance;
+            totalPendingAmount = pendingRent - pendingAdvance;
 
             String status = "Pending";
             if (totalPendingAmount == 0){
                 status = "Paid";
-            } else if (totalPendingAmount > 0 && totalPendingAmount < actualAmount) {
+            } else if (totalPendingAmount > 0 && totalPendingAmount < actualRent) {
                 status = "Partially Paid";
-            } else if (totalPendingAmount == actualAmount) {
+            } else if (totalPendingAmount == actualRent) {
                 status = "Pending";
             } else if (totalPendingAmount < 0) {
                 status = "Refund";
