@@ -2409,6 +2409,7 @@ public class ReportService {
                 pendingNonRefundable += pendingDeductionAmount;
             }
 
+            double actualAmount = actualRent + pendingNonRefundable;
             double payableAmount = pendingRent + pendingNonRefundable;
 
             totalPendingAmount = payableAmount - pendingAdvance;
@@ -2416,9 +2417,9 @@ public class ReportService {
             String status = "Pending";
             if (totalPendingAmount == 0){
                 status = "Paid";
-            } else if (totalPendingAmount > 0 && totalPendingAmount < payableAmount) {
+            } else if (totalPendingAmount > 0 && totalPendingAmount < actualAmount) {
                 status = "Partially Paid";
-            } else if (totalPendingAmount == payableAmount) {
+            } else if (totalPendingAmount == actualAmount) {
                 status = "Pending";
             } else if (totalPendingAmount < 0) {
                 status = "Refund";
