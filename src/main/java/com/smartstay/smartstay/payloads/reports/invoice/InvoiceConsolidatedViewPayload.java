@@ -1,5 +1,7 @@
 package com.smartstay.smartstay.payloads.reports.invoice;
 
+import com.smartstay.smartstay.payloads.tables.CustomersTablesColumn;
+
 import java.util.List;
 
 public record InvoiceConsolidatedViewPayload(String search,
@@ -23,7 +25,8 @@ public record InvoiceConsolidatedViewPayload(String search,
                                              Boolean includeHostelName,
                                              Boolean isPaginated,
                                              Integer page,
-                                             Integer size) {
+                                             Integer size,
+                                             List<CustomersTablesColumn> tableColumns) {
 
     public InvoiceConsolidatedViewPayload {
         page = (page == null || page < 0) ? 1 : page;

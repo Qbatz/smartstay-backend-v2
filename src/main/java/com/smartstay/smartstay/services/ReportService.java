@@ -1,5 +1,6 @@
 package com.smartstay.smartstay.services;
 
+import com.smartstay.smartstay.Exceptions.BadRequestException;
 import com.smartstay.smartstay.config.Authentication;
 import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.InvoiceItems;
@@ -13,6 +14,7 @@ import com.smartstay.smartstay.dto.reports.ReportsDto;
 import com.smartstay.smartstay.ennum.*;
 import com.smartstay.smartstay.ennum.PaymentStatus;
 import com.smartstay.smartstay.payloads.reports.invoice.InvoiceConsolidatedViewPayload;
+import com.smartstay.smartstay.payloads.tables.CustomersTablesColumn;
 import com.smartstay.smartstay.responses.Reports.FooterInfo;
 import com.smartstay.smartstay.responses.Reports.ReportDetailsResponse;
 import com.smartstay.smartstay.responses.Reports.ReportResponse;
@@ -1677,6 +1679,58 @@ public class ReportService {
         return new ResponseEntity<>(pdfUrl, HttpStatus.OK);
     }
 
+    private void validateColumns(List<CustomersTablesColumn> columns) {
+
+        Set<String> allowedFields = InvoiceRegisterConsolidatedColumnUtils.defaultColumns()
+                .stream()
+                .map(ColumnFilters::getFieldName)
+                .collect(Collectors.toSet());
+
+        Set<String> lockedFields = Set.of(
+                InvoiceRegisterConsolidatedColumnUtils.FLOOR,
+                InvoiceRegisterConsolidatedColumnUtils.ROOM,
+                InvoiceRegisterConsolidatedColumnUtils.BED,
+                InvoiceRegisterConsolidatedColumnUtils.TOTAL_PENDING_AMOUNT);
+
+        Set<String> seenFields = new HashSet<>();
+        Set<Integer> seenOrders = new HashSet<>();
+
+        for (CustomersTablesColumn column : columns) {
+
+            if (column == null) {
+                throw new BadRequestException("Invalid table column");
+            }
+
+            String fieldName = column.fieldName() == null ? null : column.fieldName().trim();
+            if (fieldName == null || fieldName.isEmpty()) {
+                throw new BadRequestException("Column field name is required");
+            }
+            if (!allowedFields.contains(fieldName)) {
+                throw new BadRequestException("Invalid column: " + fieldName);
+            }
+            if (!seenFields.add(fieldName)) {
+                throw new BadRequestException("Duplicate column: " + fieldName);
+            }
+
+            if (column.order() <= 0) {
+                throw new BadRequestException("Invalid order for column: " + fieldName);
+            }
+            if (!seenOrders.add(column.order())) {
+                throw new BadRequestException("Duplicate column order: " + column.order());
+            }
+
+            if (lockedFields.contains(fieldName) && !column.isSelected()) {
+                throw new BadRequestException(fieldName + " column cannot be deselected");
+            }
+        }
+
+        for (String locked : lockedFields) {
+            if (!seenFields.contains(locked)) {
+                throw new BadRequestException(locked + " column is required");
+            }
+        }
+    }
+
     public ResponseEntity<?> getInvoiceReportConsolidatedView(String hostelId, InvoiceConsolidatedViewPayload payload) {
 
         String loggedInUserId = authentication.getName();
@@ -1704,9 +1758,19 @@ public class ReportService {
             return new ResponseEntity<>(Utils.BILLING_RULE_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
         }
 
-        List<ColumnFilters> tableColumns = tableColumnService
-                .getInvRegConsolidatedColumns(hostelId, loggedInUserId,
-                        FilterOptionsModule.MODULE_INVOICE_REGISTER_CONSOLIDATED.name());
+        List<ColumnFilters> tableColumns;
+        List<CustomersTablesColumn> payloadColumns = payload.tableColumns();
+        if (payloadColumns != null && !payloadColumns.isEmpty()) {
+            validateColumns(payloadColumns);
+            tableColumns = payloadColumns.stream()
+                    .map(c -> new ColumnFilters(c.order(),
+                            c.fieldName().trim(), c.isSelected()))
+                    .toList();
+        } else {
+            tableColumns = tableColumnService
+                    .getInvRegConsolidatedColumns(hostelId, loggedInUserId,
+                            FilterOptionsModule.MODULE_INVOICE_REGISTER_CONSOLIDATED.name());
+        }
 
         List<ColumnFilters> activeColumns = tableColumns.stream()
                 .filter(ColumnFilters::isSelected)
@@ -1717,7 +1781,7 @@ public class ReportService {
                 .map(ColumnFilters::getFieldName)
                 .toList();
 
-        List<ColumnFiltersResponse> activeColumnsRes = activeColumns.stream()
+        List<ColumnFiltersResponse> columnsRes = tableColumns.stream()
                 .map(i -> {
 
                     boolean isLocked = InvoiceRegisterConsolidatedColumnUtils.FLOOR.equals(i.getFieldName()) ||
@@ -2044,7 +2108,7 @@ public class ReportService {
 
         InvoiceConsolidatedPdfResponse response = new InvoiceConsolidatedPdfResponse(includePaidInvoice, includeEmptyBeds,
                 includeSubTotals, includeGrandTotal, includeHostelName, hostelInfo, invHeader, footerInfo,
-                List.of(), List.of(), filtersRes, paginationData, activeColumnsRes, columnNames, columnData);
+                List.of(), List.of(), filtersRes, paginationData, columnsRes, columnNames, columnData);
 
         if (GroupByEnum.FLOOR_ROOM_BED.equals(groupByEnum)) {
 
@@ -2100,7 +2164,7 @@ public class ReportService {
 
             response = new InvoiceConsolidatedPdfResponse(includePaidInvoice, includeEmptyBeds, includeSubTotals,
                     includeGrandTotal, includeHostelName, hostelInfo, invHeader, footerInfo, paginatedFloors,
-                    List.of(), filtersRes, paginationData, activeColumnsRes, columnNames, columnData);
+                    List.of(), filtersRes, paginationData, columnsRes, columnNames, columnData);
         }
         else if (GroupByEnum.ROOM_BED.equals(groupByEnum)) {
 
@@ -2149,7 +2213,7 @@ public class ReportService {
 
             response = new InvoiceConsolidatedPdfResponse(includePaidInvoice, includeEmptyBeds, includeSubTotals,
                     includeGrandTotal, includeHostelName, hostelInfo, invHeader, footerInfo, List.of(),
-                    paginatedRooms, filtersRes, paginationData, activeColumnsRes, columnNames, columnData);
+                    paginatedRooms, filtersRes, paginationData, columnsRes, columnNames, columnData);
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK);
