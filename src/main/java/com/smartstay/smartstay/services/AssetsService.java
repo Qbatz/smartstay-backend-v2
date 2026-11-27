@@ -91,11 +91,6 @@ public class AssetsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
-        if (hostel == null) {
-            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
-        }
-
         String searchKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
 
         List<AssetsV1> assets = searchKeyword == null
@@ -160,7 +155,7 @@ public class AssetsService {
                     Beds bed = bedsMap.getOrDefault(i.getBedId(), null);
                     BankingV2 bank = bankingMap.getOrDefault(i.getBankId(), null);
 
-                    return new AssetAssignmentResponseMapper(hostel, vendor, floor, room, bed, bank)
+                    return new AssetAssignmentResponseMapper(vendor, floor, room, bed, bank)
                             .apply(i);
                 })
                 .toList();
@@ -382,16 +377,12 @@ public class AssetsService {
         Integer bedId = asset.getBedId();
         String bankId = asset.getBankId();
 
-        HostelV1 hostel = null;
         VendorV1 vendor = null;
         Floors floor = null;
         Rooms room = null;
         Beds bed = null;
         BankingV2 bank = null;
 
-        if (hostelId != null) {
-            hostel = hostelService.getHostelInfo(hostelId);
-        }
         vendor = vendorService.findVendorByHostelIdAndVendorId(hostelId, vendorId);
         if (floorId != null) {
             floor = floorsService.getByFloorId(floorId);
@@ -407,7 +398,7 @@ public class AssetsService {
         }
 
         AssetAssignmentResponse assetResponse = new AssetAssignmentResponseMapper
-                (hostel, vendor, floor, room, bed, bank)
+                (vendor, floor, room, bed, bank)
                 .apply(asset);
 
         return new ResponseEntity<>(assetResponse, HttpStatus.OK);

@@ -18,7 +18,6 @@ public class AssetAssignmentResponse {
     private String bankId;
     private String paymentMode;
     private String hostelId;
-    private String hostelName;
     private Integer vendorId;
     private String vendorName;
     private Integer floorId;
