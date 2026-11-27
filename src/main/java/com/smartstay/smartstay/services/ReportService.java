@@ -2353,6 +2353,10 @@ public class ReportService {
 
             for (InvoicesV1 invoice : customerInvoices) {
 
+                if (invoice.isCancelled()){
+                    continue;
+                }
+
                 double totalAmount = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : 0;
                 double invPaidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
                 double pendingAmount = totalAmount - invPaidAmount;
@@ -2370,7 +2374,7 @@ public class ReportService {
                     pendingRent += pendingAmount;
 
                     if (invoiceItems != null && !invoiceItems.isEmpty()){
-                        ebAmount = invoiceItems
+                        ebAmount += invoiceItems
                                 .stream()
                                 .filter(item ->  com.smartstay.smartstay.ennum.InvoiceItems.EB.name()
                                         .equals(item.getInvoiceItem()))
