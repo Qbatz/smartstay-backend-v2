@@ -6,6 +6,7 @@ import com.smartstay.smartstay.dao.*;
 import com.smartstay.smartstay.dao.InvoiceItems;
 import com.smartstay.smartstay.dto.beds.BedDetails;
 import com.smartstay.smartstay.dto.beds.RoomBedCount;
+import com.smartstay.smartstay.dto.customer.Deductions;
 import com.smartstay.smartstay.dto.hostel.BillingDates;
 import com.smartstay.smartstay.dto.reports.ComplaintsReportFilterRequest;
 import com.smartstay.smartstay.dto.reports.ComplaintsReportResponse;
@@ -1976,6 +1977,25 @@ public class ReportService {
                     .toList();
         }
 
+        invoices = invoices.stream()
+                .filter(i -> !InvoiceType.AMOUNT_HOLDING.name().equalsIgnoreCase(i.getInvoiceType()) &&
+                        !InvoiceType.EB_HOLDING.name().equalsIgnoreCase(i.getInvoiceType()) &&
+                        !InvoiceType.SETTLEMENT.name().equalsIgnoreCase(i.getInvoiceType()))
+                .filter(i -> PaymentStatus.PAID.name().equalsIgnoreCase(i.getPaymentStatus()) ||
+                        PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(i.getPaymentStatus()) ||
+                        PaymentStatus.PENDING.name().equalsIgnoreCase(i.getPaymentStatus()))
+                .toList();
+
+        Map<String, List<InvoicesV1>> invoicesByCustomer = invoices.stream()
+                .collect(Collectors.groupingBy(InvoicesV1::getCustomerId));
+
+        Set<String> createdByUserIds = invoices.stream()
+                .map(InvoicesV1::getCreatedBy)
+                .collect(Collectors.toSet());
+
+        List<Users> createdByUsers = usersService
+                .findByUserIds(new ArrayList<>(createdByUserIds));
+
         Map<Integer, List<Rooms>> roomsByFloor = new HashMap<>();
         if (rooms != null){
             roomsByFloor = rooms.stream()
@@ -1995,12 +2015,7 @@ public class ReportService {
                         (existing, replacement) -> replacement
                 ));
 
-        Map<String, List<InvoicesV1>> invoicesByCustomer = invoices.stream()
-                .collect(Collectors.groupingBy(InvoicesV1::getCustomerId));
-
-        Set<String> customerIds = invoices.stream()
-                .map(InvoicesV1::getCustomerId)
-                .collect(Collectors.toSet());
+        Set<String> customerIds = new HashSet<>(customerByBed.values());
 
         List<Customers> customers = customersService
                 .findByCustomerIds(new ArrayList<>(customerIds));
@@ -2009,15 +2024,9 @@ public class ReportService {
                 .collect(Collectors.toMap(Customers::getCustomerId,
                         customer -> customer));
 
-        Set<String> createdByUserIds = invoices.stream()
-                .filter(i -> !InvoiceType.SETTLEMENT.name().equalsIgnoreCase(i.getInvoiceType()))
-                .map(InvoicesV1::getCreatedBy)
-                .collect(Collectors.toSet());
-
-        List<Users> createdByUsers = usersService
-                .findByUserIds(new ArrayList<>(createdByUserIds));
-
         String totalInvoice = String.valueOf(invoices.size());
+        int totalTenants = customerIds.size();
+        int overdueInvoicesCount = 0;
         double totalInvoiceAmount = 0;
         double paidAmount = 0;
         double returnInvoiceAmount = 0;
@@ -2052,6 +2061,15 @@ public class ReportService {
                 paidAmount += invPaidAmount;
             }
             totalInvoiceAmount += totalAmount;
+
+            boolean isUnpaid = PaymentStatus.PENDING.name().equalsIgnoreCase(invoice.getPaymentStatus())
+                    || PaymentStatus.PARTIAL_PAYMENT.name().equalsIgnoreCase(invoice.getPaymentStatus());
+            if (!invoice.isCancelled() && isUnpaid && pendingAmount > 0 && invoice.getInvoiceDueDate() != null) {
+                boolean isOverdue = Utils.compareWithTwoDates(invoice.getInvoiceDueDate(), today) < 0;
+                if (isOverdue){
+                    overdueInvoicesCount++;
+                }
+            }
         }
 
         HostelInfoResponse hostelInfo = new HostelInfoResponse(hostel.getHostelName(), AddressUtils.getHostelAddress(hostel),
@@ -2059,9 +2077,10 @@ public class ReportService {
                 hostel.getStreet());
 
         InvoiceHeader invHeader = new InvoiceHeader(filterStartDate != null ? Utils.dateToString(filterStartDate) : null,
-                filterEndDate != null ? Utils.dateToString(filterEndDate) : null, totalInvoice, String.valueOf(totalInvoiceAmount),
-                String.valueOf(paidAmount), String.valueOf(Utils.roundOffWithTwoDigit(totalBookingAmount)),
-                String.valueOf(outstandingAmount), String.valueOf(returnInvoiceAmount), String.valueOf(cancelledAmount));
+                filterEndDate != null ? Utils.dateToString(filterEndDate) : null, totalInvoice, String.valueOf(totalTenants),
+                String.valueOf(overdueInvoicesCount), String.valueOf(totalInvoiceAmount), String.valueOf(paidAmount),
+                String.valueOf(Utils.roundOffWithTwoDigit(totalBookingAmount)), String.valueOf(outstandingAmount),
+                String.valueOf(returnInvoiceAmount), String.valueOf(cancelledAmount));
 
         FooterInfo footerInfo = new FooterInfo(Utils.dateToString(today), Utils.dateToTime(today));
 
@@ -2076,6 +2095,8 @@ public class ReportService {
                 .toList();
 
         List<EnumFilterResponse> paymentStatusFilters = Arrays.stream(PaymentStatus.values())
+                .filter(i -> PaymentStatus.PAID.equals(i) || PaymentStatus.PARTIAL_PAYMENT.equals(i)
+                        || PaymentStatus.PENDING.equals(i))
                 .map(i -> new EnumFilterResponse(i.name(), i.getDisplayName()))
                 .toList();
 
@@ -2085,6 +2106,8 @@ public class ReportService {
                 .toList();
 
         List<EnumFilterResponse> invoiceTypeFilters = Arrays.stream(InvoiceType.values())
+                .filter(i -> !InvoiceType.AMOUNT_HOLDING.equals(i) &&
+                        !InvoiceType.EB_HOLDING.equals(i) && !InvoiceType.SETTLEMENT.equals(i))
                 .map(i -> new EnumFilterResponse(i.name(),
                         NameUtils.capitalizeWordsWithUnderscore(i.name())))
                 .toList();
@@ -2338,7 +2361,7 @@ public class ReportService {
                     .map(i -> toInvConsolidatedRes(i, customer))
                     .toList();
 
-            if (!includeEmptyBeds && invoiceResponses.isEmpty()) {
+            if (!includeEmptyBeds && customer == null) {
                 continue;
             }
 
@@ -2347,18 +2370,22 @@ public class ReportService {
             double actualRent = 0;
             double pendingRent = 0;
             double ebAmount = 0;
+            double actualAdvance = 0;
             double pendingAdvance = 0;
             double pendingNonRefundable = 0;
+            double totalActualAmount = 0;
             double totalPendingAmount = 0;
 
             for (InvoicesV1 invoice : customerInvoices) {
 
+                if (invoice.isCancelled()){
+                    continue;
+                }
+
                 double totalAmount = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : 0;
                 double invPaidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
                 double pendingAmount = totalAmount - invPaidAmount;
-                double balanceAmount = invoice.getBalanceAmount() != null ? invoice.getBalanceAmount() : 0;
                 double deductionAmount = invoice.getDeductionAmount() != null ? invoice.getDeductionAmount() : 0;
-                double pendingDeductionAmount = deductionAmount;
 
                 List<InvoiceItems> invoiceItems = invoice.getInvoiceItems();
 
@@ -2370,7 +2397,7 @@ public class ReportService {
                     pendingRent += pendingAmount;
 
                     if (invoiceItems != null && !invoiceItems.isEmpty()){
-                        ebAmount = invoiceItems
+                        ebAmount += invoiceItems
                                 .stream()
                                 .filter(item ->  com.smartstay.smartstay.ennum.InvoiceItems.EB.name()
                                         .equals(item.getInvoiceItem()))
@@ -2384,25 +2411,39 @@ public class ReportService {
                         InvoiceType.ADDITIONAL_ADVANCE.name().equalsIgnoreCase(invoice.getInvoiceType()) ||
                         InvoiceType.AMOUNT_HOLDING.name().equalsIgnoreCase(invoice.getInvoiceType()) ||
                         InvoiceType.EB_HOLDING.name().equalsIgnoreCase(invoice.getInvoiceType())) {
-                    pendingAdvance += balanceAmount;
+                    actualAdvance += totalAmount;
+                    pendingAdvance += pendingAmount;
                 }
 
-                if (deductionAmount != 0){
-                    pendingDeductionAmount = deductionAmount - invPaidAmount;
+                List<Deductions> deductions = invoice.getDeductions();
+
+                if (deductions != null && !deductions.isEmpty()){
+
+                    double deductionTotalPendingAmount = 0;
+
+                    for (Deductions deduction : deductions){
+                        double amount = deduction.getAmount() != null ? deduction.getAmount() : 0;
+                        double deductionPaidAmount = deduction.getPaidAmount() != null ? deduction.getPaidAmount() : 0;
+                        double deductionPendingAmount = amount - deductionPaidAmount;
+
+                        deductionTotalPendingAmount += deductionPendingAmount;
+                    }
+
+                    pendingNonRefundable += deductionTotalPendingAmount;
+                } else {
+                    pendingNonRefundable += deductionAmount;
                 }
-                pendingNonRefundable += pendingDeductionAmount;
             }
 
-            double payableAmount = pendingRent + pendingNonRefundable;
-
-            totalPendingAmount = payableAmount - pendingAdvance;
+            totalActualAmount = actualRent + actualAdvance;
+            totalPendingAmount = pendingRent + pendingAdvance;
 
             String status = "Pending";
             if (totalPendingAmount == 0){
                 status = "Paid";
-            } else if (totalPendingAmount > 0 && totalPendingAmount < payableAmount) {
+            } else if (totalPendingAmount > 0 && totalPendingAmount < totalActualAmount) {
                 status = "Partially Paid";
-            } else if (totalPendingAmount == payableAmount) {
+            } else if (totalPendingAmount == totalActualAmount) {
                 status = "Pending";
             } else if (totalPendingAmount < 0) {
                 status = "Refund";
@@ -2411,17 +2452,21 @@ public class ReportService {
             String tenantName = null;
             String countryCode = null;
             String mobile = null;
+            String tenantProfilePic = null;
+            String tenantInitials = null;
             if (customer != null){
                 tenantName = NameUtils.getFullName(customer.getFirstName(), customer.getLastName());
                 countryCode = "+" + String.valueOf(customer.getCountryCode());
                 mobile = customer.getMobile();
+                tenantProfilePic = CustomerUtils.getProfilePic(customer);
+                tenantInitials = NameUtils.getInitials(customer.getFirstName(), customer.getLastName());
             } else {
                 status = "Vacant";
             }
 
             bedResponses.add(new InvoiceBedResponse(bed.getBedId(), bed.getBedName(), tenantName, countryCode,
-                    mobile, status, String.valueOf(actualRent), String.valueOf(pendingRent), String.valueOf(ebAmount),
-                    String.valueOf(pendingAdvance), String.valueOf(pendingNonRefundable),
+                    mobile, tenantProfilePic, tenantInitials, status, String.valueOf(actualRent), String.valueOf(pendingRent),
+                    String.valueOf(ebAmount), String.valueOf(pendingAdvance), String.valueOf(pendingNonRefundable),
                     String.valueOf(totalPendingAmount), String.valueOf(invoiceCount), invoiceResponses));
         }
 
