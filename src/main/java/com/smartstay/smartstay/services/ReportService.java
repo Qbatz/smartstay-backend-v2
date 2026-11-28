@@ -2360,8 +2360,10 @@ public class ReportService {
             double actualRent = 0;
             double pendingRent = 0;
             double ebAmount = 0;
+            double actualAdvance = 0;
             double pendingAdvance = 0;
             double pendingNonRefundable = 0;
+            double totalActualAmount = 0;
             double totalPendingAmount = 0;
 
             for (InvoicesV1 invoice : customerInvoices) {
@@ -2373,7 +2375,6 @@ public class ReportService {
                 double totalAmount = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : 0;
                 double invPaidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
                 double pendingAmount = totalAmount - invPaidAmount;
-                double balanceAmount = invoice.getBalanceAmount() != null ? invoice.getBalanceAmount() : 0;
                 double deductionAmount = invoice.getDeductionAmount() != null ? invoice.getDeductionAmount() : 0;
 
                 List<InvoiceItems> invoiceItems = invoice.getInvoiceItems();
@@ -2400,7 +2401,8 @@ public class ReportService {
                         InvoiceType.ADDITIONAL_ADVANCE.name().equalsIgnoreCase(invoice.getInvoiceType()) ||
                         InvoiceType.AMOUNT_HOLDING.name().equalsIgnoreCase(invoice.getInvoiceType()) ||
                         InvoiceType.EB_HOLDING.name().equalsIgnoreCase(invoice.getInvoiceType())) {
-                    pendingAdvance += balanceAmount;
+                    actualAdvance += totalAmount;
+                    pendingAdvance += pendingAmount;
                 }
 
                 List<Deductions> deductions = invoice.getDeductions();
@@ -2423,14 +2425,15 @@ public class ReportService {
                 }
             }
 
-            totalPendingAmount = pendingRent - pendingAdvance;
+            totalActualAmount = actualRent + actualAdvance;
+            totalPendingAmount = pendingRent + pendingAdvance;
 
             String status = "Pending";
             if (totalPendingAmount == 0){
                 status = "Paid";
-            } else if (totalPendingAmount > 0 && totalPendingAmount < actualRent) {
+            } else if (totalPendingAmount > 0 && totalPendingAmount < totalActualAmount) {
                 status = "Partially Paid";
-            } else if (totalPendingAmount == actualRent) {
+            } else if (totalPendingAmount == totalActualAmount) {
                 status = "Pending";
             } else if (totalPendingAmount < 0) {
                 status = "Refund";
